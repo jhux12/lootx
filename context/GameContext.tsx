@@ -1,21 +1,42 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, InventoryItem, CaseItem, ViewState, Battle, MysteryBox, ShippingAddress } from '../types';
-import { BATTLES as INITIAL_BATTLES, MYSTERY_BOXES, CASE_ITEMS, MOCK_USERS } from '../constants';
+import { MYSTERY_BOXES, CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
-// Firebase imports removed due to environment issues
-// Local Storage Mock Mode enabled
+import { 
+  User as FirebaseUser,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut
+} from 'firebase/auth';
+import { 
+  collection,
+  doc,
+  getDoc,
+  onSnapshot,
+  setDoc
+} from 'firebase/firestore';
 
 // Storage Keys (Fallback)
-const STORAGE_KEY_DB = 'lootx_users_db';
-const STORAGE_KEY_SESSION = 'lootx_session_user';
 const STORAGE_KEY_BOXES = 'lootx_boxes';
 const STORAGE_KEY_ITEMS = 'lootx_items'; // New key for items
+
+type PersistUserData = Partial<{
+  balance: number;
+  inventory: InventoryItem[];
+  xp: number;
+  shippingAddress: ShippingAddress;
+  name: string;
+  avatar: string;
+  lastDailyClaim: number;
+}>;
 
 interface GameContextType {
   user: User;
   isAuthenticated: boolean;
   balance: number;
   inventory: InventoryItem[];
+  users: User[];
   view: ViewState;
   battles: Battle[];
   boxes: MysteryBox[];
@@ -62,6 +83,59 @@ const GUEST_USER: User = {
   isAdmin: false
 };
 
+const getUserRef = (uid: string) => doc(db, 'users', uid);
+
+const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
+  const userRef = getUserRef(firebaseUser.uid);
+  const snapshot = await getDoc(userRef);
+
+  if (!snapshot.exists()) {
+    const newUser: User = {
+      id: firebaseUser.uid,
+      name: firebaseUser.email?.split('@')[0] || 'Player',
+      email: firebaseUser.email || '',
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
+      level: 1,
+      xp: 0,
+      shippingAddress: undefined,
+      isAdmin: false
+    };
+
+    await setDoc(userRef, {
+      ...newUser,
+      balance: 0,
+      inventory: []
+    });
+
+    return { user: newUser, balance: 0, inventory: [] as InventoryItem[] };
+  }
+
+  const data = snapshot.data();
+  const profile: User = {
+    id: firebaseUser.uid,
+    name: data.name || firebaseUser.email?.split('@')[0] || 'Player',
+    email: data.email || firebaseUser.email || '',
+    avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
+    level: data.level ?? 1,
+    xp: data.xp ?? 0,
+    shippingAddress: data.shippingAddress,
+    isAdmin: data.isAdmin ?? false
+  };
+
+  return {
+    user: profile,
+    balance: data.balance ?? 0,
+    inventory: Array.isArray(data.inventory) ? (data.inventory as InventoryItem[]) : []
+  };
+};
+
+const persistUserData = async (payload: PersistUserData) => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) return;
+  const userRef = getUserRef(currentUser.uid);
+  await setDoc(userRef, payload, { merge: true });
+};
+
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
@@ -69,37 +143,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // -- PERSISTENT STATE INITIALIZATION --
   
   // 1. Initialize User State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-      // Check localStorage as fallback or initial state
-      return !!localStorage.getItem(STORAGE_KEY_SESSION);
-  });
-
-  const [user, setUser] = useState<User>(() => {
-      const sessionEmail = localStorage.getItem(STORAGE_KEY_SESSION);
-      if(sessionEmail) {
-          const dbLocal = JSON.parse(localStorage.getItem(STORAGE_KEY_DB) || '{}');
-          if (dbLocal[sessionEmail]?.user) return dbLocal[sessionEmail].user;
-      }
-      return GUEST_USER;
-  });
-
-  const [balance, setBalance] = useState<number>(() => {
-      const sessionEmail = localStorage.getItem(STORAGE_KEY_SESSION);
-      if(sessionEmail) {
-          const dbLocal = JSON.parse(localStorage.getItem(STORAGE_KEY_DB) || '{}');
-          if (dbLocal[sessionEmail]?.balance !== undefined) return dbLocal[sessionEmail].balance;
-      }
-      return 0;
-  });
-
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => {
-      const sessionEmail = localStorage.getItem(STORAGE_KEY_SESSION);
-      if(sessionEmail) {
-          const dbLocal = JSON.parse(localStorage.getItem(STORAGE_KEY_DB) || '{}');
-          if (dbLocal[sessionEmail]?.inventory) return dbLocal[sessionEmail].inventory;
-      }
-      return [];
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [user, setUser] = useState<User>(GUEST_USER);
+  const [users, setUsers] = useState<User[]>([]);
+  const [balance, setBalance] = useState<number>(0);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   
   const [view, setView] = useState<ViewState>({ type: 'HOME' });
   
@@ -121,29 +169,58 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return MYSTERY_BOXES.sort((a,b) => a.price - b.price);
   });
 
-  const [battles, setBattles] = useState<Battle[]>(INITIAL_BATTLES);
+  const [battles, setBattles] = useState<Battle[]>([]);
 
-  // -- FIREBASE SYNC (DISABLED) --
+  // -- FIREBASE SYNC --
   useEffect(() => {
-     // Firebase sync disabled
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setIsAuthenticated(false);
+        setUser(GUEST_USER);
+        setBalance(0);
+        setInventory([]);
+        return;
+      }
+
+      setIsAuthenticated(true);
+      try {
+        const profile = await loadUserFromFirestore(firebaseUser);
+        setUser(profile.user);
+        setBalance(profile.balance);
+        setInventory(profile.inventory);
+      } catch (error) {
+        console.error('Failed to load user from Firebase', error);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const usersRef = collection(db, 'users');
+    const unsubscribe = onSnapshot(usersRef, (snapshot) => {
+      const loaded: User[] = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          name: data.name || 'Player',
+          email: data.email,
+          avatar: data.avatar || 'https://picsum.photos/id/64/100/100',
+          level: data.level ?? 1,
+          xp: data.xp ?? 0,
+          shippingAddress: data.shippingAddress,
+          isAdmin: data.isAdmin ?? false
+        } as User;
+      });
+      setUsers(loaded);
+    }, (error) => {
+      console.error('Failed to load users from Firebase', error);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // -- PERSISTENCE EFFECTS (LOCAL STORAGE FALLBACK / SYNC) --
-
-  // Save User Data whenever it changes
-  useEffect(() => {
-    // 1. Save to Local Storage (Always, as backup)
-    if (isAuthenticated && user.email) {
-      const dbLocal = JSON.parse(localStorage.getItem(STORAGE_KEY_DB) || '{}');
-      dbLocal[user.email] = {
-        user,
-        balance,
-        inventory
-      };
-      localStorage.setItem(STORAGE_KEY_DB, JSON.stringify(dbLocal));
-      localStorage.setItem(STORAGE_KEY_SESSION, user.email);
-    }
-  }, [user, balance, inventory, isAuthenticated]);
 
   // Save Boxes whenever they change
   useEffect(() => {
@@ -201,82 +278,38 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // --- ACTIONS ---
 
   const login = async (email: string, pass: string) => {
-      // 1. Simulate Admin Authentication via "Admin SDK"
-      if (email === 'admin@lootx.com' && pass === 'admin') {
-          await new Promise(resolve => setTimeout(resolve, 800)); // Simulate verifying with secure server
-          const adminUser: User = {
-              id: 'admin-master',
-              name: 'System Admin',
-              email: 'admin@lootx.com',
-              avatar: 'https://ui-avatars.com/api/?name=System+Admin&background=ef4444&color=fff&bold=true',
-              level: 100,
-              xp: 0,
-              isAdmin: true
-          };
-          setUser(adminUser);
-          setBalance(1000000); // Admin Budget
-          setInventory([]);
-          setIsAuthenticated(true);
-          setShowLoginModal(false);
-          return;
-      }
-
-      // 2. Standard Fallback: Local Storage Login
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const dbLocal = JSON.parse(localStorage.getItem(STORAGE_KEY_DB) || '{}');
-      const userData = dbLocal[email];
-
-      if (userData) {
-          setUser(userData.user);
-          setBalance(userData.balance);
-          setInventory(userData.inventory || []);
-      } else {
-          // New "Mock" User
-          const mockUser = { ...MOCK_USERS[0] };
-          const newUser = {
-              ...mockUser,
-              id: `user-${Date.now()}`,
-              email,
-              name: email.split('@')[0], 
-              shippingAddress: undefined,
-              isAdmin: false
-          };
-          setUser(newUser);
-          setBalance(1500); 
-          setInventory([]);
-      }
-      setIsAuthenticated(true);
+      await signInWithEmailAndPassword(auth, email, pass);
       setShowLoginModal(false);
   };
 
   const register = async (name: string, email: string, pass: string) => {
-      // 2. Fallback: Local Storage Register
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const dbLocal = JSON.parse(localStorage.getItem(STORAGE_KEY_DB) || '{}');
-      if (dbLocal[email]) {
-          throw new Error("User already exists");
-      }
-
+      const credential = await createUserWithEmailAndPassword(auth, email, pass);
       const newUser: User = {
-          id: `user-${Date.now()}`,
+          id: credential.user.uid,
           name,
           email,
-          avatar: `https://picsum.photos/seed/${Date.now()}/100/100`,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
           level: 1,
           xp: 0,
           shippingAddress: undefined,
           isAdmin: false
       };
 
+      await setDoc(doc(db, 'users', newUser.id), {
+          ...newUser,
+          balance: 0,
+          inventory: []
+      });
+
       setUser(newUser);
-      setBalance(500);
+      setBalance(0);
       setInventory([]);
       setIsAuthenticated(true);
       setShowLoginModal(false);
   };
 
   const logout = () => {
-      localStorage.removeItem(STORAGE_KEY_SESSION);
+      signOut(auth);
       setIsAuthenticated(false);
       setUser(GUEST_USER);
       setBalance(0);
@@ -285,14 +318,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const addBalance = async (amount: number) => {
-    setBalance(prev => prev + amount); 
+    setBalance(prev => {
+      const updated = prev + amount;
+      persistUserData({ balance: updated });
+      return updated;
+    }); 
   };
 
   const deductBalance = (amount: number): boolean => {
     if (balance >= amount) {
-      setBalance(prev => prev - amount);
+      setBalance(prev => {
+        const updated = prev - amount;
+        persistUserData({ balance: updated });
+        return updated;
+      });
       if (isAuthenticated) {
-          setUser(prev => ({ ...prev, xp: prev.xp + Math.floor(amount) }));
+          setUser(prev => {
+            const nextXp = prev.xp + Math.floor(amount);
+            persistUserData({ xp: nextXp });
+            return { ...prev, xp: nextXp };
+          });
       }
       return true;
     }
@@ -306,30 +351,50 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       obtainedAt: Date.now(),
       status: 'available'
     };
-    setInventory(prev => [newItem, ...prev]);
+    setInventory(prev => {
+      const updated = [newItem, ...prev];
+      persistUserData({ inventory: updated });
+      return updated;
+    });
   };
 
   const sellItem = async (instanceId: string, value: number) => {
     const itemToSell = inventory.find(i => i.instanceId === instanceId);
     if (!itemToSell) return;
-    setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
+    setInventory(prev => {
+      const updated = prev.filter(item => item.instanceId !== instanceId);
+      persistUserData({ inventory: updated });
+      return updated;
+    });
     addBalance(value);
   };
 
   const shipItem = async (instanceId: string) => {
-    setInventory(prev => prev.map(item => 
+    setInventory(prev => {
+      const updated = prev.map(item => 
         item.instanceId === instanceId 
         ? { ...item, status: 'shipping' }
         : item
-    ));
+      );
+      persistUserData({ inventory: updated });
+      return updated;
+    });
   };
 
   const updateAddress = async (address: ShippingAddress) => {
-      setUser(prev => ({ ...prev, shippingAddress: address }));
+      setUser(prev => {
+        const updated = { ...prev, shippingAddress: address };
+        persistUserData({ shippingAddress: address });
+        return updated;
+      });
   };
 
   const updateUserInfo = async (name: string, avatar: string) => {
-      setUser(prev => ({ ...prev, name, avatar }));
+      setUser(prev => {
+        const updated = { ...prev, name, avatar };
+        persistUserData({ name, avatar });
+        return updated;
+      });
   };
 
   const createBattle = (boxIds: string[], maxPlayers: number) => {
@@ -439,13 +504,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const claimDaily = async () => {
-    setUser(prev => ({ ...prev, lastDailyClaim: Date.now() }));
+    const timestamp = Date.now();
+    setUser(prev => ({ ...prev, lastDailyClaim: timestamp }));
+    persistUserData({ lastDailyClaim: timestamp });
   };
 
   return (
     <GameContext.Provider value={{
       user,
       isAuthenticated,
+      users,
       showLoginModal,
       showTopUpModal,
       balance,
