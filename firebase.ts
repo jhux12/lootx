@@ -1,30 +1,20 @@
-import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: "AIzaSyBHYVrOGha0bJTyiGJ7Hcu0WInZRk2AoD8",
+  authDomain: "hyperdrop-6476c.firebaseapp.com",
+  databaseURL: "https://hyperdrop-6476c-default-rtdb.firebaseio.com",
+  projectId: "hyperdrop-6476c",
+  storageBucket: "hyperdrop-6476c.firebasestorage.app",
+  messagingSenderId: "1059432373898",
+  appId: "1:1059432373898:web:de58fa703fd903a9979773"
 };
 
-const hasFirebaseConfig = Object.values(firebaseConfig).every(Boolean);
-
-let app: FirebaseApp | null = null;
-let auth: Auth | null = null;
-let db: Firestore | null = null;
-
-if (hasFirebaseConfig) {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-} else {
-  // Keep the app running in mock/localStorage mode if Firebase is not configured
-  console.warn('Firebase configuration is missing; running in local mock mode.');
-}
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 export { auth, db };
 export default app;
