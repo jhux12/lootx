@@ -106,7 +106,10 @@ export const Header: React.FC = () => {
                   <div className="flex items-center gap-2 text-gray-400 hover:text-white cursor-pointer border-r border-gray-800 pr-4">
                     <img src={user.avatar} className="w-8 h-8 rounded-lg border border-gray-700" alt="Avatar" />
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium leading-none max-w-[80px] truncate">{user.name}</span>
+                      <span className="text-sm font-medium leading-none max-w-[120px] truncate flex items-center gap-1">
+                        {user.name}
+                        {user.isAdmin && <span className="text-[9px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/30">Admin</span>}
+                      </span>
                       <span className="text-[10px] text-gray-500">Lvl {user.level}</span>
                     </div>
                     <ChevronDown className="w-3 h-3" />
@@ -137,7 +140,10 @@ export const Header: React.FC = () => {
 
                 <div className="flex items-center gap-3 text-gray-500">
                   <button className="hover:text-white transition-colors hidden sm:block"><Bell className="w-4 h-4" /></button>
-                  <img src={user.avatar} className="w-8 h-8 rounded-lg border border-gray-700 md:hidden" alt="Avatar" onClick={() => handleNav({ type: 'PROFILE' })} />
+                  <div className="flex items-center gap-2 md:hidden">
+                    <img src={user.avatar} className="w-8 h-8 rounded-lg border border-gray-700" alt="Avatar" onClick={() => handleNav({ type: 'PROFILE' })} />
+                    {user.isAdmin && <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-full border border-red-500/30">Admin</span>}
+                  </div>
                 </div>
             </>
         ) : (

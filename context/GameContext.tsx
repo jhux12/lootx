@@ -29,6 +29,7 @@ type PersistUserData = Partial<{
   name: string;
   avatar: string;
   lastDailyClaim: number;
+  isAdmin: boolean;
 }>;
 
 interface GameContextType {
@@ -83,6 +84,8 @@ const GUEST_USER: User = {
   isAdmin: false
 };
 
+const ADMIN_EMAIL = 'jhuxf12@outlook.com';
+
 const getUserRef = (uid: string) => doc(db, 'users', uid);
 
 const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
@@ -121,6 +124,12 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     shippingAddress: data.shippingAddress,
     isAdmin: data.isAdmin ?? false
   };
+
+  const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
+  if (shouldBeAdmin && !profile.isAdmin) {
+    profile.isAdmin = true;
+    await setDoc(userRef, { isAdmin: true }, { merge: true });
+  }
 
   return {
     user: profile,
@@ -292,7 +301,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           level: 1,
           xp: 0,
           shippingAddress: undefined,
-          isAdmin: false
+          isAdmin: email.toLowerCase() === ADMIN_EMAIL
       };
 
       await setDoc(doc(db, 'users', newUser.id), {
