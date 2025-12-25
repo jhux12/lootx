@@ -88,6 +88,16 @@ const ADMIN_EMAIL = 'jhuxf12@outlook.com';
 
 const getUserRef = (uid: string) => doc(db, 'users', uid);
 
+const buildUserDocument = (user: User, extras: { balance: number; inventory: InventoryItem[] }) => {
+  const payload: Record<string, unknown> = { ...user, ...extras };
+
+  if (payload.shippingAddress === undefined) {
+    delete payload.shippingAddress;
+  }
+
+  return payload;
+};
+
 const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
   const userRef = getUserRef(firebaseUser.uid);
   const snapshot = await getDoc(userRef);
@@ -104,11 +114,7 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
       isAdmin: false
     };
 
-    await setDoc(userRef, {
-      ...newUser,
-      balance: 0,
-      inventory: []
-    });
+    await setDoc(userRef, buildUserDocument(newUser, { balance: 0, inventory: [] }));
 
     return { user: newUser, balance: 0, inventory: [] as InventoryItem[] };
   }
@@ -304,11 +310,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           isAdmin: email.toLowerCase() === ADMIN_EMAIL
       };
 
-      await setDoc(doc(db, 'users', newUser.id), {
-          ...newUser,
-          balance: 0,
-          inventory: []
-      });
+      await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser, { balance: 0, inventory: [] }));
 
       setUser(newUser);
       setBalance(0);
