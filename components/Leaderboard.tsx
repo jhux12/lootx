@@ -1,19 +1,19 @@
-import React from 'react';
-import { Trophy, Medal, User, TrendingUp, Sparkles } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Trophy, Medal, Sparkles } from 'lucide-react';
 import { useGame } from '../context/GameContext';
-import { MOCK_USERS } from '../constants';
 
 export const Leaderboard: React.FC = () => {
-    // Generate mock leaderboard data based on mock users + some extras with XP data
-    const leaderboardData = [
-        { ...MOCK_USERS[1], weeklyXp: 45200, profit: 12400 }, // Zeus
-        { ...MOCK_USERS[2], weeklyXp: 38500, profit: -500 },  // CryptoKing
-        { ...MOCK_USERS[0], weeklyXp: 25100, profit: 4200 },   // MarieJane
-        { ...MOCK_USERS[3], weeklyXp: 18400, profit: 1100 },   // LootMaster
-        { id: '5', name: 'HighRoller99', avatar: 'https://picsum.photos/seed/roller/100/100', level: 45, xp: 0, weeklyXp: 12500, profit: -8000 },
-        { id: '6', name: 'LuckyStrike', avatar: 'https://picsum.photos/seed/lucky/100/100', level: 22, xp: 0, weeklyXp: 9800, profit: 15000 },
-        { id: '7', name: 'CaseClosed', avatar: 'https://picsum.photos/seed/closed/100/100', level: 18, xp: 0, weeklyXp: 5400, profit: 200 },
-    ].sort((a, b) => b.weeklyXp - a.weeklyXp);
+    const { users } = useGame();
+
+    const leaderboardData = useMemo(() => {
+        return [...users]
+            .map((u) => ({
+                ...u,
+                weeklyXp: u.xp ?? 0,
+                profit: 0,
+            }))
+            .sort((a, b) => b.weeklyXp - a.weeklyXp);
+    }, [users]);
 
     const getRankIcon = (index: number) => {
         if (index === 0) return <Trophy className="w-6 h-6 text-yellow-500 fill-yellow-500" />;
@@ -70,30 +70,38 @@ export const Leaderboard: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-800 text-sm">
-                            {leaderboardData.map((user, index) => (
-                                <tr key={user.id} className="hover:bg-[#1a2130] transition-colors">
-                                    <td className="px-6 py-4 flex items-center justify-center md:justify-start w-20">
-                                        {getRankIcon(index)}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <img src={user.avatar} className="w-8 h-8 rounded-lg" />
-                                            <div>
-                                                <div className="font-bold text-white">{user.name}</div>
-                                                <div className="text-xs text-gray-500">Level {user.level}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="text-brand-purple font-bold">{user.weeklyXp.toLocaleString()} XP</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className={`font-bold ${user.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                            {user.profit >= 0 ? '+' : ''}${user.profit.toLocaleString()}
-                                        </div>
+                            {leaderboardData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                                        No players found. Check back soon!
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                leaderboardData.map((user, index) => (
+                                    <tr key={user.id} className="hover:bg-[#1a2130] transition-colors">
+                                        <td className="px-6 py-4 flex items-center justify-center md:justify-start w-20">
+                                            {getRankIcon(index)}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <img src={user.avatar} className="w-8 h-8 rounded-lg" />
+                                                <div>
+                                                    <div className="font-bold text-white">{user.name}</div>
+                                                    <div className="text-xs text-gray-500">Level {user.level}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="text-brand-purple font-bold">{user.weeklyXp.toLocaleString()} XP</div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className={`font-bold ${user.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                {user.profit >= 0 ? '+' : ''}${user.profit.toLocaleString()}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

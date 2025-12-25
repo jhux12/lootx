@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, DollarSign, ShieldAlert, Package, Box as BoxIcon, Plus, Check, Calculator, Edit2, Trash2, Calendar } from 'lucide-react';
 import { useGame } from '../context/GameContext';
-import { MOCK_USERS } from '../constants';
 import { CaseItem, MysteryBox } from '../types';
 
 export const AdminPanel: React.FC = () => {
-  const { createItem, updateItem, deleteItem, createBox, updateBox, deleteBox, items, boxes } = useGame();
+  const { createItem, updateItem, deleteItem, createBox, updateBox, deleteBox, items, boxes, users } = useGame();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes'>('dashboard');
 
   // --- ITEM FORM STATE ---
@@ -552,21 +551,29 @@ export const AdminPanel: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-800">
-                                {MOCK_USERS.map((user) => (
-                                    <tr key={user.id} className="hover:bg-[#1a2130] transition-colors">
-                                        <td className="px-6 py-4 flex items-center gap-3">
-                                            <img src={user.avatar} className="w-8 h-8 rounded-full" />
-                                            <span className="font-bold text-white">{user.name}</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-gray-400">{user.level}</td>
-                                        <td className="px-6 py-4">
-                                            <span className="bg-green-500/10 text-green-500 px-2 py-1 rounded text-xs font-bold">Active</span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <button className="text-blue-400 hover:text-blue-300 font-bold text-xs">Edit</button>
+                                {users.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-6 text-center text-gray-500">
+                                            No users found in Firebase.
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    users.map((user) => (
+                                        <tr key={user.id} className="hover:bg-[#1a2130] transition-colors">
+                                            <td className="px-6 py-4 flex items-center gap-3">
+                                                <img src={user.avatar} className="w-8 h-8 rounded-full" />
+                                                <span className="font-bold text-white">{user.name}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-gray-400">{user.level}</td>
+                                            <td className="px-6 py-4">
+                                                <span className="bg-green-500/10 text-green-500 px-2 py-1 rounded text-xs font-bold">Active</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <button className="text-blue-400 hover:text-blue-300 font-bold text-xs">Edit</button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
