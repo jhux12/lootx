@@ -29,11 +29,12 @@ export const AIChatBot: React.FC = () => {
   useEffect(() => {
       // Initialize Gemini Chat
       try {
-        if (!process.env.API_KEY) {
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (!apiKey) {
             console.warn("Gemini API Key is missing");
             return;
         }
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey });
         const chat = ai.chats.create({
             model: 'gemini-3-pro-preview',
             config: {
