@@ -77,7 +77,7 @@ type PersistUserData = Partial<{
   inventory: InventoryItem[];
   xp: number;
   level: number;
-  friends: string[];
+  followers: string[];
   shippingAddress: ShippingAddress;
   name: string;
   avatar: string;
@@ -108,7 +108,8 @@ interface GameContextType {
   addBalance: (amount: number) => void;
   deductBalance: (amount: number) => boolean;
   addToInventory: (item: CaseItem) => void;
-  addFriend: (targetUserId: string) => Promise<void>;
+  followUser: (targetUserId: string) => Promise<void>;
+  unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string, value: number) => void;
   shipItem: (instanceId: string) => void;
   updateAddress: (address: ShippingAddress) => void;
@@ -137,7 +138,7 @@ const GUEST_USER: User = {
   avatar: 'https://picsum.photos/id/64/100/100',
   level: 0,
   xp: 0,
-  friends: [],
+  followers: [],
   isAdmin: false,
   chatWarnings: 0,
   chatDisabled: false,
@@ -171,6 +172,7 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
       level: initialProgress.level,
       xp: 0,
+      followers: [],
       shippingAddress: undefined,
       isAdmin: false,
       chatWarnings: 0,
@@ -186,6 +188,11 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
   const data = snapshot.data();
   const xp = Number(data.xp ?? 0);
   const progress = calculateLevelProgress(xp);
+  const followerIds = Array.isArray(data.followers)
+    ? data.followers
+    : Array.isArray(data.friends)
+      ? data.friends
+      : [];
   const profile: User = {
     id: firebaseUser.uid,
     name: data.name || firebaseUser.email?.split('@')[0] || 'Player',
@@ -193,7 +200,7 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
     level: data.level ?? progress.level,
     xp,
-    friends: Array.isArray(data.friends) ? data.friends : [],
+    followers: followerIds,
     shippingAddress: data.shippingAddress,
     isAdmin: data.isAdmin ?? false,
     chatWarnings: data.chatWarnings ?? 0,
@@ -318,6 +325,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const data = docSnap.data();
         const xp = Number(data.xp ?? 0);
         const progress = calculateLevelProgress(xp);
+        const followerIds = Array.isArray(data.followers)
+          ? data.followers
+          : Array.isArray(data.friends)
+            ? data.friends
+            : [];
         return {
           id: docSnap.id,
           name: data.name || 'Player',
@@ -325,7 +337,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           avatar: data.avatar || 'https://picsum.photos/id/64/100/100',
           level: data.level ?? progress.level,
           xp,
-          friends: Array.isArray(data.friends) ? data.friends : [],
+          followers: followerIds,
           shippingAddress: data.shippingAddress,
           isAdmin: data.isAdmin ?? false,
           chatWarnings: data.chatWarnings ?? 0,
@@ -479,7 +491,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
           level: 1,
           xp: 0,
-          friends: [],
+          followers: [],
           shippingAddress: undefined,
           isAdmin: email.toLowerCase() === ADMIN_EMAIL,
           chatWarnings: 0,
@@ -547,7 +559,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  const addFriend = async (targetUserId: string) => {
+  const followUser = async (targetUserId: string) => {
     if (!isAuthenticated) {
       setShowLoginModal(true);
       return;
@@ -557,29 +569,65 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const targetUser = users.find((u) => u.id === targetUserId);
     if (!targetUser) {
-      console.warn('Attempted to add unknown user as friend');
+      console.warn('Attempted to follow unknown user');
       return;
     }
 
-    const currentFriends = Array.isArray(user.friends) ? user.friends : [];
-    if (currentFriends.includes(targetUserId)) return;
+    const targetFollowers = Array.isArray(targetUser.followers)
+      ? targetUser.followers
+      : Array.isArray(targetUser.friends)
+        ? targetUser.friends
+        : [];
+    if (targetFollowers.includes(user.id)) return;
 
-    const updatedCurrent = [...currentFriends, targetUserId];
-    const targetFriends = Array.isArray(targetUser.friends) ? targetUser.friends : [];
-    const updatedTarget = targetFriends.includes(user.id) ? targetFriends : [...targetFriends, user.id];
+    const updatedTarget = [...targetFollowers, user.id];
 
     try {
-      await setDoc(getUserRef(user.id), { friends: updatedCurrent }, { merge: true });
-      await setDoc(getUserRef(targetUserId), { friends: updatedTarget }, { merge: true });
+      await setDoc(getUserRef(targetUserId), { followers: updatedTarget }, { merge: true });
     } catch (error) {
-      console.error('Failed to update friends in Firebase', error);
+      console.error('Failed to update followers in Firebase', error);
     }
 
-    setUser((prev) => ({ ...prev, friends: updatedCurrent }));
     setUsers((prev) =>
       prev.map((u) => {
-        if (u.id === user.id) return { ...u, friends: updatedCurrent };
-        if (u.id === targetUserId) return { ...u, friends: updatedTarget };
+        if (u.id === targetUserId) return { ...u, followers: updatedTarget };
+        return u;
+      })
+    );
+  };
+
+  const unfollowUser = async (targetUserId: string) => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (targetUserId === user.id) return;
+
+    const targetUser = users.find((u) => u.id === targetUserId);
+    if (!targetUser) {
+      console.warn('Attempted to unfollow unknown user');
+      return;
+    }
+
+    const targetFollowers = Array.isArray(targetUser.followers)
+      ? targetUser.followers
+      : Array.isArray(targetUser.friends)
+        ? targetUser.friends
+        : [];
+    if (!targetFollowers.includes(user.id)) return;
+
+    const updatedTarget = targetFollowers.filter((id) => id !== user.id);
+
+    try {
+      await setDoc(getUserRef(targetUserId), { followers: updatedTarget }, { merge: true });
+    } catch (error) {
+      console.error('Failed to update followers in Firebase', error);
+    }
+
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === targetUserId) return { ...u, followers: updatedTarget };
         return u;
       })
     );
@@ -861,7 +909,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       addBalance,
       deductBalance,
       addToInventory,
-      addFriend,
+      followUser,
+      unfollowUser,
       sellItem,
       shipItem,
       updateAddress,

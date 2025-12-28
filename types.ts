@@ -15,7 +15,7 @@ export interface User {
   avatar: string;
   level: number;
   xp: number;
-  friends?: string[];
+  followers?: string[];
   lastDailyClaim?: number;
   shippingAddress?: ShippingAddress;
   isAdmin?: boolean;

@@ -19,18 +19,28 @@ const AVATAR_PRESETS = [
 ];
 
 export const Profile: React.FC = () => {
-  const { user, users, inventory, balance, sellItem, updateAddress, updateUserInfo, shipItem, logout, view, setView, addFriend } = useGame();
+  const { user, users, inventory, balance, sellItem, updateAddress, updateUserInfo, shipItem, logout, view, setView, followUser, unfollowUser } = useGame();
   const { playSound } = useSound();
   
   const [activeTab, setActiveTab] = useState<'inventory' | 'settings'>('inventory');
+  const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
 
   const selectedUserId = view.type === 'PROFILE' ? view.userId : undefined;
   const profileUser = selectedUserId ? users.find((u) => u.id === selectedUserId) : user;
   const isOwnProfile = !selectedUserId || selectedUserId === user.id;
   const displayUser = profileUser || user;
-  const viewedFriendIds = Array.isArray(displayUser.friends) ? displayUser.friends : [];
-  const viewedFriends = users.filter((u) => viewedFriendIds.includes(u.id));
-  const isFriend = !!(!isOwnProfile && profileUser && Array.isArray(user.friends) && user.friends.includes(profileUser.id));
+  const viewedFollowerIds = Array.isArray(displayUser.followers) ? displayUser.followers : [];
+  const viewedFollowers = users.filter((u) => viewedFollowerIds.includes(u.id));
+  const viewedFollowing = users.filter((u) => Array.isArray(u.followers) && u.followers.includes(displayUser.id));
+  const isFollowing = !!(!isOwnProfile && profileUser && Array.isArray(profileUser.followers) && profileUser.followers.includes(user.id));
+  const activePeople = activePeopleTab === 'followers' ? viewedFollowers : viewedFollowing;
+  const activePeopleLabel = activePeopleTab === 'followers' ? 'Followers' : 'Following';
+  const activePeopleEmptyMessage =
+    activePeopleTab === 'followers'
+      ? 'No followers yet. Be the first to follow!'
+      : isOwnProfile
+        ? 'You are not following anyone yet. Browse the leaderboard to start following players.'
+        : 'Not following anyone yet.';
 
   // --- SETTINGS FORM STATES ---
   const [profileForm, setProfileForm] = useState({
@@ -55,6 +65,10 @@ export const Profile: React.FC = () => {
           setAddressForm(user.shippingAddress);
       }
   }, [user, isOwnProfile]);
+
+  useEffect(() => {
+      setActivePeopleTab('followers');
+  }, [displayUser.id]);
 
   const totalInventoryValue = isOwnProfile 
     ? inventory.reduce((sum, item) => item.status === 'available' ? sum + item.price : sum, 0)
@@ -109,11 +123,16 @@ export const Profile: React.FC = () => {
       setPasswordForm({ current: '', new: '', confirm: '' });
   };
 
-  const handleAddFriendClick = async () => {
-      if (!profileUser || isFriend) return;
-      await addFriend(profileUser.id);
-      playSound('success');
-      alert("Friend added!");
+  const handleFollowClick = async () => {
+      if (!profileUser || isFollowing) return;
+      await followUser(profileUser.id);
+      alert("Now following this player!");
+  };
+
+  const handleUnfollowClick = async () => {
+      if (!profileUser || !isFollowing) return;
+      await unfollowUser(profileUser.id);
+      alert("You unfollowed this player.");
   };
 
   if (selectedUserId && !profileUser) {
@@ -159,16 +178,19 @@ export const Profile: React.FC = () => {
                     <h2 className="text-3xl font-black text-white mb-2">{displayUser.name}</h2>
                     {!isOwnProfile && (
                         <div className="flex items-center gap-3 justify-center md:justify-end">
-                            {isFriend ? (
-                                <div className="flex items-center gap-2 bg-green-600/10 text-green-400 px-4 py-2 rounded-lg border border-green-600/40 text-sm font-bold">
-                                    <UserCheck className="w-4 h-4" /> Friends
-                                </div>
+                            {isFollowing ? (
+                                <button 
+                                    onClick={handleUnfollowClick}
+                                    className="flex items-center gap-2 bg-[#0b0e14] text-gray-200 px-4 py-2 rounded-lg font-bold text-sm border border-gray-700 hover:border-red-500 hover:text-white transition-colors"
+                                >
+                                    <UserCheck className="w-4 h-4 text-green-400" /> Unfollow
+                                </button>
                             ) : (
                                 <button 
-                                    onClick={handleAddFriendClick}
+                                    onClick={handleFollowClick}
                                     className="flex items-center gap-2 bg-brand-purple text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-purple-600 transition-colors"
                                 >
-                                    <UserPlus className="w-4 h-4" /> Add Friend
+                                    <UserPlus className="w-4 h-4" /> Follow
                                 </button>
                             )}
                             <button 
@@ -195,8 +217,13 @@ export const Profile: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-2 bg-[#0b0e14] px-4 py-2 rounded-lg border border-gray-800">
                                 <UsersIcon className="w-4 h-4 text-purple-400" />
-                                <span className="text-gray-400 text-sm">Friends:</span>
-                                <span className="text-white font-bold">{viewedFriendIds.length}</span>
+                                <span className="text-gray-400 text-sm">Followers:</span>
+                                <span className="text-white font-bold">{viewedFollowerIds.length}</span>
+                            </div>
+                            <div className="flex items-center gap-2 bg-[#0b0e14] px-4 py-2 rounded-lg border border-gray-800">
+                                <UsersIcon className="w-4 h-4 text-blue-400" />
+                                <span className="text-gray-400 text-sm">Following:</span>
+                                <span className="text-white font-bold">{viewedFollowing.length}</span>
                             </div>
                         </>
                     ) : (
@@ -208,8 +235,13 @@ export const Profile: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-2 bg-[#0b0e14] px-4 py-2 rounded-lg border border-gray-800">
                                 <UsersIcon className="w-4 h-4 text-blue-400" />
-                                <span className="text-gray-400 text-sm">Friends:</span>
-                                <span className="text-white font-bold">{viewedFriendIds.length}</span>
+                                <span className="text-gray-400 text-sm">Followers:</span>
+                                <span className="text-white font-bold">{viewedFollowerIds.length}</span>
+                            </div>
+                            <div className="flex items-center gap-2 bg-[#0b0e14] px-4 py-2 rounded-lg border border-gray-800">
+                                <UsersIcon className="w-4 h-4 text-purple-400" />
+                                <span className="text-gray-400 text-sm">Following:</span>
+                                <span className="text-white font-bold">{viewedFollowing.length}</span>
                             </div>
                             <div className="flex items-center gap-2 bg-[#0b0e14] px-4 py-2 rounded-lg border border-gray-800">
                                 <Wallet className="w-4 h-4 text-green-500" />
@@ -246,7 +278,7 @@ export const Profile: React.FC = () => {
             <div className="lg:col-span-2 space-y-6">
                 <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
                     <h3 className="text-lg font-bold text-white mb-2">About {displayUser.name}</h3>
-                    <p className="text-gray-400 text-sm">Public view of this player. Add them as a friend to follow their drops and battles.</p>
+                    <p className="text-gray-400 text-sm">Public view of this player. Follow them to track their drops and battles.</p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
                         <div className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4 flex items-center gap-3">
                             <Wallet className="w-5 h-5 text-green-500" />
@@ -265,8 +297,15 @@ export const Profile: React.FC = () => {
                         <div className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4 flex items-center gap-3">
                             <UsersIcon className="w-5 h-5 text-blue-400" />
                             <div>
-                                <div className="text-xs text-gray-500 uppercase font-bold">Friends</div>
-                                <div className="text-white font-bold">{viewedFriendIds.length}</div>
+                                <div className="text-xs text-gray-500 uppercase font-bold">Followers</div>
+                                <div className="text-white font-bold">{viewedFollowerIds.length}</div>
+                            </div>
+                        </div>
+                        <div className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4 flex items-center gap-3">
+                            <UsersIcon className="w-5 h-5 text-purple-400" />
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase font-bold">Following</div>
+                                <div className="text-white font-bold">{viewedFollowing.length}</div>
                             </div>
                         </div>
                     </div>
@@ -274,24 +313,37 @@ export const Profile: React.FC = () => {
             </div>
             <div className="space-y-6">
                 <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-white flex items-center gap-2">
-                            <UsersIcon className="w-4 h-4 text-brand-purple" /> Friends
-                        </h3>
-                        <span className="text-xs text-gray-500 font-bold">{viewedFriendIds.length} total</span>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-2 text-white font-bold">
+                            <UsersIcon className="w-4 h-4 text-brand-purple" /> Community
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setActivePeopleTab('followers')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${activePeopleTab === 'followers' ? 'bg-brand-purple text-white border-brand-purple' : 'bg-[#0b0e14] text-gray-300 border-gray-700 hover:border-gray-500'}`}
+                            >
+                                Followers ({viewedFollowerIds.length})
+                            </button>
+                            <button
+                                onClick={() => setActivePeopleTab('following')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${activePeopleTab === 'following' ? 'bg-brand-purple text-white border-brand-purple' : 'bg-[#0b0e14] text-gray-300 border-gray-700 hover:border-gray-500'}`}
+                            >
+                                Following ({viewedFollowing.length})
+                            </button>
+                        </div>
                     </div>
-                    {viewedFriends.length ? (
+                    {activePeople.length ? (
                         <div className="flex flex-col gap-3">
-                            {viewedFriends.map(friend => (
+                            {activePeople.map(person => (
                                 <button 
-                                    key={friend.id}
-                                    onClick={() => setView({ type: 'PROFILE', userId: friend.id })}
+                                    key={person.id}
+                                    onClick={() => setView({ type: 'PROFILE', userId: person.id })}
                                     className="flex items-center gap-3 bg-[#0b0e14] hover:bg-[#141b29] border border-gray-800 rounded-lg p-3 text-left transition-colors"
                                 >
-                                    <img src={friend.avatar} className="w-10 h-10 rounded-lg border border-gray-700" />
+                                    <img src={person.avatar} className="w-10 h-10 rounded-lg border border-gray-700" />
                                     <div className="flex-1">
-                                        <div className="text-white font-bold text-sm">{friend.name}</div>
-                                        <div className="text-xs text-gray-500">Lvl {friend.level}</div>
+                                        <div className="text-white font-bold text-sm">{person.name}</div>
+                                        <div className="text-xs text-gray-500">Lvl {person.level}</div>
                                     </div>
                                     <div className="text-[11px] text-gray-500">View</div>
                                 </button>
@@ -299,7 +351,7 @@ export const Profile: React.FC = () => {
                         </div>
                     ) : (
                         <div className="text-center py-6 text-gray-500 bg-[#0b0e14] rounded-lg border border-dashed border-gray-800">
-                            No friends yet. Be the first to add them!
+                            {activePeopleEmptyMessage}
                         </div>
                     )}
                 </div>
@@ -398,11 +450,11 @@ export const Profile: React.FC = () => {
                         )}
                      </div>
 
-                     {/* Friends List */}
+                     {/* Followers List */}
                      <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-bold text-white flex items-center gap-2">
-                                <UsersIcon className="w-4 h-4 text-brand-purple" /> Friends
+                                <UsersIcon className="w-4 h-4 text-brand-purple" /> Followers
                             </h3>
                             <button 
                                 onClick={() => setView({ type: 'LEADERBOARD' })}
@@ -411,18 +463,18 @@ export const Profile: React.FC = () => {
                                 Find players
                             </button>
                         </div>
-                        {viewedFriends.length ? (
+                        {viewedFollowers.length ? (
                             <div className="flex flex-col gap-3">
-                                {viewedFriends.map(friend => (
+                                {viewedFollowers.map(follower => (
                                     <button 
-                                        key={friend.id}
-                                        onClick={() => setView({ type: 'PROFILE', userId: friend.id })}
+                                        key={follower.id}
+                                        onClick={() => setView({ type: 'PROFILE', userId: follower.id })}
                                         className="flex items-center gap-3 bg-[#0b0e14] hover:bg-[#141b29] border border-gray-800 rounded-lg p-3 text-left transition-colors"
                                     >
-                                        <img src={friend.avatar} className="w-9 h-9 rounded-lg border border-gray-700" />
+                                        <img src={follower.avatar} className="w-9 h-9 rounded-lg border border-gray-700" />
                                         <div className="flex-1">
-                                            <div className="text-white font-bold text-sm">{friend.name}</div>
-                                            <div className="text-xs text-gray-500">Lvl {friend.level}</div>
+                                            <div className="text-white font-bold text-sm">{follower.name}</div>
+                                            <div className="text-xs text-gray-500">Lvl {follower.level}</div>
                                         </div>
                                         <div className="text-[11px] text-gray-500">Profile</div>
                                     </button>
@@ -430,7 +482,7 @@ export const Profile: React.FC = () => {
                             </div>
                         ) : (
                             <div className="text-center py-6 text-gray-500 bg-[#0b0e14] rounded-lg border border-dashed border-gray-800">
-                                You have no friends yet. Add players from the leaderboard.
+                                You have no followers yet. Encourage players from the leaderboard to follow you.
                             </div>
                         )}
                      </div>
