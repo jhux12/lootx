@@ -234,7 +234,7 @@ export const Bonuses: React.FC = () => {
           </div>
           <div className="flex-1 text-center md:text-left">
               <h3 className="text-2xl font-bold text-white mb-2">Affiliate Program</h3>
-              <p className="text-gray-400 max-w-xl">Invite friends and earn a percentage of every bet they place. Forever. No limits on earnings.</p>
+              <p className="text-gray-400 max-w-xl">Invite followers and earn a percentage of every bet they place. Forever. No limits on earnings.</p>
           </div>
           <button className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-900/20" onClick={() => playSound('click')}>
               Create Code
