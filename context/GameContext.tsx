@@ -20,8 +20,28 @@ import {
 } from 'firebase/firestore';
 
 // Storage Keys (Fallback)
-const STORAGE_KEY_BOXES = 'lootx_boxes';
 const STORAGE_KEY_ITEMS = 'lootx_items'; // New key for items
+
+const safeReadLocalStorage = <T,>(key: string, fallback: T): T => {
+  try {
+    const storedValue = localStorage.getItem(key);
+    if (storedValue) {
+      return JSON.parse(storedValue) as T;
+    }
+  } catch (error) {
+    console.warn(`Unable to read "${key}" from localStorage`, error);
+  }
+
+  return fallback;
+};
+
+const safeWriteLocalStorage = (key: string, value: unknown) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.warn(`Unable to write "${key}" to localStorage`, error);
+  }
+};
 
 type PersistUserData = Partial<{
   balance: number;
@@ -170,21 +190,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Initialize Items
   const [items, setItems] = useState<CaseItem[]>(() => {
-      const storedItems = localStorage.getItem(STORAGE_KEY_ITEMS);
-      if (storedItems) {
-          return JSON.parse(storedItems);
-      }
-      return CASE_ITEMS;
+      return safeReadLocalStorage<CaseItem[]>(STORAGE_KEY_ITEMS, CASE_ITEMS);
   });
   
   // 2. Initialize Boxes
-  const [boxes, setBoxes] = useState<MysteryBox[]>(() => {
-      const storedBoxes = localStorage.getItem(STORAGE_KEY_BOXES);
-      if (storedBoxes) {
-          return JSON.parse(storedBoxes);
-      }
-      return [];
-  });
+  const [boxes, setBoxes] = useState<MysteryBox[]>([]);
   const upsertAdminBox = (box: MysteryBox) => {
     setBoxes(prev => {
       const userCreated = prev.filter(b => b.isUserCreated);
@@ -299,14 +309,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // -- PERSISTENCE EFFECTS (LOCAL STORAGE FALLBACK / SYNC) --
 
-  // Save Boxes whenever they change
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_BOXES, JSON.stringify(boxes));
-  }, [boxes]);
-
   // Save Items whenever they change
   useEffect(() => {
-      localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(items));
+      safeWriteLocalStorage(STORAGE_KEY_ITEMS, items);
   }, [items]);
 
   // Battles Simulation Logic (Mocked Realtime)
