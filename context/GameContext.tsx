@@ -185,6 +185,23 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return [];
   });
+  const upsertAdminBox = (box: MysteryBox) => {
+    setBoxes(prev => {
+      const userCreated = prev.filter(b => b.isUserCreated);
+      const adminBoxes = prev.filter(b => !b.isUserCreated);
+      const filtered = adminBoxes.filter(b => b.id !== box.id);
+      const nextAdminBoxes = [...filtered, { ...box, isUserCreated: box.isUserCreated ?? false }].sort((a, b) => a.price - b.price);
+      return [...userCreated, ...nextAdminBoxes];
+    });
+  };
+
+  const removeAdminBox = (boxId: string) => {
+    setBoxes(prev => {
+      const userCreated = prev.filter(b => b.isUserCreated);
+      const adminBoxes = prev.filter(b => !b.isUserCreated && b.id !== boxId);
+      return [...userCreated, ...adminBoxes];
+    });
+  };
 
   const [battles, setBattles] = useState<Battle[]>([]);
 
@@ -542,12 +559,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const createBox = async (box: MysteryBox) => {
       const { id, ...boxData } = box;
-      if (id) {
-          await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
-          return;
+      let boxId = id;
+
+      try {
+          if (id) {
+              await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
+              boxId = id;
+          } else {
+              const docRef = await addDoc(collection(db, 'boxes'), boxData);
+              boxId = docRef.id;
+          }
+      } catch (error) {
+          console.error('Failed to save box to Firebase', error);
+          boxId = boxId || `local-box-${Date.now()}`;
       }
 
-      await addDoc(collection(db, 'boxes'), boxData);
+      upsertAdminBox({ ...boxData, id: boxId });
   };
 
   const createUserBox = async (box: MysteryBox) => {
@@ -557,11 +584,28 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateBox = async (updatedBox: MysteryBox) => {
       const { id, ...boxData } = updatedBox;
-      await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
+      if (!id) {
+          console.warn('Attempted to update a box without an id');
+          return;
+      }
+
+      try {
+          await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
+      } catch (error) {
+          console.error('Failed to update box in Firebase', error);
+      }
+
+      upsertAdminBox({ ...boxData, id });
   };
 
   const deleteBox = async (boxId: string) => {
-      await deleteDoc(doc(db, 'boxes', boxId));
+      try {
+          await deleteDoc(doc(db, 'boxes', boxId));
+      } catch (error) {
+          console.error('Failed to delete box from Firebase', error);
+      }
+
+      removeAdminBox(boxId);
   };
 
   const claimDaily = async () => {
