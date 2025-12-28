@@ -153,6 +153,33 @@ const persistUserData = async (payload: PersistUserData) => {
   await setDoc(userRef, payload, { merge: true });
 };
 
+const prepareBoxDataForFirestore = (box: MysteryBox) => {
+  const { id: _discardedId, isUserCreated: _discardedUserFlag, items, ...rest } = box;
+
+  const cleanedItems = (items ?? []).map(item => ({
+    id: item.id,
+    name: item.name,
+    price: Number(item.price ?? 0),
+    image: item.image ?? 'https://picsum.photos/300',
+    rarity: item.rarity ?? 'common',
+    chance: Number(item.chance ?? 0),
+    color: item.color ?? '#9ca3af'
+  }));
+
+  const data: Record<string, unknown> = {
+    ...rest,
+    items: cleanedItems
+  };
+
+  Object.keys(data).forEach((key) => {
+    if (data[key] === undefined) {
+      delete data[key];
+    }
+  });
+
+  return data;
+};
+
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
@@ -541,7 +568,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const createBox = async (box: MysteryBox) => {
-      const { id, ...boxData } = box;
+      const { id } = box;
+      const boxData = prepareBoxDataForFirestore(box);
       try {
           if (id) {
               await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
@@ -561,7 +589,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateBox = async (updatedBox: MysteryBox) => {
-      const { id, ...boxData } = updatedBox;
+      const { id } = updatedBox;
+      const boxData = prepareBoxDataForFirestore(updatedBox);
       try {
           await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
       } catch (error) {
