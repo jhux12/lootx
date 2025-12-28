@@ -87,9 +87,9 @@ interface GameContextType {
   createItem: (item: CaseItem) => void;
   updateItem: (item: CaseItem) => void;
   deleteItem: (itemId: string) => void;
-  createBox: (box: MysteryBox) => void; // Admin
+  createBox: (box: MysteryBox) => Promise<void>; // Admin
   createUserBox: (box: MysteryBox) => void; // User Custom
-  updateBox: (box: MysteryBox) => void;
+  updateBox: (box: MysteryBox) => Promise<void>;
   deleteBox: (boxId: string) => Promise<void>;
   claimDaily: () => void;
 }
@@ -171,6 +171,33 @@ const persistUserData = async (payload: PersistUserData) => {
   if (!currentUser) return;
   const userRef = getUserRef(currentUser.uid);
   await setDoc(userRef, payload, { merge: true });
+};
+
+const prepareBoxDataForFirestore = (box: MysteryBox) => {
+  const { id: _discardedId, isUserCreated: _discardedUserFlag, items, ...rest } = box;
+
+  const cleanedItems = (items ?? []).map(item => ({
+    id: item.id,
+    name: item.name,
+    price: Number(item.price ?? 0),
+    image: item.image ?? 'https://picsum.photos/300',
+    rarity: item.rarity ?? 'common',
+    chance: Number(item.chance ?? 0),
+    color: item.color ?? '#9ca3af'
+  }));
+
+  const data: Record<string, unknown> = {
+    ...rest,
+    items: cleanedItems
+  };
+
+  Object.keys(data).forEach((key) => {
+    if (data[key] === undefined) {
+      delete data[key];
+    }
+  });
+
+  return data;
 };
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -563,6 +590,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const createBox = async (box: MysteryBox) => {
+
       const { id, ...boxData } = box;
       let boxId = id;
 
@@ -588,6 +616,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateBox = async (updatedBox: MysteryBox) => {
+
       const { id, ...boxData } = updatedBox;
       if (!id) {
           console.warn('Attempted to update a box without an id');
