@@ -12,12 +12,12 @@ import { Bonuses } from './components/Bonuses';
 import { AdminPanel } from './components/AdminPanel';
 import { LoginModal } from './components/LoginModal';
 import { CustomCaseCreator } from './components/CustomCaseCreator';
-import { AIChatBot } from './components/AIChatBot';
 import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider } from './context/SoundContext';
 import { ShieldAlert, MessageCircle } from 'lucide-react';
+import { MobileChatModal } from './components/MobileChatModal';
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC = () => {
@@ -150,11 +150,10 @@ function App() {
             <MessageCircle className="w-5 h-5" />
           </button>
 
-          {/* Mobile Support Chat Modal */}
-          <AIChatBot 
+          {/* Mobile Chat Modal */}
+          <MobileChatModal 
             isOpen={showSupportChat} 
             onClose={() => setShowSupportChat(false)} 
-            variant="modal" 
           />
         </div>
       </GameProvider>
