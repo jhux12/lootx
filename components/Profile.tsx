@@ -329,38 +329,38 @@ export const Profile: React.FC = () => {
                         </div>
                     )}
                 </div>
-                {isOwnProfile && (
-                  <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
-                      <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-bold text-white flex items-center gap-2">
-                              <UsersIcon className="w-4 h-4 text-blue-400" /> Following
-                          </h3>
-                          <span className="text-xs text-gray-500 font-bold">{viewedFollowing.length} total</span>
-                      </div>
-                      {viewedFollowing.length ? (
-                          <div className="flex flex-col gap-3">
-                              {viewedFollowing.map(followingUser => (
-                                  <button 
-                                      key={followingUser.id}
-                                      onClick={() => setView({ type: 'PROFILE', userId: followingUser.id })}
-                                      className="flex items-center gap-3 bg-[#0b0e14] hover:bg-[#141b29] border border-gray-800 rounded-lg p-3 text-left transition-colors"
-                                  >
-                                      <img src={followingUser.avatar} className="w-10 h-10 rounded-lg border border-gray-700" />
-                                      <div className="flex-1">
-                                          <div className="text-white font-bold text-sm">{followingUser.name}</div>
-                                          <div className="text-xs text-gray-500">Lvl {followingUser.level}</div>
-                                      </div>
-                                      <div className="text-[11px] text-gray-500">View</div>
-                                  </button>
-                              ))}
-                          </div>
-                      ) : (
-                          <div className="text-center py-6 text-gray-500 bg-[#0b0e14] rounded-lg border border-dashed border-gray-800">
-                              You are not following anyone yet. Browse the leaderboard to start following players.
-                          </div>
-                      )}
-                  </div>
-                )}
+                <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-white flex items-center gap-2">
+                            <UsersIcon className="w-4 h-4 text-blue-400" /> Following
+                        </h3>
+                        <span className="text-xs text-gray-500 font-bold">{viewedFollowing.length} total</span>
+                    </div>
+                    {viewedFollowing.length ? (
+                        <div className="flex flex-col gap-3">
+                            {viewedFollowing.map(followingUser => (
+                                <button 
+                                    key={followingUser.id}
+                                    onClick={() => setView({ type: 'PROFILE', userId: followingUser.id })}
+                                    className="flex items-center gap-3 bg-[#0b0e14] hover:bg-[#141b29] border border-gray-800 rounded-lg p-3 text-left transition-colors"
+                                >
+                                    <img src={followingUser.avatar} className="w-10 h-10 rounded-lg border border-gray-700" />
+                                    <div className="flex-1">
+                                        <div className="text-white font-bold text-sm">{followingUser.name}</div>
+                                        <div className="text-xs text-gray-500">Lvl {followingUser.level}</div>
+                                    </div>
+                                    <div className="text-[11px] text-gray-500">View</div>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6 text-gray-500 bg-[#0b0e14] rounded-lg border border-dashed border-gray-800">
+                            {isOwnProfile
+                              ? 'You are not following anyone yet. Browse the leaderboard to start following players.'
+                              : 'Not following anyone yet.'}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
       )}
