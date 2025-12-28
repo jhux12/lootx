@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, InventoryItem, CaseItem, ViewState, Battle, MysteryBox, ShippingAddress } from '../types';
-import { MYSTERY_BOXES, CASE_ITEMS } from '../constants';
+import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { 
   User as FirebaseUser,
@@ -10,7 +10,9 @@ import {
   signOut
 } from 'firebase/auth';
 import { 
+  addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -181,7 +183,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (storedBoxes) {
           return JSON.parse(storedBoxes);
       }
-      return MYSTERY_BOXES.sort((a,b) => a.price - b.price);
+      return [];
   });
 
   const [battles, setBattles] = useState<Battle[]>([]);
@@ -230,6 +232,49 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUsers(loaded);
     }, (error) => {
       console.error('Failed to load users from Firebase', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const boxesRef = collection(db, 'boxes');
+    const unsubscribe = onSnapshot(boxesRef, (snapshot) => {
+      const firebaseBoxes = snapshot.docs
+        .map((docSnap) => {
+          const data = docSnap.data();
+          const items = Array.isArray(data.items) ? data.items.map((item: any, index: number) => {
+            const rarity = (item.rarity ?? 'common') as CaseItem['rarity'];
+            return {
+              id: item.id ?? `${docSnap.id}-item-${index}`,
+              name: item.name ?? 'Mystery Item',
+              price: Number(item.price ?? 0),
+              image: item.image ?? 'https://picsum.photos/300',
+              rarity,
+              chance: Number(item.chance ?? 0),
+              color: item.color ?? '#9ca3af'
+            };
+          }) : [];
+
+          return {
+            id: docSnap.id,
+            name: data.name ?? 'Mystery Box',
+            price: Number(data.price ?? 0),
+            image: data.image ?? 'https://picsum.photos/300',
+            accentColor: data.accentColor ?? '#3b82f6',
+            tag: data.tag as MysteryBox['tag'],
+            isDaily: data.isDaily ?? false,
+            items
+          } as MysteryBox;
+        })
+        .sort((a, b) => a.price - b.price);
+
+      setBoxes(prev => {
+        const userCreated = prev.filter(b => b.isUserCreated);
+        return [...userCreated, ...firebaseBoxes];
+      });
+    }, (error) => {
+      console.error('Failed to load boxes from Firebase', error);
     });
 
     return () => unsubscribe();
@@ -497,8 +542,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const createBox = async (box: MysteryBox) => {
       const { id, ...boxData } = box;
-      const newBox = { ...boxData, id: id || `box-${Date.now()}` } as MysteryBox;
-      setBoxes(prev => [...prev, newBox]);
+      if (id) {
+          await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
+          return;
+      }
+
+      await addDoc(collection(db, 'boxes'), boxData);
   };
 
   const createUserBox = async (box: MysteryBox) => {
@@ -507,11 +556,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateBox = async (updatedBox: MysteryBox) => {
-      setBoxes(prev => prev.map(b => b.id === updatedBox.id ? updatedBox : b));
+      const { id, ...boxData } = updatedBox;
+      await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
   };
 
   const deleteBox = async (boxId: string) => {
-      setBoxes(prev => prev.filter(b => b.id !== boxId));
+      await deleteDoc(doc(db, 'boxes', boxId));
   };
 
   const claimDaily = async () => {
