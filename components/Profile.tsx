@@ -23,6 +23,7 @@ export const Profile: React.FC = () => {
   const { playSound } = useSound();
   
   const [activeTab, setActiveTab] = useState<'inventory' | 'settings'>('inventory');
+  const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
 
   const selectedUserId = view.type === 'PROFILE' ? view.userId : undefined;
   const profileUser = selectedUserId ? users.find((u) => u.id === selectedUserId) : user;
@@ -32,6 +33,14 @@ export const Profile: React.FC = () => {
   const viewedFollowers = users.filter((u) => viewedFollowerIds.includes(u.id));
   const viewedFollowing = users.filter((u) => Array.isArray(u.followers) && u.followers.includes(displayUser.id));
   const isFollowing = !!(!isOwnProfile && profileUser && Array.isArray(profileUser.followers) && profileUser.followers.includes(user.id));
+  const activePeople = activePeopleTab === 'followers' ? viewedFollowers : viewedFollowing;
+  const activePeopleLabel = activePeopleTab === 'followers' ? 'Followers' : 'Following';
+  const activePeopleEmptyMessage =
+    activePeopleTab === 'followers'
+      ? 'No followers yet. Be the first to follow!'
+      : isOwnProfile
+        ? 'You are not following anyone yet. Browse the leaderboard to start following players.'
+        : 'Not following anyone yet.';
 
   // --- SETTINGS FORM STATES ---
   const [profileForm, setProfileForm] = useState({
@@ -56,6 +65,10 @@ export const Profile: React.FC = () => {
           setAddressForm(user.shippingAddress);
       }
   }, [user, isOwnProfile]);
+
+  useEffect(() => {
+      setActivePeopleTab('followers');
+  }, [displayUser.id]);
 
   const totalInventoryValue = isOwnProfile 
     ? inventory.reduce((sum, item) => item.status === 'available' ? sum + item.price : sum, 0)
@@ -300,24 +313,37 @@ export const Profile: React.FC = () => {
             </div>
             <div className="space-y-6">
                 <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-white flex items-center gap-2">
-                            <UsersIcon className="w-4 h-4 text-brand-purple" /> Followers
-                        </h3>
-                        <span className="text-xs text-gray-500 font-bold">{viewedFollowerIds.length} total</span>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-2 text-white font-bold">
+                            <UsersIcon className="w-4 h-4 text-brand-purple" /> Community
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setActivePeopleTab('followers')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${activePeopleTab === 'followers' ? 'bg-brand-purple text-white border-brand-purple' : 'bg-[#0b0e14] text-gray-300 border-gray-700 hover:border-gray-500'}`}
+                            >
+                                Followers ({viewedFollowerIds.length})
+                            </button>
+                            <button
+                                onClick={() => setActivePeopleTab('following')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${activePeopleTab === 'following' ? 'bg-brand-purple text-white border-brand-purple' : 'bg-[#0b0e14] text-gray-300 border-gray-700 hover:border-gray-500'}`}
+                            >
+                                Following ({viewedFollowing.length})
+                            </button>
+                        </div>
                     </div>
-                    {viewedFollowers.length ? (
+                    {activePeople.length ? (
                         <div className="flex flex-col gap-3">
-                            {viewedFollowers.map(follower => (
+                            {activePeople.map(person => (
                                 <button 
-                                    key={follower.id}
-                                    onClick={() => setView({ type: 'PROFILE', userId: follower.id })}
+                                    key={person.id}
+                                    onClick={() => setView({ type: 'PROFILE', userId: person.id })}
                                     className="flex items-center gap-3 bg-[#0b0e14] hover:bg-[#141b29] border border-gray-800 rounded-lg p-3 text-left transition-colors"
                                 >
-                                    <img src={follower.avatar} className="w-10 h-10 rounded-lg border border-gray-700" />
+                                    <img src={person.avatar} className="w-10 h-10 rounded-lg border border-gray-700" />
                                     <div className="flex-1">
-                                        <div className="text-white font-bold text-sm">{follower.name}</div>
-                                        <div className="text-xs text-gray-500">Lvl {follower.level}</div>
+                                        <div className="text-white font-bold text-sm">{person.name}</div>
+                                        <div className="text-xs text-gray-500">Lvl {person.level}</div>
                                     </div>
                                     <div className="text-[11px] text-gray-500">View</div>
                                 </button>
@@ -325,39 +351,7 @@ export const Profile: React.FC = () => {
                         </div>
                     ) : (
                         <div className="text-center py-6 text-gray-500 bg-[#0b0e14] rounded-lg border border-dashed border-gray-800">
-                            No followers yet. Be the first to follow!
-                        </div>
-                    )}
-                </div>
-                <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-white flex items-center gap-2">
-                            <UsersIcon className="w-4 h-4 text-blue-400" /> Following
-                        </h3>
-                        <span className="text-xs text-gray-500 font-bold">{viewedFollowing.length} total</span>
-                    </div>
-                    {viewedFollowing.length ? (
-                        <div className="flex flex-col gap-3">
-                            {viewedFollowing.map(followingUser => (
-                                <button 
-                                    key={followingUser.id}
-                                    onClick={() => setView({ type: 'PROFILE', userId: followingUser.id })}
-                                    className="flex items-center gap-3 bg-[#0b0e14] hover:bg-[#141b29] border border-gray-800 rounded-lg p-3 text-left transition-colors"
-                                >
-                                    <img src={followingUser.avatar} className="w-10 h-10 rounded-lg border border-gray-700" />
-                                    <div className="flex-1">
-                                        <div className="text-white font-bold text-sm">{followingUser.name}</div>
-                                        <div className="text-xs text-gray-500">Lvl {followingUser.level}</div>
-                                    </div>
-                                    <div className="text-[11px] text-gray-500">View</div>
-                                </button>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-6 text-gray-500 bg-[#0b0e14] rounded-lg border border-dashed border-gray-800">
-                            {isOwnProfile
-                              ? 'You are not following anyone yet. Browse the leaderboard to start following players.'
-                              : 'Not following anyone yet.'}
+                            {activePeopleEmptyMessage}
                         </div>
                     )}
                 </div>
