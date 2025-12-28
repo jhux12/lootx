@@ -8,6 +8,8 @@ interface Message {
   text: string;
 }
 
+const FALLBACK_GEMINI_API_KEY = "AIzaSyDHNb6DFcV_72EC2jYlk-F0quunMem9s10";
+
 export const AIChatBot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -29,10 +31,9 @@ export const AIChatBot: React.FC = () => {
   useEffect(() => {
       // Initialize Gemini Chat
       try {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-        if (!apiKey) {
-            console.warn("Gemini API Key is missing");
-            return;
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY || FALLBACK_GEMINI_API_KEY;
+        if (!import.meta.env.VITE_GEMINI_API_KEY) {
+            console.warn("Gemini API Key is missing from environment; using fallback key");
         }
         const ai = new GoogleGenAI({ apiKey });
         const chat = ai.chats.create({
