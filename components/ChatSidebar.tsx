@@ -10,7 +10,7 @@ export const ChatSidebar: React.FC = () => {
   const [messageText, setMessageText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playSound } = useSound();
-  const { isAuthenticated } = useGame();
+   const { isAuthenticated, setView } = useGame();
   const { messages, sendMessage, isSending, notice, isChatDisabled, warningsRemaining } = useSiteChat();
 
   // Auto scroll to bottom
@@ -25,6 +25,11 @@ export const ChatSidebar: React.FC = () => {
     playSound('click');
     await sendMessage(messageText);
     setMessageText('');
+  };
+
+  const openProfile = (userId: string) => {
+    playSound('click');
+    setView({ type: 'PROFILE', userId });
   };
 
   const TabButton: React.FC<{ id: 'chat' | 'support' | 'users'; icon: React.ReactNode; label: string }> = ({ id, icon, label }) => (
@@ -89,13 +94,17 @@ export const ChatSidebar: React.FC = () => {
                 <img 
                     src={msg.user.avatar} 
                     alt={msg.user.name} 
-                    className="w-8 h-8 rounded-lg mt-1 border border-gray-700" 
+                    className="w-8 h-8 rounded-lg mt-1 border border-gray-700 cursor-pointer" 
+                    onClick={() => openProfile(msg.user.id)}
                 />
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                        <span className={`text-xs font-bold ${msg.user.name === 'ZEUS' ? 'text-green-400' : 'text-gray-300'} hover:underline cursor-pointer`}>
+                        <button 
+                            onClick={() => openProfile(msg.user.id)}
+                            className={`text-xs font-bold ${msg.user.name === 'ZEUS' ? 'text-green-400' : 'text-gray-300'} hover:underline cursor-pointer`}
+                        >
                             {msg.user.name}
-                        </span>
+                        </button>
                         <span className="text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
                             {msg.timestamp}
                         </span>

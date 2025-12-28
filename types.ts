@@ -15,6 +15,7 @@ export interface User {
   avatar: string;
   level: number;
   xp: number;
+  followers?: string[];
   lastDailyClaim?: number;
   shippingAddress?: ShippingAddress;
   isAdmin?: boolean;
@@ -97,7 +98,7 @@ export interface LiveDrop {
 
 export type ViewState = 
   | { type: 'HOME' }
-  | { type: 'PROFILE' }
+  | { type: 'PROFILE'; userId?: string }
   | { type: 'BONUSES' }
   | { type: 'ADMIN' }
   | { type: 'LEADERBOARD' }
