@@ -71,12 +71,18 @@ export const AdminPanel: React.FC = () => {
           color: newItem.color || '#9ca3af'
       };
 
-      if (editingItemId) {
-          updateItem(item);
-          alert("Item Updated!");
-      } else {
-          createItem(item);
-          alert("Item Created!");
+      try {
+          if (editingItemId) {
+              updateItem(item);
+              alert("Item Updated!");
+          } else {
+              createItem(item);
+              alert("Item Created!");
+          }
+      } catch (error) {
+          console.error('Failed to save item', error);
+          alert("Failed to save item. Please try again.");
+          return;
       }
       resetItemForm();
   };
@@ -95,8 +101,15 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleDeleteItem = (id: string) => {
-      if (confirm("Are you sure you want to delete this item? It will be removed from future box selections, but existing boxes may still reference it.")) {
+      if (!confirm("Are you sure you want to delete this item? It will be removed from future box selections, but existing boxes may still reference it.")) {
+          return;
+      }
+
+      try {
           deleteItem(id);
+      } catch (error) {
+          console.error('Failed to delete item', error);
+          alert("Failed to delete item. Please try again.");
       }
   };
 
@@ -144,7 +157,7 @@ export const AdminPanel: React.FC = () => {
       setNewBox(prev => ({ ...prev, price: parseFloat(calculatedPrice.toFixed(2)) }));
   };
 
-  const handleSaveBox = () => {
+  const handleSaveBox = async () => {
       if(!newBox.name || !newBox.price) {
           alert("Please fill in box details");
           return;
@@ -178,12 +191,18 @@ export const AdminPanel: React.FC = () => {
           items: boxItems
       };
 
-      if (editingBoxId) {
-          updateBox(box);
-          alert("Box Updated!");
-      } else {
-          createBox(box);
-          alert("Box Created in Firebase!");
+      try {
+          if (editingBoxId) {
+              await updateBox(box);
+              alert("Box Updated!");
+          } else {
+              await createBox(box);
+              alert("Box Created in Firebase!");
+          }
+      } catch (error) {
+          console.error('Failed to save box', error);
+          alert("Failed to save box. Please try again.");
+          return;
       }
 
       resetBoxForm();
