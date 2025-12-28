@@ -19,7 +19,7 @@ const AVATAR_PRESETS = [
 ];
 
 export const Profile: React.FC = () => {
-  const { user, users, inventory, balance, sellItem, updateAddress, updateUserInfo, shipItem, logout, view, setView, followUser } = useGame();
+  const { user, users, inventory, balance, sellItem, updateAddress, updateUserInfo, shipItem, logout, view, setView, followUser, unfollowUser } = useGame();
   const { playSound } = useSound();
   
   const [activeTab, setActiveTab] = useState<'inventory' | 'settings'>('inventory');
@@ -116,6 +116,13 @@ export const Profile: React.FC = () => {
       alert("Now following this player!");
   };
 
+  const handleUnfollowClick = async () => {
+      if (!profileUser || !isFollowing) return;
+      await unfollowUser(profileUser.id);
+      playSound('success');
+      alert("You unfollowed this player.");
+  };
+
   if (selectedUserId && !profileUser) {
       return (
         <div className="max-w-4xl mx-auto p-6">
@@ -160,9 +167,12 @@ export const Profile: React.FC = () => {
                     {!isOwnProfile && (
                         <div className="flex items-center gap-3 justify-center md:justify-end">
                             {isFollowing ? (
-                                <div className="flex items-center gap-2 bg-green-600/10 text-green-400 px-4 py-2 rounded-lg border border-green-600/40 text-sm font-bold">
-                                    <UserCheck className="w-4 h-4" /> Following
-                                </div>
+                                <button 
+                                    onClick={handleUnfollowClick}
+                                    className="flex items-center gap-2 bg-[#0b0e14] text-gray-200 px-4 py-2 rounded-lg font-bold text-sm border border-gray-700 hover:border-red-500 hover:text-white transition-colors"
+                                >
+                                    <UserCheck className="w-4 h-4 text-green-400" /> Unfollow
+                                </button>
                             ) : (
                                 <button 
                                     onClick={handleFollowClick}

@@ -109,6 +109,7 @@ interface GameContextType {
   deductBalance: (amount: number) => boolean;
   addToInventory: (item: CaseItem) => void;
   followUser: (targetUserId: string) => Promise<void>;
+  unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string, value: number) => void;
   shipItem: (instanceId: string) => void;
   updateAddress: (address: ShippingAddress) => void;
@@ -595,6 +596,43 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
   };
 
+  const unfollowUser = async (targetUserId: string) => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (targetUserId === user.id) return;
+
+    const targetUser = users.find((u) => u.id === targetUserId);
+    if (!targetUser) {
+      console.warn('Attempted to unfollow unknown user');
+      return;
+    }
+
+    const targetFollowers = Array.isArray(targetUser.followers)
+      ? targetUser.followers
+      : Array.isArray(targetUser.friends)
+        ? targetUser.friends
+        : [];
+    if (!targetFollowers.includes(user.id)) return;
+
+    const updatedTarget = targetFollowers.filter((id) => id !== user.id);
+
+    try {
+      await setDoc(getUserRef(targetUserId), { followers: updatedTarget }, { merge: true });
+    } catch (error) {
+      console.error('Failed to update followers in Firebase', error);
+    }
+
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === targetUserId) return { ...u, followers: updatedTarget };
+        return u;
+      })
+    );
+  };
+
   const sellItem = async (instanceId: string, value: number) => {
     const itemToSell = inventory.find(i => i.instanceId === instanceId);
     if (!itemToSell) return;
@@ -872,6 +910,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       deductBalance,
       addToInventory,
       followUser,
+      unfollowUser,
       sellItem,
       shipItem,
       updateAddress,
