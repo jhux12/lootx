@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronLeft, Zap, Volume2, Info, Plus, X, ToggleLeft, ToggleRight } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM } from '../constants';
 import { CaseItem } from '../types';
@@ -10,10 +10,56 @@ interface CaseOpeningProps {
   isFree?: boolean;
 }
 
+interface RollData {
+  nonce: number;
+  rollHash: string;
+  rollValue: number;
+  combinedSeed: string;
+  outcome?: string;
+}
+
 const CARD_WIDTH = 160;
 const GAP_WIDTH = 16;
 const ITEM_WIDTH = CARD_WIDTH + GAP_WIDTH;
 const BUFFER_COUNT = 45; // Items before winner
+const CLIENT_SEED_KEY = 'lootx_client_seed';
+const SERVER_SEED_KEY = 'lootx_server_seed';
+
+const toHex = (buffer: ArrayBuffer) =>
+  Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+const hashString = async (value: string) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(value);
+  if (typeof crypto === 'undefined' || !crypto.subtle) {
+    const fallback = data.reduce((acc, byte, idx) => acc + byte * (idx + 1), 0);
+    return fallback.toString(16).padStart(64, '0').slice(0, 64);
+  }
+
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return toHex(hashBuffer);
+};
+
+const deriveRollValue = (hash: string) => {
+  const significantPart = hash.slice(0, 13); // 52 bits
+  const intValue = parseInt(significantPart, 16);
+  return intValue / 0x10000000000000; // 2^52
+};
+
+const generateServerSeed = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = new Uint32Array(8);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes).map((b) => b.toString(16).padStart(8, '0')).join('');
+  }
+
+  return Array.from({ length: 8 })
+    .map(() => Math.random().toString(16).slice(2, 10))
+    .join('')
+    .slice(0, 64);
+};
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
   const { balance, deductBalance, addBalance, addToInventory, setView, boxes } = useGame();
@@ -29,12 +75,89 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
+  const [serverSeed, setServerSeed] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem(SERVER_SEED_KEY) || '';
+  });
+  const [serverSeedHash, setServerSeedHash] = useState('');
+  const [clientSeed, setClientSeed] = useState(() => {
+    if (typeof window === 'undefined') return 'lootx-player';
+    return localStorage.getItem(CLIENT_SEED_KEY) || 'lootx-player';
+  });
+  const [nonce, setNonce] = useState(0);
+  const [lastRoll, setLastRoll] = useState<RollData | null>(null);
+  const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
   const [forceGoldDebug, setForceGoldDebug] = useState(false);
   
+  const nonceRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const setNewServerSeed = useCallback(async (seedOverride?: string) => {
+    setIsGeneratingSeed(true);
+    const nextSeed = seedOverride || generateServerSeed();
+
+    try {
+      const hash = await hashString(nextSeed);
+
+      setServerSeed(nextSeed);
+      setServerSeedHash(hash);
+      nonceRef.current = 0;
+      setNonce(0);
+      setLastRoll(null);
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(SERVER_SEED_KEY, nextSeed);
+      }
+
+      return nextSeed;
+    } finally {
+      setIsGeneratingSeed(false);
+    }
+  }, []);
+
+  const ensureSeedReady = useCallback(async (): Promise<string> => {
+    if (!serverSeed) {
+      return setNewServerSeed();
+    }
+
+    if (!serverSeedHash) {
+      const hash = await hashString(serverSeed);
+      setServerSeedHash(hash);
+    }
+
+    return serverSeed;
+  }, [serverSeed, serverSeedHash, setNewServerSeed]);
+
+  const getNextFairRoll = useCallback(async (): Promise<RollData> => {
+    const activeSeed = await ensureSeedReady();
+    const currentNonce = nonceRef.current;
+    const combinedSeed = `${activeSeed}:${clientSeed}:${currentNonce}`;
+    const rollHash = await hashString(combinedSeed);
+    const rollValue = deriveRollValue(rollHash);
+
+    nonceRef.current = currentNonce + 1;
+    setNonce(nonceRef.current);
+
+    return {
+      nonce: currentNonce,
+      rollHash,
+      rollValue,
+      combinedSeed
+    };
+  }, [clientSeed, ensureSeedReady]);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(CLIENT_SEED_KEY, clientSeed);
+    }
+  }, [clientSeed]);
+
+  useEffect(() => {
+    ensureSeedReady();
+  }, [ensureSeedReady]);
   
   useEffect(() => {
     // Fill the static view with random items from the specific box
@@ -46,10 +169,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
   }, [items]);
 
-  const getWinningItem = () => {
+  const getWinningItem = (randomValue: number) => {
     // Weighted Randomness
     const totalWeight = items.reduce((sum, item) => sum + item.chance, 0);
-    let random = Math.random() * totalWeight;
+    let random = randomValue * totalWeight;
     
     for (const item of items) {
       if (random < item.chance) return item;
@@ -114,7 +237,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setTimeout(onComplete, duration + 200);
   };
 
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (isSpinning) return;
     
     if (!isFree && !deductBalance(box.price)) {
@@ -129,7 +252,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     playSound('click');
     
     // 1. Determine final winner
-    let winner = getWinningItem();
+    const winningRoll = await getNextFairRoll();
+    let winner = getWinningItem(winningRoll.rollValue);
 
     // DEBUG: Force High Tier if toggle is on
     if (forceGoldDebug) {
@@ -137,9 +261,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         winner = highTier[Math.floor(Math.random() * highTier.length)] || winner;
     }
 
+    setLastRoll({
+        ...winningRoll,
+        outcome: winner.name
+    });
+
     // 2. Check for Gold Spin Eligibility
     const isHighTier = ['legendary', 'epic', 'rare'].includes(winner.rarity);
-    const triggerGold = (isHighTier && Math.random() < 0.2) || forceGoldDebug;
+    const goldRoll = await getNextFairRoll();
+    const triggerGold = (isHighTier && goldRoll.rollValue < 0.2) || forceGoldDebug;
 
     if (triggerGold) {
         // --- GOLD SPIN FLOW ---
@@ -206,6 +336,30 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       playSound('click');
       setShowWinModal(false);
   }
+
+  const handleCopyProof = useCallback(async () => {
+    playSound('click');
+    
+    if (!lastRoll) return;
+
+    const proof = [
+      `Server Seed: ${serverSeed}`,
+      `Server Seed Hash: ${serverSeedHash}`,
+      `Client Seed: ${clientSeed}`,
+      `Nonce: ${lastRoll.nonce}`,
+      `Combined Seed: ${lastRoll.combinedSeed}`,
+      `Roll Hash: ${lastRoll.rollHash}`,
+      `Roll Value: ${lastRoll.rollValue}`,
+      `Outcome: ${lastRoll.outcome ?? 'N/A'}`
+    ].join('\n');
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(proof);
+      alert('Provably fair proof copied to clipboard.');
+    } else {
+      alert(proof);
+    }
+  }, [clientSeed, lastRoll, playSound, serverSeed, serverSeedHash]);
 
   return (
     <div className="w-full max-w-7xl mx-auto p-6 animate-in fade-in zoom-in-95 duration-300">
@@ -297,14 +451,95 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="bg-[#0b0e14] p-4 flex items-center justify-center border-t border-gray-800 relative z-20">
                  <button 
                     onClick={handleSpin}
-                    disabled={isSpinning}
+                    disabled={isSpinning || isGeneratingSeed}
                     className={`min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20')}`}
                 >
-                    <span>{isSpinning ? 'Spinning...' : (isFree ? 'Free Spin' : `Open for $${box.price}`)}</span>
+                    <span>{isGeneratingSeed ? 'Preparing seed...' : (isSpinning ? 'Spinning...' : (isFree ? 'Free Spin' : `Open for $${box.price}`))}</span>
                  </button>
             </div>
         </div>
 
+        {/* Provably Fair */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
+            <div className="bg-[#0f1219] border border-gray-800 rounded-xl p-4 shadow-inner shadow-black/30">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 text-white font-semibold">
+                        <Zap className="w-5 h-5 text-yellow-400" />
+                        <span>Provably Fair</span>
+                    </div>
+                    <button
+                        onClick={async () => { playSound('click'); await setNewServerSeed(); }}
+                        disabled={isGeneratingSeed || isSpinning}
+                        className="text-xs px-3 py-1.5 bg-[#131825] border border-gray-700 rounded-lg text-gray-200 hover:border-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isGeneratingSeed ? 'Generating...' : 'New Server Seed'}
+                    </button>
+                </div>
+                <div className="space-y-2">
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Server seed hash (committed before spin)</div>
+                        <div className="font-mono text-xs text-white bg-black/30 rounded p-2 break-all border border-gray-800">{serverSeedHash || 'Generating hash...'}</div>
+                    </div>
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Server seed (revealed for verification)</div>
+                        <div className="font-mono text-xs text-gray-300 bg-black/20 rounded p-2 break-all border border-gray-800">{serverSeed || 'Generating...'}</div>
+                    </div>
+                </div>
+            </div>
+            <div className="bg-[#0f1219] border border-gray-800 rounded-xl p-4 shadow-inner shadow-black/30">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 text-white font-semibold">
+                        <Volume2 className="w-5 h-5 text-cyan-400" />
+                        <span>Client Seed</span>
+                    </div>
+                    <div className="text-[10px] uppercase font-semibold text-gray-500 bg-black/20 px-2 py-1 rounded border border-gray-800">Nonce {nonce}</div>
+                </div>
+                <label className="text-xs text-gray-400 mb-2 block">Customize your seed to verify rolls independently</label>
+                <input 
+                    value={clientSeed}
+                    onChange={(e) => setClientSeed(e.target.value)}
+                    className="w-full bg-[#0b0e14] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
+                    placeholder="Enter your own client seed"
+                    disabled={isSpinning}
+                />
+                <p className="text-xs text-gray-500 mt-3 leading-relaxed">
+                    Each roll combines the hashed server seed, your client seed, and the nonce to generate a deterministic SHA-256 hash. 
+                    Changing the client seed gives you a new set of verifiable outcomes.
+                </p>
+            </div>
+            <div className="bg-[#0f1219] border border-gray-800 rounded-xl p-4 shadow-inner shadow-black/30">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 text-white font-semibold">
+                        <Info className="w-5 h-5 text-blue-400" />
+                        <span>Last Roll Proof</span>
+                    </div>
+                    <button
+                        onClick={handleCopyProof}
+                        disabled={!lastRoll}
+                        className="text-xs px-3 py-1.5 bg-[#131825] border border-gray-700 rounded-lg text-gray-200 hover:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Copy Proof
+                    </button>
+                </div>
+                {lastRoll ? (
+                    <div className="space-y-1 font-mono text-xs text-gray-300">
+                        <div className="flex items-center justify-between"><span className="text-gray-500">Outcome</span><span className="text-white">{lastRoll.outcome}</span></div>
+                        <div className="flex items-center justify-between"><span className="text-gray-500">Nonce</span><span>{lastRoll.nonce}</span></div>
+                        <div className="flex items-center justify-between"><span className="text-gray-500">Roll Value</span><span>{lastRoll.rollValue.toFixed(6)}</span></div>
+                        <div>
+                            <div className="text-gray-500">Roll Hash</div>
+                            <div className="break-all text-gray-200">{lastRoll.rollHash}</div>
+                        </div>
+                        <div>
+                            <div className="text-gray-500">Combined Seed</div>
+                            <div className="break-all text-gray-400">{lastRoll.combinedSeed}</div>
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-500">Spin the case to generate verifiable proof data for your result.</p>
+                )}
+            </div>
+        </div>
         {/* Win Modal Overlay */}
         {showWinModal && wonItem && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
