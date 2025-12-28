@@ -41,7 +41,6 @@ export const AdminPanel: React.FC = () => {
       price: 0,
       image: 'https://picsum.photos/300',
       accentColor: '#3b82f6',
-      tag: undefined,
       isDaily: false
   });
   const [houseEdge, setHouseEdge] = useState(5); // Default 5%
@@ -221,7 +220,7 @@ export const AdminPanel: React.FC = () => {
 
   const resetBoxForm = () => {
       setEditingBoxId(null);
-      setNewBox({ name: '', price: 0, image: 'https://picsum.photos/300', accentColor: '#3b82f6', tag: undefined, isDaily: false });
+      setNewBox({ name: '', price: 0, image: 'https://picsum.photos/300', accentColor: '#3b82f6', isDaily: false });
       setSelectedItems([]);
       setHouseEdge(5);
   };
