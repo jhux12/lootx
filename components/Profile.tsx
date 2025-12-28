@@ -30,6 +30,7 @@ export const Profile: React.FC = () => {
   const displayUser = profileUser || user;
   const viewedFollowerIds = Array.isArray(displayUser.followers) ? displayUser.followers : [];
   const viewedFollowers = users.filter((u) => viewedFollowerIds.includes(u.id));
+  const viewedFollowing = users.filter((u) => Array.isArray(u.followers) && u.followers.includes(displayUser.id));
   const isFollowing = !!(!isOwnProfile && profileUser && Array.isArray(profileUser.followers) && profileUser.followers.includes(user.id));
 
   // --- SETTINGS FORM STATES ---
@@ -112,14 +113,12 @@ export const Profile: React.FC = () => {
   const handleFollowClick = async () => {
       if (!profileUser || isFollowing) return;
       await followUser(profileUser.id);
-      playSound('success');
       alert("Now following this player!");
   };
 
   const handleUnfollowClick = async () => {
       if (!profileUser || !isFollowing) return;
       await unfollowUser(profileUser.id);
-      playSound('success');
       alert("You unfollowed this player.");
   };
 
@@ -208,6 +207,11 @@ export const Profile: React.FC = () => {
                                 <span className="text-gray-400 text-sm">Followers:</span>
                                 <span className="text-white font-bold">{viewedFollowerIds.length}</span>
                             </div>
+                            <div className="flex items-center gap-2 bg-[#0b0e14] px-4 py-2 rounded-lg border border-gray-800">
+                                <UsersIcon className="w-4 h-4 text-blue-400" />
+                                <span className="text-gray-400 text-sm">Following:</span>
+                                <span className="text-white font-bold">{viewedFollowing.length}</span>
+                            </div>
                         </>
                     ) : (
                         <>
@@ -220,6 +224,11 @@ export const Profile: React.FC = () => {
                                 <UsersIcon className="w-4 h-4 text-blue-400" />
                                 <span className="text-gray-400 text-sm">Followers:</span>
                                 <span className="text-white font-bold">{viewedFollowerIds.length}</span>
+                            </div>
+                            <div className="flex items-center gap-2 bg-[#0b0e14] px-4 py-2 rounded-lg border border-gray-800">
+                                <UsersIcon className="w-4 h-4 text-purple-400" />
+                                <span className="text-gray-400 text-sm">Following:</span>
+                                <span className="text-white font-bold">{viewedFollowing.length}</span>
                             </div>
                             <div className="flex items-center gap-2 bg-[#0b0e14] px-4 py-2 rounded-lg border border-gray-800">
                                 <Wallet className="w-4 h-4 text-green-500" />
@@ -279,6 +288,13 @@ export const Profile: React.FC = () => {
                                 <div className="text-white font-bold">{viewedFollowerIds.length}</div>
                             </div>
                         </div>
+                        <div className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4 flex items-center gap-3">
+                            <UsersIcon className="w-5 h-5 text-purple-400" />
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase font-bold">Following</div>
+                                <div className="text-white font-bold">{viewedFollowing.length}</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -313,6 +329,38 @@ export const Profile: React.FC = () => {
                         </div>
                     )}
                 </div>
+                {isOwnProfile && (
+                  <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="flex items-center justify-between mb-4">
+                          <h3 className="font-bold text-white flex items-center gap-2">
+                              <UsersIcon className="w-4 h-4 text-blue-400" /> Following
+                          </h3>
+                          <span className="text-xs text-gray-500 font-bold">{viewedFollowing.length} total</span>
+                      </div>
+                      {viewedFollowing.length ? (
+                          <div className="flex flex-col gap-3">
+                              {viewedFollowing.map(followingUser => (
+                                  <button 
+                                      key={followingUser.id}
+                                      onClick={() => setView({ type: 'PROFILE', userId: followingUser.id })}
+                                      className="flex items-center gap-3 bg-[#0b0e14] hover:bg-[#141b29] border border-gray-800 rounded-lg p-3 text-left transition-colors"
+                                  >
+                                      <img src={followingUser.avatar} className="w-10 h-10 rounded-lg border border-gray-700" />
+                                      <div className="flex-1">
+                                          <div className="text-white font-bold text-sm">{followingUser.name}</div>
+                                          <div className="text-xs text-gray-500">Lvl {followingUser.level}</div>
+                                      </div>
+                                      <div className="text-[11px] text-gray-500">View</div>
+                                  </button>
+                              ))}
+                          </div>
+                      ) : (
+                          <div className="text-center py-6 text-gray-500 bg-[#0b0e14] rounded-lg border border-dashed border-gray-800">
+                              You are not following anyone yet. Browse the leaderboard to start following players.
+                          </div>
+                      )}
+                  </div>
+                )}
             </div>
         </div>
       )}
