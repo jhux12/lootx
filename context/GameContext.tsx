@@ -568,19 +568,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const createBox = async (box: MysteryBox) => {
-      const { id } = box;
-      const boxData = prepareBoxDataForFirestore(box);
-      try {
-          if (id) {
-              await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
-              return;
-          }
 
-          await addDoc(collection(db, 'boxes'), boxData);
-      } catch (error) {
-          console.error('Failed to create box in Firebase', error);
-          throw error;
+      const { id, ...boxData } = box;
+      if (id) {
+          await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
+          return;
       }
+
+      await addDoc(collection(db, 'boxes'), boxData);
   };
 
   const createUserBox = async (box: MysteryBox) => {
@@ -589,23 +584,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateBox = async (updatedBox: MysteryBox) => {
-      const { id } = updatedBox;
-      const boxData = prepareBoxDataForFirestore(updatedBox);
-      try {
-          await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
-      } catch (error) {
-          console.error('Failed to update box in Firebase', error);
-          throw error;
-      }
+
+      const { id, ...boxData } = updatedBox;
+      await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
   };
 
   const deleteBox = async (boxId: string) => {
-      try {
-          await deleteDoc(doc(db, 'boxes', boxId));
-      } catch (error) {
-          console.error('Failed to delete box in Firebase', error);
-          throw error;
-      }
+      await deleteDoc(doc(db, 'boxes', boxId));
   };
 
   const claimDaily = async () => {
