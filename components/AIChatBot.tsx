@@ -92,8 +92,8 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
     : "fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-4";
 
   const panelClass = variant === 'sidebar'
-    ? "flex flex-col h-full"
-    : "w-full sm:w-[420px] bg-[#131720] border border-gray-800 rounded-2xl shadow-2xl flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-10 fade-in duration-200";
+    ? "flex flex-col h-full min-h-0"
+    : "w-full sm:w-[420px] bg-[#131720] border border-gray-800 rounded-2xl shadow-2xl flex flex-col max-h-[80vh] min-h-0 animate-in slide-in-from-bottom-10 fade-in duration-200";
 
   return (
     <div className={containerClass}>
@@ -130,7 +130,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-[#0f1219]">
             {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-[#1a2130] text-gray-200 rounded-tl-none border border-gray-700'}`}>
+                    <div className={`max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-wrap break-words ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-[#1a2130] text-gray-200 rounded-tl-none border border-gray-700'}`}>
                         {msg.text}
                     </div>
                 </div>

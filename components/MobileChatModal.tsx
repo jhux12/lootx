@@ -70,7 +70,7 @@ export const MobileChatModal: React.FC<MobileChatModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col bg-[#0f1219]">
+        <div className="flex-1 flex flex-col bg-[#0f1219] min-h-0">
           {activeTab === 'chat' ? (
             <>
               <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin" ref={scrollRef}>
@@ -137,7 +137,7 @@ export const MobileChatModal: React.FC<MobileChatModalProps> = ({ isOpen, onClos
               </div>
             </>
           ) : (
-            <div className="flex-1">
+            <div className="flex-1 min-h-0">
               <AIChatBot isOpen variant="sidebar" />
             </div>
           )}
