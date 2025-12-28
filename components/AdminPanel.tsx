@@ -5,18 +5,18 @@ import { CaseItem, MysteryBox } from '../types';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
-    uncommon: '#3b82f6',
-    rare: '#a855f7',
-    legendary: '#ef4444',
-    gold: '#fbbf24'
+    uncommon: '#22c55e',
+    rare: '#3b82f6',
+    epic: '#a855f7',
+    legendary: '#fbbf24'
 };
 
 const rarityColorOptions = [
     { value: 'common' as const, label: 'Common', color: rarityColorMap.common },
     { value: 'uncommon' as const, label: 'Uncommon', color: rarityColorMap.uncommon },
     { value: 'rare' as const, label: 'Rare', color: rarityColorMap.rare },
-    { value: 'legendary' as const, label: 'Legendary', color: rarityColorMap.legendary },
-    { value: 'gold' as const, label: 'Gold', color: rarityColorMap.gold }
+    { value: 'epic' as const, label: 'Epic', color: rarityColorMap.epic },
+    { value: 'legendary' as const, label: 'Legendary', color: rarityColorMap.legendary }
 ];
 
 export const AdminPanel: React.FC = () => {
@@ -119,10 +119,10 @@ export const AdminPanel: React.FC = () => {
           let rarity: CaseItem['rarity'] = 'common';
           let color = '#9ca3af';
 
-          if (percentChance < 0.5) { rarity = 'gold'; color = '#fbbf24'; }
-          else if (percentChance < 5) { rarity = 'legendary'; color = '#ef4444'; }
-          else if (percentChance < 15) { rarity = 'rare'; color = '#a855f7'; }
-          else if (percentChance < 40) { rarity = 'uncommon'; color = '#3b82f6'; }
+          if (percentChance < 0.5) { rarity = 'legendary'; color = '#fbbf24'; }
+          else if (percentChance < 5) { rarity = 'epic'; color = '#a855f7'; }
+          else if (percentChance < 15) { rarity = 'rare'; color = '#3b82f6'; }
+          else if (percentChance < 40) { rarity = 'uncommon'; color = '#22c55e'; }
           
           return {
               ...item,
@@ -356,8 +356,8 @@ export const AdminPanel: React.FC = () => {
                                 <option value="common">Common</option>
                                 <option value="uncommon">Uncommon</option>
                                 <option value="rare">Rare</option>
+                                <option value="epic">Epic</option>
                                 <option value="legendary">Legendary</option>
-                                <option value="gold">Gold</option>
                             </select>
                             <select
                                 className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300"

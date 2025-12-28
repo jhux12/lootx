@@ -44,10 +44,10 @@ export const CustomCaseCreator: React.FC = () => {
           let rarity: CaseItem['rarity'] = 'common';
           let color = '#9ca3af';
 
-          if (percentChance < 0.5) { rarity = 'gold'; color = '#fbbf24'; }
-          else if (percentChance < 5) { rarity = 'legendary'; color = '#ef4444'; }
-          else if (percentChance < 15) { rarity = 'rare'; color = '#a855f7'; }
-          else if (percentChance < 40) { rarity = 'uncommon'; color = '#3b82f6'; }
+          if (percentChance < 0.5) { rarity = 'legendary'; color = '#fbbf24'; }
+          else if (percentChance < 5) { rarity = 'epic'; color = '#a855f7'; }
+          else if (percentChance < 15) { rarity = 'rare'; color = '#3b82f6'; }
+          else if (percentChance < 40) { rarity = 'uncommon'; color = '#22c55e'; }
           
           return {
               ...item,

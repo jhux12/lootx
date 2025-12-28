@@ -17,12 +17,12 @@ export const CHAT_MESSAGES: ChatMessage[] = [
 
 // Items available in the boxes (Shared pool for demo simplicity)
 export const CASE_ITEMS: CaseItem[] = [
-  { id: 'item-1', name: 'Gold Rolex', price: 15000, image: 'https://picsum.photos/id/175/300/300', rarity: 'gold', chance: 0.1, color: '#fbbf24' },
-  { id: 'item-2', name: 'Gaming PC Ultra', price: 4500, image: 'https://picsum.photos/id/2/300/300', rarity: 'legendary', chance: 0.5, color: '#ef4444' },
-  { id: 'item-3', name: 'MacBook Pro', price: 2500, image: 'https://picsum.photos/id/0/300/300', rarity: 'legendary', chance: 1.5, color: '#ef4444' },
-  { id: 'item-4', name: 'iPhone 15 Pro', price: 1200, image: 'https://picsum.photos/id/160/300/300', rarity: 'rare', chance: 5.0, color: '#a855f7' },
-  { id: 'item-5', name: 'Jordan 1 High', price: 850, image: 'https://picsum.photos/id/21/300/300', rarity: 'rare', chance: 8.0, color: '#a855f7' },
-  { id: 'item-6', name: 'Supreme Hoodie', price: 450, image: 'https://picsum.photos/id/99/300/300', rarity: 'uncommon', chance: 15.0, color: '#3b82f6' },
+  { id: 'item-1', name: 'Gold Rolex', price: 15000, image: 'https://picsum.photos/id/175/300/300', rarity: 'legendary', chance: 0.1, color: '#fbbf24' },
+  { id: 'item-2', name: 'Gaming PC Ultra', price: 4500, image: 'https://picsum.photos/id/2/300/300', rarity: 'epic', chance: 0.5, color: '#a855f7' },
+  { id: 'item-3', name: 'MacBook Pro', price: 2500, image: 'https://picsum.photos/id/0/300/300', rarity: 'epic', chance: 1.5, color: '#a855f7' },
+  { id: 'item-4', name: 'iPhone 15 Pro', price: 1200, image: 'https://picsum.photos/id/160/300/300', rarity: 'rare', chance: 5.0, color: '#3b82f6' },
+  { id: 'item-5', name: 'Jordan 1 High', price: 850, image: 'https://picsum.photos/id/21/300/300', rarity: 'rare', chance: 8.0, color: '#3b82f6' },
+  { id: 'item-6', name: 'Supreme Hoodie', price: 450, image: 'https://picsum.photos/id/99/300/300', rarity: 'uncommon', chance: 15.0, color: '#22c55e' },
   { id: 'item-7', name: 'Gaming Mouse', price: 80, image: 'https://picsum.photos/id/60/300/300', rarity: 'common', chance: 20.0, color: '#9ca3af' },
   { id: 'item-8', name: 'Keyboard', price: 120, image: 'https://picsum.photos/id/96/300/300', rarity: 'common', chance: 20.0, color: '#9ca3af' },
   { id: 'item-9', name: 'USB Cable', price: 15, image: 'https://picsum.photos/id/1/300/300', rarity: 'common', chance: 29.9, color: '#9ca3af' },
@@ -40,7 +40,7 @@ export const GOLDEN_TICKET_ITEM: CaseItem = {
   name: 'GOLDEN UPGRADE',
   price: 0,
   image: 'https://cdn-icons-png.flaticon.com/512/11020/11020536.png', 
-  rarity: 'gold',
+  rarity: 'legendary',
   chance: 0,
   color: '#fbbf24'
 };

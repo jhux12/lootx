@@ -28,7 +28,7 @@ const BattleSpinner: React.FC<{
     
     // Pool filter based on mode
     const activePool = isGoldMode 
-        ? pool.filter(i => i.rarity === 'legendary' || i.rarity === 'gold' || i.rarity === 'rare') 
+        ? pool.filter(i => ['legendary', 'epic', 'rare'].includes(i.rarity)) 
         : pool;
 
     // Fallback if pool empty after filter
@@ -82,8 +82,8 @@ const BattleSpinner: React.FC<{
        >
          {items.map((item, i) => (
              <div key={i} className="flex-shrink-0 w-full h-20 flex items-center justify-center p-2 relative">
-                 {/* Special Glow for Gold items in strip */}
-                 {item.rarity === 'gold' && <div className="absolute inset-0 bg-yellow-500/10 blur-xl"></div>}
+                 {/* Special Glow for Legendary items in strip */}
+                 {item.rarity === 'legendary' && <div className="absolute inset-0 bg-yellow-500/10 blur-xl"></div>}
                  <img src={item.image} className="h-14 w-14 object-contain relative z-10" />
              </div>
          ))}
@@ -154,14 +154,14 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
       
       // DEBUG: Force high tier item for user if debug is on
       if (p.id === user.id && forceGoldDebug) {
-           const highTierItems = pool.filter(i => ['legendary', 'gold', 'rare'].includes(i.rarity));
+           const highTierItems = pool.filter(i => ['legendary', 'epic', 'rare'].includes(i.rarity));
            item = highTierItems[Math.floor(Math.random() * highTierItems.length)] || item;
       }
 
       finalResults[p.id] = item;
       
       // Check eligibility
-      const isEligible = ['legendary', 'gold', 'rare'].includes(item.rarity);
+      const isEligible = ['legendary', 'epic', 'rare'].includes(item.rarity);
       
       // 20% Chance for Gold Upgrade if item is Epic/Legendary/Gold
       // OR if DEBUG is on for user
