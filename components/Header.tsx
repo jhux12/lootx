@@ -16,12 +16,17 @@ import {
   VolumeX, 
   ShieldCheck, 
   FlaskConical, 
-  PackageOpen 
+  PackageOpen,
+  MessageCircle 
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  onOpenSupportChat?: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat }) => {
   const { user, balance, setView, isAuthenticated, setShowLoginModal, setShowTopUpModal, logout } = useGame();
   const { muted, toggleMute, playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -169,6 +174,15 @@ export const Header: React.FC = () => {
 
         {/* User Area */}
         <div className="flex items-center gap-3 md:gap-4">
+          {onOpenSupportChat && (
+            <button 
+              onClick={() => { playSound('click'); onOpenSupportChat(); }} 
+              className="lg:hidden flex items-center gap-2 px-3 py-2 bg-[#111621] border border-gray-800 rounded-lg text-gray-200 text-sm font-semibold hover:bg-[#1b2232] transition-colors"
+            >
+              <MessageCircle className="w-4 h-4 text-brand-purple" />
+              <span>Support</span>
+            </button>
+          )}
           
           {/* Sound Toggle */}
           <button onClick={toggleMute} className="text-gray-500 hover:text-white transition-colors">
@@ -299,6 +313,14 @@ export const Header: React.FC = () => {
               >
                 <Gift className="w-5 h-5 text-green-500" /> Bonuses
               </button>
+              {onOpenSupportChat && (
+                <button 
+                  onClick={() => { playSound('click'); onOpenSupportChat(); setIsMobileMenuOpen(false); }} 
+                  className="flex items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-200 font-medium"
+                >
+                  <MessageCircle className="w-5 h-5 text-brand-purple" /> Support Chat
+                </button>
+              )}
               
               {/* Case Lab Mobile */}
               <button 

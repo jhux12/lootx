@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Users, Globe, Paperclip, Send, Zap } from 'lucide-react';
+import { MessageSquare, Users, Globe, Send, Zap, Bot } from 'lucide-react';
 import { CHAT_MESSAGES } from '../constants';
 import { useSound } from '../context/SoundContext';
+import { AIChatBot } from './AIChatBot';
 
 export const ChatSidebar: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'chat' | 'users'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'support' | 'users'>('chat');
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playSound } = useSound();
 
@@ -19,6 +20,16 @@ export const ChatSidebar: React.FC = () => {
       playSound('click');
       // Logic to send would go here
   }
+
+  const TabButton: React.FC<{ id: 'chat' | 'support' | 'users'; icon: React.ReactNode; label: string }> = ({ id, icon, label }) => (
+    <button
+      onClick={() => { setActiveTab(id); playSound('click'); }}
+      className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors ${activeTab === id ? 'text-white border-brand-purple' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
 
   return (
     <div className="w-80 bg-[#11141d] border-l border-gray-800 flex flex-col h-[calc(100vh-64px)] fixed right-0 top-16 hidden xl:flex z-40">
@@ -35,72 +46,96 @@ export const ChatSidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Rain Promotion */}
-      <div className="p-3 bg-brand-bg relative overflow-hidden group cursor-pointer border-b border-gray-800" onClick={() => playSound('click')}>
-        <div className="absolute inset-0 bg-green-900/10 group-hover:bg-green-900/20 transition-colors"></div>
-        <div className="flex items-center justify-between relative z-10">
-            <div>
-                <div className="text-[10px] font-bold text-green-400 uppercase tracking-wider flex items-center gap-1">
-                    <Zap className="w-3 h-3 fill-green-400" /> Free Rain
-                </div>
-                <div className="text-white font-mono font-bold text-lg">$90,000 <span className="text-gray-500 text-sm">67</span></div>
-            </div>
-            <button className="bg-green-500 hover:bg-green-400 text-black text-xs font-bold px-4 py-2 rounded transition-colors">
-                Join
-            </button>
-        </div>
+      {/* Tabs */}
+      <div className="grid grid-cols-3 bg-[#0c1019] border-b border-gray-800">
+        <TabButton id="chat" icon={<MessageSquare className="w-3 h-3" />} label="Chat" />
+        <TabButton id="support" icon={<Bot className="w-3 h-3" />} label="Support" />
+        <TabButton id="users" icon={<Users className="w-3 h-3" />} label="Users" />
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-4" ref={scrollRef}>
-        {CHAT_MESSAGES.map((msg) => (
-          <div key={msg.id} className="group flex gap-3">
-            <img 
-                src={msg.user.avatar} 
-                alt={msg.user.name} 
-                className="w-8 h-8 rounded-lg mt-1 border border-gray-700" 
-            />
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                    <span className={`text-xs font-bold ${msg.user.name === 'ZEUS' ? 'text-green-400' : 'text-gray-300'} hover:underline cursor-pointer`}>
-                        {msg.user.name}
-                    </span>
-                    <span className="text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {msg.timestamp}
-                    </span>
+      {activeTab === 'chat' && (
+        <>
+          {/* Rain Promotion */}
+          <div className="p-3 bg-brand-bg relative overflow-hidden group cursor-pointer border-b border-gray-800" onClick={() => playSound('click')}>
+            <div className="absolute inset-0 bg-green-900/10 group-hover:bg-green-900/20 transition-colors"></div>
+            <div className="flex items-center justify-between relative z-10">
+                <div>
+                    <div className="text-[10px] font-bold text-green-400 uppercase tracking-wider flex items-center gap-1">
+                        <Zap className="w-3 h-3 fill-green-400" /> Free Rain
+                    </div>
+                    <div className="text-white font-mono font-bold text-lg">$90,000 <span className="text-gray-500 text-sm">67</span></div>
                 </div>
-                <div className="bg-[#1a202c] p-2 rounded-r-lg rounded-bl-lg text-sm text-gray-300 font-medium leading-snug break-words">
-                   {msg.message.split(' ').map((word, i) => 
-                      word.startsWith('@') ? <span key={i} className="text-brand-purple cursor-pointer hover:underline">{word} </span> : word + ' '
-                   )}
-                </div>
+                <button className="bg-green-500 hover:bg-green-400 text-black text-xs font-bold px-4 py-2 rounded transition-colors">
+                    Join
+                </button>
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* Chat Input */}
-      <div className="p-4 bg-[#11141d] border-t border-gray-800">
-        <div className="relative">
-            <input 
-                type="text" 
-                placeholder="Your message" 
-                className="w-full bg-[#0b0e14] border border-gray-700 text-gray-200 text-sm rounded-lg pl-4 pr-10 py-3 focus:outline-none focus:border-brand-purple transition-colors"
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            />
-            <button onClick={handleSend} className="absolute right-2 top-2 p-1.5 bg-brand-purple rounded-md text-white hover:bg-purple-600 transition-colors">
-                <Send className="w-4 h-4" />
-            </button>
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-4" ref={scrollRef}>
+            {CHAT_MESSAGES.map((msg) => (
+              <div key={msg.id} className="group flex gap-3">
+                <img 
+                    src={msg.user.avatar} 
+                    alt={msg.user.name} 
+                    className="w-8 h-8 rounded-lg mt-1 border border-gray-700" 
+                />
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                        <span className={`text-xs font-bold ${msg.user.name === 'ZEUS' ? 'text-green-400' : 'text-gray-300'} hover:underline cursor-pointer`}>
+                            {msg.user.name}
+                        </span>
+                        <span className="text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {msg.timestamp}
+                        </span>
+                    </div>
+                    <div className="bg-[#1a202c] p-2 rounded-r-lg rounded-bl-lg text-sm text-gray-300 font-medium leading-snug break-words">
+                       {msg.message.split(' ').map((word, i) => 
+                          word.startsWith('@') ? <span key={i} className="text-brand-purple cursor-pointer hover:underline">{word} </span> : word + ' '
+                       )}
+                    </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Chat Input */}
+          <div className="p-4 bg-[#11141d] border-t border-gray-800">
+            <div className="relative">
+                <input 
+                    type="text" 
+                    placeholder="Your message" 
+                    className="w-full bg-[#0b0e14] border border-gray-700 text-gray-200 text-sm rounded-lg pl-4 pr-10 py-3 focus:outline-none focus:border-brand-purple transition-colors"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                />
+                <button onClick={handleSend} className="absolute right-2 top-2 p-1.5 bg-brand-purple rounded-md text-white hover:bg-purple-600 transition-colors">
+                    <Send className="w-4 h-4" />
+                </button>
+            </div>
+            <div className="flex items-center gap-4 mt-3 text-xs font-bold text-gray-500">
+                <button className="flex items-center gap-1 hover:text-gray-300 transition-colors" onClick={() => playSound('click')}>
+                    <Users className="w-3 h-3" /> Rules
+                </button>
+                <button className="flex items-center gap-1 hover:text-gray-300 transition-colors" onClick={() => playSound('click')}>
+                    <MessageSquare className="w-3 h-3" /> Emojis
+                </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {activeTab === 'support' && (
+        <div className="flex-1 p-4">
+          <AIChatBot isOpen variant="sidebar" />
         </div>
-        <div className="flex items-center gap-4 mt-3 text-xs font-bold text-gray-500">
-            <button className="flex items-center gap-1 hover:text-gray-300 transition-colors" onClick={() => playSound('click')}>
-                <Users className="w-3 h-3" /> Rules
-            </button>
-            <button className="flex items-center gap-1 hover:text-gray-300 transition-colors" onClick={() => playSound('click')}>
-                <MessageSquare className="w-3 h-3" /> Emojis
-            </button>
+      )}
+
+      {activeTab === 'users' && (
+        <div className="flex-1 flex flex-col items-center justify-center text-gray-500 text-sm px-6 text-center">
+          <Users className="w-6 h-6 mb-2" />
+          <p>View online users and their recent wins coming soon.</p>
         </div>
-      </div>
+      )}
     </div>
   );
 };

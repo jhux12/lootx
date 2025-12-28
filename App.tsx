@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { LiveTicker } from './components/LiveTicker';
 import { ChatSidebar } from './components/ChatSidebar';
@@ -128,19 +128,25 @@ const MainContent: React.FC = () => {
 };
 
 function App() {
+  const [showSupportChat, setShowSupportChat] = useState(false);
+
   return (
     <SoundProvider>
       <GameProvider>
         <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
-          <Header />
+          <Header onOpenSupportChat={() => setShowSupportChat(true)} />
           
           <div className="flex flex-1">
             <MainContent />
             <ChatSidebar />
           </div>
           
-          {/* AI Chat Bot Floating Widget */}
-          <AIChatBot />
+          {/* Mobile Support Chat Modal */}
+          <AIChatBot 
+            isOpen={showSupportChat} 
+            onClose={() => setShowSupportChat(false)} 
+            variant="modal" 
+          />
         </div>
       </GameProvider>
     </SoundProvider>
