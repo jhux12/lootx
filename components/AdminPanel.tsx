@@ -3,6 +3,22 @@ import { LayoutDashboard, Users, Settings, Activity, DollarSign, ShieldAlert, Pa
 import { useGame } from '../context/GameContext';
 import { CaseItem, MysteryBox } from '../types';
 
+const rarityColorMap: Record<CaseItem['rarity'], string> = {
+    common: '#9ca3af',
+    uncommon: '#3b82f6',
+    rare: '#a855f7',
+    legendary: '#ef4444',
+    gold: '#fbbf24'
+};
+
+const rarityColorOptions = [
+    { value: 'common' as const, label: 'Common', color: rarityColorMap.common },
+    { value: 'uncommon' as const, label: 'Uncommon', color: rarityColorMap.uncommon },
+    { value: 'rare' as const, label: 'Rare', color: rarityColorMap.rare },
+    { value: 'legendary' as const, label: 'Legendary', color: rarityColorMap.legendary },
+    { value: 'gold' as const, label: 'Gold', color: rarityColorMap.gold }
+];
+
 export const AdminPanel: React.FC = () => {
   const { createItem, updateItem, deleteItem, createBox, updateBox, deleteBox, items, boxes, users } = useGame();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes'>('dashboard');
@@ -337,14 +353,34 @@ export const AdminPanel: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <input type="text" placeholder="Item Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} />
                             <input type="number" placeholder="Price ($)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.price || ''} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} />
-                            <select className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300" value={newItem.rarity} onChange={e => setNewItem({...newItem, rarity: e.target.value as any})}>
+                          <select className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300" value={newItem.rarity} onChange={e => setNewItem({...newItem, rarity: e.target.value as any})}>
                                 <option value="common">Common</option>
                                 <option value="uncommon">Uncommon</option>
                                 <option value="rare">Rare</option>
                                 <option value="legendary">Legendary</option>
                                 <option value="gold">Gold</option>
                             </select>
-                            <input type="text" placeholder="Color Hex (e.g. #ff0000)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.color} onChange={e => setNewItem({...newItem, color: e.target.value})} />
+                            <select
+                                className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300"
+                                value={rarityColorOptions.find(option => option.color === newItem.color)?.value || 'custom'}
+                                onChange={e => {
+                                    const selectedRarity = e.target.value as CaseItem['rarity'];
+                                    if (rarityColorMap[selectedRarity]) {
+                                        setNewItem(prev => ({ ...prev, color: rarityColorMap[selectedRarity] }));
+                                    }
+                                }}
+                            >
+                                {rarityColorOptions.map(option => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label} ({option.color})
+                                    </option>
+                                ))}
+                                {!rarityColorOptions.some(option => option.color === newItem.color) && (
+                                    <option value="custom" disabled>
+                                        Custom Color ({newItem.color})
+                                    </option>
+                                )}
+                            </select>
                             <input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.image} onChange={e => setNewItem({...newItem, image: e.target.value})} />
                             <input type="number" placeholder="Chance % (0-100)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.chance} onChange={e => setNewItem({...newItem, chance: Number(e.target.value)})} />
                         </div>
