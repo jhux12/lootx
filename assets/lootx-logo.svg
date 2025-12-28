@@ -1,0 +1,46 @@
+<svg width="200" height="56" viewBox="0 0 200 56" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">LootX Logo</title>
+  <desc id="desc">Geometric LootX emblem with neon purple and pink gradient</desc>
+  <defs>
+    <linearGradient id="lootx-gradient" x1="8" y1="6" x2="62" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#EC4899"/>
+    </linearGradient>
+    <linearGradient id="lootx-text" x1="72" y1="16" x2="188" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9D5FF"/>
+    </linearGradient>
+    <filter id="glow" x="0" y="0" width="82" height="56" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="spark" x="55" y="0" width="18" height="18" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#glow)">
+    <path d="M18 10.5L42 4L66 10.5V32C66 34.2091 64.2091 36 62 36H22C19.7909 36 18 34.2091 18 32V10.5Z" fill="#0B0E14" stroke="url(#lootx-gradient)" stroke-width="2"/>
+    <path d="M42 8L60 13.2V30C60 31.1046 59.1046 32 58 32H26C24.8954 32 24 31.1046 24 30V13.2L42 8Z" fill="url(#lootx-gradient)"/>
+    <path d="M42 14L52.5 17.5V26H42V14Z" fill="#0B0E14" opacity="0.65"/>
+    <path d="M42 14L31.5 17.5V26H42V14Z" fill="#0B0E14" opacity="0.35"/>
+    <path d="M34 24C36.2091 24 38 22.2091 38 20C38 17.7909 36.2091 16 34 16C31.7909 16 30 17.7909 30 20C30 22.2091 31.7909 24 34 24Z" fill="#FDE68A"/>
+    <path d="M42 28L50 24L58 28L50 32L42 28Z" fill="#C4B5FD" opacity="0.9"/>
+    <path d="M24 26L32 22L40 26L32 30L24 26Z" fill="#A5B4FC" opacity="0.6"/>
+    <path d="M60 14C61.6569 14 63 12.6569 63 11C63 9.34315 61.6569 8 60 8C58.3431 8 57 9.34315 57 11C57 12.6569 58.3431 14 60 14Z" fill="#FCA5A5" filter="url(#spark)"/>
+  </g>
+  <g>
+    <text x="76" y="36" fill="url(#lootx-text)" font-family="Inter, 'SF Pro Display', 'Segoe UI', sans-serif" font-size="28" font-weight="800" letter-spacing="0.5">
+      LOOT
+    </text>
+    <text x="150" y="36" fill="url(#lootx-gradient)" font-family="Inter, 'SF Pro Display', 'Segoe UI', sans-serif" font-size="28" font-weight="900" letter-spacing="1">
+      X
+    </text>
+  </g>
+</svg>

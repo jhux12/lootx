@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Gamepad2, Trophy, Gift, Bell, Settings, Plus, ChevronDown, User, LogOut, Menu, X, Swords, Volume2, VolumeX, ShieldCheck, FlaskConical, PackageOpen } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import lootLogo from '../assets/lootx-logo.svg';
 
 export const Header: React.FC = () => {
   const { user, balance, setView, isAuthenticated, setShowLoginModal, setShowTopUpModal, logout } = useGame();
@@ -36,15 +37,14 @@ export const Header: React.FC = () => {
 
         {/* Logo */}
         <div 
-          className="flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => handleNav({ type: 'HOME' })}
         >
-          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center transform skew-x-[-10deg]">
-            <span className="font-black text-white text-lg skew-x-[10deg]">30</span>
-          </div>
-          <h1 className="text-xl font-bold text-white tracking-tight hidden sm:block">
-            Loot
-          </h1>
+          <img 
+            src={lootLogo} 
+            alt="LootX logo" 
+            className="h-10 w-auto animate-loot-reveal drop-shadow-[0_0_12px_rgba(139,92,246,0.45)]"
+          />
         </div>
 
         {/* Desktop Navigation */}
