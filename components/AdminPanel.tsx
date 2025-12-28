@@ -57,7 +57,7 @@ export const AdminPanel: React.FC = () => {
     { title: 'Server Load', value: '12%', icon: Activity, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
   ];
 
-  const handleSaveItem = () => {
+  const handleSaveItem = async () => {
       if(!newItem.name || !newItem.price) return;
       
       const item: CaseItem = {
@@ -71,10 +71,10 @@ export const AdminPanel: React.FC = () => {
       };
 
       if (editingItemId) {
-          updateItem(item);
+          await updateItem(item);
           alert("Item Updated!");
       } else {
-          createItem(item);
+          await createItem(item);
           alert("Item Created!");
       }
       resetItemForm();
@@ -93,9 +93,9 @@ export const AdminPanel: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = async (id: string) => {
       if (confirm("Are you sure you want to delete this item? It will be removed from future box selections, but existing boxes may still reference it.")) {
-          deleteItem(id);
+          await deleteItem(id);
       }
   };
 
