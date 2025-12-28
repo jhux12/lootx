@@ -19,6 +19,12 @@ import {
   setDoc
 } from 'firebase/firestore';
 
+const sanitizeData = <T extends Record<string, any>>(data: T): T => {
+  return Object.fromEntries(
+    Object.entries(data).filter(([, value]) => value !== undefined)
+  ) as T;
+};
+
 // Storage Keys (Fallback)
 const STORAGE_KEY_ITEMS = 'lootx_items'; // New key for items
 
@@ -563,7 +569,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const createBox = async (box: MysteryBox) => {
-      const { id, ...boxData } = box;
+      const { id, ...boxDataRaw } = box;
+      const boxData = sanitizeData(boxDataRaw);
       let boxId = id;
 
       try {
@@ -588,11 +595,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateBox = async (updatedBox: MysteryBox) => {
-      const { id, ...boxData } = updatedBox;
+      const { id, ...boxDataRaw } = updatedBox;
       if (!id) {
           console.warn('Attempted to update a box without an id');
           return;
       }
+
+      const boxData = sanitizeData(boxDataRaw);
 
       try {
           await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
