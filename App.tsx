@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { LiveTicker } from './components/LiveTicker';
 import { ChatSidebar } from './components/ChatSidebar';
@@ -12,12 +12,12 @@ import { Bonuses } from './components/Bonuses';
 import { AdminPanel } from './components/AdminPanel';
 import { LoginModal } from './components/LoginModal';
 import { CustomCaseCreator } from './components/CustomCaseCreator';
-import { AIChatBot } from './components/AIChatBot';
 import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider } from './context/SoundContext';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, MessageCircle } from 'lucide-react';
+import { MobileChatModal } from './components/MobileChatModal';
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC = () => {
@@ -128,6 +128,8 @@ const MainContent: React.FC = () => {
 };
 
 function App() {
+  const [showSupportChat, setShowSupportChat] = useState(false);
+
   return (
     <SoundProvider>
       <GameProvider>
@@ -139,8 +141,20 @@ function App() {
             <ChatSidebar />
           </div>
           
-          {/* AI Chat Bot Floating Widget */}
-          <AIChatBot />
+          {/* Mobile Chat Icon */}
+          <button
+            onClick={() => setShowSupportChat(true)}
+            className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl bg-gradient-to-r from-brand-purple to-blue-600 text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
+            aria-label="Open support chat"
+          >
+            <MessageCircle className="w-5 h-5" />
+          </button>
+
+          {/* Mobile Chat Modal */}
+          <MobileChatModal 
+            isOpen={showSupportChat} 
+            onClose={() => setShowSupportChat(false)} 
+          />
         </div>
       </GameProvider>
     </SoundProvider>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, Loader2, Sparkles } from 'lucide-react';
+import { X, Send, Loader2, Sparkles } from 'lucide-react';
 import { GoogleGenAI, Chat } from "@google/genai";
 
 interface Message {
@@ -10,8 +10,19 @@ interface Message {
 
 const FALLBACK_GEMINI_API_KEY = "AIzaSyDHNb6DFcV_72EC2jYlk-F0quunMem9s10";
 
-export const AIChatBot: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
+type ChatVariant = 'sidebar' | 'modal';
+
+interface AIChatBotProps {
+  isOpen: boolean;
+  onClose?: () => void;
+  variant?: ChatVariant;
+}
+
+export const AIChatBot: React.FC<AIChatBotProps> = ({ 
+  isOpen, 
+  onClose, 
+  variant = 'sidebar' 
+}) => {
   const [messages, setMessages] = useState<Message[]>([
       { id: 'welcome', role: 'model', text: "Hi! I'm the LootX AI Assistant. How can I help you today?" }
   ]);
@@ -74,77 +85,90 @@ export const AIChatBot: React.FC = () => {
       }
   };
 
+  if (!isOpen) return null;
+
+  const containerClass = variant === 'sidebar'
+    ? "bg-[#131720] border border-gray-800 rounded-2xl shadow-xl flex flex-col h-full overflow-hidden"
+    : "fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-4";
+
+  const panelClass = variant === 'sidebar'
+    ? "flex flex-col h-full"
+    : "w-full sm:w-[420px] bg-[#131720] border border-gray-800 rounded-2xl shadow-2xl flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-10 fade-in duration-200";
+
   return (
-      <>
-        {/* Floating Button */}
-        <button 
-            onClick={() => setIsOpen(!isOpen)}
-            className={`fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 flex items-center justify-center border border-white/10 ${isOpen ? 'bg-red-500 rotate-90' : 'bg-gradient-to-r from-brand-purple to-blue-600'}`}
-        >
-            {isOpen ? <X className="w-6 h-6 text-white" /> : <Bot className="w-6 h-6 text-white" />}
-        </button>
-
-        {/* Chat Window */}
-        {isOpen && (
-            <div className="fixed bottom-24 right-6 w-[350px] h-[500px] bg-[#131720] border border-gray-700 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-300">
-                {/* Header */}
-                <div className="p-4 bg-[#0b0e14] border-b border-gray-800 flex items-center gap-3">
-                    <div className="p-2 bg-brand-purple/20 rounded-lg">
-                        <Sparkles className="w-5 h-5 text-brand-purple" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-white text-sm">LootX Assistant</h3>
-                        <p className="text-[10px] text-green-400 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                            Online
-                        </p>
-                    </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-[#0f1219]">
-                    {messages.map((msg) => (
-                        <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-[#1a2130] text-gray-200 rounded-tl-none border border-gray-700'}`}>
-                                {msg.text}
-                            </div>
-                        </div>
-                    ))}
-                    {isLoading && (
-                        <div className="flex justify-start">
-                             <div className="bg-[#1a2130] p-3 rounded-2xl rounded-tl-none border border-gray-700 flex items-center gap-2">
-                                 <Loader2 className="w-4 h-4 text-brand-purple animate-spin" />
-                                 <span className="text-xs text-gray-400">Thinking...</span>
-                             </div>
-                        </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input */}
-                <div className="p-3 bg-[#0b0e14] border-t border-gray-800">
-                    <form 
-                        onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                        className="relative"
-                    >
-                        <input 
-                            type="text" 
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            placeholder="Ask about battles, cases..."
-                            className="w-full bg-[#151a23] border border-gray-700 text-white text-sm rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:border-brand-purple transition-colors"
-                        />
-                        <button 
-                            type="submit"
-                            disabled={isLoading || !input.trim()}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-brand-purple hover:bg-purple-600 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <Send className="w-4 h-4" />
-                        </button>
-                    </form>
-                </div>
+    <div className={containerClass}>
+      <div className={panelClass}>
+        {/* Header */}
+        <div className="p-4 bg-[#0b0e14] border-b border-gray-800 flex items-center gap-3">
+            <div className="p-2 bg-brand-purple/20 rounded-lg">
+                <Sparkles className="w-5 h-5 text-brand-purple" />
             </div>
-        )}
-      </>
+            <div className="flex-1">
+                <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                  LootX Assistant
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-brand-purple/20 text-brand-purple rounded-full border border-brand-purple/30">
+                    AI Support
+                  </span>
+                </h3>
+                <p className="text-[10px] text-green-400 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                    Online
+                </p>
+            </div>
+            {variant === 'modal' && onClose && (
+              <button 
+                onClick={onClose} 
+                className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                aria-label="Close support chat"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-[#0f1219]">
+            {messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-[#1a2130] text-gray-200 rounded-tl-none border border-gray-700'}`}>
+                        {msg.text}
+                    </div>
+                </div>
+            ))}
+            {isLoading && (
+                <div className="flex justify-start">
+                     <div className="bg-[#1a2130] p-3 rounded-2xl rounded-tl-none border border-gray-700 flex items-center gap-2">
+                         <Loader2 className="w-4 h-4 text-brand-purple animate-spin" />
+                         <span className="text-xs text-gray-400">Thinking...</span>
+                     </div>
+                </div>
+            )}
+            <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input */}
+        <div className="p-3 bg-[#0b0e14] border-t border-gray-800">
+            <form 
+                onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                className="relative"
+            >
+                <input 
+                    type="text" 
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Ask about battles, cases..."
+                    className="w-full bg-[#151a23] border border-gray-700 text-white text-sm rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:border-brand-purple transition-colors"
+                />
+                <button 
+                    type="submit"
+                    disabled={isLoading || !input.trim()}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-brand-purple hover:bg-purple-600 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <Send className="w-4 h-4" />
+                </button>
+            </form>
+        </div>
+      </div>
+    </div>
   );
 };

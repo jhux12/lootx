@@ -1,0 +1,120 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { X, MessageSquare, Bot, Send, Users } from 'lucide-react';
+import { CHAT_MESSAGES } from '../constants';
+import { useSound } from '../context/SoundContext';
+import { AIChatBot } from './AIChatBot';
+
+type MobileChatTab = 'chat' | 'support';
+
+interface MobileChatModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const MobileChatModal: React.FC<MobileChatModalProps> = ({ isOpen, onClose }) => {
+  const [activeTab, setActiveTab] = useState<MobileChatTab>('chat');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { playSound } = useSound();
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [activeTab]);
+
+  const handleSend = () => {
+    playSound('click');
+    // Placeholder for chat send logic
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-end sm:items-center justify-center p-4">
+      <div className="w-full sm:w-[420px] bg-[#0b0e14] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-[#111621]">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-brand-purple" />
+            <span className="text-sm font-bold text-white">Chat</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+            aria-label="Close chat"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="grid grid-cols-2 border-b border-gray-800">
+          <button
+            onClick={() => { setActiveTab('chat'); playSound('click'); }}
+            className={`flex items-center justify-center gap-2 py-2 text-sm font-semibold transition-colors ${activeTab === 'chat' ? 'text-white border-b-2 border-brand-purple' : 'text-gray-500 hover:text-gray-300'}`}
+          >
+            <Users className="w-4 h-4" /> Site Chat
+          </button>
+          <button
+            onClick={() => { setActiveTab('support'); playSound('click'); }}
+            className={`flex items-center justify-center gap-2 py-2 text-sm font-semibold transition-colors ${activeTab === 'support' ? 'text-white border-b-2 border-brand-purple' : 'text-gray-500 hover:text-gray-300'}`}
+          >
+            <Bot className="w-4 h-4" /> Support
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 flex flex-col bg-[#0f1219]">
+          {activeTab === 'chat' ? (
+            <>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin" ref={scrollRef}>
+                {CHAT_MESSAGES.map((msg) => (
+                  <div key={msg.id} className="group flex gap-3">
+                    <img
+                      src={msg.user.avatar}
+                      alt={msg.user.name}
+                      className="w-8 h-8 rounded-lg mt-1 border border-gray-700"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className={`text-xs font-bold ${msg.user.name === 'ZEUS' ? 'text-green-400' : 'text-gray-300'} hover:underline cursor-pointer`}>
+                          {msg.user.name}
+                        </span>
+                        <span className="text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {msg.timestamp}
+                        </span>
+                      </div>
+                      <div className="bg-[#1a202c] p-2 rounded-r-lg rounded-bl-lg text-sm text-gray-300 font-medium leading-snug break-words">
+                        {msg.message.split(' ').map((word, i) =>
+                          word.startsWith('@') ? <span key={i} className="text-brand-purple cursor-pointer hover:underline">{word} </span> : word + ' '
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-4 border-t border-gray-800 bg-[#111621]">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Your message"
+                    className="w-full bg-[#0b0e14] border border-gray-700 text-gray-200 text-sm rounded-lg pl-4 pr-10 py-3 focus:outline-none focus:border-brand-purple transition-colors"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  />
+                  <button onClick={handleSend} className="absolute right-2 top-2 p-1.5 bg-brand-purple rounded-md text-white hover:bg-purple-600 transition-colors">
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1">
+              <AIChatBot isOpen variant="sidebar" />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
