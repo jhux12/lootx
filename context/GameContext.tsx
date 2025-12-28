@@ -117,6 +117,7 @@ interface GameContextType {
   createItem: (item: CaseItem) => Promise<void>;
   updateItem: (item: CaseItem) => Promise<void>;
   deleteItem: (itemId: string) => Promise<void>;
+  updateUserFlags: (updates: Partial<User>) => Promise<void>;
   createBox: (box: MysteryBox) => void; // Admin
   createUserBox: (box: MysteryBox) => void; // User Custom
   updateBox: (box: MysteryBox) => void;
@@ -134,7 +135,10 @@ const GUEST_USER: User = {
   avatar: 'https://picsum.photos/id/64/100/100',
   level: 0,
   xp: 0,
-  isAdmin: false
+  isAdmin: false,
+  chatWarnings: 0,
+  chatDisabled: false,
+  termsFlagged: false
 };
 
 const ADMIN_EMAIL = 'jhuxf12@outlook.com';
@@ -165,7 +169,10 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
       level: initialProgress.level,
       xp: 0,
       shippingAddress: undefined,
-      isAdmin: false
+      isAdmin: false,
+      chatWarnings: 0,
+      chatDisabled: false,
+      termsFlagged: false
     };
 
     await setDoc(userRef, buildUserDocument(newUser, { balance: 0, inventory: [] }));
@@ -184,7 +191,11 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     level: data.level ?? progress.level,
     xp,
     shippingAddress: data.shippingAddress,
-    isAdmin: data.isAdmin ?? false
+    isAdmin: data.isAdmin ?? false,
+    chatWarnings: data.chatWarnings ?? 0,
+    chatDisabled: data.chatDisabled ?? false,
+    chatDisabledAt: data.chatDisabledAt,
+    termsFlagged: data.termsFlagged ?? false
   };
 
   const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
@@ -197,6 +208,18 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
 
   if (profile.level !== data.level) {
     updates.level = profile.level;
+  }
+
+  if (profile.chatWarnings !== data.chatWarnings) {
+    updates.chatWarnings = profile.chatWarnings;
+  }
+
+  if (profile.chatDisabled !== data.chatDisabled) {
+    updates.chatDisabled = profile.chatDisabled;
+  }
+
+  if (profile.termsFlagged !== data.termsFlagged) {
+    updates.termsFlagged = profile.termsFlagged;
   }
 
   if (Object.keys(updates).length > 0) {
@@ -299,7 +322,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           level: data.level ?? progress.level,
           xp,
           shippingAddress: data.shippingAddress,
-          isAdmin: data.isAdmin ?? false
+          isAdmin: data.isAdmin ?? false,
+          chatWarnings: data.chatWarnings ?? 0,
+          chatDisabled: data.chatDisabled ?? false,
+          chatDisabledAt: data.chatDisabledAt,
+          termsFlagged: data.termsFlagged ?? false
         } as User;
       });
       setUsers(loaded);
@@ -448,7 +475,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           level: 1,
           xp: 0,
           shippingAddress: undefined,
-          isAdmin: email.toLowerCase() === ADMIN_EMAIL
+          isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+          chatWarnings: 0,
+          chatDisabled: false,
+          termsFlagged: false
       };
 
       await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser, { balance: 0, inventory: [] }));
@@ -548,6 +578,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         persistUserData({ name, avatar });
         return updated;
       });
+  };
+
+  const updateUserFlags = async (updates: Partial<User>) => {
+      if (!isAuthenticated || !auth.currentUser) return;
+      const sanitizedUpdates = sanitizeData(updates);
+
+      try {
+          await setDoc(getUserRef(auth.currentUser.uid), sanitizedUpdates, { merge: true });
+      } catch (error) {
+          console.error('Failed to update user flags in Firebase', error);
+      }
+
+      setUser(prev => ({ ...prev, ...updates }));
+      setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, ...updates } : u));
   };
 
   const createBattle = (boxIds: string[], maxPlayers: number) => {
@@ -777,6 +821,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       shipItem,
       updateAddress,
       updateUserInfo,
+      updateUserFlags,
       createBattle,
       joinBattle,
       updateBattle,

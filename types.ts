@@ -18,6 +18,10 @@ export interface User {
   lastDailyClaim?: number;
   shippingAddress?: ShippingAddress;
   isAdmin?: boolean;
+  chatWarnings?: number;
+  chatDisabled?: boolean;
+  chatDisabledAt?: number;
+  termsFlagged?: boolean;
 }
 
 export interface ChatMessage {
@@ -25,6 +29,7 @@ export interface ChatMessage {
   user: User;
   message: string;
   timestamp: string;
+  createdAt?: number;
   isSystem?: boolean;
 }
 
