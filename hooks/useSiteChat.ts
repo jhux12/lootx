@@ -16,6 +16,35 @@ type ModerationResult = {
 
 type LiveChatMessage = ChatMessage & { createdAt: number };
 
+const PROFANITY_PATTERNS = [
+  /fuck/gi,
+  /shit/gi,
+  /bitch/gi,
+  /asshole/gi,
+  /bastard/gi,
+  /cunt/gi,
+  /dick/gi,
+  /piss/gi,
+  /slut/gi,
+  /whore/gi
+];
+
+const maskMatch = (match: string) => '*'.repeat(match.length);
+
+const sanitizeProfanity = (message: string) => {
+  let found = false;
+  let sanitized = message;
+
+  PROFANITY_PATTERNS.forEach((pattern) => {
+    sanitized = sanitized.replace(pattern, (match) => {
+      found = true;
+      return maskMatch(match);
+    });
+  });
+
+  return { found, sanitizedText: sanitized };
+};
+
 const formatRelativeTime = (createdAt: number, now: number) => {
   const diffSeconds = Math.max(1, Math.floor((now - createdAt) / 1000));
   if (diffSeconds < 60) return `${diffSeconds}s ago`;
@@ -27,6 +56,15 @@ const formatRelativeTime = (createdAt: number, now: number) => {
 
 const runModeration = async (message: string): Promise<ModerationResult> => {
   try {
+    const localCheck = sanitizeProfanity(message);
+    if (localCheck.found) {
+      return {
+        safe: false,
+        reason: 'Contains profanity',
+        sanitizedText: localCheck.sanitizedText
+      };
+    }
+
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || FALLBACK_GEMINI_API_KEY;
     const genAI = new GoogleGenAI({ apiKey });
     const model = genAI.models.getGenerativeModel({ model: 'gemini-1.5-flash' });
@@ -60,6 +98,15 @@ Message: """${message}"""`
     };
   } catch (error) {
     console.error('Gemini moderation failed, allowing message by default', error);
+    const fallback = sanitizeProfanity(message);
+    if (fallback.found) {
+      return {
+        safe: false,
+        reason: 'Contains profanity',
+        sanitizedText: fallback.sanitizedText
+      };
+    }
+
     return { safe: true, sanitizedText: message };
   }
 };
