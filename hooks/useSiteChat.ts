@@ -11,6 +11,7 @@ const CHAT_EXPIRATION_MS = 20 * 60 * 1000;
 type ModerationResult = {
   safe: boolean;
   reason?: string;
+  sanitizedText: string;
 };
 
 type LiveChatMessage = ChatMessage & { createdAt: number };
@@ -36,8 +37,10 @@ const runModeration = async (message: string): Promise<ModerationResult> => {
           role: 'user',
           parts: [
             {
-              text: `You are a safety filter that only returns JSON. Respond with {"safe":true} for messages that meet community guidelines. 
-If the message violates rules (harassment, hate, sexual content, violence, self-harm, spam, scams), respond with {"safe":false,"reason":"brief reason"}.
+              text: `You are a safety filter that only returns JSON. 
+- If the message is acceptable, respond with {"safe":true,"sanitizedText":"original message"}.
+- If the message contains profanity, hate speech, harassment, sexual content, violence, self-harm, spam, scams, or unsafe content, respond with {"safe":false,"reason":"brief reason","sanitizedText":"message with unsafe words replaced by asterisks"}.
+- Always include the sanitizedText field. Do not add commentary or additional keys.
 Message: """${message}"""`
             }
           ]
@@ -49,14 +52,15 @@ Message: """${message}"""`
     });
 
     const raw = response.response?.text() ?? '{}';
-    const parsed = JSON.parse(raw) as ModerationResult;
+    const parsed = JSON.parse(raw) as Partial<ModerationResult>;
     return {
       safe: parsed.safe !== false,
-      reason: parsed.reason
+      reason: parsed.reason,
+      sanitizedText: parsed.sanitizedText?.trim() || message
     };
   } catch (error) {
     console.error('Gemini moderation failed, allowing message by default', error);
-    return { safe: true };
+    return { safe: true, sanitizedText: message };
   }
 };
 
@@ -149,6 +153,13 @@ export const useSiteChat = () => {
 
     try {
       const moderation = await runModeration(trimmed);
+      const censoredMessage = moderation.sanitizedText?.trim() || trimmed;
+
+      if (!censoredMessage) {
+        setNotice('Message removed due to safety filters.');
+        return;
+      }
+
       if (!moderation.safe) {
         const currentWarnings = user.chatWarnings ?? 0;
         const nextWarnings = Math.min(currentWarnings + 1, 3);
@@ -166,7 +177,10 @@ export const useSiteChat = () => {
             ? 'Your chat access has been disabled after multiple violations.'
             : `Warning ${nextWarnings}/3: ${moderation.reason || 'Message violates chat guidelines.'}`
         );
-        return;
+
+        if (shouldDisable) {
+          return;
+        }
       }
 
       await addDoc(collection(db, 'chatMessages'), {
@@ -177,7 +191,7 @@ export const useSiteChat = () => {
           level: user.level,
           xp: user.xp
         },
-        message: trimmed,
+        message: censoredMessage,
         createdAt: serverTimestamp()
       });
 
