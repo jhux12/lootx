@@ -77,6 +77,7 @@ type PersistUserData = Partial<{
   inventory: InventoryItem[];
   xp: number;
   level: number;
+  friends: string[];
   shippingAddress: ShippingAddress;
   name: string;
   avatar: string;
@@ -107,6 +108,7 @@ interface GameContextType {
   addBalance: (amount: number) => void;
   deductBalance: (amount: number) => boolean;
   addToInventory: (item: CaseItem) => void;
+  addFriend: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string, value: number) => void;
   shipItem: (instanceId: string) => void;
   updateAddress: (address: ShippingAddress) => void;
@@ -135,6 +137,7 @@ const GUEST_USER: User = {
   avatar: 'https://picsum.photos/id/64/100/100',
   level: 0,
   xp: 0,
+  friends: [],
   isAdmin: false,
   chatWarnings: 0,
   chatDisabled: false,
@@ -190,6 +193,7 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
     level: data.level ?? progress.level,
     xp,
+    friends: Array.isArray(data.friends) ? data.friends : [],
     shippingAddress: data.shippingAddress,
     isAdmin: data.isAdmin ?? false,
     chatWarnings: data.chatWarnings ?? 0,
@@ -321,6 +325,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           avatar: data.avatar || 'https://picsum.photos/id/64/100/100',
           level: data.level ?? progress.level,
           xp,
+          friends: Array.isArray(data.friends) ? data.friends : [],
           shippingAddress: data.shippingAddress,
           isAdmin: data.isAdmin ?? false,
           chatWarnings: data.chatWarnings ?? 0,
@@ -474,6 +479,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
           level: 1,
           xp: 0,
+          friends: [],
           shippingAddress: undefined,
           isAdmin: email.toLowerCase() === ADMIN_EMAIL,
           chatWarnings: 0,
@@ -539,6 +545,44 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       persistUserData({ inventory: updated });
       return updated;
     });
+  };
+
+  const addFriend = async (targetUserId: string) => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (targetUserId === user.id) return;
+
+    const targetUser = users.find((u) => u.id === targetUserId);
+    if (!targetUser) {
+      console.warn('Attempted to add unknown user as friend');
+      return;
+    }
+
+    const currentFriends = Array.isArray(user.friends) ? user.friends : [];
+    if (currentFriends.includes(targetUserId)) return;
+
+    const updatedCurrent = [...currentFriends, targetUserId];
+    const targetFriends = Array.isArray(targetUser.friends) ? targetUser.friends : [];
+    const updatedTarget = targetFriends.includes(user.id) ? targetFriends : [...targetFriends, user.id];
+
+    try {
+      await setDoc(getUserRef(user.id), { friends: updatedCurrent }, { merge: true });
+      await setDoc(getUserRef(targetUserId), { friends: updatedTarget }, { merge: true });
+    } catch (error) {
+      console.error('Failed to update friends in Firebase', error);
+    }
+
+    setUser((prev) => ({ ...prev, friends: updatedCurrent }));
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === user.id) return { ...u, friends: updatedCurrent };
+        if (u.id === targetUserId) return { ...u, friends: updatedTarget };
+        return u;
+      })
+    );
   };
 
   const sellItem = async (instanceId: string, value: number) => {
@@ -817,6 +861,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       addBalance,
       deductBalance,
       addToInventory,
+      addFriend,
       sellItem,
       shipItem,
       updateAddress,
