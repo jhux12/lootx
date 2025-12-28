@@ -133,12 +133,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     // DEBUG: Force High Tier if toggle is on
     if (forceGoldDebug) {
-        const highTier = items.filter(i => ['legendary', 'gold', 'rare'].includes(i.rarity));
+        const highTier = items.filter(i => ['legendary', 'epic', 'rare'].includes(i.rarity));
         winner = highTier[Math.floor(Math.random() * highTier.length)] || winner;
     }
 
     // 2. Check for Gold Spin Eligibility
-    const isHighTier = ['legendary', 'gold', 'rare'].includes(winner.rarity);
+    const isHighTier = ['legendary', 'epic', 'rare'].includes(winner.rarity);
     const triggerGold = (isHighTier && Math.random() < 0.2) || forceGoldDebug;
 
     if (triggerGold) {
@@ -158,7 +158,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             // Wait a moment to see the ticket
             setTimeout(() => {
                 // Stage 2: Spin to Actual Winner (using only High Tier items in reel)
-                const highTierPool = items.filter(i => ['legendary', 'gold', 'rare'].includes(i.rarity));
+                const highTierPool = items.filter(i => ['legendary', 'epic', 'rare'].includes(i.rarity));
                 // Fallback if no high tier items exist in box
                 const pool = highTierPool.length > 0 ? highTierPool : items;
                 const goldReel = generateReel(winner, pool);
@@ -189,8 +189,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     addToInventory(item);
     
     // Play appropriate win sound
-    if (item.rarity === 'gold' || item.rarity === 'legendary') playSound('win-gold');
-    else if (item.rarity === 'rare') playSound('win-rare');
+    if (item.rarity === 'legendary') playSound('win-gold');
+    else if (item.rarity === 'epic' || item.rarity === 'rare') playSound('win-rare');
     else playSound('win-common');
   };
 

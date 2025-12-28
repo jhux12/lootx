@@ -33,7 +33,7 @@ export interface CaseItem {
   name: string;
   price: number;
   image: string;
-  rarity: 'common' | 'uncommon' | 'rare' | 'legendary' | 'gold';
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   chance: number; // Percentage 0-100
   color: string;
 }
@@ -87,7 +87,7 @@ export interface LiveDrop {
   itemImage: string;
   value: number;
   user: User;
-  rarity: 'common' | 'uncommon' | 'rare' | 'legendary';
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 }
 
 export type ViewState = 
