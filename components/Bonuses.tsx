@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Gift, Calendar, Zap, Lock, Copy, CheckCircle, TrendingUp, ShieldCheck, ClipboardList, Loader2 } from 'lucide-react';
-import { useGame } from '../context/GameContext';
+import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
 export const Bonuses: React.FC = () => {
   const { user, addBalance, claimDaily, boxes, setView } = useGame();
   const { playSound } = useSound();
+  const progress = calculateLevelProgress(user.xp || 0);
   
   const [promoCode, setPromoCode] = useState('');
   const [promoMessage, setPromoMessage] = useState('');
@@ -88,14 +89,17 @@ export const Bonuses: React.FC = () => {
                  <div className="mt-4 max-w-md">
                     <div className="flex justify-between text-xs font-bold text-gray-300 mb-1">
                         <span>XP Progress</span>
-                        <span>{user.xp} / 5000</span>
+                        <span>{progress.xpIntoLevel} / {progress.xpForNextLevel}</span>
                     </div>
                     <div className="h-3 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
                         <div 
                             className="h-full bg-gradient-to-r from-blue-500 to-cyan-400" 
-                            style={{ width: `${(user.xp / 5000) * 100}%` }}
+                            style={{ width: `${Math.min(100, (progress.xpIntoLevel / progress.xpForNextLevel) * 100)}%` }}
                         ></div>
                     </div>
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      {progress.xpToNextLevel} XP to reach level {progress.level + 1}
+                    </p>
                  </div>
              </div>
          </div>

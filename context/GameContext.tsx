@@ -25,6 +25,29 @@ const sanitizeData = <T extends Record<string, any>>(data: T): T => {
   ) as T;
 };
 
+// Leveling Configuration
+const BASE_XP_REQUIREMENT = 500;
+const XP_GROWTH_RATE = 1.2;
+
+export const calculateLevelProgress = (totalXp: number) => {
+  let level = 1;
+  let xpRemaining = Math.max(0, totalXp);
+  let xpForNextLevel = BASE_XP_REQUIREMENT;
+
+  while (xpRemaining >= xpForNextLevel) {
+    xpRemaining -= xpForNextLevel;
+    level += 1;
+    xpForNextLevel = Math.floor(xpForNextLevel * XP_GROWTH_RATE + 50);
+  }
+
+  return {
+    level,
+    xpIntoLevel: xpRemaining,
+    xpForNextLevel,
+    xpToNextLevel: xpForNextLevel - xpRemaining
+  };
+};
+
 // Storage Keys (Fallback)
 const STORAGE_KEY_ITEMS = 'lootx_items'; // New key for items
 
@@ -53,6 +76,7 @@ type PersistUserData = Partial<{
   balance: number;
   inventory: InventoryItem[];
   xp: number;
+  level: number;
   shippingAddress: ShippingAddress;
   name: string;
   avatar: string;
@@ -98,6 +122,7 @@ interface GameContextType {
   updateBox: (box: MysteryBox) => void;
   deleteBox: (boxId: string) => Promise<void>;
   claimDaily: () => void;
+  updateUserProgress: (userId: string, xp: number) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -131,12 +156,13 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
   const snapshot = await getDoc(userRef);
 
   if (!snapshot.exists()) {
+    const initialProgress = calculateLevelProgress(0);
     const newUser: User = {
       id: firebaseUser.uid,
       name: firebaseUser.email?.split('@')[0] || 'Player',
       email: firebaseUser.email || '',
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
-      level: 1,
+      level: initialProgress.level,
       xp: 0,
       shippingAddress: undefined,
       isAdmin: false
@@ -148,21 +174,33 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
   }
 
   const data = snapshot.data();
+  const xp = Number(data.xp ?? 0);
+  const progress = calculateLevelProgress(xp);
   const profile: User = {
     id: firebaseUser.uid,
     name: data.name || firebaseUser.email?.split('@')[0] || 'Player',
     email: data.email || firebaseUser.email || '',
     avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
-    level: data.level ?? 1,
-    xp: data.xp ?? 0,
+    level: data.level ?? progress.level,
+    xp,
     shippingAddress: data.shippingAddress,
     isAdmin: data.isAdmin ?? false
   };
 
   const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
+  const updates: Record<string, unknown> = {};
+
   if (shouldBeAdmin && !profile.isAdmin) {
     profile.isAdmin = true;
-    await setDoc(userRef, { isAdmin: true }, { merge: true });
+    updates.isAdmin = true;
+  }
+
+  if (profile.level !== data.level) {
+    updates.level = profile.level;
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await setDoc(userRef, updates, { merge: true });
   }
 
   return {
@@ -251,13 +289,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubscribe = onSnapshot(usersRef, (snapshot) => {
       const loaded: User[] = snapshot.docs.map((docSnap) => {
         const data = docSnap.data();
+        const xp = Number(data.xp ?? 0);
+        const progress = calculateLevelProgress(xp);
         return {
           id: docSnap.id,
           name: data.name || 'Player',
           email: data.email,
           avatar: data.avatar || 'https://picsum.photos/id/64/100/100',
-          level: data.level ?? 1,
-          xp: data.xp ?? 0,
+          level: data.level ?? progress.level,
+          xp,
           shippingAddress: data.shippingAddress,
           isAdmin: data.isAdmin ?? false
         } as User;
@@ -446,9 +486,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       if (isAuthenticated) {
           setUser(prev => {
-            const nextXp = prev.xp + Math.floor(amount);
-            persistUserData({ xp: nextXp });
-            return { ...prev, xp: nextXp };
+            const nextXp = Math.max(0, prev.xp + Math.floor(amount));
+            const progress = calculateLevelProgress(nextXp);
+            persistUserData({ xp: nextXp, level: progress.level });
+            return { ...prev, xp: nextXp, level: progress.level };
           });
       }
       return true;
@@ -696,6 +737,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     persistUserData({ lastDailyClaim: timestamp });
   };
 
+  const updateUserProgress = async (userId: string, xp: number) => {
+    const numericXp = Number.isFinite(xp) ? xp : 0;
+    const sanitizedXp = Math.max(0, Math.floor(numericXp));
+    const progress = calculateLevelProgress(sanitizedXp);
+    try {
+      await setDoc(getUserRef(userId), { xp: sanitizedXp, level: progress.level }, { merge: true });
+    } catch (error) {
+      console.error('Failed to update user progress in Firebase', error);
+    }
+
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, xp: sanitizedXp, level: progress.level } : u));
+    setUser(prev => prev.id === userId ? { ...prev, xp: sanitizedXp, level: progress.level } : prev);
+  };
+
   return (
     <GameContext.Provider value={{
       user,
@@ -732,7 +787,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       createUserBox,
       updateBox,
       deleteBox,
-      claimDaily
+      claimDaily,
+      updateUserProgress
     }}>
       {children}
     </GameContext.Provider>
