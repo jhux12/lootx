@@ -90,9 +90,9 @@ interface GameContextType {
   createBattle: (boxIds: string[], maxPlayers: number) => void;
   joinBattle: (battleId: string) => void;
   updateBattle: (updatedBattle: Battle) => void;
-  createItem: (item: CaseItem) => void;
-  updateItem: (item: CaseItem) => void;
-  deleteItem: (itemId: string) => void;
+  createItem: (item: CaseItem) => Promise<void>;
+  updateItem: (item: CaseItem) => Promise<void>;
+  deleteItem: (itemId: string) => Promise<void>;
   createBox: (box: MysteryBox) => void; // Admin
   createUserBox: (box: MysteryBox) => void; // User Custom
   updateBox: (box: MysteryBox) => void;
@@ -265,6 +265,34 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUsers(loaded);
     }, (error) => {
       console.error('Failed to load users from Firebase', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const itemsRef = collection(db, 'items');
+    const unsubscribe = onSnapshot(itemsRef, (snapshot) => {
+      const loaded: CaseItem[] = snapshot.docs
+        .map((docSnap, index) => {
+          const data = docSnap.data();
+          const rarity = (data.rarity ?? 'common') as CaseItem['rarity'];
+
+          return {
+            id: docSnap.id || `item-${index}`,
+            name: data.name ?? 'Mystery Item',
+            price: Number(data.price ?? 0),
+            image: data.image ?? 'https://picsum.photos/200',
+            rarity,
+            chance: Number(data.chance ?? 0),
+            color: data.color ?? '#9ca3af'
+          } as CaseItem;
+        })
+        .sort((a, b) => a.price - b.price);
+
+      setItems(loaded.length ? loaded : CASE_ITEMS);
+    }, (error) => {
+      console.error('Failed to load items from Firebase', error);
     });
 
     return () => unsubscribe();
@@ -556,15 +584,55 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setBattles(prev => prev.map(b => b.id === updatedBattle.id ? updatedBattle : b));
   };
 
-  const createItem = (item: CaseItem) => {
-      setItems(prev => [...prev, item]);
+  const createItem = async (item: CaseItem) => {
+      const { id, ...itemDataRaw } = item;
+      const itemData = sanitizeData(itemDataRaw);
+      let itemId = id;
+
+      try {
+          if (id) {
+              await setDoc(doc(db, 'items', id), itemData, { merge: true });
+              itemId = id;
+          } else {
+              const docRef = await addDoc(collection(db, 'items'), itemData);
+              itemId = docRef.id;
+          }
+      } catch (error) {
+          console.error('Failed to save item to Firebase', error);
+          itemId = itemId || `local-item-${Date.now()}`;
+      }
+
+      setItems(prev => {
+          const filtered = prev.filter(existing => existing.id !== itemId);
+          return [...filtered, { ...itemData, id: itemId }];
+      });
   };
 
-  const updateItem = (updatedItem: CaseItem) => {
-      setItems(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i));
+  const updateItem = async (updatedItem: CaseItem) => {
+      const { id, ...itemDataRaw } = updatedItem;
+      if (!id) {
+          console.warn('Attempted to update an item without an id');
+          return;
+      }
+
+      const itemData = sanitizeData(itemDataRaw);
+
+      try {
+          await setDoc(doc(db, 'items', id), itemData, { merge: true });
+      } catch (error) {
+          console.error('Failed to update item in Firebase', error);
+      }
+
+      setItems(prev => prev.map(i => i.id === id ? { ...itemData, id } : i));
   };
 
-  const deleteItem = (itemId: string) => {
+  const deleteItem = async (itemId: string) => {
+      try {
+          await deleteDoc(doc(db, 'items', itemId));
+      } catch (error) {
+          console.error('Failed to delete item from Firebase', error);
+      }
+
       setItems(prev => prev.filter(i => i.id !== itemId));
   };
 
