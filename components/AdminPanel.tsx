@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, DollarSign, ShieldAlert, Package, Box as BoxIcon, Plus, Check, Calculator, Edit2, Trash2, Calendar } from 'lucide-react';
-import { useGame } from '../context/GameContext';
+import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { CaseItem, MysteryBox } from '../types';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
@@ -20,7 +20,7 @@ const rarityColorOptions = [
 ];
 
 export const AdminPanel: React.FC = () => {
-  const { createItem, updateItem, deleteItem, createBox, updateBox, deleteBox, items, boxes, users } = useGame();
+  const { createItem, updateItem, deleteItem, createBox, updateBox, deleteBox, items, boxes, users, updateUserProgress } = useGame();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes'>('dashboard');
 
   // --- ITEM FORM STATE ---
@@ -46,6 +46,9 @@ export const AdminPanel: React.FC = () => {
   const [houseEdge, setHouseEdge] = useState(5); // Default 5%
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [deletingBoxId, setDeletingBoxId] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [userXpInput, setUserXpInput] = useState<number>(0);
+  const [isSavingUser, setIsSavingUser] = useState(false);
   
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
@@ -102,6 +105,24 @@ export const AdminPanel: React.FC = () => {
   const resetItemForm = () => {
       setEditingItemId(null);
       setNewItem({ name: '', price: 0, image: 'https://picsum.photos/200', rarity: 'common', chance: 10, color: '#9ca3af' });
+  };
+
+  const startEditUser = (userId: string, xp: number) => {
+      setEditingUserId(userId);
+      setUserXpInput(xp);
+  };
+
+  const cancelEditUser = () => {
+      setEditingUserId(null);
+      setUserXpInput(0);
+  };
+
+  const saveUserProgress = async (userId: string) => {
+      setIsSavingUser(true);
+      await updateUserProgress(userId, userXpInput);
+      setIsSavingUser(false);
+      setEditingUserId(null);
+      alert('User progress updated!');
   };
 
   const calculateBoxConfig = () => {
@@ -581,6 +602,7 @@ export const AdminPanel: React.FC = () => {
                                 <tr>
                                     <th className="px-6 py-4">User</th>
                                     <th className="px-6 py-4">Level</th>
+                                    <th className="px-6 py-4">XP</th>
                                     <th className="px-6 py-4">Status</th>
                                     <th className="px-6 py-4">Action</th>
                                 </tr>
@@ -588,26 +610,68 @@ export const AdminPanel: React.FC = () => {
                             <tbody className="divide-y divide-gray-800">
                                 {users.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-6 text-center text-gray-500">
+                                        <td colSpan={5} className="px-6 py-6 text-center text-gray-500">
                                             No users found in Firebase.
                                         </td>
                                     </tr>
                                 ) : (
-                                    users.map((user) => (
-                                        <tr key={user.id} className="hover:bg-[#1a2130] transition-colors">
-                                            <td className="px-6 py-4 flex items-center gap-3">
-                                                <img src={user.avatar} className="w-8 h-8 rounded-full" />
-                                                <span className="font-bold text-white">{user.name}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-gray-400">{user.level}</td>
-                                            <td className="px-6 py-4">
-                                                <span className="bg-green-500/10 text-green-500 px-2 py-1 rounded text-xs font-bold">Active</span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <button className="text-blue-400 hover:text-blue-300 font-bold text-xs">Edit</button>
-                                            </td>
-                                        </tr>
-                                    ))
+                                    users.map((user) => {
+                                        const isEditing = editingUserId === user.id;
+                                        const progress = calculateLevelProgress(isEditing ? userXpInput : (user.xp || 0));
+                                        return (
+                                            <tr key={user.id} className="hover:bg-[#1a2130] transition-colors">
+                                                <td className="px-6 py-4 flex items-center gap-3">
+                                                    <img src={user.avatar} className="w-8 h-8 rounded-full" />
+                                                    <span className="font-bold text-white">{user.name}</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-400">Lvl {progress.level}</td>
+                                                <td className="px-6 py-4 text-gray-400">
+                                                    {isEditing ? (
+                                                        <div className="space-y-1">
+                                                            <input
+                                                                type="number"
+                                                                value={userXpInput}
+                                                                onChange={(e) => setUserXpInput(Number(e.target.value))}
+                                                                className="w-32 bg-[#0b0e14] border border-gray-700 rounded px-3 py-1.5 text-white text-sm"
+                                                            />
+                                                            <div className="text-[11px] text-gray-500">Lvl after save: {progress.level}</div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-300">{user.xp ?? 0}</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="bg-green-500/10 text-green-500 px-2 py-1 rounded text-xs font-bold">Active</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {isEditing ? (
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => saveUserProgress(user.id)}
+                                                                disabled={isSavingUser}
+                                                                className="text-green-400 hover:text-green-300 font-bold text-xs disabled:opacity-50"
+                                                            >
+                                                                {isSavingUser ? 'Saving...' : 'Save'}
+                                                            </button>
+                                                            <button
+                                                                onClick={cancelEditUser}
+                                                                className="text-gray-400 hover:text-gray-300 font-bold text-xs"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            className="text-blue-400 hover:text-blue-300 font-bold text-xs"
+                                                            onClick={() => startEditUser(user.id, user.xp || 0)}
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>
