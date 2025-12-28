@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
 import { Trophy, Medal, Sparkles } from 'lucide-react';
 import { useGame } from '../context/GameContext';
+import { useSound } from '../context/SoundContext';
 
 export const Leaderboard: React.FC = () => {
-    const { users } = useGame();
+    const { users, setView } = useGame();
+    const { playSound } = useSound();
 
     const leaderboardData = useMemo(() => {
         return [...users]
@@ -14,6 +16,11 @@ export const Leaderboard: React.FC = () => {
             }))
             .sort((a, b) => b.weeklyXp - a.weeklyXp);
     }, [users]);
+
+    const openProfile = (userId: string) => {
+        playSound('click');
+        setView({ type: 'PROFILE', userId });
+    };
 
     const getRankIcon = (index: number) => {
         if (index === 0) return <Trophy className="w-6 h-6 text-yellow-500 fill-yellow-500" />;
@@ -39,7 +46,11 @@ export const Leaderboard: React.FC = () => {
                     if(!user) return null;
                     const isFirst = idx === 0;
                     return (
-                        <div key={user.id} className={`bg-[#131720] border rounded-2xl p-6 flex flex-col items-center relative ${isFirst ? 'border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.15)] order-1 md:order-2 scale-105' : 'border-gray-800 order-2 md:order-1'}`}>
+                        <button 
+                            key={user.id} 
+                            onClick={() => openProfile(user.id)}
+                            className={`bg-[#131720] border rounded-2xl p-6 flex flex-col items-center relative ${isFirst ? 'border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.15)] order-1 md:order-2 scale-105' : 'border-gray-800 order-2 md:order-1'} hover:border-brand-purple transition-colors cursor-pointer`}
+                        >
                             {isFirst && <div className="absolute -top-6"><Trophy className="w-12 h-12 text-yellow-500 drop-shadow-lg" /></div>}
                             
                             <div className="relative mt-4">
@@ -52,7 +63,7 @@ export const Leaderboard: React.FC = () => {
                             <h2 className="text-xl font-bold text-white mt-6 mb-1">{user.name}</h2>
                             <div className="text-brand-purple font-black text-lg">{user.weeklyXp.toLocaleString()} XP</div>
                             <div className="text-xs text-gray-500 uppercase font-bold mt-1">Weekly Earned</div>
-                        </div>
+                        </button>
                     )
                 })}
             </div>
@@ -83,13 +94,16 @@ export const Leaderboard: React.FC = () => {
                                             {getRankIcon(index)}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
+                                            <button 
+                                                onClick={() => openProfile(user.id)} 
+                                                className="flex items-center gap-3 text-left hover:opacity-90 transition-opacity"
+                                            >
                                                 <img src={user.avatar} className="w-8 h-8 rounded-lg" />
                                                 <div>
                                                     <div className="font-bold text-white">{user.name}</div>
                                                     <div className="text-xs text-gray-500">Level {user.level}</div>
                                                 </div>
-                                            </div>
+                                            </button>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="text-brand-purple font-bold">{user.weeklyXp.toLocaleString()} XP</div>
