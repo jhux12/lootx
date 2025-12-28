@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, Zap, Volume2, Info, Plus, X, ToggleLeft, ToggleRight } from 'lucide-react';
+import { ChevronLeft, Zap, Volume2, Info, Plus, X, ToggleLeft, ToggleRight, ShieldCheck } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM } from '../constants';
 import { CaseItem } from '../types';
 import { useGame } from '../context/GameContext';
@@ -87,6 +87,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [nonce, setNonce] = useState(0);
   const [lastRoll, setLastRoll] = useState<RollData | null>(null);
   const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
+  const [showFairModal, setShowFairModal] = useState(false);
+  const [fairTab, setFairTab] = useState<'active' | 'verify'>('active');
+  const [showFairTooltip, setShowFairTooltip] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -459,87 +462,169 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
         </div>
 
-        {/* Provably Fair */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
-            <div className="bg-[#0f1219] border border-gray-800 rounded-xl p-4 shadow-inner shadow-black/30">
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 text-white font-semibold">
-                        <Zap className="w-5 h-5 text-yellow-400" />
-                        <span>Provably Fair</span>
+        <div className="flex items-center justify-center mb-10">
+            <div 
+                className="relative flex items-center gap-2 text-gray-400 cursor-pointer hover:text-white transition-colors"
+                onClick={() => { playSound('click'); setShowFairModal(true); setFairTab('active'); }}
+                onMouseEnter={() => setShowFairTooltip(true)}
+                onMouseLeave={() => setShowFairTooltip(false)}
+            >
+                <ShieldCheck className="w-5 h-5" />
+                <span className="text-sm font-semibold">Provably Fair</span>
+                {showFairTooltip && (
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-black/80 border border-gray-700 text-xs text-gray-200 px-3 py-2 rounded-lg shadow-lg w-56 text-center z-30">
+                        Click to view seed commitments and verify your last spin.
                     </div>
-                    <button
-                        onClick={async () => { playSound('click'); await setNewServerSeed(); }}
-                        disabled={isGeneratingSeed || isSpinning}
-                        className="text-xs px-3 py-1.5 bg-[#131825] border border-gray-700 rounded-lg text-gray-200 hover:border-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isGeneratingSeed ? 'Generating...' : 'New Server Seed'}
-                    </button>
-                </div>
-                <div className="space-y-2">
-                    <div>
-                        <div className="text-xs text-gray-500 mb-1">Server seed hash (committed before spin)</div>
-                        <div className="font-mono text-xs text-white bg-black/30 rounded p-2 break-all border border-gray-800">{serverSeedHash || 'Generating hash...'}</div>
-                    </div>
-                    <div>
-                        <div className="text-xs text-gray-500 mb-1">Server seed (revealed for verification)</div>
-                        <div className="font-mono text-xs text-gray-300 bg-black/20 rounded p-2 break-all border border-gray-800">{serverSeed || 'Generating...'}</div>
-                    </div>
-                </div>
-            </div>
-            <div className="bg-[#0f1219] border border-gray-800 rounded-xl p-4 shadow-inner shadow-black/30">
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 text-white font-semibold">
-                        <Volume2 className="w-5 h-5 text-cyan-400" />
-                        <span>Client Seed</span>
-                    </div>
-                    <div className="text-[10px] uppercase font-semibold text-gray-500 bg-black/20 px-2 py-1 rounded border border-gray-800">Nonce {nonce}</div>
-                </div>
-                <label className="text-xs text-gray-400 mb-2 block">Customize your seed to verify rolls independently</label>
-                <input 
-                    value={clientSeed}
-                    onChange={(e) => setClientSeed(e.target.value)}
-                    className="w-full bg-[#0b0e14] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
-                    placeholder="Enter your own client seed"
-                    disabled={isSpinning}
-                />
-                <p className="text-xs text-gray-500 mt-3 leading-relaxed">
-                    Each roll combines the hashed server seed, your client seed, and the nonce to generate a deterministic SHA-256 hash. 
-                    Changing the client seed gives you a new set of verifiable outcomes.
-                </p>
-            </div>
-            <div className="bg-[#0f1219] border border-gray-800 rounded-xl p-4 shadow-inner shadow-black/30">
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 text-white font-semibold">
-                        <Info className="w-5 h-5 text-blue-400" />
-                        <span>Last Roll Proof</span>
-                    </div>
-                    <button
-                        onClick={handleCopyProof}
-                        disabled={!lastRoll}
-                        className="text-xs px-3 py-1.5 bg-[#131825] border border-gray-700 rounded-lg text-gray-200 hover:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Copy Proof
-                    </button>
-                </div>
-                {lastRoll ? (
-                    <div className="space-y-1 font-mono text-xs text-gray-300">
-                        <div className="flex items-center justify-between"><span className="text-gray-500">Outcome</span><span className="text-white">{lastRoll.outcome}</span></div>
-                        <div className="flex items-center justify-between"><span className="text-gray-500">Nonce</span><span>{lastRoll.nonce}</span></div>
-                        <div className="flex items-center justify-between"><span className="text-gray-500">Roll Value</span><span>{lastRoll.rollValue.toFixed(6)}</span></div>
-                        <div>
-                            <div className="text-gray-500">Roll Hash</div>
-                            <div className="break-all text-gray-200">{lastRoll.rollHash}</div>
-                        </div>
-                        <div>
-                            <div className="text-gray-500">Combined Seed</div>
-                            <div className="break-all text-gray-400">{lastRoll.combinedSeed}</div>
-                        </div>
-                    </div>
-                ) : (
-                    <p className="text-sm text-gray-500">Spin the case to generate verifiable proof data for your result.</p>
                 )}
             </div>
         </div>
+
+        {showFairModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowFairModal(false)}></div>
+                <div className="relative bg-[#0f1219] border border-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+                        <div className="flex items-center gap-2 text-white font-bold text-xl">
+                            <ShieldCheck className="w-6 h-6 text-green-400" />
+                            Provably Fair
+                        </div>
+                        <button onClick={() => { playSound('click'); setShowFairModal(false); }} className="text-gray-500 hover:text-white">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <div className="px-6 pt-4">
+                        <div className="flex gap-6 border-b border-gray-800 mb-4">
+                            <button
+                                className={`py-3 text-sm font-semibold border-b-2 transition-colors ${fairTab === 'active' ? 'text-white border-green-400' : 'text-gray-500 border-transparent hover:text-white'}`}
+                                onClick={() => { playSound('click'); setFairTab('active'); }}
+                            >
+                                Active Seeds
+                            </button>
+                            <button
+                                className={`py-3 text-sm font-semibold border-b-2 transition-colors ${fairTab === 'verify' ? 'text-white border-blue-400' : 'text-gray-500 border-transparent hover:text-white'}`}
+                                onClick={() => { playSound('click'); setFairTab('verify'); }}
+                            >
+                                Verify Last Spin
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="px-6 pb-6 max-h-[70vh] overflow-y-auto">
+                        {fairTab === 'active' && (
+                            <div className="space-y-4">
+                                <div className="bg-green-500/10 border border-green-600/40 rounded-xl p-4 text-green-200 text-sm">
+                                    We commit to a hashed server seed before your spin. After the spin, the server seed is revealed so you can verify your outcome.
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2 text-white font-semibold">
+                                                <Zap className="w-5 h-5 text-yellow-400" />
+                                                Server Seed
+                                            </div>
+                                            <button
+                                                onClick={async () => { playSound('click'); await setNewServerSeed(); }}
+                                                disabled={isGeneratingSeed || isSpinning}
+                                                className="text-xs px-3 py-1.5 bg-[#131825] border border-gray-700 rounded-lg text-gray-200 hover:border-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {isGeneratingSeed ? 'Generating...' : 'New Server Seed'}
+                                            </button>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div>
+                                                <div className="text-xs text-gray-500 mb-1">Server seed hash (committed)</div>
+                                                <div className="font-mono text-xs text-white bg-black/30 rounded p-2 break-all border border-gray-800">{serverSeedHash || 'Generating hash...'}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs text-gray-500 mb-1">Revealed server seed</div>
+                                                <div className="font-mono text-xs text-gray-300 bg-black/20 rounded p-2 break-all border border-gray-800">{serverSeed || 'Generating...'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2 text-white font-semibold">
+                                                <Volume2 className="w-5 h-5 text-cyan-400" />
+                                                Client Seed
+                                            </div>
+                                            <div className="text-[10px] uppercase font-semibold text-gray-500 bg-black/20 px-2 py-1 rounded border border-gray-800">Nonce {nonce}</div>
+                                        </div>
+                                        <label className="text-xs text-gray-400 mb-2 block">Customize your seed to verify rolls independently</label>
+                                        <input 
+                                            value={clientSeed}
+                                            onChange={(e) => setClientSeed(e.target.value)}
+                                            className="w-full bg-[#0b0e14] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
+                                            placeholder="Enter your own client seed"
+                                            disabled={isSpinning}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-3 leading-relaxed">
+                                            Each roll combines the hashed server seed, your client seed, and the nonce to generate a deterministic SHA-256 hash. Changing the client seed gives you a new set of verifiable outcomes.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {fairTab === 'verify' && (
+                            <div className="space-y-4">
+                                <div className="bg-blue-500/10 border border-blue-600/40 rounded-xl p-4 text-blue-200 text-sm flex items-start gap-3">
+                                    <Info className="w-5 h-5 mt-0.5" />
+                                    <div>
+                                        <div className="font-semibold text-white">Previous Seeds Revealed</div>
+                                        <p className="text-blue-100/90">Use the values below to re-hash the combined seed (server + client + nonce) and confirm it matches the roll hash shown.</p>
+                                    </div>
+                                </div>
+                                <div className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-white font-semibold">
+                                            <Info className="w-5 h-5 text-blue-400" />
+                                            Last Roll Proof
+                                        </div>
+                                        <button
+                                            onClick={handleCopyProof}
+                                            disabled={!lastRoll}
+                                            className="text-xs px-3 py-1.5 bg-[#131825] border border-gray-700 rounded-lg text-gray-200 hover:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Copy Proof
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="grid md:grid-cols-2 gap-3">
+                                        <div>
+                                            <div className="text-xs text-gray-500 mb-1">Revealed server seed</div>
+                                            <div className="font-mono text-xs text-gray-300 bg-black/20 rounded p-2 break-all border border-gray-800">{serverSeed || 'Spin to reveal'}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-gray-500 mb-1">Committed server hash</div>
+                                            <div className="font-mono text-xs text-gray-300 bg-black/20 rounded p-2 break-all border border-gray-800">{serverSeedHash || 'Spin to reveal'}</div>
+                                        </div>
+                                    </div>
+
+                                    {lastRoll ? (
+                                        <div className="space-y-2 font-mono text-xs text-gray-300">
+                                            <div className="flex items-center justify-between"><span className="text-gray-500">Outcome</span><span className="text-white">{lastRoll.outcome}</span></div>
+                                            <div className="flex items-center justify-between"><span className="text-gray-500">Nonce</span><span>{lastRoll.nonce}</span></div>
+                                            <div className="flex items-center justify-between"><span className="text-gray-500">Roll Value</span><span>{lastRoll.rollValue.toFixed(6)}</span></div>
+                                            <div>
+                                                <div className="text-gray-500">Roll Hash</div>
+                                                <div className="break-all text-gray-200">{lastRoll.rollHash}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-500">Combined Seed (server:client:nonce)</div>
+                                                <div className="break-all text-gray-400">{lastRoll.combinedSeed}</div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500">Spin the case to generate verifiable proof data for your result.</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
         {/* Win Modal Overlay */}
         {showWinModal && wonItem && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
