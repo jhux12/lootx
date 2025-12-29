@@ -26,6 +26,18 @@ const sanitizeData = <T extends Record<string, any>>(data: T): T => {
   ) as T;
 };
 
+const sanitizeDeep = (value: any): any => {
+  if (Array.isArray(value)) return value.map(sanitizeDeep);
+  if (value && typeof value === 'object') {
+    const cleaned: Record<string, any> = {};
+    Object.entries(value).forEach(([k, v]) => {
+      if (v !== undefined) cleaned[k] = sanitizeDeep(v);
+    });
+    return cleaned;
+  }
+  return value;
+};
+
 // Leveling Configuration
 const BASE_XP_REQUIREMENT = 500;
 const XP_GROWTH_RATE = 1.2;
@@ -520,13 +532,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               };
             });
 
-            transaction.set(battleRef, {
+            transaction.set(battleRef, sanitizeDeep({
               ...data,
               players: [...players, ...bots],
               playerCount: maxPlayers,
               status: 'active' as Battle['status'],
               botsAdded: true
-            });
+            }));
           }).catch((error) => console.error('Failed to auto-fill bots for battle', battle.id, error));
         });
     }, 1000);
@@ -791,7 +803,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     setBattles(prev => [newBattle, ...prev.filter(b => b.id !== newBattle.id)]);
     try {
-      await setDoc(battleRef, newBattle);
+      await setDoc(battleRef, sanitizeDeep(newBattle));
     } catch (error) {
       console.error('Failed to create battle in Firebase', error);
     }
@@ -837,12 +849,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const updatedPlayers = [...data.players, { ...user, totalWin: 0 }];
         const newCount = updatedPlayers.length;
 
-        transaction.set(battleRef, {
+        transaction.set(battleRef, sanitizeDeep({
           ...data,
           players: updatedPlayers,
           playerCount: newCount,
           status: (newCount === data.maxPlayers ? 'active' : 'waiting') as Battle['status']
-        });
+        }));
       });
     } catch (error: any) {
       console.error('Failed to join battle', error);
@@ -857,7 +869,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateBattle = (updatedBattle: Battle) => {
     const battleRef = doc(db, 'battles', updatedBattle.id);
-    setDoc(battleRef, updatedBattle).catch((error) => {
+    setDoc(battleRef, sanitizeDeep(updatedBattle)).catch((error) => {
       console.error('Failed to update battle in Firebase', error);
     });
     setBattles(prev => prev.map(b => b.id === updatedBattle.id ? updatedBattle : b));
