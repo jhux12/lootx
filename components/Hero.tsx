@@ -1,24 +1,31 @@
 import React, { useMemo } from 'react';
-
-const FIRESTORE_BOX_IMAGES = [
-  'https://firebasestorage.googleapis.com/v0/b/lootie-production.appspot.com/o/cases%2Fcyber-case-v2.png?alt=media',
-  'https://firebasestorage.googleapis.com/v0/b/lootie-production.appspot.com/o/cases%2Fneon-dream-case.png?alt=media',
-  'https://firebasestorage.googleapis.com/v0/b/lootie-production.appspot.com/o/cases%2Fstealth-storm-case.png?alt=media'
-];
-
-const pickRandomFirestoreBoxes = () => {
-  const first = FIRESTORE_BOX_IMAGES[Math.floor(Math.random() * FIRESTORE_BOX_IMAGES.length)];
-  let second = FIRESTORE_BOX_IMAGES[Math.floor(Math.random() * FIRESTORE_BOX_IMAGES.length)];
-
-  if (second === first && FIRESTORE_BOX_IMAGES.length > 1) {
-    second = FIRESTORE_BOX_IMAGES.find((img) => img !== first) || second;
-  }
-
-  return [first, second];
-};
+import { useGame } from '../context/GameContext';
 
 export const Hero: React.FC = () => {
-  const [topLeftImage, bottomRightImage] = useMemo(pickRandomFirestoreBoxes, []);
+  const { boxes } = useGame();
+
+  const [topLeftImage, bottomRightImage] = useMemo(() => {
+    const availableImages = boxes
+      .map((box) => box.image)
+      .filter(Boolean);
+
+    const fallbackImages = [
+      'https://firebasestorage.googleapis.com/v0/b/lootie-production.appspot.com/o/cases%2Fcyber-case-v2.png?alt=media',
+      'https://firebasestorage.googleapis.com/v0/b/lootie-production.appspot.com/o/cases%2Fneon-dream-case.png?alt=media',
+      'https://firebasestorage.googleapis.com/v0/b/lootie-production.appspot.com/o/cases%2Fstealth-storm-case.png?alt=media'
+    ];
+
+    const images = availableImages.length > 0 ? availableImages : fallbackImages;
+
+    const first = images[Math.floor(Math.random() * images.length)];
+    let second = images[Math.floor(Math.random() * images.length)];
+
+    if (second === first && images.length > 1) {
+      second = images.find((img) => img !== first) || second;
+    }
+
+    return [first, second];
+  }, [boxes]);
 
   return (
     <div className="relative w-full h-[450px] bg-brand-dark overflow-hidden rounded-2xl mx-auto max-w-7xl mt-6 group">
@@ -33,12 +40,12 @@ export const Hero: React.FC = () => {
         <img 
           src={topLeftImage}
           className="absolute top-10 left-[10%] w-24 h-24 rounded-lg shadow-lg rotate-[-15deg] opacity-60 animate-pulse hidden md:block"
-          alt="Firestore mystery box spotlight"
+          alt="Mystery box spotlight"
         />
         <img 
           src={bottomRightImage}
           className="absolute bottom-10 right-[10%] w-32 h-32 rounded-lg shadow-lg rotate-[10deg] opacity-60 animate-bounce hidden md:block"
-          alt="Firestore mystery box highlight"
+          alt="Mystery box highlight"
         />
 
         <h2 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tight drop-shadow-2xl">
