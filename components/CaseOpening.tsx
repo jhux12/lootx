@@ -282,10 +282,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         outcome: winner.name
     });
 
-    // 2. Check for Gold Spin Eligibility
-    const isHighTier = ['legendary', 'epic', 'rare'].includes(winner.rarity);
+    // 2. Check for Gold Spin Eligibility (only Epic or Legendary items)
+    const isGoldEligible = ['legendary', 'epic'].includes(winner.rarity);
     const goldRoll = await getNextFairRoll();
-    const triggerGold = (isHighTier && goldRoll.rollValue < 0.2) || forceGoldDebug;
+    const triggerGold = (isGoldEligible && goldRoll.rollValue < 0.2) || forceGoldDebug;
 
     if (triggerGold) {
         // --- GOLD SPIN FLOW ---
@@ -304,7 +304,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             // Wait a moment to see the ticket
             setTimeout(() => {
                 // Stage 2: Spin to Actual Winner (using only High Tier items in reel)
-                const highTierPool = items.filter(i => ['legendary', 'epic', 'rare'].includes(i.rarity));
+                const highTierPool = items.filter(i => ['legendary', 'epic'].includes(i.rarity));
                 // Fallback if no high tier items exist in box
                 const pool = highTierPool.length > 0 ? highTierPool : items;
                 const goldReel = generateReel(winner, pool);
