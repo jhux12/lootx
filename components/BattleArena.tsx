@@ -99,6 +99,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const [spinning, setSpinning] = useState(false);
   const [roundItems, setRoundItems] = useState<{ [playerId: string]: CaseItem }>({});
   const [waitingCountdown, setWaitingCountdown] = useState(60);
+  const isBattleOwner = battle?.players?.[0]?.id === user.id;
   
   // State to track if a specific player is in "Gold Mode" for this round
   const [goldModePlayers, setGoldModePlayers] = useState<Set<string>>(new Set());
@@ -124,14 +125,59 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   useEffect(() => {
     if (!battle) return;
 
-    if (battle.status === 'active' && !spinning && !processingRound.current) {
-      if (battle.currentRound < battle.rounds) {
+    if (battle.status === 'active' && !spinning && !processingRound.current && isBattleOwner) {
+      // Only battle owner triggers new rounds; others wait for synced history
+      if (battle.currentRound < battle.rounds && battle.history.length === battle.currentRound) {
         startRound();
-      } else {
+      } else if (battle.currentRound >= battle.rounds) {
         finishBattle();
       }
     }
-  }, [battle, spinning]);
+  }, [battle, spinning, isBattleOwner]);
+
+  useEffect(() => {
+    if (!battle || battle.status !== 'waiting') return;
+    const updateCountdown = () => {
+      const elapsed = Math.floor((Date.now() - battle.createdAt) / 1000);
+      setWaitingCountdown(Math.max(0, 60 - elapsed));
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [battle]);
+
+  useEffect(() => {
+    if (!battle) return;
+    if (battle.rewardsDistributed || rewardsDistributedRef.current) return;
+    if (battle.status !== 'finished') return;
+    if (battle.players.length === 0) return;
+
+    const winner = battle.players.reduce((prev, current) => (prev.totalWin > current.totalWin) ? prev : current);
+    if (winner.id !== user.id) return;
+
+    const allDrops = (battle.history || []).flatMap(round => round.drops.map(d => d.item));
+
+    rewardsDistributedRef.current = true;
+    allDrops.forEach(item => addToInventory(item));
+
+    updateBattle({ ...battle, rewardsDistributed: true });
+  }, [battle, addToInventory, updateBattle, user.id]);
+
+  // Sync local round items to remote history so spinners match across clients
+  useEffect(() => {
+    if (!battle) return;
+    const latestRound = battle.history[battle.history.length - 1];
+    if (!latestRound) return;
+
+    const itemsFromHistory: { [playerId: string]: CaseItem } = {};
+    latestRound.drops.forEach(drop => {
+      itemsFromHistory[drop.playerId] = drop.item;
+    });
+
+    setRoundItems(itemsFromHistory);
+    setSpinning(false);
+    processingRound.current = false;
+  }, [battle?.history, battle?.currentRound]);
 
   useEffect(() => {
     if (!battle || battle.status !== 'waiting') return;
