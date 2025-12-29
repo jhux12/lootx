@@ -21,7 +21,7 @@ const SOUND_URLS: Record<SoundType, string> = {
   'gold-mode': 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_8db1f115a5.mp3?filename=magic-spell-6005.mp3',
   'coins': 'https://cdn.pixabay.com/download/audio/2022/03/25/audio_27613c7a0d.mp3?filename=coins-21160.mp3',
   'error': 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_c6ccf3232f.mp3?filename=error-2-36058.mp3',
-  'success': 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3?filename=success-48128.mp3',
+  'success': 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/friend-request-14878.mp3?alt=media&token=41e00f87-b353-4b7f-abae-d5eef1d205e5',
 };
 
 export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
