@@ -30,6 +30,7 @@ export const BattlesList: React.FC = () => {
   const { battles, joinBattle, createBattle, user, boxes } = useGame();
   const { playSound } = useSound();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const recentBattles = battles.slice(0, 10);
   
   // Create Battle State
   const [selectedBoxIds, setSelectedBoxIds] = useState<string[]>([]);
@@ -71,7 +72,8 @@ export const BattlesList: React.FC = () => {
         <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
           <Swords className="w-5 h-5 text-brand-purple" /> Active Battles
         </h3>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center text-xs text-gray-400">
+          <span>Showing up to 10 recent battles (scroll for more)</span>
            <button 
              onClick={() => { playSound('click'); setShowCreateModal(true); }}
              className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-bold text-white transition-colors flex items-center gap-2"
@@ -84,13 +86,13 @@ export const BattlesList: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        {battles.length === 0 ? (
+      <div className="flex flex-col gap-3 max-h-[550px] overflow-y-auto pr-1 custom-scrollbar">
+        {recentBattles.length === 0 ? (
           <div className="text-center py-10 bg-[#131720] rounded-xl border border-gray-800 text-gray-500">
             No active battles. Create one!
           </div>
         ) : (
-          battles.map((battle) => {
+          recentBattles.map((battle) => {
             const isFull = battle.playerCount >= battle.maxPlayers;
             const isParticipating = battle.players.some(p => p.id === user.id);
             const statusText = battle.status === 'active' ? 'Running' : (isFull ? 'Starting' : 'Waiting');
