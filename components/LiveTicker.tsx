@@ -1,10 +1,34 @@
-import React from 'react';
-import { LIVE_DROPS } from '../constants';
-import { LiveDrop } from '../types';
+import React, { useMemo } from 'react';
+import { useGame } from '../context/GameContext';
+import { LiveDrop, User } from '../types';
+import { CASE_ITEMS } from '../constants';
 
 export const LiveTicker: React.FC = () => {
-  // Duplicate array for infinite scroll effect
-  const drops = [...LIVE_DROPS, ...LIVE_DROPS, ...LIVE_DROPS];
+  const { items, users } = useGame();
+  const drops = useMemo(() => {
+    const availableUsers: User[] = users.length ? users : [{
+      id: 'guest',
+      name: 'Player',
+      avatar: 'https://picsum.photos/seed/guest/100/100',
+      level: 1,
+      xp: 0
+    }];
+
+    const filteredItems = (items.length ? items : CASE_ITEMS)
+      .filter(item => ['legendary', 'epic'].includes(item.rarity));
+
+    const mapped = filteredItems.map((item, index) => ({
+      id: item.id,
+      itemName: item.name,
+      itemImage: item.image,
+      value: item.price,
+      user: availableUsers[index % availableUsers.length],
+      rarity: item.rarity
+    }));
+
+    // Duplicate for smooth ticker scrolling
+    return mapped.length ? [...mapped, ...mapped, ...mapped] : [];
+  }, [items, users]);
 
   const getRarityColor = (rarity: LiveDrop['rarity']) => {
     switch (rarity) {
