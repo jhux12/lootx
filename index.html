@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimum-scale=1.0"
     />
     <title>LootX - Mystery Boxes</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -57,6 +57,34 @@
         100% { transform: translateX(-50%); }
       }
     </style>
+    <script>
+      // Prevent pinch and double-tap zooming on mobile
+      const disableZoom = () => {
+        let lastTouchEnd = 0;
+
+        const preventDefault = (e) => e.preventDefault();
+
+        document.addEventListener('gesturestart', preventDefault);
+        document.addEventListener('gesturechange', preventDefault);
+        document.addEventListener('gestureend', preventDefault);
+
+        document.addEventListener('touchmove', (e) => {
+          if (e.touches.length > 1) e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+          const now = Date.now();
+          if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+          }
+          lastTouchEnd = now;
+        }, { passive: false });
+      };
+
+      if (typeof window !== 'undefined') {
+        disableZoom();
+      }
+    </script>
   <script type="importmap">
 {
   "imports": {
