@@ -232,19 +232,19 @@ export const Bonuses: React.FC = () => {
 
               <div className="flex-1 flex flex-col justify-center">
                 <label className="text-xs font-bold text-gray-400 mb-2 uppercase">Enter Affiliate Code</label>
-                <div className="flex flex-col sm:flex-row sm:flex-nowrap gap-2 mb-2">
+                <div className="flex flex-col sm:flex-row sm:flex-nowrap gap-2 mb-2 items-stretch sm:items-center min-w-0">
                     <input 
                         type="text" 
                         value={affiliateInput}
                         onChange={(e) => setAffiliateInput(e.target.value)}
                         placeholder="Ex: STREAMER123"
-                        className="flex-1 bg-[#0b0e14] border border-gray-700 rounded-lg px-4 text-white focus:outline-none focus:border-brand-purple transition-colors uppercase font-bold"
+                        className="flex-1 min-w-0 bg-[#0b0e14] border border-gray-700 rounded-lg px-4 text-white focus:outline-none focus:border-brand-purple transition-colors uppercase font-bold"
                         disabled={hasReferral}
                     />
                     <button 
                         onClick={handleApplyAffiliateCode}
                         disabled={hasReferral}
-                        className="px-6 py-3 sm:py-0 sm:h-auto bg-brand-purple hover:bg-purple-600 text-white font-bold rounded-lg transition-colors w-full sm:w-auto sm:flex-shrink-0 whitespace-nowrap"
+                        className="px-6 py-3 sm:py-[13px] bg-brand-purple hover:bg-purple-600 text-white font-bold rounded-lg transition-colors w-full sm:w-auto sm:flex-shrink-0 whitespace-nowrap"
                     >
                         {hasReferral ? 'Linked' : 'Apply'}
                     </button>
