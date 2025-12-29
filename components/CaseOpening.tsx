@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, Zap, Volume2, Info, Plus, X, ToggleLeft, ToggleRight, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, Zap, Volume2, Info, Plus, X, ShieldCheck } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM } from '../constants';
 import { CaseItem } from '../types';
 import { useGame } from '../context/GameContext';
@@ -93,7 +93,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
-  const [forceGoldDebug, setForceGoldDebug] = useState(false);
   
   const nonceRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -271,21 +270,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const winningRoll = await getNextFairRoll();
     let winner = getWinningItem(winningRoll.rollValue);
 
-    // DEBUG: Force High Tier if toggle is on
-    if (forceGoldDebug) {
-        const highTier = items.filter(i => ['legendary', 'epic', 'rare'].includes(i.rarity));
-        winner = highTier[Math.floor(Math.random() * highTier.length)] || winner;
-    }
-
     setLastRoll({
         ...winningRoll,
         outcome: winner.name
     });
 
-    // 2. Check for Gold Spin Eligibility
-    const isHighTier = ['legendary', 'epic', 'rare'].includes(winner.rarity);
+    // 2. Check for Gold Spin Eligibility (only Epic or Legendary items)
+    const isGoldEligible = ['legendary', 'epic'].includes(winner.rarity);
     const goldRoll = await getNextFairRoll();
-    const triggerGold = (isHighTier && goldRoll.rollValue < 0.2) || forceGoldDebug;
+    const triggerGold = isGoldEligible && goldRoll.rollValue < 0.2;
 
     if (triggerGold) {
         // --- GOLD SPIN FLOW ---
@@ -304,7 +297,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             // Wait a moment to see the ticket
             setTimeout(() => {
                 // Stage 2: Spin to Actual Winner (using only High Tier items in reel)
-                const highTierPool = items.filter(i => ['legendary', 'epic', 'rare'].includes(i.rarity));
+                const highTierPool = items.filter(i => ['legendary', 'epic'].includes(i.rarity));
                 // Fallback if no high tier items exist in box
                 const pool = highTierPool.length > 0 ? highTierPool : items;
                 const goldReel = generateReel(winner, pool);
@@ -381,31 +374,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     <div className="w-full max-w-7xl mx-auto p-6 animate-in fade-in zoom-in-95 duration-300">
         {/* Breadcrumb */}
         <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-                <button 
-                    onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
-                >
-                    <ChevronLeft className="w-4 h-4" /> All cases
-                </button>
-                <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-bold text-white">{box.name}</h2>
-                    {isFree && <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded">FREE SPIN</span>}
-                </div>
-            </div>
-            
-            {/* DEBUG TOGGLE */}
-            <div 
-                className="flex items-center gap-2 cursor-pointer bg-[#131825] px-3 py-1.5 rounded border border-gray-800/50 hover:border-yellow-500/50 transition-colors"
-                onClick={() => setForceGoldDebug(!forceGoldDebug)}
+        <div className="flex items-center gap-4">
+            <button 
+                onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
             >
-                <span className={`text-xs font-bold ${forceGoldDebug ? 'text-yellow-500' : 'text-gray-500'}`}>TEST: Gold Spin</span>
-                {forceGoldDebug 
-                    ? <ToggleRight className="w-5 h-5 text-yellow-500" /> 
-                    : <ToggleLeft className="w-5 h-5 text-gray-600" />
-                }
+                <ChevronLeft className="w-4 h-4" /> All cases
+            </button>
+            <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-white">{box.name}</h2>
+                {isFree && <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded">FREE SPIN</span>}
             </div>
         </div>
+    </div>
 
         {/* SPINNER AREA */}
         <div className={`relative w-full bg-[#0b0e14] border rounded-2xl p-1 mb-8 overflow-hidden shadow-2xl transition-all duration-700 ${isGoldMode ? 'border-yellow-500 shadow-yellow-500/20' : 'border-gray-800'}`}>
