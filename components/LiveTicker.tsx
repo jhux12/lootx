@@ -1,9 +1,29 @@
-import React from 'react';
-import { LIVE_DROPS } from '../constants';
-import { LiveDrop } from '../types';
+import React, { useMemo } from 'react';
+import { useGame } from '../context/GameContext';
+import { LiveDrop, User } from '../types';
 
 export const LiveTicker: React.FC = () => {
-  const legendaryAndEpicDrops = LIVE_DROPS.filter(drop => ['legendary', 'epic'].includes(drop.rarity));
+  const { items, users } = useGame();
+  const legendaryAndEpicDrops = useMemo(() => {
+    const availableUsers: User[] = users.length ? users : [{
+      id: 'guest',
+      name: 'Player',
+      avatar: 'https://picsum.photos/seed/guest/100/100',
+      level: 1,
+      xp: 0
+    }];
+
+    return items
+      .filter(item => ['legendary', 'epic'].includes(item.rarity))
+      .map((item, index) => ({
+        id: item.id,
+        itemName: item.name,
+        itemImage: item.image,
+        value: item.price,
+        user: availableUsers[index % availableUsers.length],
+        rarity: item.rarity
+      }));
+  }, [items, users]);
 
   // Duplicate array for infinite scroll effect
   const drops = [...legendaryAndEpicDrops, ...legendaryAndEpicDrops, ...legendaryAndEpicDrops];
