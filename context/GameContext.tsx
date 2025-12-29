@@ -496,8 +496,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (!snap.exists()) return;
             const data = snap.data() as Battle;
             if (data.status !== 'waiting') return;
-            const remaining = data.maxPlayers - data.playerCount;
-            if (remaining <= 0) return;
+
+            const players = Array.isArray(data.players) ? data.players : [];
+            const playerCount = Number(data.playerCount ?? players.length ?? 0);
+            const maxPlayers = Number(data.maxPlayers ?? 2);
+            const remaining = maxPlayers - playerCount;
+
+            if (remaining <= 0) {
+              transaction.set(battleRef, { ...data, status: 'active' as Battle['status'] }, { merge: true });
+              return;
+            }
 
             const bots = Array.from({ length: remaining }).map(() => {
               const botId = Math.floor(Math.random() * 10000);
@@ -514,8 +522,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             transaction.set(battleRef, {
               ...data,
-              players: [...data.players, ...bots],
-              playerCount: data.maxPlayers,
+              players: [...players, ...bots],
+              playerCount: maxPlayers,
               status: 'active' as Battle['status'],
               botsAdded: true
             });
