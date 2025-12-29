@@ -85,6 +85,7 @@ export interface Battle {
   status: 'waiting' | 'active' | 'finished';
   history: BattleRound[];
   createdAt: number;
+  rewardsDistributed?: boolean;
 }
 
 export interface LiveDrop {

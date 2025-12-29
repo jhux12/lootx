@@ -16,6 +16,7 @@ import {
   doc,
   getDoc,
   onSnapshot,
+  runTransaction,
   setDoc
 } from 'firebase/firestore';
 
@@ -114,8 +115,8 @@ interface GameContextType {
   shipItem: (instanceId: string) => void;
   updateAddress: (address: ShippingAddress) => void;
   updateUserInfo: (name: string, avatar: string) => Promise<void>;
-  createBattle: (boxIds: string[], maxPlayers: number) => void;
-  joinBattle: (battleId: string) => void;
+  createBattle: (boxIds: string[], maxPlayers: number) => Promise<void>;
+  joinBattle: (battleId: string) => Promise<void>;
   updateBattle: (updatedBattle: Battle) => void;
   createItem: (item: CaseItem) => Promise<void>;
   updateItem: (item: CaseItem) => Promise<void>;
@@ -425,55 +426,68 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => unsubscribe();
   }, []);
 
+  // Battles Realtime Sync
+  useEffect(() => {
+    const battlesRef = collection(db, 'battles');
+    const unsubscribe = onSnapshot(battlesRef, (snapshot) => {
+      const firebaseBattles = snapshot.docs
+        .map((docSnap) => {
+          const data = docSnap.data();
+          const createdAt = data.createdAt?.toMillis
+            ? data.createdAt.toMillis()
+            : Number(data.createdAt ?? Date.now());
+
+          const players = Array.isArray(data.players)
+            ? data.players.map((p: any) => ({
+                ...p,
+                totalWin: Number(p.totalWin ?? 0)
+              }))
+            : [];
+
+          const history = Array.isArray(data.history)
+            ? data.history.map((round: any) => ({
+                roundNumber: Number(round.roundNumber ?? 0),
+                drops: Array.isArray(round.drops)
+                  ? round.drops.map((drop: any) => ({
+                      playerId: drop.playerId ?? '',
+                      item: drop.item
+                    }))
+                  : []
+              }))
+            : [];
+
+          return {
+            id: docSnap.id,
+            mode: data.mode ?? 'Normal',
+            players,
+            playerCount: Number(data.playerCount ?? players.length),
+            maxPlayers: Number(data.maxPlayers ?? 2),
+            cost: Number(data.cost ?? 0),
+            cases: Array.isArray(data.cases) ? data.cases : [],
+            rounds: Number(data.rounds ?? (Array.isArray(data.cases) ? data.cases.length : 0)),
+            currentRound: Number(data.currentRound ?? 0),
+            status: data.status ?? 'waiting',
+            history,
+            createdAt,
+            rewardsDistributed: data.rewardsDistributed ?? false
+          } as Battle;
+        })
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      setBattles(firebaseBattles);
+    }, (error) => {
+      console.error('Failed to load battles from Firebase', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // -- PERSISTENCE EFFECTS (LOCAL STORAGE FALLBACK / SYNC) --
 
   // Save Items whenever they change
   useEffect(() => {
       safeWriteLocalStorage(STORAGE_KEY_ITEMS, items);
   }, [items]);
-
-  // Battles Simulation Logic (Mocked Realtime)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      
-      setBattles(currentBattles => {
-        let hasChanges = false;
-        const updatedBattles = currentBattles.map(battle => {
-          if (battle.status === 'waiting' && (now - battle.createdAt > 60000)) {
-             const needed = battle.maxPlayers - battle.playerCount;
-             if (needed > 0) {
-                 const newPlayers = [...battle.players];
-                 for(let i = 0; i < needed; i++) {
-                     const botId = Math.floor(Math.random() * 10000);
-                     newPlayers.push({
-                         id: `bot-${battle.id}-${botId}`,
-                         name: `BotUser${botId}`,
-                         avatar: `https://picsum.photos/seed/${botId}/100/100`,
-                         level: Math.floor(Math.random() * 50) + 1,
-                         xp: Math.floor(Math.random() * 5000),
-                         totalWin: 0,
-                         isBot: true
-                     });
-                 }
-                 hasChanges = true;
-                 return {
-                     ...battle,
-                     players: newPlayers,
-                     playerCount: battle.maxPlayers,
-                     status: 'active' as const
-                 };
-             }
-          }
-          return battle;
-        });
-        return hasChanges ? updatedBattles : currentBattles;
-      });
-
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   // --- ACTIONS ---
 
@@ -686,7 +700,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, ...updates } : u));
   };
 
-  const createBattle = (boxIds: string[], maxPlayers: number) => {
+  const createBattle = async (boxIds: string[], maxPlayers: number) => {
     if (!isAuthenticated) {
         setShowLoginModal(true);
         return;
@@ -705,8 +719,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
     
+    const battleRef = doc(collection(db, 'battles'));
     const newBattle: Battle = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: battleRef.id,
       mode: 'Normal',
       players: [{ ...user, totalWin: 0 }],
       playerCount: 1,
@@ -717,14 +732,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       currentRound: 0,
       status: 'waiting',
       history: [],
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      rewardsDistributed: false
     };
     
-    setBattles(prev => [newBattle, ...prev]);
+    setBattles(prev => [newBattle, ...prev.filter(b => b.id !== newBattle.id)]);
+    try {
+      await setDoc(battleRef, newBattle);
+    } catch (error) {
+      console.error('Failed to create battle in Firebase', error);
+    }
     setView({ type: 'BATTLE_ARENA', battleId: newBattle.id });
   };
 
-  const joinBattle = (battleId: string) => {
+  const joinBattle = async (battleId: string) => {
     if (!isAuthenticated) {
         setShowLoginModal(true);
         return;
@@ -743,21 +764,49 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       alert("Insufficient funds to join battle!");
       return;
     }
-    setBattles(prev => prev.map(b => {
-      if (b.id === battleId) {
-        return {
-          ...b,
-          players: [...b.players, { ...user, totalWin: 0 }],
-          playerCount: b.playerCount + 1,
-          status: (b.playerCount + 1 === b.maxPlayers ? 'active' : 'waiting') as 'waiting' | 'active' | 'finished'
-        };
+    const battleRef = doc(db, 'battles', battleId);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const battleSnap = await transaction.get(battleRef);
+        if (!battleSnap.exists()) {
+          throw new Error('Battle not found');
+        }
+        const data = battleSnap.data() as Battle;
+
+        if (data.players.some(p => p.id === user.id)) {
+          throw new Error('already-joined');
+        }
+
+        if (data.playerCount >= data.maxPlayers) {
+          throw new Error('full');
+        }
+
+        const updatedPlayers = [...data.players, { ...user, totalWin: 0 }];
+        const newCount = updatedPlayers.length;
+
+        transaction.set(battleRef, {
+          ...data,
+          players: updatedPlayers,
+          playerCount: newCount,
+          status: (newCount === data.maxPlayers ? 'active' : 'waiting') as Battle['status']
+        });
+      });
+    } catch (error: any) {
+      console.error('Failed to join battle', error);
+      addBalance(battle.cost);
+      if (error?.message === 'full') {
+        alert("Battle is full!");
       }
-      return b;
-    }));
+      return;
+    }
     setView({ type: 'BATTLE_ARENA', battleId });
   };
 
   const updateBattle = (updatedBattle: Battle) => {
+    const battleRef = doc(db, 'battles', updatedBattle.id);
+    setDoc(battleRef, updatedBattle).catch((error) => {
+      console.error('Failed to update battle in Firebase', error);
+    });
     setBattles(prev => prev.map(b => b.id === updatedBattle.id ? updatedBattle : b));
   };
 

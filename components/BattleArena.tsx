@@ -98,6 +98,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   
   const [spinning, setSpinning] = useState(false);
   const [roundItems, setRoundItems] = useState<{ [playerId: string]: CaseItem }>({});
+  const [waitingCountdown, setWaitingCountdown] = useState(60);
   
   // State to track if a specific player is in "Gold Mode" for this round
   const [goldModePlayers, setGoldModePlayers] = useState<Set<string>>(new Set());
@@ -107,6 +108,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   
   // Ref to handle the sequence steps without re-renders breaking logic
   const processingRound = useRef(false);
+  const rewardsDistributedRef = useRef(false);
 
   // Helper to get random item from a specific pool
   const getRandomItem = (pool: CaseItem[]) => {
@@ -130,6 +132,34 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
       }
     }
   }, [battle, spinning]);
+
+  useEffect(() => {
+    if (!battle || battle.status !== 'waiting') return;
+    const updateCountdown = () => {
+      const elapsed = Math.floor((Date.now() - battle.createdAt) / 1000);
+      setWaitingCountdown(Math.max(0, 60 - elapsed));
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [battle]);
+
+  useEffect(() => {
+    if (!battle) return;
+    if (battle.rewardsDistributed || rewardsDistributedRef.current) return;
+    if (battle.status !== 'finished') return;
+    if (battle.players.length === 0) return;
+
+    const winner = battle.players.reduce((prev, current) => (prev.totalWin > current.totalWin) ? prev : current);
+    if (winner.id !== user.id) return;
+
+    const allDrops = (battle.history || []).flatMap(round => round.drops.map(d => d.item));
+
+    rewardsDistributedRef.current = true;
+    allDrops.forEach(item => addToInventory(item));
+
+    updateBattle({ ...battle, rewardsDistributed: true });
+  }, [battle, addToInventory, updateBattle, user.id]);
 
   const startRound = () => {
     if (!battle) return;
@@ -230,11 +260,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
       totalWin: p.totalWin + results[p.id].price
     }));
 
-    const userDrop = results[user.id];
-    if (userDrop) {
-      addToInventory(userDrop);
-    }
-
     updateBattle({
       ...battle,
       currentRound: battle.currentRound + 1,
@@ -252,11 +277,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
 
   if (!battle) return <div className="p-10 text-center">Battle not found</div>;
 
-  const winnerId = battle.status === 'finished' 
+  const winnerId = battle.status === 'finished' && battle.players.length > 0
     ? battle.players.reduce((prev, current) => (prev.totalWin > current.totalWin) ? prev : current).id
     : null;
     
   const currentCase = battle.cases[battle.currentRound] || battle.cases[battle.cases.length - 1];
+  const remainingSpots = Math.max(0, battle.maxPlayers - battle.playerCount);
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 animate-in fade-in duration-300">
@@ -306,6 +332,18 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
            </div>
         </div>
       </div>
+
+      {battle.status === 'waiting' && (
+        <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="text-yellow-200 font-semibold">Waiting for players to join</div>
+          <div className="text-sm text-yellow-100/80">
+            {remainingSpots === 0 ? 'Starting shortly...' : `${remainingSpots} more ${remainingSpots === 1 ? 'player' : 'players'} needed to start`}
+          </div>
+          <div className="font-mono text-yellow-200 text-sm px-3 py-1 bg-yellow-500/10 rounded border border-yellow-500/40">
+            Match start window: {waitingCountdown}s
+          </div>
+        </div>
+      )}
 
       {/* Arena Grid - Forced 2 columns minimum on mobile to avoid stacking */}
       <div className={`grid gap-4 grid-cols-2 ${battle.maxPlayers > 2 ? 'md:grid-cols-4' : 'md:grid-cols-2'}`}>

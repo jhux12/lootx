@@ -16,12 +16,12 @@ const BattleTimer: React.FC<{ createdAt: number }> = ({ createdAt }) => {
         return () => clearInterval(timer);
     }, [createdAt]);
 
-    if (timeLeft === 0) return <span className="text-xs font-bold text-orange-500">Starting...</span>;
+    if (timeLeft === 0) return <span className="text-xs font-bold text-orange-500">Waiting...</span>;
 
     return (
         <div className="flex items-center gap-1 text-xs font-mono text-gray-400">
             <Clock className="w-3 h-3" />
-            <span>Bot joins in {timeLeft}s</span>
+            <span>Join window: {timeLeft}s</span>
         </div>
     );
 };
