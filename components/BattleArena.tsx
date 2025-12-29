@@ -179,6 +179,34 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
     processingRound.current = false;
   }, [battle?.history, battle?.currentRound]);
 
+  useEffect(() => {
+    if (!battle || battle.status !== 'waiting') return;
+    const updateCountdown = () => {
+      const elapsed = Math.floor((Date.now() - battle.createdAt) / 1000);
+      setWaitingCountdown(Math.max(0, 60 - elapsed));
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [battle]);
+
+  useEffect(() => {
+    if (!battle) return;
+    if (battle.rewardsDistributed || rewardsDistributedRef.current) return;
+    if (battle.status !== 'finished') return;
+    if (battle.players.length === 0) return;
+
+    const winner = battle.players.reduce((prev, current) => (prev.totalWin > current.totalWin) ? prev : current);
+    if (winner.id !== user.id) return;
+
+    const allDrops = (battle.history || []).flatMap(round => round.drops.map(d => d.item));
+
+    rewardsDistributedRef.current = true;
+    allDrops.forEach(item => addToInventory(item));
+
+    updateBattle({ ...battle, rewardsDistributed: true });
+  }, [battle, addToInventory, updateBattle, user.id]);
+
   const startRound = () => {
     if (!battle) return;
     processingRound.current = true;
