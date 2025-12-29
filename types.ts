@@ -86,6 +86,7 @@ export interface Battle {
   history: BattleRound[];
   createdAt: number;
   rewardsDistributed?: boolean;
+  botsAdded?: boolean;
 }
 
 export interface LiveDrop {

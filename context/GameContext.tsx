@@ -469,7 +469,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             status: data.status ?? 'waiting',
             history,
             createdAt,
-            rewardsDistributed: data.rewardsDistributed ?? false
+            rewardsDistributed: data.rewardsDistributed ?? false,
+            botsAdded: data.botsAdded ?? false
           } as Battle;
         })
         .sort((a, b) => b.createdAt - a.createdAt);
@@ -487,7 +488,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const interval = setInterval(() => {
       const now = Date.now();
       battles
-        .filter(b => b.status === 'waiting' && now - b.createdAt >= 60000)
+        .filter(b => b.status === 'waiting' && !b.botsAdded && now - b.createdAt >= 60000)
         .forEach(battle => {
           const battleRef = doc(db, 'battles', battle.id);
           runTransaction(db, async (transaction) => {
@@ -515,7 +516,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               ...data,
               players: [...data.players, ...bots],
               playerCount: data.maxPlayers,
-              status: 'active' as Battle['status']
+              status: 'active' as Battle['status'],
+              botsAdded: true
             });
           }).catch((error) => console.error('Failed to auto-fill bots for battle', battle.id, error));
         });
@@ -775,7 +777,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       status: 'waiting',
       history: [],
       createdAt: Date.now(),
-      rewardsDistributed: false
+      rewardsDistributed: false,
+      botsAdded: false
     };
     
     setBattles(prev => [newBattle, ...prev.filter(b => b.id !== newBattle.id)]);
