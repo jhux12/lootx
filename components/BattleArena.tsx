@@ -337,7 +337,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
         <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="text-yellow-200 font-semibold">Waiting for players to join</div>
           <div className="text-sm text-yellow-100/80">
-            {remainingSpots === 0 ? 'Starting shortly...' : `${remainingSpots} more ${remainingSpots === 1 ? 'player' : 'players'} needed to start`}
+            {remainingSpots === 0 ? 'Starting shortly...' : `${remainingSpots} more ${remainingSpots === 1 ? 'player' : 'players'} needed to start (bots will fill if time expires)`}
           </div>
           <div className="font-mono text-yellow-200 text-sm px-3 py-1 bg-yellow-500/10 rounded border border-yellow-500/40">
             Match start window: {waitingCountdown}s

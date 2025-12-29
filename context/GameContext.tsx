@@ -482,6 +482,48 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => unsubscribe();
   }, []);
 
+  // Auto-fill with bots if countdown expires without enough real players
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      battles
+        .filter(b => b.status === 'waiting' && now - b.createdAt >= 60000)
+        .forEach(battle => {
+          const battleRef = doc(db, 'battles', battle.id);
+          runTransaction(db, async (transaction) => {
+            const snap = await transaction.get(battleRef);
+            if (!snap.exists()) return;
+            const data = snap.data() as Battle;
+            if (data.status !== 'waiting') return;
+            const remaining = data.maxPlayers - data.playerCount;
+            if (remaining <= 0) return;
+
+            const bots = Array.from({ length: remaining }).map(() => {
+              const botId = Math.floor(Math.random() * 10000);
+              return {
+                id: `bot-${data.id}-${botId}`,
+                name: `BotUser${botId}`,
+                avatar: `https://picsum.photos/seed/${botId}/100/100`,
+                level: Math.floor(Math.random() * 50) + 1,
+                xp: Math.floor(Math.random() * 5000),
+                totalWin: 0,
+                isBot: true
+              };
+            });
+
+            transaction.set(battleRef, {
+              ...data,
+              players: [...data.players, ...bots],
+              playerCount: data.maxPlayers,
+              status: 'active' as Battle['status']
+            });
+          }).catch((error) => console.error('Failed to auto-fill bots for battle', battle.id, error));
+        });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [battles]);
+
   // -- PERSISTENCE EFFECTS (LOCAL STORAGE FALLBACK / SYNC) --
 
   // Save Items whenever they change
