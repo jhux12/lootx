@@ -62,7 +62,7 @@ const generateServerSeed = () => {
 };
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
-  const { balance, deductBalance, addBalance, addToInventory, setView, boxes } = useGame();
+  const { user, balance, deductBalance, addBalance, addToInventory, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily } = useGame();
   const { playSound } = useSound();
   
   const box = boxes.find(b => b.id === boxId) || boxes[0];
@@ -97,6 +97,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   
   const nonceRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
 
   const setNewServerSeed = useCallback(async (seedOverride?: string) => {
     setIsGeneratingSeed(true);
@@ -242,6 +243,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleSpin = async () => {
     if (isSpinning) return;
+
+    if (isFree) {
+      if (!isAuthenticated) {
+        setShowLoginModal(true);
+        return;
+      }
+      if (!canFreeSpin) {
+        alert("Free case already claimed. Come back in 24 hours.");
+        return;
+      }
+      claimDaily();
+    }
     
     if (!isFree && !deductBalance(box.price)) {
         alert("Insufficient funds! Click the + button in header to add test money.");

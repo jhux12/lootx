@@ -48,6 +48,10 @@ export const Header: React.FC = () => {
 
   const handleNav = (view: any) => {
     playSound('click');
+    if (view?.type === 'BONUSES' && !isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
     setView(view);
   };
 
