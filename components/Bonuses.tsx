@@ -50,7 +50,6 @@ export const Bonuses: React.FC = () => {
     
     if (dailyBox) {
         // Redirect to spin
-        claimDaily();
         setView({ type: 'CASE_OPENING', boxId: dailyBox.id, isFree: true });
     } else {
         // Fallback money reward if no daily box configured
@@ -233,7 +232,7 @@ export const Bonuses: React.FC = () => {
 
               <div className="flex-1 flex flex-col justify-center">
                 <label className="text-xs font-bold text-gray-400 mb-2 uppercase">Enter Affiliate Code</label>
-                <div className="flex gap-2 mb-2">
+                <div className="flex flex-col sm:flex-row gap-2 mb-2">
                     <input 
                         type="text" 
                         value={affiliateInput}
@@ -245,7 +244,7 @@ export const Bonuses: React.FC = () => {
                     <button 
                         onClick={handleApplyAffiliateCode}
                         disabled={hasReferral}
-                        className="px-6 bg-brand-purple hover:bg-purple-600 text-white font-bold rounded-lg transition-colors"
+                        className="px-6 py-3 sm:py-0 sm:h-auto bg-brand-purple hover:bg-purple-600 text-white font-bold rounded-lg transition-colors w-full sm:w-auto"
                     >
                         {hasReferral ? 'Linked' : 'Apply'}
                     </button>
@@ -298,7 +297,7 @@ export const Bonuses: React.FC = () => {
                       </div>
                       <div>
                           <h3 className="font-bold text-gray-300">Rakeback</h3>
-                          <p className="text-xs text-gray-600">Earn 3% back on every bet</p>
+                          <p className="text-xs text-gray-600">Earn 1% back on every bet</p>
                       </div>
                   </div>
 

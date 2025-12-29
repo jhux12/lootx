@@ -193,6 +193,7 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
       level: initialProgress.level,
       xp: 0,
+      lastDailyClaim: undefined,
       totalSpent: 0,
       rakebackBalance: 0,
       followers: [],
@@ -223,6 +224,7 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
     level: data.level ?? progress.level,
     xp,
+    lastDailyClaim: data.lastDailyClaim,
     totalSpent: Number(data.totalSpent ?? 0),
     rakebackBalance: Number(data.rakebackBalance ?? 0),
     affiliateCode: data.affiliateCode,
@@ -348,11 +350,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const usersRef = collection(db, 'users');
     const unsubscribe = onSnapshot(usersRef, (snapshot) => {
-      const loaded: User[] = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data();
-        const xp = Number(data.xp ?? 0);
-        const progress = calculateLevelProgress(xp);
-        const followerIds = Array.isArray(data.followers)
+    const loaded: User[] = snapshot.docs.map((docSnap) => {
+      const data = docSnap.data();
+      const xp = Number(data.xp ?? 0);
+      const progress = calculateLevelProgress(xp);
+      const followerIds = Array.isArray(data.followers)
           ? data.followers
           : Array.isArray(data.friends)
             ? data.friends
@@ -364,6 +366,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           avatar: data.avatar || 'https://picsum.photos/id/64/100/100',
           level: data.level ?? progress.level,
           xp,
+          lastDailyClaim: data.lastDailyClaim,
           totalSpent: Number(data.totalSpent ?? 0),
           rakebackBalance: Number(data.rakebackBalance ?? 0),
           affiliateCode: data.affiliateCode,
@@ -584,12 +587,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           id: credential.user.uid,
           name,
           email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
-          level: 1,
-          xp: 0,
-          totalSpent: 0,
-          rakebackBalance: 0,
-          followers: [],
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
+      level: 1,
+      xp: 0,
+      lastDailyClaim: undefined,
+      totalSpent: 0,
+      rakebackBalance: 0,
+      followers: [],
           shippingAddress: undefined,
           isAdmin: email.toLowerCase() === ADMIN_EMAIL,
           chatWarnings: 0,
@@ -622,7 +626,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const nextXp = Math.max(0, prev.xp + Math.floor(amount));
       const progress = calculateLevelProgress(nextXp);
       const totalSpent = Math.max(0, (prev.totalSpent ?? 0) + amount);
-      const rakebackBalance = Math.max(0, (prev.rakebackBalance ?? 0) + amount * 0.03);
+      const rakebackBalance = Math.max(0, (prev.rakebackBalance ?? 0) + amount * 0.01);
 
       persistUserData({
         xp: nextXp,
