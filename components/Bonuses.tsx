@@ -1,24 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { Gift, Calendar, Zap, Lock, Copy, CheckCircle, TrendingUp, ShieldCheck, ClipboardList, Loader2 } from 'lucide-react';
+import { Gift, Calendar, Lock, Copy, TrendingUp, ShieldCheck, ClipboardList, Loader2 } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
 export const Bonuses: React.FC = () => {
-  const { user, addBalance, claimDaily, boxes, setView } = useGame();
+  const { 
+    user, 
+    users,
+    addBalance, 
+    claimDaily, 
+    claimRakeback,
+    boxes, 
+    setView,
+    isAuthenticated,
+    setShowLoginModal,
+    updateUserFlags,
+    generateAffiliateCode
+  } = useGame();
   const { playSound } = useSound();
   const progress = calculateLevelProgress(user.xp || 0);
   
-  const [promoCode, setPromoCode] = useState('');
-  const [promoMessage, setPromoMessage] = useState('');
+  const [affiliateInput, setAffiliateInput] = useState('');
+  const [affiliateMessage, setAffiliateMessage] = useState('');
   const [isOfferLoading, setIsOfferLoading] = useState(false);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
   // Identify daily box from context
   const dailyBox = boxes.find(b => b.isDaily);
   
   // Calculate if claimed
   const canClaim = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
+  const rakebackUnlocked = user.level >= 10;
+  const affiliateUnlocked = user.level >= 3;
+  const availableRakeback = Number(user.rakebackBalance ?? 0);
+  const hasReferral = Boolean(user.referredBy);
 
   const handleClaimDaily = () => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
     if (!canClaim) {
         playSound('error');
         return;
@@ -52,22 +74,85 @@ export const Bonuses: React.FC = () => {
      }, 2000);
   };
 
-  const handleRedeem = () => {
-    if (!promoCode) {
-        playSound('error');
-        return;
+  const handleApplyAffiliateCode = async () => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
     }
-    
-    if (promoCode.toUpperCase() === 'WELCOME') {
-        playSound('coins'); // Changed to specific coins sound
-        addBalance(500);
-        setPromoMessage('Code redeemed! +$500.00');
-        setPromoCode('');
-    } else {
-        playSound('error');
-        setPromoMessage('Invalid code.');
+
+    if (hasReferral) {
+      setAffiliateMessage('You are already linked to an affiliate.');
+      return;
     }
-    setTimeout(() => setPromoMessage(''), 3000);
+
+    const formattedCode = affiliateInput.trim().toUpperCase();
+    if (!formattedCode) {
+      playSound('error');
+      setAffiliateMessage('Please enter a valid affiliate code.');
+      return;
+    }
+
+    if (user.affiliateCode && formattedCode === user.affiliateCode.toUpperCase()) {
+      playSound('error');
+      setAffiliateMessage('You cannot use your own affiliate code.');
+      return;
+    }
+
+    const affiliateOwner = users.find((u) => u.affiliateCode?.toUpperCase() === formattedCode);
+    if (!affiliateOwner) {
+      playSound('error');
+      setAffiliateMessage('Affiliate code not found.');
+      return;
+    }
+
+    try {
+      await updateUserFlags({ referredBy: formattedCode });
+      setAffiliateMessage('Affiliate linked successfully!');
+      playSound('success');
+      setAffiliateInput('');
+    } catch (error) {
+      console.error('Failed to apply affiliate code', error);
+      setAffiliateMessage('Something went wrong. Please try again.');
+    }
+    setTimeout(() => setAffiliateMessage(''), 4000);
+  };
+
+  const handleGenerateCode = async () => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+    if (!affiliateUnlocked) {
+      playSound('error');
+      return;
+    }
+    if (user.affiliateCode) {
+      navigator.clipboard?.writeText(user.affiliateCode || '');
+      setAffiliateMessage('Your code is ready to share!');
+      setTimeout(() => setAffiliateMessage(''), 3000);
+      return;
+    }
+    setIsGeneratingCode(true);
+    const code = await generateAffiliateCode();
+    setIsGeneratingCode(false);
+    if (code) {
+      playSound('success');
+      setAffiliateMessage('Affiliate code generated!');
+      setTimeout(() => setAffiliateMessage(''), 3000);
+    }
+  };
+
+  const handleClaimRakeback = () => {
+    if (!rakebackUnlocked) {
+      playSound('error');
+      return;
+    }
+    if (availableRakeback <= 0) {
+      playSound('error');
+      return;
+    }
+    playSound('coins');
+    claimRakeback();
   };
 
   return (
@@ -134,45 +219,47 @@ export const Bonuses: React.FC = () => {
               </button>
           </div>
 
-          {/* Promo Code */}
+          {/* Affiliate Code Entry */}
           <div className="bg-[#131720] border border-gray-800 rounded-xl p-6 flex flex-col">
               <div className="flex items-center gap-4 mb-6">
                   <div className="p-3 bg-brand-purple/10 rounded-lg border border-brand-purple/20">
                       <Gift className="w-8 h-8 text-brand-purple" />
                   </div>
                   <div>
-                      <h3 className="text-lg font-bold text-white">Promo Code</h3>
-                      <p className="text-sm text-gray-500">Have a code? Enter it here.</p>
+                      <h3 className="text-lg font-bold text-white">Affiliate Code</h3>
+                      <p className="text-sm text-gray-500">Support a creator to unlock special rewards.</p>
                   </div>
               </div>
 
               <div className="flex-1 flex flex-col justify-center">
-                <label className="text-xs font-bold text-gray-400 mb-2 uppercase">Enter Code</label>
+                <label className="text-xs font-bold text-gray-400 mb-2 uppercase">Enter Affiliate Code</label>
                 <div className="flex gap-2 mb-2">
                     <input 
                         type="text" 
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value)}
-                        placeholder="Ex: WELCOME"
+                        value={affiliateInput}
+                        onChange={(e) => setAffiliateInput(e.target.value)}
+                        placeholder="Ex: STREAMER123"
                         className="flex-1 bg-[#0b0e14] border border-gray-700 rounded-lg px-4 text-white focus:outline-none focus:border-brand-purple transition-colors uppercase font-bold"
+                        disabled={hasReferral}
                     />
                     <button 
-                        onClick={handleRedeem}
+                        onClick={handleApplyAffiliateCode}
+                        disabled={hasReferral}
                         className="px-6 bg-brand-purple hover:bg-purple-600 text-white font-bold rounded-lg transition-colors"
                     >
-                        Redeem
+                        {hasReferral ? 'Linked' : 'Apply'}
                     </button>
                 </div>
-                {promoMessage && (
-                    <div className={`text-xs font-bold ${promoMessage.includes('Invalid') ? 'text-red-500' : 'text-green-500'}`}>
-                        {promoMessage}
+                {affiliateMessage && (
+                    <div className={`text-xs font-bold ${affiliateMessage.toLowerCase().includes('not') || affiliateMessage.toLowerCase().includes('cannot') ? 'text-red-500' : 'text-green-500'}`}>
+                        {affiliateMessage}
                     </div>
                 )}
               </div>
               
               <div className="mt-6 pt-6 border-t border-gray-800">
                   <div className="flex items-center justify-between text-sm text-gray-400 bg-[#0b0e14] p-3 rounded-lg border border-gray-800 border-dashed">
-                      <span>Use code <span className="text-white font-bold">WELCOME</span></span>
+                      <span>Link a creator to start earning extra rewards</span>
                       <Copy className="w-4 h-4 cursor-pointer hover:text-white" onClick={() => playSound('click')} />
                   </div>
               </div>
@@ -203,7 +290,7 @@ export const Bonuses: React.FC = () => {
                   </button>
               </div>
 
-              {/* Rakeback (Locked) */}
+              {/* Rakeback */}
               <div className="bg-[#131720] border border-gray-800 rounded-xl p-6 flex-1 relative overflow-hidden">
                   <div className="flex items-center gap-4 mb-4">
                       <div className="p-2 bg-gray-800 rounded-lg">
@@ -211,24 +298,38 @@ export const Bonuses: React.FC = () => {
                       </div>
                       <div>
                           <h3 className="font-bold text-gray-300">Rakeback</h3>
-                          <p className="text-xs text-gray-600">Earn passive rewards</p>
+                          <p className="text-xs text-gray-600">Earn 3% back on every bet</p>
                       </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold text-white">${availableRakeback.toFixed(2)}</div>
+                    <div className="text-xs text-gray-500">Unlocked at level 10</div>
+                    <button 
+                      onClick={handleClaimRakeback}
+                      disabled={!rakebackUnlocked || availableRakeback <= 0}
+                      className={`w-full py-2 rounded-lg font-bold text-sm transition-all ${!rakebackUnlocked || availableRakeback <= 0 ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-green-500 hover:bg-green-400 text-black shadow-lg shadow-green-500/20'}`}
+                    >
+                      {rakebackUnlocked ? 'Collect Rakeback' : 'Locked'}
+                    </button>
                   </div>
                   
-                  <div className="absolute inset-0 bg-[#0b0e14]/80 backdrop-blur-[1px] flex flex-col items-center justify-center text-center p-4">
-                      <Lock className="w-8 h-8 text-gray-600 mb-2" />
-                      <div className="text-sm font-bold text-gray-400">Unlocks at Level 20</div>
-                      <div className="w-32 h-1.5 bg-gray-800 rounded-full mt-2 overflow-hidden">
-                          <div className="h-full bg-gray-600 w-[60%]"></div>
-                      </div>
-                  </div>
+                  {!rakebackUnlocked && (
+                    <div className="absolute inset-0 bg-[#0b0e14]/80 backdrop-blur-[1px] flex flex-col items-center justify-center text-center p-4">
+                        <Lock className="w-8 h-8 text-gray-600 mb-2" />
+                        <div className="text-sm font-bold text-gray-400">Unlocks at Level 10</div>
+                        <div className="w-32 h-1.5 bg-gray-800 rounded-full mt-2 overflow-hidden">
+                            <div className="h-full bg-gray-600 w-[60%]"></div>
+                        </div>
+                    </div>
+                  )}
               </div>
 
           </div>
       </div>
       
       {/* Affiliate Section */}
-      <div className="mt-8 bg-[#131720] border border-gray-800 rounded-xl p-8 flex flex-col md:flex-row items-center gap-8">
+      <div className="mt-8 bg-[#131720] border border-gray-800 rounded-xl p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
           <div className="bg-green-500/10 p-6 rounded-full border border-green-500/20">
               <ShieldCheck className="w-12 h-12 text-green-500" />
           </div>
@@ -236,9 +337,27 @@ export const Bonuses: React.FC = () => {
               <h3 className="text-2xl font-bold text-white mb-2">Affiliate Program</h3>
               <p className="text-gray-400 max-w-xl">Invite followers and earn a percentage of every bet they place. Forever. No limits on earnings.</p>
           </div>
-          <button className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-900/20" onClick={() => playSound('click')}>
-              Create Code
-          </button>
+          <div className="flex flex-col items-center gap-2">
+            <button 
+              className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleGenerateCode}
+              disabled={!affiliateUnlocked || isGeneratingCode}
+            >
+                {user.affiliateCode ? 'Copy Code' : isGeneratingCode ? 'Generating...' : 'Create Code'}
+            </button>
+            {user.affiliateCode && (
+              <div className="flex items-center gap-2 bg-[#0b0e14] border border-green-800/40 px-4 py-2 rounded-lg">
+                <span className="text-green-400 font-bold text-sm">{user.affiliateCode}</span>
+                <Copy className="w-4 h-4 cursor-pointer text-green-400" onClick={() => { navigator.clipboard?.writeText(user.affiliateCode || ''); playSound('click'); }} />
+              </div>
+            )}
+          </div>
+          {!affiliateUnlocked && (
+            <div className="absolute inset-0 bg-[#0b0e14]/80 backdrop-blur-[1px] flex flex-col items-center justify-center text-center p-4 rounded-xl">
+                <Lock className="w-8 h-8 text-gray-600 mb-2" />
+                <div className="text-sm font-bold text-gray-400">Affiliate codes unlock at Level 3</div>
+            </div>
+          )}
       </div>
 
     </div>

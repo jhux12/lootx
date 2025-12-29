@@ -17,6 +17,10 @@ export interface User {
   xp: number;
   followers?: string[];
   lastDailyClaim?: number;
+  totalSpent?: number;
+  rakebackBalance?: number;
+  affiliateCode?: string;
+  referredBy?: string;
   shippingAddress?: ShippingAddress;
   isAdmin?: boolean;
   chatWarnings?: number;

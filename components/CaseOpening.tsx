@@ -62,7 +62,7 @@ const generateServerSeed = () => {
 };
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
-  const { balance, deductBalance, addBalance, addToInventory, setView, boxes } = useGame();
+  const { user, balance, deductBalance, addBalance, addToInventory, setView, boxes, isAuthenticated, setShowLoginModal } = useGame();
   const { playSound } = useSound();
   
   const box = boxes.find(b => b.id === boxId) || boxes[0];
@@ -94,9 +94,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
   const [forceGoldDebug, setForceGoldDebug] = useState(false);
+  const [hasUsedFreeSpin, setHasUsedFreeSpin] = useState(false);
   
   const nonceRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
+  const recentClaim = !!user.lastDailyClaim && (Date.now() - user.lastDailyClaim < 2 * 60 * 1000);
 
   const setNewServerSeed = useCallback(async (seedOverride?: string) => {
     setIsGeneratingSeed(true);
@@ -242,6 +245,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleSpin = async () => {
     if (isSpinning) return;
+
+    if (isFree) {
+      if (!isAuthenticated) {
+        setShowLoginModal(true);
+        return;
+      }
+      if (!canFreeSpin && (!recentClaim || hasUsedFreeSpin)) {
+        alert("Free case already claimed. Come back in 24 hours.");
+        return;
+      }
+      setHasUsedFreeSpin(true);
+    }
     
     if (!isFree && !deductBalance(box.price)) {
         alert("Insufficient funds! Click the + button in header to add test money.");

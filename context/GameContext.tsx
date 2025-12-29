@@ -91,6 +91,10 @@ type PersistUserData = Partial<{
   xp: number;
   level: number;
   followers: string[];
+  totalSpent: number;
+  rakebackBalance: number;
+  affiliateCode?: string;
+  referredBy?: string;
   shippingAddress: ShippingAddress;
   name: string;
   avatar: string;
@@ -119,7 +123,7 @@ interface GameContextType {
   setShowTopUpModal: (show: boolean) => void;
   setView: (view: ViewState) => void;
   addBalance: (amount: number) => void;
-  deductBalance: (amount: number) => boolean;
+  deductBalance: (amount: number, options?: { trackRewards?: boolean }) => boolean;
   addToInventory: (item: CaseItem) => void;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
@@ -139,6 +143,8 @@ interface GameContextType {
   updateBox: (box: MysteryBox) => void;
   deleteBox: (boxId: string) => Promise<void>;
   claimDaily: () => void;
+  claimRakeback: () => void;
+  generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
 }
 
@@ -151,6 +157,8 @@ const GUEST_USER: User = {
   avatar: 'https://picsum.photos/id/64/100/100',
   level: 0,
   xp: 0,
+  totalSpent: 0,
+  rakebackBalance: 0,
   followers: [],
   isAdmin: false,
   chatWarnings: 0,
@@ -185,6 +193,8 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
       level: initialProgress.level,
       xp: 0,
+      totalSpent: 0,
+      rakebackBalance: 0,
       followers: [],
       shippingAddress: undefined,
       isAdmin: false,
@@ -213,6 +223,10 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
     level: data.level ?? progress.level,
     xp,
+    totalSpent: Number(data.totalSpent ?? 0),
+    rakebackBalance: Number(data.rakebackBalance ?? 0),
+    affiliateCode: data.affiliateCode,
+    referredBy: data.referredBy,
     followers: followerIds,
     shippingAddress: data.shippingAddress,
     isAdmin: data.isAdmin ?? false,
@@ -350,6 +364,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           avatar: data.avatar || 'https://picsum.photos/id/64/100/100',
           level: data.level ?? progress.level,
           xp,
+          totalSpent: Number(data.totalSpent ?? 0),
+          rakebackBalance: Number(data.rakebackBalance ?? 0),
+          affiliateCode: data.affiliateCode,
+          referredBy: data.referredBy,
           followers: followerIds,
           shippingAddress: data.shippingAddress,
           isAdmin: data.isAdmin ?? false,
@@ -569,6 +587,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
           level: 1,
           xp: 0,
+          totalSpent: 0,
+          rakebackBalance: 0,
           followers: [],
           shippingAddress: undefined,
           isAdmin: email.toLowerCase() === ADMIN_EMAIL,
@@ -595,6 +615,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setView({ type: 'HOME' });
   };
 
+  const registerSpend = (amount: number) => {
+    if (!isAuthenticated || amount <= 0) return;
+
+    setUser(prev => {
+      const nextXp = Math.max(0, prev.xp + Math.floor(amount));
+      const progress = calculateLevelProgress(nextXp);
+      const totalSpent = Math.max(0, (prev.totalSpent ?? 0) + amount);
+      const rakebackBalance = Math.max(0, (prev.rakebackBalance ?? 0) + amount * 0.03);
+
+      persistUserData({
+        xp: nextXp,
+        level: progress.level,
+        totalSpent,
+        rakebackBalance
+      });
+
+      return { ...prev, xp: nextXp, level: progress.level, totalSpent, rakebackBalance };
+    });
+  };
+
   const addBalance = async (amount: number) => {
     setBalance(prev => {
       const updated = prev + amount;
@@ -603,20 +643,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }); 
   };
 
-  const deductBalance = (amount: number): boolean => {
+  const deductBalance = (amount: number, options?: { trackRewards?: boolean }): boolean => {
     if (balance >= amount) {
       setBalance(prev => {
         const updated = prev - amount;
         persistUserData({ balance: updated });
         return updated;
       });
-      if (isAuthenticated) {
-          setUser(prev => {
-            const nextXp = Math.max(0, prev.xp + Math.floor(amount));
-            const progress = calculateLevelProgress(nextXp);
-            persistUserData({ xp: nextXp, level: progress.level });
-            return { ...prev, xp: nextXp, level: progress.level };
-          });
+      if (options?.trackRewards !== false) {
+        registerSpend(amount);
       }
       return true;
     }
@@ -825,7 +860,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       alert("Battle is full!");
       return;
     }
-    if (!deductBalance(battle.cost)) {
+    if (!deductBalance(battle.cost, { trackRewards: false })) {
       alert("Insufficient funds to join battle!");
       return;
     }
@@ -864,6 +899,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return;
     }
+    registerSpend(battle.cost);
     setView({ type: 'BATTLE_ARENA', battleId });
   };
 
@@ -987,6 +1023,43 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     persistUserData({ lastDailyClaim: timestamp });
   };
 
+  const claimRakeback = () => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    const available = Number(user.rakebackBalance ?? 0);
+    if (available <= 0) return;
+
+    addBalance(available);
+    setUser(prev => ({ ...prev, rakebackBalance: 0 }));
+    persistUserData({ rakebackBalance: 0 });
+  };
+
+  const generateAffiliateCode = async () => {
+    if (!isAuthenticated || !auth.currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (user.affiliateCode) return user.affiliateCode;
+
+    const base = (user.name || 'PLAYER').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase();
+    const random = Math.random().toString(36).slice(-4).toUpperCase();
+    const newCode = `${base}${random}`;
+
+    try {
+      await setDoc(getUserRef(auth.currentUser.uid), { affiliateCode: newCode }, { merge: true });
+    } catch (error) {
+      console.error('Failed to save affiliate code in Firebase', error);
+    }
+
+    setUser(prev => ({ ...prev, affiliateCode: newCode }));
+    setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, affiliateCode: newCode } : u));
+    return newCode;
+  };
+
   const updateUserProgress = async (userId: string, xp: number) => {
     const numericXp = Number.isFinite(xp) ? xp : 0;
     const sanitizedXp = Math.max(0, Math.floor(numericXp));
@@ -1041,6 +1114,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updateBox,
       deleteBox,
       claimDaily,
+      claimRakeback,
+      generateAffiliateCode,
       updateUserProgress
     }}>
       {children}
