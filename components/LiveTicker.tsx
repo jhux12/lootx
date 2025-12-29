@@ -3,8 +3,10 @@ import { LIVE_DROPS } from '../constants';
 import { LiveDrop } from '../types';
 
 export const LiveTicker: React.FC = () => {
+  const legendaryAndEpicDrops = LIVE_DROPS.filter(drop => ['legendary', 'epic'].includes(drop.rarity));
+
   // Duplicate array for infinite scroll effect
-  const drops = [...LIVE_DROPS, ...LIVE_DROPS, ...LIVE_DROPS];
+  const drops = [...legendaryAndEpicDrops, ...legendaryAndEpicDrops, ...legendaryAndEpicDrops];
 
   const getRarityColor = (rarity: LiveDrop['rarity']) => {
     switch (rarity) {

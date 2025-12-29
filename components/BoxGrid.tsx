@@ -7,8 +7,8 @@ export const BoxGrid: React.FC = () => {
   const { setView, boxes } = useGame();
   const { playSound } = useSound();
 
-  // Filter out user-created boxes from the main shop/grid
-  const displayBoxes = boxes.filter(box => !box.isUserCreated);
+  // Filter out user-created and daily free boxes from the main shop/grid
+  const displayBoxes = boxes.filter(box => !box.isUserCreated && !box.isDaily);
 
   return (
     <section className="mt-12 px-4 md:px-0">
