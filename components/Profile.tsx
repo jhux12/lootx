@@ -82,6 +82,7 @@ export const Profile: React.FC = () => {
   const totalInventoryValue = isOwnProfile 
     ? availableItems.reduce((sum, item) => sum + item.price, 0)
     : 0;
+  const profileBalance = isOwnProfile ? balance : displayUser.balance ?? 0;
 
   const handleSell = (id: string, price: number) => {
       if(confirm('Are you sure you want to sell this item for balance?')) {
@@ -232,7 +233,7 @@ export const Profile: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
                     <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
                         <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Balance</div>
-                        <div className="text-xl font-black text-green-500">${displayUser.balance.toLocaleString()}</div>
+                        <div className="text-xl font-black text-green-500">${profileBalance.toLocaleString()}</div>
                     </div>
                     <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
                         <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Inventory</div>
@@ -410,7 +411,7 @@ export const Profile: React.FC = () => {
                                           <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
                                           <div>
                                               <div className="text-white font-bold">{p.name}</div>
-                                              <div className="text-xs text-gray-500">Level {p.level} • ${p.balance.toLocaleString()}</div>
+                                              <div className="text-xs text-gray-500">Level {p.level} • ${(p.balance ?? 0).toLocaleString()}</div>
                                           </div>
                                       </div>
                                       <button 
