@@ -111,14 +111,14 @@ export const Header: React.FC = () => {
 
           {/* Logo */}
           <div
-            className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity font-sans"
             onClick={() => handleNav({ type: 'HOME' })}
           >
-            <span className="text-2xl md:text-3xl font-black italic text-white tracking-tight leading-none">
+            <span className="text-2xl md:text-3xl font-black text-white tracking-tight leading-none">
               PULLZ
             </span>
             <span
-              className={`text-2xl md:text-3xl font-black tracking-tight leading-none not-italic bg-gradient-to-r from-[#8b5cf6] to-[#22d3ee] text-transparent bg-clip-text inline-block origin-left ${lootRevealActive ? 'animate-loot-reveal' : ''}`}
+              className={`text-2xl md:text-3xl font-black tracking-tight leading-none bg-gradient-to-r from-[#8b5cf6] to-[#22d3ee] text-transparent bg-clip-text inline-block origin-left ${lootRevealActive ? 'animate-loot-reveal' : ''}`}
             >
               .GG
             </span>
