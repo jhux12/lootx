@@ -151,84 +151,68 @@ const PageIntroManager: React.FC = () => {
     () => ({
       BATTLES: {
         key: 'lootx_intro_battles_v1',
-        title: 'Battle smarter',
-        subtitle: 'Join live lobbies, watch every pull, and chase multi-case jackpots in synced rounds.',
+        title: 'Case battles in a flash',
+        subtitle: 'Pick a lobby, watch every pull, and see who wins each round.',
         icon: Swords,
         accent: 'from-brand-purple to-blue-500',
         tag: 'Battles page',
         highlights: [
-          { title: 'Pick your lobby', description: 'Filter by price and player slots, then jump in before the countdown ends.' },
-          { title: 'Track pulls live', description: 'Every spin streams in real time so you always know who is leading each round.' },
-          { title: 'Rewards & rakeback', description: 'Battles still feed your XP and rakeback progress while you duel.' },
-          { title: 'Fair results', description: 'Server-seeded rolls keep every round provably fair for all players.' }
+          { title: 'Join fast', description: 'Filter by price and slots, then hop in before the timer hits zero.' },
+          { title: 'See every pull', description: 'Live spins show who is ahead without leaving the lobby.' }
         ],
         reminders: [
-          'Fill empty slots with bots if you want to start quickly.',
-          'Tie-breakers use total value pulled, so every cent counts.',
-          'Multiplayer spins use the same odds as solo openings.',
-          'You can return to the lobby from the arena without losing your spot.'
+          'Add bots to start instantly if seats are empty.',
+          'Wins are based on total value pulled per battle.'
         ]
       },
       LEADERBOARD: {
         key: 'lootx_intro_leaderboard_v1',
-        title: 'Climb the leaderboard',
-        subtitle: 'See top rollers, streaks, and fresh high-value wins to scout who is hot right now.',
+        title: 'Leaderboard at a glance',
+        subtitle: 'See who is hot, follow players, and view their profiles.',
         icon: Trophy,
         accent: 'from-amber-400 to-orange-500',
         tag: 'Leaderboard page',
         highlights: [
-          { title: 'Live momentum', description: 'Recent streaks and big wins refresh automatically so you never miss a run.' },
-          { title: 'Profile deep dive', description: 'Tap a player to view their stats, followers, and current inventory highlights.' },
-          { title: 'Friendly competition', description: 'Use the board to find rivals for battles or to follow rising players.' },
-          { title: 'Seasonal resets', description: 'Ranks reset on schedule, keeping races tight and rewards attainable.' }
+          { title: 'Live movers', description: 'Recent streaks and wins update automatically.' },
+          { title: 'Open profiles', description: 'Tap a player to view stats and follow them.' }
         ],
         reminders: [
-          'Follow players you want to watch directly from their card.',
-          'Your XP gains from cases and battles feed your leaderboard climb.',
-          'Filters help you focus on daily, weekly, or all-time legends.',
-          'Highlights are responsive—swipe through cards comfortably on mobile.'
+          'Ranks respond to your XP from cases and battles.',
+          'Swipe through cards on mobile to explore faster.'
         ]
       },
       BONUSES: {
         key: 'lootx_intro_bonuses_v1',
-        title: 'Max your bonuses',
+        title: 'Quick bonus check',
         subtitle: isAuthenticated
-          ? 'Claim rakeback, streak perks, and event boosts tailored to your recent play.'
-          : 'Sign in to unlock rakeback, streak perks, and seasonal boosts for your account.',
+          ? 'Claim rakeback, streak perks, and limited boosts in a few taps.'
+          : 'Sign in to unlock rakeback, streak perks, and seasonal boosts.',
         icon: Gift,
         accent: 'from-emerald-400 to-teal-500',
         tag: 'Bonuses page',
         highlights: [
-          { title: 'Rakeback ready', description: 'Earn and claim a share of every wager even while you explore new cases.' },
-          { title: 'Daily streaks', description: 'Maintain consistent openings to unlock escalating daily rewards.' },
-          { title: 'Event boosts', description: 'Special drops and limited events appear here first—check back often.' },
-          { title: 'Affiliate perks', description: 'Use or share a code to generate extra value for both you and your friends.' }
+          { title: 'Rakeback', description: 'Claim a slice of every wager you make.' },
+          { title: 'Streak perks', description: 'Open daily to stack simple, time-based rewards.' }
         ],
         reminders: [
-          isAuthenticated ? 'Set a reminder to claim rakeback frequently so it never caps out.' : 'Log in or register to reveal your available bonus tiers.',
-          'Look for timers on streak rewards to know when the next boost is ready.',
-          'Bonuses are mobile-first—quick claims take just a tap.',
-          'Terms for each promo are summarized under the claim button.'
+          isAuthenticated ? 'Claim often so rakeback never caps.' : 'Log in or register to reveal your bonuses.',
+          'Timers show when the next streak boost is ready.'
         ]
       },
       CUSTOM_CREATOR: {
         key: 'lootx_intro_caselab_v1',
-        title: 'Welcome to Case Lab',
-        subtitle: 'Prototype custom cases, tune the item mix, and publish your design to challenge friends.',
+        title: 'Case Lab basics',
+        subtitle: 'Build, test, and publish cases without leaving the lobby.',
         icon: FlaskConical,
         accent: 'from-fuchsia-400 to-cyan-500',
         tag: 'Case Lab',
         highlights: [
-          { title: 'Mix & test', description: 'Drag in items, set weights, and simulate spins to verify your payout curve.' },
-          { title: 'Publish & share', description: 'Push your case live so others can open it or feature it in battles.' },
-          { title: 'Mobile ready', description: 'All creator controls are touch-friendly for on-the-go edits.' },
-          { title: 'Iterate fast', description: 'Duplicate an existing case to tweak odds without starting from scratch.' }
+          { title: 'Drag & set odds', description: 'Drop items in, set weights, and see the curve instantly.' },
+          { title: 'Publish fast', description: 'Save, publish, then use your case in battles or share it.' }
         ],
         reminders: [
-          'Save drafts often so you can return later without losing tweaks.',
-          'Testing spins use the same math as live openings for accurate previews.',
-          'Preview images and names should match your theme for quick recognition.',
-          'You can feature your case in a new battle right after publishing.'
+          'Testing uses the same odds as live openings.',
+          'Drafts stay saved so you can edit on mobile later.'
         ]
       }
     }),

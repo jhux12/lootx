@@ -32,25 +32,25 @@ export const FirstVisitModal: React.FC<FirstVisitModalProps> = ({ isOpen, onClos
   const handleClose = () => onClose(dontShowAgain);
 
   return (
-    <div className="fixed inset-0 z-[95] flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <div className="fixed inset-0 z-[95] flex items-center justify-center px-3 py-6 sm:px-5">
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={handleClose}
         aria-hidden="true"
       ></div>
 
-      <div className="relative w-full max-w-4xl bg-gradient-to-br from-[#0d111a] via-[#0b0f18] to-[#0c1220] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-3xl bg-gradient-to-br from-[#0d111a] via-[#0b0f18] to-[#0c1220] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.12),_transparent_45%),_radial-gradient(circle_at_bottom,_rgba(34,211,238,0.12),_transparent_40%)]"></div>
 
-        <div className="flex flex-col gap-4 sm:gap-6 p-5 sm:p-7 lg:p-8 relative z-10">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 sm:gap-5 p-4 sm:p-6 relative z-10">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 sm:gap-4">
               <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${content.accent} flex items-center justify-center shadow-lg shadow-brand-purple/30`}>
                 <Icon className="w-6 h-6 text-white" />
               </div>
               <div>
                 <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">{content.tag}</p>
-                <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">{content.title}</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-white leading-tight">{content.title}</h2>
                 <p className="text-gray-400 text-sm sm:text-base mt-1">{content.subtitle}</p>
               </div>
             </div>
@@ -63,13 +63,13 @@ export const FirstVisitModal: React.FC<FirstVisitModalProps> = ({ isOpen, onClos
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {content.highlights.map((item) => (
               <div
                 key={item.title}
-                className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5 shadow-[0_10px_40px_rgba(0,0,0,0.35)]"
+                className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
               >
-                <h3 className="text-base font-semibold text-white mb-2">{item.title}</h3>
+                <h3 className="text-sm sm:text-base font-semibold text-white mb-1.5">{item.title}</h3>
                 <p className="text-sm text-gray-300 leading-relaxed">{item.description}</p>
               </div>
             ))}
@@ -80,7 +80,7 @@ export const FirstVisitModal: React.FC<FirstVisitModalProps> = ({ isOpen, onClos
               <Info className="w-4 h-4 text-blue-300" />
               Quick reminders
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-300">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-sm text-gray-300">
               {content.reminders.map((item) => (
                 <div key={item} className="flex items-start gap-2">
                   <Shield className="w-4 h-4 text-brand-purple mt-0.5 shrink-0" />
@@ -103,7 +103,7 @@ export const FirstVisitModal: React.FC<FirstVisitModalProps> = ({ isOpen, onClos
 
             <button
               onClick={handleClose}
-              className="px-5 py-2 text-sm font-bold text-white rounded-lg bg-gradient-to-r from-brand-purple to-blue-500 shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/40 transition-all w-full sm:w-auto text-center"
+              className="px-5 py-2.5 text-sm font-bold text-white rounded-lg bg-gradient-to-r from-brand-purple to-blue-500 shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/40 transition-all w-full sm:w-auto text-center"
             >
               Got it
             </button>
