@@ -32,7 +32,7 @@ export const Header: React.FC = () => {
 
     const triggerAnimation = () => {
       setLootRevealActive(true);
-      timeoutId = setTimeout(() => setLootRevealActive(false), 1700);
+      timeoutId = setTimeout(() => setLootRevealActive(false), 1500);
     };
 
     // Trigger once on mount
@@ -67,34 +67,38 @@ export const Header: React.FC = () => {
   return (
     <>
       <style>{`
-        @keyframes loot-reveal {
+        @keyframes gamified-pop {
           0% { 
-            transform: scale(1) rotate(0deg) translateY(0); 
-            filter: brightness(1) hue-rotate(0deg); 
+            transform: scale(1) rotate(0deg); 
+            filter: brightness(1) drop-shadow(0 0 0 rgba(139, 92, 246, 0));
           }
-          10% { transform: scale(0.94) rotate(-3deg) translateY(0); }
-          20% { transform: scale(0.92) rotate(3deg) translateY(0); }
-          30% { transform: scale(0.9) rotate(-2deg) translateY(0); }
-          40% { 
-            transform: scale(1.5) rotate(0deg) translateY(-6px); 
-            filter: brightness(2) hue-rotate(25deg); 
+          15% { 
+            transform: scale(0.85) rotate(-10deg); 
           }
-          50% { 
-            transform: scale(1.35) rotate(1deg) translateY(-8px); 
-            filter: brightness(1.8) hue-rotate(35deg); 
+          30% { 
+            transform: scale(1.6) rotate(8deg); 
+            filter: brightness(2.2) drop-shadow(0 0 25px rgba(34, 211, 238, 0.9));
           }
-          70% { 
-            transform: scale(1.05) rotate(0deg) translateY(-2px); 
-            filter: brightness(1.1) hue-rotate(10deg); 
+          45% { 
+            transform: scale(1.2) rotate(-4deg); 
+            filter: brightness(1.6) drop-shadow(0 0 15px rgba(139, 92, 246, 0.7));
+          }
+          60% { 
+            transform: scale(1.4) rotate(3deg); 
+            filter: brightness(1.9) drop-shadow(0 0 20px rgba(34, 211, 238, 0.8));
+          }
+          80% { 
+            transform: scale(1) rotate(0deg); 
+            filter: brightness(1.2) drop-shadow(0 0 10px rgba(139, 92, 246, 0.4));
           }
           100% { 
-            transform: scale(1) rotate(0deg) translateY(0); 
-            filter: brightness(1) hue-rotate(0deg); 
+            transform: scale(1) rotate(0deg); 
+            filter: brightness(1) drop-shadow(0 0 0 rgba(139, 92, 246, 0));
           }
         }
 
-        .animate-loot-reveal {
-          animation: loot-reveal 1.7s ease-in-out;
+        .animate-gamified-pop {
+          animation: gamified-pop 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
       `}</style>
 
@@ -118,7 +122,7 @@ export const Header: React.FC = () => {
               PULLZ
             </span>
             <span
-              className={`text-2xl md:text-3xl font-black tracking-tight leading-none bg-gradient-to-r from-[#8b5cf6] to-[#22d3ee] text-transparent bg-clip-text inline-block origin-left ${lootRevealActive ? 'animate-loot-reveal' : ''}`}
+              className={`text-2xl md:text-3xl font-black tracking-tight leading-none bg-gradient-to-r from-[#8b5cf6] to-[#22d3ee] text-transparent bg-clip-text inline-block origin-left ${lootRevealActive ? 'animate-gamified-pop' : ''}`}
             >
               .GG
             </span>
