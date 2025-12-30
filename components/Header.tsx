@@ -111,7 +111,7 @@ export const Header: React.FC = () => {
 
           {/* Logo */}
           <div
-            className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity font-sans"
+            className="flex items-center gap-1 cursor-pointer hover:opacity-90 transition-opacity font-sans"
             onClick={() => handleNav({ type: 'HOME' })}
           >
             <span className="text-2xl md:text-3xl font-black text-white tracking-tight leading-none">
