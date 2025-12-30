@@ -22,7 +22,8 @@ export const Profile: React.FC = () => {
   const { user, users, inventory, balance, sellItem, updateAddress, updateUserInfo, shipItem, logout, view, setView, followUser, unfollowUser } = useGame();
   const { playSound } = useSound();
   
-  const [activeTab, setActiveTab] = useState<'inventory' | 'shipped' | 'community' | 'settings'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'community' | 'settings'>('inventory');
+  const [inventorySubTab, setInventorySubTab] = useState<'available' | 'shipped'>('available');
   const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -76,6 +77,7 @@ export const Profile: React.FC = () => {
 
   const availableItems = inventory.filter(item => item.status === 'available');
   const shippedItems = inventory.filter(item => item.status === 'shipping' || item.status === 'shipped');
+  const displayInventory = inventorySubTab === 'available' ? availableItems : shippedItems;
 
   const totalInventoryValue = isOwnProfile 
     ? availableItems.reduce((sum, item) => sum + item.price, 0)
@@ -256,14 +258,6 @@ export const Profile: React.FC = () => {
             >
                 <Package className="w-4 h-4" /> Inventory
             </button>
-            {isOwnProfile && (
-                <button 
-                    onClick={() => setActiveTab('shipped')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'shipped' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-                >
-                    <Truck className="w-4 h-4" /> Shipped
-                </button>
-            )}
             <button 
                 onClick={() => setActiveTab('community')}
                 className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'community' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
@@ -283,89 +277,101 @@ export const Profile: React.FC = () => {
 
       {/* Tab Content */}
       <div className="min-h-[400px]">
-          {(activeTab === 'inventory' || activeTab === 'shipped') && (
+          {activeTab === 'inventory' && (
               <div className="space-y-6">
+                  {/* Inventory Sub-Tabs */}
+                  <div className="flex items-center justify-between border-b border-gray-800 pb-4">
+                      <div className="flex gap-2">
+                          <button 
+                            onClick={() => setInventorySubTab('available')}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${inventorySubTab === 'available' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
+                          >
+                              Available Items ({availableItems.length})
+                          </button>
+                          <button 
+                            onClick={() => setInventorySubTab('shipped')}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${inventorySubTab === 'shipped' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
+                          >
+                              Shipped & Processing ({shippedItems.length})
+                          </button>
+                      </div>
+                      
+                      {isOwnProfile && inventorySubTab === 'available' && availableItems.length > 0 && (
+                          <div className="text-xs text-gray-500 font-medium">
+                              Total Value: <span className="text-green-500 font-bold">${totalInventoryValue.toLocaleString()}</span>
+                          </div>
+                      )}
+                  </div>
+
                   {!isOwnProfile ? (
                       <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
                           <Lock className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                           <h3 className="text-xl font-bold text-white mb-2">Private Inventory</h3>
                           <p className="text-gray-500">This player's inventory is set to private.</p>
                       </div>
-                  ) : (
-                      <>
-                          {activeTab === 'inventory' && availableItems.length > 0 && (
-                              <div className="flex justify-end border-b border-gray-800 pb-4">
-                                  <div className="text-xs text-gray-500 font-medium">
-                                      Total Value: <span className="text-green-500 font-bold">${totalInventoryValue.toLocaleString()}</span>
-                                  </div>
-                              </div>
+                  ) : displayInventory.length === 0 ? (
+                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
+                          <Package className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+                          <h3 className="text-xl font-bold text-white mb-2">
+                              {inventorySubTab === 'available' ? 'Your inventory is empty' : 'No shipped items yet'}
+                          </h3>
+                          <p className="text-gray-500 mb-6">
+                              {inventorySubTab === 'available' 
+                                ? 'Open some boxes to start collecting items!' 
+                                : 'Items you choose to ship will appear here.'}
+                          </p>
+                          {inventorySubTab === 'available' && (
+                              <button 
+                                onClick={() => setView({ type: 'BOXES' })}
+                                className="px-6 py-2 bg-brand-purple text-white rounded-lg font-bold hover:bg-purple-600 transition-colors"
+                              >
+                                Browse Boxes
+                              </button>
                           )}
-
-                          {(activeTab === 'inventory' ? availableItems : shippedItems).length === 0 ? (
-                              <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
-                                  {activeTab === 'inventory' ? <Package className="w-12 h-12 text-gray-700 mx-auto mb-4" /> : <Truck className="w-12 h-12 text-gray-700 mx-auto mb-4" />}
-                                  <h3 className="text-xl font-bold text-white mb-2">
-                                      {activeTab === 'inventory' ? 'Your inventory is empty' : 'No shipped items yet'}
-                                  </h3>
-                                  <p className="text-gray-500 mb-6">
-                                      {activeTab === 'inventory' 
-                                        ? 'Open some boxes to start collecting items!' 
-                                        : 'Items you choose to ship will appear here.'}
-                                  </p>
-                                  {activeTab === 'inventory' && (
-                                      <button 
-                                        onClick={() => setView({ type: 'BOXES' })}
-                                        className="px-6 py-2 bg-brand-purple text-white rounded-lg font-bold hover:bg-purple-600 transition-colors"
-                                      >
-                                        Browse Boxes
-                                      </button>
-                                  )}
-                              </div>
-                          ) : (
-                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                  {(activeTab === 'inventory' ? availableItems : shippedItems).map((item) => (
-                                      <div key={item.id} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all">
-                                          <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
-                                              <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
-                                              <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
-                                                  item.rarity === 'legendary' ? 'from-yellow-500' :
-                                                  item.rarity === 'epic' ? 'from-purple-500' :
-                                                  item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
-                                              }`} />
-                                          </div>
-                                          <div className="text-xs font-bold text-gray-500 uppercase mb-1 tracking-wider">{item.rarity}</div>
-                                          <h4 className="text-white font-bold text-sm mb-2 line-clamp-1">{item.name}</h4>
-                                          <div className="text-green-500 font-black mb-4">${item.price.toLocaleString()}</div>
-                                          
-                                          {activeTab === 'inventory' ? (
-                                              <div className="grid grid-cols-2 gap-2">
-                                                  <button 
-                                                      onClick={() => handleSell(item.id, item.price)}
-                                                      className="py-2 bg-green-500/10 text-green-500 rounded-lg text-xs font-bold hover:bg-green-500 hover:text-white transition-all"
-                                                  >
-                                                      Sell
-                                                  </button>
-                                                  <button 
-                                                      onClick={() => handleShip(item.id)}
-                                                      className="py-2 bg-blue-500/10 text-blue-500 rounded-lg text-xs font-bold hover:bg-blue-500 hover:text-white transition-all"
-                                                  >
-                                                      Ship
-                                                  </button>
-                                              </div>
+                      </div>
+                  ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                          {displayInventory.map((item) => (
+                              <div key={item.id} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all">
+                                  <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
+                                      <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                                      <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
+                                          item.rarity === 'legendary' ? 'from-yellow-500' :
+                                          item.rarity === 'epic' ? 'from-purple-500' :
+                                          item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
+                                      }`} />
+                                  </div>
+                                  <div className="text-xs font-bold text-gray-500 uppercase mb-1 tracking-wider">{item.rarity}</div>
+                                  <h4 className="text-white font-bold text-sm mb-2 line-clamp-1">{item.name}</h4>
+                                  <div className="text-green-500 font-black mb-4">${item.price.toLocaleString()}</div>
+                                  
+                                  {inventorySubTab === 'available' ? (
+                                      <div className="grid grid-cols-2 gap-2">
+                                          <button 
+                                              onClick={() => handleSell(item.id, item.price)}
+                                              className="py-2 bg-green-500/10 text-green-500 rounded-lg text-xs font-bold hover:bg-green-500 hover:text-white transition-all"
+                                          >
+                                              Sell
+                                          </button>
+                                          <button 
+                                              onClick={() => handleShip(item.id)}
+                                              className="py-2 bg-blue-500/10 text-blue-500 rounded-lg text-xs font-bold hover:bg-blue-500 hover:text-white transition-all"
+                                          >
+                                              Ship
+                                          </button>
+                                      </div>
+                                  ) : (
+                                      <div className="flex items-center gap-2 text-xs font-bold py-2 px-3 bg-[#0b0e14] rounded-lg text-gray-400">
+                                          {item.status === 'shipping' ? (
+                                              <><Clock className="w-3 h-3 text-yellow-500" /> Processing</>
                                           ) : (
-                                              <div className="flex items-center gap-2 text-xs font-bold py-2 px-3 bg-[#0b0e14] rounded-lg text-gray-400">
-                                                  {item.status === 'shipping' ? (
-                                                      <><Clock className="w-3 h-3 text-yellow-500" /> Processing</>
-                                                  ) : (
-                                                      <><Truck className="w-3 h-3 text-green-500" /> Shipped</>
-                                                  )}
-                                              </div>
+                                              <><Truck className="w-3 h-3 text-green-500" /> Shipped</>
                                           )}
                                       </div>
-                                  ))}
+                                  )}
                               </div>
-                          )}
-                      </>
+                          ))}
+                      </div>
                   )}
               </div>
           )}
