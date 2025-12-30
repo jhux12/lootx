@@ -75,8 +75,17 @@ export const Profile: React.FC = () => {
       setActivePeopleTab('followers');
   }, [displayUser.id]);
 
-  const availableItems = inventory.filter(item => item.status === 'available');
-  const shippedItems = inventory.filter(item => item.status === 'shipping' || item.status === 'shipped');
+  const normalizedInventory = inventory
+    .map((item, index) => ({
+      ...item,
+      instanceId: item.instanceId || `${item.id}-${index}`,
+      status: item.status ?? 'available',
+      obtainedAt: item.obtainedAt ?? 0
+    }))
+    .sort((a, b) => b.obtainedAt - a.obtainedAt);
+
+  const availableItems = normalizedInventory.filter(item => item.status === 'available');
+  const shippedItems = normalizedInventory.filter(item => item.status === 'shipping' || item.status === 'shipped');
   const displayInventory = inventorySubTab === 'available' ? availableItems : shippedItems;
 
   const totalInventoryValue = isOwnProfile 
@@ -333,7 +342,7 @@ export const Profile: React.FC = () => {
                   ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                           {displayInventory.map((item) => (
-                              <div key={item.id} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all">
+                              <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all">
                                   <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
                                       <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
                                       <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
@@ -349,13 +358,13 @@ export const Profile: React.FC = () => {
                                   {inventorySubTab === 'available' ? (
                                       <div className="grid grid-cols-2 gap-2">
                                           <button 
-                                              onClick={() => handleSell(item.id, item.price)}
+                                              onClick={() => handleSell(item.instanceId, item.price)}
                                               className="py-2 bg-green-500/10 text-green-500 rounded-lg text-xs font-bold hover:bg-green-500 hover:text-white transition-all"
                                           >
                                               Sell
                                           </button>
                                           <button 
-                                              onClick={() => handleShip(item.id)}
+                                              onClick={() => handleShip(item.instanceId)}
                                               className="py-2 bg-blue-500/10 text-blue-500 rounded-lg text-xs font-bold hover:bg-blue-500 hover:text-white transition-all"
                                           >
                                               Ship
