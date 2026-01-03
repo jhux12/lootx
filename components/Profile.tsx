@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { XP_ICON } from '../constants';
 import { User, Package, Wallet, Clock, History, MapPin, Truck, Save, Check, Settings, Shield, Lock, LogOut, Mail, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Upload, Image as ImageIcon, Trash2, ExternalLink } from 'lucide-react';
 
 const AVATAR_PRESETS = [
@@ -253,8 +254,14 @@ export const Profile: React.FC = () => {
                         <div className="text-xl font-black text-brand-purple">${isOwnProfile ? totalInventoryValue.toLocaleString() : '?'}</div>
                     </div>
                     <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
-                        <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">XP Points</div>
-                        <div className="text-xl font-black text-blue-500">{displayUser.xp.toLocaleString()}</div>
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                            <div className="text-gray-500 text-xs font-bold uppercase tracking-wider">XP Points</div>
+                            <img src={XP_ICON} alt="XP" className="w-5 h-5 object-contain drop-shadow" />
+                        </div>
+                        <div className="text-xl font-black text-blue-500 flex items-center gap-2">
+                            <img src={XP_ICON} alt="XP" className="w-6 h-6 object-contain" />
+                            <span>{displayUser.xp.toLocaleString()}</span>
+                        </div>
                     </div>
                 </div>
             </div>

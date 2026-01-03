@@ -1,5 +1,7 @@
 import { Battle, ChatMessage, LiveDrop, MysteryBox, CaseItem, User } from "./types";
 
+export const XP_ICON = 'https://cdn-icons-png.flaticon.com/512/3284/3284473.png';
+
 export const MOCK_USERS: User[] = [
   { id: '1', name: 'MarieJane', avatar: 'https://picsum.photos/id/64/100/100', level: 5, xp: 1250 },
   { id: '2', name: 'ZEUS', avatar: 'https://picsum.photos/id/65/100/100', level: 99, xp: 99999 },
