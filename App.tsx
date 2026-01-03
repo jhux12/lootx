@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Header } from './components/Header';
 import { LiveTicker } from './components/LiveTicker';
 import { ChatSidebar } from './components/ChatSidebar';
@@ -16,8 +16,9 @@ import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider } from './context/SoundContext';
-import { ShieldAlert, MessageCircle } from 'lucide-react';
+import { ShieldAlert, MessageCircle, Swords, Trophy, Gift, FlaskConical } from 'lucide-react';
 import { MobileChatModal } from './components/MobileChatModal';
+import { FirstVisitModal, IntroContent } from './components/FirstVisitModal';
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC = () => {
@@ -141,6 +142,106 @@ const MainContent: React.FC = () => {
   );
 };
 
+const PageIntroManager: React.FC = () => {
+  const { view, isAuthenticated } = useGame();
+  const [isOpen, setIsOpen] = useState(false);
+  const [content, setContent] = useState<IntroContent | null>(null);
+
+  const contentMap = useMemo<Record<string, IntroContent | undefined>>(
+    () => ({
+      BATTLES: {
+        key: 'lootx_intro_battles_v1',
+        title: 'Case battles in a flash',
+        subtitle: 'Pick a lobby, watch every pull, and see who wins each round.',
+        icon: Swords,
+        accent: 'from-brand-purple to-blue-500',
+        tag: 'Battles page',
+        highlights: [
+          { title: 'Join fast', description: 'Filter by price and slots, then hop in before the timer hits zero.' },
+          { title: 'See every pull', description: 'Live spins show who is ahead without leaving the lobby.' }
+        ],
+        reminders: [
+          'Add bots to start instantly if seats are empty.',
+          'Wins are based on total value pulled per battle.'
+        ]
+      },
+      LEADERBOARD: {
+        key: 'lootx_intro_leaderboard_v1',
+        title: 'Leaderboard at a glance',
+        subtitle: 'See who is hot, follow players, and view their profiles.',
+        icon: Trophy,
+        accent: 'from-amber-400 to-orange-500',
+        tag: 'Leaderboard page',
+        highlights: [
+          { title: 'Live movers', description: 'Recent streaks and wins update automatically.' },
+          { title: 'Open profiles', description: 'Tap a player to view stats and follow them.' }
+        ],
+        reminders: [
+          'Ranks respond to your XP from cases and battles.',
+          'Swipe through cards on mobile to explore faster.'
+        ]
+      },
+      BONUSES: {
+        key: 'lootx_intro_bonuses_v1',
+        title: 'Quick bonus check',
+        subtitle: isAuthenticated
+          ? 'Claim rakeback, streak perks, and limited boosts in a few taps.'
+          : 'Sign in to unlock rakeback, streak perks, and seasonal boosts.',
+        icon: Gift,
+        accent: 'from-emerald-400 to-teal-500',
+        tag: 'Bonuses page',
+        highlights: [
+          { title: 'Rakeback', description: 'Claim a slice of every wager you make.' },
+          { title: 'Streak perks', description: 'Open daily to stack simple, time-based rewards.' }
+        ],
+        reminders: [
+          isAuthenticated ? 'Claim often so rakeback never caps.' : 'Log in or register to reveal your bonuses.',
+          'Timers show when the next streak boost is ready.'
+        ]
+      },
+      CUSTOM_CREATOR: {
+        key: 'lootx_intro_caselab_v1',
+        title: 'Case Lab basics',
+        subtitle: 'Build, test, and publish cases without leaving the lobby.',
+        icon: FlaskConical,
+        accent: 'from-fuchsia-400 to-cyan-500',
+        tag: 'Case Lab',
+        highlights: [
+          { title: 'Drag & set odds', description: 'Drop items in, set weights, and see the curve instantly.' },
+          { title: 'Publish fast', description: 'Save, publish, then use your case in battles or share it.' }
+        ],
+        reminders: [
+          'Testing uses the same odds as live openings.',
+          'Drafts stay saved so you can edit on mobile later.'
+        ]
+      }
+    }),
+    [isAuthenticated]
+  );
+
+  useEffect(() => {
+    const next = contentMap[view.type];
+    if (!next) {
+      setIsOpen(false);
+      setContent(null);
+      return;
+    }
+
+    setContent(next);
+    const hidden = localStorage.getItem(next.key);
+    setIsOpen(!hidden);
+  }, [contentMap, view]);
+
+  const handleClose = (dontShowAgain: boolean) => {
+    if (content && dontShowAgain) {
+      localStorage.setItem(content.key, 'true');
+    }
+    setIsOpen(false);
+  };
+
+  return <FirstVisitModal isOpen={isOpen} onClose={handleClose} content={content} />;
+};
+
 function App() {
   const [showSupportChat, setShowSupportChat] = useState(false);
 
@@ -149,6 +250,7 @@ function App() {
       <GameProvider>
         <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
           <Header />
+          <PageIntroManager />
           
           <div className="flex flex-1">
             <MainContent />
