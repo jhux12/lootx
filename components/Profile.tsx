@@ -75,13 +75,23 @@ export const Profile: React.FC = () => {
       setActivePeopleTab('followers');
   }, [displayUser.id]);
 
-  const availableItems = inventory.filter(item => item.status === 'available');
-  const shippedItems = inventory.filter(item => item.status === 'shipping' || item.status === 'shipped');
+  const normalizedInventory = inventory
+    .map((item, index) => ({
+      ...item,
+      instanceId: item.instanceId || `${item.id}-${index}`,
+      status: item.status ?? 'available',
+      obtainedAt: item.obtainedAt ?? 0
+    }))
+    .sort((a, b) => b.obtainedAt - a.obtainedAt);
+
+  const availableItems = normalizedInventory.filter(item => item.status === 'available');
+  const shippedItems = normalizedInventory.filter(item => item.status === 'shipping' || item.status === 'shipped');
   const displayInventory = inventorySubTab === 'available' ? availableItems : shippedItems;
 
   const totalInventoryValue = isOwnProfile 
     ? availableItems.reduce((sum, item) => sum + item.price, 0)
     : 0;
+  const profileBalance = isOwnProfile ? balance : displayUser.balance ?? 0;
 
   const handleSell = (id: string, price: number) => {
       if(confirm('Are you sure you want to sell this item for balance?')) {
@@ -232,7 +242,7 @@ export const Profile: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
                     <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
                         <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Balance</div>
-                        <div className="text-xl font-black text-green-500">${displayUser.balance.toLocaleString()}</div>
+                        <div className="text-xl font-black text-green-500">${profileBalance.toLocaleString()}</div>
                     </div>
                     <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
                         <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Inventory</div>
@@ -251,23 +261,23 @@ export const Profile: React.FC = () => {
          </div>
 
          {/* Main Tabs */}
-         <div className="flex items-center gap-1 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-fit">
+         <div className="flex items-center gap-1 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-full overflow-x-auto md:overflow-visible scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
             <button 
                 onClick={() => setActiveTab('inventory')}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'inventory' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 ${activeTab === 'inventory' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
             >
                 <Package className="w-4 h-4" /> Inventory
             </button>
             <button 
                 onClick={() => setActiveTab('community')}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'community' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 ${activeTab === 'community' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
             >
                 <UsersIcon className="w-4 h-4" /> Community
             </button>
             {isOwnProfile && (
                 <button 
                     onClick={() => setActiveTab('settings')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'settings' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 ${activeTab === 'settings' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
                 >
                     <Settings className="w-4 h-4" /> Settings
                 </button>
@@ -280,17 +290,17 @@ export const Profile: React.FC = () => {
           {activeTab === 'inventory' && (
               <div className="space-y-6">
                   {/* Inventory Sub-Tabs */}
-                  <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-                      <div className="flex gap-2">
+                  <div className="flex items-center justify-between border-b border-gray-800 pb-4 gap-3 flex-col sm:flex-row">
+                      <div className="flex gap-2 w-full sm:w-auto overflow-x-auto sm:overflow-visible scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
                           <button 
                             onClick={() => setInventorySubTab('available')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${inventorySubTab === 'available' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap shrink-0 ${inventorySubTab === 'available' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
                           >
                               Available Items ({availableItems.length})
                           </button>
                           <button 
                             onClick={() => setInventorySubTab('shipped')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${inventorySubTab === 'shipped' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap shrink-0 ${inventorySubTab === 'shipped' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
                           >
                               Shipped & Processing ({shippedItems.length})
                           </button>
@@ -332,7 +342,7 @@ export const Profile: React.FC = () => {
                   ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                           {displayInventory.map((item) => (
-                              <div key={item.id} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all">
+                              <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all">
                                   <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
                                       <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
                                       <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
@@ -348,13 +358,13 @@ export const Profile: React.FC = () => {
                                   {inventorySubTab === 'available' ? (
                                       <div className="grid grid-cols-2 gap-2">
                                           <button 
-                                              onClick={() => handleSell(item.id, item.price)}
+                                              onClick={() => handleSell(item.instanceId, item.price)}
                                               className="py-2 bg-green-500/10 text-green-500 rounded-lg text-xs font-bold hover:bg-green-500 hover:text-white transition-all"
                                           >
                                               Sell
                                           </button>
                                           <button 
-                                              onClick={() => handleShip(item.id)}
+                                              onClick={() => handleShip(item.instanceId)}
                                               className="py-2 bg-blue-500/10 text-blue-500 rounded-lg text-xs font-bold hover:bg-blue-500 hover:text-white transition-all"
                                           >
                                               Ship
@@ -410,7 +420,7 @@ export const Profile: React.FC = () => {
                                           <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
                                           <div>
                                               <div className="text-white font-bold">{p.name}</div>
-                                              <div className="text-xs text-gray-500">Level {p.level} • ${p.balance.toLocaleString()}</div>
+                                              <div className="text-xs text-gray-500">Level {p.level} • ${(p.balance ?? 0).toLocaleString()}</div>
                                           </div>
                                       </div>
                                       <button 
