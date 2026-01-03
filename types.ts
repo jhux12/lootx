@@ -15,6 +15,7 @@ export interface User {
   avatar: string;
   level: number;
   xp: number;
+  balance?: number;
   followers?: string[];
   lastDailyClaim?: number;
   totalSpent?: number;
