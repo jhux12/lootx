@@ -786,11 +786,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateUserInfo = async (name: string, avatar: string) => {
-      setUser(prev => {
-        const updated = { ...prev, name, avatar };
-        persistUserData({ name, avatar });
-        return updated;
-      });
+      const updates = { name, avatar };
+      setUser(prev => ({ ...prev, ...updates }));
+      setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, ...updates } : u));
+
+      try {
+        await persistUserData(updates);
+      } catch (error) {
+        console.error('Failed to persist profile changes', error);
+      }
   };
 
   const updateUserFlags = async (updates: Partial<User>) => {

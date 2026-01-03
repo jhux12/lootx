@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Gift, Calendar, Lock, Copy, TrendingUp, ShieldCheck, ClipboardList, Loader2 } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { XP_ICON } from '../constants';
 
 export const Bonuses: React.FC = () => {
   const { 
@@ -171,9 +172,12 @@ export const Bonuses: React.FC = () => {
                  
                  {/* XP Progress */}
                  <div className="mt-4 max-w-md">
-                    <div className="flex justify-between text-xs font-bold text-gray-300 mb-1">
-                        <span>XP Progress</span>
-                        <span>{progress.xpIntoLevel} / {progress.xpForNextLevel}</span>
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-gray-300 mb-1">
+                        <div className="flex items-center gap-2">
+                            <img src={XP_ICON} alt="XP" className="w-5 h-5 object-contain" />
+                            <span>XP Progress</span>
+                        </div>
+                        <span className="text-right">{progress.xpIntoLevel} / {progress.xpForNextLevel}</span>
                     </div>
                     <div className="h-3 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
                         <div 
