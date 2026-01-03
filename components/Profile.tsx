@@ -261,23 +261,23 @@ export const Profile: React.FC = () => {
          </div>
 
          {/* Main Tabs */}
-         <div className="flex items-center gap-1 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-fit">
+         <div className="flex items-center gap-1 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-full overflow-x-auto md:overflow-visible scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
             <button 
                 onClick={() => setActiveTab('inventory')}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'inventory' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 ${activeTab === 'inventory' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
             >
                 <Package className="w-4 h-4" /> Inventory
             </button>
             <button 
                 onClick={() => setActiveTab('community')}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'community' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 ${activeTab === 'community' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
             >
                 <UsersIcon className="w-4 h-4" /> Community
             </button>
             {isOwnProfile && (
                 <button 
                     onClick={() => setActiveTab('settings')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'settings' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 ${activeTab === 'settings' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
                 >
                     <Settings className="w-4 h-4" /> Settings
                 </button>
@@ -290,17 +290,17 @@ export const Profile: React.FC = () => {
           {activeTab === 'inventory' && (
               <div className="space-y-6">
                   {/* Inventory Sub-Tabs */}
-                  <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-                      <div className="flex gap-2">
+                  <div className="flex items-center justify-between border-b border-gray-800 pb-4 gap-3 flex-col sm:flex-row">
+                      <div className="flex gap-2 w-full sm:w-auto overflow-x-auto sm:overflow-visible scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
                           <button 
                             onClick={() => setInventorySubTab('available')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${inventorySubTab === 'available' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap shrink-0 ${inventorySubTab === 'available' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
                           >
                               Available Items ({availableItems.length})
                           </button>
                           <button 
                             onClick={() => setInventorySubTab('shipped')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${inventorySubTab === 'shipped' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap shrink-0 ${inventorySubTab === 'shipped' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
                           >
                               Shipped & Processing ({shippedItems.length})
                           </button>
