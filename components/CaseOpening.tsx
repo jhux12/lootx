@@ -66,6 +66,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const { playSound } = useSound();
   
   const box = boxes.find(b => b.id === boxId) || boxes[0];
+  const dailyBox = boxes.find(b => b.isDaily);
   const items = box.items || [];
 
   // Sort items high to low for display purposes
@@ -97,6 +98,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const nonceRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
+  const canTryFree = Boolean(dailyBox) && canFreeSpin;
 
   const setNewServerSeed = useCallback(async (seedOverride?: string) => {
     setIsGeneratingSeed(true);
@@ -321,6 +323,27 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
   };
 
+  const handleTryFree = () => {
+    playSound('click');
+
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (!dailyBox) {
+      alert('No free spins are available right now.');
+      return;
+    }
+
+    if (!canFreeSpin) {
+      alert('Free case already claimed. Come back in 24 hours.');
+      return;
+    }
+
+    setView({ type: 'CASE_OPENING', boxId: dailyBox.id, isFree: true });
+  };
+
   const finishSpin = (item: CaseItem) => {
     setIsSpinning(false);
     setShowWinModal(true);
@@ -445,14 +468,26 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="bg-[#0b0e14] p-4 flex items-center justify-center border-t border-gray-800 relative z-20">
+            <div className="bg-[#0b0e14] p-4 flex flex-col sm:flex-row items-center justify-center gap-3 border-t border-gray-800 relative z-20">
                  <button 
                     onClick={handleSpin}
                     disabled={isSpinning || isGeneratingSeed}
-                    className={`min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20')}`}
+                    className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20')}`}
                 >
                     <span>{isGeneratingSeed ? 'Preparing seed...' : (isSpinning ? 'Spinning...' : (isFree ? 'Free Spin' : `Open for $${box.price}`))}</span>
                  </button>
+                 {!isFree && dailyBox && (
+                   <button
+                     onClick={handleTryFree}
+                     disabled={isSpinning || isGeneratingSeed || !canTryFree}
+                     className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
+                   >
+                     <span>Try for Free</span>
+                     {!canTryFree && (
+                       <span className="text-xs font-medium text-emerald-100/90">Available every 24h</span>
+                     )}
+                   </button>
+                 )}
             </div>
         </div>
 
