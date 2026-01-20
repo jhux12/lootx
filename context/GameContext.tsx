@@ -193,7 +193,7 @@ const buildUserDocument = (user: User, extras: { balance: number; inventory: Inv
     delete payload.shippingAddress;
   }
 
-  return payload;
+  return sanitizeDeep(payload);
 };
 
 const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
@@ -303,7 +303,7 @@ const persistUserData = async (payload: PersistUserData) => {
   const currentUser = auth.currentUser;
   if (!currentUser) return;
   const userRef = getUserRef(currentUser.uid);
-  await setDoc(userRef, payload, { merge: true });
+  await setDoc(userRef, sanitizeDeep(payload), { merge: true });
 };
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
