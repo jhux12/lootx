@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Swords, Plus, X, Trash2, Clock } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { CoinAmount } from './CoinAmount';
 
 // Sub-component for countdown
 const BattleTimer: React.FC<{ createdAt: number }> = ({ createdAt }) => {
@@ -135,7 +136,12 @@ export const BattlesList: React.FC = () => {
                  <div className="ml-auto flex items-center gap-4 p-2 w-full md:w-auto justify-between md:justify-end">
                      {battle.status === 'waiting' && <BattleTimer createdAt={battle.createdAt} />}
                      <div className="text-right">
-                         <div className="text-green-500 font-bold">${battle.cost.toFixed(2)}</div>
+                         <CoinAmount
+                           amount={battle.cost}
+                           formatOptions={{ maximumFractionDigits: 0 }}
+                           className="text-green-500 font-bold justify-end"
+                           iconClassName="w-3.5 h-3.5"
+                         />
                          <div className="text-[10px] text-gray-500 uppercase font-bold">Cost</div>
                      </div>
                      
@@ -213,7 +219,12 @@ export const BattlesList: React.FC = () => {
                                             </button>
                                             <img src={box.image} className="w-12 h-12 object-contain mb-1" />
                                             <div className="text-[10px] text-gray-400 truncate w-full text-center">{box.name}</div>
-                                            <div className="text-[10px] text-green-500 font-bold">${box.price}</div>
+                                            <CoinAmount
+                                              amount={box.price}
+                                              formatOptions={{ maximumFractionDigits: 0 }}
+                                              className="text-[10px] text-green-500 font-bold justify-center"
+                                              iconClassName="w-3 h-3"
+                                            />
                                         </div>
                                     );
                                 })
@@ -233,7 +244,12 @@ export const BattlesList: React.FC = () => {
                                 >
                                     <img src={box.image} className="w-12 h-12 object-contain mb-2" />
                                     <div className="text-xs text-gray-300 font-medium truncate w-full">{box.name}</div>
-                                    <div className="text-xs text-green-500 font-bold">${box.price}</div>
+                                    <CoinAmount
+                                      amount={box.price}
+                                      formatOptions={{ maximumFractionDigits: 0 }}
+                                      className="text-xs text-green-500 font-bold justify-center"
+                                      iconClassName="w-3 h-3"
+                                    />
                                 </div>
                             ))}
                         </div>
@@ -244,7 +260,12 @@ export const BattlesList: React.FC = () => {
                 <div className="mt-6 pt-4 border-t border-gray-800 flex items-center justify-between">
                     <div>
                         <div className="text-xs text-gray-500">Total Cost</div>
-                        <div className="text-xl font-black text-white">${calculateTotalCost().toFixed(2)}</div>
+                        <CoinAmount
+                          amount={calculateTotalCost()}
+                          formatOptions={{ maximumFractionDigits: 0 }}
+                          className="text-xl font-black text-white"
+                          iconClassName="w-4 h-4"
+                        />
                     </div>
                     <button 
                         onClick={handleCreateConfirm}

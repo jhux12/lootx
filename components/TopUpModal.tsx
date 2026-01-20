@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import { X, CreditCard, Wallet, Bitcoin, Loader2, CheckCircle } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { COIN_ICON } from '../constants';
+import { CoinAmount } from './CoinAmount';
 
 export const TopUpModal: React.FC = () => {
   const { setShowTopUpModal, addBalance } = useGame();
   const { playSound } = useSound();
   const [method, setMethod] = useState<'card' | 'crypto'>('card');
-  const [amount, setAmount] = useState<number>(50);
+  const [amountCoins, setAmountCoins] = useState<number>(5000);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const amounts = [10, 25, 50, 100, 250, 500];
+  const amounts = [1000, 2500, 5000, 10000, 25000, 50000];
 
   const handleDeposit = () => {
       playSound('click');
@@ -19,7 +21,7 @@ export const TopUpModal: React.FC = () => {
 
       // Simulate API Call
       setTimeout(() => {
-          addBalance(amount);
+          addBalance(amountCoins / 100);
           setIsLoading(false);
           setSuccess(true);
           playSound('coins');
@@ -44,13 +46,13 @@ export const TopUpModal: React.FC = () => {
             <div className="p-12 flex flex-col items-center justify-center text-center">
                 <CheckCircle className="w-16 h-16 text-green-500 mb-4 animate-bounce" />
                 <h2 className="text-2xl font-black text-white mb-2">Deposit Successful!</h2>
-                <p className="text-gray-400">Your balance has been updated.</p>
+                <p className="text-gray-400">Your coins have been added.</p>
             </div>
         ) : (
             <>
                 <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-[#0b0e14]">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <Wallet className="w-5 h-5 text-blue-500" /> Top Up Balance
+                        <Wallet className="w-5 h-5 text-blue-500" /> Top Up Coins
                     </h2>
                     <button 
                         onClick={() => setShowTopUpModal(false)} 
@@ -80,28 +82,39 @@ export const TopUpModal: React.FC = () => {
                     </div>
 
                     {/* Amount Selector */}
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Select Amount</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Select Coin Pack</label>
                     <div className="grid grid-cols-3 gap-3 mb-6">
                         {amounts.map(amt => (
                             <button
                                 key={amt}
-                                onClick={() => { setAmount(amt); playSound('click'); }}
-                                className={`py-3 rounded-lg border font-bold transition-all ${amount === amt ? 'bg-green-600 border-green-500 text-white shadow-lg shadow-green-900/20' : 'bg-[#0b0e14] border-gray-800 text-gray-400 hover:border-gray-600'}`}
+                                onClick={() => { setAmountCoins(amt); playSound('click'); }}
+                                className={`py-3 rounded-lg border font-bold transition-all ${amountCoins === amt ? 'bg-green-600 border-green-500 text-white shadow-lg shadow-green-900/20' : 'bg-[#0b0e14] border-gray-800 text-gray-400 hover:border-gray-600'}`}
                             >
-                                ${amt}
+                                <CoinAmount
+                                  amount={amt / 100}
+                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                  className="justify-center"
+                                  iconClassName="w-3.5 h-3.5"
+                                />
                             </button>
                         ))}
                     </div>
 
                     {/* Custom Amount Input */}
-                    <div className="mb-6 relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
-                        <input 
-                            type="number" 
-                            value={amount}
-                            onChange={(e) => setAmount(Number(e.target.value))}
-                            className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg py-3 pl-8 pr-4 text-white font-bold focus:outline-none focus:border-blue-500 transition-colors"
-                        />
+                    <div className="mb-6">
+                        <div className="relative">
+                            <span className="absolute inset-y-0 left-4 flex items-center">
+                              <img src={COIN_ICON} alt="Coin" className="w-4 h-4" />
+                            </span>
+                            <input 
+                                type="number"
+                                min="0"
+                                value={amountCoins}
+                                onChange={(e) => setAmountCoins(Number(e.target.value))}
+                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg py-3 pl-11 pr-4 text-white font-bold leading-none focus:outline-none focus:border-blue-500 transition-colors"
+                            />
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-2">100 coins = $1</p>
                     </div>
 
                     {/* Submit Button */}
@@ -115,7 +128,16 @@ export const TopUpModal: React.FC = () => {
                                 <Loader2 className="w-5 h-5 animate-spin" /> Processing...
                             </>
                         ) : (
-                            `Deposit $${amount}`
+                            <span className="inline-flex items-center gap-2">
+                              Deposit
+                              <CoinAmount
+                                amount={amountCoins / 100}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="text-white"
+                                iconClassName="w-4 h-4"
+                              />
+                              coins
+                            </span>
                         )}
                     </button>
                     

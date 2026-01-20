@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useGame } from '../context/GameContext';
 import { LiveDrop, User } from '../types';
 import { CASE_ITEMS } from '../constants';
+import { CoinAmount } from './CoinAmount';
 
 export const LiveTicker: React.FC = () => {
   const { items, users } = useGame();
@@ -51,19 +52,23 @@ export const LiveTicker: React.FC = () => {
           <div 
             key={`${drop.id}-${idx}`} 
             className={`
-              flex-shrink-0 w-40 h-14 bg-brand-card rounded flex items-center p-2 gap-3 
+              flex-shrink-0 w-40 h-14 bg-brand-card rounded flex items-center p-2 gap-3 min-w-0
               border-b-2 transition-transform hover:scale-105 cursor-pointer
               ${getRarityColor(drop.rarity)}
             `}
           >
             <img src={drop.itemImage} alt={drop.itemName} className="w-10 h-10 object-contain rounded bg-gray-900" />
-            <div className="flex flex-col overflow-hidden">
+            <div className="flex flex-col overflow-hidden min-w-0">
               <span className="text-xs font-bold text-gray-200 truncate">{drop.itemName}</span>
               <span className="text-[10px] text-gray-500 truncate">{drop.user.name}</span>
             </div>
-            <div className="ml-auto text-xs font-medium text-green-400">
-              ${drop.value.toLocaleString()}
-            </div>
+            <CoinAmount
+              amount={drop.value}
+              formatOptions={{ maximumFractionDigits: 0 }}
+              className="ml-auto text-xs font-medium text-green-400 max-w-[72px] justify-end"
+              iconClassName="w-3.5 h-3.5 flex-shrink-0"
+              textClassName="truncate"
+            />
           </div>
         ))}
       </div>

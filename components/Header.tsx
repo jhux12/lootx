@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { CoinAmount } from './CoinAmount';
 
 export const Header: React.FC = () => {
   const {
@@ -199,13 +200,18 @@ export const Header: React.FC = () => {
           {isAuthenticated ? (
             <>
               <div className="flex items-center bg-[#111621] rounded-lg p-1 pr-3 border border-gray-800">
-                <div className="bg-[#1a2130] px-2 md:px-3 py-1 rounded text-cyan-400 font-bold text-xs md:text-sm mr-2 md:mr-3">
-                  ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <div className="bg-[#1a2130] px-2 md:px-3 py-1 rounded text-xs md:text-sm mr-2 md:mr-3">
+                  <CoinAmount
+                    amount={balance}
+                    formatOptions={{ maximumFractionDigits: 0 }}
+                    className="text-cyan-400 font-bold"
+                    iconClassName="w-3.5 h-3.5"
+                  />
                 </div>
                 <button 
                   onClick={() => setShowTopUpModal(true)}
                   className="bg-blue-600 hover:bg-blue-500 text-white rounded p-1 transition-colors active:scale-95"
-                  title="Add Balance"
+                  title="Add Coins"
                 >
                   <Plus className="w-3 h-3" />
                 </button>

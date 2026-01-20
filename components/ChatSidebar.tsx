@@ -4,6 +4,7 @@ import { useSound } from '../context/SoundContext';
 import { AIChatBot } from './AIChatBot';
 import { useSiteChat } from '../hooks/useSiteChat';
 import { useGame } from '../context/GameContext';
+import { CoinAmount } from './CoinAmount';
 
 export const ChatSidebar: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'chat' | 'support' | 'users'>('chat');
@@ -74,7 +75,15 @@ export const ChatSidebar: React.FC = () => {
                     <div className="text-[10px] font-bold text-green-400 uppercase tracking-wider flex items-center gap-1">
                         <Zap className="w-3 h-3 fill-green-400" /> Free Rain
                     </div>
-                    <div className="text-white font-mono font-bold text-lg">$90,000 <span className="text-gray-500 text-sm">67</span></div>
+                    <div className="text-white font-mono font-bold text-lg flex items-center gap-2">
+                        <CoinAmount
+                          amount={90000}
+                          formatOptions={{ maximumFractionDigits: 0 }}
+                          className="text-white"
+                          iconClassName="w-4 h-4"
+                        />
+                        <span className="text-gray-500 text-sm">67</span>
+                    </div>
                 </div>
                 <button className="bg-green-500 hover:bg-green-400 text-black text-xs font-bold px-4 py-2 rounded transition-colors">
                     Join
