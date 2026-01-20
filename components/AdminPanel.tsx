@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, DollarSign, ShieldAlert, Package, Box as BoxIcon, Plus, Check, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { LayoutDashboard, Users, Settings, Activity, DollarSign, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { CaseItem, MysteryBox } from '../types';
+import { AdminActionLog, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, MysteryBox, UserLocks, UserStatus } from '../types';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -19,8 +19,25 @@ const rarityColorOptions = [
     { value: 'legendary' as const, label: 'Legendary', color: rarityColorMap.legendary }
 ];
 
+const DEFAULT_LOCKS: UserLocks = {
+    openCases: false,
+    deposits: false,
+    withdraws: false,
+    marketplace: false,
+    shipments: false
+};
+
+const LOCK_LABELS: Record<keyof UserLocks, string> = {
+    openCases: 'Open Cases',
+    deposits: 'Deposits',
+    withdraws: 'Withdraws',
+    marketplace: 'Marketplace',
+    shipments: 'Shipments'
+};
+
 export const AdminPanel: React.FC = () => {
   const {
+    user: adminUser,
     createItem,
     updateItem,
     deleteItem,
@@ -65,9 +82,89 @@ export const AdminPanel: React.FC = () => {
   const [adminNotification, setAdminNotification] = useState('');
   const [adminNoticeSent, setAdminNoticeSent] = useState(false);
   const [shipmentFilter, setShipmentFilter] = useState<'all' | 'processing' | 'shipped'>('processing');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [userStatuses, setUserStatuses] = useState<Record<string, UserStatus>>({});
+  const [userLocks, setUserLocks] = useState<Record<string, UserLocks>>({});
+  const [ledgerEntries, setLedgerEntries] = useState<Record<string, LedgerEntry[]>>({});
+  const [adminLogs, setAdminLogs] = useState<Record<string, AdminActionLog[]>>({});
+  const [inventoryState, setInventoryState] = useState<Record<string, InventoryItem[]>>({});
+  const [reversalAmount, setReversalAmount] = useState('');
+  const [reversalReason, setReversalReason] = useState('');
+  const [voidSourceId, setVoidSourceId] = useState('');
+  const [voidReason, setVoidReason] = useState('');
   
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
+
+  const makeId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+  const formatTimestamp = (ts: number) => new Date(ts).toLocaleString();
+  const formatCurrency = (amount: number) => `${amount < 0 ? '-' : '+'}$${Math.abs(amount).toFixed(2)}`;
+
+  const seedLedgerEntries = (profileId: string, index: number): LedgerEntry[] => {
+      const now = Date.now();
+      const base = now - (index + 1) * 1000 * 60 * 60 * 6;
+      return [
+          {
+              id: makeId('ledger'),
+              userId: profileId,
+              type: 'deposit',
+              amount: 250,
+              createdAt: base - 1000 * 60 * 60,
+              sourceId: `stripe-${profileId.slice(0, 6)}`,
+              memo: 'Stripe top-up'
+          },
+          {
+              id: makeId('ledger'),
+              userId: profileId,
+              type: 'case_open',
+              amount: -45,
+              createdAt: base - 1000 * 60 * 30,
+              sourceId: `case-${profileId.slice(0, 6)}-open`,
+              memo: 'Opened Neon Nexus Case'
+          },
+          {
+              id: makeId('ledger'),
+              userId: profileId,
+              type: 'sell_back',
+              amount: 82,
+              createdAt: base - 1000 * 60 * 12,
+              sourceId: `sell-${profileId.slice(0, 6)}`,
+              memo: 'Sold inventory item'
+          },
+          {
+              id: makeId('ledger'),
+              userId: profileId,
+              type: 'bonus',
+              amount: 15,
+              createdAt: base - 1000 * 60 * 5,
+              sourceId: `promo-${profileId.slice(0, 6)}`,
+              memo: 'Welcome promo credit'
+          }
+      ];
+  };
+
+  const seedInventory = (inventory: InventoryItem[] = [], profileId: string, index: number) => {
+      return inventory.map((item, itemIndex) => {
+          const provenance = item.provenance ?? {
+              sourceType: itemIndex % 2 === 0 ? 'case_open' : 'promo',
+              sourceId: `${itemIndex % 2 === 0 ? 'case' : 'promo'}-${profileId.slice(0, 6)}-${itemIndex + 1}`
+          };
+          const history: InventoryHistoryEntry[] = item.history ?? [
+              {
+                  id: makeId('history'),
+                  action: 'added',
+                  createdAt: item.obtainedAt || Date.now() - (index + 1) * 1000 * 60 * 45,
+                  note: 'Item added to inventory'
+              }
+          ];
+          return {
+              ...item,
+              locked: item.locked ?? false,
+              provenance,
+              history
+          };
+      });
+  };
 
   const shipmentRecords = users.flatMap((profile) => {
       const inventory = Array.isArray(profile.inventory) ? profile.inventory : [];
@@ -91,6 +188,62 @@ export const AdminPanel: React.FC = () => {
     { title: 'Battles Today', value: '843', icon: SwordsIcon, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { title: 'Server Load', value: '12%', icon: Activity, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
   ];
+
+  useEffect(() => {
+      if (users.length === 0) return;
+
+      setSelectedUserId((current) => current ?? users[0].id);
+
+      setUserStatuses((prev) => {
+          const next = { ...prev };
+          users.forEach((profile) => {
+              if (!next[profile.id]) {
+                  next[profile.id] = profile.status ?? 'active';
+              }
+          });
+          return next;
+      });
+
+      setUserLocks((prev) => {
+          const next = { ...prev };
+          users.forEach((profile) => {
+              if (!next[profile.id]) {
+                  next[profile.id] = { ...DEFAULT_LOCKS, ...(profile.locks ?? {}) };
+              }
+          });
+          return next;
+      });
+
+      setLedgerEntries((prev) => {
+          const next = { ...prev };
+          users.forEach((profile, index) => {
+              if (!next[profile.id]) {
+                  next[profile.id] = profile.ledger ?? seedLedgerEntries(profile.id, index);
+              }
+          });
+          return next;
+      });
+
+      setAdminLogs((prev) => {
+          const next = { ...prev };
+          users.forEach((profile) => {
+              if (!next[profile.id]) {
+                  next[profile.id] = profile.adminLogs ?? [];
+              }
+          });
+          return next;
+      });
+
+      setInventoryState((prev) => {
+          const next = { ...prev };
+          users.forEach((profile, index) => {
+              if (!next[profile.id]) {
+                  next[profile.id] = seedInventory(profile.inventory, profile.id, index);
+              }
+          });
+          return next;
+      });
+  }, [users]);
 
   const handleSaveItem = async () => {
       if(!newItem.name || !newItem.price) return;
@@ -151,7 +304,15 @@ export const AdminPanel: React.FC = () => {
 
   const saveUserProgress = async (userId: string) => {
       setIsSavingUser(true);
+      const previousXp = users.find((profile) => profile.id === userId)?.xp ?? 0;
       await updateUserProgress(userId, userXpInput);
+      logAdminAction(
+          userId,
+          'xp_update',
+          { xp: previousXp },
+          { xp: userXpInput },
+          'Updated user XP'
+      );
       setIsSavingUser(false);
       setEditingUserId(null);
       alert('User progress updated!');
@@ -204,6 +365,190 @@ export const AdminPanel: React.FC = () => {
       setSelectedItems(updatedItems);
       setNewBox(prev => ({ ...prev, price: parseFloat(calculatedPrice.toFixed(2)) }));
   };
+
+  const logAdminAction = (targetUserId: string, actionType: string, before: Record<string, unknown>, after: Record<string, unknown>, reason: string) => {
+      const entry: AdminActionLog = {
+          id: makeId('admin-log'),
+          adminUid: adminUser?.id ?? 'admin',
+          targetUserUid: targetUserId,
+          actionType,
+          before,
+          after,
+          reason,
+          createdAt: Date.now()
+      };
+      setAdminLogs((prev) => ({
+          ...prev,
+          [targetUserId]: [entry, ...(prev[targetUserId] ?? [])]
+      }));
+  };
+
+  const appendLedgerEntry = (targetUserId: string, entry: LedgerEntry) => {
+      setLedgerEntries((prev) => ({
+          ...prev,
+          [targetUserId]: [entry, ...(prev[targetUserId] ?? [])]
+      }));
+  };
+
+  const handleStatusChange = (targetUserId: string, nextStatus: UserStatus) => {
+      const previousStatus = userStatuses[targetUserId] ?? 'active';
+      setUserStatuses((prev) => ({ ...prev, [targetUserId]: nextStatus }));
+      logAdminAction(
+          targetUserId,
+          'status_update',
+          { status: previousStatus },
+          { status: nextStatus },
+          `Status changed to ${nextStatus}`
+      );
+  };
+
+  const handleLockToggle = (targetUserId: string, lockKey: keyof UserLocks) => {
+      setUserLocks((prev) => {
+          const currentLocks = prev[targetUserId] ?? { ...DEFAULT_LOCKS };
+          const nextLocks = { ...currentLocks, [lockKey]: !currentLocks[lockKey] };
+          logAdminAction(
+              targetUserId,
+              'lock_toggle',
+              { [lockKey]: currentLocks[lockKey] },
+              { [lockKey]: nextLocks[lockKey] },
+              `Toggled ${lockKey} lock`
+          );
+          return { ...prev, [targetUserId]: nextLocks };
+      });
+  };
+
+  const handleInventoryLockToggle = (targetUserId: string, instanceId: string) => {
+      setInventoryState((prev) => {
+          const items = prev[targetUserId] ?? [];
+          const nextItems = items.map((item) => {
+              if (item.instanceId !== instanceId) return item;
+              const nextLocked = !item.locked;
+              const historyEntry: InventoryHistoryEntry = {
+                  id: makeId('history'),
+                  action: nextLocked ? 'locked' : 'unlocked',
+                  createdAt: Date.now(),
+                  note: `Item ${nextLocked ? 'locked' : 'unlocked'} by admin`,
+                  adminUid: adminUser?.id ?? 'admin'
+              };
+              return {
+                  ...item,
+                  locked: nextLocked,
+                  history: [historyEntry, ...(item.history ?? [])]
+              };
+          });
+          logAdminAction(
+              targetUserId,
+              'inventory_lock',
+              { instanceId },
+              { instanceId, locked: nextItems.find((item) => item.instanceId === instanceId)?.locked },
+              'Inventory lock toggled'
+          );
+          return { ...prev, [targetUserId]: nextItems };
+      });
+  };
+
+  const handleCreateReversal = () => {
+      if (!selectedUserId) return;
+      const amountValue = Number(reversalAmount);
+      if (!amountValue || !reversalReason.trim()) return;
+      const entry: LedgerEntry = {
+          id: makeId('ledger'),
+          userId: selectedUserId,
+          type: 'reversal',
+          amount: -Math.abs(amountValue),
+          createdAt: Date.now(),
+          sourceId: `reversal-${selectedUserId.slice(0, 6)}`,
+          memo: reversalReason.trim()
+      };
+      appendLedgerEntry(selectedUserId, entry);
+      logAdminAction(
+          selectedUserId,
+          'ledger_reversal',
+          { amount: 0 },
+          { amount: entry.amount },
+          reversalReason.trim()
+      );
+      setReversalAmount('');
+      setReversalReason('');
+  };
+
+  const handleVoidOpen = () => {
+      if (!selectedUserId || !voidSourceId.trim()) return;
+      const items = inventoryState[selectedUserId] ?? [];
+      const impactedItems = items.filter((item) => item.provenance?.sourceId === voidSourceId.trim());
+      const totalValue = impactedItems.reduce((sum, item) => sum + item.price, 0);
+      const entry: LedgerEntry = {
+          id: makeId('ledger'),
+          userId: selectedUserId,
+          type: 'reversal',
+          amount: totalValue === 0 ? 0 : -Math.abs(totalValue),
+          createdAt: Date.now(),
+          sourceId: voidSourceId.trim(),
+          memo: voidReason.trim() || 'Voided case open'
+      };
+      appendLedgerEntry(selectedUserId, entry);
+      setInventoryState((prev) => {
+          const nextItems = (prev[selectedUserId] ?? []).map((item) => {
+              if (item.provenance?.sourceId !== voidSourceId.trim()) return item;
+              const historyEntry: InventoryHistoryEntry = {
+                  id: makeId('history'),
+                  action: 'void_open',
+                  createdAt: Date.now(),
+                  note: voidReason.trim() || 'Case open voided',
+                  adminUid: adminUser?.id ?? 'admin'
+              };
+              return {
+                  ...item,
+                  locked: true,
+                  history: [historyEntry, ...(item.history ?? [])]
+              };
+          });
+          return { ...prev, [selectedUserId]: nextItems };
+      });
+      logAdminAction(
+          selectedUserId,
+          'void_case_open',
+          { sourceId: voidSourceId.trim(), affectedItems: impactedItems.length },
+          { ledgerAmount: entry.amount, affectedItems: impactedItems.length },
+          voidReason.trim() || 'Case open voided'
+      );
+      setVoidSourceId('');
+      setVoidReason('');
+  };
+
+  const selectedUser = useMemo(() => users.find((profile) => profile.id === selectedUserId), [users, selectedUserId]);
+  const selectedLedgerEntries = selectedUserId ? ledgerEntries[selectedUserId] ?? [] : [];
+  const selectedInventory = selectedUserId ? inventoryState[selectedUserId] ?? [] : [];
+  const selectedAdminLogs = selectedUserId ? adminLogs[selectedUserId] ?? [] : [];
+
+  const timelineEntries = useMemo(() => {
+      const entries = [
+          ...selectedLedgerEntries.map((entry) => ({
+              id: entry.id,
+              createdAt: entry.createdAt,
+              title: `Ledger • ${entry.type.replace('_', ' ')}`,
+              description: `${formatCurrency(entry.amount)} ${entry.memo ?? ''}`.trim(),
+              meta: entry.sourceId ? `Source: ${entry.sourceId}` : ''
+          })),
+          ...selectedInventory.flatMap((item) =>
+              (item.history ?? []).map((history) => ({
+                  id: `${item.instanceId}-${history.id}`,
+                  createdAt: history.createdAt,
+                  title: `Inventory • ${history.action.replace('_', ' ')}`,
+                  description: `${item.name}${history.note ? ` — ${history.note}` : ''}`,
+                  meta: item.provenance ? `From ${item.provenance.sourceType} (${item.provenance.sourceId})` : ''
+              }))
+          ),
+          ...selectedAdminLogs.map((log) => ({
+              id: log.id,
+              createdAt: log.createdAt,
+              title: `Admin • ${log.actionType.replace('_', ' ')}`,
+              description: log.reason,
+              meta: `Admin: ${log.adminUid}`
+          }))
+      ];
+      return entries.sort((a, b) => b.createdAt - a.createdAt);
+  }, [selectedAdminLogs, selectedInventory, selectedLedgerEntries]);
 
   const handleSaveBox = () => {
       if(!newBox.name || !newBox.price) {
@@ -643,87 +988,435 @@ export const AdminPanel: React.FC = () => {
 
             {/* TAB: USERS */}
             {activeTab === 'users' && (
-                <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-[#0b0e14] text-gray-400 font-medium border-b border-gray-800">
-                                <tr>
-                                    <th className="px-6 py-4">User</th>
-                                    <th className="px-6 py-4">Level</th>
-                                    <th className="px-6 py-4">XP</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-800">
-                                {users.length === 0 ? (
+                <div className="space-y-6">
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-[#0b0e14] text-gray-400 font-medium border-b border-gray-800">
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-6 text-center text-gray-500">
-                                            No users found in Firebase.
-                                        </td>
+                                        <th className="px-6 py-4">User</th>
+                                        <th className="px-6 py-4">Level</th>
+                                        <th className="px-6 py-4">XP</th>
+                                        <th className="px-6 py-4">Status</th>
+                                        <th className="px-6 py-4 text-right">Actions</th>
                                     </tr>
-                                ) : (
-                                    users.map((user) => {
-                                        const isEditing = editingUserId === user.id;
-                                        const progress = calculateLevelProgress(isEditing ? userXpInput : (user.xp || 0));
-                                        return (
-                                            <tr key={user.id} className="hover:bg-[#1a2130] transition-colors">
-                                                <td className="px-6 py-4 flex items-center gap-3">
-                                                    <img src={user.avatar} className="w-8 h-8 rounded-full" />
-                                                    <span className="font-bold text-white">{user.name}</span>
-                                                </td>
-                                                <td className="px-6 py-4 text-gray-400">Lvl {progress.level}</td>
-                                                <td className="px-6 py-4 text-gray-400">
-                                                    {isEditing ? (
-                                                        <div className="space-y-1">
-                                                            <input
-                                                                type="number"
-                                                                value={userXpInput}
-                                                                onChange={(e) => setUserXpInput(Number(e.target.value))}
-                                                                className="w-32 bg-[#0b0e14] border border-gray-700 rounded px-3 py-1.5 text-white text-sm"
-                                                            />
-                                                            <div className="text-[11px] text-gray-500">Lvl after save: {progress.level}</div>
+                                </thead>
+                                <tbody className="divide-y divide-gray-800">
+                                    {users.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-6 text-center text-gray-500">
+                                                No users found in Firebase.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        users.map((profile) => {
+                                            const isEditing = editingUserId === profile.id;
+                                            const progress = calculateLevelProgress(isEditing ? userXpInput : (profile.xp || 0));
+                                            const status = userStatuses[profile.id] ?? 'active';
+                                            return (
+                                                <tr key={profile.id} className="hover:bg-[#1a2130] transition-colors">
+                                                    <td className="px-6 py-4 flex items-center gap-3">
+                                                        <img src={profile.avatar} className="w-8 h-8 rounded-full" />
+                                                        <span className="font-bold text-white">{profile.name}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-gray-400">Lvl {progress.level}</td>
+                                                    <td className="px-6 py-4 text-gray-400">
+                                                        {isEditing ? (
+                                                            <div className="space-y-1">
+                                                                <input
+                                                                    type="number"
+                                                                    value={userXpInput}
+                                                                    onChange={(e) => setUserXpInput(Number(e.target.value))}
+                                                                    className="w-32 bg-[#0b0e14] border border-gray-700 rounded px-3 py-1.5 text-white text-sm"
+                                                                />
+                                                                <div className="text-[11px] text-gray-500">Lvl after save: {progress.level}</div>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-gray-300">{profile.xp ?? 0}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                                            status === 'active'
+                                                                ? 'bg-green-500/10 text-green-500'
+                                                                : status === 'suspended'
+                                                                    ? 'bg-yellow-500/10 text-yellow-400'
+                                                                    : 'bg-red-500/10 text-red-400'
+                                                        }`}>
+                                                            {status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex justify-end gap-3">
+                                                            {isEditing ? (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => saveUserProgress(profile.id)}
+                                                                        disabled={isSavingUser}
+                                                                        className="text-green-400 hover:text-green-300 font-bold text-xs disabled:opacity-50"
+                                                                    >
+                                                                        {isSavingUser ? 'Saving...' : 'Save'}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={cancelEditUser}
+                                                                        className="text-gray-400 hover:text-gray-300 font-bold text-xs"
+                                                                    >
+                                                                        Cancel
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <button
+                                                                        className="text-blue-400 hover:text-blue-300 font-bold text-xs"
+                                                                        onClick={() => startEditUser(profile.id, profile.xp || 0)}
+                                                                    >
+                                                                        Edit XP
+                                                                    </button>
+                                                                    <button
+                                                                        className="text-purple-400 hover:text-purple-300 font-bold text-xs"
+                                                                        onClick={() => setSelectedUserId(profile.id)}
+                                                                    >
+                                                                        View
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                         </div>
-                                                    ) : (
-                                                        <span className="text-gray-300">{user.xp ?? 0}</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="bg-green-500/10 text-green-500 px-2 py-1 rounded text-xs font-bold">Active</span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {isEditing ? (
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => saveUserProgress(user.id)}
-                                                                disabled={isSavingUser}
-                                                                className="text-green-400 hover:text-green-300 font-bold text-xs disabled:opacity-50"
-                                                            >
-                                                                {isSavingUser ? 'Saving...' : 'Save'}
-                                                            </button>
-                                                            <button
-                                                                onClick={cancelEditUser}
-                                                                className="text-gray-400 hover:text-gray-300 font-bold text-xs"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                        </div>
-                                                    ) : (
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
+                            {users.length === 0 ? (
+                                <div className="px-6 py-6 text-center text-gray-500">
+                                    No users found in Firebase.
+                                </div>
+                            ) : (
+                                users.map((profile) => {
+                                    const status = userStatuses[profile.id] ?? 'active';
+                                    const isEditing = editingUserId === profile.id;
+                                    return (
+                                        <div key={profile.id} className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4 space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <img src={profile.avatar} className="w-10 h-10 rounded-full" />
+                                                <div className="flex-1">
+                                                    <div className="text-white font-bold">{profile.name}</div>
+                                                    <div className="text-xs text-gray-400">Lvl {calculateLevelProgress(profile.xp || 0).level}</div>
+                                                </div>
+                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                                                    status === 'active'
+                                                        ? 'bg-green-500/10 text-green-500'
+                                                        : status === 'suspended'
+                                                            ? 'bg-yellow-500/10 text-yellow-400'
+                                                            : 'bg-red-500/10 text-red-400'
+                                                }`}>
+                                                    {status}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-gray-400">
+                                                XP: <span className="text-gray-200">{profile.xp ?? 0}</span>
+                                            </div>
+                                            {isEditing && (
+                                                <div className="space-y-2">
+                                                    <input
+                                                        type="number"
+                                                        value={userXpInput}
+                                                        onChange={(e) => setUserXpInput(Number(e.target.value))}
+                                                        className="w-full bg-[#131720] border border-gray-700 rounded px-3 py-2 text-white text-sm"
+                                                    />
+                                                    <div className="flex gap-3">
                                                         <button
-                                                            className="text-blue-400 hover:text-blue-300 font-bold text-xs"
-                                                            onClick={() => startEditUser(user.id, user.xp || 0)}
+                                                            onClick={() => saveUserProgress(profile.id)}
+                                                            disabled={isSavingUser}
+                                                            className="text-green-400 text-xs font-bold disabled:opacity-50"
                                                         >
-                                                            Edit
+                                                            {isSavingUser ? 'Saving...' : 'Save'}
                                                         </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
+                                                        <button
+                                                            onClick={cancelEditUser}
+                                                            className="text-gray-400 text-xs font-bold"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {!isEditing && (
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button
+                                                        className="px-3 py-1.5 rounded-lg bg-blue-600/20 text-blue-300 text-xs font-semibold"
+                                                        onClick={() => startEditUser(profile.id, profile.xp || 0)}
+                                                    >
+                                                        Edit XP
+                                                    </button>
+                                                    <button
+                                                        className="px-3 py-1.5 rounded-lg bg-purple-600/20 text-purple-300 text-xs font-semibold"
+                                                        onClick={() => setSelectedUserId(profile.id)}
+                                                    >
+                                                        View
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
                     </div>
+
+                    {selectedUser ? (
+                        <div className="space-y-6">
+                            <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                    <div className="flex items-center gap-4">
+                                        <img src={selectedUser.avatar} className="w-12 h-12 rounded-full" />
+                                        <div>
+                                            <div className="text-white text-lg font-bold">{selectedUser.name}</div>
+                                            <div className="text-xs text-gray-400">{selectedUser.email || 'No email on file'}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <span className="px-3 py-1 rounded-full bg-[#0b0e14] text-xs text-gray-400">
+                                            Balance: <span className="text-green-400 font-semibold">${(selectedUser.balance ?? 0).toFixed(2)}</span>
+                                        </span>
+                                        <span className="px-3 py-1 rounded-full bg-[#0b0e14] text-xs text-gray-400">
+                                            Inventory: <span className="text-gray-200 font-semibold">{selectedInventory.length}</span>
+                                        </span>
+                                        <span className="px-3 py-1 rounded-full bg-[#0b0e14] text-xs text-gray-400">
+                                            Ledger entries: <span className="text-gray-200 font-semibold">{selectedLedgerEntries.length}</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                                <div className="space-y-6">
+                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <UserCog className="w-4 h-4 text-blue-400" />
+                                            <h3 className="text-sm font-bold text-white">Status & Locks</h3>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Account Status</label>
+                                                <select
+                                                    value={userStatuses[selectedUser.id] ?? 'active'}
+                                                    onChange={(event) => handleStatusChange(selectedUser.id, event.target.value as UserStatus)}
+                                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                                >
+                                                    <option value="active">Active</option>
+                                                    <option value="suspended">Suspended</option>
+                                                    <option value="banned">Banned</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Risk Locks</label>
+                                                <div className="space-y-2">
+                                                    {Object.entries(LOCK_LABELS).map(([key, label]) => {
+                                                        const isLocked = userLocks[selectedUser.id]?.[key as keyof UserLocks];
+                                                        return (
+                                                            <button
+                                                                key={key}
+                                                                onClick={() => handleLockToggle(selectedUser.id, key as keyof UserLocks)}
+                                                                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-sm ${
+                                                                    isLocked
+                                                                        ? 'bg-red-500/10 border-red-500/40 text-red-300'
+                                                                        : 'bg-[#0b0e14] border-gray-700 text-gray-300'
+                                                                }`}
+                                                            >
+                                                                <span>{label}</span>
+                                                                {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <ShieldCheck className="w-4 h-4 text-green-400" />
+                                            <h3 className="text-sm font-bold text-white">Fix Tools</h3>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="block text-[10px] uppercase text-gray-500 font-bold">Reversal Entry</label>
+                                                <input
+                                                    type="number"
+                                                    value={reversalAmount}
+                                                    onChange={(event) => setReversalAmount(event.target.value)}
+                                                    placeholder="Amount to reverse"
+                                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                                />
+                                                <textarea
+                                                    value={reversalReason}
+                                                    onChange={(event) => setReversalReason(event.target.value)}
+                                                    rows={2}
+                                                    placeholder="Reason for reversal"
+                                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                                />
+                                                <button
+                                                    onClick={handleCreateReversal}
+                                                    disabled={!reversalAmount || !reversalReason.trim()}
+                                                    className="w-full px-3 py-2 rounded-lg bg-red-500/20 text-red-300 text-xs font-bold uppercase disabled:opacity-50"
+                                                >
+                                                    Create Reversal Entry
+                                                </button>
+                                            </div>
+                                            <div className="border-t border-gray-800 pt-4 space-y-2">
+                                                <label className="block text-[10px] uppercase text-gray-500 font-bold">Void Case Open</label>
+                                                <input
+                                                    type="text"
+                                                    value={voidSourceId}
+                                                    onChange={(event) => setVoidSourceId(event.target.value)}
+                                                    placeholder="Case open ID"
+                                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                                />
+                                                <textarea
+                                                    value={voidReason}
+                                                    onChange={(event) => setVoidReason(event.target.value)}
+                                                    rows={2}
+                                                    placeholder="Void reason"
+                                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                                />
+                                                <button
+                                                    onClick={handleVoidOpen}
+                                                    disabled={!voidSourceId.trim()}
+                                                    className="w-full px-3 py-2 rounded-lg bg-yellow-500/20 text-yellow-300 text-xs font-bold uppercase disabled:opacity-50"
+                                                >
+                                                    Void Open & Compensate
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="xl:col-span-2 space-y-6">
+                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <ScrollText className="w-4 h-4 text-purple-400" />
+                                            <h3 className="text-sm font-bold text-white">Immutable Coin Ledger</h3>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {selectedLedgerEntries.length === 0 ? (
+                                                <div className="text-sm text-gray-500">No ledger entries yet.</div>
+                                            ) : (
+                                                selectedLedgerEntries.map((entry) => (
+                                                    <div key={entry.id} className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                        <div>
+                                                            <div className="text-xs text-gray-400 uppercase">{entry.type.replace('_', ' ')}</div>
+                                                            <div className="text-sm text-gray-200 font-semibold">{entry.memo || 'Balance update'}</div>
+                                                            <div className="text-[11px] text-gray-500">{entry.sourceId || 'Manual entry'} • {formatTimestamp(entry.createdAt)}</div>
+                                                        </div>
+                                                        <div className={`text-sm font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                            {formatCurrency(entry.amount)}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <Package className="w-4 h-4 text-blue-400" />
+                                            <h3 className="text-sm font-bold text-white">Inventory Locks & Provenance</h3>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {selectedInventory.length === 0 ? (
+                                                <div className="text-sm text-gray-500">No inventory items available.</div>
+                                            ) : (
+                                                selectedInventory.map((item) => (
+                                                    <div key={item.instanceId} className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                                                        <div className="flex items-start gap-3">
+                                                            <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg bg-[#131720] object-contain" />
+                                                            <div>
+                                                                <div className="text-sm text-white font-semibold">{item.name}</div>
+                                                                <div className="text-xs text-gray-500">
+                                                                    {item.provenance ? `From ${item.provenance.sourceType} (${item.provenance.sourceId})` : 'Provenance unknown'}
+                                                                </div>
+                                                                <div className="text-[10px] text-gray-500 mt-1">Status: {item.status}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col sm:flex-row gap-2">
+                                                            <button
+                                                                onClick={() => handleInventoryLockToggle(selectedUser.id, item.instanceId)}
+                                                                className={`px-3 py-2 rounded-lg text-xs font-bold uppercase ${
+                                                                    item.locked
+                                                                        ? 'bg-red-500/20 text-red-300'
+                                                                        : 'bg-[#131720] text-gray-300 border border-gray-700'
+                                                                }`}
+                                                            >
+                                                                {item.locked ? 'Locked' : 'Unlock'}
+                                                            </button>
+                                                            <div className="text-[10px] text-gray-500">
+                                                                {(item.history ?? []).slice(0, 2).map((history) => (
+                                                                    <div key={history.id}>
+                                                                        {history.action.replace('_', ' ')} • {formatTimestamp(history.createdAt)}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <ShieldAlert className="w-4 h-4 text-red-400" />
+                                            <h3 className="text-sm font-bold text-white">Admin Action Log</h3>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {selectedAdminLogs.length === 0 ? (
+                                                <div className="text-sm text-gray-500">No admin actions recorded.</div>
+                                            ) : (
+                                                selectedAdminLogs.map((log) => (
+                                                    <div key={log.id} className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3">
+                                                        <div className="text-xs text-gray-400 uppercase">{log.actionType.replace('_', ' ')}</div>
+                                                        <div className="text-sm text-gray-200 font-semibold">{log.reason}</div>
+                                                        <div className="text-[11px] text-gray-500">Admin {log.adminUid} • {formatTimestamp(log.createdAt)}</div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <Activity className="w-4 h-4 text-green-400" />
+                                            <h3 className="text-sm font-bold text-white">Unified User Timeline</h3>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {timelineEntries.length === 0 ? (
+                                                <div className="text-sm text-gray-500">No timeline events available.</div>
+                                            ) : (
+                                                timelineEntries.slice(0, 15).map((entry) => (
+                                                    <div key={entry.id} className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3">
+                                                        <div className="text-sm text-gray-200 font-semibold">{entry.title}</div>
+                                                        <div className="text-xs text-gray-400">{entry.description}</div>
+                                                        <div className="text-[11px] text-gray-500">
+                                                            {entry.meta ? `${entry.meta} • ` : ''}{formatTimestamp(entry.createdAt)}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-[#131720] border border-gray-800 rounded-xl p-6 text-sm text-gray-500">
+                            Select a user to review ledger activity, locks, and admin actions.
+                        </div>
+                    )}
                 </div>
             )}
 
