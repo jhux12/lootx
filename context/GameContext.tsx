@@ -151,6 +151,7 @@ interface GameContextType {
   claimRakeback: () => void;
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
+  updateShipmentStatus: (userId: string, instanceId: string, status: InventoryItem['status']) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -384,6 +385,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           referredBy: data.referredBy,
           followers: followerIds,
           shippingAddress: data.shippingAddress,
+          inventory: Array.isArray(data.inventory) ? (data.inventory as InventoryItem[]) : [],
           isAdmin: data.isAdmin ?? false,
           chatWarnings: data.chatWarnings ?? 0,
           chatDisabled: data.chatDisabled ?? false,
@@ -1128,6 +1130,30 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(prev => prev.id === userId ? { ...prev, xp: sanitizedXp, level: progress.level } : prev);
   };
 
+  const updateShipmentStatus = async (userId: string, instanceId: string, status: InventoryItem['status']) => {
+    const targetUser = users.find((u) => u.id === userId);
+    if (!targetUser) {
+      console.warn('Attempted to update shipment for unknown user');
+      return;
+    }
+
+    const inventoryList = Array.isArray(targetUser.inventory) ? targetUser.inventory : [];
+    const updatedInventory = inventoryList.map((item) =>
+      item.instanceId === instanceId ? { ...item, status } : item
+    );
+
+    try {
+      await setDoc(getUserRef(userId), { inventory: updatedInventory }, { merge: true });
+    } catch (error) {
+      console.error('Failed to update shipment status in Firebase', error);
+      return;
+    }
+
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, inventory: updatedInventory } : u))
+    );
+  };
+
   return (
     <GameContext.Provider value={{
       user,
@@ -1175,7 +1201,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       claimDaily,
       claimRakeback,
       generateAffiliateCode,
-      updateUserProgress
+      updateUserProgress,
+      updateShipmentStatus
     }}>
       {children}
     </GameContext.Provider>

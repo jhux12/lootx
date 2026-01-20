@@ -23,6 +23,7 @@ export interface User {
   affiliateCode?: string;
   referredBy?: string;
   shippingAddress?: ShippingAddress;
+  inventory?: InventoryItem[];
   isAdmin?: boolean;
   chatWarnings?: number;
   chatDisabled?: boolean;
