@@ -9,11 +9,11 @@ export const TopUpModal: React.FC = () => {
   const { setShowTopUpModal, addBalance } = useGame();
   const { playSound } = useSound();
   const [method, setMethod] = useState<'card' | 'crypto'>('card');
-  const [amount, setAmount] = useState<number>(50);
+  const [amountCoins, setAmountCoins] = useState<number>(5000);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const amounts = [10, 25, 50, 100, 250, 500];
+  const amounts = [1000, 2500, 5000, 10000, 25000, 50000];
 
   const handleDeposit = () => {
       playSound('click');
@@ -21,7 +21,7 @@ export const TopUpModal: React.FC = () => {
 
       // Simulate API Call
       setTimeout(() => {
-          addBalance(amount);
+          addBalance(amountCoins / 100);
           setIsLoading(false);
           setSuccess(true);
           playSound('coins');
@@ -82,16 +82,16 @@ export const TopUpModal: React.FC = () => {
                     </div>
 
                     {/* Amount Selector */}
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Select Amount</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Select Coin Pack</label>
                     <div className="grid grid-cols-3 gap-3 mb-6">
                         {amounts.map(amt => (
                             <button
                                 key={amt}
-                                onClick={() => { setAmount(amt); playSound('click'); }}
-                                className={`py-3 rounded-lg border font-bold transition-all ${amount === amt ? 'bg-green-600 border-green-500 text-white shadow-lg shadow-green-900/20' : 'bg-[#0b0e14] border-gray-800 text-gray-400 hover:border-gray-600'}`}
+                                onClick={() => { setAmountCoins(amt); playSound('click'); }}
+                                className={`py-3 rounded-lg border font-bold transition-all ${amountCoins === amt ? 'bg-green-600 border-green-500 text-white shadow-lg shadow-green-900/20' : 'bg-[#0b0e14] border-gray-800 text-gray-400 hover:border-gray-600'}`}
                             >
                                 <CoinAmount
-                                  amount={amt}
+                                  amount={amt / 100}
                                   formatOptions={{ maximumFractionDigits: 0 }}
                                   className="justify-center"
                                   iconClassName="w-3.5 h-3.5"
@@ -108,9 +108,10 @@ export const TopUpModal: React.FC = () => {
                           className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
                         />
                         <input 
-                            type="number" 
-                            value={amount}
-                            onChange={(e) => setAmount(Number(e.target.value))}
+                            type="number"
+                            min="0"
+                            value={amountCoins}
+                            onChange={(e) => setAmountCoins(Number(e.target.value))}
                             className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-white font-bold focus:outline-none focus:border-blue-500 transition-colors"
                         />
                         <p className="text-[10px] text-gray-500 mt-2">100 coins = $1</p>
@@ -130,7 +131,7 @@ export const TopUpModal: React.FC = () => {
                             <span className="inline-flex items-center gap-2">
                               Deposit
                               <CoinAmount
-                                amount={amount}
+                                amount={amountCoins / 100}
                                 formatOptions={{ maximumFractionDigits: 0 }}
                                 className="text-white"
                                 iconClassName="w-4 h-4"
