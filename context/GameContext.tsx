@@ -47,18 +47,28 @@ const DEFAULT_LOCKS: UserLocks = {
 };
 
 // Leveling Configuration
-const BASE_XP_REQUIREMENT = 500;
-const XP_GROWTH_RATE = 1.2;
+const BASE_XP_REQUIREMENT = 1500;
+const XP_GROWTH_RATE = 1.12;
+const MAX_LEVEL = 100;
 
 export const calculateLevelProgress = (totalXp: number) => {
   let level = 1;
   let xpRemaining = Math.max(0, totalXp);
   let xpForNextLevel = BASE_XP_REQUIREMENT;
 
-  while (xpRemaining >= xpForNextLevel) {
+  while (xpRemaining >= xpForNextLevel && level < MAX_LEVEL) {
     xpRemaining -= xpForNextLevel;
     level += 1;
-    xpForNextLevel = Math.floor(xpForNextLevel * XP_GROWTH_RATE + 50);
+    xpForNextLevel = Math.ceil(xpForNextLevel * XP_GROWTH_RATE);
+  }
+
+  if (level >= MAX_LEVEL) {
+    return {
+      level: MAX_LEVEL,
+      xpIntoLevel: 0,
+      xpForNextLevel: 0,
+      xpToNextLevel: 0
+    };
   }
 
   return {
