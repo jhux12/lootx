@@ -1,9 +1,102 @@
 import React, { useState } from 'react';
-import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search } from 'lucide-react';
+import { Package, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
+
+const DEFAULT_IMPORT_IMAGE = 'https://picsum.photos/seed/lootx-import/120';
+const MAX_IMPORTED_ITEMS = 120;
+
+const parseNumber = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const cleaned = value.replace(/[^0-9.]/g, '');
+    const parsed = Number.parseFloat(cleaned);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+};
+
+const normalizePercent = (value: unknown) => {
+  const parsed = parseNumber(value);
+  if (parsed === undefined) return undefined;
+  if (parsed <= 1) return parsed * 100;
+  return parsed;
+};
+
+const deriveRarity = (chance: number) => {
+  if (chance < 0.5) return { rarity: 'legendary' as const, color: '#fbbf24' };
+  if (chance < 5) return { rarity: 'epic' as const, color: '#a855f7' };
+  if (chance < 15) return { rarity: 'rare' as const, color: '#3b82f6' };
+  if (chance < 40) return { rarity: 'uncommon' as const, color: '#22c55e' };
+  return { rarity: 'common' as const, color: '#9ca3af' };
+};
+
+const buildProxyUrl = (url: string) => {
+  const stripped = url.replace(/^https?:\/\//, '');
+  return `https://r.jina.ai/http://${stripped}`;
+};
+
+const normalizeHypedropUrl = (rawUrl: string) => {
+  try {
+    const trimmed = rawUrl.trim();
+    const withScheme = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+    const url = new URL(withScheme);
+    if (!url.hostname.endsWith('hypedrop.com')) return undefined;
+    return url.toString();
+  } catch (error) {
+    return undefined;
+  }
+};
+
+const extractNextData = (html: string) => {
+  const match = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)<\/script>/s);
+  if (!match?.[1]) return undefined;
+  try {
+    return JSON.parse(match[1]);
+  } catch (error) {
+    return undefined;
+  }
+};
+
+const findBoxCandidate = (data: any) => {
+  if (!data) return undefined;
+
+  const candidates: Array<{ score: number; data: any }> = [];
+  const itemKeys = ['items', 'prizes', 'drops', 'contents', 'itemList', 'itemsList', 'boxItems'];
+
+  const stack = [data];
+  const seen = new Set<any>();
+
+  while (stack.length) {
+    const current = stack.pop();
+    if (!current || typeof current !== 'object' || seen.has(current)) continue;
+    seen.add(current);
+
+    if (Array.isArray(current)) {
+      current.forEach(entry => stack.push(entry));
+      continue;
+    }
+
+    itemKeys.forEach(key => {
+      const items = current[key];
+      if (Array.isArray(items) && items.length) {
+        const itemScore = items.filter(item => item?.name || item?.title || item?.item?.name).length;
+        const score = itemScore +
+          (current.name || current.title ? 4 : 0) +
+          (current.price || current.boxPrice ? 2 : 0) +
+          (current.image || current.coverImage ? 1 : 0);
+        candidates.push({ score, data: { ...current, items } });
+      }
+    });
+
+    Object.values(current).forEach(value => stack.push(value));
+  }
+
+  if (!candidates.length) return undefined;
+  return candidates.sort((a, b) => b.score - a.score)[0].data;
+};
 
 export const CustomCaseCreator: React.FC = () => {
   const { createItem, createUserBox, items, setView } = useGame();
@@ -14,6 +107,8 @@ export const CustomCaseCreator: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [lastCalculated, setLastCalculated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [importUrl, setImportUrl] = useState('');
+  const [importStatus, setImportStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error'; message?: string }>({ type: 'idle' });
 
   // House Edge is hardcoded for user created boxes
   const USER_HOUSE_EDGE = 60; 
@@ -66,6 +161,98 @@ export const CustomCaseCreator: React.FC = () => {
       setBoxPrice(parseFloat(calculatedPrice.toFixed(2)));
       setLastCalculated(true);
       // Removed 'coins' sound on calculate
+  };
+
+  const handleImport = async () => {
+      playSound('click');
+      const normalizedUrl = normalizeHypedropUrl(importUrl);
+      if (!normalizedUrl) {
+          setImportStatus({ type: 'error', message: 'Please paste a valid hypedrop.com box link.' });
+          return;
+      }
+
+      setImportStatus({ type: 'loading', message: 'Fetching box data...' });
+
+      try {
+          const response = await fetch(buildProxyUrl(normalizedUrl));
+          if (!response.ok) {
+              throw new Error(`Unable to fetch box data (${response.status}).`);
+          }
+
+          const html = await response.text();
+          const nextData = extractNextData(html);
+          const candidate = nextData ? findBoxCandidate(nextData) : undefined;
+
+          if (!candidate?.items?.length) {
+              throw new Error('Could not detect box data from the provided link.');
+          }
+
+          const mappedItems = candidate.items
+              .map((item: any, index: number) => {
+                  const name = item?.name || item?.title || item?.item?.name || item?.product?.name;
+                  if (!name) return undefined;
+                  const chance = normalizePercent(
+                    item?.chance ??
+                    item?.odds ??
+                    item?.probability ??
+                    item?.dropRate ??
+                    item?.drop_rate ??
+                    item?.percent
+                  );
+                  const price = parseNumber(
+                    item?.price ??
+                    item?.value ??
+                    item?.marketValue ??
+                    item?.cost ??
+                    item?.item?.price ??
+                    item?.item?.value
+                  );
+                  const image = item?.image || item?.imageUrl || item?.icon || item?.picture || item?.item?.image || item?.product?.image;
+                  const safeChance = chance ?? 0;
+                  const { rarity, color } = deriveRarity(safeChance || 0);
+
+                  return {
+                      id: `import-${Date.now()}-${index}`,
+                      name,
+                      price: price ?? 0,
+                      image: image || DEFAULT_IMPORT_IMAGE,
+                      chance: Number(safeChance.toFixed(4)),
+                      rarity,
+                      color
+                  } as CaseItem;
+              })
+              .filter((item: CaseItem | undefined): item is CaseItem => Boolean(item))
+              .slice(0, MAX_IMPORTED_ITEMS);
+
+          if (!mappedItems.length) {
+              throw new Error('No prizes were detected from the provided box.');
+          }
+
+          await Promise.all(mappedItems.map(item => createItem(item)));
+
+          const candidateName = candidate.name || candidate.title || candidate.boxName || candidate.caseName;
+          const candidatePrice = parseNumber(candidate.price ?? candidate.boxPrice ?? candidate.value ?? candidate.cost);
+          const hasChances = mappedItems.every(item => item.chance > 0);
+          const inferredPrice = hasChances
+            ? mappedItems.reduce((sum, item) => sum + item.price * (item.chance / 100), 0) * (1 + USER_HOUSE_EDGE / 100)
+            : 0;
+
+          if (candidateName) {
+              setBoxName(candidateName);
+          }
+
+          setBoxPrice(candidatePrice ?? parseFloat(inferredPrice.toFixed(2)));
+          setSelectedItems(mappedItems);
+          setLastCalculated(hasChances);
+          setSearchQuery('');
+
+          setImportStatus({
+              type: 'success',
+              message: `Imported ${mappedItems.length} prizes${hasChances ? ' with odds applied.' : '.'}`
+          });
+      } catch (error: any) {
+          setImportStatus({ type: 'error', message: error?.message || 'Failed to import this box.' });
+      }
   };
 
   const handleCreate = () => {
@@ -125,6 +312,41 @@ export const CustomCaseCreator: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* LEFT: Item Picker */}
           <div className="lg:col-span-2 space-y-4">
+              <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                      <div>
+                          <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wide">Import from Hypedrop</h3>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Paste a hypedrop.com box link to auto-detect prizes, odds, and images.
+                          </p>
+                      </div>
+                      <span className="text-[10px] text-gray-500">Uses a read-only proxy to avoid CORS issues.</span>
+                  </div>
+
+                  <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="url"
+                        placeholder="https://hypedrop.com/box/..."
+                        value={importUrl}
+                        onChange={(e) => setImportUrl(e.target.value)}
+                        className="flex-1 bg-[#0b0e14] border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-brand-purple transition-colors"
+                      />
+                      <button
+                        onClick={handleImport}
+                        disabled={importStatus.type === 'loading'}
+                        className="px-5 py-2.5 bg-brand-purple hover:bg-purple-600 text-white text-sm font-bold rounded-lg transition-colors disabled:opacity-60"
+                      >
+                        {importStatus.type === 'loading' ? 'Importing...' : 'Import Box'}
+                      </button>
+                  </div>
+
+                  {importStatus.type !== 'idle' && (
+                    <p className={`mt-3 text-xs ${importStatus.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                      {importStatus.message}
+                    </p>
+                  )}
+              </div>
+
               <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-4">
                       <h3 className="text-sm font-bold text-gray-400 uppercase flex items-center gap-2">
