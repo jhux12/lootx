@@ -61,7 +61,7 @@ export const BoxGrid: React.FC = () => {
                 <h4 className="text-gray-400 text-sm font-medium mb-1 group-hover:text-white">{box.name}</h4>
                 <CoinAmount
                   amount={box.price}
-                  formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                  formatOptions={{ maximumFractionDigits: 0 }}
                   className="text-white font-bold text-lg justify-center"
                   iconClassName="w-4 h-4"
                 />

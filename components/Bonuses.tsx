@@ -309,7 +309,7 @@ export const Bonuses: React.FC = () => {
                   <div className="space-y-3">
                     <CoinAmount
                       amount={availableRakeback}
-                      formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                      formatOptions={{ maximumFractionDigits: 0 }}
                       className="text-3xl font-bold text-white"
                       iconClassName="w-5 h-5"
                     />

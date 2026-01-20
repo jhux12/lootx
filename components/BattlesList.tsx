@@ -138,7 +138,7 @@ export const BattlesList: React.FC = () => {
                      <div className="text-right">
                          <CoinAmount
                            amount={battle.cost}
-                           formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                           formatOptions={{ maximumFractionDigits: 0 }}
                            className="text-green-500 font-bold justify-end"
                            iconClassName="w-3.5 h-3.5"
                          />
@@ -262,7 +262,7 @@ export const BattlesList: React.FC = () => {
                         <div className="text-xs text-gray-500">Total Cost</div>
                         <CoinAmount
                           amount={calculateTotalCost()}
-                          formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                          formatOptions={{ maximumFractionDigits: 0 }}
                           className="text-xl font-black text-white"
                           iconClassName="w-4 h-4"
                         />

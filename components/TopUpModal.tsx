@@ -113,6 +113,7 @@ export const TopUpModal: React.FC = () => {
                             onChange={(e) => setAmount(Number(e.target.value))}
                             className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-white font-bold focus:outline-none focus:border-blue-500 transition-colors"
                         />
+                        <p className="text-[10px] text-gray-500 mt-2">100 coins = $1</p>
                     </div>
 
                     {/* Submit Button */}

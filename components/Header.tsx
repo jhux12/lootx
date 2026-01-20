@@ -203,7 +203,7 @@ export const Header: React.FC = () => {
                 <div className="bg-[#1a2130] px-2 md:px-3 py-1 rounded text-xs md:text-sm mr-2 md:mr-3">
                   <CoinAmount
                     amount={balance}
-                    formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                    formatOptions={{ maximumFractionDigits: 0 }}
                     className="text-cyan-400 font-bold"
                     iconClassName="w-3.5 h-3.5"
                   />

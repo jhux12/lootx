@@ -494,7 +494,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           Open for
                           <CoinAmount
                             amount={box.price}
-                            formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                            formatOptions={{ maximumFractionDigits: 0 }}
                             className="text-white"
                             iconClassName="w-4 h-4"
                           />
@@ -703,7 +703,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                          <h3 className="text-xl font-bold text-white mb-1">{wonItem.name}</h3>
                          <CoinAmount
                            amount={wonItem.price}
-                           formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                           formatOptions={{ maximumFractionDigits: 0 }}
                            className="text-gray-400 font-medium justify-center"
                            iconClassName="w-4 h-4"
                          />
@@ -720,7 +720,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   Sell for
                                   <CoinAmount
                                     amount={wonItem.price}
-                                    formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                    formatOptions={{ maximumFractionDigits: 0 }}
                                     className="text-gray-300"
                                     iconClassName="w-4 h-4"
                                   />
@@ -764,7 +764,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             <div className="text-gray-400 text-xs font-medium truncate mb-0.5">{item.name}</div>
                             <CoinAmount
                               amount={item.price}
-                              formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                              formatOptions={{ maximumFractionDigits: 0 }}
                               className="text-white font-bold text-sm"
                               iconClassName="w-3.5 h-3.5"
                             />

@@ -223,7 +223,7 @@ export const CustomCaseCreator: React.FC = () => {
                           <span className="text-sm text-gray-400">Total Price</span>
                           <CoinAmount
                             amount={boxPrice}
-                            formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                            formatOptions={{ maximumFractionDigits: 0 }}
                             className="text-2xl font-black text-green-500"
                             iconClassName="w-4 h-4"
                           />

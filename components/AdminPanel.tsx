@@ -107,7 +107,8 @@ export const AdminPanel: React.FC = () => {
   const formatTimestamp = (ts: number) => new Date(ts).toLocaleString();
   const formatCoinText = (amount: number, { showSign = true }: { showSign?: boolean } = {}) => {
       const absoluteAmount = showSign ? Math.abs(amount) : amount;
-      const formatted = absoluteAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const coins = absoluteAmount * 100;
+      const formatted = coins.toLocaleString(undefined, { maximumFractionDigits: 0 });
       const sign = showSign ? (amount < 0 ? '-' : '+') : '';
       return `${sign}${formatted} coins`;
   };
@@ -778,7 +779,7 @@ export const AdminPanel: React.FC = () => {
                                     {stat.isCoin ? (
                                         <CoinAmount
                                           amount={stat.value as number}
-                                          formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                          formatOptions={{ maximumFractionDigits: 0 }}
                                           className="text-white"
                                           iconClassName="w-5 h-5"
                                         />
@@ -809,7 +810,7 @@ export const AdminPanel: React.FC = () => {
                                     <div className="text-right">
                                         <CoinAmount
                                           amount={i % 2 === 0 ? 500 : -50}
-                                          formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                          formatOptions={{ maximumFractionDigits: 0 }}
                                           showSign
                                           className={`text-sm font-bold ${i % 2 === 0 ? 'text-green-400' : 'text-white'}`}
                                           iconClassName="w-3.5 h-3.5"
@@ -1054,7 +1055,7 @@ export const AdminPanel: React.FC = () => {
                                         <td className="px-4 py-3">
                                             <CoinAmount
                                               amount={box.price}
-                                              formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                              formatOptions={{ maximumFractionDigits: 0 }}
                                               className="text-green-500 font-semibold"
                                               iconClassName="w-3.5 h-3.5"
                                             />
@@ -1277,7 +1278,7 @@ export const AdminPanel: React.FC = () => {
                                             Coins:
                                             <CoinAmount
                                               amount={selectedUser.balance ?? 0}
-                                              formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                              formatOptions={{ maximumFractionDigits: 0 }}
                                               className="text-green-400 font-semibold"
                                               iconClassName="w-3 h-3"
                                             />
@@ -1410,7 +1411,7 @@ export const AdminPanel: React.FC = () => {
                                                     Net:{' '}
                                                     <CoinAmount
                                                       amount={ledgerNetChange}
-                                                      formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                                      formatOptions={{ maximumFractionDigits: 0 }}
                                                       showSign
                                                       className={ledgerNetChange >= 0 ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}
                                                       iconClassName="w-3.5 h-3.5"
@@ -1457,7 +1458,7 @@ export const AdminPanel: React.FC = () => {
                                                                       • Balance
                                                                       <CoinAmount
                                                                         amount={entry.balanceAfter}
-                                                                        formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                                                        formatOptions={{ maximumFractionDigits: 0 }}
                                                                         className="text-gray-400 font-semibold"
                                                                         iconClassName="w-3 h-3"
                                                                       />
@@ -1467,7 +1468,7 @@ export const AdminPanel: React.FC = () => {
                                                         </div>
                                                         <CoinAmount
                                                           amount={entry.amount}
-                                                          formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                                          formatOptions={{ maximumFractionDigits: 0 }}
                                                           showSign
                                                           className={`text-sm font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}
                                                           iconClassName="w-3.5 h-3.5"

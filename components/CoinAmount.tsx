@@ -19,7 +19,8 @@ export const CoinAmount: React.FC<CoinAmountProps> = ({
   showSign = false
 }) => {
   const absoluteAmount = showSign ? Math.abs(amount) : amount;
-  const formatted = absoluteAmount.toLocaleString(undefined, formatOptions);
+  const coins = absoluteAmount * 100;
+  const formatted = coins.toLocaleString(undefined, formatOptions ?? { maximumFractionDigits: 0 });
   const sign = showSign ? (amount < 0 ? '-' : '+') : '';
 
   return (
