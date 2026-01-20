@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, DollarSign, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, MysteryBox, UserLocks, UserStatus } from '../types';
+import { AdminActionLog, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus } from '../types';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -49,7 +49,8 @@ export const AdminPanel: React.FC = () => {
     users,
     updateUserProgress,
     sendAdminNotification,
-    updateShipmentStatus
+    updateShipmentStatus,
+    updateUserAdminData
   } = useGame();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments'>('dashboard');
 
@@ -92,6 +93,10 @@ export const AdminPanel: React.FC = () => {
   const [reversalReason, setReversalReason] = useState('');
   const [voidSourceId, setVoidSourceId] = useState('');
   const [voidReason, setVoidReason] = useState('');
+  const [ledgerFilter, setLedgerFilter] = useState<'all' | LedgerEntryType>('all');
+  const [ledgerSearch, setLedgerSearch] = useState('');
+  const [timelineFilter, setTimelineFilter] = useState<'all' | 'ledger' | 'inventory' | 'admin'>('all');
+  const [timelineSearch, setTimelineSearch] = useState('');
   
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
@@ -197,9 +202,7 @@ export const AdminPanel: React.FC = () => {
       setUserStatuses((prev) => {
           const next = { ...prev };
           users.forEach((profile) => {
-              if (!next[profile.id]) {
-                  next[profile.id] = profile.status ?? 'active';
-              }
+              next[profile.id] = profile.status ?? 'active';
           });
           return next;
       });
@@ -207,9 +210,7 @@ export const AdminPanel: React.FC = () => {
       setUserLocks((prev) => {
           const next = { ...prev };
           users.forEach((profile) => {
-              if (!next[profile.id]) {
-                  next[profile.id] = { ...DEFAULT_LOCKS, ...(profile.locks ?? {}) };
-              }
+              next[profile.id] = { ...DEFAULT_LOCKS, ...(profile.locks ?? {}) };
           });
           return next;
       });
@@ -217,9 +218,7 @@ export const AdminPanel: React.FC = () => {
       setLedgerEntries((prev) => {
           const next = { ...prev };
           users.forEach((profile, index) => {
-              if (!next[profile.id]) {
-                  next[profile.id] = profile.ledger ?? seedLedgerEntries(profile.id, index);
-              }
+              next[profile.id] = profile.ledger ?? next[profile.id] ?? seedLedgerEntries(profile.id, index);
           });
           return next;
       });
@@ -227,9 +226,7 @@ export const AdminPanel: React.FC = () => {
       setAdminLogs((prev) => {
           const next = { ...prev };
           users.forEach((profile) => {
-              if (!next[profile.id]) {
-                  next[profile.id] = profile.adminLogs ?? [];
-              }
+              next[profile.id] = profile.adminLogs ?? next[profile.id] ?? [];
           });
           return next;
       });
@@ -237,9 +234,7 @@ export const AdminPanel: React.FC = () => {
       setInventoryState((prev) => {
           const next = { ...prev };
           users.forEach((profile, index) => {
-              if (!next[profile.id]) {
-                  next[profile.id] = seedInventory(profile.inventory, profile.id, index);
-              }
+              next[profile.id] = seedInventory(profile.inventory, profile.id, index);
           });
           return next;
       });
@@ -366,6 +361,30 @@ export const AdminPanel: React.FC = () => {
       setNewBox(prev => ({ ...prev, price: parseFloat(calculatedPrice.toFixed(2)) }));
   };
 
+  const updateAdminLogs = (targetUserId: string, updater: (entries: AdminActionLog[]) => AdminActionLog[]) => {
+      setAdminLogs((prev) => {
+          const nextEntries = updater(prev[targetUserId] ?? []);
+          void updateUserAdminData(targetUserId, { adminLogs: nextEntries });
+          return { ...prev, [targetUserId]: nextEntries };
+      });
+  };
+
+  const updateLedgerRecords = (targetUserId: string, updater: (entries: LedgerEntry[]) => LedgerEntry[]) => {
+      setLedgerEntries((prev) => {
+          const nextEntries = updater(prev[targetUserId] ?? []);
+          void updateUserAdminData(targetUserId, { ledger: nextEntries });
+          return { ...prev, [targetUserId]: nextEntries };
+      });
+  };
+
+  const updateInventoryRecords = (targetUserId: string, updater: (items: InventoryItem[]) => InventoryItem[]) => {
+      setInventoryState((prev) => {
+          const nextItems = updater(prev[targetUserId] ?? []);
+          void updateUserAdminData(targetUserId, { inventory: nextItems });
+          return { ...prev, [targetUserId]: nextItems };
+      });
+  };
+
   const logAdminAction = (targetUserId: string, actionType: string, before: Record<string, unknown>, after: Record<string, unknown>, reason: string) => {
       const entry: AdminActionLog = {
           id: makeId('admin-log'),
@@ -377,22 +396,24 @@ export const AdminPanel: React.FC = () => {
           reason,
           createdAt: Date.now()
       };
-      setAdminLogs((prev) => ({
-          ...prev,
-          [targetUserId]: [entry, ...(prev[targetUserId] ?? [])]
-      }));
+      updateAdminLogs(targetUserId, (entries) => [entry, ...entries]);
   };
 
   const appendLedgerEntry = (targetUserId: string, entry: LedgerEntry) => {
-      setLedgerEntries((prev) => ({
-          ...prev,
-          [targetUserId]: [entry, ...(prev[targetUserId] ?? [])]
-      }));
+      updateLedgerRecords(targetUserId, (entries) => {
+          const currentBalance = entries.reduce((sum, item) => sum + item.amount, 0);
+          const entryWithBalance = {
+              ...entry,
+              balanceAfter: entry.balanceAfter ?? currentBalance + entry.amount
+          };
+          return [entryWithBalance, ...entries];
+      });
   };
 
   const handleStatusChange = (targetUserId: string, nextStatus: UserStatus) => {
       const previousStatus = userStatuses[targetUserId] ?? 'active';
       setUserStatuses((prev) => ({ ...prev, [targetUserId]: nextStatus }));
+      void updateUserAdminData(targetUserId, { status: nextStatus });
       logAdminAction(
           targetUserId,
           'status_update',
@@ -406,6 +427,7 @@ export const AdminPanel: React.FC = () => {
       setUserLocks((prev) => {
           const currentLocks = prev[targetUserId] ?? { ...DEFAULT_LOCKS };
           const nextLocks = { ...currentLocks, [lockKey]: !currentLocks[lockKey] };
+          void updateUserAdminData(targetUserId, { locks: nextLocks });
           logAdminAction(
               targetUserId,
               'lock_toggle',
@@ -418,8 +440,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleInventoryLockToggle = (targetUserId: string, instanceId: string) => {
-      setInventoryState((prev) => {
-          const items = prev[targetUserId] ?? [];
+      updateInventoryRecords(targetUserId, (items) => {
           const nextItems = items.map((item) => {
               if (item.instanceId !== instanceId) return item;
               const nextLocked = !item.locked;
@@ -443,7 +464,7 @@ export const AdminPanel: React.FC = () => {
               { instanceId, locked: nextItems.find((item) => item.instanceId === instanceId)?.locked },
               'Inventory lock toggled'
           );
-          return { ...prev, [targetUserId]: nextItems };
+          return nextItems;
       });
   };
 
@@ -487,8 +508,8 @@ export const AdminPanel: React.FC = () => {
           memo: voidReason.trim() || 'Voided case open'
       };
       appendLedgerEntry(selectedUserId, entry);
-      setInventoryState((prev) => {
-          const nextItems = (prev[selectedUserId] ?? []).map((item) => {
+      updateInventoryRecords(selectedUserId, (prevItems) => {
+          const nextItems = prevItems.map((item) => {
               if (item.provenance?.sourceId !== voidSourceId.trim()) return item;
               const historyEntry: InventoryHistoryEntry = {
                   id: makeId('history'),
@@ -503,7 +524,7 @@ export const AdminPanel: React.FC = () => {
                   history: [historyEntry, ...(item.history ?? [])]
               };
           });
-          return { ...prev, [selectedUserId]: nextItems };
+          return nextItems;
       });
       logAdminAction(
           selectedUserId,
@@ -520,6 +541,8 @@ export const AdminPanel: React.FC = () => {
   const selectedLedgerEntries = selectedUserId ? ledgerEntries[selectedUserId] ?? [] : [];
   const selectedInventory = selectedUserId ? inventoryState[selectedUserId] ?? [] : [];
   const selectedAdminLogs = selectedUserId ? adminLogs[selectedUserId] ?? [] : [];
+  const ledgerNetChange = selectedLedgerEntries.reduce((sum, entry) => sum + entry.amount, 0);
+  const ledgerSearchValue = ledgerSearch.trim().toLowerCase();
 
   const timelineEntries = useMemo(() => {
       const entries = [
@@ -528,7 +551,8 @@ export const AdminPanel: React.FC = () => {
               createdAt: entry.createdAt,
               title: `Ledger • ${entry.type.replace('_', ' ')}`,
               description: `${formatCurrency(entry.amount)} ${entry.memo ?? ''}`.trim(),
-              meta: entry.sourceId ? `Source: ${entry.sourceId}` : ''
+              meta: entry.sourceId ? `Source: ${entry.sourceId}` : '',
+              category: 'ledger' as const
           })),
           ...selectedInventory.flatMap((item) =>
               (item.history ?? []).map((history) => ({
@@ -536,7 +560,8 @@ export const AdminPanel: React.FC = () => {
                   createdAt: history.createdAt,
                   title: `Inventory • ${history.action.replace('_', ' ')}`,
                   description: `${item.name}${history.note ? ` — ${history.note}` : ''}`,
-                  meta: item.provenance ? `From ${item.provenance.sourceType} (${item.provenance.sourceId})` : ''
+                  meta: item.provenance ? `From ${item.provenance.sourceType} (${item.provenance.sourceId})` : '',
+                  category: 'inventory' as const
               }))
           ),
           ...selectedAdminLogs.map((log) => ({
@@ -544,11 +569,33 @@ export const AdminPanel: React.FC = () => {
               createdAt: log.createdAt,
               title: `Admin • ${log.actionType.replace('_', ' ')}`,
               description: log.reason,
-              meta: `Admin: ${log.adminUid}`
+              meta: `Admin: ${log.adminUid}`,
+              category: 'admin' as const
           }))
       ];
       return entries.sort((a, b) => b.createdAt - a.createdAt);
   }, [selectedAdminLogs, selectedInventory, selectedLedgerEntries]);
+
+  const filteredLedgerEntries = selectedLedgerEntries.filter((entry) => {
+      if (ledgerFilter !== 'all' && entry.type !== ledgerFilter) return false;
+      if (!ledgerSearchValue) return true;
+      return [
+          entry.memo,
+          entry.sourceId,
+          entry.type
+      ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(ledgerSearchValue));
+  });
+
+  const timelineSearchValue = timelineSearch.trim().toLowerCase();
+  const filteredTimelineEntries = timelineEntries.filter((entry) => {
+      if (timelineFilter !== 'all' && entry.category !== timelineFilter) return false;
+      if (!timelineSearchValue) return true;
+      return [entry.title, entry.description, entry.meta]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(timelineSearchValue));
+  });
 
   const handleSaveBox = () => {
       if(!newBox.name || !newBox.price) {
@@ -1298,20 +1345,58 @@ export const AdminPanel: React.FC = () => {
 
                                 <div className="xl:col-span-2 space-y-6">
                                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <ScrollText className="w-4 h-4 text-purple-400" />
-                                            <h3 className="text-sm font-bold text-white">Immutable Coin Ledger</h3>
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                                            <div className="flex items-center gap-2">
+                                                <ScrollText className="w-4 h-4 text-purple-400" />
+                                                <h3 className="text-sm font-bold text-white">Immutable Coin Ledger</h3>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 text-[11px]">
+                                                <span className="px-2 py-1 rounded-full bg-[#0b0e14] text-gray-400">
+                                                    Entries: <span className="text-gray-200 font-semibold">{selectedLedgerEntries.length}</span>
+                                                </span>
+                                                <span className="px-2 py-1 rounded-full bg-[#0b0e14] text-gray-400">
+                                                    Net: <span className={ledgerNetChange >= 0 ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>{formatCurrency(ledgerNetChange)}</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col md:flex-row gap-3 mb-4">
+                                            <select
+                                                value={ledgerFilter}
+                                                onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)}
+                                                className="w-full md:w-48 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                            >
+                                                <option value="all">All entry types</option>
+                                                <option value="deposit">Deposit</option>
+                                                <option value="case_open">Case open</option>
+                                                <option value="sell_back">Sell back</option>
+                                                <option value="bonus">Bonus</option>
+                                                <option value="admin_adjustment">Admin adjustment</option>
+                                                <option value="chargeback_reversal">Chargeback reversal</option>
+                                                <option value="reversal">Reversal</option>
+                                            </select>
+                                            <input
+                                                type="text"
+                                                value={ledgerSearch}
+                                                onChange={(event) => setLedgerSearch(event.target.value)}
+                                                placeholder="Search memo or source ID"
+                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                            />
                                         </div>
                                         <div className="space-y-3">
-                                            {selectedLedgerEntries.length === 0 ? (
+                                            {filteredLedgerEntries.length === 0 ? (
                                                 <div className="text-sm text-gray-500">No ledger entries yet.</div>
                                             ) : (
-                                                selectedLedgerEntries.map((entry) => (
+                                                filteredLedgerEntries.map((entry) => (
                                                     <div key={entry.id} className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                                         <div>
                                                             <div className="text-xs text-gray-400 uppercase">{entry.type.replace('_', ' ')}</div>
                                                             <div className="text-sm text-gray-200 font-semibold">{entry.memo || 'Balance update'}</div>
-                                                            <div className="text-[11px] text-gray-500">{entry.sourceId || 'Manual entry'} • {formatTimestamp(entry.createdAt)}</div>
+                                                            <div className="text-[11px] text-gray-500">
+                                                                {entry.sourceId || 'Manual entry'} • {formatTimestamp(entry.createdAt)}
+                                                                {entry.balanceAfter !== undefined && (
+                                                                    <span className="text-gray-400"> • Balance {formatCurrency(entry.balanceAfter)}</span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                         <div className={`text-sm font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                                             {formatCurrency(entry.amount)}
@@ -1352,7 +1437,7 @@ export const AdminPanel: React.FC = () => {
                                                                         : 'bg-[#131720] text-gray-300 border border-gray-700'
                                                                 }`}
                                                             >
-                                                                {item.locked ? 'Locked' : 'Unlock'}
+                                                                {item.locked ? 'Unlock' : 'Lock'}
                                                             </button>
                                                             <div className="text-[10px] text-gray-500">
                                                                 {(item.history ?? []).slice(0, 2).map((history) => (
@@ -1389,15 +1474,44 @@ export const AdminPanel: React.FC = () => {
                                     </div>
 
                                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <Activity className="w-4 h-4 text-green-400" />
-                                            <h3 className="text-sm font-bold text-white">Unified User Timeline</h3>
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                                            <div className="flex items-center gap-2">
+                                                <Activity className="w-4 h-4 text-green-400" />
+                                                <h3 className="text-sm font-bold text-white">Unified User Timeline</h3>
+                                            </div>
+                                            <div className="text-[11px] text-gray-500">
+                                                Showing <span className="text-gray-200 font-semibold">{Math.min(filteredTimelineEntries.length, 15)}</span> of <span className="text-gray-200 font-semibold">{filteredTimelineEntries.length}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col md:flex-row gap-3 mb-4">
+                                            <div className="flex flex-wrap gap-2">
+                                                {(['all', 'ledger', 'inventory', 'admin'] as const).map((filter) => (
+                                                    <button
+                                                        key={filter}
+                                                        onClick={() => setTimelineFilter(filter)}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-colors ${
+                                                            timelineFilter === filter
+                                                                ? 'bg-green-500/20 text-green-300'
+                                                                : 'bg-[#0b0e14] text-gray-400 hover:text-white hover:bg-gray-800'
+                                                        }`}
+                                                    >
+                                                        {filter === 'all' ? 'All' : filter}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={timelineSearch}
+                                                onChange={(event) => setTimelineSearch(event.target.value)}
+                                                placeholder="Search timeline details"
+                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                            />
                                         </div>
                                         <div className="space-y-3">
-                                            {timelineEntries.length === 0 ? (
+                                            {filteredTimelineEntries.length === 0 ? (
                                                 <div className="text-sm text-gray-500">No timeline events available.</div>
                                             ) : (
-                                                timelineEntries.slice(0, 15).map((entry) => (
+                                                filteredTimelineEntries.slice(0, 15).map((entry) => (
                                                     <div key={entry.id} className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3">
                                                         <div className="text-sm text-gray-200 font-semibold">{entry.title}</div>
                                                         <div className="text-xs text-gray-400">{entry.description}</div>

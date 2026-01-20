@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AppNotification, User, InventoryItem, CaseItem, ViewState, Battle, MysteryBox, ShippingAddress } from '../types';
+import { AppNotification, User, InventoryItem, CaseItem, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { 
@@ -36,6 +36,14 @@ const sanitizeDeep = (value: any): any => {
     return cleaned;
   }
   return value;
+};
+
+const DEFAULT_LOCKS: UserLocks = {
+  openCases: false,
+  deposits: false,
+  withdraws: false,
+  marketplace: false,
+  shipments: false
 };
 
 // Leveling Configuration
@@ -143,6 +151,7 @@ interface GameContextType {
   updateItem: (item: CaseItem) => Promise<void>;
   deleteItem: (itemId: string) => Promise<void>;
   updateUserFlags: (updates: Partial<User>) => Promise<void>;
+  updateUserAdminData: (userId: string, updates: Partial<User>) => Promise<void>;
   createBox: (box: MysteryBox) => void; // Admin
   createUserBox: (box: MysteryBox) => void; // User Custom
   updateBox: (box: MysteryBox) => void;
@@ -209,7 +218,11 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
       isAdmin: false,
       chatWarnings: 0,
       chatDisabled: false,
-      termsFlagged: false
+      termsFlagged: false,
+      status: 'active',
+      locks: DEFAULT_LOCKS,
+      ledger: [],
+      adminLogs: []
     };
 
     await setDoc(userRef, buildUserDocument(newUser, { balance: 0, inventory: [] }));
@@ -244,7 +257,11 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
     chatDisabledAt: data.chatDisabledAt,
-    termsFlagged: data.termsFlagged ?? false
+    termsFlagged: data.termsFlagged ?? false,
+    status: data.status ?? 'active',
+    locks: data.locks ?? DEFAULT_LOCKS,
+    ledger: Array.isArray(data.ledger) ? data.ledger : undefined,
+    adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined
   };
 
   const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
@@ -390,7 +407,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           chatWarnings: data.chatWarnings ?? 0,
           chatDisabled: data.chatDisabled ?? false,
           chatDisabledAt: data.chatDisabledAt,
-          termsFlagged: data.termsFlagged ?? false
+          termsFlagged: data.termsFlagged ?? false,
+          status: data.status ?? 'active',
+          locks: data.locks ?? DEFAULT_LOCKS,
+          ledger: Array.isArray(data.ledger) ? data.ledger : undefined,
+          adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined
         } as User;
       });
       setUsers(loaded);
@@ -855,6 +876,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, ...updates } : u));
   };
 
+  const updateUserAdminData = async (userId: string, updates: Partial<User>) => {
+      if (!isAuthenticated || !auth.currentUser) return;
+      const sanitizedUpdates = sanitizeDeep(updates);
+
+      try {
+        await setDoc(getUserRef(userId), sanitizedUpdates, { merge: true });
+      } catch (error) {
+        console.error('Failed to update user admin data in Firebase', error);
+      }
+
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
+      setUser(prev => prev.id === userId ? { ...prev, ...updates } : prev);
+  };
+
   const createBattle = async (boxIds: string[], maxPlayers: number) => {
     if (!isAuthenticated) {
         setShowLoginModal(true);
@@ -1188,6 +1223,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       clearNotifications,
       sendAdminNotification,
       updateUserFlags,
+      updateUserAdminData,
       createBattle,
       joinBattle,
       updateBattle,
