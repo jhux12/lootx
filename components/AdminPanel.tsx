@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, DollarSign, ShieldAlert, Package, Box as BoxIcon, Plus, Check, Calculator, Edit2, Trash2, Calendar, BellRing } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Activity, DollarSign, ShieldAlert, Package, Box as BoxIcon, Plus, Check, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { CaseItem, MysteryBox } from '../types';
 
@@ -31,9 +31,10 @@ export const AdminPanel: React.FC = () => {
     boxes,
     users,
     updateUserProgress,
-    sendAdminNotification
+    sendAdminNotification,
+    updateShipmentStatus
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -63,10 +64,27 @@ export const AdminPanel: React.FC = () => {
   const [isSavingUser, setIsSavingUser] = useState(false);
   const [adminNotification, setAdminNotification] = useState('');
   const [adminNoticeSent, setAdminNoticeSent] = useState(false);
+  const [shipmentFilter, setShipmentFilter] = useState<'all' | 'processing' | 'shipped'>('processing');
   
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
 
+  const shipmentRecords = users.flatMap((profile) => {
+      const inventory = Array.isArray(profile.inventory) ? profile.inventory : [];
+      return inventory
+        .map((item, index) => ({
+            user: profile,
+            item,
+            key: `${profile.id}-${item.instanceId || item.id}-${index}`
+        }))
+        .filter(({ item }) => item.status === 'shipping' || item.status === 'shipped');
+  });
+
+  const filteredShipments = shipmentRecords.filter(({ item }) => {
+      if (shipmentFilter === 'processing') return item.status === 'shipping';
+      if (shipmentFilter === 'shipped') return item.status === 'shipped';
+      return true;
+  });
   const stats = [
     { title: 'Total Revenue', value: '$124,592.00', icon: DollarSign, color: 'text-green-500', bg: 'bg-green-500/10' },
     { title: 'Active Users', value: '1,420', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
@@ -313,6 +331,12 @@ export const AdminPanel: React.FC = () => {
                        <Users className="w-4 h-4" /> User Management
                    </button>
                    <button 
+                     onClick={() => setActiveTab('shipments')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipments' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <Truck className="w-4 h-4" /> Shipment Manager
+                   </button>
+                   <button 
                      onClick={() => setActiveTab('settings')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'settings' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -333,6 +357,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'settings' && 'System Configuration'}
                     {activeTab === 'items' && 'Item Manager'}
                     {activeTab === 'boxes' && 'Box Manager'}
+                    {activeTab === 'shipments' && 'Shipment Manager'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
             </div>
@@ -699,6 +724,100 @@ export const AdminPanel: React.FC = () => {
                             </tbody>
                         </table>
                     </div>
+                </div>
+            )}
+
+            {/* TAB: SHIPMENTS */}
+            {activeTab === 'shipments' && (
+                <div className="space-y-6">
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Shipping Requests</h3>
+                                <p className="text-sm text-gray-400">Track items that players have requested to ship or already delivered.</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {(['all', 'processing', 'shipped'] as const).map((filter) => (
+                                    <button
+                                        key={filter}
+                                        onClick={() => setShipmentFilter(filter)}
+                                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-colors ${
+                                            shipmentFilter === filter
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-[#0b0e14] text-gray-400 hover:text-white hover:bg-gray-800'
+                                        }`}
+                                    >
+                                        {filter === 'all' ? 'All' : filter === 'processing' ? 'Processing' : 'Shipped'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {filteredShipments.length === 0 ? (
+                        <div className="bg-[#131720] border border-gray-800 rounded-xl p-8 text-center text-gray-500">
+                            No shipment requests match this filter.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {filteredShipments.map(({ user: shipmentUser, item, key }) => {
+                                const address = shipmentUser.shippingAddress;
+                                const canUpdate = Boolean(item.instanceId);
+                                return (
+                                    <div key={key} className="bg-[#131720] border border-gray-800 rounded-xl p-5 flex flex-col gap-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <img src={item.image} alt={item.name} className="w-12 h-12 rounded-lg bg-[#0b0e14] object-contain" />
+                                                <div>
+                                                    <div className="text-white font-bold">{item.name}</div>
+                                                    <div className="text-xs text-green-400 font-semibold">${item.price}</div>
+                                                    <div className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full mt-1 ${
+                                                        item.status === 'shipped'
+                                                            ? 'bg-green-500/10 text-green-400'
+                                                            : 'bg-yellow-500/10 text-yellow-400'
+                                                    }`}>
+                                                        {item.status === 'shipped' ? <PackageCheck className="w-3 h-3" /> : <Truck className="w-3 h-3" />}
+                                                        {item.status === 'shipped' ? 'Shipped' : 'Processing'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-sm text-gray-300 sm:text-right">
+                                                <div className="font-semibold">{shipmentUser.name}</div>
+                                                <div className="text-xs text-gray-500 break-all">{shipmentUser.email || 'No email on file'}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 text-xs text-gray-400 space-y-1">
+                                                <div className="text-[10px] uppercase font-bold text-gray-500">Shipping Address</div>
+                                                {address ? (
+                                                    <>
+                                                        <div className="text-gray-200 font-semibold">{address.fullName}</div>
+                                                        <div>{address.street}</div>
+                                                        <div>{address.city}, {address.state} {address.zipCode}</div>
+                                                        <div>{address.country}</div>
+                                                    </>
+                                                ) : (
+                                                    <div className="text-yellow-400">No address saved.</div>
+                                                )}
+                                            </div>
+                                            <div className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 text-xs text-gray-400 flex flex-col gap-3">
+                                                <div className="text-[10px] uppercase font-bold text-gray-500">Shipment Actions</div>
+                                                <div className="text-gray-500">Instance ID: <span className="text-gray-300">{item.instanceId || 'Unavailable'}</span></div>
+                                                <button
+                                                    onClick={() => updateShipmentStatus(shipmentUser.id, item.instanceId || '', 'shipped')}
+                                                    disabled={item.status === 'shipped' || !canUpdate}
+                                                    className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    Mark as shipped
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
             
