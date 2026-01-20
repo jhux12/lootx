@@ -29,6 +29,10 @@ export interface User {
   chatDisabled?: boolean;
   chatDisabledAt?: number;
   termsFlagged?: boolean;
+  status?: UserStatus;
+  locks?: UserLocks;
+  ledger?: LedgerEntry[];
+  adminLogs?: AdminActionLog[];
 }
 
 export interface ChatMessage {
@@ -66,6 +70,72 @@ export interface InventoryItem extends CaseItem {
   instanceId: string;
   obtainedAt: number;
   status: 'available' | 'sold' | 'shipping' | 'shipped';
+  locked?: boolean;
+  provenance?: InventoryProvenance;
+  history?: InventoryHistoryEntry[];
+}
+
+export type UserStatus = 'active' | 'suspended' | 'banned';
+
+export interface UserLocks {
+  openCases: boolean;
+  deposits: boolean;
+  withdraws: boolean;
+  marketplace: boolean;
+  shipments: boolean;
+}
+
+export type LedgerEntryType =
+  | 'deposit'
+  | 'case_open'
+  | 'sell_back'
+  | 'bonus'
+  | 'admin_adjustment'
+  | 'chargeback_reversal'
+  | 'reversal';
+
+export interface LedgerEntry {
+  id: string;
+  userId: string;
+  type: LedgerEntryType;
+  amount: number;
+  createdAt: number;
+  balanceAfter?: number;
+  sourceId?: string;
+  memo?: string;
+}
+
+export interface AdminActionLog {
+  id: string;
+  adminUid: string;
+  targetUserUid: string;
+  actionType: string;
+  reason: string;
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  createdAt: number;
+}
+
+export type InventoryHistoryAction =
+  | 'added'
+  | 'locked'
+  | 'unlocked'
+  | 'sold'
+  | 'shipped'
+  | 'void_open'
+  | 'reversal';
+
+export interface InventoryHistoryEntry {
+  id: string;
+  action: InventoryHistoryAction;
+  createdAt: number;
+  note?: string;
+  adminUid?: string;
+}
+
+export interface InventoryProvenance {
+  sourceType: 'case_open' | 'deposit' | 'promo' | 'admin_adjustment';
+  sourceId: string;
 }
 
 export interface BattlePlayer extends User {
