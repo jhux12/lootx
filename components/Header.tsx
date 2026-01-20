@@ -22,10 +22,22 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
 export const Header: React.FC = () => {
-  const { user, balance, setView, isAuthenticated, setShowLoginModal, setShowTopUpModal, logout } = useGame();
+  const {
+    user,
+    balance,
+    setView,
+    isAuthenticated,
+    setShowLoginModal,
+    setShowTopUpModal,
+    logout,
+    notifications,
+    dismissNotification,
+    clearNotifications
+  } = useGame();
   const { muted, toggleMute, playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [lootRevealActive, setLootRevealActive] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -63,6 +75,8 @@ export const Header: React.FC = () => {
       action();
     }
   };
+
+  const notificationCount = notifications.length;
 
   return (
     <>
@@ -242,9 +256,85 @@ export const Header: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3 text-gray-500">
-                <button className="hover:text-white transition-colors hidden sm:block">
-                  <Bell className="w-4 h-4" />
-                </button>
+                <div className="relative">
+                  <button
+                    className="hover:text-white transition-colors p-2 rounded-lg hover:bg-[#11141d] relative"
+                    onClick={() => setIsNotificationsOpen((prev) => !prev)}
+                    aria-label="Notifications"
+                  >
+                    <Bell className="w-4 h-4" />
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                        {notificationCount > 9 ? '9+' : notificationCount}
+                      </span>
+                    )}
+                  </button>
+                  {isNotificationsOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsNotificationsOpen(false)}
+                      ></div>
+                      <div
+                        className="absolute right-0 mt-3 w-[90vw] max-w-sm md:w-96 bg-[#151a23] border border-gray-800 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+                          <span className="text-sm font-bold text-white">Notifications</span>
+                          <button
+                            onClick={() => clearNotifications()}
+                            className="text-xs text-gray-400 hover:text-white disabled:opacity-50"
+                            disabled={notificationCount === 0}
+                          >
+                            Clear all
+                          </button>
+                        </div>
+                        <div className="max-h-72 overflow-y-auto">
+                          {notificationCount === 0 ? (
+                            <div className="px-4 py-6 text-center text-sm text-gray-500">
+                              You are all caught up.
+                            </div>
+                          ) : (
+                            notifications.map((notification) => {
+                              const Icon = notification.type === 'shipping' ? PackageOpen : ShieldCheck;
+                              const accent =
+                                notification.type === 'shipping' ? 'text-green-400' : 'text-purple-400';
+                              const badge =
+                                notification.type === 'shipping'
+                                  ? 'bg-green-500/10 border-green-500/20'
+                                  : 'bg-purple-500/10 border-purple-500/20';
+                              return (
+                                <div
+                                  key={notification.id}
+                                  className="flex items-start gap-3 px-4 py-3 border-b border-gray-800 last:border-b-0"
+                                >
+                                  <div className={`p-2 rounded-lg border ${badge}`}>
+                                    <Icon className={`w-4 h-4 ${accent}`} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-gray-200 leading-snug">
+                                      {notification.message}
+                                    </p>
+                                    <p className="text-[11px] text-gray-500 mt-1">
+                                      {new Date(notification.createdAt).toLocaleTimeString()}
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => dismissNotification(notification.id)}
+                                    className="text-gray-500 hover:text-white"
+                                    aria-label="Dismiss notification"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 md:hidden">
                   <img 
                     src={user.avatar} 
