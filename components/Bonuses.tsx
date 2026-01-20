@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Gift, Calendar, Lock, Copy, TrendingUp, ShieldCheck, ClipboardList, Loader2 } from 'lucide-react';
+import { Gift, Calendar, Lock, Copy, TrendingUp, ShieldCheck, ClipboardList, Loader2, Zap, Timer } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
@@ -26,6 +26,12 @@ export const Bonuses: React.FC = () => {
   const [affiliateMessage, setAffiliateMessage] = useState('');
   const [isOfferLoading, setIsOfferLoading] = useState(false);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [tapStreak, setTapStreak] = useState(0);
+  const [tappedBlocks, setTappedBlocks] = useState<boolean[]>(() => Array.from({ length: 50 }, () => false));
+  const [frenzyActive, setFrenzyActive] = useState(false);
+  const [frenzyTimeLeft, setFrenzyTimeLeft] = useState<number | null>(null);
+  const [frenzyBonusAwarded, setFrenzyBonusAwarded] = useState<number | null>(null);
+  const [frenzyMessage, setFrenzyMessage] = useState('');
 
   // Identify daily box from context
   const dailyBox = boxes.find(b => b.isDaily);
@@ -36,6 +42,22 @@ export const Bonuses: React.FC = () => {
   const affiliateUnlocked = user.level >= 3;
   const availableRakeback = Number(user.rakebackBalance ?? 0);
   const hasReferral = Boolean(user.referredBy);
+  const blockTarget = 50;
+  const frenzyDuration = 12;
+
+  useEffect(() => {
+    if (!frenzyActive || frenzyTimeLeft === null) return;
+    if (frenzyTimeLeft <= 0) {
+      setFrenzyActive(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setFrenzyTimeLeft((prev) => (prev ? prev - 1 : prev));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [frenzyActive, frenzyTimeLeft]);
 
   const handleClaimDaily = () => {
     if (!isAuthenticated) {
@@ -57,6 +79,60 @@ export const Bonuses: React.FC = () => {
         // Fallback coin reward if no daily box configured
         addBalance(100);
         claimDaily();
+    }
+  };
+
+  const resetFrenzy = (options?: { keepMessage?: boolean }) => {
+    setTapStreak(0);
+    setTappedBlocks(Array.from({ length: blockTarget }, () => false));
+    setFrenzyActive(false);
+    setFrenzyTimeLeft(null);
+    setFrenzyBonusAwarded(null);
+    if (!options?.keepMessage) {
+      setFrenzyMessage('');
+    }
+  };
+
+  const calculateFrenzyBonus = (level: number) => {
+    const baseBonus = 0.25;
+    const levelBonus = 0.05 * Math.max(0, level);
+    return Math.min(2.5, baseBonus + levelBonus);
+  };
+
+  const handleBlockTap = (index: number) => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (frenzyActive) {
+      playSound('error');
+      return;
+    }
+
+    if (tappedBlocks[index]) {
+      playSound('error');
+      resetFrenzy({ keepMessage: true });
+      setFrenzyMessage('Oops! Re-tapped block. Streak reset.');
+      return;
+    }
+
+    const updatedBlocks = [...tappedBlocks];
+    updatedBlocks[index] = true;
+    const nextStreak = tapStreak + 1;
+
+    setTappedBlocks(updatedBlocks);
+    setTapStreak(nextStreak);
+    playSound('click');
+
+    if (nextStreak >= blockTarget) {
+      const bonus = Number(calculateFrenzyBonus(user.level).toFixed(2));
+      addBalance(bonus);
+      setFrenzyBonusAwarded(bonus);
+      setFrenzyActive(true);
+      setFrenzyTimeLeft(frenzyDuration);
+      setFrenzyMessage(`Frenzy unlocked! +$${bonus.toFixed(2)} added.`);
+      playSound('coins');
     }
   };
 
@@ -334,6 +410,92 @@ export const Bonuses: React.FC = () => {
                   )}
               </div>
 
+          </div>
+      </div>
+
+      {/* Block Frenzy */}
+      <div className="mt-8 bg-[#131720] border border-gray-800 rounded-xl p-6">
+          <div className="flex flex-col gap-6">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div>
+                      <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                              <Zap className="w-5 h-5 text-blue-400" />
+                          </div>
+                          <div>
+                              <h3 className="text-lg font-bold text-white">Block Frenzy</h3>
+                              <p className="text-sm text-gray-400">Tap 50 blocks in a row to unlock a quick frenzy bonus.</p>
+                          </div>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                          Bonus scales slightly with your level and stays modest.
+                      </div>
+                  </div>
+                  <div className="flex flex-col items-start md:items-end gap-2 text-xs text-gray-400">
+                      <div className="flex items-center gap-2">
+                          <Timer className="w-4 h-4 text-blue-400" />
+                          {frenzyActive ? (
+                            <span className="text-blue-300 font-bold">Frenzy live: {frenzyTimeLeft ?? 0}s</span>
+                          ) : (
+                            <span>Frenzy timer: {frenzyDuration}s</span>
+                          )}
+                      </div>
+                      {frenzyBonusAwarded !== null && (
+                        <div className="text-green-400 font-semibold">+${frenzyBonusAwarded.toFixed(2)} awarded</div>
+                      )}
+                  </div>
+              </div>
+
+              <div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-gray-400 mb-2">
+                      <span>{tapStreak} / {blockTarget} taps</span>
+                      <span>{frenzyActive ? 'Keep the energy up!' : 'Don’t re-tap the same block.'}</span>
+                  </div>
+                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all"
+                        style={{ width: `${Math.min(100, (tapStreak / blockTarget) * 100)}%` }}
+                      ></div>
+                  </div>
+                  {frenzyMessage && (
+                    <div className="text-xs text-blue-300 mt-2">{frenzyMessage}</div>
+                  )}
+              </div>
+
+              <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                  {Array.from({ length: blockTarget }, (_, index) => {
+                    const isTapped = tappedBlocks[index];
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => handleBlockTap(index)}
+                        disabled={frenzyActive}
+                        aria-label={`Tap block ${index + 1}`}
+                        aria-pressed={isTapped}
+                        className={`aspect-square w-full rounded-lg border text-[10px] font-bold transition-all ${
+                          isTapped
+                            ? 'bg-green-500/30 border-green-400 text-green-200'
+                            : 'bg-[#0b0e14] border-gray-700 text-gray-500 hover:border-blue-400 hover:text-blue-200'
+                        } ${frenzyActive ? 'opacity-60 cursor-not-allowed' : 'active:scale-95'}`}
+                      >
+                        {index + 1}
+                      </button>
+                    );
+                  })}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                  <button
+                    onClick={() => resetFrenzy()}
+                    disabled={frenzyActive && frenzyTimeLeft !== null && frenzyTimeLeft > 0}
+                    className={`px-4 py-2 rounded-lg font-bold transition-colors border ${
+                      frenzyActive ? 'bg-gray-900 border-gray-700 text-gray-500 cursor-not-allowed' : 'bg-[#0b0e14] border-gray-700 text-gray-300 hover:text-white hover:border-gray-500'
+                    }`}
+                  >
+                    Reset Streak
+                  </button>
+                  <span>Hit 50 taps to unlock frenzy mode.</span>
+              </div>
           </div>
       </div>
       
