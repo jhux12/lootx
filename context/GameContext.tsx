@@ -301,14 +301,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [users, setUsers] = useState<User[]>([]);
   const [balance, setBalance] = useState<number>(0);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>(() => {
-    const stored = safeReadLocalStorage<Notification[]>(STORAGE_KEY_NOTIFICATIONS, []);
-    return stored.length ? stored : SITE_NOTIFICATIONS;
-  });
-
-  useEffect(() => {
-    safeWriteLocalStorage(STORAGE_KEY_NOTIFICATIONS, notifications);
-  }, [notifications]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+        setNotifications([]);
   
   const [view, setView] = useState<ViewState>({ type: 'HOME' });
   

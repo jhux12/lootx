@@ -188,66 +188,68 @@ export const Header: React.FC = () => {
             {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
           </button>
 
-          <div className="relative">
-            <button
-              className="hover:text-white transition-colors flex items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-gray-500"
-              onClick={() => setIsNotificationsOpen((prev) => !prev)}
-              aria-label="Notifications"
-              aria-expanded={isNotificationsOpen}
-            >
-              <Bell className="w-4 h-4" />
-              {notifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border border-[#0b0e14]">
-                  {Math.min(notifications.length, 9)}
-                </span>
-              )}
-            </button>
-            {isNotificationsOpen && (
-              <div className="absolute right-0 mt-2 w-[min(90vw,360px)] bg-[#151a23] border border-gray-800 rounded-xl shadow-xl z-50">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-                  <span className="text-sm font-semibold text-white">Notifications</span>
-                  {notifications.length > 0 && (
-                    <button
-                      onClick={clearNotifications}
-                      className="text-xs text-blue-400 hover:text-blue-300 font-semibold"
-                    >
-                      Clear all
-                    </button>
-                  )}
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {formattedNotifications.length === 0 ? (
-                    <div className="py-10 text-center text-xs text-gray-400">You're all caught up.</div>
-                  ) : (
-                    formattedNotifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className="flex gap-3 px-4 py-3 border-b border-gray-800 last:border-b-0"
+          {isAuthenticated && (
+            <div className="relative">
+              <button
+                className="hover:text-white transition-colors flex items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-gray-500"
+                onClick={() => setIsNotificationsOpen((prev) => !prev)}
+                aria-label="Notifications"
+                aria-expanded={isNotificationsOpen}
+              >
+                <Bell className="w-4 h-4" />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border border-[#0b0e14]">
+                    {Math.min(notifications.length, 9)}
+                  </span>
+                )}
+              </button>
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-2 w-[min(90vw,360px)] bg-[#151a23] border border-gray-800 rounded-xl shadow-xl z-50">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+                    <span className="text-sm font-semibold text-white">Notifications</span>
+                    {notifications.length > 0 && (
+                      <button
+                        onClick={clearNotifications}
+                        className="text-xs text-blue-400 hover:text-blue-300 font-semibold"
                       >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-blue-400 uppercase tracking-wide">
-                              {notification.type}
-                            </span>
-                            <span className="text-[10px] text-gray-500">{notification.time}</span>
-                          </div>
-                          <p className="text-sm text-white font-semibold">{notification.title}</p>
-                          <p className="text-xs text-gray-400">{notification.message}</p>
-                        </div>
-                        <button
-                          onClick={() => removeNotification(notification.id)}
-                          className="text-gray-500 hover:text-white"
-                          aria-label="Remove notification"
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {formattedNotifications.length === 0 ? (
+                      <div className="py-10 text-center text-xs text-gray-400">You're all caught up.</div>
+                    ) : (
+                      formattedNotifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className="flex gap-3 px-4 py-3 border-b border-gray-800 last:border-b-0"
                         >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))
-                  )}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-blue-400 uppercase tracking-wide">
+                                {notification.type}
+                              </span>
+                              <span className="text-[10px] text-gray-500">{notification.time}</span>
+                            </div>
+                            <p className="text-sm text-white font-semibold">{notification.title}</p>
+                            <p className="text-xs text-gray-400">{notification.message}</p>
+                          </div>
+                          <button
+                            onClick={() => removeNotification(notification.id)}
+                            className="text-gray-500 hover:text-white"
+                            aria-label="Remove notification"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {isAuthenticated ? (
             <>
