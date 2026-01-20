@@ -14,7 +14,6 @@ import {
   Swords, 
   Volume2, 
   VolumeX, 
-  ShieldCheck, 
   FlaskConical, 
   PackageOpen
 } from 'lucide-react';
@@ -163,15 +162,6 @@ export const Header: React.FC = () => {
               <FlaskConical className="w-4 h-4" /> Case Lab
             </button>
 
-            {/* Admin Panel Link - Only visible to Admins */}
-            {user.isAdmin && (
-              <button 
-                onClick={() => handleNav({ type: 'ADMIN' })} 
-                className="flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors text-sm font-bold ml-4 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20"
-              >
-                <ShieldCheck className="w-4 h-4" /> Admin
-              </button>
-            )}
           </nav>
         </div>
 
@@ -207,11 +197,6 @@ export const Header: React.FC = () => {
                   <div className="flex flex-col">
                     <span className="text-sm font-medium leading-none max-w-[120px] truncate flex items-center gap-1">
                       {user.name}
-                      {user.isAdmin && (
-                        <span className="text-[9px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/30">
-                          Admin
-                        </span>
-                      )}
                     </span>
                     <span className="text-[10px] text-gray-500">Lvl {user.level}</span>
                   </div>
@@ -252,11 +237,6 @@ export const Header: React.FC = () => {
                     alt="Avatar" 
                     onClick={() => handleNav({ type: 'PROFILE' })} 
                   />
-                  {user.isAdmin && (
-                    <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-full border border-red-500/30">
-                      Admin
-                    </span>
-                  )}
                 </div>
               </div>
             </>
@@ -317,14 +297,6 @@ export const Header: React.FC = () => {
                 <FlaskConical className="w-5 h-5" /> Case Lab
               </button>
 
-              {user.isAdmin && (
-                <button 
-                  onClick={() => { handleNav({ type: 'ADMIN' }); setIsMobileMenuOpen(false); }} 
-                  className="flex items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-red-400 font-medium"
-                >
-                  <ShieldCheck className="w-5 h-5 text-red-500" /> Admin Panel
-                </button>
-              )}
               <hr className="border-gray-800 my-2" />
               
               {isAuthenticated ? (
