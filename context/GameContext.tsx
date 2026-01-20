@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, InventoryItem, CaseItem, ViewState, Battle, MysteryBox, ShippingAddress } from '../types';
-import { CASE_ITEMS } from '../constants';
+import { User, InventoryItem, CaseItem, ViewState, Battle, MysteryBox, ShippingAddress, Notification } from '../types';
+import { CASE_ITEMS, SITE_NOTIFICATIONS } from '../constants';
 import { auth, db } from '../firebase';
 import { 
   User as FirebaseUser,
@@ -63,6 +63,7 @@ export const calculateLevelProgress = (totalXp: number) => {
 
 // Storage Keys (Fallback)
 const STORAGE_KEY_ITEMS = 'lootx_items'; // New key for items
+const STORAGE_KEY_NOTIFICATIONS = 'lootx_notifications';
 
 const safeReadLocalStorage = <T,>(key: string, fallback: T): T => {
   try {
@@ -112,6 +113,7 @@ interface GameContextType {
   battles: Battle[];
   boxes: MysteryBox[];
   items: CaseItem[];
+  notifications: Notification[];
   showLoginModal: boolean;
   showTopUpModal: boolean;
   
@@ -138,6 +140,10 @@ interface GameContextType {
   updateItem: (item: CaseItem) => Promise<void>;
   deleteItem: (itemId: string) => Promise<void>;
   updateUserFlags: (updates: Partial<User>) => Promise<void>;
+  addNotification: (notification: Notification) => void;
+  removeNotification: (notificationId: string) => void;
+  clearNotifications: () => void;
+  updateShipmentStatus: (userId: string, instanceId: string, status: InventoryItem['status']) => Promise<void>;
   createBox: (box: MysteryBox) => void; // Admin
   createUserBox: (box: MysteryBox) => void; // User Custom
   updateBox: (box: MysteryBox) => void;
@@ -295,6 +301,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [users, setUsers] = useState<User[]>([]);
   const [balance, setBalance] = useState<number>(0);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>(() => {
+    const stored = safeReadLocalStorage<Notification[]>(STORAGE_KEY_NOTIFICATIONS, []);
+    return stored.length ? stored : SITE_NOTIFICATIONS;
+  });
+
+  useEffect(() => {
+    safeWriteLocalStorage(STORAGE_KEY_NOTIFICATIONS, notifications);
+  }, [notifications]);
   
   const [view, setView] = useState<ViewState>({ type: 'HOME' });
   
@@ -357,7 +371,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const data = docSnap.data();
       const xp = Number(data.xp ?? 0);
       const progress = calculateLevelProgress(xp);
-      const followerIds = Array.isArray(data.followers)
+          const followerIds = Array.isArray(data.followers)
           ? data.followers
           : Array.isArray(data.friends)
             ? data.friends
@@ -376,6 +390,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           affiliateCode: data.affiliateCode,
           referredBy: data.referredBy,
           followers: followerIds,
+          inventory: Array.isArray(data.inventory) ? (data.inventory as InventoryItem[]) : [],
           shippingAddress: data.shippingAddress,
           isAdmin: data.isAdmin ?? false,
           chatWarnings: data.chatWarnings ?? 0,
@@ -811,6 +826,42 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, ...updates } : u));
   };
 
+  const addNotification = (notification: Notification) => {
+    setNotifications(prev => [notification, ...prev]);
+  };
+
+  const removeNotification = (notificationId: string) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== notificationId));
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+  };
+
+  const updateShipmentStatus = async (userId: string, instanceId: string, status: InventoryItem['status']) => {
+    const targetUser = users.find((u) => u.id === userId);
+    if (!targetUser || !targetUser.inventory) return;
+
+    const updatedInventory = targetUser.inventory.map((item) =>
+      item.instanceId === instanceId ? { ...item, status } : item
+    );
+
+    try {
+      await setDoc(getUserRef(userId), { inventory: updatedInventory }, { merge: true });
+    } catch (error) {
+      console.error('Failed to update shipment status in Firebase', error);
+    }
+
+    setUsers(prev =>
+      prev.map(u => (u.id === userId ? { ...u, inventory: updatedInventory } : u))
+    );
+
+    if (userId === user.id) {
+      setInventory(updatedInventory);
+      persistUserData({ inventory: updatedInventory });
+    }
+  };
+
   const createBattle = async (boxIds: string[], maxPlayers: number) => {
     if (!isAuthenticated) {
         setShowLoginModal(true);
@@ -1099,6 +1150,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       battles,
       boxes,
       items,
+      notifications,
       login,
       register,
       logout,
@@ -1115,6 +1167,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updateAddress,
       updateUserInfo,
       updateUserFlags,
+      addNotification,
+      removeNotification,
+      clearNotifications,
+      updateShipmentStatus,
       createBattle,
       joinBattle,
       updateBattle,

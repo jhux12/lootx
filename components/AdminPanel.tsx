@@ -20,8 +20,8 @@ const rarityColorOptions = [
 ];
 
 export const AdminPanel: React.FC = () => {
-  const { createItem, updateItem, deleteItem, createBox, updateBox, deleteBox, items, boxes, users, updateUserProgress } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes'>('dashboard');
+  const { createItem, updateItem, deleteItem, createBox, updateBox, deleteBox, items, boxes, users, updateUserProgress, updateShipmentStatus } = useGame();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -49,6 +49,20 @@ export const AdminPanel: React.FC = () => {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userXpInput, setUserXpInput] = useState<number>(0);
   const [isSavingUser, setIsSavingUser] = useState(false);
+
+  const shipmentQueue = users.flatMap(user => {
+    const inventory = user.inventory ?? [];
+    return inventory
+      .filter(item => item.status === 'shipping' || item.status === 'shipped')
+      .map(item => ({
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        avatar: user.avatar,
+        address: user.shippingAddress,
+        item
+      }));
+  });
   
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
@@ -284,6 +298,12 @@ export const AdminPanel: React.FC = () => {
                        <BoxIcon className="w-4 h-4" /> Manage Boxes
                    </button>
                    <button 
+                     onClick={() => setActiveTab('shipments')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipments' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <Package className="w-4 h-4" /> Shipment Manager
+                   </button>
+                   <button 
                      onClick={() => setActiveTab('users')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'users' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -310,6 +330,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'settings' && 'System Configuration'}
                     {activeTab === 'items' && 'Item Manager'}
                     {activeTab === 'boxes' && 'Box Manager'}
+                    {activeTab === 'shipments' && 'Shipment Manager'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
             </div>
@@ -589,6 +610,84 @@ export const AdminPanel: React.FC = () => {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB: SHIPMENTS */}
+            {activeTab === 'shipments' && (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+                            <p className="text-xs text-gray-500 uppercase font-semibold">Pending Shipments</p>
+                            <p className="text-2xl text-white font-bold">
+                                {shipmentQueue.filter(entry => entry.item.status === 'shipping').length}
+                            </p>
+                        </div>
+                        <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+                            <p className="text-xs text-gray-500 uppercase font-semibold">Shipped</p>
+                            <p className="text-2xl text-white font-bold">
+                                {shipmentQueue.filter(entry => entry.item.status === 'shipped').length}
+                            </p>
+                        </div>
+                        <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+                            <p className="text-xs text-gray-500 uppercase font-semibold">Total Requests</p>
+                            <p className="text-2xl text-white font-bold">{shipmentQueue.length}</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+                        {shipmentQueue.length === 0 ? (
+                            <div className="text-gray-400 text-sm text-center py-12">
+                                No shipment requests yet.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                {shipmentQueue.map(entry => (
+                                    <div key={entry.item.instanceId} className="border border-gray-800 rounded-xl p-4 bg-[#0f141d]">
+                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <img src={entry.item.image} className="w-12 h-12 rounded-lg border border-gray-700 object-contain" />
+                                                <div>
+                                                    <p className="text-white font-semibold">{entry.item.name}</p>
+                                                    <p className="text-xs text-gray-400">${entry.item.price.toFixed(2)}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        Request by {entry.userName}
+                                                        {entry.userEmail ? ` • ${entry.userEmail}` : ''}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-[11px] font-bold px-2 py-1 rounded-full border ${entry.item.status === 'shipping' ? 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' : 'text-green-400 border-green-500/30 bg-green-500/10'}`}>
+                                                    {entry.item.status === 'shipping' ? 'Processing' : 'Shipped'}
+                                                </span>
+                                                {entry.item.status === 'shipping' && (
+                                                    <button
+                                                        onClick={() => updateShipmentStatus(entry.userId, entry.item.instanceId, 'shipped')}
+                                                        className="px-3 py-1 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-500 text-white"
+                                                    >
+                                                        Mark Shipped
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 border-t border-gray-800 pt-3 text-xs text-gray-400 space-y-1">
+                                            {entry.address ? (
+                                                <>
+                                                    <p className="text-gray-300 font-semibold">Shipping Address</p>
+                                                    <p>{entry.address.fullName}</p>
+                                                    <p>{entry.address.street}</p>
+                                                    <p>{entry.address.city}, {entry.address.state} {entry.address.zipCode}</p>
+                                                    <p>{entry.address.country}</p>
+                                                </>
+                                            ) : (
+                                                <p className="text-red-400">No shipping address on file.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
