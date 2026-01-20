@@ -103,6 +103,13 @@ export interface LiveDrop {
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 }
 
+export interface AppNotification {
+  id: string;
+  message: string;
+  createdAt: number;
+  type: 'shipping' | 'admin';
+}
+
 export type ViewState = 
   | { type: 'HOME' }
   | { type: 'PROFILE'; userId?: string }

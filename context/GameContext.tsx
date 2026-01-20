@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, InventoryItem, CaseItem, ViewState, Battle, MysteryBox, ShippingAddress } from '../types';
+import { AppNotification, User, InventoryItem, CaseItem, ViewState, Battle, MysteryBox, ShippingAddress } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { 
@@ -108,6 +108,7 @@ interface GameContextType {
   balance: number;
   inventory: InventoryItem[];
   users: User[];
+  notifications: AppNotification[];
   view: ViewState;
   battles: Battle[];
   boxes: MysteryBox[];
@@ -131,6 +132,10 @@ interface GameContextType {
   shipItem: (instanceId: string) => void;
   updateAddress: (address: ShippingAddress) => void;
   updateUserInfo: (name: string, avatar: string) => Promise<void>;
+  addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>) => void;
+  dismissNotification: (id: string) => void;
+  clearNotifications: () => void;
+  sendAdminNotification: (message: string) => void;
   createBattle: (boxIds: string[], maxPlayers: number) => Promise<void>;
   joinBattle: (battleId: string) => Promise<void>;
   updateBattle: (updatedBattle: Battle) => void;
@@ -295,6 +300,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [users, setUsers] = useState<User[]>([]);
   const [balance, setBalance] = useState<number>(0);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   
   const [view, setView] = useState<ViewState>({ type: 'HOME' });
   
@@ -333,6 +339,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(GUEST_USER);
         setBalance(0);
         setInventory([]);
+        setNotifications([]);
         return;
       }
 
@@ -620,6 +627,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(GUEST_USER);
       setBalance(0);
       setInventory([]);
+      setNotifications([]);
       setView({ type: 'HOME' });
   };
 
@@ -678,6 +686,33 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       persistUserData({ inventory: updated });
       return updated;
     });
+  };
+
+  const addNotification = (
+    notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>
+  ) => {
+    setNotifications((prev) => {
+      const next: AppNotification = {
+        id: notification.id ?? `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        createdAt: notification.createdAt ?? Date.now(),
+        message: notification.message,
+        type: notification.type
+      };
+      return [next, ...prev].slice(0, 50);
+    });
+  };
+
+  const dismissNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+  };
+
+  const sendAdminNotification = (message: string) => {
+    if (!message.trim()) return;
+    addNotification({ message: message.trim(), type: 'admin' });
   };
 
   const followUser = async (targetUserId: string) => {
@@ -766,6 +801,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const shipItem = async (instanceId: string) => {
+    const itemToShip = inventory.find(item => item.instanceId === instanceId);
     setInventory(prev => {
       const updated = prev.map(item => 
         item.instanceId === instanceId 
@@ -775,6 +811,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       persistUserData({ inventory: updated });
       return updated;
     });
+    if (itemToShip) {
+      addNotification({
+        message: `${itemToShip.name} is now shipping to your saved address.`,
+        type: 'shipping'
+      });
+    }
   };
 
   const updateAddress = async (address: ShippingAddress) => {
@@ -1091,6 +1133,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       user,
       isAuthenticated,
       users,
+      notifications,
       showLoginModal,
       showTopUpModal,
       balance,
@@ -1114,6 +1157,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       shipItem,
       updateAddress,
       updateUserInfo,
+      addNotification,
+      dismissNotification,
+      clearNotifications,
+      sendAdminNotification,
       updateUserFlags,
       createBattle,
       joinBattle,
