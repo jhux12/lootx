@@ -17,6 +17,7 @@ export interface User {
   xp: number;
   balance?: number;
   followers?: string[];
+  inventory?: InventoryItem[];
   lastDailyClaim?: number;
   totalSpent?: number;
   rakebackBalance?: number;
@@ -65,6 +66,15 @@ export interface InventoryItem extends CaseItem {
   instanceId: string;
   obtainedAt: number;
   status: 'available' | 'sold' | 'shipping' | 'shipped';
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'site' | 'account' | 'shipment' | 'reward';
+  createdAt: number;
+  read?: boolean;
 }
 
 export interface BattlePlayer extends User {

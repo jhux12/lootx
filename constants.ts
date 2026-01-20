@@ -1,4 +1,4 @@
-import { Battle, ChatMessage, LiveDrop, MysteryBox, CaseItem, User } from "./types";
+import { Battle, ChatMessage, LiveDrop, MysteryBox, CaseItem, User, Notification } from "./types";
 
 export const XP_ICON = 'https://cdn-icons-png.flaticon.com/512/3284/3284473.png';
 
@@ -53,6 +53,23 @@ export const LIVE_DROPS: LiveDrop[] = [
   { id: '3', itemName: 'Jordan 1', itemImage: 'https://picsum.photos/id/103/50/50', value: 1290, user: MOCK_USERS[2], rarity: 'rare' },
   { id: '4', itemName: 'Gaming PC', itemImage: 'https://picsum.photos/id/2/50/50', value: 5600, user: MOCK_USERS[3], rarity: 'rare' },
   { id: '5', itemName: 'Supreme Tee', itemImage: 'https://picsum.photos/id/99/50/50', value: 100, user: MOCK_USERS[0], rarity: 'uncommon' },
+];
+
+export const SITE_NOTIFICATIONS: Notification[] = [
+  {
+    id: 'site-001',
+    title: 'Scheduled Maintenance',
+    message: 'We will be deploying new cases tonight at 11 PM UTC.',
+    type: 'site',
+    createdAt: Date.now() - 1000 * 60 * 45,
+  },
+  {
+    id: 'site-002',
+    title: 'Case Lab Rewards',
+    message: 'Designers can now earn bonus XP for featured community cases.',
+    type: 'site',
+    createdAt: Date.now() - 1000 * 60 * 60 * 6,
+  },
 ];
 
 export const BATTLES: Battle[] = [
