@@ -91,6 +91,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [showFairModal, setShowFairModal] = useState(false);
   const [fairTab, setFairTab] = useState<'active' | 'verify'>('active');
   const [showFairTooltip, setShowFairTooltip] = useState(false);
+  const [rewardResolved, setRewardResolved] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -271,6 +272,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setShowWinModal(false);
     setIsGoldMode(false);
     setWonItem(null);
+    setRewardResolved(false);
     playSound('click');
     
     // 1. Determine final winner
@@ -336,14 +338,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsSpinning(false);
     setShowWinModal(true);
     setWonItem(item);
-    if (!isDemoSpin) {
-      addToInventory(item);
-    }
+    setRewardResolved(false);
     
     // Play appropriate win sound
     if (item.rarity === 'legendary') playSound('win-gold');
     else if (item.rarity === 'epic' || item.rarity === 'rare') playSound('win-rare');
     else playSound('win-common');
+  };
+
+  const closeWinModal = () => {
+    if (!isDemoSpin && !rewardResolved && wonItem) {
+      addToInventory(wonItem);
+      setRewardResolved(true);
+    }
+    setShowWinModal(false);
   };
 
   const handleSell = () => {
@@ -352,14 +360,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         setShowWinModal(false);
         return;
     }
-    if (wonItem) {
+    if (wonItem && !rewardResolved) {
         addBalance(wonItem.price);
+        setRewardResolved(true);
     }
     setShowWinModal(false);
   };
 
   const handleKeep = () => {
       playSound('click');
+      if (wonItem && !rewardResolved) {
+        addToInventory(wonItem);
+        setRewardResolved(true);
+      }
       setShowWinModal(false);
   }
 
@@ -648,9 +661,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         {/* Win Modal Overlay */}
         {showWinModal && wonItem && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowWinModal(false)}></div>
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={closeWinModal}></div>
                 <div className="relative bg-[#151a23] border border-gray-700 p-8 rounded-2xl max-w-md w-full flex flex-col items-center animate-in zoom-in-95 duration-300 shadow-2xl">
-                     <button onClick={() => setShowWinModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+                     <button onClick={closeWinModal} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
                      
                      <div className="text-2xl font-black italic text-white mb-2 uppercase tracking-wider">
                          You Won!
@@ -672,14 +685,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                          <p className="text-gray-400 font-medium">${wonItem.price.toFixed(2)}</p>
                      </div>
 
-                     <div className="flex gap-3 w-full">
-                        <button onClick={handleSell} className="flex-1 py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
-                            Sell for ${wonItem.price.toFixed(2)}
+                     {isDemoSpin ? (
+                        <button onClick={closeWinModal} className="w-full py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
+                            Close
                         </button>
-                        <button onClick={handleKeep} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg shadow-blue-600/20 transition-colors">
-                            Keep Item
-                        </button>
-                     </div>
+                     ) : (
+                        <div className="flex gap-3 w-full">
+                            <button onClick={handleSell} className="flex-1 py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
+                                Sell for ${wonItem.price.toFixed(2)}
+                            </button>
+                            <button onClick={handleKeep} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg shadow-blue-600/20 transition-colors">
+                                Keep Item
+                            </button>
+                        </div>
+                     )}
                 </div>
             </div>
         )}
