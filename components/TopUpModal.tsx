@@ -101,19 +101,19 @@ export const TopUpModal: React.FC = () => {
                     </div>
 
                     {/* Custom Amount Input */}
-                    <div className="mb-6 relative">
-                        <img
-                          src={COIN_ICON}
-                          alt="Coin"
-                          className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
-                        />
-                        <input 
-                            type="number"
-                            min="0"
-                            value={amountCoins}
-                            onChange={(e) => setAmountCoins(Number(e.target.value))}
-                            className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-white font-bold focus:outline-none focus:border-blue-500 transition-colors"
-                        />
+                    <div className="mb-6">
+                        <div className="relative">
+                            <span className="absolute inset-y-0 left-4 flex items-center">
+                              <img src={COIN_ICON} alt="Coin" className="w-4 h-4" />
+                            </span>
+                            <input 
+                                type="number"
+                                min="0"
+                                value={amountCoins}
+                                onChange={(e) => setAmountCoins(Number(e.target.value))}
+                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg py-3 pl-11 pr-4 text-white font-bold leading-none focus:outline-none focus:border-blue-500 transition-colors"
+                            />
+                        </div>
                         <p className="text-[10px] text-gray-500 mt-2">100 coins = $1</p>
                     </div>
 
