@@ -786,10 +786,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  const updateAddress = async (address: ShippingAddress) => {
+    const shipmentNotification: Notification = {
       title: 'Shipment update',
       message: `Order ${orderNumber} has been shipped.`,
-        persistUserData({ shippingAddress: address });
+    };
+
+    addNotification(shipmentNotification);
         return updated;
       });
   };
