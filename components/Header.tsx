@@ -21,6 +21,7 @@ import {
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
+import pullzLogo from '../assets/pullz-p.png';
 
 export const Header: React.FC = () => {
   const {
@@ -134,9 +135,9 @@ export const Header: React.FC = () => {
             onClick={() => handleNav({ type: 'HOME' })}
           >
             <img 
-              src="/assets/pullz-p.png" 
+              src={pullzLogo} 
               alt="PULLZ Logo" 
-              className="h-10 md:h-12"
+              className="h-12 md:h-14 lg:h-16"
             />
           </div>
 
