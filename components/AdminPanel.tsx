@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, DollarSign, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus } from '../types';
+import { COIN_ICON } from '../constants';
+import { CoinAmount } from './CoinAmount';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -103,7 +105,12 @@ export const AdminPanel: React.FC = () => {
 
   const makeId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
   const formatTimestamp = (ts: number) => new Date(ts).toLocaleString();
-  const formatCurrency = (amount: number) => `${amount < 0 ? '-' : '+'}$${Math.abs(amount).toFixed(2)}`;
+  const formatCoinText = (amount: number, { showSign = true }: { showSign?: boolean } = {}) => {
+      const absoluteAmount = showSign ? Math.abs(amount) : amount;
+      const formatted = absoluteAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const sign = showSign ? (amount < 0 ? '-' : '+') : '';
+      return `${sign}${formatted} coins`;
+  };
 
   const seedLedgerEntries = (profileId: string, index: number): LedgerEntry[] => {
       const now = Date.now();
@@ -188,7 +195,7 @@ export const AdminPanel: React.FC = () => {
       return true;
   });
   const stats = [
-    { title: 'Total Revenue', value: '$124,592.00', icon: DollarSign, color: 'text-green-500', bg: 'bg-green-500/10' },
+    { title: 'Total Coins', value: 124592, icon: CoinStatIcon, color: 'text-green-500', bg: 'bg-green-500/10', isCoin: true },
     { title: 'Active Users', value: '1,420', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { title: 'Battles Today', value: '843', icon: SwordsIcon, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { title: 'Server Load', value: '12%', icon: Activity, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
@@ -550,7 +557,7 @@ export const AdminPanel: React.FC = () => {
               id: entry.id,
               createdAt: entry.createdAt,
               title: `Ledger • ${entry.type.replace('_', ' ')}`,
-              description: `${formatCurrency(entry.amount)} ${entry.memo ?? ''}`.trim(),
+              description: `${formatCoinText(entry.amount)} ${entry.memo ?? ''}`.trim(),
               meta: entry.sourceId ? `Source: ${entry.sourceId}` : '',
               category: 'ledger' as const
           })),
@@ -767,7 +774,18 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                     <span className="text-xs font-bold text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded">+4.5%</span>
                                 </div>
-                                <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
+                                <div className="text-2xl font-bold text-white mb-1">
+                                    {stat.isCoin ? (
+                                        <CoinAmount
+                                          amount={stat.value as number}
+                                          formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                          className="text-white"
+                                          iconClassName="w-5 h-5"
+                                        />
+                                    ) : (
+                                        stat.value
+                                    )}
+                                </div>
                                 <div className="text-xs text-gray-500">{stat.title}</div>
                             </div>
                         ))}
@@ -789,9 +807,13 @@ export const AdminPanel: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className={`text-sm font-bold ${i % 2 === 0 ? 'text-green-400' : 'text-white'}`}>
-                                            {i % 2 === 0 ? '+$500.00' : '-$50.00'}
-                                        </div>
+                                        <CoinAmount
+                                          amount={i % 2 === 0 ? 500 : -50}
+                                          formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                          showSign
+                                          className={`text-sm font-bold ${i % 2 === 0 ? 'text-green-400' : 'text-white'}`}
+                                          iconClassName="w-3.5 h-3.5"
+                                        />
                                         <div className="text-xs text-gray-500">User_{1000 + i}</div>
                                     </div>
                                 </div>
@@ -812,7 +834,7 @@ export const AdminPanel: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <input type="text" placeholder="Item Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} />
-                            <input type="number" placeholder="Price ($)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.price || ''} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} />
+                            <input type="number" placeholder="Price (coins)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.price || ''} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} />
                           <select className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300" value={newItem.rarity} onChange={e => setNewItem({...newItem, rarity: e.target.value as any})}>
                                 <option value="common">Common</option>
                                 <option value="uncommon">Uncommon</option>
@@ -868,7 +890,14 @@ export const AdminPanel: React.FC = () => {
                                             <span className="text-white">{item.name}</span>
                                         </td>
                                         <td className="px-4 py-3 capitalize text-gray-400">{item.rarity}</td>
-                                        <td className="px-4 py-3 text-green-500">${item.price}</td>
+                                        <td className="px-4 py-3">
+                                            <CoinAmount
+                                              amount={item.price}
+                                              formatOptions={{ maximumFractionDigits: 0 }}
+                                              className="text-green-500 font-semibold"
+                                              iconClassName="w-3.5 h-3.5"
+                                            />
+                                        </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end gap-2">
                                                 <button onClick={() => handleEditItem(item)} className="p-1.5 hover:bg-blue-500/10 text-blue-400 rounded transition-colors"><Edit2 className="w-4 h-4" /></button>
@@ -902,8 +931,8 @@ export const AdminPanel: React.FC = () => {
                             <div className="flex flex-col gap-3">
                                 <div className="flex gap-2">
                                     <div className="flex-1">
-                                        <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Price ($)</label>
-                                        <input type="number" placeholder="Box Price" className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold text-green-400" value={newBox.price || ''} onChange={e => setNewBox({...newBox, price: Number(e.target.value)})} />
+                                        <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Price (coins)</label>
+                                        <input type="number" placeholder="Box Price (coins)" className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold text-green-400" value={newBox.price || ''} onChange={e => setNewBox({...newBox, price: Number(e.target.value)})} />
                                     </div>
                                     <div className="flex-1">
                                         <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">House Edge (%)</label>
@@ -951,7 +980,12 @@ export const AdminPanel: React.FC = () => {
                                             <img src={item.image} className="w-8 h-8 object-contain" />
                                             <div className="w-full">
                                                 <div className="text-[10px] text-gray-300 truncate font-medium">{item.name}</div>
-                                                <div className="text-[10px] text-green-400 font-bold">${item.price}</div>
+                                                <CoinAmount
+                                                  amount={item.price}
+                                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                                  className="text-[10px] text-green-400 font-bold justify-center"
+                                                  iconClassName="w-3 h-3"
+                                                />
                                             </div>
                                             {isSelected && <div className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full"></div>}
                                         </div>
@@ -968,7 +1002,12 @@ export const AdminPanel: React.FC = () => {
                                              <div key={idx} className="flex items-center gap-2 text-xs bg-[#131720] p-1.5 rounded border border-gray-700">
                                                  <img src={item.image} className="w-5 h-5 object-contain" />
                                                  <span className="flex-1 text-gray-300 truncate">{item.name}</span>
-                                                 <span className="text-gray-500">${item.price}</span>
+                                                 <CoinAmount
+                                                   amount={item.price}
+                                                   formatOptions={{ maximumFractionDigits: 0 }}
+                                                   className="text-gray-500"
+                                                   iconClassName="w-3 h-3"
+                                                 />
                                                  <div className="flex items-center gap-1 bg-black/30 px-2 py-0.5 rounded">
                                                      <span className="text-gray-400">Chance:</span>
                                                      <span className="font-bold text-white">{item.chance}%</span>
@@ -1012,7 +1051,14 @@ export const AdminPanel: React.FC = () => {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-gray-400">{box.items?.length || 0} items</td>
-                                        <td className="px-4 py-3 text-green-500">${box.price.toFixed(2)}</td>
+                                        <td className="px-4 py-3">
+                                            <CoinAmount
+                                              amount={box.price}
+                                              formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                              className="text-green-500 font-semibold"
+                                              iconClassName="w-3.5 h-3.5"
+                                            />
+                                        </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end gap-2">
                                                 <button onClick={() => handleEditBox(box)} className="p-1.5 hover:bg-blue-500/10 text-blue-400 rounded transition-colors"><Edit2 className="w-4 h-4" /></button>
@@ -1227,8 +1273,14 @@ export const AdminPanel: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
-                                        <span className="px-3 py-1 rounded-full bg-[#0b0e14] text-xs text-gray-400">
-                                            Balance: <span className="text-green-400 font-semibold">${(selectedUser.balance ?? 0).toFixed(2)}</span>
+                                        <span className="px-3 py-1 rounded-full bg-[#0b0e14] text-xs text-gray-400 inline-flex items-center gap-2">
+                                            Coins:
+                                            <CoinAmount
+                                              amount={selectedUser.balance ?? 0}
+                                              formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                              className="text-green-400 font-semibold"
+                                              iconClassName="w-3 h-3"
+                                            />
                                         </span>
                                         <span className="px-3 py-1 rounded-full bg-[#0b0e14] text-xs text-gray-400">
                                             Inventory: <span className="text-gray-200 font-semibold">{selectedInventory.length}</span>
@@ -1355,7 +1407,14 @@ export const AdminPanel: React.FC = () => {
                                                     Entries: <span className="text-gray-200 font-semibold">{selectedLedgerEntries.length}</span>
                                                 </span>
                                                 <span className="px-2 py-1 rounded-full bg-[#0b0e14] text-gray-400">
-                                                    Net: <span className={ledgerNetChange >= 0 ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>{formatCurrency(ledgerNetChange)}</span>
+                                                    Net:{' '}
+                                                    <CoinAmount
+                                                      amount={ledgerNetChange}
+                                                      formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                                      showSign
+                                                      className={ledgerNetChange >= 0 ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}
+                                                      iconClassName="w-3.5 h-3.5"
+                                                    />
                                                 </span>
                                             </div>
                                         </div>
@@ -1394,13 +1453,25 @@ export const AdminPanel: React.FC = () => {
                                                             <div className="text-[11px] text-gray-500">
                                                                 {entry.sourceId || 'Manual entry'} • {formatTimestamp(entry.createdAt)}
                                                                 {entry.balanceAfter !== undefined && (
-                                                                    <span className="text-gray-400"> • Balance {formatCurrency(entry.balanceAfter)}</span>
+                                                                    <span className="text-gray-400 inline-flex items-center gap-1">
+                                                                      • Balance
+                                                                      <CoinAmount
+                                                                        amount={entry.balanceAfter}
+                                                                        formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                                                        className="text-gray-400 font-semibold"
+                                                                        iconClassName="w-3 h-3"
+                                                                      />
+                                                                    </span>
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        <div className={`text-sm font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                            {formatCurrency(entry.amount)}
-                                                        </div>
+                                                        <CoinAmount
+                                                          amount={entry.amount}
+                                                          formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                                          showSign
+                                                          className={`text-sm font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}
+                                                          iconClassName="w-3.5 h-3.5"
+                                                        />
                                                     </div>
                                                 ))
                                             )}
@@ -1577,7 +1648,12 @@ export const AdminPanel: React.FC = () => {
                                                 <img src={item.image} alt={item.name} className="w-12 h-12 rounded-lg bg-[#0b0e14] object-contain" />
                                                 <div>
                                                     <div className="text-white font-bold">{item.name}</div>
-                                                    <div className="text-xs text-green-400 font-semibold">${item.price}</div>
+                                                    <CoinAmount
+                                                      amount={item.price}
+                                                      formatOptions={{ maximumFractionDigits: 0 }}
+                                                      className="text-xs text-green-400 font-semibold"
+                                                      iconClassName="w-3 h-3"
+                                                    />
                                                     <div className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full mt-1 ${
                                                         item.status === 'shipped'
                                                             ? 'bg-green-500/10 text-green-400'
@@ -1725,4 +1801,8 @@ export const AdminPanel: React.FC = () => {
 
 const SwordsIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline><line x1="13" y1="19" x2="19" y2="13"></line><line x1="16" y1="16" x2="20" y2="20"></line><line x1="19" y1="21" x2="21" y2="19"></line><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"></polyline><line x1="5" y1="14" x2="9" y2="18"></line><line x1="7" y1="17" x2="4" y2="20"></line><line x1="3" y1="19" x2="5" y2="21"></line></svg>
+);
+
+const CoinStatIcon = () => (
+    <img src={COIN_ICON} alt="Coin" className="w-6 h-6" />
 );

@@ -3,6 +3,7 @@ import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beak
 import { useGame } from '../context/GameContext';
 import { CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
+import { CoinAmount } from './CoinAmount';
 
 export const CustomCaseCreator: React.FC = () => {
   const { createItem, createUserBox, items, setView } = useGame();
@@ -155,7 +156,12 @@ export const CustomCaseCreator: React.FC = () => {
                                     <img src={item.image} className="w-12 h-12 object-contain" />
                                     <div className="w-full">
                                         <div className="text-[10px] text-gray-300 truncate font-medium">{item.name}</div>
-                                        <div className="text-[10px] text-green-400 font-bold">${item.price}</div>
+                                        <CoinAmount
+                                          amount={item.price}
+                                          formatOptions={{ maximumFractionDigits: 0 }}
+                                          className="text-[10px] text-green-400 font-bold justify-center"
+                                          iconClassName="w-3 h-3"
+                                        />
                                     </div>
                                     {isSelected && (
                                         <div className="absolute top-1 right-1 bg-brand-purple rounded-full p-0.5">
@@ -193,7 +199,12 @@ export const CustomCaseCreator: React.FC = () => {
                               <div key={idx} className="flex justify-between text-xs p-1.5 bg-[#0b0e14] rounded border border-gray-800/50">
                                   <span className="text-gray-400 truncate w-24">{item.name}</span>
                                   {lastCalculated && <span className="text-brand-purple font-mono">{item.chance}%</span>}
-                                  <span className="text-green-500">${item.price}</span>
+                                  <CoinAmount
+                                    amount={item.price}
+                                    formatOptions={{ maximumFractionDigits: 0 }}
+                                    className="text-green-500"
+                                    iconClassName="w-3 h-3"
+                                  />
                               </div>
                           ))}
                       </div>
@@ -210,7 +221,12 @@ export const CustomCaseCreator: React.FC = () => {
                   <div className="border-t border-gray-800 pt-4 mb-6">
                       <div className="flex justify-between items-center mb-1">
                           <span className="text-sm text-gray-400">Total Price</span>
-                          <span className="text-2xl font-black text-green-500">${boxPrice.toFixed(2)}</span>
+                          <CoinAmount
+                            amount={boxPrice}
+                            formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                            className="text-2xl font-black text-green-500"
+                            iconClassName="w-4 h-4"
+                          />
                       </div>
                       <div className="text-[10px] text-gray-600 text-right">Includes {USER_HOUSE_EDGE}% House Edge</div>
                   </div>

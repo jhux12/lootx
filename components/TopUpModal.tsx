@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { X, CreditCard, Wallet, Bitcoin, Loader2, CheckCircle } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { COIN_ICON } from '../constants';
+import { CoinAmount } from './CoinAmount';
 
 export const TopUpModal: React.FC = () => {
   const { setShowTopUpModal, addBalance } = useGame();
@@ -44,13 +46,13 @@ export const TopUpModal: React.FC = () => {
             <div className="p-12 flex flex-col items-center justify-center text-center">
                 <CheckCircle className="w-16 h-16 text-green-500 mb-4 animate-bounce" />
                 <h2 className="text-2xl font-black text-white mb-2">Deposit Successful!</h2>
-                <p className="text-gray-400">Your balance has been updated.</p>
+                <p className="text-gray-400">Your coins have been added.</p>
             </div>
         ) : (
             <>
                 <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-[#0b0e14]">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <Wallet className="w-5 h-5 text-blue-500" /> Top Up Balance
+                        <Wallet className="w-5 h-5 text-blue-500" /> Top Up Coins
                     </h2>
                     <button 
                         onClick={() => setShowTopUpModal(false)} 
@@ -88,19 +90,28 @@ export const TopUpModal: React.FC = () => {
                                 onClick={() => { setAmount(amt); playSound('click'); }}
                                 className={`py-3 rounded-lg border font-bold transition-all ${amount === amt ? 'bg-green-600 border-green-500 text-white shadow-lg shadow-green-900/20' : 'bg-[#0b0e14] border-gray-800 text-gray-400 hover:border-gray-600'}`}
                             >
-                                ${amt}
+                                <CoinAmount
+                                  amount={amt}
+                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                  className="justify-center"
+                                  iconClassName="w-3.5 h-3.5"
+                                />
                             </button>
                         ))}
                     </div>
 
                     {/* Custom Amount Input */}
                     <div className="mb-6 relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                        <img
+                          src={COIN_ICON}
+                          alt="Coin"
+                          className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
+                        />
                         <input 
                             type="number" 
                             value={amount}
                             onChange={(e) => setAmount(Number(e.target.value))}
-                            className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg py-3 pl-8 pr-4 text-white font-bold focus:outline-none focus:border-blue-500 transition-colors"
+                            className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-white font-bold focus:outline-none focus:border-blue-500 transition-colors"
                         />
                     </div>
 
@@ -115,7 +126,16 @@ export const TopUpModal: React.FC = () => {
                                 <Loader2 className="w-5 h-5 animate-spin" /> Processing...
                             </>
                         ) : (
-                            `Deposit $${amount}`
+                            <span className="inline-flex items-center gap-2">
+                              Deposit
+                              <CoinAmount
+                                amount={amount}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="text-white"
+                                iconClassName="w-4 h-4"
+                              />
+                              coins
+                            </span>
                         )}
                     </button>
                     

@@ -3,6 +3,7 @@ import { Trophy, Medal, Sparkles } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
+import { CoinAmount } from './CoinAmount';
 
 export const Leaderboard: React.FC = () => {
     const { users, setView } = useGame();
@@ -116,9 +117,13 @@ export const Leaderboard: React.FC = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className={`font-bold ${user.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                                {user.profit >= 0 ? '+' : ''}${user.profit.toLocaleString()}
-                                            </div>
+                                            <CoinAmount
+                                              amount={user.profit}
+                                              formatOptions={{ maximumFractionDigits: 0 }}
+                                              showSign
+                                              className={`font-bold ${user.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                                              iconClassName="w-3.5 h-3.5"
+                                            />
                                         </td>
                                     </tr>
                                 ))

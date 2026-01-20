@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { CoinAmount } from './CoinAmount';
 
 export const BoxGrid: React.FC = () => {
   const { setView, boxes } = useGame();
@@ -58,9 +59,12 @@ export const BoxGrid: React.FC = () => {
             {/* Info */}
             <div className="text-center w-full">
                 <h4 className="text-gray-400 text-sm font-medium mb-1 group-hover:text-white">{box.name}</h4>
-                <div className="text-white font-bold text-lg">
-                    ${box.price.toFixed(2)}
-                </div>
+                <CoinAmount
+                  amount={box.price}
+                  formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                  className="text-white font-bold text-lg justify-center"
+                  iconClassName="w-4 h-4"
+                />
             </div>
 
             {/* Bottom Color Bar */}

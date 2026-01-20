@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronLeft, Zap, Volume2, Info, Plus, X, ShieldCheck } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM } from '../constants';
+import { CoinAmount } from './CoinAmount';
 import { CaseItem } from '../types';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -264,7 +265,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
     
     if (!isDemo && !isFree && !deductBalance(box.price)) {
-        alert("Insufficient funds! Click the + button in header to add test money.");
+        alert("Insufficient coins! Click the + button in header to add test coins.");
         return;
     }
 
@@ -481,7 +482,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     disabled={isSpinning || isGeneratingSeed}
                     className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20')}`}
                 >
-                    <span>{isGeneratingSeed ? 'Preparing seed...' : (isSpinning ? 'Spinning...' : (isFree ? 'Free Spin' : `Open for $${box.price}`))}</span>
+                    <span>
+                      {isGeneratingSeed ? (
+                        'Preparing seed...'
+                      ) : isSpinning ? (
+                        'Spinning...'
+                      ) : isFree ? (
+                        'Free Spin'
+                      ) : (
+                        <span className="inline-flex items-center gap-2">
+                          Open for
+                          <CoinAmount
+                            amount={box.price}
+                            formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                            className="text-white"
+                            iconClassName="w-4 h-4"
+                          />
+                        </span>
+                      )}
+                    </span>
                  </button>
                  {!isFree && (
                    <button
@@ -682,7 +701,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
                      <div className={`text-center ${isDemoSpin ? 'mb-6' : 'mb-8'}`}>
                          <h3 className="text-xl font-bold text-white mb-1">{wonItem.name}</h3>
-                         <p className="text-gray-400 font-medium">${wonItem.price.toFixed(2)}</p>
+                         <CoinAmount
+                           amount={wonItem.price}
+                           formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                           className="text-gray-400 font-medium justify-center"
+                           iconClassName="w-4 h-4"
+                         />
                      </div>
 
                      {isDemoSpin ? (
@@ -692,7 +716,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                      ) : (
                         <div className="flex gap-3 w-full">
                             <button onClick={handleSell} className="flex-1 py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
-                                Sell for ${wonItem.price.toFixed(2)}
+                                <span className="inline-flex items-center justify-center gap-2">
+                                  Sell for
+                                  <CoinAmount
+                                    amount={wonItem.price}
+                                    formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                    className="text-gray-300"
+                                    iconClassName="w-4 h-4"
+                                  />
+                                </span>
                             </button>
                             <button onClick={handleKeep} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg shadow-blue-600/20 transition-colors">
                                 Keep Item
@@ -730,7 +762,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
                         <div className="w-full text-left mt-auto">
                             <div className="text-gray-400 text-xs font-medium truncate mb-0.5">{item.name}</div>
-                            <div className="text-white font-bold text-sm">${item.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                            <CoinAmount
+                              amount={item.price}
+                              formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                              className="text-white font-bold text-sm"
+                              iconClassName="w-3.5 h-3.5"
+                            />
                         </div>
 
                         <div 

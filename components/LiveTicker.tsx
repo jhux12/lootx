@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useGame } from '../context/GameContext';
 import { LiveDrop, User } from '../types';
 import { CASE_ITEMS } from '../constants';
+import { CoinAmount } from './CoinAmount';
 
 export const LiveTicker: React.FC = () => {
   const { items, users } = useGame();
@@ -61,9 +62,12 @@ export const LiveTicker: React.FC = () => {
               <span className="text-xs font-bold text-gray-200 truncate">{drop.itemName}</span>
               <span className="text-[10px] text-gray-500 truncate">{drop.user.name}</span>
             </div>
-            <div className="ml-auto text-xs font-medium text-green-400">
-              ${drop.value.toLocaleString()}
-            </div>
+            <CoinAmount
+              amount={drop.value}
+              formatOptions={{ maximumFractionDigits: 0 }}
+              className="ml-auto text-xs font-medium text-green-400"
+              iconClassName="w-3.5 h-3.5"
+            />
           </div>
         ))}
       </div>

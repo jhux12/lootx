@@ -3,6 +3,7 @@ import { Gift, Calendar, Lock, Copy, TrendingUp, ShieldCheck, ClipboardList, Loa
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
+import { CoinAmount } from './CoinAmount';
 
 export const Bonuses: React.FC = () => {
   const { 
@@ -53,7 +54,7 @@ export const Bonuses: React.FC = () => {
         // Redirect to spin
         setView({ type: 'CASE_OPENING', boxId: dailyBox.id, isFree: true });
     } else {
-        // Fallback money reward if no daily box configured
+        // Fallback coin reward if no daily box configured
         addBalance(100);
         claimDaily();
     }
@@ -279,7 +280,7 @@ export const Bonuses: React.FC = () => {
                       </h3>
                       <span className="text-xs font-bold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded">High Payer</span>
                   </div>
-                  <p className="text-xs text-gray-500 mb-4">Complete surveys, install apps, and play games to earn free balance.</p>
+                  <p className="text-xs text-gray-500 mb-4">Complete surveys, install apps, and play games to earn free coins.</p>
                   <button 
                     onClick={handleOfferWall} 
                     disabled={isOfferLoading}
@@ -306,7 +307,12 @@ export const Bonuses: React.FC = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="text-3xl font-bold text-white">${availableRakeback.toFixed(2)}</div>
+                    <CoinAmount
+                      amount={availableRakeback}
+                      formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                      className="text-3xl font-bold text-white"
+                      iconClassName="w-5 h-5"
+                    />
                     <div className="text-xs text-gray-500">Unlocked at level 10</div>
                     <button 
                       onClick={handleClaimRakeback}
