@@ -66,7 +66,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const { playSound } = useSound();
   
   const box = boxes.find(b => b.id === boxId) || boxes[0];
-  const dailyBox = boxes.find(b => b.isDaily);
   const items = box.items || [];
 
   // Sort items high to low for display purposes
@@ -76,6 +75,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
+  const [isDemoSpin, setIsDemoSpin] = useState(false);
   const [serverSeed, setServerSeed] = useState(() => {
     if (typeof window === 'undefined') return '';
     return localStorage.getItem(SERVER_SEED_KEY) || '';
@@ -98,7 +98,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const nonceRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
-  const canTryFree = Boolean(dailyBox) && canFreeSpin;
 
   const setNewServerSeed = useCallback(async (seedOverride?: string) => {
     setIsGeneratingSeed(true);
@@ -242,10 +241,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setTimeout(onComplete, duration + 200);
   };
 
-  const handleSpin = async () => {
+  const handleSpin = async ({ isDemo = false }: { isDemo?: boolean } = {}) => {
     if (isSpinning) return;
 
-    if (isFree) {
+    if (isDemo) {
+      setIsDemoSpin(true);
+    } else {
+      setIsDemoSpin(false);
+    }
+
+    if (!isDemo && isFree) {
       if (!isAuthenticated) {
         setShowLoginModal(true);
         return;
@@ -257,7 +262,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       claimDaily();
     }
     
-    if (!isFree && !deductBalance(box.price)) {
+    if (!isDemo && !isFree && !deductBalance(box.price)) {
         alert("Insufficient funds! Click the + button in header to add test money.");
         return;
     }
@@ -324,31 +329,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   };
 
   const handleTryFree = () => {
-    playSound('click');
-
-    if (!isAuthenticated) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    if (!dailyBox) {
-      alert('No free spins are available right now.');
-      return;
-    }
-
-    if (!canFreeSpin) {
-      alert('Free case already claimed. Come back in 24 hours.');
-      return;
-    }
-
-    setView({ type: 'CASE_OPENING', boxId: dailyBox.id, isFree: true });
+    handleSpin({ isDemo: true });
   };
 
   const finishSpin = (item: CaseItem) => {
     setIsSpinning(false);
     setShowWinModal(true);
     setWonItem(item);
-    addToInventory(item);
+    if (!isDemoSpin) {
+      addToInventory(item);
+    }
     
     // Play appropriate win sound
     if (item.rarity === 'legendary') playSound('win-gold');
@@ -358,6 +348,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleSell = () => {
     playSound('click');
+    if (isDemoSpin) {
+        setShowWinModal(false);
+        return;
+    }
     if (wonItem) {
         addBalance(wonItem.price);
     }
@@ -470,22 +464,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Action Bar */}
             <div className="bg-[#0b0e14] p-4 flex flex-col sm:flex-row items-center justify-center gap-3 border-t border-gray-800 relative z-20">
                  <button 
-                    onClick={handleSpin}
+                    onClick={() => handleSpin()}
                     disabled={isSpinning || isGeneratingSeed}
                     className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20')}`}
                 >
                     <span>{isGeneratingSeed ? 'Preparing seed...' : (isSpinning ? 'Spinning...' : (isFree ? 'Free Spin' : `Open for $${box.price}`))}</span>
                  </button>
-                 {!isFree && dailyBox && (
+                 {!isFree && (
                    <button
                      onClick={handleTryFree}
-                     disabled={isSpinning || isGeneratingSeed || !canTryFree}
+                     disabled={isSpinning || isGeneratingSeed}
                      className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Try for Free</span>
-                     {!canTryFree && (
-                       <span className="text-xs font-medium text-emerald-100/90">Available every 24h</span>
-                     )}
                    </button>
                  )}
             </div>
@@ -664,14 +655,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                      <div className="text-2xl font-black italic text-white mb-2 uppercase tracking-wider">
                          You Won!
                      </div>
+                     {isDemoSpin && (
+                        <div className="text-xs font-semibold uppercase tracking-wide text-emerald-300 mb-4">
+                            Demo spin — rewards not granted
+                        </div>
+                     )}
                      
-                     <div className="relative w-64 h-64 flex items-center justify-center mb-6">
+                     <div className={`relative w-64 h-64 flex items-center justify-center ${isDemoSpin ? 'mb-4' : 'mb-6'}`}>
                          <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-white/5 rounded-full animate-pulse"></div>
                          <div className="absolute inset-10 blur-3xl opacity-40 rounded-full" style={{ backgroundColor: wonItem.color }}></div>
                          <img src={wonItem.image} alt={wonItem.name} className="relative z-10 w-48 h-48 object-contain drop-shadow-2xl scale-110" />
                      </div>
 
-                     <div className="text-center mb-8">
+                     <div className={`text-center ${isDemoSpin ? 'mb-6' : 'mb-8'}`}>
                          <h3 className="text-xl font-bold text-white mb-1">{wonItem.name}</h3>
                          <p className="text-gray-400 font-medium">${wonItem.price.toFixed(2)}</p>
                      </div>
