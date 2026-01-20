@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Gamepad2, 
   Trophy, 
@@ -37,25 +37,40 @@ export const Header: React.FC = () => {
   } = useGame();
   const { muted, toggleMute, playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [lootRevealActive, setLootRevealActive] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const ggRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const gg = ggRef.current;
+    if (!gg) return undefined;
 
-    const triggerAnimation = () => {
-      setLootRevealActive(true);
-      timeoutId = setTimeout(() => setLootRevealActive(false), 1500);
+    const isDesktop = () => window.matchMedia('(min-width: 769px)').matches;
+    let spinTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let startTimeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const run = () => {
+      if (!isDesktop() || gg.classList.contains('is-spinning')) return;
+      gg.classList.add('is-spinning');
+
+      spinTimeoutId = window.setTimeout(() => {
+        gg.classList.remove('is-spinning');
+      }, 1350);
     };
 
-    // Trigger once on mount
-    triggerAnimation();
-    // Then every 10s
-    const intervalId = setInterval(triggerAnimation, 10000);
+    startTimeoutId = window.setTimeout(run, 1200);
+    const intervalId = window.setInterval(run, 6500);
+
+    const handleResize = () => {
+      if (!isDesktop()) gg.classList.remove('is-spinning');
+    };
+
+    window.addEventListener('resize', handleResize);
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      clearInterval(intervalId);
+      if (spinTimeoutId) window.clearTimeout(spinTimeoutId);
+      if (startTimeoutId) window.clearTimeout(startTimeoutId);
+      window.clearInterval(intervalId);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -82,38 +97,161 @@ export const Header: React.FC = () => {
   return (
     <>
       <style>{`
-        @keyframes gamified-pop {
-          0% { 
-            transform: scale(1) rotate(0deg); 
-            filter: brightness(1) drop-shadow(0 0 0 rgba(139, 92, 246, 0));
+        .brand {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          text-decoration: none;
+          font-family: 'Satoshi', 'Inter', sans-serif;
+        }
+
+        .brand__icon {
+          width: 38px;
+          height: 38px;
+          display: block;
+          filter: drop-shadow(0 0 14px rgba(170, 90, 255, 0.25));
+        }
+
+        .brand__wordmark {
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+          font-weight: 800;
+          letter-spacing: 0.2px;
+          color: #fff;
+        }
+
+        @media (max-width: 768px) {
+          .brand__wordmark {
+            display: none;
           }
-          15% { 
-            transform: scale(0.85) rotate(-10deg); 
-          }
-          30% { 
-            transform: scale(1.6) rotate(8deg); 
-            filter: brightness(2.2) drop-shadow(0 0 25px rgba(34, 211, 238, 0.9));
-          }
-          45% { 
-            transform: scale(1.2) rotate(-4deg); 
-            filter: brightness(1.6) drop-shadow(0 0 15px rgba(139, 92, 246, 0.7));
-          }
-          60% { 
-            transform: scale(1.4) rotate(3deg); 
-            filter: brightness(1.9) drop-shadow(0 0 20px rgba(34, 211, 238, 0.8));
-          }
-          80% { 
-            transform: scale(1) rotate(0deg); 
-            filter: brightness(1.2) drop-shadow(0 0 10px rgba(139, 92, 246, 0.4));
-          }
-          100% { 
-            transform: scale(1) rotate(0deg); 
-            filter: brightness(1) drop-shadow(0 0 0 rgba(139, 92, 246, 0));
+
+          .brand__icon {
+            width: 44px;
+            height: 44px;
           }
         }
 
-        .animate-gamified-pop {
-          animation: gamified-pop 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        @media (min-width: 769px) {
+          .brand__wordmark {
+            display: flex;
+          }
+        }
+
+        .gg {
+          position: relative;
+          display: inline-block;
+          width: 52px;
+          height: 28px;
+        }
+
+        .gg__text,
+        .gg__spinner {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: flex-end;
+          justify-content: flex-start;
+        }
+
+        .gg__text {
+          font-size: 26px;
+          line-height: 1;
+          opacity: 1;
+          transform: scale(1);
+          transition: opacity 0.25s ease, transform 0.25s ease, filter 0.25s ease;
+          filter: drop-shadow(0 0 10px rgba(120, 210, 255, 0.18));
+        }
+
+        .gg__spinner {
+          opacity: 0;
+          transform: scale(0.75);
+          transition: opacity 0.25s ease, transform 0.25s ease;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .gg.is-spinning .gg__text {
+          opacity: 0;
+          transform: scale(0.85);
+          filter: blur(1px);
+        }
+
+        .gg.is-spinning .gg__spinner {
+          opacity: 1;
+          transform: scale(1);
+        }
+
+        .wheel {
+          position: relative;
+          width: 26px;
+          height: 26px;
+          border-radius: 999px;
+          background: radial-gradient(circle at 30% 30%, rgba(120, 210, 255, 0.55), rgba(215, 115, 255, 0.35));
+          box-shadow: 0 0 16px rgba(200, 120, 255, 0.35);
+          overflow: hidden;
+        }
+
+        .wheel__tick {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 2px;
+          height: 11px;
+          background: rgba(255, 255, 255, 0.65);
+          transform-origin: 0 0;
+          transform: translate(-1px, -11px) rotate(0deg);
+          opacity: 0.75;
+        }
+
+        .wheel__tick:nth-child(1) {
+          transform: translate(-1px, -11px) rotate(0deg);
+        }
+
+        .wheel__tick:nth-child(2) {
+          transform: translate(-1px, -11px) rotate(60deg);
+        }
+
+        .wheel__tick:nth-child(3) {
+          transform: translate(-1px, -11px) rotate(120deg);
+        }
+
+        .wheel__tick:nth-child(4) {
+          transform: translate(-1px, -11px) rotate(180deg);
+        }
+
+        .wheel__tick:nth-child(5) {
+          transform: translate(-1px, -11px) rotate(240deg);
+        }
+
+        .wheel__tick:nth-child(6) {
+          transform: translate(-1px, -11px) rotate(300deg);
+        }
+
+        .wheel__needle {
+          position: absolute;
+          right: 2px;
+          top: 50%;
+          width: 0;
+          height: 0;
+          transform: translateY(-50%);
+          border-left: 7px solid rgba(255, 255, 255, 0.85);
+          border-top: 5px solid transparent;
+          border-bottom: 5px solid transparent;
+          filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.25));
+        }
+
+        .gg.is-spinning .wheel {
+          animation: spinWheel 1.15s cubic-bezier(0.12, 0.78, 0.2, 1) both;
+        }
+
+        @keyframes spinWheel {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(820deg);
+          }
         }
       `}</style>
 
@@ -129,19 +267,33 @@ export const Header: React.FC = () => {
           </button>
 
           {/* Logo */}
-          <div
-            className="flex items-center gap-1 cursor-pointer hover:opacity-90 transition-opacity font-sans"
-            onClick={() => handleNav({ type: 'HOME' })}
+          <a
+            className="brand cursor-pointer hover:opacity-90 transition-opacity"
+            href="/"
+            onClick={(event) => {
+              event.preventDefault();
+              handleNav({ type: 'HOME' });
+            }}
           >
-            <span className="text-2xl md:text-3xl font-black text-white tracking-tight leading-none">
-              PULLZ
+            <img className="brand__icon" src="/assets/pullz-p.png" alt="Pullz" />
+            <span className="brand__wordmark" aria-label="pullz dot gg">
+              <span className="brand__pullz">pullz</span>
+              <span className="gg" aria-hidden="true" ref={ggRef}>
+                <span className="gg__text">.gg</span>
+                <span className="gg__spinner">
+                  <span className="wheel">
+                    <span className="wheel__tick"></span>
+                    <span className="wheel__tick"></span>
+                    <span className="wheel__tick"></span>
+                    <span className="wheel__tick"></span>
+                    <span className="wheel__tick"></span>
+                    <span className="wheel__tick"></span>
+                  </span>
+                  <span className="wheel__needle"></span>
+                </span>
+              </span>
             </span>
-            <span
-              className={`text-2xl md:text-3xl font-black tracking-tight leading-none bg-gradient-to-r from-[#8b5cf6] to-[#22d3ee] text-transparent bg-clip-text inline-block origin-left ${lootRevealActive ? 'animate-gamified-pop' : ''}`}
-            >
-              .GG
-            </span>
-          </div>
+          </a>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-8">
