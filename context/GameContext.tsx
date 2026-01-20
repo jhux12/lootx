@@ -787,8 +787,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateAddress = async (address: ShippingAddress) => {
-      setUser(prev => {
-        const updated = { ...prev, shippingAddress: address };
+      title: 'Shipment update',
+      message: `Order ${orderNumber} has been shipped.`,
         persistUserData({ shippingAddress: address });
         return updated;
       });
