@@ -709,31 +709,50 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                          />
                      </div>
 
-                     {isDemoSpin ? (
-                        <button onClick={closeWinModal} className="w-full py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
+                     {isDemoSpin && (
+                        <div className="w-full text-xs text-emerald-200/80 mb-3 text-center">
+                            Demo spin — actions are disabled.
+                        </div>
+                     )}
+                     <div className="flex flex-col sm:flex-row gap-3 w-full">
+                         <button
+                            onClick={handleSell}
+                            disabled={isDemoSpin}
+                            className="flex-1 py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                         >
+                             <span className="inline-flex items-center justify-center gap-2">
+                               Sell back for
+                               <CoinAmount
+                                 amount={wonItem.price}
+                                 formatOptions={{ maximumFractionDigits: 0 }}
+                                 className="text-gray-300"
+                                 iconClassName="w-4 h-4"
+                               />
+                               <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Coins</span>
+                             </span>
+                         </button>
+                         <button
+                            onClick={handleKeep}
+                            disabled={isDemoSpin}
+                            className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg shadow-blue-600/20 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                         >
+                             Keep Item
+                         </button>
+                         <button
+                            onClick={handleKeep}
+                            disabled={isDemoSpin}
+                            className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg shadow-emerald-600/20 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                         >
+                             Ship Item
+                         </button>
+                     </div>
+                     {isDemoSpin && (
+                        <button
+                          onClick={closeWinModal}
+                          className="w-full mt-3 py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700"
+                        >
                             Close
                         </button>
-                     ) : (
-                        <div className="flex flex-col sm:flex-row gap-3 w-full">
-                            <button onClick={handleSell} className="flex-1 py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
-                                <span className="inline-flex items-center justify-center gap-2">
-                                  Sell back for
-                                  <CoinAmount
-                                    amount={wonItem.price}
-                                    formatOptions={{ maximumFractionDigits: 0 }}
-                                    className="text-gray-300"
-                                    iconClassName="w-4 h-4"
-                                  />
-                                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Coins</span>
-                                </span>
-                            </button>
-                            <button onClick={handleKeep} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg shadow-blue-600/20 transition-colors">
-                                Keep Item
-                            </button>
-                            <button onClick={handleKeep} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg shadow-emerald-600/20 transition-colors">
-                                Ship Item
-                            </button>
-                        </div>
                      )}
                 </div>
             </div>
