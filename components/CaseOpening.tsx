@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronLeft, Zap, Volume2, Info, Plus, X, ShieldCheck } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM } from '../constants';
 import { CoinAmount } from './CoinAmount';
-import { CaseItem } from '../types';
+import { CaseItem, InventoryItem } from '../types';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
@@ -63,7 +63,7 @@ const generateServerSeed = () => {
 };
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
-  const { user, balance, deductBalance, addBalance, addToInventory, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily } = useGame();
+  const { user, balance, deductBalance, addToInventory, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily } = useGame();
   const { playSound } = useSound();
   
   const box = boxes.find(b => b.id === boxId) || boxes[0];
@@ -75,6 +75,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isSpinning, setIsSpinning] = useState(false);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
+  const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
   const [serverSeed, setServerSeed] = useState(() => {
@@ -273,6 +274,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setShowWinModal(false);
     setIsGoldMode(false);
     setWonItem(null);
+    setWonInventoryItem(null);
     setRewardResolved(false);
     playSound('click');
     
@@ -289,6 +291,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const isGoldEligible = ['legendary', 'epic'].includes(winner.rarity);
     const goldRoll = await getNextFairRoll();
     const triggerGold = isGoldEligible && goldRoll.rollValue < 0.2;
+
+    if (!isDemo) {
+      const inventoryItem = addToInventory(winner);
+      setWonInventoryItem(inventoryItem);
+    }
 
     if (triggerGold) {
         // --- GOLD SPIN FLOW ---
@@ -348,11 +355,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   };
 
   const closeWinModal = () => {
-    if (!isDemoSpin && !rewardResolved && wonItem) {
-      addToInventory(wonItem);
+    if (!rewardResolved) {
       setRewardResolved(true);
     }
     setShowWinModal(false);
+    setWonInventoryItem(null);
   };
 
   const handleSell = () => {
@@ -361,20 +368,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         setShowWinModal(false);
         return;
     }
-    if (wonItem && !rewardResolved) {
-        addBalance(wonItem.price);
+    if (wonInventoryItem && !rewardResolved) {
+        sellItem(wonInventoryItem.instanceId, wonInventoryItem.price);
         setRewardResolved(true);
     }
     setShowWinModal(false);
+    setWonInventoryItem(null);
   };
 
   const handleKeep = () => {
       playSound('click');
       if (wonItem && !rewardResolved) {
-        addToInventory(wonItem);
         setRewardResolved(true);
       }
       setShowWinModal(false);
+      setWonInventoryItem(null);
   }
 
   const handleCopyProof = useCallback(async () => {
