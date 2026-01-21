@@ -940,6 +940,19 @@ export const AdminPanel: React.FC = () => {
                                     <div>
                                         <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Price (coins)</label>
                                         <input type="number" placeholder="Box Price (coins)" className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold text-green-400" value={newBox.price || ''} onChange={e => setNewBox({...newBox, price: Number(e.target.value)})} />
+                                        <div className="text-[10px] text-gray-500 mt-1 flex items-center gap-1">
+                                            <span>Calculated:</span>
+                                            {newBox.price ? (
+                                                <CoinAmount
+                                                    amount={Number(newBox.price)}
+                                                    formatOptions={{ maximumFractionDigits: 0 }}
+                                                    className="text-gray-300 font-semibold"
+                                                    iconClassName="w-3 h-3"
+                                                />
+                                            ) : (
+                                                <span className="text-gray-600">--</span>
+                                            )}
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Target EV (%)</label>
