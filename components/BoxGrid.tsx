@@ -67,17 +67,9 @@ export const BoxGrid: React.FC = () => {
                 />
             </div>
 
-            {/* Bottom Color Bar */}
-            <div 
-                className="absolute bottom-0 left-4 right-4 h-0.5 rounded-t-full opacity-50 group-hover:opacity-100 transition-opacity"
-                style={{ backgroundColor: box.accentColor, boxShadow: `0 0 10px ${box.accentColor}` }}
-            ></div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-};
+                <div className="relative h-1 rounded-full bg-[#0b0e14] overflow-hidden">
+                      className="absolute top-1/2 h-2 w-2 -translate-y-1/2 rounded-full border border-white/70 bg-white shadow-sm"
+                      style={{ left: `calc(${(evPercent / 150) * 100}% - 4px)` }}
 
 const GiftIcon = () => (
     <svg className="w-5 h-5 text-green-500" viewBox="0 0 24 24" fill="currentColor">
