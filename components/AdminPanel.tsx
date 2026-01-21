@@ -606,17 +606,31 @@ export const AdminPanel: React.FC = () => {
           alert("Select at least one item for the box");
           return;
       }
-      if (oddsOutOfBounds) {
+      const refreshedItems = buildOddsWithRiskAndTargetEV(
+          selectedItems,
+          riskBalance,
+          clampedTargetEV,
+          Number(newBox.price)
+      );
+      const refreshedOddsTotal = calculateOddsTotal(refreshedItems);
+      const refreshedEv = calculateExpectedValue(refreshedItems);
+      const refreshedEvRatio = refreshedEv / Number(newBox.price);
+      const refreshedOddsOutOfBounds = Math.abs(refreshedOddsTotal - 100) > 0.001;
+      const refreshedEvOutOfBounds = Math.abs(refreshedEvRatio - clampedTargetEV) > EV_TOLERANCE;
+
+      setSelectedItems(refreshedItems);
+
+      if (refreshedOddsOutOfBounds) {
           alert("Total odds must equal 100% before saving.");
           return;
       }
-      if (evOutOfBounds) {
+      if (refreshedEvOutOfBounds) {
           alert("Expected value is outside the allowed tolerance.");
           return;
       }
 
       // Clone items to decouple from global pool (ensuring box-specific chances)
-      const boxItems = selectedItems.map(i => ({...i}));
+      const boxItems = refreshedItems.map(i => ({...i}));
       
       // If setting as daily, unset others first (best effort approach)
       if (newBox.isDaily) {
