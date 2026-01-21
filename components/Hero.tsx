@@ -1,11 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useGame } from '../context/GameContext';
 
 export const Hero: React.FC = () => {
   const { boxes } = useGame();
-  const [isAgeConfirmed, setIsAgeConfirmed] = useState(false);
-  const [wantsEmailAlerts, setWantsEmailAlerts] = useState(false);
-
   const [topLeftImage, bottomRightImage] = useMemo(() => {
     const availableImages = boxes
       .map((box) => box.image)
@@ -65,42 +62,12 @@ export const Hero: React.FC = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full items-center justify-center">
-          <button
-            className="px-8 py-3 bg-green-500 hover:bg-green-400 text-black font-extrabold rounded-lg shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-            disabled={!isAgeConfirmed}
-          >
+          <button className="px-8 py-3 bg-green-500 hover:bg-green-400 text-black font-extrabold rounded-lg shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all transform hover:-translate-y-1">
             Sign up
           </button>
           <button className="px-8 py-3 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-lg border border-gray-700 transition-all">
             Sign in
           </button>
-        </div>
-
-        <div className="mt-4 w-full max-w-md text-left space-y-3 text-sm text-gray-300">
-          <label className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-gray-600 bg-gray-900 text-green-500 focus:ring-green-400"
-              checked={isAgeConfirmed}
-              onChange={(event) => setIsAgeConfirmed(event.target.checked)}
-            />
-            <span>
-              I am 18+ and have read the{' '}
-              <a href="/terms-of-use" className="text-white underline hover:text-gray-200">
-                Terms of Use
-              </a>
-              .
-            </span>
-          </label>
-          <label className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-gray-600 bg-gray-900 text-green-500 focus:ring-green-400"
-              checked={wantsEmailAlerts}
-              onChange={(event) => setWantsEmailAlerts(event.target.checked)}
-            />
-            <span>Send me valuable email alerts about new drops and battles.</span>
-          </label>
         </div>
 
         {/* 3D Box Illustration (CSS only) */}
