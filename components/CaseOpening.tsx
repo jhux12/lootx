@@ -274,6 +274,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setShowWinModal(false);
     setIsGoldMode(false);
     setWonItem(null);
+    setWonInventoryItem(null);
     setRewardResolved(false);
     playSound('click');
     
@@ -290,6 +291,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const isGoldEligible = ['legendary', 'epic'].includes(winner.rarity);
     const goldRoll = await getNextFairRoll();
     const triggerGold = isGoldEligible && goldRoll.rollValue < 0.2;
+
+    if (!isDemo) {
+      const inventoryItem = addToInventory(winner);
+      setWonInventoryItem(inventoryItem);
+    }
 
     if (triggerGold) {
         // --- GOLD SPIN FLOW ---
@@ -340,13 +346,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsSpinning(false);
     setShowWinModal(true);
     setWonItem(item);
-    setWonInventoryItem(null);
     setRewardResolved(false);
-
-    if (!isDemoSpin) {
-      const inventoryItem = addToInventory(item);
-      setWonInventoryItem(inventoryItem);
-    }
     
     // Play appropriate win sound
     if (item.rarity === 'legendary') playSound('win-gold');
