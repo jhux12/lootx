@@ -47,18 +47,30 @@ const DEFAULT_LOCKS: UserLocks = {
 };
 
 // Leveling Configuration
-const BASE_XP_REQUIREMENT = 500;
-const XP_GROWTH_RATE = 1.2;
+const BASE_XP_REQUIREMENT = 200;
+const XP_GROWTH_RATE = 1.35;
+const XP_GROWTH_BONUS = 75;
+const MAX_LEVEL = 100;
+const COINS_PER_UNIT = 100;
 
 export const calculateLevelProgress = (totalXp: number) => {
   let level = 1;
   let xpRemaining = Math.max(0, totalXp);
   let xpForNextLevel = BASE_XP_REQUIREMENT;
 
-  while (xpRemaining >= xpForNextLevel) {
+  while (xpRemaining >= xpForNextLevel && level < MAX_LEVEL) {
     xpRemaining -= xpForNextLevel;
     level += 1;
-    xpForNextLevel = Math.floor(xpForNextLevel * XP_GROWTH_RATE + 50);
+    xpForNextLevel = Math.floor(xpForNextLevel * XP_GROWTH_RATE + XP_GROWTH_BONUS);
+  }
+
+  if (level >= MAX_LEVEL) {
+    return {
+      level: MAX_LEVEL,
+      xpIntoLevel: 0,
+      xpForNextLevel: 0,
+      xpToNextLevel: 0
+    };
   }
 
   return {
@@ -658,7 +670,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!isAuthenticated || amount <= 0) return;
 
     setUser(prev => {
-      const nextXp = Math.max(0, prev.xp + Math.floor(amount));
+      const xpGain = Math.max(0, Math.floor(amount * COINS_PER_UNIT));
+      const nextXp = Math.max(0, prev.xp + xpGain);
       const progress = calculateLevelProgress(nextXp);
       const totalSpent = Math.max(0, (prev.totalSpent ?? 0) + amount);
       const rakebackBalance = Math.max(0, (prev.rakebackBalance ?? 0) + amount * 0.01);
