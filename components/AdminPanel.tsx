@@ -334,9 +334,15 @@ export const AdminPanel: React.FC = () => {
   const calculateBoxConfig = () => {
       if (selectedItems.length === 0) return;
 
-      // 1. Calculate weights (inversely proportional to price)
-      const riskExponent = 1.8 - (Math.min(100, Math.max(0, riskBalance)) / 100) * 1.2;
-      const weights = selectedItems.map(item => 1 / Math.pow(Math.max(1, item.price), riskExponent));
+      // 1. Calculate weights (lower risk favors cheaper, higher risk favors expensive)
+      const riskFactor = Math.min(100, Math.max(0, riskBalance)) / 100;
+      const weightExponent = 1.25;
+      const weights = selectedItems.map(item => {
+          const priceBase = Math.max(1, item.price);
+          const safeWeight = 1 / Math.pow(priceBase, weightExponent);
+          const riskyWeight = Math.pow(priceBase, weightExponent);
+          return safeWeight * (1 - riskFactor) + riskyWeight * riskFactor;
+      });
       const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
       // 2. Distribute chances
@@ -639,7 +645,8 @@ export const AdminPanel: React.FC = () => {
           accentColor: newBox.accentColor || '#3b82f6',
           tag: newBox.tag,
           isDaily: newBox.isDaily,
-          items: boxItems
+          items: boxItems,
+          riskBalance
       };
 
       if (editingBoxId) {
@@ -664,7 +671,7 @@ export const AdminPanel: React.FC = () => {
           isDaily: box.isDaily
       });
       setSelectedItems(box.items.map(i => ({...i})));
-      setRiskBalance(50);
+      setRiskBalance(box.riskBalance ?? 50);
       setTargetEvPercent(100);
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };

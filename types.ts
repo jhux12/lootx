@@ -63,6 +63,7 @@ export interface MysteryBox {
   tag?: 'New' | 'Hot' | 'Sale';
   accentColor: string;
   items: CaseItem[];
+  riskBalance?: number;
   isUserCreated?: boolean;
   isDaily?: boolean;
 }

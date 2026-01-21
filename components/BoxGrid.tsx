@@ -29,13 +29,15 @@ export const BoxGrid: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {displayBoxes.map((box) => (
-          <div 
-            key={box.id} 
-            onClick={() => { playSound('click'); setView({ type: 'CASE_OPENING', boxId: box.id }); }}
-            onMouseEnter={() => playSound('hover')}
-            className="group relative bg-[#131720] border border-gray-800 rounded-xl p-4 flex flex-col items-center hover:border-gray-600 transition-all cursor-pointer hover:-translate-y-1"
-          >
+        {displayBoxes.map((box) => {
+          const riskValue = Math.min(100, Math.max(0, box.riskBalance ?? 50));
+          return (
+            <div 
+              key={box.id} 
+              onClick={() => { playSound('click'); setView({ type: 'CASE_OPENING', boxId: box.id }); }}
+              onMouseEnter={() => playSound('hover')}
+              className="group relative bg-[#131720] border border-gray-800 rounded-xl p-4 flex flex-col items-center hover:border-gray-600 transition-all cursor-pointer hover:-translate-y-1"
+            >
             {/* Tag */}
             {box.tag && (
                 <span className="absolute top-3 left-3 px-2 py-0.5 text-[10px] font-bold text-white bg-red-500 rounded uppercase tracking-wide z-10">
@@ -65,6 +67,32 @@ export const BoxGrid: React.FC = () => {
                   className="text-white font-bold text-lg justify-center"
                   iconClassName="w-4 h-4"
                 />
+                <div className="mt-3 space-y-1">
+                  <div className="flex items-center justify-between text-[10px] uppercase tracking-wide text-gray-500">
+                    <span>Risk</span>
+                    <span className="text-gray-300 font-semibold">{riskValue}%</span>
+                  </div>
+                  <div className="relative h-2 rounded-full bg-[#0b0e14] border border-gray-800 overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full"
+                      style={{
+                        width: `${riskValue}%`,
+                        background: `linear-gradient(90deg, rgba(34,197,94,0.8), ${box.accentColor})`
+                      }}
+                    />
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-white/70 shadow-md"
+                      style={{
+                        left: `calc(${riskValue}% - 7px)`,
+                        backgroundColor: box.accentColor
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[9px] text-gray-500">
+                    <span>Safer</span>
+                    <span>Riskier</span>
+                  </div>
+                </div>
             </div>
 
             {/* Bottom Color Bar */}
@@ -72,8 +100,9 @@ export const BoxGrid: React.FC = () => {
                 className="absolute bottom-0 left-4 right-4 h-0.5 rounded-t-full opacity-50 group-hover:opacity-100 transition-opacity"
                 style={{ backgroundColor: box.accentColor, boxShadow: `0 0 10px ${box.accentColor}` }}
             />
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

@@ -32,9 +32,15 @@ export const CustomCaseCreator: React.FC = () => {
   const calculateConfig = () => {
       if (selectedItems.length === 0) return;
 
-      // 1. Calculate weights (inversely proportional to price)
-      const riskExponent = 1.8 - (Math.min(100, Math.max(0, riskBalance)) / 100) * 1.2;
-      const weights = selectedItems.map(item => 1 / Math.pow(Math.max(1, item.price), riskExponent));
+      // 1. Calculate weights (lower risk favors cheaper, higher risk favors expensive)
+      const riskFactor = Math.min(100, Math.max(0, riskBalance)) / 100;
+      const weightExponent = 1.25;
+      const weights = selectedItems.map(item => {
+          const priceBase = Math.max(1, item.price);
+          const safeWeight = 1 / Math.pow(priceBase, weightExponent);
+          const riskyWeight = Math.pow(priceBase, weightExponent);
+          return safeWeight * (1 - riskFactor) + riskyWeight * riskFactor;
+      });
       const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
       // 2. Distribute chances
@@ -90,7 +96,8 @@ export const CustomCaseCreator: React.FC = () => {
           image: 'https://picsum.photos/300', // Default image for custom boxes
           accentColor: '#8b5cf6', // Brand purple for custom
           tag: 'New',
-          items: selectedItems
+          items: selectedItems,
+          riskBalance
       };
 
       createUserBox(newBox);
