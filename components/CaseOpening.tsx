@@ -714,10 +714,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             Close
                         </button>
                      ) : (
-                        <div className="flex gap-3 w-full">
+                        <div className="flex flex-col sm:flex-row gap-3 w-full">
                             <button onClick={handleSell} className="flex-1 py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
                                 <span className="inline-flex items-center justify-center gap-2">
-                                  Sell for
+                                  Sell back for
                                   <CoinAmount
                                     amount={wonItem.price}
                                     formatOptions={{ maximumFractionDigits: 0 }}
@@ -729,6 +729,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             </button>
                             <button onClick={handleKeep} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg shadow-blue-600/20 transition-colors">
                                 Keep Item
+                            </button>
+                            <button onClick={handleKeep} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg shadow-emerald-600/20 transition-colors">
+                                Ship Item
                             </button>
                         </div>
                      )}
