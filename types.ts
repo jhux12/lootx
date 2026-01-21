@@ -65,6 +65,7 @@ export interface MysteryBox {
   items: CaseItem[];
   isUserCreated?: boolean;
   isDaily?: boolean;
+  riskBalance?: number;
 }
 
 export interface InventoryItem extends CaseItem {
