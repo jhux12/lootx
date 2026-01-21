@@ -724,6 +724,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                     className="text-gray-300"
                                     iconClassName="w-4 h-4"
                                   />
+                                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Coins</span>
                                 </span>
                             </button>
                             <button onClick={handleKeep} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg shadow-blue-600/20 transition-colors">
