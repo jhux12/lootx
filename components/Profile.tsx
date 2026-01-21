@@ -21,7 +21,7 @@ const AVATAR_PRESETS = [
 ];
 
 export const Profile: React.FC = () => {
-  const { user, users, inventory, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser } = useGame();
+  const { user, users, inventory, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem } = useGame();
   const { playSound } = useSound();
   
   const [activeTab, setActiveTab] = useState<'topPulls' | 'inventory' | 'community' | 'settings'>('topPulls');
@@ -97,6 +97,7 @@ export const Profile: React.FC = () => {
   const communitySearchResults = trimmedSearch
     ? users.filter((u) => u.name.toLowerCase().includes(trimmedSearch))
     : [];
+  const hasShippingAddress = !!user.shippingAddress && Object.values(user.shippingAddress).every((value) => String(value).trim().length > 0);
 
   const handleTopPullsVisibility = async (isPublic: boolean) => {
       setTopPullsPublic(isPublic);
@@ -113,6 +114,24 @@ export const Profile: React.FC = () => {
       await updateAddress(addressForm);
       playSound('success');
       alert("Shipping address saved!");
+  };
+
+  const handleSellInventoryItem = async (item: typeof normalizedInventory[number]) => {
+      if (item.status !== 'available') return;
+      if (!confirm(`Sell ${item.name} for ${item.price.toLocaleString()} coins?`)) return;
+      await sellItem(item.instanceId, item.price);
+      playSound('success');
+  };
+
+  const handleShipInventoryItem = async (item: typeof normalizedInventory[number]) => {
+      if (item.status !== 'available') return;
+      if (!hasShippingAddress) {
+        alert('Add a complete shipping address in Settings before shipping items.');
+        setActiveTab('settings');
+        return;
+      }
+      await shipItem(item.instanceId);
+      playSound('success');
   };
 
   const handleUpdatePassword = () => {
@@ -408,6 +427,30 @@ export const Profile: React.FC = () => {
                                       <span className="text-[11px] text-gray-500">
                                         {item.obtainedAt ? new Date(item.obtainedAt).toLocaleDateString() : 'New'}
                                       </span>
+                                  </div>
+                                  <div className="mt-3 flex flex-col gap-2">
+                                      <button
+                                        onClick={() => handleSellInventoryItem(item)}
+                                        disabled={item.status !== 'available'}
+                                        className={`w-full py-2 rounded-lg text-xs font-bold border transition-colors ${
+                                          item.status === 'available'
+                                            ? 'bg-[#1a2130] hover:bg-gray-700 text-gray-300 border-gray-700'
+                                            : 'bg-[#0b0e14] text-gray-600 border-gray-800 cursor-not-allowed'
+                                        }`}
+                                      >
+                                        Sell for {item.price.toLocaleString()}
+                                      </button>
+                                      <button
+                                        onClick={() => handleShipInventoryItem(item)}
+                                        disabled={item.status !== 'available' || !hasShippingAddress}
+                                        className={`w-full py-2 rounded-lg text-xs font-bold border transition-colors ${
+                                          item.status === 'available' && hasShippingAddress
+                                            ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-600/20'
+                                            : 'bg-[#0b0e14] text-gray-600 border-gray-800 cursor-not-allowed'
+                                        }`}
+                                      >
+                                        {item.status === 'shipping' ? 'Shipping' : item.status === 'shipped' ? 'Shipped' : 'Ship Item'}
+                                      </button>
                                   </div>
                               </div>
                           ))}
