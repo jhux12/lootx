@@ -29,7 +29,9 @@ export const BoxGrid: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {displayBoxes.map((box) => (
+        {displayBoxes.map((box) => {
+          const riskBalance = Math.min(100, Math.max(0, box.riskBalance ?? 50));
+          return (
           <div 
             key={box.id} 
             onClick={() => { playSound('click'); setView({ type: 'CASE_OPENING', boxId: box.id }); }}
@@ -59,6 +61,26 @@ export const BoxGrid: React.FC = () => {
             {/* Info */}
             <div className="text-center w-full">
                 <h4 className="text-gray-400 text-sm font-medium mb-1 group-hover:text-white">{box.name}</h4>
+                <div className="w-full px-2 mb-3">
+                  <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1">
+                    <span>Risk</span>
+                    <span className="text-gray-300 font-semibold">{riskBalance}%</span>
+                  </div>
+                  <div className="relative h-2 rounded-full bg-[#0b0e14] overflow-hidden border border-gray-800">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500"
+                      style={{ width: `${riskBalance}%` }}
+                    />
+                    <div
+                      className="absolute top-1/2 h-3 w-3 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.7)] -translate-x-1/2 -translate-y-1/2"
+                      style={{ left: `${riskBalance}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[9px] text-gray-500 mt-1">
+                    <span>Safer</span>
+                    <span>Riskier</span>
+                  </div>
+                </div>
                 <CoinAmount
                   amount={box.price}
                   formatOptions={{ maximumFractionDigits: 0 }}
@@ -73,7 +95,8 @@ export const BoxGrid: React.FC = () => {
                 style={{ backgroundColor: box.accentColor, boxShadow: `0 0 10px ${box.accentColor}` }}
             />
           </div>
-        ))}
+        );
+        })}
       </div>
     </section>
   );

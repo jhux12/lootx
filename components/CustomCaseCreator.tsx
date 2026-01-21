@@ -90,7 +90,8 @@ export const CustomCaseCreator: React.FC = () => {
           image: 'https://picsum.photos/300', // Default image for custom boxes
           accentColor: '#8b5cf6', // Brand purple for custom
           tag: 'New',
-          items: selectedItems
+          items: selectedItems,
+          riskBalance
       };
 
       createUserBox(newBox);
