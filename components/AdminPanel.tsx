@@ -941,12 +941,10 @@ export const AdminPanel: React.FC = () => {
                                         <div className="text-[10px] text-gray-500 mt-1 flex items-center gap-1">
                                             <span>Calculated:</span>
                                             {newBox.price ? (
-                                                <CoinAmount
-                                                    amount={Number(newBox.price)}
-                                                    formatOptions={{ maximumFractionDigits: 0 }}
-                                                    className="text-gray-300 font-semibold"
-                                                    iconClassName="w-3 h-3"
-                                                />
+                                                <span className="inline-flex items-center gap-1 text-gray-300 font-semibold">
+                                                    <img src={COIN_ICON} alt="Coin" className="w-3 h-3" />
+                                                    {Number(newBox.price).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                </span>
                                             ) : (
                                                 <span className="text-gray-600">--</span>
                                             )}

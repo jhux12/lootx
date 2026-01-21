@@ -4,6 +4,7 @@ import { useGame } from '../context/GameContext';
 import { CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
+import { COIN_ICON } from '../constants';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, getRiskLabel } from '../utils/caseOdds';
 
 export const CustomCaseCreator: React.FC = () => {
@@ -220,12 +221,10 @@ export const CustomCaseCreator: React.FC = () => {
                   <div className="border-t border-gray-800 pt-4 mb-6">
                       <div className="flex justify-between items-center mb-1">
                           <span className="text-sm text-gray-400">Total Price</span>
-                          <CoinAmount
-                            amount={boxPrice}
-                            formatOptions={{ maximumFractionDigits: 0 }}
-                            className="text-2xl font-black text-green-500"
-                            iconClassName="w-4 h-4"
-                          />
+                          <span className="inline-flex items-center gap-1 text-2xl font-black text-green-500">
+                            <img src={COIN_ICON} alt="Coin" className="w-4 h-4" />
+                            {boxPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </span>
                       </div>
                   </div>
 
