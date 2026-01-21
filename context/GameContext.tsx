@@ -133,7 +133,7 @@ interface GameContextType {
   setView: (view: ViewState) => void;
   addBalance: (amount: number) => void;
   deductBalance: (amount: number, options?: { trackRewards?: boolean }) => boolean;
-  addToInventory: (item: CaseItem) => void;
+  addToInventory: (item: CaseItem) => InventoryItem;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string, value: number) => void;
@@ -698,7 +698,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return false;
   };
 
-  const addToInventory = async (item: CaseItem) => {
+  const addToInventory = (item: CaseItem): InventoryItem => {
     const newItem: InventoryItem = {
       ...item,
       instanceId: Math.random().toString(36).substr(2, 9),
@@ -710,6 +710,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       persistUserData({ inventory: updated });
       return updated;
     });
+    return newItem;
   };
 
   const addNotification = (
@@ -814,14 +815,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const sellItem = async (instanceId: string, value: number) => {
-    const itemToSell = inventory.find(i => i.instanceId === instanceId);
-    if (!itemToSell) return;
+    let soldItem = false;
     setInventory(prev => {
+      const itemToSell = prev.find(i => i.instanceId === instanceId);
+      if (!itemToSell) return prev;
+      soldItem = true;
       const updated = prev.filter(item => item.instanceId !== instanceId);
       persistUserData({ inventory: updated });
       return updated;
     });
-    addBalance(value);
+    if (soldItem) {
+      addBalance(value);
+    }
   };
 
   const shipItem = async (instanceId: string) => {
