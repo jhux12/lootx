@@ -33,6 +33,7 @@ export interface User {
   locks?: UserLocks;
   ledger?: LedgerEntry[];
   adminLogs?: AdminActionLog[];
+  topPullsPublic?: boolean;
 }
 
 export interface ChatMessage {
