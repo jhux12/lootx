@@ -32,10 +32,10 @@ export const CASE_ITEMS: CaseItem[] = [
 ];
 
 export const MYSTERY_BOXES: MysteryBox[] = [
-  { id: 'supreme', name: 'Case Supreme', price: 50.00, image: 'https://picsum.photos/id/175/300/300', accentColor: '#ef4444', tag: 'Hot', items: CASE_ITEMS },
-  { id: 'tech', name: 'Tech Beast', price: 150.00, image: 'https://picsum.photos/id/2/300/300', accentColor: '#3b82f6', items: CASE_ITEMS },
-  { id: 'sneaker', name: 'Sneakerhead', price: 95.00, image: 'https://picsum.photos/id/21/300/300', accentColor: '#22c55e', items: CASE_ITEMS },
-  { id: 'watch', name: 'Timekeeper', price: 290.00, image: 'https://picsum.photos/id/180/300/300', accentColor: '#eab308', items: CASE_ITEMS },
+  { id: 'supreme', name: 'Case Supreme', price: 50.00, image: 'https://picsum.photos/id/175/300/300', accentColor: '#ef4444', tag: 'Hot', items: CASE_ITEMS, targetEV: 0.85, riskLevel: 50 },
+  { id: 'tech', name: 'Tech Beast', price: 150.00, image: 'https://picsum.photos/id/2/300/300', accentColor: '#3b82f6', items: CASE_ITEMS, targetEV: 0.85, riskLevel: 50 },
+  { id: 'sneaker', name: 'Sneakerhead', price: 95.00, image: 'https://picsum.photos/id/21/300/300', accentColor: '#22c55e', items: CASE_ITEMS, targetEV: 0.85, riskLevel: 50 },
+  { id: 'watch', name: 'Timekeeper', price: 290.00, image: 'https://picsum.photos/id/180/300/300', accentColor: '#eab308', items: CASE_ITEMS, targetEV: 0.85, riskLevel: 50 },
 ];
 
 export const GOLDEN_TICKET_ITEM: CaseItem = {

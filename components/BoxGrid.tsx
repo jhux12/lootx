@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
+import { getRiskLabel } from '../utils/caseOdds';
 
 export const BoxGrid: React.FC = () => {
   const { setView, boxes } = useGame();
@@ -65,6 +66,9 @@ export const BoxGrid: React.FC = () => {
                   className="text-white font-bold text-lg justify-center"
                   iconClassName="w-4 h-4"
                 />
+                <div className="mt-2 text-[10px] uppercase tracking-wide text-gray-500">
+                  {getRiskLabel(box.riskLevel ?? 50)}
+                </div>
             </div>
 
             {/* Bottom Color Bar */}
