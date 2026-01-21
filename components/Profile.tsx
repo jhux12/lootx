@@ -21,10 +21,10 @@ const AVATAR_PRESETS = [
 ];
 
 export const Profile: React.FC = () => {
-  const { user, users, inventory, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser } = useGame();
+  const { user, users, inventory, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem } = useGame();
   const { playSound } = useSound();
   
-  const [activeTab, setActiveTab] = useState<'topPulls' | 'community' | 'settings'>('topPulls');
+  const [activeTab, setActiveTab] = useState<'topPulls' | 'inventory' | 'community' | 'settings'>('topPulls');
   const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
   const [communitySearch, setCommunitySearch] = useState('');
   const [topPullsPublic, setTopPullsPublic] = useState(user.topPullsPublic ?? false);
@@ -97,6 +97,7 @@ export const Profile: React.FC = () => {
   const communitySearchResults = trimmedSearch
     ? users.filter((u) => u.name.toLowerCase().includes(trimmedSearch))
     : [];
+  const hasShippingAddress = !!user.shippingAddress && Object.values(user.shippingAddress).every((value) => String(value).trim().length > 0);
 
   const handleTopPullsVisibility = async (isPublic: boolean) => {
       setTopPullsPublic(isPublic);
@@ -113,6 +114,24 @@ export const Profile: React.FC = () => {
       await updateAddress(addressForm);
       playSound('success');
       alert("Shipping address saved!");
+  };
+
+  const handleSellInventoryItem = async (item: typeof normalizedInventory[number]) => {
+      if (item.status !== 'available') return;
+      if (!confirm(`Sell ${item.name} for ${item.price.toLocaleString()} coins?`)) return;
+      await sellItem(item.instanceId, item.price);
+      playSound('success');
+  };
+
+  const handleShipInventoryItem = async (item: typeof normalizedInventory[number]) => {
+      if (item.status !== 'available') return;
+      if (!hasShippingAddress) {
+        alert('Add a complete shipping address in Settings before shipping items.');
+        setActiveTab('settings');
+        return;
+      }
+      await shipItem(item.instanceId);
+      playSound('success');
   };
 
   const handleUpdatePassword = () => {
@@ -267,6 +286,14 @@ export const Profile: React.FC = () => {
             </button>
             {isOwnProfile && (
                 <button 
+                    onClick={() => setActiveTab('inventory')}
+                    className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'inventory' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                    <Lock className="w-4 h-4" /> Inventory
+                </button>
+            )}
+            {isOwnProfile && (
+                <button 
                     onClick={() => setActiveTab('settings')}
                     className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'settings' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
                 >
@@ -337,6 +364,94 @@ export const Profile: React.FC = () => {
                                     className="text-green-500 font-black"
                                     iconClassName="w-3.5 h-3.5"
                                   />
+                              </div>
+                          ))}
+                      </div>
+                  )}
+              </div>
+          )}
+
+          {activeTab === 'inventory' && isOwnProfile && (
+              <div className="space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-gray-800 pb-4">
+                      <div>
+                          <h3 className="text-lg font-bold text-white">Your Inventory</h3>
+                          <p className="text-sm text-gray-500">Only you can see this inventory.</p>
+                      </div>
+                      <button 
+                        onClick={() => setView({ type: 'BOXES' })}
+                        className="inline-flex items-center justify-center px-4 py-2 bg-brand-purple text-white rounded-lg font-bold text-sm hover:bg-purple-600 transition-colors"
+                      >
+                        Open Boxes
+                      </button>
+                  </div>
+
+                  {normalizedInventory.length === 0 ? (
+                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
+                          <Sparkles className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+                          <h3 className="text-xl font-bold text-white mb-2">Your inventory is empty</h3>
+                          <p className="text-gray-500 mb-6">
+                            Open boxes to add items to your private inventory.
+                          </p>
+                          <button 
+                            onClick={() => setView({ type: 'BOXES' })}
+                            className="px-6 py-2 bg-brand-purple text-white rounded-lg font-bold hover:bg-purple-600 transition-colors"
+                          >
+                            Browse Boxes
+                          </button>
+                      </div>
+                  ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                          {normalizedInventory.map((item) => (
+                              <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all">
+                                  <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
+                                      <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                                      <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
+                                          item.rarity === 'legendary' ? 'from-yellow-500' :
+                                          item.rarity === 'epic' ? 'from-purple-500' :
+                                          item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
+                                      }`} />
+                                  </div>
+                                  <div className="flex items-center justify-between gap-2 mb-1">
+                                      <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">{item.rarity}</div>
+                                      <span className="text-[10px] font-semibold text-gray-500 uppercase">{item.status}</span>
+                                  </div>
+                                  <h4 className="text-white font-bold text-sm mb-2 line-clamp-1">{item.name}</h4>
+                                  <div className="flex items-center justify-between gap-2">
+                                      <CoinAmount
+                                        amount={item.price}
+                                        formatOptions={{ maximumFractionDigits: 0 }}
+                                        className="text-green-500 font-black"
+                                        iconClassName="w-3.5 h-3.5"
+                                      />
+                                      <span className="text-[11px] text-gray-500">
+                                        {item.obtainedAt ? new Date(item.obtainedAt).toLocaleDateString() : 'New'}
+                                      </span>
+                                  </div>
+                                  <div className="mt-3 flex flex-col gap-2">
+                                      <button
+                                        onClick={() => handleSellInventoryItem(item)}
+                                        disabled={item.status !== 'available'}
+                                        className={`w-full py-2 rounded-lg text-xs font-bold border transition-colors ${
+                                          item.status === 'available'
+                                            ? 'bg-[#1a2130] hover:bg-gray-700 text-gray-300 border-gray-700'
+                                            : 'bg-[#0b0e14] text-gray-600 border-gray-800 cursor-not-allowed'
+                                        }`}
+                                      >
+                                        Sell for {item.price.toLocaleString()}
+                                      </button>
+                                      <button
+                                        onClick={() => handleShipInventoryItem(item)}
+                                        disabled={item.status !== 'available' || !hasShippingAddress}
+                                        className={`w-full py-2 rounded-lg text-xs font-bold border transition-colors ${
+                                          item.status === 'available' && hasShippingAddress
+                                            ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-600/20'
+                                            : 'bg-[#0b0e14] text-gray-600 border-gray-800 cursor-not-allowed'
+                                        }`}
+                                      >
+                                        {item.status === 'shipping' ? 'Shipping' : item.status === 'shipped' ? 'Shipped' : 'Ship Item'}
+                                      </button>
+                                  </div>
                               </div>
                           ))}
                       </div>
