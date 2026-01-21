@@ -116,6 +116,64 @@ export const Header: React.FC = () => {
         .animate-gamified-pop {
           animation: gamified-pop 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
+
+        @keyframes logo-shimmer-sweep {
+          0% {
+            transform: translateX(-160%) skewX(-18deg);
+            opacity: 0;
+          }
+          15% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateX(160%) skewX(-18deg);
+            opacity: 0;
+          }
+        }
+
+        .logo-shimmer {
+          position: relative;
+          display: flex;
+          align-items: center;
+          overflow: hidden;
+        }
+
+        .logo-shimmer::after {
+          content: '';
+          position: absolute;
+          top: -30%;
+          left: -120%;
+          width: 70%;
+          height: 160%;
+          background: linear-gradient(
+            120deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.35) 40%,
+            rgba(255, 255, 255, 0.95) 50%,
+            rgba(255, 255, 255, 0.35) 60%,
+            transparent 100%
+          );
+          filter: blur(1px);
+          opacity: 0;
+          animation: logo-shimmer-sweep 2.2s ease-in-out infinite;
+          pointer-events: none;
+        }
+
+        .logo-shimmer img {
+          position: relative;
+          z-index: 1;
+          filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.55));
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .logo-shimmer::after {
+            animation: none;
+            opacity: 0;
+          }
+        }
       `}</style>
 
       <header className="flex items-center justify-between px-4 md:px-6 py-3 bg-[#080b14] border-b border-gray-800/50 sticky top-0 z-50">
@@ -131,7 +189,7 @@ export const Header: React.FC = () => {
 
           {/* Logo */}
           <div
-            className="flex items-center cursor-pointer hover:opacity-90 transition-opacity"
+            className="logo-shimmer flex items-center cursor-pointer hover:opacity-90 transition-opacity"
             onClick={() => handleNav({ type: 'HOME' })}
           >
             <img 
