@@ -411,7 +411,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           status: data.status ?? 'active',
           locks: data.locks ?? DEFAULT_LOCKS,
           ledger: Array.isArray(data.ledger) ? data.ledger : undefined,
-          adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined
+          adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
+          topPullsPublic: data.topPullsPublic ?? false
         } as User;
       });
       setUsers(loaded);

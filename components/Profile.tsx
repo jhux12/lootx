@@ -21,18 +21,20 @@ const AVATAR_PRESETS = [
 ];
 
 export const Profile: React.FC = () => {
-  const { user, users, inventory, updateAddress, updateUserInfo, logout, view, setView, followUser, unfollowUser } = useGame();
+  const { user, users, inventory, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser } = useGame();
   const { playSound } = useSound();
   
   const [activeTab, setActiveTab] = useState<'topPulls' | 'community' | 'settings'>('topPulls');
   const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
   const [communitySearch, setCommunitySearch] = useState('');
+  const [topPullsPublic, setTopPullsPublic] = useState(user.topPullsPublic ?? false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedUserId = view.type === 'PROFILE' ? view.userId : undefined;
   const profileUser = selectedUserId ? users.find((u) => u.id === selectedUserId) : user;
   const isOwnProfile = !selectedUserId || selectedUserId === user.id;
   const displayUser = profileUser || user;
+  const canViewTopPulls = isOwnProfile || !!displayUser.topPullsPublic;
   
   const viewedFollowerIds = Array.isArray(displayUser.followers) ? displayUser.followers : [];
   const viewedFollowers = users.filter((u) => viewedFollowerIds.includes(u.id));
@@ -67,6 +69,7 @@ export const Profile: React.FC = () => {
           name: user.name,
           avatar: user.avatar
       });
+      setTopPullsPublic(user.topPullsPublic ?? false);
       if (user.shippingAddress) {
           setAddressForm(user.shippingAddress);
       }
@@ -76,7 +79,8 @@ export const Profile: React.FC = () => {
       setActivePeopleTab('followers');
   }, [displayUser.id]);
 
-  const normalizedInventory = inventory
+  const inventorySource = isOwnProfile ? inventory : displayUser.inventory ?? [];
+  const normalizedInventory = inventorySource
     .map((item, index) => ({
       ...item,
       instanceId: item.instanceId || `${item.id}-${index}`,
@@ -93,6 +97,11 @@ export const Profile: React.FC = () => {
   const communitySearchResults = trimmedSearch
     ? users.filter((u) => u.name.toLowerCase().includes(trimmedSearch))
     : [];
+
+  const handleTopPullsVisibility = async (isPublic: boolean) => {
+      setTopPullsPublic(isPublic);
+      await updateUserFlags({ topPullsPublic: isPublic });
+  };
 
   const handleSaveProfile = async () => {
       await updateUserInfo(profileForm.name, profileForm.avatar);
@@ -225,7 +234,7 @@ export const Profile: React.FC = () => {
                     <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
                         <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Top Pulls</div>
                         <div className="text-xl font-black text-white">
-                            {isOwnProfile ? `${topPulls.length} Items` : 'Private'}
+                            {canViewTopPulls ? `${topPulls.length} Items` : 'Private'}
                         </div>
                     </div>
                     <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
@@ -286,23 +295,27 @@ export const Profile: React.FC = () => {
                       )}
                   </div>
 
-                  {!isOwnProfile ? (
+                  {!canViewTopPulls ? (
                       <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
                           <Lock className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                           <h3 className="text-xl font-bold text-white mb-2">Top Pulls Are Private</h3>
-                          <p className="text-gray-500">Only the account owner can see their top items.</p>
+                          <p className="text-gray-500">This player has chosen to keep their top pulls private.</p>
                       </div>
                   ) : topPulls.length === 0 ? (
                       <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
                           <Sparkles className="w-12 h-12 text-gray-700 mx-auto mb-4" />
-                          <h3 className="text-xl font-bold text-white mb-2">No pulls yet</h3>
-                          <p className="text-gray-500 mb-6">Open a few boxes to showcase your top pulls.</p>
-                          <button 
-                            onClick={() => setView({ type: 'BOXES' })}
-                            className="px-6 py-2 bg-brand-purple text-white rounded-lg font-bold hover:bg-purple-600 transition-colors"
-                          >
-                            Browse Boxes
-                          </button>
+                          <h3 className="text-xl font-bold text-white mb-2">No top pulls yet</h3>
+                          <p className="text-gray-500 mb-6">
+                            {isOwnProfile ? 'Open a few boxes to showcase your top pulls.' : 'Check back once they start opening boxes.'}
+                          </p>
+                          {isOwnProfile && (
+                              <button 
+                                onClick={() => setView({ type: 'BOXES' })}
+                                className="px-6 py-2 bg-brand-purple text-white rounded-lg font-bold hover:bg-purple-600 transition-colors"
+                              >
+                                Browse Boxes
+                              </button>
+                          )}
                       </div>
                   ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -492,6 +505,34 @@ export const Profile: React.FC = () => {
                                   className="w-full py-3 bg-brand-purple text-white rounded-xl font-bold hover:bg-purple-600 transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
                               >
                                   <Save className="w-5 h-5" /> Save Profile Changes
+                              </button>
+                          </div>
+                      </div>
+
+                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                          <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                              <Lock className="w-5 h-5 text-brand-purple" /> Privacy
+                          </h3>
+
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                              <div>
+                                  <p className="text-sm font-bold text-white">Show top pulls publicly</p>
+                                  <p className="text-xs text-gray-500">When enabled, anyone viewing your profile can see your top pulls.</p>
+                              </div>
+                              <button
+                                  type="button"
+                                  onClick={() => handleTopPullsVisibility(!topPullsPublic)}
+                                  className={`relative inline-flex h-10 w-20 items-center rounded-full border transition-colors ${
+                                    topPullsPublic ? 'bg-brand-purple/30 border-brand-purple' : 'bg-[#0b0e14] border-gray-700'
+                                  }`}
+                              >
+                                  <span
+                                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-bold transition-transform ${
+                                        topPullsPublic ? 'translate-x-10 text-brand-purple' : 'translate-x-1 text-gray-600'
+                                      }`}
+                                  >
+                                      {topPullsPublic ? 'On' : 'Off'}
+                                  </span>
                               </button>
                           </div>
                       </div>
