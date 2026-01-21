@@ -71,7 +71,7 @@ export const BoxGrid: React.FC = () => {
             <div 
                 className="absolute bottom-0 left-4 right-4 h-0.5 rounded-t-full opacity-50 group-hover:opacity-100 transition-opacity"
                 style={{ backgroundColor: box.accentColor, boxShadow: `0 0 10px ${box.accentColor}` }}
-            ></div>
+            />
           </div>
         ))}
       </div>
@@ -84,4 +84,4 @@ const GiftIcon = () => (
         <path d="M12 2C10.9 2 10 2.9 10 4V6H5C3.9 6 3 6.9 3 8V10H21V8C21 6.9 20.1 6 19 6H14V4C14 2.9 13.1 2 12 2ZM5 12V20C5 21.1 5.9 22 7 22H17C18.1 22 19 21.1 19 20V12H5Z" opacity="0.4" />
         <path d="M12 22C13.1 22 14 21.1 14 20V12H10V20C10 21.1 10.9 22 12 22Z" />
     </svg>
-)
+);
