@@ -12,6 +12,11 @@ export const TopUpModal: React.FC = () => {
   const [amountCoins, setAmountCoins] = useState<number>(5000);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const formattedDepositAmount = new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2
+  }).format(amountCoins / 100);
 
   const amounts = [1000, 2500, 5000, 10000, 25000, 50000];
 
@@ -128,15 +133,17 @@ export const TopUpModal: React.FC = () => {
                                 <Loader2 className="w-5 h-5 animate-spin" /> Processing...
                             </>
                         ) : (
-                            <span className="inline-flex items-center gap-2">
-                              Deposit
-                              <CoinAmount
-                                amount={amountCoins / 100}
-                                formatOptions={{ maximumFractionDigits: 0 }}
-                                className="text-white"
-                                iconClassName="w-4 h-4"
-                              />
-                              coins
+                            <span className="inline-flex flex-col items-center gap-1 text-center sm:flex-row sm:gap-2">
+                              <span>Deposit {formattedDepositAmount}</span>
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-white/80 sm:text-sm">
+                                <CoinAmount
+                                  amount={amountCoins / 100}
+                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                  className="text-white"
+                                  iconClassName="w-4 h-4"
+                                />
+                                coins
+                              </span>
                             </span>
                         )}
                     </button>
