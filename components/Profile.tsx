@@ -3,7 +3,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
-import { User, Package, Wallet, Clock, History, MapPin, Truck, Save, Check, Settings, Shield, Lock, LogOut, Mail, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Upload, Image as ImageIcon, Trash2, ExternalLink } from 'lucide-react';
+import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Upload, Trash2, ExternalLink, Search } from 'lucide-react';
 
 const AVATAR_PRESETS = [
     'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
@@ -21,12 +21,12 @@ const AVATAR_PRESETS = [
 ];
 
 export const Profile: React.FC = () => {
-  const { user, users, inventory, balance, sellItem, updateAddress, updateUserInfo, shipItem, logout, view, setView, followUser, unfollowUser } = useGame();
+  const { user, users, inventory, updateAddress, updateUserInfo, logout, view, setView, followUser, unfollowUser } = useGame();
   const { playSound } = useSound();
   
-  const [activeTab, setActiveTab] = useState<'inventory' | 'community' | 'settings'>('inventory');
-  const [inventorySubTab, setInventorySubTab] = useState<'available' | 'shipped'>('available');
+  const [activeTab, setActiveTab] = useState<'topPulls' | 'community' | 'settings'>('topPulls');
   const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
+  const [communitySearch, setCommunitySearch] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedUserId = view.type === 'PROFILE' ? view.userId : undefined;
@@ -41,7 +41,6 @@ export const Profile: React.FC = () => {
   const isFollowing = !!(!isOwnProfile && profileUser && Array.isArray(profileUser.followers) && profileUser.followers.includes(user.id));
   
   const activePeople = activePeopleTab === 'followers' ? viewedFollowers : viewedFollowing;
-  const activePeopleLabel = activePeopleTab === 'followers' ? 'Followers' : 'Following';
   const activePeopleEmptyMessage =
     activePeopleTab === 'followers'
       ? isOwnProfile ? 'You have no followers yet.' : 'No followers yet. Be the first to follow!'
@@ -86,33 +85,14 @@ export const Profile: React.FC = () => {
     }))
     .sort((a, b) => b.obtainedAt - a.obtainedAt);
 
-  const availableItems = normalizedInventory.filter(item => item.status === 'available');
-  const shippedItems = normalizedInventory.filter(item => item.status === 'shipping' || item.status === 'shipped');
-  const displayInventory = inventorySubTab === 'available' ? availableItems : shippedItems;
+  const topPulls = [...normalizedInventory]
+    .sort((a, b) => b.price - a.price)
+    .slice(0, 6);
 
-  const totalInventoryValue = isOwnProfile 
-    ? availableItems.reduce((sum, item) => sum + item.price, 0)
-    : 0;
-  const profileBalance = isOwnProfile ? balance : displayUser.balance ?? 0;
-
-  const handleSell = (id: string, price: number) => {
-      if(confirm('Are you sure you want to sell this item for coins?')) {
-          playSound('coins');
-          sellItem(id, price);
-      }
-  }
-
-  const handleShip = (id: string) => {
-      if (!user.shippingAddress || !user.shippingAddress.fullName) {
-          alert("Please save your shipping address in Settings first!");
-          setActiveTab('settings');
-          return;
-      }
-      if(confirm('Ship this item to your saved address?')) {
-          playSound('success');
-          shipItem(id);
-      }
-  };
+  const trimmedSearch = communitySearch.trim().toLowerCase();
+  const communitySearchResults = trimmedSearch
+    ? users.filter((u) => u.name.toLowerCase().includes(trimmedSearch))
+    : [];
 
   const handleSaveProfile = async () => {
       await updateUserInfo(profileForm.name, profileForm.avatar);
@@ -241,32 +221,12 @@ export const Profile: React.FC = () => {
                     )}
                 </div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
                     <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
-                        <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Coins</div>
-                        <CoinAmount
-                          amount={profileBalance}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          className="text-xl font-black text-green-500"
-                          iconClassName="w-5 h-5"
-                        />
-                    </div>
-                    <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
-                        <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Inventory</div>
-                        <div className="text-xl font-black text-white">{isOwnProfile ? availableItems.length : '?'} Items</div>
-                    </div>
-                    <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
-                        <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Total Value</div>
-                        {isOwnProfile ? (
-                          <CoinAmount
-                            amount={totalInventoryValue}
-                            formatOptions={{ maximumFractionDigits: 0 }}
-                            className="text-xl font-black text-brand-purple"
-                            iconClassName="w-5 h-5"
-                          />
-                        ) : (
-                          <div className="text-xl font-black text-brand-purple">?</div>
-                        )}
+                        <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Top Pulls</div>
+                        <div className="text-xl font-black text-white">
+                            {isOwnProfile ? `${topPulls.length} Items` : 'Private'}
+                        </div>
                     </div>
                     <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
                         <div className="flex items-center justify-between gap-3 mb-2">
@@ -285,10 +245,10 @@ export const Profile: React.FC = () => {
          {/* Main Tabs */}
          <div className="flex flex-wrap md:flex-nowrap items-center gap-2 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-full max-w-full overflow-x-auto">
             <button 
-                onClick={() => setActiveTab('inventory')}
-                className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'inventory' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                onClick={() => setActiveTab('topPulls')}
+                className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'topPulls' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
             >
-                <Package className="w-4 h-4" /> Inventory
+                <Sparkles className="w-4 h-4" /> Top Pulls
             </button>
             <button 
                 onClick={() => setActiveTab('community')}
@@ -309,61 +269,44 @@ export const Profile: React.FC = () => {
 
       {/* Tab Content */}
       <div className="min-h-[400px]">
-          {activeTab === 'inventory' && (
+          {activeTab === 'topPulls' && (
               <div className="space-y-6">
-                  {/* Inventory Sub-Tabs */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-800 pb-4">
-                      <div className="flex flex-wrap gap-2">
-                          <button 
-                            onClick={() => setInventorySubTab('available')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${inventorySubTab === 'available' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
-                          >
-                              Available Items ({availableItems.length})
-                          </button>
-                          <button 
-                            onClick={() => setInventorySubTab('shipped')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${inventorySubTab === 'shipped' ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20' : 'text-gray-500 hover:text-gray-300'}`}
-                          >
-                              Shipped & Processing ({shippedItems.length})
-                          </button>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-800 pb-4">
+                      <div>
+                          <h3 className="text-lg font-bold text-white">Top Pulls</h3>
+                          <p className="text-sm text-gray-500">Your most valuable items, ranked by rarity and value.</p>
                       </div>
-                      
-                      {isOwnProfile && inventorySubTab === 'available' && availableItems.length > 0 && (
-                          <div className="text-xs text-gray-500 font-medium">
-                              Total Value: <CoinAmount amount={totalInventoryValue} className="text-green-500 font-bold" iconClassName="w-3.5 h-3.5" />
-                          </div>
+                      {isOwnProfile && (
+                          <button 
+                            onClick={() => setView({ type: 'BOXES' })}
+                            className="inline-flex items-center justify-center px-4 py-2 bg-brand-purple text-white rounded-lg font-bold text-sm hover:bg-purple-600 transition-colors"
+                          >
+                            Open Boxes
+                          </button>
                       )}
                   </div>
 
                   {!isOwnProfile ? (
                       <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
                           <Lock className="w-12 h-12 text-gray-700 mx-auto mb-4" />
-                          <h3 className="text-xl font-bold text-white mb-2">Private Inventory</h3>
-                          <p className="text-gray-500">This player's inventory is set to private.</p>
+                          <h3 className="text-xl font-bold text-white mb-2">Top Pulls Are Private</h3>
+                          <p className="text-gray-500">Only the account owner can see their top items.</p>
                       </div>
-                  ) : displayInventory.length === 0 ? (
+                  ) : topPulls.length === 0 ? (
                       <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
-                          <Package className="w-12 h-12 text-gray-700 mx-auto mb-4" />
-                          <h3 className="text-xl font-bold text-white mb-2">
-                              {inventorySubTab === 'available' ? 'Your inventory is empty' : 'No shipped items yet'}
-                          </h3>
-                          <p className="text-gray-500 mb-6">
-                              {inventorySubTab === 'available' 
-                                ? 'Open some boxes to start collecting items!' 
-                                : 'Items you choose to ship will appear here.'}
-                          </p>
-                          {inventorySubTab === 'available' && (
-                              <button 
-                                onClick={() => setView({ type: 'BOXES' })}
-                                className="px-6 py-2 bg-brand-purple text-white rounded-lg font-bold hover:bg-purple-600 transition-colors"
-                              >
-                                Browse Boxes
-                              </button>
-                          )}
+                          <Sparkles className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+                          <h3 className="text-xl font-bold text-white mb-2">No pulls yet</h3>
+                          <p className="text-gray-500 mb-6">Open a few boxes to showcase your top pulls.</p>
+                          <button 
+                            onClick={() => setView({ type: 'BOXES' })}
+                            className="px-6 py-2 bg-brand-purple text-white rounded-lg font-bold hover:bg-purple-600 transition-colors"
+                          >
+                            Browse Boxes
+                          </button>
                       </div>
                   ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                          {displayInventory.map((item) => (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                          {topPulls.map((item) => (
                               <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all">
                                   <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
                                       <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
@@ -378,34 +321,9 @@ export const Profile: React.FC = () => {
                                   <CoinAmount
                                     amount={item.price}
                                     formatOptions={{ maximumFractionDigits: 0 }}
-                                    className="text-green-500 font-black mb-4"
+                                    className="text-green-500 font-black"
                                     iconClassName="w-3.5 h-3.5"
                                   />
-                                  
-                                  {inventorySubTab === 'available' ? (
-                                      <div className="grid grid-cols-2 gap-2">
-                                          <button 
-                                              onClick={() => handleSell(item.instanceId, item.price)}
-                                              className="py-2 bg-green-500/10 text-green-500 rounded-lg text-xs font-bold hover:bg-green-500 hover:text-white transition-all"
-                                          >
-                                              Sell
-                                          </button>
-                                          <button 
-                                              onClick={() => handleShip(item.instanceId)}
-                                              className="py-2 bg-blue-500/10 text-blue-500 rounded-lg text-xs font-bold hover:bg-blue-500 hover:text-white transition-all"
-                                          >
-                                              Ship
-                                          </button>
-                                      </div>
-                                  ) : (
-                                      <div className="flex items-center gap-2 text-xs font-bold py-2 px-3 bg-[#0b0e14] rounded-lg text-gray-400">
-                                          {item.status === 'shipping' ? (
-                                              <><Clock className="w-3 h-3 text-yellow-500" /> Processing</>
-                                          ) : (
-                                              <><Truck className="w-3 h-3 text-green-500" /> Shipped</>
-                                          )}
-                                      </div>
-                                  )}
                               </div>
                           ))}
                       </div>
@@ -415,6 +333,57 @@ export const Profile: React.FC = () => {
 
           {activeTab === 'community' && (
               <div className="bg-[#131720] border border-gray-800 rounded-2xl overflow-hidden">
+                  <div className="p-4 border-b border-gray-800">
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Search players</label>
+                      <div className="mt-2 flex items-center gap-3 bg-[#0b0e14] border border-gray-800 rounded-xl px-3 py-2">
+                          <Search className="w-4 h-4 text-gray-500" />
+                          <input 
+                            type="text"
+                            value={communitySearch}
+                            onChange={(e) => setCommunitySearch(e.target.value)}
+                            placeholder="Search by username"
+                            className="w-full bg-transparent text-sm text-white focus:outline-none"
+                          />
+                      </div>
+                  </div>
+
+                  {trimmedSearch && (
+                      <div className="p-6 border-b border-gray-800">
+                          <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-sm font-bold text-white">Search Results</h4>
+                              <span className="text-xs text-gray-500">{communitySearchResults.length} matches</span>
+                          </div>
+                          {communitySearchResults.length === 0 ? (
+                              <div className="py-6 text-center text-gray-500 text-sm">
+                                  No players found for that search.
+                              </div>
+                          ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {communitySearchResults.map((p) => (
+                                      <div key={p.id} className="flex items-center justify-between p-4 bg-[#0b0e14] rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
+                                          <div 
+                                            className="flex items-center gap-4 cursor-pointer"
+                                            onClick={() => setView({ type: 'PROFILE', userId: p.id })}
+                                          >
+                                              <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
+                                              <div>
+                                                  <div className="text-white font-bold">{p.name}</div>
+                                                  <div className="text-xs text-gray-500">Level {p.level}</div>
+                                              </div>
+                                          </div>
+                                          <button 
+                                            onClick={() => setView({ type: 'PROFILE', userId: p.id })}
+                                            className="p-2 text-gray-500 hover:text-white transition-colors"
+                                          >
+                                              <ExternalLink className="w-5 h-5" />
+                                          </button>
+                                      </div>
+                                  ))}
+                              </div>
+                          )}
+                      </div>
+                  )}
+
                   <div className="flex border-b border-gray-800">
                       <button 
                         onClick={() => setActivePeopleTab('followers')}
@@ -447,15 +416,7 @@ export const Profile: React.FC = () => {
                                           <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
                                           <div>
                                               <div className="text-white font-bold">{p.name}</div>
-                                              <div className="text-xs text-gray-500">
-                                                Level {p.level} •{' '}
-                                                <CoinAmount
-                                                  amount={p.balance ?? 0}
-                                                  formatOptions={{ maximumFractionDigits: 0 }}
-                                                  className="text-gray-400 font-semibold"
-                                                  iconClassName="w-3 h-3"
-                                                />
-                                              </div>
+                                              <div className="text-xs text-gray-500">Level {p.level}</div>
                                           </div>
                                       </div>
                                       <button 
