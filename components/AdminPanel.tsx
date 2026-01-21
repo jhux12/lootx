@@ -76,7 +76,8 @@ export const AdminPanel: React.FC = () => {
       accentColor: '#3b82f6',
       isDaily: false
   });
-  const [houseEdge, setHouseEdge] = useState(5); // Default 5%
+  const [riskBalance, setRiskBalance] = useState(50);
+  const [targetEvPercent, setTargetEvPercent] = useState(100);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [deletingBoxId, setDeletingBoxId] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -334,7 +335,8 @@ export const AdminPanel: React.FC = () => {
       if (selectedItems.length === 0) return;
 
       // 1. Calculate weights (inversely proportional to price)
-      const weights = selectedItems.map(item => 1 / Math.max(1, item.price));
+      const riskExponent = 1.8 - (Math.min(100, Math.max(0, riskBalance)) / 100) * 1.2;
+      const weights = selectedItems.map(item => 1 / Math.pow(Math.max(1, item.price), riskExponent));
       const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
       // 2. Distribute chances
@@ -361,8 +363,9 @@ export const AdminPanel: React.FC = () => {
       // 3. Calculate Expected Value (EV)
       const ev = updatedItems.reduce((sum, item) => sum + (item.price * (item.chance / 100)), 0);
 
-      // 4. Set Box Price based on EV + House Edge
-      const calculatedPrice = ev * (1 + (houseEdge / 100));
+      // 4. Set Box Price based on target EV
+      const safeTargetEv = Math.min(150, Math.max(50, targetEvPercent));
+      const calculatedPrice = ev / (safeTargetEv / 100);
 
       // Apply updates
       setSelectedItems(updatedItems);
@@ -661,6 +664,8 @@ export const AdminPanel: React.FC = () => {
           isDaily: box.isDaily
       });
       setSelectedItems(box.items.map(i => ({...i})));
+      setRiskBalance(50);
+      setTargetEvPercent(100);
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -684,7 +689,8 @@ export const AdminPanel: React.FC = () => {
       setEditingBoxId(null);
       setNewBox({ name: '', price: 0, image: 'https://picsum.photos/300', accentColor: '#3b82f6', isDaily: false });
       setSelectedItems([]);
-      setHouseEdge(5);
+      setRiskBalance(50);
+      setTargetEvPercent(100);
   };
 
   const toggleItemSelection = (item: CaseItem) => {
@@ -929,15 +935,39 @@ export const AdminPanel: React.FC = () => {
                             <input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.image} onChange={e => setNewBox({...newBox, image: e.target.value})} />
                             <input type="text" placeholder="Accent Color (Hex)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.accentColor} onChange={e => setNewBox({...newBox, accentColor: e.target.value})} />
                             
-                            <div className="flex flex-col gap-3">
-                                <div className="flex gap-2">
-                                    <div className="flex-1">
+                            <div className="flex flex-col gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div>
                                         <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Price (coins)</label>
                                         <input type="number" placeholder="Box Price (coins)" className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold text-green-400" value={newBox.price || ''} onChange={e => setNewBox({...newBox, price: Number(e.target.value)})} />
                                     </div>
-                                    <div className="flex-1">
-                                        <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">House Edge (%)</label>
-                                        <input type="number" placeholder="Edge %" className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold" value={houseEdge} onChange={e => setHouseEdge(Number(e.target.value))} />
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Target EV (%)</label>
+                                        <input
+                                            type="number"
+                                            min={50}
+                                            max={150}
+                                            placeholder="EV %"
+                                            className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold"
+                                            value={targetEvPercent}
+                                            onChange={e => setTargetEvPercent(Number(e.target.value))}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Risk Balance</label>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={100}
+                                        value={riskBalance}
+                                        onChange={e => setRiskBalance(Number(e.target.value))}
+                                        className="w-full accent-brand-purple"
+                                    />
+                                    <div className="flex justify-between text-[10px] text-gray-500">
+                                        <span>Safer</span>
+                                        <span className="text-gray-300 font-semibold">{riskBalance}%</span>
+                                        <span>Riskier</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
