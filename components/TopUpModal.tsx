@@ -21,7 +21,7 @@ export const TopUpModal: React.FC = () => {
 
       // Simulate API Call
       setTimeout(() => {
-          addBalance(amountCoins / 100);
+          addBalance(amountCoins);
           setIsLoading(false);
           setSuccess(true);
           playSound('coins');
@@ -91,7 +91,7 @@ export const TopUpModal: React.FC = () => {
                                 className={`py-3 rounded-lg border font-bold transition-all ${amountCoins === amt ? 'bg-green-600 border-green-500 text-white shadow-lg shadow-green-900/20' : 'bg-[#0b0e14] border-gray-800 text-gray-400 hover:border-gray-600'}`}
                             >
                                 <CoinAmount
-                                  amount={amt / 100}
+                                  amount={amt}
                                   formatOptions={{ maximumFractionDigits: 0 }}
                                   className="justify-center"
                                   iconClassName="w-3.5 h-3.5"
@@ -131,7 +131,7 @@ export const TopUpModal: React.FC = () => {
                             <span className="inline-flex items-center gap-2">
                               Deposit
                               <CoinAmount
-                                amount={amountCoins / 100}
+                                amount={amountCoins}
                                 formatOptions={{ maximumFractionDigits: 0 }}
                                 className="text-white"
                                 iconClassName="w-4 h-4"
