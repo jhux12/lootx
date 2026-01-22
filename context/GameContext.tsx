@@ -478,6 +478,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             accentColor: data.accentColor ?? '#3b82f6',
             tag: data.tag as MysteryBox['tag'],
             isDaily: data.isDaily ?? false,
+            targetEV: data.targetEV !== undefined ? Number(data.targetEV) : undefined,
+            riskLevel: data.riskLevel !== undefined ? Number(data.riskLevel) : undefined,
             items
           } as MysteryBox;
         })
