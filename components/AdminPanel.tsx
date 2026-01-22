@@ -350,6 +350,28 @@ export const AdminPanel: React.FC = () => {
       setNewBox(prev => ({ ...prev, price: parseFloat(calculatedPrice.toFixed(2)) }));
   };
 
+  useEffect(() => {
+      if (selectedItems.length === 0) return;
+
+      const baseSelection = selectedItems.map(item => ({ ...item, chance: 0 }));
+      const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
+      const baseEv = calculateExpectedValue(baseItems);
+      const calculatedPrice = (newBox.price && newBox.price > 0)
+        ? newBox.price
+        : baseEv / clampedTargetEV;
+      const updatedItems = buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice);
+      const currentChances = selectedItems.map(item => item.chance.toFixed(4)).join('|');
+      const updatedChances = updatedItems.map(item => item.chance.toFixed(4)).join('|');
+
+      if (currentChances !== updatedChances) {
+          setSelectedItems(updatedItems);
+      }
+
+      if (!newBox.price || newBox.price <= 0) {
+          setNewBox(prev => ({ ...prev, price: parseFloat(calculatedPrice.toFixed(2)) }));
+      }
+  }, [clampedTargetEV, newBox.price, riskBalance, selectedItems]);
+
   const updateAdminLogs = (targetUserId: string, updater: (entries: AdminActionLog[]) => AdminActionLog[]) => {
       setAdminLogs((prev) => {
           const nextEntries = updater(prev[targetUserId] ?? []);
