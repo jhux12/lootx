@@ -18,7 +18,27 @@ export const TopUpModal: React.FC = () => {
     maximumFractionDigits: 2
   }).format(amountCoins / 100);
 
-  const amounts = [1000, 2500, 5000, 10000, 25000, 50000];
+  const coinPacks = [
+    { coins: 1000, bonusPercent: 0 },
+    { coins: 2500, bonusPercent: 5 },
+    { coins: 5000, bonusPercent: 10 },
+    { coins: 10000, bonusPercent: 15 },
+    { coins: 25000, bonusPercent: 20 },
+    { coins: 50000, bonusPercent: 25 }
+  ];
+
+  const getBonusPercent = (coins: number) => {
+    if (coins >= 50000) return 25;
+    if (coins >= 25000) return 20;
+    if (coins >= 10000) return 15;
+    if (coins >= 5000) return 10;
+    if (coins >= 2500) return 5;
+    return 0;
+  };
+
+  const bonusPercent = getBonusPercent(amountCoins);
+  const bonusCoins = Math.floor(amountCoins * (bonusPercent / 100));
+  const totalCoins = amountCoins + bonusCoins;
 
   const handleDeposit = () => {
       playSound('click');
@@ -26,7 +46,7 @@ export const TopUpModal: React.FC = () => {
 
       // Simulate API Call
       setTimeout(() => {
-          addBalance(amountCoins / 100);
+          addBalance(totalCoins / 100);
           setIsLoading(false);
           setSuccess(true);
           playSound('coins');
@@ -55,7 +75,7 @@ export const TopUpModal: React.FC = () => {
             </div>
         ) : (
             <>
-                <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-[#0b0e14]">
+                <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-gradient-to-r from-[#0b0e14] via-[#111827] to-[#0b0e14]">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                         <Wallet className="w-5 h-5 text-blue-500" /> Top Up Coins
                     </h2>
@@ -88,21 +108,48 @@ export const TopUpModal: React.FC = () => {
 
                     {/* Amount Selector */}
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Select Coin Pack</label>
-                    <div className="grid grid-cols-3 gap-3 mb-6">
-                        {amounts.map(amt => (
+                    <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-3">
+                        {coinPacks.map((pack) => {
+                          const packBonusCoins = Math.floor(pack.coins * (pack.bonusPercent / 100));
+                          const packTotalCoins = pack.coins + packBonusCoins;
+                          const formattedPackPrice = new Intl.NumberFormat(undefined, {
+                            style: 'currency',
+                            currency: 'USD',
+                            maximumFractionDigits: 2
+                          }).format(pack.coins / 100);
+                          const isBestValue = pack.coins === 50000;
+
+                          return (
                             <button
-                                key={amt}
-                                onClick={() => { setAmountCoins(amt); playSound('click'); }}
-                                className={`py-3 rounded-lg border font-bold transition-all ${amountCoins === amt ? 'bg-green-600 border-green-500 text-white shadow-lg shadow-green-900/20' : 'bg-[#0b0e14] border-gray-800 text-gray-400 hover:border-gray-600'}`}
+                                key={pack.coins}
+                                onClick={() => { setAmountCoins(pack.coins); playSound('click'); }}
+                                className={`relative rounded-xl border px-3 py-3 text-left transition-all ${amountCoins === pack.coins ? 'bg-emerald-500/10 border-emerald-400 text-white shadow-lg shadow-emerald-900/20' : 'bg-[#0b0e14] border-gray-800 text-gray-300 hover:border-gray-600'}`}
                             >
-                                <CoinAmount
-                                  amount={amt / 100}
-                                  formatOptions={{ maximumFractionDigits: 0 }}
-                                  className="justify-center"
-                                  iconClassName="w-3.5 h-3.5"
-                                />
+                                {isBestValue && (
+                                  <span className="absolute -top-2 right-2 rounded-full bg-gradient-to-r from-emerald-400 to-blue-500 px-2 py-0.5 text-[10px] font-bold uppercase text-black shadow">
+                                    Best Value
+                                  </span>
+                                )}
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-[11px] font-semibold text-gray-400">{formattedPackPrice}</span>
+                                  <CoinAmount
+                                    amount={pack.coins / 100}
+                                    formatOptions={{ maximumFractionDigits: 0 }}
+                                    className="text-white"
+                                    iconClassName="w-3.5 h-3.5"
+                                  />
+                                  {pack.bonusPercent > 0 && (
+                                    <span className="text-[10px] font-semibold text-emerald-400">
+                                      +{packBonusCoins.toLocaleString()} bonus
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-gray-500">
+                                    Total {packTotalCoins.toLocaleString()} coins
+                                  </span>
+                                </div>
                             </button>
-                        ))}
+                          );
+                        })}
                     </div>
 
                     {/* Custom Amount Input */}
@@ -119,7 +166,32 @@ export const TopUpModal: React.FC = () => {
                                 className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg py-3 pl-11 pr-4 text-white font-bold leading-none focus:outline-none focus:border-blue-500 transition-colors"
                             />
                         </div>
-                        <p className="text-[10px] text-gray-500 mt-2">100 coins = $1</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
+                          <span>100 coins = $1</span>
+                          {bonusPercent > 0 && (
+                            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-300">
+                              Bonus +{bonusCoins.toLocaleString()} coins ({bonusPercent}%)
+                            </span>
+                          )}
+                        </div>
+                    </div>
+
+                    <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 p-4">
+                      <p className="text-xs font-semibold uppercase text-emerald-200">You get</p>
+                      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                        <CoinAmount
+                          amount={totalCoins / 100}
+                          formatOptions={{ maximumFractionDigits: 0 }}
+                          className="text-lg font-black text-white"
+                          iconClassName="w-5 h-5"
+                        />
+                        <div className="text-right text-xs text-emerald-200">
+                          <div>{formattedDepositAmount} deposit</div>
+                          {bonusPercent > 0 && (
+                            <div>Includes +{bonusCoins.toLocaleString()} bonus coins</div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Submit Button */}
@@ -137,7 +209,7 @@ export const TopUpModal: React.FC = () => {
                               <span>Deposit {formattedDepositAmount}</span>
                               <span className="inline-flex items-center gap-1 text-xs font-semibold text-white/80 sm:text-sm">
                                 <CoinAmount
-                                  amount={amountCoins / 100}
+                                  amount={totalCoins / 100}
                                   formatOptions={{ maximumFractionDigits: 0 }}
                                   className="text-white"
                                   iconClassName="w-4 h-4"
