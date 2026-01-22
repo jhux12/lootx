@@ -118,7 +118,7 @@ export const Header: React.FC = () => {
         }
       `}</style>
 
-      <header className="flex items-center justify-between px-4 md:px-6 py-3 bg-[#080b14] border-b border-gray-800/50 sticky top-0 z-50">
+      <header className="sticky top-0 z-50 w-full flex items-center justify-between px-4 md:px-6 py-3 bg-[#080b14]/95 border-b border-gray-800/50 backdrop-blur">
         <div className="flex items-center gap-4 lg:gap-10">
           
           {/* Mobile Menu Button */}
