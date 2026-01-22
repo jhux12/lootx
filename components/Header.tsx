@@ -21,7 +21,7 @@ import {
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
-import pullzLogo from '../assets/pullz-p.png';
+import pullzLogo from '../assets/pullz-p2.png';
 
 export const Header: React.FC = () => {
   const {
@@ -374,8 +374,9 @@ export const Header: React.FC = () => {
 
         {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 top-[72px] md:top-[80px] bg-[#0b0e14] z-40 lg:hidden flex flex-col p-4 animate-in slide-in-from-left-full duration-200">
-            <nav className="flex flex-col gap-2">
+          <div className="fixed inset-0 top-[72px] md:top-[80px] z-40 lg:hidden">
+            <div className="absolute inset-0 bg-[#0b0e14]" />
+            <nav className="relative flex flex-col gap-2 p-4 animate-in slide-in-from-left-full duration-200">
               <button 
                 onClick={() => { handleNav({ type: 'HOME' }); setIsMobileMenuOpen(false); }} 
                 className="flex items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-white font-medium"
