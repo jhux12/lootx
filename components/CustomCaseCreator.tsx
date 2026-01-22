@@ -1,21 +1,22 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
+import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, getRiskLabel } from '../utils/caseOdds';
 
 export const CustomCaseCreator: React.FC = () => {
   const { createItem, createUserBox, items, setView } = useGame();
   const { playSound } = useSound();
 
+  const DEFAULT_TARGET_EV = 0.85;
   const [boxName, setBoxName] = useState('');
   const [boxPrice, setBoxPrice] = useState<number>(0);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [lastCalculated, setLastCalculated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [riskBalance, setRiskBalance] = useState(50);
-  const [targetEvPercent, setTargetEvPercent] = useState(100);
 
   const toggleItemSelection = (item: CaseItem) => {
       playSound('click');
@@ -32,36 +33,13 @@ export const CustomCaseCreator: React.FC = () => {
   const calculateConfig = () => {
       if (selectedItems.length === 0) return;
 
-      // 1. Calculate weights (inversely proportional to price)
-      const riskExponent = 1.8 - (Math.min(100, Math.max(0, riskBalance)) / 100) * 1.2;
-      const weights = selectedItems.map(item => 1 / Math.pow(Math.max(1, item.price), riskExponent));
-      const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+      const baseItems = selectedItems.map(item => ({ ...item, chance: 0 }));
 
-      // 2. Distribute chances
-      const updatedItems = selectedItems.map((item, index) => {
-          const rawChance = weights[index] / totalWeight; 
-          const percentChance = rawChance * 100;
-          
-          let rarity: CaseItem['rarity'] = 'common';
-          let color = '#9ca3af';
-
-          if (percentChance < 0.5) { rarity = 'legendary'; color = '#fbbf24'; }
-          else if (percentChance < 5) { rarity = 'epic'; color = '#a855f7'; }
-          else if (percentChance < 15) { rarity = 'rare'; color = '#3b82f6'; }
-          else if (percentChance < 40) { rarity = 'uncommon'; color = '#22c55e'; }
-          
-          return {
-              ...item,
-              chance: parseFloat(percentChance.toFixed(4)),
-              rarity,
-              color
-          };
-      });
-
-      // 3. Calculate EV
-      const ev = updatedItems.reduce((sum, item) => sum + (item.price * (item.chance / 100)), 0);
-      const safeTargetEv = Math.min(150, Math.max(50, targetEvPercent));
-      const calculatedPrice = ev / (safeTargetEv / 100);
+      // Risk only redistributes odds. Target EV stays locked after redistribution.
+      const baseOdds = buildRiskAdjustedOdds(baseItems, riskBalance);
+      const baseEv = calculateExpectedValue(baseOdds);
+      const calculatedPrice = baseEv / DEFAULT_TARGET_EV;
+      const updatedItems = buildOddsWithRiskAndTargetEV(baseItems, riskBalance, DEFAULT_TARGET_EV, calculatedPrice);
 
       setSelectedItems(updatedItems);
       setBoxPrice(parseFloat(calculatedPrice.toFixed(2)));
@@ -90,18 +68,15 @@ export const CustomCaseCreator: React.FC = () => {
           image: 'https://picsum.photos/300', // Default image for custom boxes
           accentColor: '#8b5cf6', // Brand purple for custom
           tag: 'New',
-          items: selectedItems
+          items: selectedItems,
+          targetEV: DEFAULT_TARGET_EV,
+          riskLevel: riskBalance
       };
 
       createUserBox(newBox);
       // Removed 'success' sound on create
       setView({ type: 'CASE_OPENING', boxId: newBox.id });
   };
-
-  const calculatedEv = useMemo(() => {
-    if (!lastCalculated) return 0;
-    return selectedItems.reduce((sum, item) => sum + (item.price * (item.chance / 100)), 0);
-  }, [lastCalculated, selectedItems]);
 
   // Filter items based on search
   const filteredItems = items.filter(item => 
@@ -123,7 +98,7 @@ export const CustomCaseCreator: React.FC = () => {
                </div>
                <div>
                     <h1 className="text-3xl font-black text-white">Case Lab</h1>
-                    <p className="text-gray-400 text-sm">Engineer your luck. Tune risk balance and target EV for custom cases.</p>
+                    <p className="text-gray-400 text-sm">Engineer your luck. Tune your risk balance for a custom case.</p>
                </div>
            </div>
       </div>
@@ -195,40 +170,23 @@ export const CustomCaseCreator: React.FC = () => {
                       />
                   </div>
 
-                  <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Target EV (%)</label>
-                          <input
-                            type="number"
-                            min={50}
-                            max={150}
-                            value={targetEvPercent}
-                            onChange={(e) => {
-                              setTargetEvPercent(Number(e.target.value));
-                              setLastCalculated(false);
-                            }}
-                            className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all"
-                          />
-                          <p className="text-[10px] text-gray-500 mt-1">Higher EV lowers price; 100% is fair.</p>
-                      </div>
-                      <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Risk Balance</label>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            value={riskBalance}
-                            onChange={(e) => {
-                              setRiskBalance(Number(e.target.value));
-                              setLastCalculated(false);
-                            }}
-                            className="w-full accent-brand-purple"
-                          />
-                          <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-                              <span>Safer</span>
-                              <span className="text-gray-300 font-semibold">{riskBalance}%</span>
-                              <span>Riskier</span>
-                          </div>
+                  <div className="mb-6">
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Risk Balance</label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={riskBalance}
+                        onChange={(e) => {
+                          setRiskBalance(Number(e.target.value));
+                          setLastCalculated(false);
+                        }}
+                        className="w-full accent-brand-purple"
+                      />
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-500 mt-1">
+                          <span>Safer</span>
+                          <span className="text-gray-300 font-semibold">{getRiskLabel(riskBalance)}</span>
+                          <span>Riskier</span>
                       </div>
                   </div>
 
@@ -270,10 +228,6 @@ export const CustomCaseCreator: React.FC = () => {
                             className="text-2xl font-black text-green-500"
                             iconClassName="w-4 h-4"
                           />
-                      </div>
-                      <div className="flex justify-between text-[10px] text-gray-500">
-                          <span>Target EV: {targetEvPercent}%</span>
-                          <span>EV: {lastCalculated ? calculatedEv.toFixed(2) : '--'}</span>
                       </div>
                   </div>
 

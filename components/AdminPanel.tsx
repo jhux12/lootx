@@ -4,6 +4,7 @@ import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
+import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -77,7 +78,7 @@ export const AdminPanel: React.FC = () => {
       isDaily: false
   });
   const [riskBalance, setRiskBalance] = useState(50);
-  const [targetEvPercent, setTargetEvPercent] = useState(100);
+  const [targetEV, setTargetEV] = useState(0.85);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [deletingBoxId, setDeletingBoxId] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -100,6 +101,9 @@ export const AdminPanel: React.FC = () => {
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [timelineFilter, setTimelineFilter] = useState<'all' | 'ledger' | 'inventory' | 'admin'>('all');
   const [timelineSearch, setTimelineSearch] = useState('');
+  const EV_TOLERANCE = 0.01;
+  const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
+  const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
   
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
@@ -333,44 +337,38 @@ export const AdminPanel: React.FC = () => {
 
   const calculateBoxConfig = () => {
       if (selectedItems.length === 0) return;
-
-      // 1. Calculate weights (inversely proportional to price)
-      const riskExponent = 1.8 - (Math.min(100, Math.max(0, riskBalance)) / 100) * 1.2;
-      const weights = selectedItems.map(item => 1 / Math.pow(Math.max(1, item.price), riskExponent));
-      const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-
-      // 2. Distribute chances
-      const updatedItems = selectedItems.map((item, index) => {
-          const rawChance = weights[index] / totalWeight; // 0 to 1
-          const percentChance = rawChance * 100;
-          
-          let rarity: CaseItem['rarity'] = 'common';
-          let color = '#9ca3af';
-
-          if (percentChance < 0.5) { rarity = 'legendary'; color = '#fbbf24'; }
-          else if (percentChance < 5) { rarity = 'epic'; color = '#a855f7'; }
-          else if (percentChance < 15) { rarity = 'rare'; color = '#3b82f6'; }
-          else if (percentChance < 40) { rarity = 'uncommon'; color = '#22c55e'; }
-          
-          return {
-              ...item,
-              chance: parseFloat(percentChance.toFixed(4)),
-              rarity,
-              color
-          };
-      });
-
-      // 3. Calculate Expected Value (EV)
-      const ev = updatedItems.reduce((sum, item) => sum + (item.price * (item.chance / 100)), 0);
-
-      // 4. Set Box Price based on target EV
-      const safeTargetEv = Math.min(150, Math.max(50, targetEvPercent));
-      const calculatedPrice = ev / (safeTargetEv / 100);
+      const baseSelection = selectedItems.map(item => ({ ...item, chance: 0 }));
+      const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
+      const baseEv = calculateExpectedValue(baseItems);
+      const calculatedPrice = (newBox.price && newBox.price > 0)
+        ? newBox.price
+        : baseEv / clampedTargetEV;
+      const updatedItems = buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice);
 
       // Apply updates
       setSelectedItems(updatedItems);
       setNewBox(prev => ({ ...prev, price: parseFloat(calculatedPrice.toFixed(2)) }));
   };
+
+  useEffect(() => {
+      setSelectedItems((prev) => {
+          if (prev.length === 0) return prev;
+
+          const baseSelection = prev.map(item => ({ ...item, chance: 0 }));
+          const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
+          const baseEv = calculateExpectedValue(baseItems);
+          const calculatedPrice = (newBox.price && newBox.price > 0)
+            ? newBox.price
+            : baseEv / clampedTargetEV;
+          const updatedItems = buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice);
+
+          if (!newBox.price || newBox.price <= 0) {
+              setNewBox((current) => ({ ...current, price: parseFloat(calculatedPrice.toFixed(2)) }));
+          }
+
+          return updatedItems;
+      });
+  }, [clampedTargetEV, newBox.price, riskBalance]);
 
   const updateAdminLogs = (targetUserId: string, updater: (entries: AdminActionLog[]) => AdminActionLog[]) => {
       setAdminLogs((prev) => {
@@ -608,6 +606,17 @@ export const AdminPanel: React.FC = () => {
           .some((value) => String(value).toLowerCase().includes(timelineSearchValue));
   });
 
+  const oddsTotal = useMemo(() => calculateOddsTotal(selectedItems), [selectedItems]);
+  const expectedValue = useMemo(() => calculateExpectedValue(selectedItems), [selectedItems]);
+  const evRatio = useMemo(() => {
+      if (!newBox.price || newBox.price <= 0) return 0;
+      return expectedValue / Number(newBox.price);
+  }, [expectedValue, newBox.price]);
+  const marginPercent = newBox.price && newBox.price > 0 ? (1 - evRatio) * 100 : NaN;
+  const evOutOfBounds = newBox.price ? Math.abs(evRatio - clampedTargetEV) > EV_TOLERANCE : false;
+  const oddsOutOfBounds = Math.abs(oddsTotal - 100) > 0.001;
+  const canSaveBox = !!newBox.name && !!newBox.price && selectedItems.length > 0 && !evOutOfBounds && !oddsOutOfBounds;
+
   const handleSaveBox = () => {
       if(!newBox.name || !newBox.price) {
           alert("Please fill in box details");
@@ -618,9 +627,32 @@ export const AdminPanel: React.FC = () => {
           alert("Select at least one item for the box");
           return;
       }
+      const baseSelection = selectedItems.map(item => ({ ...item, chance: 0 }));
+      const refreshedItems = buildOddsWithRiskAndTargetEV(
+          baseSelection,
+          riskBalance,
+          clampedTargetEV,
+          Number(newBox.price)
+      );
+      const refreshedOddsTotal = calculateOddsTotal(refreshedItems);
+      const refreshedEv = calculateExpectedValue(refreshedItems);
+      const refreshedEvRatio = refreshedEv / Number(newBox.price);
+      const refreshedOddsOutOfBounds = Math.abs(refreshedOddsTotal - 100) > 0.001;
+      const refreshedEvOutOfBounds = Math.abs(refreshedEvRatio - clampedTargetEV) > EV_TOLERANCE;
+
+      setSelectedItems(refreshedItems);
+
+      if (refreshedOddsOutOfBounds) {
+          alert("Total odds must equal 100% before saving.");
+          return;
+      }
+      if (refreshedEvOutOfBounds) {
+          alert("Expected value is outside the allowed tolerance.");
+          return;
+      }
 
       // Clone items to decouple from global pool (ensuring box-specific chances)
-      const boxItems = selectedItems.map(i => ({...i}));
+      const boxItems = refreshedItems.map(i => ({...i}));
       
       // If setting as daily, unset others first (best effort approach)
       if (newBox.isDaily) {
@@ -639,7 +671,9 @@ export const AdminPanel: React.FC = () => {
           accentColor: newBox.accentColor || '#3b82f6',
           tag: newBox.tag,
           isDaily: newBox.isDaily,
-          items: boxItems
+          items: boxItems,
+          targetEV: clampedTargetEV,
+          riskLevel: riskBalance
       };
 
       if (editingBoxId) {
@@ -664,8 +698,8 @@ export const AdminPanel: React.FC = () => {
           isDaily: box.isDaily
       });
       setSelectedItems(box.items.map(i => ({...i})));
-      setRiskBalance(50);
-      setTargetEvPercent(100);
+      setRiskBalance(box.riskLevel ?? 50);
+      setTargetEV(box.targetEV ?? 0.85);
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -690,7 +724,7 @@ export const AdminPanel: React.FC = () => {
       setNewBox({ name: '', price: 0, image: 'https://picsum.photos/300', accentColor: '#3b82f6', isDaily: false });
       setSelectedItems([]);
       setRiskBalance(50);
-      setTargetEvPercent(100);
+      setTargetEV(0.85);
   };
 
   const toggleItemSelection = (item: CaseItem) => {
@@ -955,16 +989,18 @@ export const AdminPanel: React.FC = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Target EV (%)</label>
+                                        <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Target EV (ratio)</label>
                                         <input
                                             type="number"
-                                            min={50}
-                                            max={150}
-                                            placeholder="EV %"
+                                            min={0.5}
+                                            max={1.5}
+                                            step={0.01}
+                                            placeholder="0.85"
                                             className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold"
-                                            value={targetEvPercent}
-                                            onChange={e => setTargetEvPercent(Number(e.target.value))}
+                                            value={targetEV}
+                                            onChange={e => setTargetEV(Number(e.target.value))}
                                         />
+                                        <p className="text-[10px] text-gray-500 mt-1">0.85 = 85% payout target.</p>
                                     </div>
                                 </div>
                                 <div>
@@ -979,10 +1015,30 @@ export const AdminPanel: React.FC = () => {
                                     />
                                     <div className="flex justify-between text-[10px] text-gray-500">
                                         <span>Safer</span>
-                                        <span className="text-gray-300 font-semibold">{riskBalance}%</span>
+                                        <span className="text-gray-300 font-semibold">{getRiskLabel(riskBalance)}</span>
                                         <span>Riskier</span>
                                     </div>
                                 </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-gray-400">
+                                    <div className="bg-[#0b0e14] border border-gray-800 rounded p-2">
+                                        <div className="uppercase text-[10px] text-gray-500 font-bold">Live EV</div>
+                                        <div className="text-white font-semibold">{expectedValue.toFixed(2)}</div>
+                                    </div>
+                                    <div className="bg-[#0b0e14] border border-gray-800 rounded p-2">
+                                        <div className="uppercase text-[10px] text-gray-500 font-bold">Margin</div>
+                                        <div className="text-white font-semibold">{Number.isFinite(marginPercent) ? `${marginPercent.toFixed(2)}%` : '--'}</div>
+                                    </div>
+                                    <div className="bg-[#0b0e14] border border-gray-800 rounded p-2">
+                                        <div className="uppercase text-[10px] text-gray-500 font-bold">Total Odds</div>
+                                        <div className="text-white font-semibold">{oddsTotal.toFixed(2)}%</div>
+                                    </div>
+                                </div>
+                                {(evOutOfBounds || oddsOutOfBounds) && (
+                                    <div className="text-[11px] text-red-400">
+                                        {oddsOutOfBounds && <div>⚠ Total odds must equal 100%.</div>}
+                                        {evOutOfBounds && <div>⚠ EV must stay within ±1% of target.</div>}
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-2">
                                     <input 
                                         type="checkbox" 
@@ -1066,7 +1122,11 @@ export const AdminPanel: React.FC = () => {
                              )}
                         </div>
 
-                        <button onClick={handleSaveBox} className={`w-full py-3 ${editingBoxId ? 'bg-orange-600 hover:bg-orange-500' : 'bg-blue-600 hover:bg-blue-500'} text-white font-bold rounded shadow-lg`}>
+                        <button
+                            onClick={handleSaveBox}
+                            disabled={!canSaveBox}
+                            className={`w-full py-3 ${editingBoxId ? 'bg-orange-600 hover:bg-orange-500' : 'bg-blue-600 hover:bg-blue-500'} text-white font-bold rounded shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
                             {editingBoxId ? 'Update Box' : 'Create Box'}
                         </button>
                     </div>

@@ -5,6 +5,7 @@ import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { getRiskLabel } from '../utils/caseOdds';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -413,18 +414,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     <div className="w-full max-w-7xl mx-auto p-6 animate-in fade-in zoom-in-95 duration-300">
         {/* Breadcrumb */}
         <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-            <button 
-                onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
-                className="flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
-            >
-                <ChevronLeft className="w-4 h-4" /> All cases
-            </button>
-            <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-white">{box.name}</h2>
-                {isFree && <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded">FREE SPIN</span>}
+            <div className="flex items-center gap-4">
+                <button 
+                    onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
+                >
+                    <ChevronLeft className="w-4 h-4" /> All cases
+                </button>
+                <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-bold text-white">{box.name}</h2>
+                    {isFree && <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded">FREE SPIN</span>}
+                    <span className="bg-[#131825] text-gray-300 text-xs font-semibold px-2 py-0.5 rounded border border-gray-700">
+                      {getRiskLabel(box.riskLevel ?? 50)}
+                    </span>
+                </div>
             </div>
-        </div>
     </div>
 
         {/* SPINNER AREA */}
