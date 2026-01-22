@@ -97,8 +97,8 @@ export const buildOddsWithRiskAndTargetEV = (
   const safeAverage = Math.max(1, averagePrice);
   const desiredEvRatio = targetEV;
 
-  let lower = -3;
-  let upper = 3;
+  let lower = -1;
+  let upper = 1;
   let bestItems = buildOddsFromWeights(items, baseWeights);
   let bestDiff = Math.abs(calculateExpectedValue(bestItems) / price - desiredEvRatio);
 
@@ -106,8 +106,11 @@ export const buildOddsWithRiskAndTargetEV = (
   for (let i = 0; i < 28; i += 1) {
     const mid = (lower + upper) / 2;
     const biasedWeights = baseWeights.map((weight, index) => {
-      const valueFactor = Math.pow(Math.max(1, items[index].price) / safeAverage, mid);
-      return weight * valueFactor;
+      const itemPrice = Math.max(1, items[index].price);
+      const normalized = (itemPrice - safeAverage) / safeAverage;
+      const tilt = 1 + mid * normalized;
+      const safeTilt = clamp(tilt, 0.05, 20);
+      return weight * safeTilt;
     });
     const candidateItems = buildOddsFromWeights(items, biasedWeights);
     const candidateRatio = calculateExpectedValue(candidateItems) / price;
@@ -126,4 +129,41 @@ export const buildOddsWithRiskAndTargetEV = (
   }
 
   return bestItems;
+};
+
+export const runRiskBalanceDevCheck = () => {
+  const sampleItems: CaseItem[] = [
+    { name: 'Canvas Sticker', price: 2, image: '', rarity: 'common', chance: 0, color: '#9ca3af' },
+    { name: 'Spray Paint', price: 6, image: '', rarity: 'common', chance: 0, color: '#9ca3af' },
+    { name: 'Sports Bottle', price: 12, image: '', rarity: 'uncommon', chance: 0, color: '#22c55e' },
+    { name: 'Leather Wallet', price: 20, image: '', rarity: 'uncommon', chance: 0, color: '#22c55e' },
+    { name: 'Wireless Earbuds', price: 45, image: '', rarity: 'rare', chance: 0, color: '#3b82f6' },
+    { name: 'Smart Speaker', price: 80, image: '', rarity: 'rare', chance: 0, color: '#3b82f6' },
+    { name: 'Luxury Watch', price: 160, image: '', rarity: 'epic', chance: 0, color: '#a855f7' },
+    { name: 'Collector Drone', price: 320, image: '', rarity: 'legendary', chance: 0, color: '#fbbf24' }
+  ];
+
+  const targetEV = 0.65;
+  const price = 60;
+  const safer = buildOddsWithRiskAndTargetEV(sampleItems, 10, targetEV, price);
+  const riskier = buildOddsWithRiskAndTargetEV(sampleItems, 90, targetEV, price);
+
+  const summarize = (label: string, items: CaseItem[]) => {
+    const ev = calculateExpectedValue(items);
+    console.log(`${label} (EV ratio ${(ev / price).toFixed(3)})`);
+    items.forEach((item) => {
+      console.log(`  ${item.name}: ${item.chance.toFixed(3)}%`);
+    });
+  };
+
+  summarize('Risk 10', safer);
+  summarize('Risk 90', riskier);
+
+  const diffCount = sampleItems.reduce((count, item) => {
+    const saferChance = safer.find((entry) => entry.name === item.name)?.chance ?? 0;
+    const riskierChance = riskier.find((entry) => entry.name === item.name)?.chance ?? 0;
+    return count + (Math.abs(saferChance - riskierChance) > 0.5 ? 1 : 0);
+  }, 0);
+
+  console.log(`Items with >0.5% swing: ${diffCount}`);
 };
