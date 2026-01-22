@@ -33,11 +33,13 @@ export const CustomCaseCreator: React.FC = () => {
   const calculateConfig = () => {
       if (selectedItems.length === 0) return;
 
+      const baseItems = selectedItems.map(item => ({ ...item, chance: 0 }));
+
       // Risk only redistributes odds. Target EV stays locked after redistribution.
-      const baseItems = buildRiskAdjustedOdds(selectedItems, riskBalance);
-      const baseEv = calculateExpectedValue(baseItems);
+      const baseOdds = buildRiskAdjustedOdds(baseItems, riskBalance);
+      const baseEv = calculateExpectedValue(baseOdds);
       const calculatedPrice = baseEv / DEFAULT_TARGET_EV;
-      const updatedItems = buildOddsWithRiskAndTargetEV(selectedItems, riskBalance, DEFAULT_TARGET_EV, calculatedPrice);
+      const updatedItems = buildOddsWithRiskAndTargetEV(baseItems, riskBalance, DEFAULT_TARGET_EV, calculatedPrice);
 
       setSelectedItems(updatedItems);
       setBoxPrice(parseFloat(calculatedPrice.toFixed(2)));

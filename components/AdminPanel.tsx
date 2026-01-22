@@ -337,12 +337,13 @@ export const AdminPanel: React.FC = () => {
 
   const calculateBoxConfig = () => {
       if (selectedItems.length === 0) return;
-      const baseItems = buildRiskAdjustedOdds(selectedItems, riskBalance);
+      const baseSelection = selectedItems.map(item => ({ ...item, chance: 0 }));
+      const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
       const baseEv = calculateExpectedValue(baseItems);
       const calculatedPrice = (newBox.price && newBox.price > 0)
         ? newBox.price
         : baseEv / clampedTargetEV;
-      const updatedItems = buildOddsWithRiskAndTargetEV(selectedItems, riskBalance, clampedTargetEV, calculatedPrice);
+      const updatedItems = buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice);
 
       // Apply updates
       setSelectedItems(updatedItems);
@@ -606,8 +607,9 @@ export const AdminPanel: React.FC = () => {
           alert("Select at least one item for the box");
           return;
       }
+      const baseSelection = selectedItems.map(item => ({ ...item, chance: 0 }));
       const refreshedItems = buildOddsWithRiskAndTargetEV(
-          selectedItems,
+          baseSelection,
           riskBalance,
           clampedTargetEV,
           Number(newBox.price)
