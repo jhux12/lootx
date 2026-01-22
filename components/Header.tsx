@@ -118,7 +118,7 @@ export const Header: React.FC = () => {
         }
       `}</style>
 
-      <header className="flex items-center justify-between px-4 md:px-6 py-3 bg-[#080b14] border-b border-gray-800/50 sticky top-0 z-50">
+      <header className="fixed top-0 left-0 right-0 z-50 w-full flex items-center justify-between px-4 md:px-6 py-3 min-h-[72px] md:min-h-[80px] lg:min-h-[88px] bg-[#080b14]/95 border-b border-gray-800/50 backdrop-blur">
         <div className="flex items-center gap-4 lg:gap-10">
           
           {/* Mobile Menu Button */}
@@ -374,7 +374,7 @@ export const Header: React.FC = () => {
 
         {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 top-[60px] bg-[#0b0e14] z-40 lg:hidden flex flex-col p-4 animate-in slide-in-from-left-full duration-200">
+          <div className="fixed inset-0 top-[72px] md:top-[80px] bg-[#0b0e14] z-40 lg:hidden flex flex-col p-4 animate-in slide-in-from-left-full duration-200">
             <nav className="flex flex-col gap-2">
               <button 
                 onClick={() => { handleNav({ type: 'HOME' }); setIsMobileMenuOpen(false); }} 
