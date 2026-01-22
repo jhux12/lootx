@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
@@ -53,9 +53,11 @@ export const AdminPanel: React.FC = () => {
     updateUserProgress,
     sendAdminNotification,
     updateShipmentStatus,
-    updateUserAdminData
+    updateUserAdminData,
+    bonusSettings,
+    updateBonusSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'bonuses'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -101,6 +103,8 @@ export const AdminPanel: React.FC = () => {
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [timelineFilter, setTimelineFilter] = useState<'all' | 'ledger' | 'inventory' | 'admin'>('all');
   const [timelineSearch, setTimelineSearch] = useState('');
+  const [bonusDraft, setBonusDraft] = useState(bonusSettings);
+  const [bonusSaveNotice, setBonusSaveNotice] = useState(false);
   const EV_TOLERANCE = 0.01;
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
@@ -252,6 +256,10 @@ export const AdminPanel: React.FC = () => {
           return next;
       });
   }, [users]);
+
+  useEffect(() => {
+      setBonusDraft(bonusSettings);
+  }, [bonusSettings]);
 
   const handleSaveItem = async () => {
       if(!newItem.name || !newItem.price) return;
@@ -736,6 +744,12 @@ export const AdminPanel: React.FC = () => {
       }
   };
 
+  const handleSaveBonusSettings = () => {
+      updateBonusSettings(bonusDraft);
+      setBonusSaveNotice(true);
+      window.setTimeout(() => setBonusSaveNotice(false), 3000);
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto p-6 animate-in fade-in duration-300">
       
@@ -777,6 +791,12 @@ export const AdminPanel: React.FC = () => {
                        <Truck className="w-4 h-4" /> Shipment Manager
                    </button>
                    <button 
+                     onClick={() => setActiveTab('bonuses')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'bonuses' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <Sparkles className="w-4 h-4" /> Bonuses
+                   </button>
+                   <button 
                      onClick={() => setActiveTab('settings')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'settings' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -798,6 +818,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'items' && 'Item Manager'}
                     {activeTab === 'boxes' && 'Box Manager'}
                     {activeTab === 'shipments' && 'Shipment Manager'}
+                    {activeTab === 'bonuses' && 'Bonuses & XP'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
             </div>
@@ -1805,6 +1826,174 @@ export const AdminPanel: React.FC = () => {
                             })}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* TAB: BONUSES */}
+            {activeTab === 'bonuses' && (
+                <div className="space-y-6">
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">XP Distribution & Leveling</h3>
+                                <p className="text-sm text-gray-400">
+                                    Tune how players earn XP and how quickly they level up. All coin values are shown in coins.
+                                </p>
+                            </div>
+                            <div className="text-xs text-gray-500 bg-[#0b0e14] border border-gray-800 rounded-lg px-3 py-2">
+                                Active XP Curve: Base {bonusDraft.levelBaseXp} XP • Multiplier {bonusDraft.levelXpMultiplier.toFixed(2)}x
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP per 100 coins wagered</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        step={1}
+                                        value={bonusDraft.xpPer100Coins}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, xpPer100Coins: Number(event.target.value) }))}
+                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        Current distribution: {bonusDraft.xpPer100Coins} XP for every 100 coins wagered.
+                                    </p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP per case opened</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        step={1}
+                                        value={bonusDraft.xpPerCaseOpen}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, xpPerCaseOpen: Number(event.target.value) }))}
+                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        Bonus XP for engagement loops and streaks.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Base XP to reach level 2</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        step={10}
+                                        value={bonusDraft.levelBaseXp}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, levelBaseXp: Number(event.target.value) }))}
+                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Leveling multiplier</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        step={0.01}
+                                        value={bonusDraft.levelXpMultiplier}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, levelXpMultiplier: Number(event.target.value) }))}
+                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        Higher values mean each level needs more XP than the last.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Rakeback Settings</h3>
+                                <p className="text-sm text-gray-400">
+                                    Configure unlock levels and bonus amounts. Coin values are displayed in coins only.
+                                </p>
+                            </div>
+                            <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+                                Unlock at level {bonusDraft.rakebackUnlockLevel}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Level to unlock rakeback</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        step={1}
+                                        value={bonusDraft.rakebackUnlockLevel}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, rakebackUnlockLevel: Number(event.target.value) }))}
+                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Base rakeback rate (%)</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        step={0.1}
+                                        value={bonusDraft.rakebackBasePercent}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, rakebackBasePercent: Number(event.target.value) }))}
+                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        Applies to net wagers once the unlock level is reached.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Weekly bonus payout (coins)</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        step={100}
+                                        value={bonusDraft.rakebackBonusCoins}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, rakebackBonusCoins: Number(event.target.value) }))}
+                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        Boost power users with a fixed coin grant.
+                                    </p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Daily rakeback cap (coins)</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        step={100}
+                                        value={bonusDraft.rakebackDailyCapCoins}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, rakebackDailyCapCoins: Number(event.target.value) }))}
+                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                    />
+                                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 mt-2">
+                                        <span>Cap preview:</span>
+                                        <span className="text-gray-200 font-semibold">{bonusDraft.rakebackDailyCapCoins.toLocaleString()} coins</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-800 mt-6 pt-4">
+                            <div className="text-xs text-gray-500">
+                                Rakeback bonus: {bonusDraft.rakebackBonusCoins.toLocaleString()} coins • Base rate: {bonusDraft.rakebackBasePercent}%
+                            </div>
+                            <button
+                                onClick={handleSaveBonusSettings}
+                                className="w-full sm:w-auto px-5 py-2 bg-brand-purple/20 text-brand-purple border border-brand-purple/40 rounded-lg text-sm font-bold hover:bg-brand-purple hover:text-white transition-colors"
+                            >
+                                Save bonus settings
+                            </button>
+                            {bonusSaveNotice && (
+                                <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+                                    Bonus settings saved.
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
             
