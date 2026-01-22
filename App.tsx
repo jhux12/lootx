@@ -150,7 +150,7 @@ function App() {
         <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
           <Header />
           
-          <div className="flex flex-1">
+          <div className="flex flex-1 pt-[72px] md:pt-[80px] lg:pt-[88px]">
             <MainContent />
             <ChatSidebar />
           </div>
