@@ -17,7 +17,8 @@ export const Bonuses: React.FC = () => {
     isAuthenticated,
     setShowLoginModal,
     updateUserFlags,
-    generateAffiliateCode
+    generateAffiliateCode,
+    bonusSettings
   } = useGame();
   const { playSound } = useSound();
   const progress = calculateLevelProgress(user.xp || 0);
@@ -32,7 +33,7 @@ export const Bonuses: React.FC = () => {
   
   // Calculate if claimed
   const canClaim = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
-  const rakebackUnlocked = user.level >= 10;
+  const rakebackUnlocked = user.level >= bonusSettings.rakebackUnlockLevel;
   const affiliateUnlocked = user.level >= 3;
   const availableRakeback = Number(user.rakebackBalance ?? 0);
   const hasReferral = Boolean(user.referredBy);
@@ -302,7 +303,7 @@ export const Bonuses: React.FC = () => {
                       </div>
                       <div>
                           <h3 className="font-bold text-gray-300">Rakeback</h3>
-                          <p className="text-xs text-gray-600">Earn 1% back on every bet</p>
+                          <p className="text-xs text-gray-600">Earn {bonusSettings.rakebackBasePercent}% back on every bet</p>
                       </div>
                   </div>
 
@@ -313,7 +314,7 @@ export const Bonuses: React.FC = () => {
                       className="text-3xl font-bold text-white"
                       iconClassName="w-5 h-5"
                     />
-                    <div className="text-xs text-gray-500">Unlocked at level 10</div>
+                    <div className="text-xs text-gray-500">Unlocked at level {bonusSettings.rakebackUnlockLevel}</div>
                     <button 
                       onClick={handleClaimRakeback}
                       disabled={!rakebackUnlocked || availableRakeback <= 0}
@@ -326,7 +327,7 @@ export const Bonuses: React.FC = () => {
                   {!rakebackUnlocked && (
                     <div className="absolute inset-0 bg-[#0b0e14]/80 backdrop-blur-[1px] flex flex-col items-center justify-center text-center p-4">
                         <Lock className="w-8 h-8 text-gray-600 mb-2" />
-                        <div className="text-sm font-bold text-gray-400">Unlocks at Level 10</div>
+                        <div className="text-sm font-bold text-gray-400">Unlocks at Level {bonusSettings.rakebackUnlockLevel}</div>
                         <div className="w-32 h-1.5 bg-gray-800 rounded-full mt-2 overflow-hidden">
                             <div className="h-full bg-gray-600 w-[60%]"></div>
                         </div>
