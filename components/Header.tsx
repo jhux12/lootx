@@ -21,7 +21,7 @@ import {
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
-import pullzLogo from '../assets/pullz-p.png';
+import pullzLogo from '../assets/pullz-p2.png';
 
 export const Header: React.FC = () => {
   const {
@@ -374,29 +374,29 @@ export const Header: React.FC = () => {
 
         {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 top-[72px] md:top-[80px] bg-[#0b0e14] z-40 lg:hidden flex flex-col p-4 animate-in slide-in-from-left-full duration-200">
-            <nav className="flex flex-col gap-2">
+          <div className="fixed inset-0 top-0 pt-[72px] md:pt-[80px] bg-[#0b0e14] opacity-100 backdrop-blur-none z-40 lg:hidden flex flex-col animate-in slide-in-from-left-full duration-200">
+            <nav className="flex flex-col gap-2 bg-[#0b0e14] w-full flex-1 px-4 pb-4">
               <button 
                 onClick={() => { handleNav({ type: 'HOME' }); setIsMobileMenuOpen(false); }} 
-                className="flex items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-white font-medium"
+                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-white font-medium"
               >
                 <PackageOpen className="w-5 h-5 text-blue-500" /> Cases
               </button>
               <button 
                 onClick={() => { handleNav({ type: 'BATTLES' }); setIsMobileMenuOpen(false); }} 
-                className="flex items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
+                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
               >
                 <Swords className="w-5 h-5 text-purple-500" /> Battles
               </button>
               <button 
                 onClick={() => { handleNav({ type: 'LEADERBOARD' }); setIsMobileMenuOpen(false); }} 
-                className="flex items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
+                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
               >
                 <Trophy className="w-5 h-5 text-yellow-500" /> Leaderboard
               </button>
               <button 
                 onClick={() => { handleNav({ type: 'BONUSES' }); setIsMobileMenuOpen(false); }} 
-                className="flex items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
+                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
               >
                 <Gift className="w-5 h-5 text-green-500" /> Bonuses
               </button>
@@ -406,7 +406,7 @@ export const Header: React.FC = () => {
                   handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' })); 
                   if (isAuthenticated) setIsMobileMenuOpen(false);
                 }} 
-                className="flex items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-brand-purple font-medium"
+                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-brand-purple font-medium"
               >
                 <FlaskConical className="w-5 h-5" /> Case Lab
               </button>
@@ -414,7 +414,7 @@ export const Header: React.FC = () => {
               {user.isAdmin && (
                 <button 
                   onClick={() => { handleNav({ type: 'ADMIN' }); setIsMobileMenuOpen(false); }} 
-                  className="flex items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-red-400 font-medium"
+                  className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-red-400 font-medium"
                 >
                   <ShieldCheck className="w-5 h-5 text-red-500" /> Admin Panel
                 </button>
@@ -425,13 +425,13 @@ export const Header: React.FC = () => {
                 <>
                   <button 
                     onClick={() => { handleNav({ type: 'PROFILE' }); setIsMobileMenuOpen(false); }} 
-                    className="flex items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
+                    className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
                   >
                     <User className="w-5 h-5 text-gray-400" /> Profile
                   </button>
                   <button 
                     onClick={() => { logout(); setIsMobileMenuOpen(false); }} 
-                    className="flex items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-red-400 font-medium"
+                    className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-red-400 font-medium"
                   >
                     <LogOut className="w-5 h-5" /> Sign out
                   </button>
@@ -439,7 +439,7 @@ export const Header: React.FC = () => {
               ) : (
                 <button 
                   onClick={() => { setShowLoginModal(true); setIsMobileMenuOpen(false); }} 
-                  className="flex items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg text-white font-medium justify-center"
+                  className="flex w-full items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg text-white font-medium justify-center"
                 >
                   Sign In
                 </button>
