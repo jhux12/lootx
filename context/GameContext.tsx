@@ -119,6 +119,98 @@ const safeWriteLocalStorage = (key: string, value: unknown) => {
   }
 };
 
+const parseBooleanSearchParam = (value: string | null) => {
+  if (!value) return false;
+  return value === '1' || value.toLowerCase() === 'true';
+};
+
+const getViewFromLocation = (pathname: string, search: string): ViewState => {
+  const trimmed = pathname.replace(/^\/+|\/+$/g, '');
+  const segments = trimmed ? trimmed.split('/') : [];
+  const [primary, secondary] = segments;
+  const params = new URLSearchParams(search);
+
+  if (!primary || primary === 'home') {
+    return { type: 'HOME' };
+  }
+
+  if (primary === 'cases') {
+    if (secondary) {
+      return {
+        type: 'CASE_OPENING',
+        boxId: secondary,
+        isFree: parseBooleanSearchParam(params.get('free'))
+      };
+    }
+    return { type: 'HOME' };
+  }
+
+  if (primary === 'battles') {
+    if (secondary) {
+      return { type: 'BATTLE_ARENA', battleId: secondary };
+    }
+    return { type: 'BATTLES' };
+  }
+
+  if (primary === 'profile') {
+    if (secondary) {
+      return { type: 'PROFILE', userId: secondary };
+    }
+    return { type: 'PROFILE' };
+  }
+
+  if (primary === 'inventory') {
+    return { type: 'INVENTORY' };
+  }
+
+  if (primary === 'bonuses') {
+    return { type: 'BONUSES' };
+  }
+
+  if (primary === 'leaderboard') {
+    return { type: 'LEADERBOARD' };
+  }
+
+  if (primary === 'admin') {
+    return { type: 'ADMIN' };
+  }
+
+  if (primary === 'case-lab' || primary === 'caselab') {
+    return { type: 'CUSTOM_CREATOR' };
+  }
+
+  return { type: 'HOME' };
+};
+
+const getPathFromView = (view: ViewState): string => {
+  switch (view.type) {
+    case 'HOME':
+      return '/';
+    case 'PROFILE':
+      return view.userId ? `/profile/${view.userId}` : '/profile';
+    case 'INVENTORY':
+      return '/inventory';
+    case 'BONUSES':
+      return '/bonuses';
+    case 'ADMIN':
+      return '/admin';
+    case 'LEADERBOARD':
+      return '/leaderboard';
+    case 'CUSTOM_CREATOR':
+      return '/case-lab';
+    case 'CASE_OPENING': {
+      const search = view.isFree ? '?free=true' : '';
+      return `/cases/${view.boxId}${search}`;
+    }
+    case 'BATTLE_ARENA':
+      return `/battles/${view.battleId}`;
+    case 'BATTLES':
+      return '/battles';
+    default:
+      return '/';
+  }
+};
+
 type PersistUserData = Partial<{
   balance: number;
   inventory: InventoryItem[];
@@ -349,7 +441,23 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   
-  const [view, setView] = useState<ViewState>({ type: 'HOME' });
+  const [view, setViewState] = useState<ViewState>(() => {
+    if (typeof window === 'undefined') {
+      return { type: 'HOME' };
+    }
+    return getViewFromLocation(window.location.pathname, window.location.search);
+  });
+
+  const setView = (nextView: ViewState) => {
+    setViewState(nextView);
+    if (typeof window !== 'undefined') {
+      const nextPath = getPathFromView(nextView);
+      const currentPath = `${window.location.pathname}${window.location.search}`;
+      if (nextPath !== currentPath) {
+        window.history.pushState({}, '', nextPath);
+      }
+    }
+  };
   
   // Initialize Items
   const [items, setItems] = useState<CaseItem[]>(() => {
@@ -381,6 +489,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [battles, setBattles] = useState<Battle[]>([]);
 
   // -- FIREBASE SYNC --
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePopState = () => {
+      setViewState(getViewFromLocation(window.location.pathname, window.location.search));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {

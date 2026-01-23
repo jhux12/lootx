@@ -20,11 +20,17 @@ const AVATAR_PRESETS = [
     'https://picsum.photos/id/237/200/200',
 ];
 
-export const Profile: React.FC = () => {
+type ProfileTab = 'topPulls' | 'inventory' | 'community' | 'settings';
+
+interface ProfileProps {
+  initialTab?: ProfileTab;
+}
+
+export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => {
   const { user, users, inventory, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem } = useGame();
   const { playSound } = useSound();
   
-  const [activeTab, setActiveTab] = useState<'topPulls' | 'inventory' | 'community' | 'settings'>('topPulls');
+  const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const [inventoryFilter, setInventoryFilter] = useState<'inventory' | 'processing' | 'shipped'>('inventory');
   const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
   const [communitySearch, setCommunitySearch] = useState('');
@@ -79,6 +85,10 @@ export const Profile: React.FC = () => {
   useEffect(() => {
       setActivePeopleTab('followers');
   }, [displayUser.id]);
+
+  useEffect(() => {
+      setActiveTab(initialTab);
+  }, [initialTab, displayUser.id]);
 
   const inventorySource = isOwnProfile ? inventory : displayUser.inventory ?? [];
   const normalizedInventory = inventorySource
