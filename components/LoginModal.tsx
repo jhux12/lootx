@@ -14,6 +14,8 @@ export const LoginModal: React.FC = () => {
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAgeConfirmed, setIsAgeConfirmed] = useState(false);
+  const [wantsEmailAlerts, setWantsEmailAlerts] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +42,8 @@ export const LoginModal: React.FC = () => {
   const toggleMode = () => {
       setMode(prev => prev === 'login' ? 'register' : 'login');
       setError(null);
+      setIsAgeConfirmed(false);
+      setWantsEmailAlerts(false);
       playSound('click');
   };
 
@@ -125,9 +129,39 @@ export const LoginModal: React.FC = () => {
                 </div>
             </div>
 
+            {mode === 'register' && (
+                <div className="space-y-3 text-sm text-gray-300">
+                    <label className="flex items-start gap-3">
+                        <input
+                            type="checkbox"
+                            className="mt-1 h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-green-500 focus:ring-green-400"
+                            checked={isAgeConfirmed}
+                            onChange={(event) => setIsAgeConfirmed(event.target.checked)}
+                            required
+                        />
+                        <span>
+                            I am 18+ and have read the{' '}
+                            <a href="/terms-of-use" className="text-white underline hover:text-gray-200">
+                                Terms of Use
+                            </a>
+                            .
+                        </span>
+                    </label>
+                    <label className="flex items-start gap-3">
+                        <input
+                            type="checkbox"
+                            className="mt-1 h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-green-500 focus:ring-green-400"
+                            checked={wantsEmailAlerts}
+                            onChange={(event) => setWantsEmailAlerts(event.target.checked)}
+                        />
+                        <span>Send me valuable email alerts about new drops and battles.</span>
+                    </label>
+                </div>
+            )}
+
             <button 
                 type="submit" 
-                disabled={isLoading}
+                disabled={isLoading || (mode === 'register' && !isAgeConfirmed)}
                 className={`w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${mode === 'login' ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20' : 'bg-green-600 hover:bg-green-500 shadow-green-600/20'}`}
             >
                 {isLoading ? 'Processing...' : (mode === 'login' ? 'Sign In' : 'Create Account')}

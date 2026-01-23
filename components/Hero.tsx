@@ -3,7 +3,6 @@ import { useGame } from '../context/GameContext';
 
 export const Hero: React.FC = () => {
   const { boxes } = useGame();
-
   const [topLeftImage, bottomRightImage] = useMemo(() => {
     const availableImages = boxes
       .map((box) => box.image)
@@ -62,7 +61,7 @@ export const Hero: React.FC = () => {
           The platform where players design boxes, compete in real-time battles, and chase rare rewards.
         </p>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 w-full items-center justify-center">
           <button className="px-8 py-3 bg-green-500 hover:bg-green-400 text-black font-extrabold rounded-lg shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all transform hover:-translate-y-1">
             Sign up
           </button>
