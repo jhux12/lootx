@@ -15,6 +15,7 @@ import { LoginModal } from './components/LoginModal';
 import { CustomCaseCreator } from './components/CustomCaseCreator';
 import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
+import { BrandLockup } from './components/BrandLockup';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider } from './context/SoundContext';
 import { ShieldAlert, MessageCircle } from 'lucide-react';
@@ -146,6 +147,13 @@ const MainContent: React.FC = () => {
 
       {/* Footer */}
       <footer className="mt-auto border-t border-gray-800/50 py-8 text-center text-gray-600 text-sm">
+          <div className="flex justify-center mb-6 px-4">
+            <BrandLockup
+              className="justify-center"
+              logoClassName="h-10 md:h-12"
+              textClassName="text-lg"
+            />
+          </div>
           <div className="flex justify-center gap-6 mb-4 font-medium flex-wrap px-4">
             <span className="cursor-pointer hover:text-gray-400">Terms of Service</span>
             <span className="cursor-pointer hover:text-gray-400">Privacy Policy</span>
