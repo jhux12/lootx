@@ -4,19 +4,19 @@ import { useGame } from '../context/GameContext';
 import { CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
-import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, getRiskLabel } from '../utils/caseOdds';
+import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue } from '../utils/caseOdds';
 
 export const CustomCaseCreator: React.FC = () => {
   const { createItem, createUserBox, items, setView } = useGame();
   const { playSound } = useSound();
 
   const DEFAULT_TARGET_EV = 0.85;
+  const FIXED_RISK_LEVEL = 50;
   const [boxName, setBoxName] = useState('');
   const [boxPrice, setBoxPrice] = useState<number>(0);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [lastCalculated, setLastCalculated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [riskBalance, setRiskBalance] = useState(50);
 
   const toggleItemSelection = (item: CaseItem) => {
       playSound('click');
@@ -36,10 +36,15 @@ export const CustomCaseCreator: React.FC = () => {
       const baseItems = selectedItems.map(item => ({ ...item, chance: 0 }));
 
       // Risk only redistributes odds. Target EV stays locked after redistribution.
-      const baseOdds = buildRiskAdjustedOdds(baseItems, riskBalance);
+      const baseOdds = buildRiskAdjustedOdds(baseItems, FIXED_RISK_LEVEL);
       const baseEv = calculateExpectedValue(baseOdds);
       const calculatedPrice = baseEv / DEFAULT_TARGET_EV;
-      const updatedItems = buildOddsWithRiskAndTargetEV(baseItems, riskBalance, DEFAULT_TARGET_EV, calculatedPrice);
+      const updatedItems = buildOddsWithRiskAndTargetEV(
+        baseItems,
+        FIXED_RISK_LEVEL,
+        DEFAULT_TARGET_EV,
+        calculatedPrice
+      );
 
       setSelectedItems(updatedItems);
       setBoxPrice(parseFloat(calculatedPrice.toFixed(2)));
@@ -70,7 +75,7 @@ export const CustomCaseCreator: React.FC = () => {
           tag: 'New',
           items: selectedItems,
           targetEV: DEFAULT_TARGET_EV,
-          riskLevel: riskBalance
+          riskLevel: FIXED_RISK_LEVEL
       };
 
       createUserBox(newBox);
@@ -168,26 +173,6 @@ export const CustomCaseCreator: React.FC = () => {
                         onChange={(e) => setBoxName(e.target.value)}
                         className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all"
                       />
-                  </div>
-
-                  <div className="mb-6">
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Risk Balance</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={riskBalance}
-                        onChange={(e) => {
-                          setRiskBalance(Number(e.target.value));
-                          setLastCalculated(false);
-                        }}
-                        className="w-full accent-brand-purple"
-                      />
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-500 mt-1">
-                          <span>Safer</span>
-                          <span className="text-gray-300 font-semibold">{getRiskLabel(riskBalance)}</span>
-                          <span>Riskier</span>
-                      </div>
                   </div>
 
                   <div className="mb-6">
