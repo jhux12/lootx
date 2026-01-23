@@ -4,7 +4,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { getRiskLabel } from '../utils/caseOdds';
-import caselabImage from '../assets/caselab.jpg';
+import caselabImage from '../assets/caselab.gif';
 
 export const BoxGrid: React.FC = () => {
   const { setView, boxes } = useGame();
