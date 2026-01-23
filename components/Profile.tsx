@@ -35,6 +35,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
   const [communitySearch, setCommunitySearch] = useState('');
   const [topPullsPublic, setTopPullsPublic] = useState(user.topPullsPublic ?? false);
+  const [sellOffers, setSellOffers] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedUserId = view.type === 'PROFILE' ? view.userId : undefined;
@@ -105,6 +106,18 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
     if (inventoryFilter === 'shipped') return item.status === 'shipped';
     return item.status === 'available';
   });
+
+  useEffect(() => {
+    setSellOffers((prev) => {
+      const next: Record<string, boolean> = {};
+      normalizedInventory.forEach((item) => {
+        if (prev[item.instanceId]) {
+          next[item.instanceId] = true;
+        }
+      });
+      return next;
+    });
+  }, [normalizedInventory]);
 
   const topPulls = [...normalizedInventory]
     .sort((a, b) => b.price - a.price)
@@ -517,7 +530,15 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                           </button>
                                           {inventoryFilter === 'inventory' && (
                                               <button
-                                                onClick={() => sellItem(item.instanceId, item.price)}
+                                                onClick={() => {
+                                                  if (!sellOffers[item.instanceId]) {
+                                                    setSellOffers((prev) => ({ ...prev, [item.instanceId]: true }));
+                                                    return;
+                                                  }
+                                                  const sellBackPrice = Math.round(item.price * 0.82);
+                                                  sellItem(item.instanceId, sellBackPrice);
+                                                  setSellOffers((prev) => ({ ...prev, [item.instanceId]: false }));
+                                                }}
                                                 disabled={!canSell}
                                                 className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border flex items-center justify-center gap-2 ${
                                                   canSell
@@ -525,13 +546,19 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                                     : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
                                                 }`}
                                               >
-                                                Sell back
-                                                <CoinAmount
-                                                  amount={item.price}
-                                                  formatOptions={{ maximumFractionDigits: 0 }}
-                                                  className="text-gray-100"
-                                                  iconClassName="w-3 h-3"
-                                                />
+                                                <span className="flex flex-col items-center gap-1 text-center">
+                                                  <span className="uppercase tracking-wide text-[10px]">
+                                                    {sellOffers[item.instanceId] ? 'Accept buy back offer' : 'Generate buy back offer'}
+                                                  </span>
+                                                  {sellOffers[item.instanceId] && (
+                                                    <CoinAmount
+                                                      amount={Math.round(item.price * 0.82)}
+                                                      formatOptions={{ maximumFractionDigits: 0 }}
+                                                      className="text-gray-100"
+                                                      iconClassName="w-3 h-3"
+                                                    />
+                                                  )}
+                                                </span>
                                               </button>
                                           )}
                                           {inventoryFilter === 'shipped' && (
