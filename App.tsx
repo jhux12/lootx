@@ -4,6 +4,7 @@ import { LiveTicker } from './components/LiveTicker';
 import { ChatSidebar } from './components/ChatSidebar';
 import { Hero } from './components/Hero';
 import { BoxGrid } from './components/BoxGrid';
+import { BoxCatalog } from './components/BoxCatalog';
 import { BattlesList } from './components/BattlesList';
 import { CaseOpening } from './components/CaseOpening';
 import { Profile } from './components/Profile';
@@ -42,6 +43,12 @@ const MainContent: React.FC = () => {
                <p className="text-gray-400">Compete against other players for the best drops.</p>
            </div>
            <BattlesList />
+        </div>
+      )}
+
+      {view.type === 'BOXES' && (
+        <div className="w-full">
+          <BoxCatalog />
         </div>
       )}
 

@@ -61,6 +61,7 @@ export interface MysteryBox {
   price: number;
   image: string;
   tag?: 'New' | 'Hot' | 'Sale';
+  tags?: string[];
   accentColor: string;
   items: CaseItem[];
   targetEV?: number;
@@ -187,6 +188,7 @@ export interface AppNotification {
 
 export type ViewState = 
   | { type: 'HOME' }
+  | { type: 'BOXES' }
   | { type: 'PROFILE'; userId?: string }
   | { type: 'INVENTORY' }
   | { type: 'BONUSES' }
