@@ -702,62 +702,69 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         )}
         {/* Win Modal Overlay */}
         {showWinModal && wonItem && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={closeWinModal}></div>
-                <div className="relative bg-[#151a23] border border-gray-700 p-8 rounded-2xl max-w-md w-full flex flex-col items-center animate-in zoom-in-95 duration-300 shadow-2xl">
-                     <button onClick={closeWinModal} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
-                     
-                     <div className="text-2xl font-black italic text-white mb-2 uppercase tracking-wider">
-                         You Won!
-                     </div>
-                     {isDemoSpin && (
-                        <div className="text-xs font-semibold uppercase tracking-wide text-emerald-300 mb-4">
-                            Demo spin — rewards not granted
-                        </div>
-                     )}
-                     
-                     <div className={`relative w-64 h-64 flex items-center justify-center ${isDemoSpin ? 'mb-4' : 'mb-6'}`}>
-                         <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-white/5 rounded-full animate-pulse"></div>
-                         <div className="absolute inset-10 blur-3xl opacity-40 rounded-full" style={{ backgroundColor: wonItem.color }}></div>
-                         <img src={wonItem.image} alt={wonItem.name} className="relative z-10 w-48 h-48 object-contain drop-shadow-2xl scale-110" />
-                     </div>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" onClick={closeWinModal}></div>
+                <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111722] to-[#0b0f18] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] animate-in zoom-in-95 duration-300">
+                     <div className="absolute inset-0 opacity-60" style={{ background: `radial-gradient(circle at top, ${wonItem.color}22, transparent 60%)` }}></div>
+                     <button onClick={closeWinModal} className="absolute right-4 top-4 rounded-full border border-white/10 bg-black/30 p-2 text-gray-300 transition hover:border-white/30 hover:text-white">
+                        <X className="w-4 h-4" />
+                     </button>
 
-                     <div className={`text-center ${isDemoSpin ? 'mb-6' : 'mb-8'}`}>
-                         <h3 className="text-xl font-bold text-white mb-1">{wonItem.name}</h3>
-                         <CoinAmount
-                           amount={wonItem.price}
-                           formatOptions={{ maximumFractionDigits: 0 }}
-                           className="text-gray-400 font-medium justify-center"
-                           iconClassName="w-4 h-4"
-                         />
-                     </div>
-
-                     {isDemoSpin ? (
-                        <button onClick={closeWinModal} className="w-full py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
-                            Close
-                        </button>
-                     ) : (
-                        <div className="flex flex-col gap-3 w-full sm:flex-row">
-                            <button onClick={handleSell} className="flex-1 py-3 px-4 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
-                                <span className="flex flex-col items-center justify-center gap-1">
-                                  <span className="text-sm uppercase tracking-wide">
-                                    {sellOfferGenerated ? 'Accept buy back offer' : 'Generate buy back offer'}
-                                  </span>
-                                  {sellOfferGenerated && (
-                                    <CoinAmount
-                                      amount={Math.round(wonItem.price * 0.82)}
-                                      formatOptions={{ maximumFractionDigits: 0 }}
-                                      className="text-gray-300"
-                                      iconClassName="w-4 h-4"
-                                    />
-                                  )}
-                                </span>
-                            </button>
-                            <button onClick={handleKeep} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg shadow-blue-600/20 transition-colors">
-                                Keep Item
-                            </button>
+                     <div className="relative flex flex-col items-center px-5 pb-6 pt-10 sm:px-8 sm:pb-8">
+                        <div className="flex flex-col items-center gap-2 text-center">
+                            <div className="text-xs uppercase tracking-[0.3em] text-gray-400">Case result</div>
+                            <div className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider">You Won</div>
+                            {isDemoSpin && (
+                                <div className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-200">
+                                    Demo spin — rewards not granted
+                                </div>
+                            )}
                         </div>
-                     )}
+
+                        <div className={`relative mt-6 flex h-52 w-52 items-center justify-center sm:h-60 sm:w-60 ${isDemoSpin ? 'mb-4' : 'mb-6'}`}>
+                            <div className="absolute inset-0 rounded-full border border-white/10 bg-white/5"></div>
+                            <div className="absolute inset-6 rounded-full blur-3xl opacity-50" style={{ backgroundColor: wonItem.color }}></div>
+                            <div className="absolute inset-4 rounded-full bg-gradient-to-br from-white/10 to-transparent"></div>
+                            <img src={wonItem.image} alt={wonItem.name} className="relative z-10 h-36 w-36 object-contain drop-shadow-2xl sm:h-44 sm:w-44" />
+                        </div>
+
+                        <div className={`w-full text-center ${isDemoSpin ? 'mb-6' : 'mb-7'}`}>
+                            <h3 className="text-xl sm:text-2xl font-bold text-white">{wonItem.name}</h3>
+                            <CoinAmount
+                              amount={wonItem.price}
+                              formatOptions={{ maximumFractionDigits: 0 }}
+                              className="mt-2 text-gray-300 font-semibold justify-center"
+                              iconClassName="w-4 h-4"
+                            />
+                        </div>
+
+                        {isDemoSpin ? (
+                            <button onClick={closeWinModal} className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10">
+                                Close
+                            </button>
+                        ) : (
+                            <div className="flex w-full flex-col gap-3 sm:flex-row">
+                                <button onClick={handleSell} className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10">
+                                    <span className="flex flex-col items-center justify-center gap-1">
+                                      <span className="text-[11px] uppercase tracking-wide text-gray-400">
+                                        {sellOfferGenerated ? 'Accept buy back offer' : 'Generate buy back offer'}
+                                      </span>
+                                      {sellOfferGenerated && (
+                                        <CoinAmount
+                                          amount={Math.round(wonItem.price * 0.82)}
+                                          formatOptions={{ maximumFractionDigits: 0 }}
+                                          className="text-gray-200"
+                                          iconClassName="w-4 h-4"
+                                        />
+                                      )}
+                                    </span>
+                                </button>
+                                <button onClick={handleKeep} className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-500 hover:to-blue-400">
+                                    Keep Item
+                                </button>
+                            </div>
+                        )}
+                     </div>
                 </div>
             </div>
         )}
