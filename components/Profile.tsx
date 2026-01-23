@@ -25,6 +25,7 @@ export const Profile: React.FC = () => {
   const { playSound } = useSound();
   
   const [activeTab, setActiveTab] = useState<'topPulls' | 'inventory' | 'community' | 'settings'>('topPulls');
+  const [inventoryFilter, setInventoryFilter] = useState<'inventory' | 'processing' | 'shipped'>('inventory');
   const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
   const [communitySearch, setCommunitySearch] = useState('');
   const [topPullsPublic, setTopPullsPublic] = useState(user.topPullsPublic ?? false);
@@ -88,6 +89,12 @@ export const Profile: React.FC = () => {
       obtainedAt: item.obtainedAt ?? 0
     }))
     .sort((a, b) => b.obtainedAt - a.obtainedAt);
+
+  const filteredInventory = normalizedInventory.filter((item) => {
+    if (inventoryFilter === 'processing') return item.status === 'shipping';
+    if (inventoryFilter === 'shipped') return item.status === 'shipped';
+    return item.status === 'available';
+  });
 
   const topPulls = [...normalizedInventory]
     .sort((a, b) => b.price - a.price)
@@ -359,19 +366,40 @@ export const Profile: React.FC = () => {
                           <h3 className="text-lg font-bold text-white">Inventory</h3>
                           <p className="text-sm text-gray-500">Manage your items, ship rewards, or sell them back for coins.</p>
                       </div>
-                      <button 
-                        onClick={() => setView({ type: 'BOXES' })}
-                        className="inline-flex items-center justify-center px-4 py-2 bg-brand-purple text-white rounded-lg font-bold text-sm hover:bg-purple-600 transition-colors"
-                      >
-                        Open Boxes
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                          {(['inventory', 'processing', 'shipped'] as const).map((filter) => (
+                              <button
+                                  key={filter}
+                                  onClick={() => setInventoryFilter(filter)}
+                                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-colors ${
+                                      inventoryFilter === filter
+                                          ? 'bg-brand-purple text-white'
+                                          : 'bg-[#0b0e14] text-gray-400 hover:text-white hover:bg-gray-800'
+                                  }`}
+                              >
+                                  {filter === 'inventory' ? 'Inventory' : filter === 'processing' ? 'Processing' : 'Shipped'}
+                              </button>
+                          ))}
+                      </div>
                   </div>
 
-                  {normalizedInventory.length === 0 ? (
+                  {filteredInventory.length === 0 ? (
                       <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
                           <Package className="w-12 h-12 text-gray-700 mx-auto mb-4" />
-                          <h3 className="text-xl font-bold text-white mb-2">Your inventory is empty</h3>
-                          <p className="text-gray-500 mb-6">Open cases to collect items you can ship or sell back.</p>
+                          <h3 className="text-xl font-bold text-white mb-2">
+                              {inventoryFilter === 'inventory'
+                                  ? 'Your inventory is empty'
+                                  : inventoryFilter === 'processing'
+                                    ? 'No items are processing'
+                                    : 'No items have shipped yet'}
+                          </h3>
+                          <p className="text-gray-500 mb-6">
+                              {inventoryFilter === 'inventory'
+                                  ? 'Open cases to collect items you can ship or sell back.'
+                                  : inventoryFilter === 'processing'
+                                    ? 'Ship an item to start tracking its progress here.'
+                                    : 'Once items are shipped, tracking details will appear here.'}
+                          </p>
                           <button 
                             onClick={() => setView({ type: 'BOXES' })}
                             className="px-6 py-2 bg-brand-purple text-white rounded-lg font-bold hover:bg-purple-600 transition-colors"
@@ -381,7 +409,7 @@ export const Profile: React.FC = () => {
                       </div>
                   ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                          {normalizedInventory.map((item) => {
+                          {filteredInventory.map((item) => {
                               const isAvailable = item.status === 'available';
                               const isLocked = !!item.locked;
                               const canShip = isAvailable && !isLocked && !!user.shippingAddress;
@@ -425,6 +453,11 @@ export const Profile: React.FC = () => {
                                       <div className="text-[11px] text-gray-500 mt-2">
                                         Obtained {new Date(item.obtainedAt).toLocaleDateString()}
                                       </div>
+                                      {inventoryFilter === 'shipped' && item.trackingNumber && (
+                                          <div className="text-[11px] text-blue-300 mt-2 break-words">
+                                              Tracking: {item.trackingNumber}
+                                          </div>
+                                      )}
 
                                       <div className="mt-4 flex flex-col gap-2">
                                           <button

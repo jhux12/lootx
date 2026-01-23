@@ -189,7 +189,7 @@ interface GameContextType {
   awardCaseOpenXp: () => void;
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
-  updateShipmentStatus: (userId: string, instanceId: string, status: InventoryItem['status']) => Promise<void>;
+  updateShipmentStatus: (userId: string, instanceId: string, status: InventoryItem['status'], trackingNumber?: string) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -1241,7 +1241,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(prev => prev.id === userId ? { ...prev, xp: sanitizedXp, level: progress.level } : prev);
   };
 
-  const updateShipmentStatus = async (userId: string, instanceId: string, status: InventoryItem['status']) => {
+  const updateShipmentStatus = async (userId: string, instanceId: string, status: InventoryItem['status'], trackingNumber?: string) => {
     const targetUser = users.find((u) => u.id === userId);
     if (!targetUser) {
       console.warn('Attempted to update shipment for unknown user');
@@ -1249,8 +1249,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     const inventoryList = Array.isArray(targetUser.inventory) ? targetUser.inventory : [];
+    const sanitizedTrackingNumber = trackingNumber?.trim();
     const updatedInventory = inventoryList.map((item) =>
-      item.instanceId === instanceId ? { ...item, status } : item
+      item.instanceId === instanceId
+        ? {
+            ...item,
+            status,
+            trackingNumber: sanitizedTrackingNumber || item.trackingNumber
+          }
+        : item
     );
 
     try {
