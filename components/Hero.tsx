@@ -1,53 +1,19 @@
-import React, { useMemo } from 'react';
-import { useGame } from '../context/GameContext';
+import React from 'react';
+import heroImage from '../assets/hero.gif';
 
 export const Hero: React.FC = () => {
-  const { boxes } = useGame();
-
-  const [topLeftImage, bottomRightImage] = useMemo(() => {
-    const availableImages = boxes
-      .map((box) => box.image)
-      .filter(Boolean);
-
-    const fallbackImages = [
-      'https://firebasestorage.googleapis.com/v0/b/lootie-production.appspot.com/o/cases%2Fcyber-case-v2.png?alt=media',
-      'https://firebasestorage.googleapis.com/v0/b/lootie-production.appspot.com/o/cases%2Fneon-dream-case.png?alt=media',
-      'https://firebasestorage.googleapis.com/v0/b/lootie-production.appspot.com/o/cases%2Fstealth-storm-case.png?alt=media'
-    ];
-
-    const images = availableImages.length > 0 ? availableImages : fallbackImages;
-
-    const first = images[Math.floor(Math.random() * images.length)];
-    let second = images[Math.floor(Math.random() * images.length)];
-
-    if (second === first && images.length > 1) {
-      second = images.find((img) => img !== first) || second;
-    }
-
-    return [first, second];
-  }, [boxes]);
-
   return (
-    <div className="relative w-full h-[450px] bg-brand-dark overflow-hidden rounded-2xl mx-auto max-w-7xl mt-6 group">
+    <div className="relative w-full aspect-video bg-brand-dark overflow-hidden rounded-2xl mx-auto max-w-7xl mt-6 group">
       {/* Background Gradient & Effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-brand-purple/20 via-brand-bg to-brand-green/10 z-0"></div>
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 z-0"></div>
+      <img
+        src={heroImage}
+        className="absolute inset-0 h-full w-full rounded-xl object-cover z-0"
+        alt="LootX hero animation"
+      />
       
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
         
-        {/* Floating elements simulation */}
-        <img 
-          src={topLeftImage}
-          className="absolute top-10 left-[10%] w-24 h-24 rounded-lg shadow-lg rotate-[-15deg] opacity-60 animate-pulse hidden md:block"
-          alt="Mystery box spotlight"
-        />
-        <img 
-          src={bottomRightImage}
-          className="absolute bottom-10 right-[10%] w-32 h-32 rounded-lg shadow-lg rotate-[10deg] opacity-60 animate-bounce hidden md:block"
-          alt="Mystery box highlight"
-        />
-
         <h2 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tight drop-shadow-2xl">
           Create Mystery Boxes.
           <br />
