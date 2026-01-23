@@ -72,8 +72,22 @@ const STORAGE_KEY_BONUS_SETTINGS = 'lootx_bonus_settings';
 
 const getStoredBonusSettings = (): BonusSettings => {
   if (typeof window === 'undefined') return DEFAULT_BONUS_SETTINGS;
-  return safeReadLocalStorage(STORAGE_KEY_BONUS_SETTINGS, DEFAULT_BONUS_SETTINGS);
+  const stored = safeReadLocalStorage<Partial<BonusSettings>>(STORAGE_KEY_BONUS_SETTINGS, DEFAULT_BONUS_SETTINGS);
+  return { ...DEFAULT_BONUS_SETTINGS, ...stored };
 };
+
+const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings => ({
+  xpPer100Coins: Math.max(0, Number(settings.xpPer100Coins) || 0),
+  xpPerCaseOpen: Math.max(0, Number(settings.xpPerCaseOpen) || 0),
+  levelBaseXp: Math.max(1, Number(settings.levelBaseXp) || DEFAULT_BONUS_SETTINGS.levelBaseXp),
+  levelXpMultiplier: Math.max(1, Number(settings.levelXpMultiplier) || DEFAULT_BONUS_SETTINGS.levelXpMultiplier),
+  rakebackUnlockLevel: Math.max(1, Number(settings.rakebackUnlockLevel) || DEFAULT_BONUS_SETTINGS.rakebackUnlockLevel),
+  rakebackBasePercent: Math.max(0, Number(settings.rakebackBasePercent) || 0),
+  rakebackBonusCoins: Math.max(0, Number(settings.rakebackBonusCoins) || 0),
+  rakebackDailyCapCoins: Math.max(0, Number(settings.rakebackDailyCapCoins) || 0)
+});
+
+const BONUS_SETTINGS_DOC = 'bonus-settings';
 
 export const calculateLevelProgress = (totalXp: number, overrides?: Partial<BonusSettings>) => {
   const settings = { ...getStoredBonusSettings(), ...(overrides ?? {}) };
@@ -225,6 +239,8 @@ type PersistUserData = Partial<{
   followers: string[];
   totalSpent: number;
   rakebackBalance: number;
+  rakebackEarnedToday: number;
+  rakebackEarnedAt: number;
   affiliateCode?: string;
   referredBy?: string;
   shippingAddress: ShippingAddress;
@@ -290,6 +306,12 @@ interface GameContextType {
   updateShipmentStatus: (userId: string, instanceId: string, status: InventoryItem['status'], trackingNumber?: string) => Promise<void>;
 }
 
+const getDayStart = (timestamp: number = Date.now()) => {
+  const date = new Date(timestamp);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+};
+
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 // Guest / Loading User
@@ -302,6 +324,8 @@ const GUEST_USER: User = {
   xp: 0,
   totalSpent: 0,
   rakebackBalance: 0,
+  rakebackEarnedToday: 0,
+  rakebackEarnedAt: getDayStart(),
   followers: [],
   isAdmin: false,
   chatWarnings: 0,
@@ -340,6 +364,8 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
       lastDailyClaim: undefined,
       totalSpent: 0,
       rakebackBalance: 0,
+      rakebackEarnedToday: 0,
+      rakebackEarnedAt: getDayStart(),
       followers: [],
       shippingAddress: undefined,
       isAdmin: false,
@@ -376,6 +402,8 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     lastDailyClaim: data.lastDailyClaim,
     totalSpent: Number(data.totalSpent ?? 0),
     rakebackBalance: Number(data.rakebackBalance ?? 0),
+    rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
+    rakebackEarnedAt: Number(data.rakebackEarnedAt ?? 0),
     affiliateCode: data.affiliateCode,
     referredBy: data.referredBy,
     followers: followerIds,
@@ -471,6 +499,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   });
 
   const [bonusSettings, setBonusSettings] = useState<BonusSettings>(() => getStoredBonusSettings());
+
+  useEffect(() => {
+    const bonusSettingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC);
+    const unsubscribe = onSnapshot(bonusSettingsRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const normalized = normalizeBonusSettings(snapshot.data() as Partial<BonusSettings>);
+      setBonusSettings(normalized);
+      safeWriteLocalStorage(STORAGE_KEY_BONUS_SETTINGS, normalized);
+    }, (error) => {
+      console.error('Failed to load bonus settings from Firebase', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
   
   // 2. Initialize Boxes
   const [boxes, setBoxes] = useState<MysteryBox[]>([]);
@@ -552,6 +594,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           lastDailyClaim: data.lastDailyClaim,
           totalSpent: Number(data.totalSpent ?? 0),
           rakebackBalance: Number(data.rakebackBalance ?? 0),
+          rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
+          rakebackEarnedAt: Number(data.rakebackEarnedAt ?? 0),
           affiliateCode: data.affiliateCode,
           referredBy: data.referredBy,
           followers: followerIds,
@@ -768,19 +812,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // --- ACTIONS ---
 
   const updateBonusSettings = (settings: BonusSettings) => {
-    const normalized: BonusSettings = {
-      xpPer100Coins: Math.max(0, Number(settings.xpPer100Coins) || 0),
-      xpPerCaseOpen: Math.max(0, Number(settings.xpPerCaseOpen) || 0),
-      levelBaseXp: Math.max(1, Number(settings.levelBaseXp) || DEFAULT_BONUS_SETTINGS.levelBaseXp),
-      levelXpMultiplier: Math.max(1, Number(settings.levelXpMultiplier) || DEFAULT_BONUS_SETTINGS.levelXpMultiplier),
-      rakebackUnlockLevel: Math.max(1, Number(settings.rakebackUnlockLevel) || DEFAULT_BONUS_SETTINGS.rakebackUnlockLevel),
-      rakebackBasePercent: Math.max(0, Number(settings.rakebackBasePercent) || 0),
-      rakebackBonusCoins: Math.max(0, Number(settings.rakebackBonusCoins) || 0),
-      rakebackDailyCapCoins: Math.max(0, Number(settings.rakebackDailyCapCoins) || 0)
-    };
+    const normalized = normalizeBonusSettings(settings);
 
     setBonusSettings(normalized);
     safeWriteLocalStorage(STORAGE_KEY_BONUS_SETTINGS, normalized);
+    const bonusSettingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC);
+    void setDoc(bonusSettingsRef, normalized, { merge: true }).catch((error) => {
+      console.error('Failed to save bonus settings to Firebase', error);
+    });
   };
 
   const login = async (email: string, pass: string) => {
@@ -800,6 +839,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       lastDailyClaim: undefined,
       totalSpent: 0,
       rakebackBalance: 0,
+      rakebackEarnedToday: 0,
+      rakebackEarnedAt: getDayStart(),
       followers: [],
           shippingAddress: undefined,
           isAdmin: email.toLowerCase() === ADMIN_EMAIL,
@@ -836,16 +877,33 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const progress = calculateLevelProgress(nextXp, bonusSettings);
       const totalSpent = Math.max(0, (prev.totalSpent ?? 0) + amount);
       const rakebackRate = Math.max(0, bonusSettings.rakebackBasePercent) / 100;
-      const rakebackBalance = Math.max(0, (prev.rakebackBalance ?? 0) + amount * rakebackRate);
+      const today = getDayStart();
+      const earnedAt = Number(prev.rakebackEarnedAt ?? 0);
+      const earnedToday = earnedAt === today ? Number(prev.rakebackEarnedToday ?? 0) : 0;
+      const capAmount = bonusSettings.rakebackDailyCapCoins / 100;
+      const remainingCap = capAmount > 0 ? Math.max(0, capAmount - earnedToday) : Number.POSITIVE_INFINITY;
+      const rakebackEarned = Math.min(remainingCap, amount * rakebackRate);
+      const rakebackBalance = Math.max(0, (prev.rakebackBalance ?? 0) + rakebackEarned);
+      const nextEarnedToday = earnedToday + rakebackEarned;
 
       persistUserData({
         xp: nextXp,
         level: progress.level,
         totalSpent,
-        rakebackBalance
+        rakebackBalance,
+        rakebackEarnedToday: nextEarnedToday,
+        rakebackEarnedAt: today
       });
 
-      return { ...prev, xp: nextXp, level: progress.level, totalSpent, rakebackBalance };
+      return {
+        ...prev,
+        xp: nextXp,
+        level: progress.level,
+        totalSpent,
+        rakebackBalance,
+        rakebackEarnedToday: nextEarnedToday,
+        rakebackEarnedAt: today
+      };
     });
   };
 
