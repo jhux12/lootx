@@ -380,7 +380,7 @@ export const Profile: React.FC = () => {
                           </button>
                       </div>
                   ) : (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                           {normalizedInventory.map((item) => {
                               const isAvailable = item.status === 'available';
                               const isLocked = !!item.locked;
@@ -402,41 +402,35 @@ export const Profile: React.FC = () => {
                                     : 'bg-gray-700/40 text-gray-300 border-gray-600';
 
                               return (
-                                  <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-2xl p-4 flex flex-col gap-4">
-                                      <div className="flex flex-col sm:flex-row gap-4">
-                                          <div className="relative w-full sm:w-32 aspect-square bg-[#0b0e14] rounded-xl p-3 flex items-center justify-center overflow-hidden">
-                                              <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
-                                              <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
-                                                  item.rarity === 'legendary' ? 'from-yellow-500' :
-                                                  item.rarity === 'epic' ? 'from-purple-500' :
-                                                  item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
-                                              }`} />
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                              <div className="flex items-start justify-between gap-3">
-                                                  <div>
-                                                      <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">{item.rarity}</div>
-                                                      <h4 className="text-white font-bold text-base mb-2 line-clamp-2">{item.name}</h4>
-                                                  </div>
-                                                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${statusTone}`}>{statusLabel}</span>
-                                              </div>
-                                              <CoinAmount
-                                                amount={item.price}
-                                                formatOptions={{ maximumFractionDigits: 0 }}
-                                                className="text-green-500 font-black"
-                                                iconClassName="w-4 h-4"
-                                              />
-                                              <div className="text-xs text-gray-500 mt-2">
-                                                Obtained {new Date(item.obtainedAt).toLocaleDateString()}
-                                              </div>
-                                          </div>
+                                  <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all flex flex-col">
+                                      <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
+                                          <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                                          <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
+                                              item.rarity === 'legendary' ? 'from-yellow-500' :
+                                              item.rarity === 'epic' ? 'from-purple-500' :
+                                              item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
+                                          }`} />
+                                      </div>
+                                      <div className="flex items-start justify-between gap-2">
+                                          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">{item.rarity}</div>
+                                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${statusTone}`}>{statusLabel}</span>
+                                      </div>
+                                      <h4 className="text-white font-bold text-sm mt-2 mb-2 line-clamp-2 min-h-[2.5rem]">{item.name}</h4>
+                                      <CoinAmount
+                                        amount={item.price}
+                                        formatOptions={{ maximumFractionDigits: 0 }}
+                                        className="text-green-500 font-black"
+                                        iconClassName="w-3.5 h-3.5"
+                                      />
+                                      <div className="text-[11px] text-gray-500 mt-2">
+                                        Obtained {new Date(item.obtainedAt).toLocaleDateString()}
                                       </div>
 
-                                      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                                      <div className="mt-4 flex flex-col gap-2">
                                           <button
                                             onClick={() => shipItem(item.instanceId)}
                                             disabled={!canShip}
-                                            className={`flex-1 px-4 py-2 rounded-lg font-bold text-sm transition-colors border ${
+                                            className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${
                                               canShip
                                                 ? 'bg-blue-600/20 text-blue-200 border-blue-500/40 hover:bg-blue-600/30'
                                                 : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
@@ -447,7 +441,7 @@ export const Profile: React.FC = () => {
                                           <button
                                             onClick={() => sellItem(item.instanceId, item.price)}
                                             disabled={!canSell}
-                                            className={`flex-1 px-4 py-2 rounded-lg font-bold text-sm transition-colors border flex items-center justify-center gap-2 ${
+                                            className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border flex items-center justify-center gap-2 ${
                                               canSell
                                                 ? 'bg-[#0b0e14] text-gray-200 border-gray-700 hover:border-brand-purple/60'
                                                 : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
@@ -458,13 +452,13 @@ export const Profile: React.FC = () => {
                                               amount={item.price}
                                               formatOptions={{ maximumFractionDigits: 0 }}
                                               className="text-gray-100"
-                                              iconClassName="w-3.5 h-3.5"
+                                              iconClassName="w-3 h-3"
                                             />
                                           </button>
                                       </div>
 
                                       {!user.shippingAddress && (
-                                          <div className="text-xs text-amber-400">
+                                          <div className="text-[11px] text-amber-400 mt-2">
                                               Add a shipping address in Settings to enable shipping.
                                           </div>
                                       )}
