@@ -16,7 +16,8 @@ import {
   VolumeX, 
   ShieldCheck, 
   FlaskConical, 
-  PackageOpen
+  PackageOpen,
+  Package
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -148,6 +149,12 @@ export const Header: React.FC = () => {
               className="flex items-center gap-2 text-white hover:text-blue-400 transition-colors text-sm font-semibold"
             >
               <PackageOpen className="w-4 h-4" /> Cases
+            </button>
+            <button 
+              onClick={() => handleAuthAction(() => setView({ type: 'INVENTORY' }))} 
+              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-medium"
+            >
+              <Package className="w-4 h-4" /> Inventory
             </button>
             <button 
               onClick={() => handleNav({ type: 'BATTLES' })} 
@@ -381,6 +388,15 @@ export const Header: React.FC = () => {
                 className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-white font-medium"
               >
                 <PackageOpen className="w-5 h-5 text-blue-500" /> Cases
+              </button>
+              <button 
+                onClick={() => { 
+                  handleAuthAction(() => setView({ type: 'INVENTORY' })); 
+                  if (isAuthenticated) setIsMobileMenuOpen(false);
+                }} 
+                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
+              >
+                <Package className="w-5 h-5 text-cyan-400" /> Inventory
               </button>
               <button 
                 onClick={() => { handleNav({ type: 'BATTLES' }); setIsMobileMenuOpen(false); }} 

@@ -123,6 +123,12 @@ const MainContent: React.FC = () => {
         </div>
       )}
 
+      {view.type === 'INVENTORY' && (
+        <div className="w-full pt-6">
+          <Profile initialTab="inventory" />
+        </div>
+      )}
+
       {/* Modals */}
       {showLoginModal && <LoginModal />}
       {showTopUpModal && <TopUpModal />}

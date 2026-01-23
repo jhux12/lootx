@@ -188,6 +188,7 @@ export interface AppNotification {
 export type ViewState = 
   | { type: 'HOME' }
   | { type: 'PROFILE'; userId?: string }
+  | { type: 'INVENTORY' }
   | { type: 'BONUSES' }
   | { type: 'ADMIN' }
   | { type: 'LEADERBOARD' }
