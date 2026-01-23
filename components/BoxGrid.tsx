@@ -4,7 +4,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { getRiskLabel } from '../utils/caseOdds';
-import caselabImage from '../assets/caselab.jpg';
+import caselabImage from '../assets/caselab.gif';
 
 export const BoxGrid: React.FC = () => {
   const { setView, boxes } = useGame();
@@ -81,14 +81,22 @@ export const BoxGrid: React.FC = () => {
         ))}
       </div>
       <div className="mt-6 w-full">
-        <div className="relative w-full aspect-video overflow-hidden rounded-xl border border-gray-800 bg-[#131720]">
+        <button
+          type="button"
+          onClick={() => {
+            playSound('click');
+            setView({ type: 'CUSTOM_CREATOR' });
+          }}
+          aria-label="Open Case Lab"
+          className="relative w-full aspect-video overflow-hidden rounded-xl border border-gray-800 bg-[#131720] transition hover:border-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
+        >
           <img
             src={caselabImage}
             alt="Caselab showcase"
             className="h-full w-full object-cover"
             loading="lazy"
           />
-        </div>
+        </button>
       </div>
     </section>
   );
