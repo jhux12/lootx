@@ -21,7 +21,7 @@ import {
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
-import pullzLogo from '../assets/pullz-p.png';
+import pullzLogo from '../assets/pullz-p2.png';
 
 export const Header: React.FC = () => {
   const {
