@@ -374,7 +374,7 @@ export const Header: React.FC = () => {
 
         {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 top-[72px] md:top-[80px] bg-[#0b0e14] z-40 lg:hidden flex flex-col p-4 animate-in slide-in-from-left-full duration-200">
+          <div className="fixed inset-0 top-[72px] md:top-[80px] bg-[#0b0e14] bg-opacity-100 backdrop-blur-none z-40 lg:hidden flex flex-col p-4 animate-in slide-in-from-left-full duration-200">
             <nav className="flex flex-col gap-2">
               <button 
                 onClick={() => { handleNav({ type: 'HOME' }); setIsMobileMenuOpen(false); }} 
