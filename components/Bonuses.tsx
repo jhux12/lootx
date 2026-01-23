@@ -21,7 +21,7 @@ export const Bonuses: React.FC = () => {
     bonusSettings
   } = useGame();
   const { playSound } = useSound();
-  const progress = calculateLevelProgress(user.xp || 0);
+  const progress = calculateLevelProgress(user.xp || 0, bonusSettings);
   
   const [affiliateInput, setAffiliateInput] = useState('');
   const [affiliateMessage, setAffiliateMessage] = useState('');

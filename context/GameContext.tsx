@@ -69,11 +69,23 @@ const DEFAULT_BONUS_SETTINGS: BonusSettings = {
 };
 
 const STORAGE_KEY_BONUS_SETTINGS = 'lootx_bonus_settings';
+const BONUS_SETTINGS_DOC_ID = 'bonus-settings';
 
 const getStoredBonusSettings = (): BonusSettings => {
   if (typeof window === 'undefined') return DEFAULT_BONUS_SETTINGS;
   return safeReadLocalStorage(STORAGE_KEY_BONUS_SETTINGS, DEFAULT_BONUS_SETTINGS);
 };
+
+const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings => ({
+  xpPer100Coins: Math.max(0, Number(settings.xpPer100Coins) || 0),
+  xpPerCaseOpen: Math.max(0, Number(settings.xpPerCaseOpen) || 0),
+  levelBaseXp: Math.max(1, Number(settings.levelBaseXp) || DEFAULT_BONUS_SETTINGS.levelBaseXp),
+  levelXpMultiplier: Math.max(1, Number(settings.levelXpMultiplier) || DEFAULT_BONUS_SETTINGS.levelXpMultiplier),
+  rakebackUnlockLevel: Math.max(1, Number(settings.rakebackUnlockLevel) || DEFAULT_BONUS_SETTINGS.rakebackUnlockLevel),
+  rakebackBasePercent: Math.max(0, Number(settings.rakebackBasePercent) || 0),
+  rakebackBonusCoins: Math.max(0, Number(settings.rakebackBonusCoins) || 0),
+  rakebackDailyCapCoins: Math.max(0, Number(settings.rakebackDailyCapCoins) || 0)
+});
 
 export const calculateLevelProgress = (totalXp: number, overrides?: Partial<BonusSettings>) => {
   const settings = { ...getStoredBonusSettings(), ...(overrides ?? {}) };
@@ -283,7 +295,7 @@ interface GameContextType {
   deleteBox: (boxId: string) => Promise<void>;
   claimDaily: () => void;
   claimRakeback: () => void;
-  updateBonusSettings: (settings: BonusSettings) => void;
+  updateBonusSettings: (settings: BonusSettings) => Promise<void>;
   awardCaseOpenXp: () => void;
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
@@ -328,7 +340,7 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
   const snapshot = await getDoc(userRef);
 
   if (!snapshot.exists()) {
-    const initialProgress = calculateLevelProgress(0);
+    const initialProgress = calculateLevelProgress(0, getStoredBonusSettings());
     const newUser: User = {
       id: firebaseUser.uid,
       name: firebaseUser.email?.split('@')[0] || 'Player',
@@ -359,7 +371,7 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
 
   const data = snapshot.data();
   const xp = Number(data.xp ?? 0);
-  const progress = calculateLevelProgress(xp);
+  const progress = calculateLevelProgress(xp, getStoredBonusSettings());
   const followerIds = Array.isArray(data.followers)
     ? data.followers
     : Array.isArray(data.friends)
@@ -535,7 +547,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const loaded: User[] = snapshot.docs.map((docSnap) => {
       const data = docSnap.data();
       const xp = Number(data.xp ?? 0);
-      const progress = calculateLevelProgress(xp);
+      const progress = calculateLevelProgress(xp, bonusSettings);
       const followerIds = Array.isArray(data.followers)
           ? data.followers
           : Array.isArray(data.friends)
@@ -572,6 +584,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUsers(loaded);
     }, (error) => {
       console.error('Failed to load users from Firebase', error);
+    });
+
+    return () => unsubscribe();
+  }, [bonusSettings]);
+
+  useEffect(() => {
+    const settingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC_ID);
+    const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.data() as Partial<BonusSettings>;
+      const normalized = normalizeBonusSettings(data);
+      setBonusSettings(normalized);
+      safeWriteLocalStorage(STORAGE_KEY_BONUS_SETTINGS, normalized);
+    }, (error) => {
+      console.error('Failed to load bonus settings', error);
     });
 
     return () => unsubscribe();
@@ -767,20 +794,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // --- ACTIONS ---
 
-  const updateBonusSettings = (settings: BonusSettings) => {
-    const normalized: BonusSettings = {
-      xpPer100Coins: Math.max(0, Number(settings.xpPer100Coins) || 0),
-      xpPerCaseOpen: Math.max(0, Number(settings.xpPerCaseOpen) || 0),
-      levelBaseXp: Math.max(1, Number(settings.levelBaseXp) || DEFAULT_BONUS_SETTINGS.levelBaseXp),
-      levelXpMultiplier: Math.max(1, Number(settings.levelXpMultiplier) || DEFAULT_BONUS_SETTINGS.levelXpMultiplier),
-      rakebackUnlockLevel: Math.max(1, Number(settings.rakebackUnlockLevel) || DEFAULT_BONUS_SETTINGS.rakebackUnlockLevel),
-      rakebackBasePercent: Math.max(0, Number(settings.rakebackBasePercent) || 0),
-      rakebackBonusCoins: Math.max(0, Number(settings.rakebackBonusCoins) || 0),
-      rakebackDailyCapCoins: Math.max(0, Number(settings.rakebackDailyCapCoins) || 0)
-    };
+  const updateBonusSettings = async (settings: BonusSettings) => {
+    const normalized = normalizeBonusSettings(settings);
 
     setBonusSettings(normalized);
     safeWriteLocalStorage(STORAGE_KEY_BONUS_SETTINGS, normalized);
+
+    try {
+      await setDoc(doc(db, 'settings', BONUS_SETTINGS_DOC_ID), normalized, { merge: true });
+    } catch (error) {
+      console.error('Failed to save bonus settings', error);
+    }
   };
 
   const login = async (email: string, pass: string) => {

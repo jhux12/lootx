@@ -759,8 +759,8 @@ export const AdminPanel: React.FC = () => {
       }
   };
 
-  const handleSaveBonusSettings = () => {
-      updateBonusSettings(bonusDraft);
+  const handleSaveBonusSettings = async () => {
+      await updateBonusSettings(bonusDraft);
       setBonusSaveNotice(true);
       window.setTimeout(() => setBonusSaveNotice(false), 3000);
   };
@@ -1266,7 +1266,7 @@ export const AdminPanel: React.FC = () => {
                                     ) : (
                                         users.map((profile) => {
                                             const isEditing = editingUserId === profile.id;
-                                            const progress = calculateLevelProgress(isEditing ? userXpInput : (profile.xp || 0));
+                                            const progress = calculateLevelProgress(isEditing ? userXpInput : (profile.xp || 0), bonusSettings);
                                             const status = userStatuses[profile.id] ?? 'active';
                                             return (
                                                 <tr key={profile.id} className="hover:bg-[#1a2130] transition-colors">
@@ -1360,7 +1360,7 @@ export const AdminPanel: React.FC = () => {
                                                 <img src={profile.avatar} className="w-10 h-10 rounded-full" />
                                                 <div className="flex-1">
                                                     <div className="text-white font-bold">{profile.name}</div>
-                                                    <div className="text-xs text-gray-400">Lvl {calculateLevelProgress(profile.xp || 0).level}</div>
+                                                    <div className="text-xs text-gray-400">Lvl {calculateLevelProgress(profile.xp || 0, bonusSettings).level}</div>
                                                 </div>
                                                 <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
                                                     status === 'active'
