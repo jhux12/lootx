@@ -74,6 +74,7 @@ export interface InventoryItem extends CaseItem {
   obtainedAt: number;
   status: 'available' | 'sold' | 'shipping' | 'shipped';
   locked?: boolean;
+  trackingNumber?: string;
   provenance?: InventoryProvenance;
   history?: InventoryHistoryEntry[];
 }
