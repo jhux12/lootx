@@ -11,12 +11,12 @@ export const CustomCaseCreator: React.FC = () => {
   const { playSound } = useSound();
 
   const DEFAULT_TARGET_EV = 0.85;
+  const FIXED_RISK_LEVEL = 50;
   const [boxName, setBoxName] = useState('');
   const [boxPrice, setBoxPrice] = useState<number>(0);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [lastCalculated, setLastCalculated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [riskBalance, setRiskBalance] = useState(50);
 
   const toggleItemSelection = (item: CaseItem) => {
       playSound('click');
@@ -36,10 +36,15 @@ export const CustomCaseCreator: React.FC = () => {
       const baseItems = selectedItems.map(item => ({ ...item, chance: 0 }));
 
       // Risk only redistributes odds. Target EV stays locked after redistribution.
-      const baseOdds = buildRiskAdjustedOdds(baseItems, riskBalance);
+      const baseOdds = buildRiskAdjustedOdds(baseItems, FIXED_RISK_LEVEL);
       const baseEv = calculateExpectedValue(baseOdds);
       const calculatedPrice = baseEv / DEFAULT_TARGET_EV;
-      const updatedItems = buildOddsWithRiskAndTargetEV(baseItems, riskBalance, DEFAULT_TARGET_EV, calculatedPrice);
+      const updatedItems = buildOddsWithRiskAndTargetEV(
+        baseItems,
+        FIXED_RISK_LEVEL,
+        DEFAULT_TARGET_EV,
+        calculatedPrice
+      );
 
       setSelectedItems(updatedItems);
       setBoxPrice(parseFloat(calculatedPrice.toFixed(2)));
@@ -70,7 +75,7 @@ export const CustomCaseCreator: React.FC = () => {
           tag: 'New',
           items: selectedItems,
           targetEV: DEFAULT_TARGET_EV,
-          riskLevel: riskBalance
+          riskLevel: FIXED_RISK_LEVEL
       };
 
       createUserBox(newBox);
@@ -171,23 +176,23 @@ export const CustomCaseCreator: React.FC = () => {
                   </div>
 
                   <div className="mb-6">
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Risk Balance</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Risk Balance (Fixed)</label>
                       <input
                         type="range"
                         min={0}
                         max={100}
-                        value={riskBalance}
-                        onChange={(e) => {
-                          setRiskBalance(Number(e.target.value));
-                          setLastCalculated(false);
-                        }}
-                        className="w-full accent-brand-purple"
+                        value={FIXED_RISK_LEVEL}
+                        disabled
+                        className="w-full accent-brand-purple cursor-not-allowed opacity-60"
                       />
                       <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-500 mt-1">
                           <span>Safer</span>
-                          <span className="text-gray-300 font-semibold">{getRiskLabel(riskBalance)}</span>
+                          <span className="text-gray-300 font-semibold">{getRiskLabel(FIXED_RISK_LEVEL)}</span>
                           <span>Riskier</span>
                       </div>
+                      <p className="mt-2 text-[11px] text-gray-400">
+                        Risk tuning is locked for user-created cases.
+                      </p>
                   </div>
 
                   <div className="mb-6">
