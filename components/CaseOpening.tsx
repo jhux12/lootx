@@ -371,7 +371,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return;
     }
     if (wonInventoryItem && !rewardResolved) {
-        sellItem(wonInventoryItem.instanceId, wonInventoryItem.price);
+        const sellBackPrice = Math.round(wonInventoryItem.price * 0.82);
+        sellItem(wonInventoryItem.instanceId, sellBackPrice);
         setRewardResolved(true);
     }
     setShowWinModal(false);
@@ -727,12 +728,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             Close
                         </button>
                      ) : (
-                        <div className="flex gap-3 w-full">
-                            <button onClick={handleSell} className="flex-1 py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
-                                <span className="inline-flex items-center justify-center gap-2">
-                                  Sell for
+                        <div className="flex flex-col gap-3 w-full sm:flex-row">
+                            <button onClick={handleSell} className="flex-1 py-3 px-4 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
+                                <span className="flex flex-col items-center justify-center gap-1">
+                                  <span className="text-sm uppercase tracking-wide">Generate buy back offer</span>
                                   <CoinAmount
-                                    amount={wonItem.price}
+                                    amount={Math.round(wonItem.price * 0.82)}
                                     formatOptions={{ maximumFractionDigits: 0 }}
                                     className="text-gray-300"
                                     iconClassName="w-4 h-4"
