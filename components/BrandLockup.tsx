@@ -5,12 +5,14 @@ type BrandLockupProps = {
   className?: string;
   logoClassName?: string;
   textClassName?: string;
+  showTextOnMobile?: boolean;
 };
 
 export const BrandLockup: React.FC<BrandLockupProps> = ({
   className = '',
   logoClassName = 'h-12 md:h-14 lg:h-16',
   textClassName = 'text-lg md:text-xl',
+  showTextOnMobile = false,
 }) => (
   <div className={`flex items-center gap-3 ${className}`}>
     <img
@@ -19,7 +21,7 @@ export const BrandLockup: React.FC<BrandLockupProps> = ({
       className={logoClassName}
     />
     <span
-      className={`hidden sm:inline-flex items-baseline font-black uppercase tracking-[0.14em] text-white ${textClassName}`}
+      className={`items-baseline font-black uppercase tracking-[0.14em] text-white ${showTextOnMobile ? 'inline-flex' : 'hidden sm:inline-flex'} ${textClassName}`}
     >
       <span>PULLZ</span>
       <span className="ml-1 text-base md:text-lg font-semibold tracking-normal">.gg</span>

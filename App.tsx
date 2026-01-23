@@ -152,6 +152,7 @@ const MainContent: React.FC = () => {
               className="justify-center"
               logoClassName="h-10 md:h-12"
               textClassName="text-lg"
+              showTextOnMobile
             />
           </div>
           <div className="flex justify-center gap-6 mb-4 font-medium flex-wrap px-4">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, LogIn, Mail, Lock, UserPlus, User, AlertCircle } from 'lucide-react';
+import { X, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { BrandLockup } from './BrandLockup';
@@ -65,10 +65,8 @@ export const LoginModal: React.FC = () => {
                     className="justify-center"
                     logoClassName="h-12 md:h-14"
                     textClassName="text-xl"
+                    showTextOnMobile
                 />
-            </div>
-            <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center transform rotate-3 shadow-lg transition-colors ${mode === 'login' ? 'bg-blue-600 shadow-blue-600/20' : 'bg-green-600 shadow-green-600/20'}`}>
-                {mode === 'login' ? <LogIn className="w-8 h-8 text-white" /> : <UserPlus className="w-8 h-8 text-white" />}
             </div>
             <h2 className="text-2xl font-black text-white mb-1">
                 {mode === 'login' ? 'Welcome Back' : 'Create Account'}
