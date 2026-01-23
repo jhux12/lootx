@@ -152,6 +152,10 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'BATTLES' };
   }
 
+  if (primary === 'boxes') {
+    return { type: 'BOXES' };
+  }
+
   if (primary === 'profile') {
     if (secondary) {
       return { type: 'PROFILE', userId: secondary };
@@ -186,6 +190,8 @@ const getPathFromView = (view: ViewState): string => {
   switch (view.type) {
     case 'HOME':
       return '/';
+    case 'BOXES':
+      return '/boxes';
     case 'PROFILE':
       return view.userId ? `/profile/${view.userId}` : '/profile';
     case 'INVENTORY':

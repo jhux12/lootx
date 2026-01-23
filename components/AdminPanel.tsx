@@ -77,7 +77,8 @@ export const AdminPanel: React.FC = () => {
       price: 0,
       image: 'https://picsum.photos/300',
       accentColor: '#3b82f6',
-      isDaily: false
+      isDaily: false,
+      tags: []
   });
   const [riskBalance, setRiskBalance] = useState(50);
   const [targetEV, setTargetEV] = useState(0.85);
@@ -109,6 +110,7 @@ export const AdminPanel: React.FC = () => {
   const EV_TOLERANCE = 0.01;
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
+  const boxTagOptions = ['Tech Boxes', 'Pokemon', 'Digital Codes', 'Hot', 'Deals'];
   
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
@@ -679,6 +681,7 @@ export const AdminPanel: React.FC = () => {
           image: newBox.image || 'https://picsum.photos/300',
           accentColor: newBox.accentColor || '#3b82f6',
           tag: newBox.tag,
+          tags: newBox.tags ?? [],
           isDaily: newBox.isDaily,
           items: boxItems,
           targetEV: clampedTargetEV,
@@ -704,6 +707,7 @@ export const AdminPanel: React.FC = () => {
           image: box.image,
           accentColor: box.accentColor,
           tag: box.tag,
+          tags: box.tags ?? (box.tag ? [box.tag] : []),
           isDaily: box.isDaily
       });
       setSelectedItems(box.items.map(i => ({...i})));
@@ -730,10 +734,20 @@ export const AdminPanel: React.FC = () => {
 
   const resetBoxForm = () => {
       setEditingBoxId(null);
-      setNewBox({ name: '', price: 0, image: 'https://picsum.photos/300', accentColor: '#3b82f6', isDaily: false });
+      setNewBox({ name: '', price: 0, image: 'https://picsum.photos/300', accentColor: '#3b82f6', isDaily: false, tags: [] });
       setSelectedItems([]);
       setRiskBalance(50);
       setTargetEV(0.85);
+  };
+
+  const toggleBoxTag = (tag: string) => {
+      setNewBox(prev => {
+          const currentTags = prev.tags ?? [];
+          const nextTags = currentTags.includes(tag)
+              ? currentTags.filter(existing => existing !== tag)
+              : [...currentTags, tag];
+          return { ...prev, tags: nextTags };
+      });
   };
 
   const toggleItemSelection = (item: CaseItem) => {
@@ -987,10 +1001,32 @@ export const AdminPanel: React.FC = () => {
 
                         {/* Top Config Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <input type="text" placeholder="Box Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.name} onChange={e => setNewBox({...newBox, name: e.target.value})} />
-                            <input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.image} onChange={e => setNewBox({...newBox, image: e.target.value})} />
-                            <input type="text" placeholder="Accent Color (Hex)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.accentColor} onChange={e => setNewBox({...newBox, accentColor: e.target.value})} />
-                            
+                            <div className="space-y-3">
+                                <input type="text" placeholder="Box Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.name} onChange={e => setNewBox({...newBox, name: e.target.value})} />
+                                <input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.image} onChange={e => setNewBox({...newBox, image: e.target.value})} />
+                                <input type="text" placeholder="Accent Color (Hex)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.accentColor} onChange={e => setNewBox({...newBox, accentColor: e.target.value})} />
+                                <div>
+                                    <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Box Tags</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        {boxTagOptions.map((tag) => {
+                                            const isSelected = (newBox.tags ?? []).includes(tag);
+                                            return (
+                                                <button
+                                                    key={tag}
+                                                    type="button"
+                                                    aria-pressed={isSelected}
+                                                    onClick={() => toggleBoxTag(tag)}
+                                                    className={`px-2 py-1.5 rounded border text-[11px] font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-blue-600/20 border-blue-500 text-blue-200' : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                                                >
+                                                    {tag}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="mt-2 text-[10px] text-gray-500">Tags power homepage filters. Select all that apply.</p>
+                                </div>
+                            </div>
+
                             <div className="flex flex-col gap-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <div>
