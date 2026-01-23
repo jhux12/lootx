@@ -65,7 +65,7 @@ export const TopUpModal: React.FC = () => {
         onClick={() => setShowTopUpModal(false)}
       ></div>
       
-      <div className="relative w-full max-w-md bg-[#131720] border border-gray-700 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95">
+      <div className="relative w-full max-w-md max-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border border-white/10 bg-[#0f131c] shadow-2xl animate-in zoom-in-95 flex flex-col">
         
         {success ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -75,10 +75,16 @@ export const TopUpModal: React.FC = () => {
             </div>
         ) : (
             <>
-                <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-gradient-to-r from-[#0b0e14] via-[#111827] to-[#0b0e14]">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <Wallet className="w-5 h-5 text-blue-500" /> Top Up Coins
-                    </h2>
+                <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10">
+                        <Wallet className="h-5 w-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-white">Top up</h2>
+                        <p className="text-xs text-gray-500">Choose a pack or enter a custom amount</p>
+                      </div>
+                    </div>
                     <button 
                         onClick={() => setShowTopUpModal(false)} 
                         className="text-gray-500 hover:text-white transition-colors"
@@ -87,28 +93,34 @@ export const TopUpModal: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="p-6">
+                <div className="flex-1 overflow-y-auto px-5 py-4">
                     {/* Method Selector */}
-                    <div className="flex gap-3 mb-6">
+                    <div className="flex gap-3 mb-5">
                         <button 
                             onClick={() => { setMethod('card'); playSound('click'); }}
-                            className={`flex-1 py-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${method === 'card' ? 'bg-blue-600/10 border-blue-500 text-white' : 'bg-[#0b0e14] border-gray-700 text-gray-500 hover:border-gray-500'}`}
+                            className={`flex-1 rounded-xl border px-3 py-3 text-left transition-all ${method === 'card' ? 'border-blue-400 bg-blue-500/10 text-white shadow-lg shadow-blue-900/10' : 'border-white/10 bg-[#0b0e14] text-gray-400 hover:border-white/30'}`}
                         >
-                            <CreditCard className="w-6 h-6" />
-                            <span className="text-xs font-bold">Credit Card</span>
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="w-5 h-5" />
+                              <span className="text-xs font-semibold">Card</span>
+                            </div>
+                            <span className="mt-2 block text-[11px] text-gray-500">Instant approval</span>
                         </button>
                         <button 
                             onClick={() => { setMethod('crypto'); playSound('click'); }}
-                            className={`flex-1 py-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${method === 'crypto' ? 'bg-orange-500/10 border-orange-500 text-white' : 'bg-[#0b0e14] border-gray-700 text-gray-500 hover:border-gray-500'}`}
+                            className={`flex-1 rounded-xl border px-3 py-3 text-left transition-all ${method === 'crypto' ? 'border-orange-400 bg-orange-500/10 text-white shadow-lg shadow-orange-900/10' : 'border-white/10 bg-[#0b0e14] text-gray-400 hover:border-white/30'}`}
                         >
-                            <Bitcoin className="w-6 h-6" />
-                            <span className="text-xs font-bold">Crypto</span>
+                            <div className="flex items-center gap-2">
+                              <Bitcoin className="w-5 h-5" />
+                              <span className="text-xs font-semibold">Crypto</span>
+                            </div>
+                            <span className="mt-2 block text-[11px] text-gray-500">BTC, ETH, USDC</span>
                         </button>
                     </div>
 
                     {/* Amount Selector */}
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Select Coin Pack</label>
-                    <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Select a pack</label>
+                    <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-3">
                         {coinPacks.map((pack) => {
                           const packBonusCoins = Math.floor(pack.coins * (pack.bonusPercent / 100));
                           const packTotalCoins = pack.coins + packBonusCoins;
@@ -123,7 +135,7 @@ export const TopUpModal: React.FC = () => {
                             <button
                                 key={pack.coins}
                                 onClick={() => { setAmountCoins(pack.coins); playSound('click'); }}
-                                className={`relative rounded-xl border px-3 py-3 text-left transition-all ${amountCoins === pack.coins ? 'bg-emerald-500/10 border-emerald-400 text-white shadow-lg shadow-emerald-900/20' : 'bg-[#0b0e14] border-gray-800 text-gray-300 hover:border-gray-600'}`}
+                                className={`relative rounded-xl border px-3 py-3 text-left transition-all ${amountCoins === pack.coins ? 'border-emerald-400 bg-emerald-500/10 text-white shadow-lg shadow-emerald-900/20' : 'border-white/10 bg-[#0b0e14] text-gray-300 hover:border-white/30'}`}
                             >
                                 {isBestValue && (
                                   <span className="absolute -top-2 right-2 rounded-full bg-gradient-to-r from-emerald-400 to-blue-500 px-2 py-0.5 text-[10px] font-bold uppercase text-black shadow">
@@ -153,7 +165,7 @@ export const TopUpModal: React.FC = () => {
                     </div>
 
                     {/* Custom Amount Input */}
-                    <div className="mb-6">
+                    <div className="mb-5">
                         <div className="relative">
                             <span className="absolute inset-y-0 left-4 flex items-center">
                               <img src={COIN_ICON} alt="Coin" className="w-4 h-4" />
@@ -163,7 +175,7 @@ export const TopUpModal: React.FC = () => {
                                 min="0"
                                 value={amountCoins}
                                 onChange={(e) => setAmountCoins(Number(e.target.value))}
-                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg py-3 pl-11 pr-4 text-white font-bold leading-none focus:outline-none focus:border-blue-500 transition-colors"
+                                className="w-full rounded-xl border border-white/10 bg-[#0b0e14] py-3 pl-11 pr-4 text-white font-semibold leading-none focus:outline-none focus:border-blue-500 transition-colors"
                             />
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
@@ -176,7 +188,7 @@ export const TopUpModal: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 p-4">
+                    <div className="mb-5 rounded-2xl border border-white/10 bg-[#121826] p-4">
                       <p className="text-xs font-semibold uppercase text-emerald-200">You get</p>
                       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
                         <CoinAmount
@@ -198,7 +210,7 @@ export const TopUpModal: React.FC = () => {
                     <button 
                         onClick={handleDeposit}
                         disabled={isLoading}
-                        className="w-full py-4 bg-green-600 hover:bg-green-500 text-white font-black text-lg rounded-xl shadow-lg shadow-green-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="w-full rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {isLoading ? (
                             <>
