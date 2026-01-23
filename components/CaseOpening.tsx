@@ -69,6 +69,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   
   const box = boxes.find(b => b.id === boxId) || boxes[0];
   const items = box.items || [];
+  const sellBackRate = box?.isUserCreated ? 0.75 : 0.82;
 
   // Sort items high to low for display purposes
   const displayItems = [...items].sort((a, b) => b.price - a.price);
@@ -296,7 +297,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const triggerGold = isGoldEligible && goldRoll.rollValue < 0.2;
 
     if (!isDemo) {
-      const inventoryItem = addToInventory(winner);
+      const inventoryItem = addToInventory(winner, { sourceType: 'case_open', sourceId: box.id });
       setWonInventoryItem(inventoryItem);
       awardCaseOpenXp();
     }
@@ -378,7 +379,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return;
     }
     if (wonInventoryItem && !rewardResolved) {
-        const sellBackPrice = Math.round(wonInventoryItem.price * 0.82);
+        const sellBackPrice = Math.round(wonInventoryItem.price * sellBackRate);
         sellItem(wonInventoryItem.instanceId, sellBackPrice);
         setRewardResolved(true);
     }
@@ -751,7 +752,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                       </span>
                                       {sellOfferGenerated && (
                                         <CoinAmount
-                                          amount={Math.round(wonItem.price * 0.82)}
+                                          amount={Math.round(wonItem.price * sellBackRate)}
                                           formatOptions={{ maximumFractionDigits: 0 }}
                                           className="text-gray-200"
                                           iconClassName="w-4 h-4"

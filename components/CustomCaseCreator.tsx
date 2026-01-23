@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search } from 'lucide-react';
+import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search, Info } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
@@ -97,13 +97,35 @@ export const CustomCaseCreator: React.FC = () => {
            >
              <ChevronLeft className="w-4 h-4" /> Back
            </button>
-           <div className="flex items-center gap-3">
+           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                <div className="p-2 bg-brand-purple/20 rounded-lg border border-brand-purple/40">
                     <FlaskConical className="w-6 h-6 text-brand-purple" />
                </div>
                <div>
                     <h1 className="text-3xl font-black text-white">Case Lab</h1>
                     <p className="text-gray-400 text-sm">Engineer your luck. Tune your risk balance for a custom case.</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-gray-300">
+                      <span className="rounded-full border border-purple-400/30 bg-purple-500/10 px-2 py-1 font-semibold uppercase tracking-wide text-purple-200">
+                        Case Lab sell-back
+                      </span>
+                      <div className="relative group">
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 font-semibold text-gray-200 transition hover:border-brand-purple/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple/60"
+                          aria-label="How Case Lab sell-back works"
+                        >
+                          <Info className="h-3.5 w-3.5" />
+                          How it works
+                        </button>
+                        <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-72 max-w-[85vw] -translate-x-1/2 translate-y-1 rounded-2xl border border-white/10 bg-[#0f141f] px-4 py-3 text-[11px] text-gray-200 opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                          <div className="mb-1 text-xs font-semibold text-white">Case Lab sell-back rates</div>
+                          <p className="leading-relaxed text-gray-300">
+                            Items won from Case Lab cases can be sold back for <span className="font-semibold text-emerald-300">75% of their value</span>
+                            . That 25% fee only applies to Case Lab cases you create.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                </div>
            </div>
       </div>
