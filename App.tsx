@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { LiveTicker } from './components/LiveTicker';
 import { ChatSidebar } from './components/ChatSidebar';
@@ -23,6 +23,10 @@ import { MobileChatModal } from './components/MobileChatModal';
 // Main content wrapper to handle view switching
 const MainContent: React.FC = () => {
   const { view, showLoginModal, showTopUpModal, isAuthenticated, user, setView, setShowLoginModal } = useGame();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [view]);
 
   return (
     <main className="flex-1 min-w-0 pb-10 xl:mr-80">
