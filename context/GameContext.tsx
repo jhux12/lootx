@@ -46,19 +46,57 @@ const DEFAULT_LOCKS: UserLocks = {
   shipments: false
 };
 
-// Leveling Configuration
-const BASE_XP_REQUIREMENT = 500;
-const XP_GROWTH_RATE = 1.2;
+interface BonusSettings {
+  xpPer100Coins: number;
+  xpPerCaseOpen: number;
+  levelBaseXp: number;
+  levelXpMultiplier: number;
+  rakebackUnlockLevel: number;
+  rakebackBasePercent: number;
+  rakebackBonusCoins: number;
+  rakebackDailyCapCoins: number;
+}
 
-export const calculateLevelProgress = (totalXp: number) => {
+const DEFAULT_BONUS_SETTINGS: BonusSettings = {
+  xpPer100Coins: 25,
+  xpPerCaseOpen: 15,
+  levelBaseXp: 200,
+  levelXpMultiplier: 1.12,
+  rakebackUnlockLevel: 6,
+  rakebackBasePercent: 5,
+  rakebackBonusCoins: 2500,
+  rakebackDailyCapCoins: 15000
+};
+
+const STORAGE_KEY_BONUS_SETTINGS = 'lootx_bonus_settings';
+const BONUS_SETTINGS_DOC_ID = 'bonus-settings';
+
+const getStoredBonusSettings = (): BonusSettings => {
+  if (typeof window === 'undefined') return DEFAULT_BONUS_SETTINGS;
+  return safeReadLocalStorage(STORAGE_KEY_BONUS_SETTINGS, DEFAULT_BONUS_SETTINGS);
+};
+
+const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings => ({
+  xpPer100Coins: Math.max(0, Number(settings.xpPer100Coins) || 0),
+  xpPerCaseOpen: Math.max(0, Number(settings.xpPerCaseOpen) || 0),
+  levelBaseXp: Math.max(1, Number(settings.levelBaseXp) || DEFAULT_BONUS_SETTINGS.levelBaseXp),
+  levelXpMultiplier: Math.max(1, Number(settings.levelXpMultiplier) || DEFAULT_BONUS_SETTINGS.levelXpMultiplier),
+  rakebackUnlockLevel: Math.max(1, Number(settings.rakebackUnlockLevel) || DEFAULT_BONUS_SETTINGS.rakebackUnlockLevel),
+  rakebackBasePercent: Math.max(0, Number(settings.rakebackBasePercent) || 0),
+  rakebackBonusCoins: Math.max(0, Number(settings.rakebackBonusCoins) || 0),
+  rakebackDailyCapCoins: Math.max(0, Number(settings.rakebackDailyCapCoins) || 0)
+});
+
+export const calculateLevelProgress = (totalXp: number, overrides?: Partial<BonusSettings>) => {
+  const settings = { ...getStoredBonusSettings(), ...(overrides ?? {}) };
   let level = 1;
   let xpRemaining = Math.max(0, totalXp);
-  let xpForNextLevel = BASE_XP_REQUIREMENT;
+  let xpForNextLevel = Math.max(1, Math.floor(settings.levelBaseXp));
 
   while (xpRemaining >= xpForNextLevel) {
     xpRemaining -= xpForNextLevel;
     level += 1;
-    xpForNextLevel = Math.floor(xpForNextLevel * XP_GROWTH_RATE + 50);
+    xpForNextLevel = Math.floor(xpForNextLevel * settings.levelXpMultiplier + 50);
   }
 
   return {
@@ -121,6 +159,7 @@ interface GameContextType {
   battles: Battle[];
   boxes: MysteryBox[];
   items: CaseItem[];
+  bonusSettings: BonusSettings;
   showLoginModal: boolean;
   showTopUpModal: boolean;
   
@@ -158,6 +197,8 @@ interface GameContextType {
   deleteBox: (boxId: string) => Promise<void>;
   claimDaily: () => void;
   claimRakeback: () => void;
+  updateBonusSettings: (settings: BonusSettings) => Promise<void>;
+  awardCaseOpenXp: () => void;
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
   updateShipmentStatus: (userId: string, instanceId: string, status: InventoryItem['status']) => Promise<void>;
@@ -201,7 +242,7 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
   const snapshot = await getDoc(userRef);
 
   if (!snapshot.exists()) {
-    const initialProgress = calculateLevelProgress(0);
+    const initialProgress = calculateLevelProgress(0, getStoredBonusSettings());
     const newUser: User = {
       id: firebaseUser.uid,
       name: firebaseUser.email?.split('@')[0] || 'Player',
@@ -232,7 +273,7 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
 
   const data = snapshot.data();
   const xp = Number(data.xp ?? 0);
-  const progress = calculateLevelProgress(xp);
+  const progress = calculateLevelProgress(xp, getStoredBonusSettings());
   const followerIds = Array.isArray(data.followers)
     ? data.followers
     : Array.isArray(data.friends)
@@ -326,6 +367,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [items, setItems] = useState<CaseItem[]>(() => {
       return safeReadLocalStorage<CaseItem[]>(STORAGE_KEY_ITEMS, CASE_ITEMS);
   });
+
+  const [bonusSettings, setBonusSettings] = useState<BonusSettings>(() => getStoredBonusSettings());
   
   // 2. Initialize Boxes
   const [boxes, setBoxes] = useState<MysteryBox[]>([]);
@@ -381,7 +424,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const loaded: User[] = snapshot.docs.map((docSnap) => {
       const data = docSnap.data();
       const xp = Number(data.xp ?? 0);
-      const progress = calculateLevelProgress(xp);
+      const progress = calculateLevelProgress(xp, bonusSettings);
       const followerIds = Array.isArray(data.followers)
           ? data.followers
           : Array.isArray(data.friends)
@@ -418,6 +461,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUsers(loaded);
     }, (error) => {
       console.error('Failed to load users from Firebase', error);
+    });
+
+    return () => unsubscribe();
+  }, [bonusSettings]);
+
+  useEffect(() => {
+    const settingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC_ID);
+    const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.data() as Partial<BonusSettings>;
+      const normalized = normalizeBonusSettings(data);
+      setBonusSettings(normalized);
+      safeWriteLocalStorage(STORAGE_KEY_BONUS_SETTINGS, normalized);
+    }, (error) => {
+      console.error('Failed to load bonus settings', error);
     });
 
     return () => unsubscribe();
@@ -613,6 +671,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // --- ACTIONS ---
 
+  const updateBonusSettings = async (settings: BonusSettings) => {
+    const normalized = normalizeBonusSettings(settings);
+
+    setBonusSettings(normalized);
+    safeWriteLocalStorage(STORAGE_KEY_BONUS_SETTINGS, normalized);
+
+    try {
+      await setDoc(doc(db, 'settings', BONUS_SETTINGS_DOC_ID), normalized, { merge: true });
+    } catch (error) {
+      console.error('Failed to save bonus settings', error);
+    }
+  };
+
   const login = async (email: string, pass: string) => {
       await signInWithEmailAndPassword(auth, email, pass);
       setShowLoginModal(false);
@@ -661,10 +732,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!isAuthenticated || amount <= 0) return;
 
     setUser(prev => {
-      const nextXp = Math.max(0, prev.xp + Math.floor(amount));
-      const progress = calculateLevelProgress(nextXp);
+      const xpGain = Math.max(0, Math.floor(amount * bonusSettings.xpPer100Coins));
+      const nextXp = Math.max(0, prev.xp + xpGain);
+      const progress = calculateLevelProgress(nextXp, bonusSettings);
       const totalSpent = Math.max(0, (prev.totalSpent ?? 0) + amount);
-      const rakebackBalance = Math.max(0, (prev.rakebackBalance ?? 0) + amount * 0.01);
+      const rakebackRate = Math.max(0, bonusSettings.rakebackBasePercent) / 100;
+      const rakebackBalance = Math.max(0, (prev.rakebackBalance ?? 0) + amount * rakebackRate);
 
       persistUserData({
         xp: nextXp,
@@ -1131,9 +1204,28 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const available = Number(user.rakebackBalance ?? 0);
     if (available <= 0) return;
 
-    addBalance(available);
-    setUser(prev => ({ ...prev, rakebackBalance: 0 }));
-    persistUserData({ rakebackBalance: 0 });
+    const capAmount = bonusSettings.rakebackDailyCapCoins / 100;
+    const payout = capAmount > 0 ? Math.min(available, capAmount) : available;
+    if (payout <= 0) return;
+
+    addBalance(payout);
+    const remaining = Math.max(0, available - payout);
+    setUser(prev => ({ ...prev, rakebackBalance: remaining }));
+    persistUserData({ rakebackBalance: remaining });
+  };
+
+  const awardCaseOpenXp = () => {
+    if (!isAuthenticated) return;
+
+    const xpGain = Math.max(0, Math.floor(bonusSettings.xpPerCaseOpen));
+    if (!xpGain) return;
+
+    setUser(prev => {
+      const nextXp = Math.max(0, prev.xp + xpGain);
+      const progress = calculateLevelProgress(nextXp, bonusSettings);
+      persistUserData({ xp: nextXp, level: progress.level });
+      return { ...prev, xp: nextXp, level: progress.level };
+    });
   };
 
   const generateAffiliateCode = async () => {
@@ -1162,7 +1254,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateUserProgress = async (userId: string, xp: number) => {
     const numericXp = Number.isFinite(xp) ? xp : 0;
     const sanitizedXp = Math.max(0, Math.floor(numericXp));
-    const progress = calculateLevelProgress(sanitizedXp);
+    const progress = calculateLevelProgress(sanitizedXp, bonusSettings);
     try {
       await setDoc(getUserRef(userId), { xp: sanitizedXp, level: progress.level }, { merge: true });
     } catch (error) {
@@ -1211,6 +1303,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       battles,
       boxes,
       items,
+      bonusSettings,
       login,
       register,
       logout,
@@ -1244,6 +1337,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       deleteBox,
       claimDaily,
       claimRakeback,
+      updateBonusSettings,
+      awardCaseOpenXp,
       generateAffiliateCode,
       updateUserProgress,
       updateShipmentStatus

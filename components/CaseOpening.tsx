@@ -64,7 +64,7 @@ const generateServerSeed = () => {
 };
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
-  const { user, balance, deductBalance, addToInventory, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily } = useGame();
+  const { user, balance, deductBalance, addToInventory, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily, awardCaseOpenXp } = useGame();
   const { playSound } = useSound();
   
   const box = boxes.find(b => b.id === boxId) || boxes[0];
@@ -296,6 +296,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (!isDemo) {
       const inventoryItem = addToInventory(winner);
       setWonInventoryItem(inventoryItem);
+      awardCaseOpenXp();
     }
 
     if (triggerGold) {
