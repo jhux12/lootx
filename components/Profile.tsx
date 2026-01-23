@@ -25,6 +25,7 @@ export const Profile: React.FC = () => {
   const { playSound } = useSound();
   
   const [activeTab, setActiveTab] = useState<'topPulls' | 'inventory' | 'community' | 'settings'>('topPulls');
+  const [inventoryFilter, setInventoryFilter] = useState<'inventory' | 'processing' | 'shipped'>('inventory');
   const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
   const [communitySearch, setCommunitySearch] = useState('');
   const [topPullsPublic, setTopPullsPublic] = useState(user.topPullsPublic ?? false);
@@ -88,6 +89,12 @@ export const Profile: React.FC = () => {
       obtainedAt: item.obtainedAt ?? 0
     }))
     .sort((a, b) => b.obtainedAt - a.obtainedAt);
+
+  const filteredInventory = normalizedInventory.filter((item) => {
+    if (inventoryFilter === 'processing') return item.status === 'shipping';
+    if (inventoryFilter === 'shipped') return item.status === 'shipped';
+    return item.status === 'available';
+  });
 
   const topPulls = [...normalizedInventory]
     .sort((a, b) => b.price - a.price)
@@ -359,19 +366,40 @@ export const Profile: React.FC = () => {
                           <h3 className="text-lg font-bold text-white">Inventory</h3>
                           <p className="text-sm text-gray-500">Manage your items, ship rewards, or sell them back for coins.</p>
                       </div>
-                      <button 
-                        onClick={() => setView({ type: 'BOXES' })}
-                        className="inline-flex items-center justify-center px-4 py-2 bg-brand-purple text-white rounded-lg font-bold text-sm hover:bg-purple-600 transition-colors"
-                      >
-                        Open Boxes
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                          {(['inventory', 'processing', 'shipped'] as const).map((filter) => (
+                              <button
+                                  key={filter}
+                                  onClick={() => setInventoryFilter(filter)}
+                                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-colors ${
+                                      inventoryFilter === filter
+                                          ? 'bg-brand-purple text-white'
+                                          : 'bg-[#0b0e14] text-gray-400 hover:text-white hover:bg-gray-800'
+                                  }`}
+                              >
+                                  {filter === 'inventory' ? 'Inventory' : filter === 'processing' ? 'Processing' : 'Shipped'}
+                              </button>
+                          ))}
+                      </div>
                   </div>
 
-                  {normalizedInventory.length === 0 ? (
+                  {filteredInventory.length === 0 ? (
                       <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
                           <Package className="w-12 h-12 text-gray-700 mx-auto mb-4" />
-                          <h3 className="text-xl font-bold text-white mb-2">Your inventory is empty</h3>
-                          <p className="text-gray-500 mb-6">Open cases to collect items you can ship or sell back.</p>
+                          <h3 className="text-xl font-bold text-white mb-2">
+                              {inventoryFilter === 'inventory'
+                                  ? 'Your inventory is empty'
+                                  : inventoryFilter === 'processing'
+                                    ? 'No items are processing'
+                                    : 'No items have shipped yet'}
+                          </h3>
+                          <p className="text-gray-500 mb-6">
+                              {inventoryFilter === 'inventory'
+                                  ? 'Open cases to collect items you can ship or sell back.'
+                                  : inventoryFilter === 'processing'
+                                    ? 'Ship an item to start tracking its progress here.'
+                                    : 'Once items are shipped, tracking details will appear here.'}
+                          </p>
                           <button 
                             onClick={() => setView({ type: 'BOXES' })}
                             className="px-6 py-2 bg-brand-purple text-white rounded-lg font-bold hover:bg-purple-600 transition-colors"
@@ -380,8 +408,8 @@ export const Profile: React.FC = () => {
                           </button>
                       </div>
                   ) : (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {normalizedInventory.map((item) => {
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                          {filteredInventory.map((item) => {
                               const isAvailable = item.status === 'available';
                               const isLocked = !!item.locked;
                               const canShip = isAvailable && !isLocked && !!user.shippingAddress;
@@ -402,41 +430,40 @@ export const Profile: React.FC = () => {
                                     : 'bg-gray-700/40 text-gray-300 border-gray-600';
 
                               return (
-                                  <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-2xl p-4 flex flex-col gap-4">
-                                      <div className="flex flex-col sm:flex-row gap-4">
-                                          <div className="relative w-full sm:w-32 aspect-square bg-[#0b0e14] rounded-xl p-3 flex items-center justify-center overflow-hidden">
-                                              <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
-                                              <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
-                                                  item.rarity === 'legendary' ? 'from-yellow-500' :
-                                                  item.rarity === 'epic' ? 'from-purple-500' :
-                                                  item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
-                                              }`} />
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                              <div className="flex items-start justify-between gap-3">
-                                                  <div>
-                                                      <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">{item.rarity}</div>
-                                                      <h4 className="text-white font-bold text-base mb-2 line-clamp-2">{item.name}</h4>
-                                                  </div>
-                                                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${statusTone}`}>{statusLabel}</span>
-                                              </div>
-                                              <CoinAmount
-                                                amount={item.price}
-                                                formatOptions={{ maximumFractionDigits: 0 }}
-                                                className="text-green-500 font-black"
-                                                iconClassName="w-4 h-4"
-                                              />
-                                              <div className="text-xs text-gray-500 mt-2">
-                                                Obtained {new Date(item.obtainedAt).toLocaleDateString()}
-                                              </div>
-                                          </div>
+                                  <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all flex flex-col">
+                                      <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
+                                          <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                                          <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
+                                              item.rarity === 'legendary' ? 'from-yellow-500' :
+                                              item.rarity === 'epic' ? 'from-purple-500' :
+                                              item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
+                                          }`} />
                                       </div>
+                                      <div className="flex items-start justify-between gap-2">
+                                          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">{item.rarity}</div>
+                                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${statusTone}`}>{statusLabel}</span>
+                                      </div>
+                                      <h4 className="text-white font-bold text-sm mt-2 mb-2 line-clamp-2 min-h-[2.5rem]">{item.name}</h4>
+                                      <CoinAmount
+                                        amount={item.price}
+                                        formatOptions={{ maximumFractionDigits: 0 }}
+                                        className="text-green-500 font-black"
+                                        iconClassName="w-3.5 h-3.5"
+                                      />
+                                      <div className="text-[11px] text-gray-500 mt-2">
+                                        Obtained {new Date(item.obtainedAt).toLocaleDateString()}
+                                      </div>
+                                      {inventoryFilter === 'shipped' && item.trackingNumber && (
+                                          <div className="text-[11px] text-blue-300 mt-2 break-words">
+                                              Tracking: {item.trackingNumber}
+                                          </div>
+                                      )}
 
-                                      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                                      <div className="mt-4 flex flex-col gap-2">
                                           <button
                                             onClick={() => shipItem(item.instanceId)}
                                             disabled={!canShip}
-                                            className={`flex-1 px-4 py-2 rounded-lg font-bold text-sm transition-colors border ${
+                                            className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${
                                               canShip
                                                 ? 'bg-blue-600/20 text-blue-200 border-blue-500/40 hover:bg-blue-600/30'
                                                 : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
@@ -447,7 +474,7 @@ export const Profile: React.FC = () => {
                                           <button
                                             onClick={() => sellItem(item.instanceId, item.price)}
                                             disabled={!canSell}
-                                            className={`flex-1 px-4 py-2 rounded-lg font-bold text-sm transition-colors border flex items-center justify-center gap-2 ${
+                                            className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border flex items-center justify-center gap-2 ${
                                               canSell
                                                 ? 'bg-[#0b0e14] text-gray-200 border-gray-700 hover:border-brand-purple/60'
                                                 : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
@@ -458,13 +485,13 @@ export const Profile: React.FC = () => {
                                               amount={item.price}
                                               formatOptions={{ maximumFractionDigits: 0 }}
                                               className="text-gray-100"
-                                              iconClassName="w-3.5 h-3.5"
+                                              iconClassName="w-3 h-3"
                                             />
                                           </button>
                                       </div>
 
                                       {!user.shippingAddress && (
-                                          <div className="text-xs text-amber-400">
+                                          <div className="text-[11px] text-amber-400 mt-2">
                                               Add a shipping address in Settings to enable shipping.
                                           </div>
                                       )}
