@@ -21,7 +21,7 @@ import {
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
-import pullzLogo from '../assets/pullz-p.PNG';
+import { BrandLockup } from './BrandLockup';
 
 export const Header: React.FC = () => {
   const {
@@ -131,14 +131,10 @@ export const Header: React.FC = () => {
 
           {/* Logo */}
           <div
-            className="flex items-center cursor-pointer hover:opacity-90 transition-opacity"
+            className="cursor-pointer hover:opacity-90 transition-opacity"
             onClick={() => handleNav({ type: 'HOME' })}
           >
-            <img 
-              src={pullzLogo} 
-              alt="PULLZ Logo" 
-              className="h-12 md:h-14 lg:h-16"
-            />
+            <BrandLockup />
           </div>
 
           {/* Desktop Navigation */}
