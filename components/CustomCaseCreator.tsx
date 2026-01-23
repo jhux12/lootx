@@ -4,7 +4,7 @@ import { useGame } from '../context/GameContext';
 import { CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
-import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, getRiskLabel } from '../utils/caseOdds';
+import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue } from '../utils/caseOdds';
 
 export const CustomCaseCreator: React.FC = () => {
   const { createItem, createUserBox, items, setView } = useGame();
@@ -173,26 +173,6 @@ export const CustomCaseCreator: React.FC = () => {
                         onChange={(e) => setBoxName(e.target.value)}
                         className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all"
                       />
-                  </div>
-
-                  <div className="mb-6">
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Risk Balance (Fixed)</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={FIXED_RISK_LEVEL}
-                        disabled
-                        className="w-full accent-brand-purple cursor-not-allowed opacity-60"
-                      />
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-500 mt-1">
-                          <span>Safer</span>
-                          <span className="text-gray-300 font-semibold">{getRiskLabel(FIXED_RISK_LEVEL)}</span>
-                          <span>Riskier</span>
-                      </div>
-                      <p className="mt-2 text-[11px] text-gray-400">
-                        Risk tuning is locked for user-created cases.
-                      </p>
                   </div>
 
                   <div className="mb-6">
