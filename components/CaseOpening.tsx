@@ -78,6 +78,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
+  const [sellOfferGenerated, setSellOfferGenerated] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
   const [serverSeed, setServerSeed] = useState(() => {
     if (typeof window === 'undefined') return '';
@@ -277,6 +278,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setWonItem(null);
     setWonInventoryItem(null);
     setRewardResolved(false);
+    setSellOfferGenerated(false);
     playSound('click');
     
     // 1. Determine final winner
@@ -362,6 +364,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
     setShowWinModal(false);
     setWonInventoryItem(null);
+    setSellOfferGenerated(false);
   };
 
   const handleSell = () => {
@@ -370,12 +373,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         setShowWinModal(false);
         return;
     }
+    if (!sellOfferGenerated) {
+        setSellOfferGenerated(true);
+        return;
+    }
     if (wonInventoryItem && !rewardResolved) {
-        sellItem(wonInventoryItem.instanceId, wonInventoryItem.price);
+        const sellBackPrice = Math.round(wonInventoryItem.price * 0.82);
+        sellItem(wonInventoryItem.instanceId, sellBackPrice);
         setRewardResolved(true);
     }
     setShowWinModal(false);
     setWonInventoryItem(null);
+    setSellOfferGenerated(false);
   };
 
   const handleKeep = () => {
@@ -385,6 +394,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       setShowWinModal(false);
       setWonInventoryItem(null);
+      setSellOfferGenerated(false);
   }
 
   const handleCopyProof = useCallback(async () => {
@@ -727,16 +737,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             Close
                         </button>
                      ) : (
-                        <div className="flex gap-3 w-full">
-                            <button onClick={handleSell} className="flex-1 py-3 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
-                                <span className="inline-flex items-center justify-center gap-2">
-                                  Sell for
-                                  <CoinAmount
-                                    amount={wonItem.price}
-                                    formatOptions={{ maximumFractionDigits: 0 }}
-                                    className="text-gray-300"
-                                    iconClassName="w-4 h-4"
-                                  />
+                        <div className="flex flex-col gap-3 w-full sm:flex-row">
+                            <button onClick={handleSell} className="flex-1 py-3 px-4 bg-[#1a2130] hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition-colors border border-gray-700">
+                                <span className="flex flex-col items-center justify-center gap-1">
+                                  <span className="text-sm uppercase tracking-wide">
+                                    {sellOfferGenerated ? 'Accept buy back offer' : 'Generate buy back offer'}
+                                  </span>
+                                  {sellOfferGenerated && (
+                                    <CoinAmount
+                                      amount={Math.round(wonItem.price * 0.82)}
+                                      formatOptions={{ maximumFractionDigits: 0 }}
+                                      className="text-gray-300"
+                                      iconClassName="w-4 h-4"
+                                    />
+                                  )}
                                 </span>
                             </button>
                             <button onClick={handleKeep} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg shadow-blue-600/20 transition-colors">
