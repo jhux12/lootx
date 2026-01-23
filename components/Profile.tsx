@@ -194,101 +194,135 @@ export const Profile: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
       {/* Profile Header */}
-      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6 md:p-8 mb-8">
-         <div className="flex flex-col md:flex-row items-center gap-8 mb-8">
-            <div className="relative group">
-                <img src={displayUser.avatar} alt={displayUser.name} className="w-32 h-32 rounded-2xl border-4 border-[#1a2130] shadow-2xl object-cover bg-[#0b0e14]" />
-                <div className="absolute -bottom-3 -right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full border-4 border-[#131720]">
-                    Lvl {displayUser.level}
-                </div>
-            </div>
-            
-            <div className="flex-1 text-center md:text-left w-full">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <h2 className="text-3xl font-black text-white mb-2">{displayUser.name}</h2>
-                        <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm text-gray-400">
-                            <span className="flex items-center gap-1.5"><UsersIcon className="w-4 h-4" /> {viewedFollowerIds.length} Followers</span>
-                            <span className="flex items-center gap-1.5"><UserPlus className="w-4 h-4" /> {viewedFollowing.length} Following</span>
-                            <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> Joined {new Date(displayUser.joinedAt).toLocaleDateString()}</span>
-                        </div>
-                    </div>
-                    
-                    {!isOwnProfile && (
-                        <div className="flex items-center gap-3 justify-center md:justify-end">
-                            {isFollowing ? (
-                                <button 
-                                    onClick={handleUnfollowClick}
-                                    className="flex items-center gap-2 bg-[#0b0e14] text-gray-200 px-4 py-2 rounded-lg font-bold text-sm border border-gray-700 hover:border-red-500 hover:text-white transition-colors"
-                                >
-                                    <UserCheck className="w-4 h-4" /> Following
-                                </button>
-                            ) : (
-                                <button 
-                                    onClick={handleFollowClick}
-                                    className="flex items-center gap-2 bg-brand-purple text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/20"
-                                >
-                                    <UserPlus className="w-4 h-4" /> Follow
-                                </button>
-                            )}
-                        </div>
-                    )}
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-                    <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
-                        <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Top Pulls</div>
-                        <div className="text-xl font-black text-white">
-                            {canViewTopPulls ? `${topPulls.length} Items` : 'Private'}
-                        </div>
-                    </div>
-                    <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
-                        <div className="flex items-center justify-between gap-3 mb-2">
-                            <div className="text-gray-500 text-xs font-bold uppercase tracking-wider">XP Points</div>
-                            <img src={XP_ICON} alt="XP" className="w-5 h-5 object-contain drop-shadow" />
-                        </div>
-                        <div className="text-xl font-black text-blue-500 flex items-center gap-2">
-                            <img src={XP_ICON} alt="XP" className="w-6 h-6 object-contain" />
-                            <span>{displayUser.xp.toLocaleString()}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-         </div>
+      <div className="bg-[#131720] border border-gray-800 rounded-2xl overflow-hidden mb-8">
+        <div className="relative h-36 sm:h-44 md:h-48 bg-gradient-to-r from-[#1d2333] via-[#1a2130] to-[#0b0e14]">
+          <div className="absolute inset-0 opacity-60 bg-[radial-gradient(circle_at_top,_rgba(120,87,255,0.45),_transparent_60%)]" />
+        </div>
 
-         {/* Main Tabs */}
-         <div className="flex flex-wrap md:flex-nowrap items-center gap-2 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-full max-w-full overflow-x-auto">
-            <button 
+        <div className="px-4 pb-6 sm:px-6 md:px-8">
+          <div className="flex flex-col gap-6 -mt-12 sm:-mt-14">
+            <div className="flex flex-col lg:flex-row lg:items-end gap-6">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4 w-full">
+                <div className="relative group self-center sm:self-auto">
+                  <img src={displayUser.avatar} alt={displayUser.name} className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-[#131720] shadow-2xl object-cover bg-[#0b0e14]" />
+                  <div className="absolute -bottom-3 -right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full border-4 border-[#131720]">
+                      Lvl {displayUser.level}
+                  </div>
+                </div>
+
+                <div className="flex-1 text-center sm:text-left">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">Player profile</p>
+                      <h2 className="text-3xl sm:text-4xl font-black text-white mt-2">{displayUser.name}</h2>
+                      <div className="flex flex-wrap justify-center sm:justify-start gap-3 text-sm text-gray-400 mt-3">
+                        <span className="flex items-center gap-1.5 bg-[#0b0e14] px-3 py-1 rounded-full border border-gray-800">
+                          <UsersIcon className="w-4 h-4" /> {viewedFollowerIds.length} Followers
+                        </span>
+                        <span className="flex items-center gap-1.5 bg-[#0b0e14] px-3 py-1 rounded-full border border-gray-800">
+                          <UserPlus className="w-4 h-4" /> {viewedFollowing.length} Following
+                        </span>
+                        <span className="flex items-center gap-1.5 bg-[#0b0e14] px-3 py-1 rounded-full border border-gray-800">
+                          <Clock className="w-4 h-4" /> Joined {new Date(displayUser.joinedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3">
+                      {!isOwnProfile && (
+                        <>
+                          {isFollowing ? (
+                            <button
+                              onClick={handleUnfollowClick}
+                              className="flex items-center gap-2 bg-[#0b0e14] text-gray-200 px-4 py-2 rounded-lg font-bold text-sm border border-gray-700 hover:border-red-500 hover:text-white transition-colors"
+                            >
+                              <UserCheck className="w-4 h-4" /> Following
+                            </button>
+                          ) : (
+                            <button
+                              onClick={handleFollowClick}
+                              className="flex items-center gap-2 bg-brand-purple text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/20"
+                            >
+                              <UserPlus className="w-4 h-4" /> Follow
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {isOwnProfile && (
+                        <button
+                          onClick={() => setActiveTab('settings')}
+                          className="flex items-center gap-2 bg-[#0b0e14] text-gray-200 px-4 py-2 rounded-lg font-bold text-sm border border-gray-700 hover:border-brand-purple/60 transition-colors"
+                        >
+                          <Settings className="w-4 h-4" /> Edit Profile
+                        </button>
+                      )}
+                      {isOwnProfile && (
+                        <button
+                          onClick={() => setView({ type: 'BOXES' })}
+                          className="flex items-center gap-2 bg-brand-purple text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/20"
+                        >
+                          <Sparkles className="w-4 h-4" /> Open Boxes
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full lg:max-w-md">
+                <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
+                  <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Top Pulls</div>
+                  <div className="text-xl font-black text-white">
+                    {canViewTopPulls ? `${topPulls.length} Items` : 'Private'}
+                  </div>
+                </div>
+                <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="text-gray-500 text-xs font-bold uppercase tracking-wider">XP Points</div>
+                    <img src={XP_ICON} alt="XP" className="w-5 h-5 object-contain drop-shadow" />
+                  </div>
+                  <div className="text-xl font-black text-blue-500 flex items-center gap-2">
+                    <img src={XP_ICON} alt="XP" className="w-6 h-6 object-contain" />
+                    <span>{displayUser.xp.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Tabs */}
+            <div className="flex flex-wrap md:flex-nowrap items-center gap-2 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-full max-w-full overflow-x-auto">
+              <button
                 onClick={() => setActiveTab('topPulls')}
                 className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'topPulls' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-            >
+              >
                 <Sparkles className="w-4 h-4" /> Top Pulls
-            </button>
-            {isOwnProfile && (
-                <button 
-                    onClick={() => setActiveTab('inventory')}
-                    className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'inventory' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+              </button>
+              {isOwnProfile && (
+                <button
+                  onClick={() => setActiveTab('inventory')}
+                  className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'inventory' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
                 >
-                    <Package className="w-4 h-4" /> Inventory
+                  <Package className="w-4 h-4" /> Inventory
                 </button>
-            )}
-            <button 
+              )}
+              <button
                 onClick={() => setActiveTab('community')}
                 className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'community' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-            >
+              >
                 <UsersIcon className="w-4 h-4" /> Community
-            </button>
-            {isOwnProfile && (
-                <button 
-                    onClick={() => setActiveTab('settings')}
-                    className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'settings' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+              </button>
+              {isOwnProfile && (
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'settings' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
                 >
-                    <Settings className="w-4 h-4" /> Settings
+                  <Settings className="w-4 h-4" /> Settings
                 </button>
-            )}
-         </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Tab Content */}
