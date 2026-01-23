@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CreditCard, Wallet, Bitcoin, Loader2, CheckCircle } from 'lucide-react';
+import { X, Wallet, Loader2, CheckCircle } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { COIN_ICON } from '../constants';
@@ -8,7 +8,6 @@ import { CoinAmount } from './CoinAmount';
 export const TopUpModal: React.FC = () => {
   const { setShowTopUpModal, addBalance } = useGame();
   const { playSound } = useSound();
-  const [method, setMethod] = useState<'card' | 'crypto'>('card');
   const [amountCoins, setAmountCoins] = useState<number>(5000);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -39,6 +38,28 @@ export const TopUpModal: React.FC = () => {
   const bonusPercent = getBonusPercent(amountCoins);
   const bonusCoins = Math.floor(amountCoins * (bonusPercent / 100));
   const totalCoins = amountCoins + bonusCoins;
+  const paymentMethods = [
+    {
+      name: 'Visa',
+      src: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg'
+    },
+    {
+      name: 'Mastercard',
+      src: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg'
+    },
+    {
+      name: 'American Express',
+      src: 'https://upload.wikimedia.org/wikipedia/commons/3/30/American_Express_logo_%282018%29.svg'
+    },
+    {
+      name: 'Apple Pay',
+      src: 'https://upload.wikimedia.org/wikipedia/commons/b/b0/Apple_Pay_logo.svg'
+    },
+    {
+      name: 'Google Pay',
+      src: 'https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg'
+    }
+  ];
 
   const handleDeposit = () => {
       playSound('click');
@@ -65,7 +86,7 @@ export const TopUpModal: React.FC = () => {
         onClick={() => setShowTopUpModal(false)}
       ></div>
       
-      <div className="relative w-full max-w-md bg-[#131720] border border-gray-700 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95">
+      <div className="relative w-full max-w-md sm:max-w-lg bg-[#131720] border border-gray-700 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 max-h-[calc(100vh-2rem)] flex flex-col">
         
         {success ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -75,7 +96,7 @@ export const TopUpModal: React.FC = () => {
             </div>
         ) : (
             <>
-                <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-gradient-to-r from-[#0b0e14] via-[#111827] to-[#0b0e14]">
+                <div className="p-4 sm:p-6 border-b border-gray-800 flex justify-between items-center bg-gradient-to-r from-[#0b0e14] via-[#111827] to-[#0b0e14]">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                         <Wallet className="w-5 h-5 text-blue-500" /> Top Up Coins
                     </h2>
@@ -87,23 +108,24 @@ export const TopUpModal: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="p-6">
-                    {/* Method Selector */}
-                    <div className="flex gap-3 mb-6">
-                        <button 
-                            onClick={() => { setMethod('card'); playSound('click'); }}
-                            className={`flex-1 py-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${method === 'card' ? 'bg-blue-600/10 border-blue-500 text-white' : 'bg-[#0b0e14] border-gray-700 text-gray-500 hover:border-gray-500'}`}
-                        >
-                            <CreditCard className="w-6 h-6" />
-                            <span className="text-xs font-bold">Credit Card</span>
-                        </button>
-                        <button 
-                            onClick={() => { setMethod('crypto'); playSound('click'); }}
-                            className={`flex-1 py-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${method === 'crypto' ? 'bg-orange-500/10 border-orange-500 text-white' : 'bg-[#0b0e14] border-gray-700 text-gray-500 hover:border-gray-500'}`}
-                        >
-                            <Bitcoin className="w-6 h-6" />
-                            <span className="text-xs font-bold">Crypto</span>
-                        </button>
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                    <div className="mb-6">
+                      <p className="text-xs font-bold text-gray-500 uppercase mb-3">Accepted payment methods</p>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {paymentMethods.map((methodItem) => (
+                          <div
+                            key={methodItem.name}
+                            className="flex items-center justify-center rounded-xl border border-gray-800 bg-[#0b0e14] px-3 py-3"
+                          >
+                            <img
+                              src={methodItem.src}
+                              alt={methodItem.name}
+                              className="h-6 w-auto max-w-full object-contain"
+                              loading="lazy"
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Amount Selector */}
