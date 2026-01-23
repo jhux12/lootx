@@ -89,6 +89,7 @@ export const AdminPanel: React.FC = () => {
   const [adminNotification, setAdminNotification] = useState('');
   const [adminNoticeSent, setAdminNoticeSent] = useState(false);
   const [shipmentFilter, setShipmentFilter] = useState<'all' | 'processing' | 'shipped'>('processing');
+  const [shipmentTracking, setShipmentTracking] = useState<Record<string, string>>({});
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userStatuses, setUserStatuses] = useState<Record<string, UserStatus>>({});
   const [userLocks, setUserLocks] = useState<Record<string, UserLocks>>({});
@@ -1766,6 +1767,8 @@ export const AdminPanel: React.FC = () => {
                             {filteredShipments.map(({ user: shipmentUser, item, key }) => {
                                 const address = shipmentUser.shippingAddress;
                                 const canUpdate = Boolean(item.instanceId);
+                                const trackingKey = `${shipmentUser.id}-${item.instanceId || key}`;
+                                const trackingValue = shipmentTracking[trackingKey] ?? item.trackingNumber ?? '';
                                 return (
                                     <div key={key} className="bg-[#131720] border border-gray-800 rounded-xl p-5 flex flex-col gap-4">
                                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -1812,8 +1815,28 @@ export const AdminPanel: React.FC = () => {
                                             <div className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 text-xs text-gray-400 flex flex-col gap-3">
                                                 <div className="text-[10px] uppercase font-bold text-gray-500">Shipment Actions</div>
                                                 <div className="text-gray-500">Instance ID: <span className="text-gray-300">{item.instanceId || 'Unavailable'}</span></div>
+                                                <label className="text-[10px] uppercase font-bold text-gray-500">Tracking number</label>
+                                                <input
+                                                    type="text"
+                                                    value={trackingValue}
+                                                    onChange={(event) =>
+                                                        setShipmentTracking((prev) => ({
+                                                            ...prev,
+                                                            [trackingKey]: event.target.value
+                                                        }))
+                                                    }
+                                                    placeholder="Enter tracking number"
+                                                    className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200"
+                                                />
                                                 <button
-                                                    onClick={() => updateShipmentStatus(shipmentUser.id, item.instanceId || '', 'shipped')}
+                                                    onClick={() =>
+                                                        updateShipmentStatus(
+                                                            shipmentUser.id,
+                                                            item.instanceId || '',
+                                                            'shipped',
+                                                            trackingValue
+                                                        )
+                                                    }
                                                     disabled={item.status === 'shipped' || !canUpdate}
                                                     className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
