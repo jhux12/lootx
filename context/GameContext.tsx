@@ -239,6 +239,8 @@ type PersistUserData = Partial<{
   followers: string[];
   totalSpent: number;
   rakebackBalance: number;
+  rakebackEarnedToday: number;
+  rakebackEarnedAt: number;
   affiliateCode?: string;
   referredBy?: string;
   shippingAddress: ShippingAddress;
@@ -304,6 +306,12 @@ interface GameContextType {
   updateShipmentStatus: (userId: string, instanceId: string, status: InventoryItem['status'], trackingNumber?: string) => Promise<void>;
 }
 
+const getDayStart = (timestamp: number = Date.now()) => {
+  const date = new Date(timestamp);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+};
+
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 // Guest / Loading User
@@ -316,6 +324,8 @@ const GUEST_USER: User = {
   xp: 0,
   totalSpent: 0,
   rakebackBalance: 0,
+  rakebackEarnedToday: 0,
+  rakebackEarnedAt: getDayStart(),
   followers: [],
   isAdmin: false,
   chatWarnings: 0,
@@ -354,6 +364,8 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
       lastDailyClaim: undefined,
       totalSpent: 0,
       rakebackBalance: 0,
+      rakebackEarnedToday: 0,
+      rakebackEarnedAt: getDayStart(),
       followers: [],
       shippingAddress: undefined,
       isAdmin: false,
@@ -390,6 +402,8 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     lastDailyClaim: data.lastDailyClaim,
     totalSpent: Number(data.totalSpent ?? 0),
     rakebackBalance: Number(data.rakebackBalance ?? 0),
+    rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
+    rakebackEarnedAt: Number(data.rakebackEarnedAt ?? 0),
     affiliateCode: data.affiliateCode,
     referredBy: data.referredBy,
     followers: followerIds,
@@ -580,6 +594,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           lastDailyClaim: data.lastDailyClaim,
           totalSpent: Number(data.totalSpent ?? 0),
           rakebackBalance: Number(data.rakebackBalance ?? 0),
+          rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
+          rakebackEarnedAt: Number(data.rakebackEarnedAt ?? 0),
           affiliateCode: data.affiliateCode,
           referredBy: data.referredBy,
           followers: followerIds,
@@ -823,6 +839,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       lastDailyClaim: undefined,
       totalSpent: 0,
       rakebackBalance: 0,
+      rakebackEarnedToday: 0,
+      rakebackEarnedAt: getDayStart(),
       followers: [],
           shippingAddress: undefined,
           isAdmin: email.toLowerCase() === ADMIN_EMAIL,
@@ -859,16 +877,33 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const progress = calculateLevelProgress(nextXp, bonusSettings);
       const totalSpent = Math.max(0, (prev.totalSpent ?? 0) + amount);
       const rakebackRate = Math.max(0, bonusSettings.rakebackBasePercent) / 100;
-      const rakebackBalance = Math.max(0, (prev.rakebackBalance ?? 0) + amount * rakebackRate);
+      const today = getDayStart();
+      const earnedAt = Number(prev.rakebackEarnedAt ?? 0);
+      const earnedToday = earnedAt === today ? Number(prev.rakebackEarnedToday ?? 0) : 0;
+      const capAmount = bonusSettings.rakebackDailyCapCoins / 100;
+      const remainingCap = capAmount > 0 ? Math.max(0, capAmount - earnedToday) : Number.POSITIVE_INFINITY;
+      const rakebackEarned = Math.min(remainingCap, amount * rakebackRate);
+      const rakebackBalance = Math.max(0, (prev.rakebackBalance ?? 0) + rakebackEarned);
+      const nextEarnedToday = earnedToday + rakebackEarned;
 
       persistUserData({
         xp: nextXp,
         level: progress.level,
         totalSpent,
-        rakebackBalance
+        rakebackBalance,
+        rakebackEarnedToday: nextEarnedToday,
+        rakebackEarnedAt: today
       });
 
-      return { ...prev, xp: nextXp, level: progress.level, totalSpent, rakebackBalance };
+      return {
+        ...prev,
+        xp: nextXp,
+        level: progress.level,
+        totalSpent,
+        rakebackBalance,
+        rakebackEarnedToday: nextEarnedToday,
+        rakebackEarnedAt: today
+      };
     });
   };
 

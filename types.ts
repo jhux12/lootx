@@ -20,6 +20,8 @@ export interface User {
   lastDailyClaim?: number;
   totalSpent?: number;
   rakebackBalance?: number;
+  rakebackEarnedToday?: number;
+  rakebackEarnedAt?: number;
   affiliateCode?: string;
   referredBy?: string;
   shippingAddress?: ShippingAddress;
