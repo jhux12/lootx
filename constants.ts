@@ -1,3 +1,4 @@
+import pullzTicketImage from './assets/pullz-p.PNG';
 import { Battle, ChatMessage, LiveDrop, MysteryBox, CaseItem, User } from "./types";
 
 export const XP_ICON = 'https://cdn-icons-png.flaticon.com/512/3284/3284473.png';
@@ -42,7 +43,7 @@ export const GOLDEN_TICKET_ITEM: CaseItem = {
   id: 'golden-ticket',
   name: 'GOLDEN UPGRADE',
   price: 0,
-  image: 'https://cdn-icons-png.flaticon.com/512/11020/11020536.png', 
+  image: pullzTicketImage,
   rarity: 'legendary',
   chance: 0,
   color: '#fbbf24'
