@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Users, Globe, Send, Zap, Bot, Shield } from 'lucide-react';
+import { MessageSquare, Users, Globe, Send, Bot, Shield } from 'lucide-react';
 import { useSound } from '../context/SoundContext';
 import { AIChatBot } from './AIChatBot';
 import { useSiteChat } from '../hooks/useSiteChat';
 import { useGame } from '../context/GameContext';
-import { CoinAmount } from './CoinAmount';
+import { FreeRainBanner } from './FreeRainBanner';
 
 export const ChatSidebar: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'chat' | 'support' | 'users'>('chat');
   const [messageText, setMessageText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playSound } = useSound();
-   const { isAuthenticated, setView } = useGame();
+  const { isAuthenticated, setView } = useGame();
   const { messages, sendMessage, isSending, notice, isChatDisabled, warningsRemaining } = useSiteChat();
 
   // Auto scroll to bottom
@@ -68,28 +68,7 @@ export const ChatSidebar: React.FC = () => {
       {activeTab === 'chat' && (
         <>
           {/* Rain Promotion */}
-          <div className="p-3 bg-brand-bg relative overflow-hidden group cursor-pointer border-b border-gray-800" onClick={() => playSound('click')}>
-            <div className="absolute inset-0 bg-green-900/10 group-hover:bg-green-900/20 transition-colors"></div>
-            <div className="flex items-center justify-between relative z-10">
-                <div>
-                    <div className="text-[10px] font-bold text-green-400 uppercase tracking-wider flex items-center gap-1">
-                        <Zap className="w-3 h-3 fill-green-400" /> Free Rain
-                    </div>
-                    <div className="text-white font-mono font-bold text-lg flex items-center gap-2">
-                        <CoinAmount
-                          amount={90000}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          className="text-white"
-                          iconClassName="w-4 h-4"
-                        />
-                        <span className="text-gray-500 text-sm">67</span>
-                    </div>
-                </div>
-                <button className="bg-green-500 hover:bg-green-400 text-black text-xs font-bold px-4 py-2 rounded transition-colors">
-                    Join
-                </button>
-            </div>
-          </div>
+          <FreeRainBanner />
 
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-4" ref={scrollRef}>

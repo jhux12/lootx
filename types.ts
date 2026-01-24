@@ -36,6 +36,8 @@ export interface User {
   ledger?: LedgerEntry[];
   adminLogs?: AdminActionLog[];
   topPullsPublic?: boolean;
+  createdAt?: number;
+  lastChatAt?: number;
 }
 
 export interface ChatMessage {
