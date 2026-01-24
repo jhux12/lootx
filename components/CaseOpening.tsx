@@ -68,9 +68,29 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const { user, balance, deductBalance, addToInventory, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily, awardCaseOpenXp } = useGame();
   const { playSound } = useSound();
   
-  const box = boxes.find(b => b.id === boxId) || boxes[0];
+  const matchedBox = boxes.find(b => b.id === boxId);
+  const box = matchedBox ?? boxes[0];
+
+  useEffect(() => {
+    if (boxes.length === 0) return;
+    if (!matchedBox) {
+      setView({ type: 'HOME' });
+    }
+  }, [boxes.length, matchedBox, setView]);
+
+  if (!box) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4">
+        <div className="text-center">
+          <p className="text-white text-lg font-semibold">Loading case...</p>
+          <p className="text-gray-400 text-sm mt-2">Preparing your drops and odds.</p>
+        </div>
+      </div>
+    );
+  }
+
   const items = box.items || [];
-  const sellBackRate = box?.isUserCreated ? 0.75 : 0.82;
+  const sellBackRate = box.isUserCreated ? 0.75 : 0.82;
 
   // Sort items high to low for display purposes
   const displayItems = [...items].sort((a, b) => b.price - a.price);
