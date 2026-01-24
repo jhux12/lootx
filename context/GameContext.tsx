@@ -1388,7 +1388,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const createBox = async (box: MysteryBox) => {
       const { id, ...boxDataRaw } = box;
-      const boxData = sanitizeData(boxDataRaw);
+      const boxData = sanitizeDeep(boxDataRaw);
       let boxId = id;
 
       try {
@@ -1419,7 +1419,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return;
       }
 
-      const boxData = sanitizeData(boxDataRaw);
+      const boxData = sanitizeDeep(boxDataRaw);
 
       try {
           await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
