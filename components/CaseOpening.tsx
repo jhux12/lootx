@@ -191,7 +191,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return items[items.length - 1];
   };
 
-  const generateReel = (target: CaseItem, pool: CaseItem[]) => {
+  const generateReel = (target: CaseItem, pool: CaseItem[], sprinkleGold: boolean) => {
     const endBuffer = 5; 
     const newReel: CaseItem[] = [];
     
@@ -206,6 +206,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     // Add end buffer
     for (let i = 0; i < endBuffer; i++) {
         newReel.push(pool[Math.floor(Math.random() * pool.length)]);
+    }
+
+    if (sprinkleGold) {
+      const goldInterval = 9;
+      const goldOffset = Math.floor(Math.random() * goldInterval);
+      for (let i = goldOffset; i < newReel.length; i += goldInterval) {
+        if (i !== BUFFER_COUNT) {
+          newReel[i] = GOLDEN_TICKET_ITEM;
+        }
+      }
     }
     
     return newReel;
@@ -308,7 +318,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         // Stage 1: Spin to Golden Ticket
         // Note: We use global items pool for buffer if box items are too few, or just box items. 
         // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
-        const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items);
+        const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items, true);
         setReelItems(ticketReel);
         
         animateSpin(4500, () => {
@@ -321,7 +331,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 // Stage 2: Spin to Actual Winner (using only legendary items in reel)
                 const legendaryPool = items.filter(i => i.rarity === 'legendary');
                 const pool = legendaryPool.length > 0 ? legendaryPool : items;
-                const goldReel = generateReel(winner, pool);
+                const goldReel = generateReel(winner, pool, true);
                 setReelItems(goldReel);
                 
                 animateSpin(4000, () => {
@@ -333,7 +343,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     } else {
         // --- NORMAL SPIN FLOW ---
-        const normalReel = generateReel(winner, items);
+        const normalReel = generateReel(winner, items, true);
         setReelItems(normalReel);
         
         animateSpin(5000, () => {
