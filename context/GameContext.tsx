@@ -110,9 +110,6 @@ export const calculateLevelProgress = (totalXp: number, overrides?: Partial<Bonu
   };
 };
 
-// Storage Keys (Fallback)
-const STORAGE_KEY_ITEMS = 'lootx_items'; // New key for items
-
 const safeReadLocalStorage = <T,>(key: string, fallback: T): T => {
   try {
     const storedValue = localStorage.getItem(key);
@@ -496,9 +493,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   
   // Initialize Items
-  const [items, setItems] = useState<CaseItem[]>(() => {
-      return safeReadLocalStorage<CaseItem[]>(STORAGE_KEY_ITEMS, CASE_ITEMS);
-  });
+  const [items, setItems] = useState<CaseItem[]>(() => CASE_ITEMS);
 
   const [bonusSettings, setBonusSettings] = useState<BonusSettings>(() => getStoredBonusSettings());
 
@@ -638,7 +633,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             image: data.image ?? 'https://picsum.photos/200',
             rarity,
             chance: Number(data.chance ?? 0),
-            color: data.color ?? '#9ca3af'
+            color: data.color ?? '#9ca3af',
+            tags: Array.isArray(data.tags) ? (data.tags as CaseItem['tags']) : undefined
           } as CaseItem;
         })
         .sort((a, b) => a.price - b.price);
@@ -666,7 +662,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               image: item.image ?? 'https://picsum.photos/300',
               rarity,
               chance: Number(item.chance ?? 0),
-              color: item.color ?? '#9ca3af'
+              color: item.color ?? '#9ca3af',
+              tags: Array.isArray(item.tags) ? (item.tags as CaseItem['tags']) : undefined
             };
           }) : [];
 
@@ -677,6 +674,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             image: data.image ?? 'https://picsum.photos/300',
             accentColor: data.accentColor ?? '#3b82f6',
             tag: data.tag as MysteryBox['tag'],
+            tags: Array.isArray(data.tags) ? (data.tags as MysteryBox['tags']) : undefined,
             isDaily: data.isDaily ?? false,
             targetEV: data.targetEV !== undefined ? Number(data.targetEV) : undefined,
             riskLevel: data.riskLevel !== undefined ? Number(data.riskLevel) : undefined,
@@ -803,13 +801,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return () => clearInterval(interval);
   }, [battles]);
-
-  // -- PERSISTENCE EFFECTS (LOCAL STORAGE FALLBACK / SYNC) --
-
-  // Save Items whenever they change
-  useEffect(() => {
-      safeWriteLocalStorage(STORAGE_KEY_ITEMS, items);
-  }, [items]);
 
   // --- ACTIONS ---
 
