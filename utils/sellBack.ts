@@ -3,5 +3,6 @@ export const getSellBackValue = (price: number, rate: number) => {
   if (rawValue <= 0) {
     return 0;
   }
-  return Math.max(1, Math.round(rawValue));
+  const roundedValue = Math.round(rawValue);
+  return Math.min(price, Math.max(1, roundedValue));
 };
