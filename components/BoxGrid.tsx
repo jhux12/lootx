@@ -4,12 +4,14 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import caselabImage from '../assets/caselab.gif';
 import { BoxCard } from './BoxCard';
+import { DEFAULT_LOCKS } from '../types';
 
 export const BoxGrid: React.FC = () => {
-  const { setView, boxes } = useGame();
+  const { setView, boxes, user } = useGame();
   const { playSound } = useSound();
   const [visibleCount, setVisibleCount] = useState(4);
   const perPage = 4;
+  const openCasesLocked = { ...DEFAULT_LOCKS, ...(user.locks ?? {}) }.openCases;
 
   // Filter out user-created and daily free boxes from the main shop/grid
   const displayBoxes = useMemo(
@@ -26,11 +28,19 @@ export const BoxGrid: React.FC = () => {
         </h3>
       </div>
 
+      {openCasesLocked && (
+        <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-200">
+          Case opening is currently locked on this account.
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {visibleBoxes.map((box) => (
           <BoxCard
             key={box.id}
             box={box}
+            isLocked={openCasesLocked}
+            lockLabel="Cases are locked for this account."
             onSelect={(boxId) => {
               playSound('click');
               setView({ type: 'CASE_OPENING', boxId });

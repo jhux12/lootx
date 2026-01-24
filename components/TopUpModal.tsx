@@ -4,14 +4,17 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
+import { DEFAULT_LOCKS } from '../types';
 
 export const TopUpModal: React.FC = () => {
-  const { setShowTopUpModal, addBalance } = useGame();
+  const { setShowTopUpModal, addBalance, user } = useGame();
   const { playSound } = useSound();
   const [method, setMethod] = useState<'card' | 'crypto'>('card');
   const [amountCoins, setAmountCoins] = useState<number>(5000);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const depositsLocked = { ...DEFAULT_LOCKS, ...(user.locks ?? {}) }.deposits;
+  const isDepositDisabled = isLoading || depositsLocked;
   const formattedDepositAmount = new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: 'USD',
@@ -41,6 +44,7 @@ export const TopUpModal: React.FC = () => {
   const totalCoins = amountCoins + bonusCoins;
 
   const handleDeposit = () => {
+      if (depositsLocked) return;
       playSound('click');
       setIsLoading(true);
 
@@ -94,11 +98,17 @@ export const TopUpModal: React.FC = () => {
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+                    {depositsLocked && (
+                      <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-200">
+                        Deposits are currently locked on this account. Check back later or contact support if this seems wrong.
+                      </div>
+                    )}
                     {/* Method Selector */}
                     <div className="flex gap-3 mb-5">
                         <button 
                             onClick={() => { setMethod('card'); playSound('click'); }}
-                            className={`flex-1 rounded-xl border px-3 py-3 text-left transition-all ${method === 'card' ? 'border-blue-400 bg-blue-500/10 text-white shadow-lg shadow-blue-900/10' : 'border-white/10 bg-[#0b0e14] text-gray-400 hover:border-white/30'}`}
+                            disabled={depositsLocked}
+                            className={`flex-1 rounded-xl border px-3 py-3 text-left transition-all ${method === 'card' ? 'border-blue-400 bg-blue-500/10 text-white shadow-lg shadow-blue-900/10' : 'border-white/10 bg-[#0b0e14] text-gray-400 hover:border-white/30'} ${depositsLocked ? 'cursor-not-allowed opacity-50' : ''}`}
                         >
                             <div className="flex items-center gap-2">
                               <CreditCard className="w-5 h-5" />
@@ -108,7 +118,8 @@ export const TopUpModal: React.FC = () => {
                         </button>
                         <button 
                             onClick={() => { setMethod('crypto'); playSound('click'); }}
-                            className={`flex-1 rounded-xl border px-3 py-3 text-left transition-all ${method === 'crypto' ? 'border-orange-400 bg-orange-500/10 text-white shadow-lg shadow-orange-900/10' : 'border-white/10 bg-[#0b0e14] text-gray-400 hover:border-white/30'}`}
+                            disabled={depositsLocked}
+                            className={`flex-1 rounded-xl border px-3 py-3 text-left transition-all ${method === 'crypto' ? 'border-orange-400 bg-orange-500/10 text-white shadow-lg shadow-orange-900/10' : 'border-white/10 bg-[#0b0e14] text-gray-400 hover:border-white/30'} ${depositsLocked ? 'cursor-not-allowed opacity-50' : ''}`}
                         >
                             <div className="flex items-center gap-2">
                               <Bitcoin className="w-5 h-5" />
@@ -135,7 +146,8 @@ export const TopUpModal: React.FC = () => {
                             <button
                                 key={pack.coins}
                                 onClick={() => { setAmountCoins(pack.coins); playSound('click'); }}
-                                className={`relative rounded-xl border px-3 py-3 text-left transition-all ${amountCoins === pack.coins ? 'border-emerald-400 bg-emerald-500/10 text-white shadow-lg shadow-emerald-900/20' : 'border-white/10 bg-[#0b0e14] text-gray-300 hover:border-white/30'}`}
+                                disabled={depositsLocked}
+                                className={`relative rounded-xl border px-3 py-3 text-left transition-all ${amountCoins === pack.coins ? 'border-emerald-400 bg-emerald-500/10 text-white shadow-lg shadow-emerald-900/20' : 'border-white/10 bg-[#0b0e14] text-gray-300 hover:border-white/30'} ${depositsLocked ? 'cursor-not-allowed opacity-50' : ''}`}
                             >
                                 {isBestValue && (
                                   <span className="absolute -top-2 right-2 rounded-full bg-gradient-to-r from-emerald-400 to-blue-500 px-2 py-0.5 text-[10px] font-bold uppercase text-black shadow">
@@ -175,7 +187,8 @@ export const TopUpModal: React.FC = () => {
                                 min="0"
                                 value={amountCoins}
                                 onChange={(e) => setAmountCoins(Number(e.target.value))}
-                                className="w-full rounded-xl border border-white/10 bg-[#0b0e14] py-3 pl-11 pr-4 text-white font-semibold leading-none focus:outline-none focus:border-blue-500 transition-colors"
+                                disabled={depositsLocked}
+                                className={`w-full rounded-xl border border-white/10 bg-[#0b0e14] py-3 pl-11 pr-4 text-white font-semibold leading-none focus:outline-none focus:border-blue-500 transition-colors ${depositsLocked ? 'cursor-not-allowed opacity-60' : ''}`}
                             />
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
@@ -209,10 +222,12 @@ export const TopUpModal: React.FC = () => {
                     {/* Submit Button */}
                     <button 
                         onClick={handleDeposit}
-                        disabled={isLoading}
+                        disabled={isDepositDisabled}
                         className="w-full rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        {isLoading ? (
+                        {depositsLocked ? (
+                          'Deposits are locked'
+                        ) : isLoading ? (
                             <>
                                 <Loader2 className="w-5 h-5 animate-spin" /> Processing...
                             </>

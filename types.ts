@@ -96,6 +96,18 @@ export interface UserLocks {
   shipments: boolean;
 }
 
+export const DEFAULT_LOCKS: UserLocks = {
+  openCases: false,
+  deposits: false,
+  withdraws: false,
+  marketplace: false,
+  shipments: false
+};
+
+export interface SiteSettings {
+  maintenanceMode: boolean;
+}
+
 export type LedgerEntryType =
   | 'deposit'
   | 'case_open'

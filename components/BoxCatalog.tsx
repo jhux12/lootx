@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Tag, ChevronLeft } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
-import { MysteryBox } from '../types';
+import { DEFAULT_LOCKS, MysteryBox } from '../types';
 import { BoxCard } from './BoxCard';
 
 const normalizeTag = (tag: string) => tag.trim().toLowerCase();
@@ -15,9 +15,10 @@ const getBoxTags = (box: MysteryBox) => {
 };
 
 export const BoxCatalog: React.FC = () => {
-  const { boxes, setView } = useGame();
+  const { boxes, setView, user } = useGame();
   const { playSound } = useSound();
   const [activeTag, setActiveTag] = useState<string>('All');
+  const openCasesLocked = { ...DEFAULT_LOCKS, ...(user.locks ?? {}) }.openCases;
 
   const displayBoxes = useMemo(
     () => boxes.filter(box => !box.isUserCreated && !box.isDaily),
@@ -86,12 +87,20 @@ export const BoxCatalog: React.FC = () => {
         })}
       </div>
 
+      {openCasesLocked && (
+        <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-200">
+          Case opening is currently locked on this account.
+        </div>
+      )}
+
       {filteredBoxes.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {filteredBoxes.map(box => (
             <BoxCard
               key={box.id}
               box={box}
+              isLocked={openCasesLocked}
+              lockLabel="Cases are locked for this account."
               onSelect={(boxId) => {
                 playSound('click');
                 setView({ type: 'CASE_OPENING', boxId });

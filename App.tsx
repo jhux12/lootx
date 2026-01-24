@@ -16,6 +16,7 @@ import { CustomCaseCreator } from './components/CustomCaseCreator';
 import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
 import { BrandLockup } from './components/BrandLockup';
+import { MaintenanceMode } from './components/MaintenanceMode';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider } from './context/SoundContext';
 import { ShieldAlert, MessageCircle } from 'lucide-react';
@@ -168,37 +169,53 @@ const MainContent: React.FC = () => {
 };
 
 function App() {
-  const [showSupportChat, setShowSupportChat] = useState(false);
-
   return (
     <SoundProvider>
       <GameProvider>
-        <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
-          <Header />
-          
-          <div className="flex flex-1 pt-[72px] md:pt-[80px] lg:pt-[88px]">
-            <MainContent />
-            <ChatSidebar />
-          </div>
-          
-          {/* Mobile Chat Icon */}
-          <button
-            onClick={() => setShowSupportChat(true)}
-            className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl bg-gradient-to-r from-brand-purple to-blue-600 text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
-            aria-label="Open support chat"
-          >
-            <MessageCircle className="w-5 h-5" />
-          </button>
-
-          {/* Mobile Chat Modal */}
-          <MobileChatModal 
-            isOpen={showSupportChat} 
-            onClose={() => setShowSupportChat(false)} 
-          />
-        </div>
+        <AppShell />
       </GameProvider>
     </SoundProvider>
   );
 }
+
+const AppShell: React.FC = () => {
+  const { siteSettings, user } = useGame();
+  const [showSupportChat, setShowSupportChat] = useState(false);
+  const maintenanceActive = siteSettings.maintenanceMode && !user.isAdmin;
+
+  if (maintenanceActive) {
+    return (
+      <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white">
+        <MaintenanceMode />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+      <Header />
+
+      <div className="flex flex-1 pt-[72px] md:pt-[80px] lg:pt-[88px]">
+        <MainContent />
+        <ChatSidebar />
+      </div>
+
+      {/* Mobile Chat Icon */}
+      <button
+        onClick={() => setShowSupportChat(true)}
+        className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl bg-gradient-to-r from-brand-purple to-blue-600 text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
+        aria-label="Open support chat"
+      >
+        <MessageCircle className="w-5 h-5" />
+      </button>
+
+      {/* Mobile Chat Modal */}
+      <MobileChatModal 
+        isOpen={showSupportChat} 
+        onClose={() => setShowSupportChat(false)} 
+      />
+    </div>
+  );
+};
 
 export default App;

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, BoxTag, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus, BOX_TAG_OPTIONS } from '../types';
+import { AdminActionLog, BoxTag, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus, BOX_TAG_OPTIONS, DEFAULT_LOCKS } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -21,14 +21,6 @@ const rarityColorOptions = [
     { value: 'epic' as const, label: 'Epic', color: rarityColorMap.epic },
     { value: 'legendary' as const, label: 'Legendary', color: rarityColorMap.legendary }
 ];
-
-const DEFAULT_LOCKS: UserLocks = {
-    openCases: false,
-    deposits: false,
-    withdraws: false,
-    marketplace: false,
-    shipments: false
-};
 
 const LOCK_LABELS: Record<keyof UserLocks, string> = {
     openCases: 'Open Cases',
@@ -55,7 +47,9 @@ export const AdminPanel: React.FC = () => {
     updateShipmentStatus,
     updateUserAdminData,
     bonusSettings,
-    updateBonusSettings
+    updateBonusSettings,
+    siteSettings,
+    updateSiteSettings
   } = useGame();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'bonuses'>('dashboard');
 
@@ -108,6 +102,8 @@ export const AdminPanel: React.FC = () => {
   const [timelineSearch, setTimelineSearch] = useState('');
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
   const [bonusSaveNotice, setBonusSaveNotice] = useState(false);
+  const [siteDraft, setSiteDraft] = useState(siteSettings);
+  const [siteSaveNotice, setSiteSaveNotice] = useState(false);
   const EV_TOLERANCE = 0.01;
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
@@ -265,6 +261,10 @@ export const AdminPanel: React.FC = () => {
   useEffect(() => {
       setBonusDraft(bonusSettings);
   }, [bonusSettings]);
+
+  useEffect(() => {
+      setSiteDraft(siteSettings);
+  }, [siteSettings]);
 
   const handleSaveItem = async () => {
       if(!newItem.name || !newItem.price) return;
@@ -777,6 +777,12 @@ export const AdminPanel: React.FC = () => {
       updateBonusSettings(bonusDraft);
       setBonusSaveNotice(true);
       window.setTimeout(() => setBonusSaveNotice(false), 3000);
+  };
+
+  const handleSaveSiteSettings = () => {
+      updateSiteSettings(siteDraft);
+      setSiteSaveNotice(true);
+      window.setTimeout(() => setSiteSaveNotice(false), 3000);
   };
 
   return (
@@ -2115,13 +2121,41 @@ export const AdminPanel: React.FC = () => {
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Maintenance Mode</label>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-6 bg-gray-700 rounded-full relative cursor-pointer">
-                                        <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full"></div>
-                                    </div>
-                                    <span className="text-sm text-gray-400">Disabled</span>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSiteDraft((prev) => ({ ...prev, maintenanceMode: !prev.maintenanceMode }))}
+                                        className={`relative h-6 w-12 rounded-full border transition-colors ${siteDraft.maintenanceMode ? 'border-red-400 bg-red-500/40' : 'border-gray-700 bg-gray-800'}`}
+                                        aria-pressed={siteDraft.maintenanceMode}
+                                    >
+                                        <span
+                                            className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all ${siteDraft.maintenanceMode ? 'left-7' : 'left-1'}`}
+                                        ></span>
+                                    </button>
+                                    <span className={`text-sm font-semibold ${siteDraft.maintenanceMode ? 'text-red-300' : 'text-gray-400'}`}>
+                                        {siteDraft.maintenanceMode ? 'Enabled' : 'Disabled'}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                        Toggle before saving to activate maintenance mode.
+                                    </span>
                                 </div>
                             </div>
+                        </div>
+                        <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-800 pt-4">
+                            <div className="text-xs text-gray-500">
+                                Maintenance mode takes effect for everyone except admins.
+                            </div>
+                            <button
+                                onClick={handleSaveSiteSettings}
+                                className="w-full sm:w-auto px-5 py-2 bg-red-500/20 text-red-300 border border-red-500/40 rounded-lg text-sm font-bold hover:bg-red-500 hover:text-white transition-colors"
+                            >
+                                Save site settings
+                            </button>
+                            {siteSaveNotice && (
+                                <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+                                    Site settings saved.
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
