@@ -83,7 +83,7 @@ Message: """${message}"""`
           ]
         }
       ],
-      generationConfig: {
+      config: {
         responseMimeType: 'application/json'
       }
     });
