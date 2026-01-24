@@ -39,6 +39,17 @@ const BattleSpinner: React.FC<{
     for (let i = 0; i < bufferCount + 5; i++) {
         strip.push(finalPool[Math.floor(Math.random() * finalPool.length)]);
     }
+
+    // Sprinkle in the gold spin tile occasionally while spinning so it stays visible
+    if (spinning) {
+      const goldInterval = 7;
+      const goldOffset = Math.floor(Math.random() * goldInterval);
+      for (let i = goldOffset; i < strip.length; i += goldInterval) {
+        if (i !== 28) {
+          strip[i] = GOLDEN_TICKET_ITEM;
+        }
+      }
+    }
     
     // Insert winner at fixed position if known (e.g. index 28)
     if (winningItem) {
@@ -46,7 +57,7 @@ const BattleSpinner: React.FC<{
     }
     
     setItems(strip);
-  }, [winningItem, isGoldMode, pool]);
+  }, [winningItem, isGoldMode, pool, spinning]);
 
   useEffect(() => {
     if (spinning && containerRef.current) {
