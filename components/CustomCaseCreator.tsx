@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search, Info, X } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search, Info, X, Tag } from 'lucide-react';
 import { useGame } from '../context/GameContext';
-import { CaseItem, MysteryBox } from '../types';
+import { BoxTag, BOX_TAG_OPTIONS, CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue } from '../utils/caseOdds';
@@ -18,6 +18,8 @@ export const CustomCaseCreator: React.FC = () => {
   const [lastCalculated, setLastCalculated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showLabInfo, setShowLabInfo] = useState(false);
+  const [activeTag, setActiveTag] = useState<'All' | BoxTag>('All');
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
   const toggleItemSelection = (item: CaseItem) => {
       playSound('click');
@@ -84,10 +86,16 @@ export const CustomCaseCreator: React.FC = () => {
       setView({ type: 'CASE_OPENING', boxId: newBox.id });
   };
 
-  // Filter items based on search
-  const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const tagOptions = useMemo(() => ['All', ...BOX_TAG_OPTIONS], []);
+
+  const filteredItems = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return items.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(normalizedQuery);
+      const matchesTag = activeTag === 'All' ? true : item.tags?.includes(activeTag);
+      return matchesSearch && matchesTag;
+    });
+  }, [items, searchQuery, activeTag]);
 
   return (
     <div className="max-w-5xl mx-auto p-6 animate-in fade-in slide-in-from-bottom-4">
@@ -98,8 +106,8 @@ export const CustomCaseCreator: React.FC = () => {
            >
              <ChevronLeft className="w-4 h-4" /> Back
            </button>
-           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-               <div className="p-2 bg-brand-purple/20 rounded-lg border border-brand-purple/40">
+           <div className="flex flex-row items-start gap-3 sm:items-center">
+               <div className="shrink-0 p-2 bg-brand-purple/20 rounded-lg border border-brand-purple/40">
                     <FlaskConical className="w-6 h-6 text-brand-purple" />
                </div>
                <div>
@@ -192,18 +200,39 @@ export const CustomCaseCreator: React.FC = () => {
                       />
                   </div>
 
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 max-h-[300px] md:max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="mb-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 mb-2">Filter by tag</div>
+                      <div className="flex gap-2 overflow-x-auto pb-2 sm:flex-wrap">
+                          {tagOptions.map(tag => {
+                              const isSelected = activeTag === tag;
+                              return (
+                                  <button
+                                      key={tag}
+                                      type="button"
+                                      onClick={() => setActiveTag(tag)}
+                                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition ${isSelected ? 'border-brand-purple/70 bg-brand-purple/20 text-purple-200' : 'border-gray-700 bg-[#0b0e14] text-gray-400 hover:border-gray-500'}`}
+                                  >
+                                      <Tag className="h-3 w-3" />
+                                      {tag}
+                                  </button>
+                              );
+                          })}
+                      </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-[300px] md:max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                        {filteredItems.map(item => {
                             const isSelected = selectedItems.some(i => i.id === item.id);
+                            const isExpanded = expandedItemId === item.id;
                             return (
                                 <div 
                                     key={item.id} 
-                                    onClick={() => toggleItemSelection(item)}
-                                    className={`relative p-2 rounded-lg border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isSelected ? 'bg-brand-purple/10 border-brand-purple shadow-[0_0_10px_rgba(139,92,246,0.2)]' : 'bg-[#0b0e14] border-gray-800 hover:border-gray-600'}`}
+                                    onClick={() => setExpandedItemId(prev => prev === item.id ? null : item.id)}
+                                    className={`relative rounded-lg border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isExpanded ? 'p-3 bg-[#101520] border-brand-purple/60 shadow-[0_10px_30px_rgba(15,23,42,0.45)]' : 'p-2 bg-[#0b0e14] border-gray-800 hover:border-gray-600'} ${isSelected ? 'ring-1 ring-brand-purple/40' : ''}`}
                                 >
                                     <img src={item.image} className="w-12 h-12 object-contain" />
                                     <div className="w-full">
-                                        <div className="text-[10px] text-gray-300 truncate font-medium">{item.name}</div>
+                                        <div className={`text-[10px] text-gray-300 font-medium ${isExpanded ? 'line-clamp-2 text-[11px]' : 'truncate'}`}>{item.name}</div>
                                         <CoinAmount
                                           amount={item.price}
                                           formatOptions={{ maximumFractionDigits: 0 }}
@@ -215,6 +244,20 @@ export const CustomCaseCreator: React.FC = () => {
                                         <div className="absolute top-1 right-1 bg-brand-purple rounded-full p-0.5">
                                             <Check className="w-3 h-3 text-white" />
                                         </div>
+                                    )}
+                                    {isExpanded && (
+                                      <div className="mt-2 w-full">
+                                          <button
+                                              type="button"
+                                              onClick={(event) => {
+                                                  event.stopPropagation();
+                                                  toggleItemSelection(item);
+                                              }}
+                                              className={`w-full rounded-md px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-white/10 text-gray-200 hover:bg-white/20' : 'bg-brand-purple text-white hover:bg-purple-600'}`}
+                                          >
+                                              {isSelected ? 'Remove from box' : 'Add to box'}
+                                          </button>
+                                      </div>
                                     )}
                                 </div>
                             );
