@@ -5,7 +5,7 @@ import { db } from '../firebase';
 import { ChatMessage, User } from '../types';
 import { useGame } from '../context/GameContext';
 
-const FALLBACK_GEMINI_API_KEY = "AIzaSyDHNb6DFcV_72EC2jYlk-F0quunMem9s10";
+const FALLBACK_GEMINI_API_KEY = "AIzaSyC9KqEBjypQOAxikon_kbAdAUffOVdXnR0";
 const CHAT_EXPIRATION_MS = 20 * 60 * 1000;
 
 type ModerationResult = {
@@ -67,9 +67,8 @@ const runModeration = async (message: string): Promise<ModerationResult> => {
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || FALLBACK_GEMINI_API_KEY;
     const genAI = new GoogleGenAI({ apiKey });
-    const model = genAI.models.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    const response = await model.generateContent({
+    const response = await genAI.models.generateContent({
+      model: 'gemini-1.5-flash',
       contents: [
         {
           role: 'user',
@@ -89,7 +88,7 @@ Message: """${message}"""`
       }
     });
 
-    const raw = response.response?.text() ?? '{}';
+    const raw = response.text ?? response.response?.text?.() ?? '{}';
     const parsed = JSON.parse(raw) as Partial<ModerationResult>;
     return {
       safe: parsed.safe !== false,
