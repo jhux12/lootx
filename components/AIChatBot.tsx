@@ -8,7 +8,7 @@ interface Message {
   text: string;
 }
 
-const FALLBACK_GEMINI_API_KEY = "AIzaSyDHNb6DFcV_72EC2jYlk-F0quunMem9s10";
+const FALLBACK_GEMINI_API_KEY = "AIzaSyBcVfnAAfylvjRl60rPCkCSGllwsV_nqi8";
 
 type ChatVariant = 'sidebar' | 'modal';
 
@@ -48,7 +48,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
         }
         const ai = new GoogleGenAI({ apiKey });
         const chat = ai.chats.create({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-2.0-flash',
             config: {
                 systemInstruction: "You are the AI Support Assistant for LootX, a premier mystery box and case battle platform. Your tone is professional, helpful, and slightly gamer-centric. \n\nKey Knowledge:\n- LootX allows users to open mystery boxes containing real-world items (simulated).\n- Case Battles: Users compete against each other. The highest total value wins everything.\n- Case Lab: Users can create custom cases with specific odds.\n- Provably Fair: All outcomes are random and verifiable.\n- Currency: Users use site coins (simulated).\n\nDo not answer questions unrelated to LootX, gaming, or general support. Keep answers concise."
             }

@@ -44,7 +44,7 @@ export const ChatSidebar: React.FC = () => {
   );
 
   return (
-    <div className="w-80 bg-[#11141d] border-l border-gray-800 flex flex-col h-[calc(100vh-64px)] fixed right-0 top-16 hidden xl:flex z-40">
+    <div className="w-80 bg-[#11141d] border-l border-gray-800 flex flex-col fixed right-0 hidden xl:flex z-40 top-[72px] md:top-[80px] lg:top-[88px] h-[calc(100vh-72px)] md:h-[calc(100vh-80px)] lg:h-[calc(100vh-88px)]">
       
       {/* Sidebar Header */}
       <div className="p-4 border-b border-gray-800 flex items-center justify-between">
