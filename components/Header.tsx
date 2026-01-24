@@ -276,7 +276,7 @@ export const Header: React.FC = () => {
                         onClick={() => setIsNotificationsOpen(false)}
                       ></div>
                       <div
-                        className="absolute right-0 mt-3 w-[90vw] max-w-sm md:w-96 bg-[#151a23] border border-gray-800 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                        className="fixed top-[76px] left-2 right-2 w-auto max-w-none mt-0 bg-[#151a23] border border-gray-800 rounded-2xl shadow-2xl z-50 overflow-hidden md:absolute md:top-full md:right-0 md:left-auto md:mt-3 md:w-96 md:max-w-sm"
                         onClick={(event) => event.stopPropagation()}
                       >
                         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
