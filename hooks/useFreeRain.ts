@@ -139,15 +139,25 @@ export const useFreeRain = () => {
         const participants = Array.from(new Set(state.joinedUserIds));
         const payouts = distributeRandomly(state.potCoins, participants);
 
-        for (const userId of participants) {
+        const payoutEntries = participants
+          .map((userId) => ({ userId, payout: payouts.get(userId) }))
+          .filter((entry): entry is { userId: string; payout: number } => Boolean(entry.payout));
+
+        const userSnapshots = await Promise.all(
+          payoutEntries.map(async ({ userId }) => {
+            const userRef = doc(db, 'users', userId);
+            const userSnap = await transaction.get(userRef);
+            return { userId, userRef, userSnap };
+          })
+        );
+
+        userSnapshots.forEach(({ userRef, userSnap, userId }) => {
+          if (!userSnap.exists()) return;
           const payout = payouts.get(userId);
-          if (!payout) continue;
-          const userRef = doc(db, 'users', userId);
-          const userSnap = await transaction.get(userRef);
-          if (!userSnap.exists()) continue;
+          if (!payout) return;
           const currentBalance = Number(userSnap.data().balance ?? 0);
           transaction.set(userRef, { balance: currentBalance + payout }, { merge: true });
-        }
+        });
 
         const nextState: FreeRainState = {
           ...createInitialState(currentNow),
