@@ -6,6 +6,7 @@ import { CaseItem, InventoryItem } from '../types';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getRiskLabel } from '../utils/caseOdds';
+import { getSellBackValue } from '../utils/sellBack';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -409,7 +410,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return;
     }
     if (wonInventoryItem && !rewardResolved) {
-        const sellBackPrice = Math.round(wonInventoryItem.price * sellBackRate);
+        const sellBackPrice = getSellBackValue(wonInventoryItem.price, sellBackRate);
         sellItem(wonInventoryItem.instanceId, sellBackPrice);
         setRewardResolved(true);
     }
@@ -812,7 +813,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                       </span>
                                       {sellOfferGenerated && !isGeneratingSellOffer && (
                                         <CoinAmount
-                                          amount={Math.round(wonItem.price * sellBackRate)}
+                                          amount={getSellBackValue(wonItem.price, sellBackRate)}
                                           formatOptions={{ maximumFractionDigits: 0 }}
                                           className="text-gray-200"
                                           iconClassName="w-4 h-4"
