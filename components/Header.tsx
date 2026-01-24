@@ -342,11 +342,6 @@ export const Header: React.FC = () => {
                     alt="Avatar" 
                     onClick={() => handleNav({ type: 'PROFILE' })} 
                   />
-                  {user.isAdmin && (
-                    <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-full border border-red-500/30">
-                      Admin
-                    </span>
-                  )}
                 </div>
               </div>
             </>
