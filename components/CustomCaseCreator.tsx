@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search, Info } from 'lucide-react';
+import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search, Info, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
@@ -17,6 +17,7 @@ export const CustomCaseCreator: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [lastCalculated, setLastCalculated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showLabInfo, setShowLabInfo] = useState(false);
 
   const toggleItemSelection = (item: CaseItem) => {
       playSound('click');
@@ -105,30 +106,69 @@ export const CustomCaseCreator: React.FC = () => {
                     <h1 className="text-3xl font-black text-white">Case Lab</h1>
                     <p className="text-gray-400 text-sm">Engineer your luck. Tune your risk balance for a custom case.</p>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-gray-300">
-                      <span className="rounded-full border border-purple-400/30 bg-purple-500/10 px-2 py-1 font-semibold uppercase tracking-wide text-purple-200">
-                        Case Lab sell-back
-                      </span>
-                      <div className="relative group">
-                        <button
-                          type="button"
-                          className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 font-semibold text-gray-200 transition hover:border-brand-purple/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple/60"
-                          aria-label="How Case Lab sell-back works"
-                        >
-                          <Info className="h-3.5 w-3.5" />
-                          How it works
-                        </button>
-                        <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-72 max-w-[85vw] -translate-x-1/2 translate-y-1 rounded-2xl border border-white/10 bg-[#0f141f] px-4 py-3 text-[11px] text-gray-200 opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-                          <div className="mb-1 text-xs font-semibold text-white">Case Lab sell-back rates</div>
-                          <p className="leading-relaxed text-gray-300">
-                            Items won from Case Lab cases can be sold back for <span className="font-semibold text-emerald-300">75% of their value</span>
-                            . That 25% fee only applies to Case Lab cases you create.
-                          </p>
-                        </div>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowLabInfo(true)}
+                        className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 font-semibold text-gray-200 transition hover:border-brand-purple/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple/60"
+                        aria-label="How Case Lab works"
+                      >
+                        <Info className="h-3.5 w-3.5" />
+                        How it works
+                      </button>
                     </div>
                </div>
            </div>
       </div>
+      {showLabInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setShowLabInfo(false)}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            aria-label="Close Case Lab info"
+          />
+          <div className="relative w-full max-w-xl rounded-2xl border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111722] to-[#0b0f18] p-5 text-gray-200 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-xs uppercase tracking-[0.3em] text-purple-300/80">Case Lab Guide</div>
+                <h2 className="mt-2 text-xl font-black text-white sm:text-2xl">Design your custom case</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLabInfo(false)}
+                className="rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:border-white/30 hover:text-white"
+              >
+                <span className="sr-only">Close</span>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <ol className="mt-4 space-y-3 text-sm text-gray-300">
+              <li className="flex gap-3">
+                <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">1</span>
+                <p>Select the items you want included in your case and give it a memorable name.</p>
+              </li>
+              <li className="flex gap-3">
+                <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">2</span>
+                <p>Tap <span className="font-semibold text-white">Synthesize Odds</span> to balance the odds and calculate the case price.</p>
+              </li>
+              <li className="flex gap-3">
+                <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">3</span>
+                <p>Create and open your case instantly. Case Lab wins can be sold back for <span className="font-semibold text-emerald-300">75% of item value</span>.</p>
+              </li>
+            </ol>
+            <div className="mt-5 flex flex-col gap-2 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
+              <span>Case Lab cases are for experimentation and custom odds.</span>
+              <button
+                type="button"
+                onClick={() => setShowLabInfo(false)}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold text-gray-200 transition hover:border-white/30 hover:text-white"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* LEFT: Item Picker */}
