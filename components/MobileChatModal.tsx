@@ -4,6 +4,7 @@ import { useSound } from '../context/SoundContext';
 import { AIChatBot } from './AIChatBot';
 import { useSiteChat } from '../hooks/useSiteChat';
 import { useGame } from '../context/GameContext';
+import { FreeRainBanner } from './FreeRainBanner';
 
 type MobileChatTab = 'chat' | 'support';
 
@@ -73,6 +74,7 @@ export const MobileChatModal: React.FC<MobileChatModalProps> = ({ isOpen, onClos
         <div className="flex-1 flex flex-col bg-[#0f1219] min-h-0">
           {activeTab === 'chat' ? (
             <>
+              <FreeRainBanner />
               <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin" ref={scrollRef}>
                 {messages.length === 0 && (
                   <div className="text-center text-gray-500 text-sm py-6 border border-dashed border-gray-800 rounded-xl">
