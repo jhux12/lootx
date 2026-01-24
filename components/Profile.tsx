@@ -98,15 +98,17 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
     sellOfferTimersRef.current = {};
   }, []);
 
-  const inventorySource = isOwnProfile ? inventory : displayUser.inventory ?? [];
-  const normalizedInventory = inventorySource
-    .map((item, index) => ({
+  const normalizeItems = (items: typeof inventory) =>
+    (items ?? []).map((item, index) => ({
       ...item,
       instanceId: item.instanceId || `${item.id}-${index}`,
       status: item.status ?? 'available',
-      obtainedAt: item.obtainedAt ?? 0
-    }))
-    .sort((a, b) => b.obtainedAt - a.obtainedAt);
+      obtainedAt: item.obtainedAt ?? 0,
+      rarity: item.rarity ?? 'common'
+    }));
+
+  const inventorySource = isOwnProfile ? inventory : displayUser.inventory ?? [];
+  const normalizedInventory = normalizeItems(inventorySource).sort((a, b) => b.obtainedAt - a.obtainedAt);
 
   const filteredInventory = normalizedInventory.filter((item) => {
     if (inventoryFilter === 'processing') return item.status === 'shipping';
@@ -142,8 +144,13 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
     });
   }, [normalizedInventory]);
 
-  const topPulls = [...normalizedInventory]
-    .sort((a, b) => b.price - a.price)
+  const topPullsSource = isOwnProfile ? user.topPulls : displayUser.topPulls;
+  const topPulls = normalizeItems(topPullsSource ?? [])
+    .sort((a, b) => {
+      const priceDiff = b.price - a.price;
+      if (priceDiff !== 0) return priceDiff;
+      return b.obtainedAt - a.obtainedAt;
+    })
     .slice(0, 6);
 
   const trimmedSearch = communitySearch.trim().toLowerCase();
@@ -424,17 +431,22 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                       </div>
                   ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                          {topPulls.map((item) => (
-                              <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all">
-                                  <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
+                          {topPulls.map((item, index) => (
+                              <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-3 sm:p-4 group hover:border-brand-purple/50 transition-all">
+                                  <div className="relative aspect-square mb-3 sm:mb-4 bg-[#0b0e14] rounded-lg p-3 sm:p-4 flex items-center justify-center overflow-hidden">
+                                      <div className="absolute left-2 top-2 z-10 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide bg-black/70 text-white border border-white/10">
+                                        #{index + 1}
+                                      </div>
                                       <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
-                                      <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
+                                      <div className={`absolute inset-0 opacity-15 bg-gradient-to-br ${
                                           item.rarity === 'legendary' ? 'from-yellow-500' :
                                           item.rarity === 'epic' ? 'from-purple-500' :
-                                          item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
+                                          item.rarity === 'rare' ? 'from-blue-500' :
+                                          item.rarity === 'uncommon' ? 'from-emerald-500' :
+                                          'from-gray-500'
                                       }`} />
                                   </div>
-                                  <div className="text-xs font-bold text-gray-500 uppercase mb-1 tracking-wider">{item.rarity}</div>
+                                  <div className="text-[11px] font-bold text-gray-500 uppercase mb-1 tracking-wider">{item.rarity}</div>
                                   <h4 className="text-white font-bold text-sm mb-2 line-clamp-1">{item.name}</h4>
                                   <CoinAmount
                                     amount={item.price}

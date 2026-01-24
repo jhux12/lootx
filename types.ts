@@ -36,6 +36,7 @@ export interface User {
   ledger?: LedgerEntry[];
   adminLogs?: AdminActionLog[];
   topPullsPublic?: boolean;
+  topPulls?: InventoryItem[];
   createdAt?: number;
   lastChatAt?: number;
 }
