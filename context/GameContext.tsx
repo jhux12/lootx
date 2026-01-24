@@ -861,7 +861,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const resetPassword = async (email: string) => {
-      await sendPasswordResetEmail(auth, email);
+      const actionCodeSettings = {
+          url: window.location.origin,
+          handleCodeInApp: true
+      };
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
   };
 
   const logout = () => {
