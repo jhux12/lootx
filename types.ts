@@ -47,6 +47,9 @@ export interface ChatMessage {
   isSystem?: boolean;
 }
 
+export type BoxTag = 'New' | 'Hot' | 'Sale';
+export const BOX_TAG_OPTIONS: BoxTag[] = ['New', 'Hot', 'Sale'];
+
 export interface CaseItem {
   id: string;
   name: string;
@@ -55,6 +58,7 @@ export interface CaseItem {
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   chance: number; // Percentage 0-100
   color: string;
+  tags?: BoxTag[];
 }
 
 export interface MysteryBox {
@@ -62,7 +66,7 @@ export interface MysteryBox {
   name: string;
   price: number;
   image: string;
-  tag?: 'New' | 'Hot' | 'Sale';
+  tag?: BoxTag;
   tags?: string[];
   accentColor: string;
   items: CaseItem[];

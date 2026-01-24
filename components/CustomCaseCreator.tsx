@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search, Info, X } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search, Info, X, Tag } from 'lucide-react';
 import { useGame } from '../context/GameContext';
-import { CaseItem, MysteryBox } from '../types';
+import { BoxTag, BOX_TAG_OPTIONS, CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue } from '../utils/caseOdds';
@@ -18,6 +18,7 @@ export const CustomCaseCreator: React.FC = () => {
   const [lastCalculated, setLastCalculated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showLabInfo, setShowLabInfo] = useState(false);
+  const [activeTag, setActiveTag] = useState<'All' | BoxTag>('All');
 
   const toggleItemSelection = (item: CaseItem) => {
       playSound('click');
@@ -84,10 +85,16 @@ export const CustomCaseCreator: React.FC = () => {
       setView({ type: 'CASE_OPENING', boxId: newBox.id });
   };
 
-  // Filter items based on search
-  const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const tagOptions = useMemo(() => ['All', ...BOX_TAG_OPTIONS], []);
+
+  const filteredItems = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return items.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(normalizedQuery);
+      const matchesTag = activeTag === 'All' ? true : item.tags?.includes(activeTag);
+      return matchesSearch && matchesTag;
+    });
+  }, [items, searchQuery, activeTag]);
 
   return (
     <div className="max-w-5xl mx-auto p-6 animate-in fade-in slide-in-from-bottom-4">
@@ -190,6 +197,26 @@ export const CustomCaseCreator: React.FC = () => {
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-brand-purple transition-colors"
                       />
+                  </div>
+
+                  <div className="mb-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 mb-2">Filter by tag</div>
+                      <div className="flex gap-2 overflow-x-auto pb-2 sm:flex-wrap">
+                          {tagOptions.map(tag => {
+                              const isSelected = activeTag === tag;
+                              return (
+                                  <button
+                                      key={tag}
+                                      type="button"
+                                      onClick={() => setActiveTag(tag)}
+                                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition ${isSelected ? 'border-brand-purple/70 bg-brand-purple/20 text-purple-200' : 'border-gray-700 bg-[#0b0e14] text-gray-400 hover:border-gray-500'}`}
+                                  >
+                                      <Tag className="h-3 w-3" />
+                                      {tag}
+                                  </button>
+                              );
+                          })}
+                      </div>
                   </div>
 
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 max-h-[300px] md:max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
