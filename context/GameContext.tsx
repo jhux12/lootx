@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AppNotification, User, InventoryItem, CaseItem, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks } from '../types';
+import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { 
@@ -274,7 +274,7 @@ interface GameContextType {
   setView: (view: ViewState) => void;
   addBalance: (amount: number) => void;
   deductBalance: (amount: number, options?: { trackRewards?: boolean }) => boolean;
-  addToInventory: (item: CaseItem) => InventoryItem;
+  addToInventory: (item: CaseItem, provenance?: InventoryProvenance) => InventoryItem;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string, value: number) => void;
@@ -930,12 +930,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return false;
   };
 
-  const addToInventory = (item: CaseItem): InventoryItem => {
+  const addToInventory = (item: CaseItem, provenance?: InventoryProvenance): InventoryItem => {
     const newItem: InventoryItem = {
       ...item,
       instanceId: Math.random().toString(36).substr(2, 9),
       obtainedAt: Date.now(),
-      status: 'available'
+      status: 'available',
+      provenance
     };
     setInventory(prev => {
       const updated = [newItem, ...prev];

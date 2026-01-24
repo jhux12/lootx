@@ -27,7 +27,7 @@ interface ProfileProps {
 }
 
 export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => {
-  const { user, users, inventory, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem } = useGame();
+  const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem } = useGame();
   const { playSound } = useSound();
   
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
@@ -127,6 +127,16 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   const communitySearchResults = trimmedSearch
     ? users.filter((u) => u.name.toLowerCase().includes(trimmedSearch))
     : [];
+
+  const getSellBackRate = (item: typeof normalizedInventory[number]) => {
+    if (item.provenance?.sourceType === 'case_open' && item.provenance?.sourceId) {
+      const sourceBox = boxes.find((box) => box.id === item.provenance?.sourceId);
+      if (sourceBox?.isUserCreated) {
+        return 0.75;
+      }
+    }
+    return 0.82;
+  };
 
   const handleTopPullsVisibility = async (isPublic: boolean) => {
       setTopPullsPublic(isPublic);
@@ -535,7 +545,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                                     setSellOffers((prev) => ({ ...prev, [item.instanceId]: true }));
                                                     return;
                                                   }
-                                                  const sellBackPrice = Math.round(item.price * 0.82);
+                                                  const sellBackPrice = Math.round(item.price * getSellBackRate(item));
                                                   sellItem(item.instanceId, sellBackPrice);
                                                   setSellOffers((prev) => ({ ...prev, [item.instanceId]: false }));
                                                 }}
@@ -552,7 +562,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                                   </span>
                                                   {sellOffers[item.instanceId] && (
                                                     <CoinAmount
-                                                      amount={Math.round(item.price * 0.82)}
+                                                      amount={Math.round(item.price * getSellBackRate(item))}
                                                       formatOptions={{ maximumFractionDigits: 0 }}
                                                       className="text-gray-100"
                                                       iconClassName="w-3 h-3"
