@@ -106,8 +106,8 @@ export const CustomCaseCreator: React.FC = () => {
            >
              <ChevronLeft className="w-4 h-4" /> Back
            </button>
-           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-               <div className="p-2 bg-brand-purple/20 rounded-lg border border-brand-purple/40">
+           <div className="flex flex-row items-start gap-3 sm:items-center">
+               <div className="shrink-0 p-2 bg-brand-purple/20 rounded-lg border border-brand-purple/40">
                     <FlaskConical className="w-6 h-6 text-brand-purple" />
                </div>
                <div>
