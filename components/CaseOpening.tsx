@@ -24,10 +24,6 @@ const CARD_WIDTH = 160;
 const GAP_WIDTH = 16;
 const ITEM_WIDTH = CARD_WIDTH + GAP_WIDTH;
 const BUFFER_COUNT = 45; // Items before winner
-const CLIENT_SEED_KEY = 'lootx_client_seed';
-const SERVER_SEED_KEY = 'lootx_server_seed';
-const NONCE_KEY = 'lootx_nonce';
-
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -94,21 +90,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [sellOfferGenerated, setSellOfferGenerated] = useState(false);
   const [isGeneratingSellOffer, setIsGeneratingSellOffer] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
-  const [serverSeed, setServerSeed] = useState(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem(SERVER_SEED_KEY) || '';
-  });
+  const [serverSeed, setServerSeed] = useState('');
   const [serverSeedHash, setServerSeedHash] = useState('');
-  const [clientSeed, setClientSeed] = useState(() => {
-    if (typeof window === 'undefined') return 'lootx-player';
-    return localStorage.getItem(CLIENT_SEED_KEY) || 'lootx-player';
-  });
-  const [nonce, setNonce] = useState(() => {
-    if (typeof window === 'undefined') return 0;
-    const storedNonce = localStorage.getItem(NONCE_KEY);
-    const parsedNonce = storedNonce ? Number.parseInt(storedNonce, 10) : 0;
-    return Number.isFinite(parsedNonce) && parsedNonce >= 0 ? parsedNonce : 0;
-  });
+  const [clientSeed, setClientSeed] = useState('lootx-player');
+  const [nonce, setNonce] = useState(0);
   const [lastRoll, setLastRoll] = useState<RollData | null>(null);
   const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
   const [showFairModal, setShowFairModal] = useState(false);
@@ -136,11 +121,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       nonceRef.current = 0;
       setNonce(0);
       setLastRoll(null);
-
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(SERVER_SEED_KEY, nextSeed);
-        localStorage.setItem(NONCE_KEY, '0');
-      }
 
       return nextSeed;
     } finally {
@@ -172,9 +152,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const nextNonce = currentNonce + 1;
       nonceRef.current = nextNonce;
       setNonce(nextNonce);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(NONCE_KEY, String(nextNonce));
-      }
     }
 
     return {
@@ -185,12 +162,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     };
   }, [clientSeed, ensureSeedReady]);
   
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(CLIENT_SEED_KEY, clientSeed);
-    }
-  }, [clientSeed]);
-
   useEffect(() => {
     nonceRef.current = nonce;
   }, [nonce]);
