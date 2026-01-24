@@ -445,7 +445,8 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     status: data.status ?? 'active',
     locks: data.locks ?? DEFAULT_LOCKS,
     ledger: Array.isArray(data.ledger) ? data.ledger : undefined,
-    adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined
+    adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
+    topPullsPublic: data.topPullsPublic ?? false
   };
 
   const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
@@ -663,8 +664,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const needsBalanceUpdate = nextBalance !== balance;
     const needsCreatedAtUpdate = !user.createdAt && !!latestUser.createdAt;
     const needsLastChatUpdate = latestUser.lastChatAt !== undefined && latestUser.lastChatAt !== user.lastChatAt;
+    const nextTopPullsPublic = latestUser.topPullsPublic ?? false;
+    const needsTopPullsPublicUpdate = nextTopPullsPublic !== (user.topPullsPublic ?? false);
 
-    if (!needsBalanceUpdate && !needsCreatedAtUpdate && !needsLastChatUpdate) return;
+    if (!needsBalanceUpdate && !needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate) return;
 
     if (needsBalanceUpdate) {
       setBalance(nextBalance);
@@ -674,9 +677,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (needsBalanceUpdate) updates.balance = nextBalance;
     if (needsCreatedAtUpdate) updates.createdAt = latestUser.createdAt;
     if (needsLastChatUpdate) updates.lastChatAt = latestUser.lastChatAt;
+    if (needsTopPullsPublicUpdate) updates.topPullsPublic = nextTopPullsPublic;
 
     setUser((prev) => ({ ...prev, ...updates }));
-  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, balance]);
+  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic, balance]);
 
   useEffect(() => {
     const itemsRef = collection(db, 'items');
