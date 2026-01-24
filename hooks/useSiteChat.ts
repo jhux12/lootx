@@ -241,6 +241,7 @@ export const useSiteChat = () => {
         createdAt: serverTimestamp()
       });
 
+      await updateUserFlags({ lastChatAt: Date.now() });
       await purgeExpiredMessages();
     } catch (error) {
       console.error('Failed to send chat message', error);
