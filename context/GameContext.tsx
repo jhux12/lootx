@@ -18,7 +18,8 @@ import {
   getDoc,
   onSnapshot,
   runTransaction,
-  setDoc
+  setDoc,
+  Timestamp
 } from 'firebase/firestore';
 
 const sanitizeData = <T extends Record<string, any>>(data: T): T => {
@@ -336,6 +337,19 @@ const ADMIN_EMAIL = 'jhuxf12@outlook.com';
 
 const getUserRef = (uid: string) => doc(db, 'users', uid);
 
+const normalizeTimestamp = (value: unknown, fallback: number) => {
+  if (value instanceof Timestamp) return value.toMillis();
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  if (value && typeof value === 'object' && 'toMillis' in value && typeof (value as { toMillis: () => number }).toMillis === 'function') {
+    return (value as { toMillis: () => number }).toMillis();
+  }
+  return fallback;
+};
+
 const buildUserDocument = (user: User, extras: { balance: number; inventory: InventoryItem[] }) => {
   const payload: Record<string, unknown> = { ...user, ...extras };
 
@@ -351,9 +365,11 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
   const snapshot = await getDoc(userRef);
 
   if (!snapshot.exists()) {
+    const createdAt = Date.now();
     const initialProgress = calculateLevelProgress(0);
     const newUser: User = {
       id: firebaseUser.uid,
+      createdAt,
       name: firebaseUser.email?.split('@')[0] || 'Player',
       email: firebaseUser.email || '',
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
@@ -383,6 +399,18 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
   }
 
   const data = snapshot.data();
+  const now = Date.now();
+  const metadataCreatedAt = firebaseUser.metadata.creationTime ? Date.parse(firebaseUser.metadata.creationTime) : NaN;
+  const fallbackCreatedAt = Number.isFinite(metadataCreatedAt) ? metadataCreatedAt : now;
+  const createdAt = normalizeTimestamp(data.createdAt, fallbackCreatedAt);
+  const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
+
+  if (data.createdAt === undefined) {
+    void setDoc(userRef, { createdAt }, { merge: true }).catch((error) => {
+      console.error('Failed to backfill user createdAt timestamp', error);
+    });
+  }
+
   const xp = Number(data.xp ?? 0);
   const progress = calculateLevelProgress(xp);
   const followerIds = Array.isArray(data.followers)
@@ -392,6 +420,8 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
       : [];
   const profile: User = {
     id: firebaseUser.uid,
+    createdAt,
+    lastChatAt,
     name: data.name || firebaseUser.email?.split('@')[0] || 'Player',
     email: data.email || firebaseUser.email || '',
     avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
@@ -573,6 +603,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubscribe = onSnapshot(usersRef, (snapshot) => {
     const loaded: User[] = snapshot.docs.map((docSnap) => {
       const data = docSnap.data();
+      const now = Date.now();
+      const createdAt = normalizeTimestamp(data.createdAt, now);
+      const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
       const xp = Number(data.xp ?? 0);
       const progress = calculateLevelProgress(xp);
       const followerIds = Array.isArray(data.followers)
@@ -582,6 +615,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             : [];
         return {
           id: docSnap.id,
+          createdAt,
+          lastChatAt,
           name: data.name || 'Player',
           email: data.email,
           avatar: data.avatar || 'https://picsum.photos/id/64/100/100',
@@ -617,6 +652,31 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const latestUser = users.find((entry) => entry.id === user.id);
+    if (!latestUser) return;
+
+    const nextBalance = Number(latestUser.balance ?? 0);
+    const needsBalanceUpdate = nextBalance !== balance;
+    const needsCreatedAtUpdate = !user.createdAt && !!latestUser.createdAt;
+    const needsLastChatUpdate = latestUser.lastChatAt !== undefined && latestUser.lastChatAt !== user.lastChatAt;
+
+    if (!needsBalanceUpdate && !needsCreatedAtUpdate && !needsLastChatUpdate) return;
+
+    if (needsBalanceUpdate) {
+      setBalance(nextBalance);
+    }
+
+    const updates: Partial<User> = {};
+    if (needsBalanceUpdate) updates.balance = nextBalance;
+    if (needsCreatedAtUpdate) updates.createdAt = latestUser.createdAt;
+    if (needsLastChatUpdate) updates.lastChatAt = latestUser.lastChatAt;
+
+    setUser((prev) => ({ ...prev, ...updates }));
+  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, balance]);
 
   useEffect(() => {
     const itemsRef = collection(db, 'items');
@@ -821,11 +881,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const register = async (name: string, email: string, pass: string) => {
-      const credential = await createUserWithEmailAndPassword(auth, email, pass);
-      const newUser: User = {
-          id: credential.user.uid,
-          name,
-          email,
+    const credential = await createUserWithEmailAndPassword(auth, email, pass);
+    const createdAt = Date.now();
+    const newUser: User = {
+      id: credential.user.uid,
+      createdAt,
+      name,
+      email,
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
       level: 1,
       xp: 0,
@@ -835,20 +897,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       rakebackEarnedToday: 0,
       rakebackEarnedAt: getDayStart(),
       followers: [],
-          shippingAddress: undefined,
-          isAdmin: email.toLowerCase() === ADMIN_EMAIL,
-          chatWarnings: 0,
-          chatDisabled: false,
-          termsFlagged: false
-      };
+      shippingAddress: undefined,
+      isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+      chatWarnings: 0,
+      chatDisabled: false,
+      termsFlagged: false
+    };
 
-      await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser, { balance: 0, inventory: [] }));
+    await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser, { balance: 0, inventory: [] }));
 
-      setUser(newUser);
-      setBalance(0);
-      setInventory([]);
-      setIsAuthenticated(true);
-      setShowLoginModal(false);
+    setUser(newUser);
+    setBalance(0);
+    setInventory([]);
+    setIsAuthenticated(true);
+    setShowLoginModal(false);
   };
 
   const resetPassword = async (email: string) => {
