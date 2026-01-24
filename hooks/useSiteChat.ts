@@ -68,7 +68,7 @@ const runModeration = async (message: string): Promise<ModerationResult> => {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || FALLBACK_GEMINI_API_KEY;
     const genAI = new GoogleGenAI({ apiKey });
     const response = await genAI.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       contents: [
         {
           role: 'user',
