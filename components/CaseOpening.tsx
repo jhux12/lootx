@@ -50,6 +50,11 @@ const deriveRollValue = (hash: string) => {
   return intValue / 0x10000000000000; // 2^52
 };
 
+const deriveSecondaryRollValue = async (hash: string, label: string) => {
+  const secondaryHash = await hashString(`${hash}:${label}`);
+  return deriveRollValue(secondaryHash);
+};
+
 const generateServerSeed = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
     const bytes = new Uint32Array(8);
@@ -102,6 +107,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isGoldMode, setIsGoldMode] = useState(false);
   
   const nonceRef = useRef(0);
+  const spinLockRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
 
@@ -248,7 +254,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   };
 
   const handleSpin = async ({ isDemo = false }: { isDemo?: boolean } = {}) => {
-    if (isSpinning) return;
+    if (isSpinning || spinLockRef.current) return;
 
     if (isDemo) {
       setIsDemoSpin(true);
@@ -273,6 +279,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return;
     }
 
+    spinLockRef.current = true;
     setIsSpinning(true);
     setShowWinModal(false);
     setIsGoldMode(false);
@@ -281,64 +288,70 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setRewardResolved(false);
     setSellOfferGenerated(false);
     playSound('click');
-    
-    // 1. Determine final winner
-    const winningRoll = await getNextFairRoll();
-    let winner = getWinningItem(winningRoll.rollValue);
 
-    setLastRoll({
-        ...winningRoll,
-        outcome: winner.name
-    });
+    try {
+      // 1. Determine final winner
+      const winningRoll = await getNextFairRoll();
+      let winner = getWinningItem(winningRoll.rollValue);
 
-    // 2. Gold spin only triggers when the winner is guaranteed legendary
-    const isGoldEligible = winner.rarity === 'legendary';
-    const goldRoll = await getNextFairRoll();
-    const triggerGold = isGoldEligible && goldRoll.rollValue < 0.2;
+      setLastRoll({
+          ...winningRoll,
+          outcome: winner.name
+      });
 
-    if (!isDemo) {
-      const inventoryItem = addToInventory(winner, { sourceType: 'case_open', sourceId: box.id });
-      setWonInventoryItem(inventoryItem);
-      awardCaseOpenXp();
-    }
+      // 2. Gold spin only triggers when the winner is guaranteed legendary
+      const isGoldEligible = winner.rarity === 'legendary';
+      const goldRollValue = await deriveSecondaryRollValue(winningRoll.rollHash, 'gold');
+      const triggerGold = isGoldEligible && goldRollValue < 0.2;
 
-    if (triggerGold) {
-        // --- GOLD SPIN FLOW ---
-        
-        // Stage 1: Spin to Golden Ticket
-        // Note: We use global items pool for buffer if box items are too few, or just box items. 
-        // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
-        const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items);
-        setReelItems(ticketReel);
-        
-        animateSpin(4500, () => {
-            // Stage 1 Complete: Activate Gold Mode
-            playSound('gold-mode');
-            setIsGoldMode(true);
-            
-            // Wait a moment to see the ticket
-            setTimeout(() => {
-                // Stage 2: Spin to Actual Winner (using only legendary items in reel)
-                const legendaryPool = items.filter(i => i.rarity === 'legendary');
-                const pool = legendaryPool.length > 0 ? legendaryPool : items;
-                const goldReel = generateReel(winner, pool);
-                setReelItems(goldReel);
-                
-                animateSpin(4000, () => {
-                    // Stage 2 Complete
-                    finishSpin(winner);
-                });
-            }, 1000);
-        });
+      if (!isDemo) {
+        const inventoryItem = addToInventory(winner, { sourceType: 'case_open', sourceId: box.id });
+        setWonInventoryItem(inventoryItem);
+        awardCaseOpenXp();
+      }
 
-    } else {
-        // --- NORMAL SPIN FLOW ---
-        const normalReel = generateReel(winner, items);
-        setReelItems(normalReel);
-        
-        animateSpin(5000, () => {
-            finishSpin(winner);
-        });
+      if (triggerGold) {
+          // --- GOLD SPIN FLOW ---
+          
+          // Stage 1: Spin to Golden Ticket
+          // Note: We use global items pool for buffer if box items are too few, or just box items. 
+          // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
+          const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items);
+          setReelItems(ticketReel);
+          
+          animateSpin(4500, () => {
+              // Stage 1 Complete: Activate Gold Mode
+              playSound('gold-mode');
+              setIsGoldMode(true);
+              
+              // Wait a moment to see the ticket
+              setTimeout(() => {
+                  // Stage 2: Spin to Actual Winner (using only legendary items in reel)
+                  const legendaryPool = items.filter(i => i.rarity === 'legendary');
+                  const pool = legendaryPool.length > 0 ? legendaryPool : items;
+                  const goldReel = generateReel(winner, pool);
+                  setReelItems(goldReel);
+                  
+                  animateSpin(4000, () => {
+                      // Stage 2 Complete
+                      finishSpin(winner);
+                  });
+              }, 1000);
+          });
+
+      } else {
+          // --- NORMAL SPIN FLOW ---
+          const normalReel = generateReel(winner, items);
+          setReelItems(normalReel);
+          
+          animateSpin(5000, () => {
+              finishSpin(winner);
+          });
+      }
+    } catch (error) {
+      console.error('Failed to complete spin', error);
+      setIsSpinning(false);
+      spinLockRef.current = false;
     }
   };
 
@@ -348,6 +361,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const finishSpin = (item: CaseItem) => {
     setIsSpinning(false);
+    spinLockRef.current = false;
     setShowWinModal(true);
     setWonItem(item);
     setRewardResolved(false);
@@ -558,36 +572,33 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
                 <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setShowFairModal(false)}></div>
                 <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#0f1219] shadow-2xl animate-in fade-in">
-                    <div className="flex items-start justify-between gap-4 border-b border-white/5 px-4 py-4 sm:px-6">
-                        <div className="flex items-start gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
-                                <ShieldCheck className="h-5 w-5" />
+                    <div className="flex items-center justify-between gap-3 border-b border-white/5 px-3 py-3 sm:px-5">
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300">
+                                <ShieldCheck className="h-4 w-4" />
                             </div>
-                            <div className="space-y-1">
-                                <div className="text-lg font-semibold text-white">Provably Fair</div>
-                                <p className="text-sm text-gray-400">Check the current seeds or verify the latest spin in a few taps.</p>
-                            </div>
+                            <div className="text-base font-semibold text-white sm:text-lg">Provably Fair</div>
                         </div>
                         <button
                             onClick={() => { playSound('click'); setShowFairModal(false); }}
-                            className="rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:border-white/20 hover:text-white"
+                            className="rounded-full border border-white/10 bg-white/5 p-1.5 text-gray-300 transition hover:border-white/20 hover:text-white"
                             aria-label="Close provably fair modal"
                         >
                             <X className="h-4 w-4" />
                         </button>
                     </div>
 
-                    <div className="px-4 pb-5 pt-4 sm:px-6 sm:pb-6">
-                        <div className="mb-4 inline-flex w-full rounded-xl border border-white/10 bg-black/30 p-1">
+                    <div className="px-3 pb-4 pt-3 sm:px-5 sm:pb-5">
+                        <div className="mb-3 inline-flex w-full rounded-lg border border-white/10 bg-black/30 p-0.5">
                             <button
-                                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${fairTab === 'active' ? 'bg-white text-[#0f1219]' : 'text-gray-300 hover:text-white'}`}
+                                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition sm:text-sm ${fairTab === 'active' ? 'bg-white text-[#0f1219]' : 'text-gray-300 hover:text-white'}`}
                                 onClick={() => { playSound('click'); setFairTab('active'); }}
                                 type="button"
                             >
                                 Active Seeds
                             </button>
                             <button
-                                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${fairTab === 'verify' ? 'bg-white text-[#0f1219]' : 'text-gray-300 hover:text-white'}`}
+                                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition sm:text-sm ${fairTab === 'verify' ? 'bg-white text-[#0f1219]' : 'text-gray-300 hover:text-white'}`}
                                 onClick={() => { playSound('click'); setFairTab('verify'); }}
                                 type="button"
                             >
@@ -595,79 +606,76 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             </button>
                         </div>
 
-                        <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+                        <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
                             {fairTab === 'active' && (
-                                <div className="space-y-4">
-                                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-                                        We hash the server seed before every spin and reveal it after, so you can independently confirm the result.
-                                    </div>
+                                <div className="space-y-3">
+                                    <p className="text-xs text-gray-400">
+                                        One roll = one nonce. We commit to the hash first, then reveal the seed after spins.
+                                    </p>
 
-                                    <div className="grid gap-4 md:grid-cols-2">
-                                        <div className="space-y-3 rounded-xl border border-white/5 bg-black/20 p-4">
-                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                                <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                                                    <Zap className="h-4 w-4 text-yellow-400" />
-                                                    Server Seed
+                                    <div className="grid gap-3 md:grid-cols-2">
+                                        <div className="space-y-2 rounded-lg border border-white/5 bg-black/20 p-3">
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-300">
+                                                    <Zap className="h-3.5 w-3.5 text-yellow-400" />
+                                                    Server
                                                 </div>
                                                 <button
                                                     onClick={async () => { playSound('click'); await setNewServerSeed(); }}
                                                     disabled={isGeneratingSeed || isSpinning}
-                                                    className="inline-flex items-center justify-center rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white transition hover:border-yellow-400/60 hover:text-yellow-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="inline-flex items-center justify-center rounded-md border border-white/15 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:border-yellow-400/60 hover:text-yellow-100 disabled:cursor-not-allowed disabled:opacity-50"
                                                     type="button"
                                                 >
                                                     {isGeneratingSeed ? 'Generating...' : 'New Seed'}
                                                 </button>
                                             </div>
 
-                                            <div className="space-y-2">
+                                            <div className="space-y-1.5">
                                                 <div className="space-y-1">
-                                                    <div className="text-xs font-medium uppercase tracking-wide text-gray-500">Server seed hash</div>
-                                                    <div className="rounded-lg border border-white/5 bg-black/40 p-2 text-xs font-mono text-white break-all">{serverSeedHash || 'Generating hash...'}</div>
+                                                    <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Server Seed Hash (Active)</div>
+                                                    <div className="rounded-md border border-white/5 bg-black/40 p-2 text-[11px] font-mono text-white break-all">{serverSeedHash || 'Generating hash...'}</div>
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <div className="text-xs font-medium uppercase tracking-wide text-gray-500">Revealed server seed</div>
-                                                    <div className="rounded-lg border border-white/5 bg-black/30 p-2 text-xs font-mono text-gray-200 break-all">{serverSeed || 'Generating...'}</div>
+                                                    <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Revealed Server Seed (Previous)</div>
+                                                    <div className="rounded-md border border-white/5 bg-black/30 p-2 text-[11px] font-mono text-gray-200 break-all">{serverSeed || 'Generating...'}</div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="space-y-3 rounded-xl border border-white/5 bg-black/20 p-4">
-                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                                <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                                                    <Volume2 className="h-4 w-4 text-cyan-400" />
-                                                    Client Seed
+                                        <div className="space-y-2 rounded-lg border border-white/5 bg-black/20 p-3">
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-300">
+                                                    <Volume2 className="h-3.5 w-3.5 text-cyan-400" />
+                                                    Client
                                                 </div>
-                                                <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-300">
-                                                    Nonce {nonce}
+                                                <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-300">
+                                                    Nonce (Spin #) {lastRoll?.nonce ?? nonce}
                                                 </div>
                                             </div>
 
-                                            <label className="text-xs text-gray-400" htmlFor="client-seed-input">
-                                                Set your own client seed
+                                            <label className="text-[11px] text-gray-400" htmlFor="client-seed-input">
+                                                Client seed
                                             </label>
                                             <input
                                                 id="client-seed-input"
                                                 value={clientSeed}
                                                 onChange={(e) => setClientSeed(e.target.value)}
-                                                className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-400"
+                                                className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none transition focus:border-cyan-400"
                                                 placeholder="Enter client seed"
                                                 disabled={isSpinning}
                                             />
-                                            <p className="text-xs leading-relaxed text-gray-500">
-                                                Each roll uses server seed + client seed + nonce to create a deterministic SHA-256 hash. Updating your client seed gives you a fresh, verifiable roll path.
-                                            </p>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
                             {fairTab === 'verify' && (
-                                <div className="space-y-4">
-                                    <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
-                                        Re-hash the values below (server + client + nonce) and confirm it matches the roll hash.
-                                    </div>
+                                <div className="space-y-3">
+                                    <p className="text-xs text-gray-400">
+                                        Re-hash the combined seed and confirm it matches the roll hash.
+                                    </p>
 
-                                    <div className="space-y-4 rounded-xl border border-white/5 bg-black/20 p-4">
+                                    <div className="space-y-3 rounded-lg border border-white/5 bg-black/20 p-3">
                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                             <div className="flex items-center gap-2 text-sm font-semibold text-white">
                                                 <Info className="h-4 w-4 text-blue-400" />
@@ -676,28 +684,28 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                             <button
                                                 onClick={handleCopyProof}
                                                 disabled={!lastRoll}
-                                                className="inline-flex items-center justify-center rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white transition hover:border-blue-400/60 hover:text-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                className="inline-flex items-center justify-center rounded-md border border-white/15 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:border-blue-400/60 hover:text-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
                                                 type="button"
                                             >
                                                 Copy Proof
                                             </button>
                                         </div>
 
-                                        <div className="grid gap-3 md:grid-cols-2">
+                                        <div className="grid gap-2.5 md:grid-cols-2">
                                             <div className="space-y-1">
-                                                <div className="text-xs font-medium uppercase tracking-wide text-gray-500">Revealed server seed</div>
-                                                <div className="rounded-lg border border-white/5 bg-black/30 p-2 text-xs font-mono text-gray-200 break-all">{serverSeed || 'Spin to reveal'}</div>
+                                                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Revealed Server Seed (Previous)</div>
+                                                <div className="rounded-md border border-white/5 bg-black/30 p-2 text-[11px] font-mono text-gray-200 break-all">{serverSeed || 'Spin to reveal'}</div>
                                             </div>
                                             <div className="space-y-1">
-                                                <div className="text-xs font-medium uppercase tracking-wide text-gray-500">Committed server hash</div>
-                                                <div className="rounded-lg border border-white/5 bg-black/30 p-2 text-xs font-mono text-gray-200 break-all">{serverSeedHash || 'Spin to reveal'}</div>
+                                                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Server Seed Hash (Active)</div>
+                                                <div className="rounded-md border border-white/5 bg-black/30 p-2 text-[11px] font-mono text-gray-200 break-all">{serverSeedHash || 'Spin to reveal'}</div>
                                             </div>
                                         </div>
 
                                         {lastRoll ? (
-                                            <div className="space-y-2 rounded-lg border border-white/5 bg-black/30 p-3 text-xs font-mono text-gray-200">
+                                            <div className="space-y-2 rounded-md border border-white/5 bg-black/30 p-2.5 text-[11px] font-mono text-gray-200">
                                                 <div className="flex items-center justify-between gap-3"><span className="text-gray-500">Outcome</span><span className="text-white">{lastRoll.outcome}</span></div>
-                                                <div className="flex items-center justify-between gap-3"><span className="text-gray-500">Nonce</span><span>{lastRoll.nonce}</span></div>
+                                                <div className="flex items-center justify-between gap-3"><span className="text-gray-500">Nonce (Spin #)</span><span>{lastRoll.nonce}</span></div>
                                                 <div className="flex items-center justify-between gap-3"><span className="text-gray-500">Roll Value</span><span>{lastRoll.rollValue.toFixed(6)}</span></div>
                                                 <div className="space-y-1">
                                                     <div className="text-gray-500">Roll Hash</div>
@@ -709,7 +717,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                                 </div>
                                             </div>
                                         ) : (
-                                            <p className="rounded-lg border border-white/5 bg-black/30 p-3 text-sm text-gray-400">
+                                            <p className="rounded-md border border-white/5 bg-black/30 p-2.5 text-sm text-gray-400">
                                                 Spin the case to generate verifiable proof data for your result.
                                             </p>
                                         )}
