@@ -36,7 +36,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   const [communitySearch, setCommunitySearch] = useState('');
   const [topPullsPublic, setTopPullsPublic] = useState(user.topPullsPublic ?? false);
   const [sellOffers, setSellOffers] = useState<Record<string, boolean>>({});
+  const [isGeneratingSellOffers, setIsGeneratingSellOffers] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sellOfferTimersRef = useRef<Record<string, number>>({});
 
   const selectedUserId = view.type === 'PROFILE' ? view.userId : undefined;
   const profileUser = selectedUserId ? users.find((u) => u.id === selectedUserId) : user;
@@ -91,6 +93,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
       setActiveTab(initialTab);
   }, [initialTab, displayUser.id]);
 
+  useEffect(() => () => {
+    Object.values(sellOfferTimersRef.current).forEach((timerId) => window.clearTimeout(timerId));
+    sellOfferTimersRef.current = {};
+  }, []);
+
   const inventorySource = isOwnProfile ? inventory : displayUser.inventory ?? [];
   const normalizedInventory = inventorySource
     .map((item, index) => ({
@@ -116,6 +123,22 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
         }
       });
       return next;
+    });
+    setIsGeneratingSellOffers((prev) => {
+      const next: Record<string, boolean> = {};
+      normalizedInventory.forEach((item) => {
+        if (prev[item.instanceId]) {
+          next[item.instanceId] = true;
+        }
+      });
+      return next;
+    });
+    const validIds = new Set(normalizedInventory.map((item) => item.instanceId));
+    Object.entries(sellOfferTimersRef.current).forEach(([instanceId, timerId]) => {
+      if (!validIds.has(instanceId)) {
+        window.clearTimeout(timerId);
+        delete sellOfferTimersRef.current[instanceId];
+      }
     });
   }, [normalizedInventory]);
 
@@ -541,26 +564,45 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                           {inventoryFilter === 'inventory' && (
                                               <button
                                                 onClick={() => {
+                                                  if (!canSell || isGeneratingSellOffers[item.instanceId]) return;
                                                   if (!sellOffers[item.instanceId]) {
-                                                    setSellOffers((prev) => ({ ...prev, [item.instanceId]: true }));
+                                                    setIsGeneratingSellOffers((prev) => ({ ...prev, [item.instanceId]: true }));
+                                                    const timerId = window.setTimeout(() => {
+                                                      setSellOffers((prev) => ({ ...prev, [item.instanceId]: true }));
+                                                      setIsGeneratingSellOffers((prev) => ({ ...prev, [item.instanceId]: false }));
+                                                      delete sellOfferTimersRef.current[item.instanceId];
+                                                    }, 900);
+                                                    sellOfferTimersRef.current[item.instanceId] = timerId;
                                                     return;
                                                   }
                                                   const sellBackPrice = Math.round(item.price * getSellBackRate(item));
                                                   sellItem(item.instanceId, sellBackPrice);
+                                                  if (sellOfferTimersRef.current[item.instanceId]) {
+                                                    window.clearTimeout(sellOfferTimersRef.current[item.instanceId]);
+                                                    delete sellOfferTimersRef.current[item.instanceId];
+                                                  }
                                                   setSellOffers((prev) => ({ ...prev, [item.instanceId]: false }));
+                                                  setIsGeneratingSellOffers((prev) => ({ ...prev, [item.instanceId]: false }));
                                                 }}
-                                                disabled={!canSell}
-                                                className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border flex items-center justify-center gap-2 ${
+                                                disabled={!canSell || !!isGeneratingSellOffers[item.instanceId]}
+                                                className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-80 ${
                                                   canSell
                                                     ? 'bg-[#0b0e14] text-gray-200 border-gray-700 hover:border-brand-purple/60'
                                                     : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
                                                 }`}
                                               >
                                                 <span className="flex flex-col items-center gap-1 text-center">
-                                                  <span className="uppercase tracking-wide text-[10px]">
-                                                    {sellOffers[item.instanceId] ? 'Accept buy back offer' : 'Generate buy back offer'}
+                                                  <span className="flex items-center justify-center gap-2 uppercase tracking-wide text-[10px]">
+                                                    {isGeneratingSellOffers[item.instanceId] && (
+                                                      <span className="h-3 w-3 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
+                                                    )}
+                                                    {isGeneratingSellOffers[item.instanceId]
+                                                      ? 'Generating offer...'
+                                                      : sellOffers[item.instanceId]
+                                                        ? 'Accept buy back offer'
+                                                        : 'Generate buy back offer'}
                                                   </span>
-                                                  {sellOffers[item.instanceId] && (
+                                                  {sellOffers[item.instanceId] && !isGeneratingSellOffers[item.instanceId] && (
                                                     <CoinAmount
                                                       amount={Math.round(item.price * getSellBackRate(item))}
                                                       formatOptions={{ maximumFractionDigits: 0 }}
