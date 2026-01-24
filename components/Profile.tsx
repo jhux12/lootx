@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
+import { getSellBackValue } from '../utils/sellBack';
 import { CoinAmount } from './CoinAmount';
 import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Upload, Trash2, ExternalLink, Search, Package } from 'lucide-react';
 
@@ -587,7 +588,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                                     sellOfferTimersRef.current[item.instanceId] = timerId;
                                                     return;
                                                   }
-                                                  const sellBackPrice = Math.round(item.price * getSellBackRate(item));
+                                                  const sellBackPrice = getSellBackValue(item.price, getSellBackRate(item));
                                                   sellItem(item.instanceId, sellBackPrice);
                                                   if (sellOfferTimersRef.current[item.instanceId]) {
                                                     window.clearTimeout(sellOfferTimersRef.current[item.instanceId]);
@@ -616,7 +617,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                                   </span>
                                                   {sellOffers[item.instanceId] && !isGeneratingSellOffers[item.instanceId] && (
                                                     <CoinAmount
-                                                      amount={Math.round(item.price * getSellBackRate(item))}
+                                                      amount={getSellBackValue(item.price, getSellBackRate(item))}
                                                       formatOptions={{ maximumFractionDigits: 0 }}
                                                       className="text-gray-100"
                                                       iconClassName="w-3 h-3"
