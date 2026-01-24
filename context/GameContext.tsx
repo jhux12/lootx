@@ -1026,15 +1026,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       status: 'available',
       provenance
     };
-    let updatedInventory: InventoryItem[] = [];
     setInventory(prev => {
-      updatedInventory = [newItem, ...prev];
-      return updatedInventory;
+      const nextInventory = [newItem, ...prev];
+      const nextTopPulls = rankTopPullsByValue(nextInventory);
+
+      setUser(current => ({ ...current, topPulls: nextTopPulls }));
+      setUsers(current => current.map(u => u.id === auth.currentUser?.uid ? { ...u, topPulls: nextTopPulls } : u));
+      persistUserData({ inventory: nextInventory, topPulls: nextTopPulls });
+
+      return nextInventory;
     });
-    const nextTopPulls = rankTopPullsByValue([newItem, ...normalizeInventoryItems(user.topPulls)]);
-    setUser(prev => ({ ...prev, topPulls: nextTopPulls }));
-    setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, topPulls: nextTopPulls } : u));
-    persistUserData({ inventory: updatedInventory, topPulls: nextTopPulls });
     return newItem;
   };
 
