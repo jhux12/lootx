@@ -69,7 +69,7 @@ export const BoxGrid: React.FC = () => {
             setView({ type: 'CUSTOM_CREATOR' });
           }}
           aria-label="Open Case Lab"
-          className="relative w-full aspect-video overflow-hidden rounded-xl border border-gray-800 bg-[#131720] transition hover:border-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
+          className="relative w-full lg:max-w-5xl xl:max-w-4xl 2xl:max-w-3xl lg:mx-auto aspect-video lg:aspect-[20/9] overflow-hidden rounded-xl border border-gray-800 bg-[#131720] transition hover:border-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
         >
           <img
             src={caselabImage}
