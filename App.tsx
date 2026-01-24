@@ -20,6 +20,7 @@ import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider } from './context/SoundContext';
 import { ShieldAlert, MessageCircle } from 'lucide-react';
 import { MobileChatModal } from './components/MobileChatModal';
+import { ResetPasswordModal } from './components/ResetPasswordModal';
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC = () => {
@@ -195,6 +196,7 @@ function App() {
             isOpen={showSupportChat} 
             onClose={() => setShowSupportChat(false)} 
           />
+          <ResetPasswordModal />
         </div>
       </GameProvider>
     </SoundProvider>
