@@ -98,16 +98,17 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
     sellOfferTimersRef.current = {};
   }, []);
 
-  const inventorySource = isOwnProfile ? inventory : displayUser.inventory ?? [];
-  const normalizedInventory = inventorySource
-    .map((item, index) => ({
+  const normalizeItems = (items: typeof inventory) =>
+    (items ?? []).map((item, index) => ({
       ...item,
       instanceId: item.instanceId || `${item.id}-${index}`,
       status: item.status ?? 'available',
       obtainedAt: item.obtainedAt ?? 0,
       rarity: item.rarity ?? 'common'
-    }))
-    .sort((a, b) => b.obtainedAt - a.obtainedAt);
+    }));
+
+  const inventorySource = isOwnProfile ? inventory : displayUser.inventory ?? [];
+  const normalizedInventory = normalizeItems(inventorySource).sort((a, b) => b.obtainedAt - a.obtainedAt);
 
   const filteredInventory = normalizedInventory.filter((item) => {
     if (inventoryFilter === 'processing') return item.status === 'shipping';
@@ -143,18 +144,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
     });
   }, [normalizedInventory]);
 
-  const rarityRank: Record<typeof normalizedInventory[number]['rarity'], number> = {
-    common: 0,
-    uncommon: 1,
-    rare: 2,
-    epic: 3,
-    legendary: 4
-  };
-
-  const topPulls = [...normalizedInventory]
+  const topPullsSource = isOwnProfile ? user.topPulls : displayUser.topPulls;
+  const topPulls = normalizeItems(topPullsSource ?? [])
     .sort((a, b) => {
-      const rarityDiff = rarityRank[b.rarity] - rarityRank[a.rarity];
-      if (rarityDiff !== 0) return rarityDiff;
       const priceDiff = b.price - a.price;
       if (priceDiff !== 0) return priceDiff;
       return b.obtainedAt - a.obtainedAt;

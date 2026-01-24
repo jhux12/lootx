@@ -40,6 +40,41 @@ const sanitizeDeep = (value: any): any => {
   return value;
 };
 
+const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
+  if (!Array.isArray(items)) return [];
+  return items.map((item, index) => {
+    const typed = item as Partial<InventoryItem>;
+    const fallbackId = typeof typed.id === 'string' ? typed.id : `item-${index}`;
+    return {
+      ...(typed as InventoryItem),
+      id: fallbackId,
+      instanceId: typed.instanceId || `${fallbackId}-${index}`,
+      obtainedAt: Number(typed.obtainedAt ?? 0),
+      status: (typed.status ?? 'available') as InventoryItem['status'],
+      rarity: (typed.rarity ?? 'common') as InventoryItem['rarity'],
+      price: Number(typed.price ?? 0),
+      name: typed.name ?? 'Mystery Item',
+      image: typed.image ?? 'https://picsum.photos/200',
+      chance: Number(typed.chance ?? 0),
+      color: typed.color ?? '#9ca3af'
+    };
+  });
+};
+
+const inventorySignature = (items: InventoryItem[]) =>
+  items
+    .map((item) => `${item.instanceId}:${item.price}:${item.rarity}:${item.obtainedAt}`)
+    .join('|');
+
+const rankTopPullsByValue = (items: InventoryItem[], limit = 6) =>
+  [...items]
+    .sort((a, b) => {
+      const priceDiff = b.price - a.price;
+      if (priceDiff !== 0) return priceDiff;
+      return b.obtainedAt - a.obtainedAt;
+    })
+    .slice(0, limit);
+
 const DEFAULT_LOCKS: UserLocks = {
   openCases: false,
   deposits: false,
@@ -233,6 +268,7 @@ const getPathFromView = (view: ViewState): string => {
 type PersistUserData = Partial<{
   balance: number;
   inventory: InventoryItem[];
+  topPulls: InventoryItem[];
   xp: number;
   level: number;
   followers: string[];
@@ -446,8 +482,11 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     locks: data.locks ?? DEFAULT_LOCKS,
     ledger: Array.isArray(data.ledger) ? data.ledger : undefined,
     adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
-    topPullsPublic: data.topPullsPublic ?? false
+    topPullsPublic: data.topPullsPublic ?? false,
+    topPulls: normalizeInventoryItems(data.topPulls)
   };
+  const inventoryItems = normalizeInventoryItems(data.inventory);
+  const storedTopPulls = normalizeInventoryItems(data.topPulls);
 
   const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
   const updates: Record<string, unknown> = {};
@@ -473,6 +512,12 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     updates.termsFlagged = profile.termsFlagged;
   }
 
+  if (storedTopPulls.length === 0 && inventoryItems.length > 0) {
+    const computedTopPulls = rankTopPullsByValue(inventoryItems);
+    profile.topPulls = computedTopPulls;
+    updates.topPulls = computedTopPulls;
+  }
+
   if (Object.keys(updates).length > 0) {
     await setDoc(userRef, updates, { merge: true });
   }
@@ -480,7 +525,8 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
   return {
     user: profile,
     balance: data.balance ?? 0,
-    inventory: Array.isArray(data.inventory) ? (data.inventory as InventoryItem[]) : []
+    inventory: inventoryItems,
+    topPulls: profile.topPulls ?? storedTopPulls
   };
 };
 
@@ -588,7 +634,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsAuthenticated(true);
       try {
         const profile = await loadUserFromFirestore(firebaseUser);
-        setUser(profile.user);
+        setUser((prev) => ({ ...prev, ...profile.user, topPulls: profile.topPulls }));
         setBalance(profile.balance);
         setInventory(profile.inventory);
       } catch (error) {
@@ -633,7 +679,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           referredBy: data.referredBy,
           followers: followerIds,
           shippingAddress: data.shippingAddress,
-          inventory: Array.isArray(data.inventory) ? (data.inventory as InventoryItem[]) : [],
+          inventory: normalizeInventoryItems(data.inventory),
           isAdmin: data.isAdmin ?? false,
           chatWarnings: data.chatWarnings ?? 0,
           chatDisabled: data.chatDisabled ?? false,
@@ -643,7 +689,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           locks: data.locks ?? DEFAULT_LOCKS,
           ledger: Array.isArray(data.ledger) ? data.ledger : undefined,
           adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
-          topPullsPublic: data.topPullsPublic ?? false
+          topPullsPublic: data.topPullsPublic ?? false,
+          topPulls: normalizeInventoryItems(data.topPulls)
         } as User;
       });
       setUsers(loaded);
@@ -666,8 +713,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const needsLastChatUpdate = latestUser.lastChatAt !== undefined && latestUser.lastChatAt !== user.lastChatAt;
     const nextTopPullsPublic = latestUser.topPullsPublic ?? false;
     const needsTopPullsPublicUpdate = nextTopPullsPublic !== (user.topPullsPublic ?? false);
+    const nextTopPulls = normalizeInventoryItems(latestUser.topPulls);
+    const needsTopPullsUpdate = inventorySignature(nextTopPulls) !== inventorySignature(normalizeInventoryItems(user.topPulls));
 
-    if (!needsBalanceUpdate && !needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate) return;
+    if (!needsBalanceUpdate && !needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate && !needsTopPullsUpdate) return;
 
     if (needsBalanceUpdate) {
       setBalance(nextBalance);
@@ -678,9 +727,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (needsCreatedAtUpdate) updates.createdAt = latestUser.createdAt;
     if (needsLastChatUpdate) updates.lastChatAt = latestUser.lastChatAt;
     if (needsTopPullsPublicUpdate) updates.topPullsPublic = nextTopPullsPublic;
+    if (needsTopPullsUpdate) updates.topPulls = nextTopPulls;
 
     setUser((prev) => ({ ...prev, ...updates }));
-  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic, balance]);
+  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic, user.topPulls, balance]);
 
   useEffect(() => {
     const itemsRef = collection(db, 'items');
@@ -1005,11 +1055,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       status: 'available',
       provenance
     };
+    let updatedInventory: InventoryItem[] = [];
     setInventory(prev => {
-      const updated = [newItem, ...prev];
-      persistUserData({ inventory: updated });
-      return updated;
+      updatedInventory = [newItem, ...prev];
+      return updatedInventory;
     });
+    const nextTopPulls = rankTopPullsByValue([newItem, ...normalizeInventoryItems(user.topPulls)]);
+    setUser(prev => ({ ...prev, topPulls: nextTopPulls }));
+    setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, topPulls: nextTopPulls } : u));
+    persistUserData({ inventory: updatedInventory, topPulls: nextTopPulls });
     return newItem;
   };
 
