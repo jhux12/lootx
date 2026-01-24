@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronLeft, Zap, Volume2, Info, Plus, X, ShieldCheck } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM } from '../constants';
 import { CoinAmount } from './CoinAmount';
-import { CaseItem, InventoryItem } from '../types';
+import { CaseItem, InventoryItem, DEFAULT_LOCKS } from '../types';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getRiskLabel } from '../utils/caseOdds';
@@ -70,6 +70,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const box = boxes.find(b => b.id === boxId) || boxes[0];
   const items = box.items || [];
   const sellBackRate = box?.isUserCreated ? 0.75 : 0.82;
+  const locks = { ...DEFAULT_LOCKS, ...(user.locks ?? {}) };
+  const openCasesLocked = locks.openCases;
+  const sellLocked = locks.marketplace || locks.withdraws;
 
   // Sort items high to low for display purposes
   const displayItems = [...items].sort((a, b) => b.price - a.price);
@@ -249,6 +252,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleSpin = async ({ isDemo = false }: { isDemo?: boolean } = {}) => {
     if (isSpinning) return;
+    if (openCasesLocked) {
+      alert('Case opening is currently locked on this account.');
+      return;
+    }
 
     if (isDemo) {
       setIsDemoSpin(true);
@@ -370,6 +377,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleSell = () => {
     playSound('click');
+    if (sellLocked) {
+        return;
+    }
     if (isDemoSpin) {
         setShowWinModal(false);
         return;
@@ -443,6 +453,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
     </div>
 
+        {openCasesLocked && (
+            <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200">
+                Case opening is currently locked on this account.
+            </div>
+        )}
+
         {/* SPINNER AREA */}
         <div className={`relative w-full bg-[#0b0e14] border rounded-2xl p-1 mb-8 overflow-hidden shadow-2xl transition-all duration-700 ${isGoldMode ? 'border-yellow-500 shadow-yellow-500/20' : 'border-gray-800'}`}>
             
@@ -503,7 +519,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="bg-[#0b0e14] p-4 flex flex-col sm:flex-row items-center justify-center gap-3 border-t border-gray-800 relative z-20">
                  <button 
                     onClick={() => handleSpin()}
-                    disabled={isSpinning || isGeneratingSeed}
+                    disabled={isSpinning || isGeneratingSeed || openCasesLocked}
                     className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20')}`}
                 >
                     <span>
@@ -529,7 +545,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                  {!isFree && (
                    <button
                      onClick={handleTryFree}
-                     disabled={isSpinning || isGeneratingSeed}
+                     disabled={isSpinning || isGeneratingSeed || openCasesLocked}
                      className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Try for Free</span>
@@ -744,26 +760,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 Close
                             </button>
                         ) : (
-                            <div className="flex w-full flex-col gap-3 sm:flex-row">
-                                <button onClick={handleSell} className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10">
-                                    <span className="flex flex-col items-center justify-center gap-1">
-                                      <span className="text-[11px] uppercase tracking-wide text-gray-400">
-                                        {sellOfferGenerated ? 'Accept buy back offer' : 'Generate buy back offer'}
-                                      </span>
-                                      {sellOfferGenerated && (
-                                        <CoinAmount
-                                          amount={Math.round(wonItem.price * sellBackRate)}
-                                          formatOptions={{ maximumFractionDigits: 0 }}
-                                          className="text-gray-200"
-                                          iconClassName="w-4 h-4"
-                                        />
-                                      )}
-                                    </span>
-                                </button>
-                                <button onClick={handleKeep} className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-500 hover:to-blue-400">
-                                    Keep Item
-                                </button>
-                            </div>
+                            <>
+                                <div className="flex w-full flex-col gap-3 sm:flex-row">
+                                    <button
+                                        onClick={handleSell}
+                                        disabled={sellLocked}
+                                        className={`flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold transition ${sellLocked ? 'cursor-not-allowed text-gray-500 opacity-60' : 'text-gray-200 hover:border-white/20 hover:bg-white/10'}`}
+                                    >
+                                        <span className="flex flex-col items-center justify-center gap-1">
+                                          <span className="text-[11px] uppercase tracking-wide text-gray-400">
+                                            {sellOfferGenerated ? 'Accept buy back offer' : 'Generate buy back offer'}
+                                          </span>
+                                          {sellOfferGenerated && (
+                                            <CoinAmount
+                                              amount={Math.round(wonItem.price * sellBackRate)}
+                                              formatOptions={{ maximumFractionDigits: 0 }}
+                                              className="text-gray-200"
+                                              iconClassName="w-4 h-4"
+                                            />
+                                          )}
+                                        </span>
+                                    </button>
+                                    <button onClick={handleKeep} className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-500 hover:to-blue-400">
+                                        Keep Item
+                                    </button>
+                                </div>
+                                {sellLocked && (
+                                  <div className="mt-3 text-center text-xs text-red-200">
+                                    Marketplace withdrawals are locked on this account.
+                                  </div>
+                                )}
+                            </>
                         )}
                      </div>
                 </div>

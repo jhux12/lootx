@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks } from '../types';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, SiteSettings, DEFAULT_LOCKS } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { 
@@ -39,14 +39,6 @@ const sanitizeDeep = (value: any): any => {
   return value;
 };
 
-const DEFAULT_LOCKS: UserLocks = {
-  openCases: false,
-  deposits: false,
-  withdraws: false,
-  marketplace: false,
-  shipments: false
-};
-
 interface BonusSettings {
   xpPer100Coins: number;
   xpPerCaseOpen: number;
@@ -70,11 +62,26 @@ const DEFAULT_BONUS_SETTINGS: BonusSettings = {
 };
 
 const STORAGE_KEY_BONUS_SETTINGS = 'lootx_bonus_settings';
+const STORAGE_KEY_SITE_SETTINGS = 'lootx_site_settings';
 
 const getStoredBonusSettings = (): BonusSettings => {
   if (typeof window === 'undefined') return DEFAULT_BONUS_SETTINGS;
   const stored = safeReadLocalStorage<Partial<BonusSettings>>(STORAGE_KEY_BONUS_SETTINGS, DEFAULT_BONUS_SETTINGS);
   return { ...DEFAULT_BONUS_SETTINGS, ...stored };
+};
+
+const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  maintenanceMode: false
+};
+
+const getStoredSiteSettings = (): SiteSettings => {
+  if (typeof window === 'undefined') return DEFAULT_SITE_SETTINGS;
+  const stored = safeReadLocalStorage<Partial<SiteSettings>>(STORAGE_KEY_SITE_SETTINGS, DEFAULT_SITE_SETTINGS);
+  return {
+    ...DEFAULT_SITE_SETTINGS,
+    ...stored,
+    maintenanceMode: Boolean(stored.maintenanceMode)
+  };
 };
 
 const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings => ({
@@ -88,7 +95,12 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
   rakebackDailyCapCoins: Math.max(0, Number(settings.rakebackDailyCapCoins) || 0)
 });
 
+const normalizeSiteSettings = (settings: Partial<SiteSettings>): SiteSettings => ({
+  maintenanceMode: Boolean(settings.maintenanceMode)
+});
+
 const BONUS_SETTINGS_DOC = 'bonus-settings';
+const SITE_SETTINGS_DOC = 'site-settings';
 
 export const calculateLevelProgress = (totalXp: number, overrides?: Partial<BonusSettings>) => {
   const settings = { ...getStoredBonusSettings(), ...(overrides ?? {}) };
@@ -263,6 +275,7 @@ interface GameContextType {
   boxes: MysteryBox[];
   items: CaseItem[];
   bonusSettings: BonusSettings;
+  siteSettings: SiteSettings;
   showLoginModal: boolean;
   showTopUpModal: boolean;
   
@@ -302,6 +315,7 @@ interface GameContextType {
   claimDaily: () => void;
   claimRakeback: () => void;
   updateBonusSettings: (settings: BonusSettings) => void;
+  updateSiteSettings: (settings: SiteSettings) => void;
   awardCaseOpenXp: () => void;
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
@@ -501,6 +515,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   });
 
   const [bonusSettings, setBonusSettings] = useState<BonusSettings>(() => getStoredBonusSettings());
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>(() => getStoredSiteSettings());
+  const activeLocks = useMemo(() => ({ ...DEFAULT_LOCKS, ...(user.locks ?? {}) }), [user.locks]);
 
   useEffect(() => {
     const bonusSettingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC);
@@ -511,6 +527,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       safeWriteLocalStorage(STORAGE_KEY_BONUS_SETTINGS, normalized);
     }, (error) => {
       console.error('Failed to load bonus settings from Firebase', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const siteSettingsRef = doc(db, 'settings', SITE_SETTINGS_DOC);
+    const unsubscribe = onSnapshot(siteSettingsRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const normalized = normalizeSiteSettings(snapshot.data() as Partial<SiteSettings>);
+      setSiteSettings(normalized);
+      safeWriteLocalStorage(STORAGE_KEY_SITE_SETTINGS, normalized);
+    }, (error) => {
+      console.error('Failed to load site settings from Firebase', error);
     });
 
     return () => unsubscribe();
@@ -824,6 +854,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
+  const updateSiteSettings = (settings: SiteSettings) => {
+    const normalized = normalizeSiteSettings(settings);
+    setSiteSettings(normalized);
+    safeWriteLocalStorage(STORAGE_KEY_SITE_SETTINGS, normalized);
+    const siteSettingsRef = doc(db, 'settings', SITE_SETTINGS_DOC);
+    void setDoc(siteSettingsRef, normalized, { merge: true }).catch((error) => {
+      console.error('Failed to save site settings to Firebase', error);
+    });
+  };
+
   const login = async (email: string, pass: string) => {
       await signInWithEmailAndPassword(auth, email, pass);
       setShowLoginModal(false);
@@ -914,6 +954,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const addBalance = async (amount: number) => {
+    if (activeLocks.deposits) {
+      return;
+    }
     setBalance(prev => {
       const updated = prev + amount;
       persistUserData({ balance: updated });
@@ -1054,6 +1097,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const sellItem = async (instanceId: string, value: number) => {
+    if (activeLocks.marketplace || activeLocks.withdraws) {
+      return;
+    }
     let soldItem = false;
     setInventory(prev => {
       const itemToSell = prev.find(i => i.instanceId === instanceId);
@@ -1069,6 +1115,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const shipItem = async (instanceId: string) => {
+    if (activeLocks.shipments || activeLocks.withdraws) {
+      return;
+    }
     const itemToShip = inventory.find(item => item.instanceId === instanceId);
     setInventory(prev => {
       const updated = prev.map(item => 
@@ -1475,6 +1524,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       boxes,
       items,
       bonusSettings,
+      siteSettings,
       login,
       register,
       logout,
@@ -1509,6 +1559,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       claimDaily,
       claimRakeback,
       updateBonusSettings,
+      updateSiteSettings,
       awardCaseOpenXp,
       generateAffiliateCode,
       updateUserProgress,

@@ -4,6 +4,7 @@ import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Upload, Trash2, ExternalLink, Search, Package } from 'lucide-react';
+import { DEFAULT_LOCKS } from '../types';
 
 const AVATAR_PRESETS = [
     'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
@@ -43,6 +44,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   const isOwnProfile = !selectedUserId || selectedUserId === user.id;
   const displayUser = profileUser || user;
   const canViewTopPulls = isOwnProfile || !!displayUser.topPullsPublic;
+  const locks = { ...DEFAULT_LOCKS, ...(user.locks ?? {}) };
+  const openCasesLocked = locks.openCases;
+  const marketplaceLocked = locks.marketplace || locks.withdraws;
+  const shipmentsLocked = locks.shipments || locks.withdraws;
+  const withdrawalsLocked = locks.withdraws;
   
   const viewedFollowerIds = Array.isArray(displayUser.followers) ? displayUser.followers : [];
   const viewedFollowers = users.filter((u) => viewedFollowerIds.includes(u.id));
@@ -449,6 +455,13 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                           ))}
                       </div>
                   </div>
+                  {(marketplaceLocked || shipmentsLocked || withdrawalsLocked) && (
+                      <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-200">
+                          {withdrawalsLocked
+                            ? 'Withdrawals are currently locked on this account.'
+                            : 'Some inventory actions are currently locked on this account.'}
+                      </div>
+                  )}
 
                   {filteredInventory.length === 0 ? (
                       <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
@@ -469,7 +482,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                           </p>
                           <button 
                             onClick={() => setView({ type: 'BOXES' })}
-                            className="px-6 py-2 bg-brand-purple text-white rounded-lg font-bold hover:bg-purple-600 transition-colors"
+                            disabled={openCasesLocked}
+                            className={`px-6 py-2 rounded-lg font-bold transition-colors ${openCasesLocked ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-brand-purple text-white hover:bg-purple-600'}`}
                           >
                             Browse Boxes
                           </button>
@@ -479,8 +493,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                           {filteredInventory.map((item) => {
                               const isAvailable = item.status === 'available';
                               const isLocked = !!item.locked;
-                              const canShip = isAvailable && !isLocked && !!user.shippingAddress;
-                              const canSell = isAvailable && !isLocked;
+                              const canShip = isAvailable && !isLocked && !!user.shippingAddress && !shipmentsLocked;
+                              const canSell = isAvailable && !isLocked && !marketplaceLocked;
                               const statusLabel = item.status === 'shipping'
                                 ? 'Shipping'
                                 : item.status === 'shipped'
@@ -597,6 +611,16 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                       {!user.shippingAddress && (
                                           <div className="text-[11px] text-amber-400 mt-2">
                                               Add a shipping address in Settings to enable shipping.
+                                          </div>
+                                      )}
+                                      {shipmentsLocked && (
+                                          <div className="text-[11px] text-red-300 mt-2">
+                                              Shipping is locked on this account.
+                                          </div>
+                                      )}
+                                      {inventoryFilter === 'inventory' && marketplaceLocked && (
+                                          <div className="text-[11px] text-red-300 mt-2">
+                                              Marketplace cash-out is locked on this account.
                                           </div>
                                       )}
                                   </div>

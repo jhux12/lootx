@@ -16,12 +16,14 @@ import {
   VolumeX, 
   ShieldCheck, 
   FlaskConical, 
-  PackageOpen
+  PackageOpen,
+  Lock
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
+import { DEFAULT_LOCKS } from '../types';
 
 export const Header: React.FC = () => {
   const {
@@ -79,6 +81,8 @@ export const Header: React.FC = () => {
   };
 
   const notificationCount = notifications.length;
+  const locks = { ...DEFAULT_LOCKS, ...(user.locks ?? {}) };
+  const depositsLocked = locks.deposits;
 
   return (
     <>
@@ -204,10 +208,11 @@ export const Header: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => setShowTopUpModal(true)}
-                  className="bg-blue-600 hover:bg-blue-500 text-white rounded p-1 transition-colors active:scale-95"
-                  title="Add Coins"
+                  disabled={depositsLocked}
+                  className={`rounded p-1 transition-colors active:scale-95 ${depositsLocked ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white'}`}
+                  title={depositsLocked ? 'Deposits are locked' : 'Add Coins'}
                 >
-                  <Plus className="w-3 h-3" />
+                  {depositsLocked ? <Lock className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
                 </button>
               </div>
 
