@@ -4,7 +4,9 @@ import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
 
 const RAIN_DURATION_MS = 60 * 60 * 1000;
-const RAIN_JOIN_BONUS = 10;
+const RAIN_JOIN_BONUS_COINS = 10;
+const COINS_PER_UNIT = 100;
+const RAIN_JOIN_BONUS = RAIN_JOIN_BONUS_COINS / COINS_PER_UNIT;
 const MIN_ACCOUNT_AGE_MS = 10 * 60 * 1000;
 const RECENT_CHAT_MS = 5 * 60 * 1000;
 
@@ -45,7 +47,7 @@ const normalizeRainState = (raw: Record<string, unknown> | undefined, now: numbe
 
   const startedAt = Number(raw.cycleStartedAt ?? now);
   const endsAt = Number(raw.cycleEndsAt ?? startedAt + RAIN_DURATION_MS);
-  const potCoins = Math.max(0, Math.floor(Number(raw.potCoins ?? 0)));
+  const potCoins = normalizeAmount(raw.potCoins);
   const joinedUserIds = Array.isArray(raw.joinedUserIds)
     ? Array.from(new Set(raw.joinedUserIds.map((id) => String(id))))
     : [];
@@ -61,17 +63,27 @@ const normalizeRainState = (raw: Record<string, unknown> | undefined, now: numbe
   };
 };
 
+const toCents = (amount: number) => Math.max(0, Math.round(amount * COINS_PER_UNIT));
+const fromCents = (cents: number) => cents / COINS_PER_UNIT;
+
+const normalizeAmount = (value: unknown) => {
+  const parsed = Number(value ?? 0);
+  if (!Number.isFinite(parsed)) return 0;
+  return fromCents(toCents(parsed));
+};
+
 const distributeEvenly = (pot: number, participants: string[]) => {
   if (pot <= 0 || participants.length === 0) return new Map<string, number>();
-  const baseShare = Math.floor(pot / participants.length);
-  const remainder = pot - baseShare * participants.length;
+  const totalCents = toCents(pot);
+  const baseShareCents = Math.floor(totalCents / participants.length);
+  const remainder = totalCents - baseShareCents * participants.length;
   const payouts = new Map<string, number>();
 
   participants.forEach((userId, index) => {
     const bonus = index < remainder ? 1 : 0;
-    const amount = baseShare + bonus;
-    if (amount > 0) {
-      payouts.set(userId, amount);
+    const amountCents = baseShareCents + bonus;
+    if (amountCents > 0) {
+      payouts.set(userId, fromCents(amountCents));
     }
   });
 
@@ -231,7 +243,7 @@ export const useFreeRain = () => {
         }
 
         const joinedUserIds = [...state.joinedUserIds, user.id];
-        const potCoins = state.potCoins + RAIN_JOIN_BONUS;
+        const potCoins = fromCents(toCents(state.potCoins) + toCents(RAIN_JOIN_BONUS));
 
         transaction.set(
           rainRef,
@@ -272,7 +284,7 @@ export const useFreeRain = () => {
     isJoining,
     timeRemainingMs,
     eligibility,
-    joinBonus: RAIN_JOIN_BONUS,
+    joinBonusCoins: RAIN_JOIN_BONUS_COINS,
     rainDurationMs: RAIN_DURATION_MS,
     joinRain
   };

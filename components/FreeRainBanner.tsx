@@ -29,7 +29,7 @@ export const FreeRainBanner: React.FC<FreeRainBannerProps> = ({ className }) => 
     isJoining,
     timeRemainingMs,
     eligibility,
-    joinBonus,
+    joinBonusCoins,
     joinRain
   } = useFreeRain();
   const { playSound } = useSound();
@@ -73,7 +73,7 @@ export const FreeRainBanner: React.FC<FreeRainBannerProps> = ({ className }) => 
             </div>
           </div>
           <div className="mt-1 text-[11px] text-gray-400">
-            +{joinBonus} coins per join • evenly split when timer ends
+            +{joinBonusCoins} coins per join • evenly split when timer ends
           </div>
           {!eligibility.eligible && (
             <div className="mt-2 text-[11px] text-amber-300/90">{eligibility.reason}</div>
