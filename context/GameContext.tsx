@@ -105,13 +105,7 @@ const DEFAULT_BONUS_SETTINGS: BonusSettings = {
   rakebackDailyCapCoins: 15000
 };
 
-const STORAGE_KEY_BONUS_SETTINGS = 'lootx_bonus_settings';
-
-const getStoredBonusSettings = (): BonusSettings => {
-  if (typeof window === 'undefined') return DEFAULT_BONUS_SETTINGS;
-  const stored = safeReadLocalStorage<Partial<BonusSettings>>(STORAGE_KEY_BONUS_SETTINGS, DEFAULT_BONUS_SETTINGS);
-  return { ...DEFAULT_BONUS_SETTINGS, ...stored };
-};
+const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
 
 const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings => ({
   xpPer100Coins: Math.max(0, Number(settings.xpPer100Coins) || 0),
@@ -127,7 +121,7 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
 const BONUS_SETTINGS_DOC = 'bonus-settings';
 
 export const calculateLevelProgress = (totalXp: number, overrides?: Partial<BonusSettings>) => {
-  const settings = { ...getStoredBonusSettings(), ...(overrides ?? {}) };
+  const settings = { ...DEFAULT_BONUS_SETTINGS, ...(overrides ?? {}) };
   let level = 1;
   let xpRemaining = Math.max(0, totalXp);
   let xpForNextLevel = Math.max(1, Math.floor(settings.levelBaseXp));
@@ -144,27 +138,6 @@ export const calculateLevelProgress = (totalXp: number, overrides?: Partial<Bonu
     xpForNextLevel,
     xpToNextLevel: xpForNextLevel - xpRemaining
   };
-};
-
-const safeReadLocalStorage = <T,>(key: string, fallback: T): T => {
-  try {
-    const storedValue = localStorage.getItem(key);
-    if (storedValue) {
-      return JSON.parse(storedValue) as T;
-    }
-  } catch (error) {
-    console.warn(`Unable to read "${key}" from localStorage`, error);
-  }
-
-  return fallback;
-};
-
-const safeWriteLocalStorage = (key: string, value: unknown) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.warn(`Unable to write "${key}" to localStorage`, error);
-  }
 };
 
 const parseBooleanSearchParam = (value: string | null) => {
@@ -580,7 +553,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!snapshot.exists()) return;
       const normalized = normalizeBonusSettings(snapshot.data() as Partial<BonusSettings>);
       setBonusSettings(normalized);
-      safeWriteLocalStorage(STORAGE_KEY_BONUS_SETTINGS, normalized);
     }, (error) => {
       console.error('Failed to load bonus settings from Firebase', error);
     });
@@ -922,7 +894,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const normalized = normalizeBonusSettings(settings);
 
     setBonusSettings(normalized);
-    safeWriteLocalStorage(STORAGE_KEY_BONUS_SETTINGS, normalized);
     const bonusSettingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC);
     void setDoc(bonusSettingsRef, normalized, { merge: true }).catch((error) => {
       console.error('Failed to save bonus settings to Firebase', error);
@@ -1055,15 +1026,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       status: 'available',
       provenance
     };
-    let updatedInventory: InventoryItem[] = [];
     setInventory(prev => {
-      updatedInventory = [newItem, ...prev];
-      return updatedInventory;
+      const nextInventory = [newItem, ...prev];
+      const nextTopPulls = rankTopPullsByValue(nextInventory);
+
+      setUser(current => ({ ...current, topPulls: nextTopPulls }));
+      setUsers(current => current.map(u => u.id === auth.currentUser?.uid ? { ...u, topPulls: nextTopPulls } : u));
+      persistUserData({ inventory: nextInventory, topPulls: nextTopPulls });
+
+      return nextInventory;
     });
-    const nextTopPulls = rankTopPullsByValue([newItem, ...normalizeInventoryItems(user.topPulls)]);
-    setUser(prev => ({ ...prev, topPulls: nextTopPulls }));
-    setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, topPulls: nextTopPulls } : u));
-    persistUserData({ inventory: updatedInventory, topPulls: nextTopPulls });
     return newItem;
   };
 

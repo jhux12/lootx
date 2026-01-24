@@ -24,10 +24,6 @@ const CARD_WIDTH = 160;
 const GAP_WIDTH = 16;
 const ITEM_WIDTH = CARD_WIDTH + GAP_WIDTH;
 const BUFFER_COUNT = 45; // Items before winner
-const CLIENT_SEED_KEY = 'lootx_client_seed';
-const SERVER_SEED_KEY = 'lootx_server_seed';
-const NONCE_KEY = 'lootx_nonce';
-
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -68,9 +64,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const { user, balance, deductBalance, addToInventory, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily, awardCaseOpenXp } = useGame();
   const { playSound } = useSound();
   
-  const box = boxes.find(b => b.id === boxId) || boxes[0];
-  const items = box.items || [];
+  const matchedBox = boxes.find(b => b.id === boxId);
+  const box = matchedBox ?? boxes[0];
+
+  useEffect(() => {
+    if (boxes.length === 0) return;
+    if (!matchedBox) {
+      setView({ type: 'HOME' });
+    }
+  }, [boxes.length, matchedBox, setView]);
+
+  const items = box?.items ?? [];
+  const hasItems = items.length > 0;
   const sellBackRate = box?.isUserCreated ? 0.75 : 0.82;
+  const isReady = Boolean(box) && hasItems;
 
   // Sort items high to low for display purposes
   const displayItems = [...items].sort((a, b) => b.price - a.price);
@@ -83,21 +90,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [sellOfferGenerated, setSellOfferGenerated] = useState(false);
   const [isGeneratingSellOffer, setIsGeneratingSellOffer] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
-  const [serverSeed, setServerSeed] = useState(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem(SERVER_SEED_KEY) || '';
-  });
+  const [serverSeed, setServerSeed] = useState('');
   const [serverSeedHash, setServerSeedHash] = useState('');
-  const [clientSeed, setClientSeed] = useState(() => {
-    if (typeof window === 'undefined') return 'lootx-player';
-    return localStorage.getItem(CLIENT_SEED_KEY) || 'lootx-player';
-  });
-  const [nonce, setNonce] = useState(() => {
-    if (typeof window === 'undefined') return 0;
-    const storedNonce = localStorage.getItem(NONCE_KEY);
-    const parsedNonce = storedNonce ? Number.parseInt(storedNonce, 10) : 0;
-    return Number.isFinite(parsedNonce) && parsedNonce >= 0 ? parsedNonce : 0;
-  });
+  const [clientSeed, setClientSeed] = useState('lootx-player');
+  const [nonce, setNonce] = useState(0);
   const [lastRoll, setLastRoll] = useState<RollData | null>(null);
   const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
   const [showFairModal, setShowFairModal] = useState(false);
@@ -125,11 +121,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       nonceRef.current = 0;
       setNonce(0);
       setLastRoll(null);
-
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(SERVER_SEED_KEY, nextSeed);
-        localStorage.setItem(NONCE_KEY, '0');
-      }
 
       return nextSeed;
     } finally {
@@ -161,9 +152,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const nextNonce = currentNonce + 1;
       nonceRef.current = nextNonce;
       setNonce(nextNonce);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(NONCE_KEY, String(nextNonce));
-      }
     }
 
     return {
@@ -174,12 +162,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     };
   }, [clientSeed, ensureSeedReady]);
   
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(CLIENT_SEED_KEY, clientSeed);
-    }
-  }, [clientSeed]);
-
   useEffect(() => {
     nonceRef.current = nonce;
   }, [nonce]);
@@ -284,6 +266,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleSpin = async ({ isDemo = false }: { isDemo?: boolean } = {}) => {
     if (isSpinning) return;
+    if (!box || items.length === 0) return;
 
     if (isDemo) {
       setIsDemoSpin(true);
@@ -481,6 +464,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   return (
     <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
+      {!isReady ? (
+        <div className="min-h-[60vh] flex items-center justify-center px-4">
+          <div className="text-center max-w-sm">
+            <p className="text-white text-lg font-semibold">Loading case...</p>
+            <p className="text-gray-400 text-sm mt-2">We&apos;re syncing the drops and odds for this case.</p>
+          </div>
+        </div>
+      ) : (
+        <>
         {/* Breadcrumb */}
         <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
@@ -491,10 +483,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     <ChevronLeft className="w-4 h-4" /> All cases
                 </button>
                 <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-bold text-white">{box.name}</h2>
+                    <h2 className="text-2xl font-bold text-white">{box!.name}</h2>
                     {isFree && <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded">FREE SPIN</span>}
                     <span className="bg-[#131825] text-gray-300 text-xs font-semibold px-2 py-0.5 rounded border border-gray-700">
-                      {getRiskLabel(box.riskLevel ?? 50)}
+                      {getRiskLabel(box!.riskLevel ?? 50)}
                     </span>
                 </div>
             </div>
@@ -574,7 +566,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <span className="inline-flex items-center gap-2">
                           Open for
                           <CoinAmount
-                            amount={box.price}
+                            amount={box!.price}
                             formatOptions={{ maximumFractionDigits: 0 }}
                             className="text-white"
                             iconClassName="w-4 h-4"
@@ -881,6 +873,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 ))}
             </div>
         </div>
+        </>
+      )}
     </div>
   );
 };
