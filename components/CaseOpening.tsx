@@ -26,6 +26,7 @@ const ITEM_WIDTH = CARD_WIDTH + GAP_WIDTH;
 const BUFFER_COUNT = 45; // Items before winner
 const CLIENT_SEED_KEY = 'lootx_client_seed';
 const SERVER_SEED_KEY = 'lootx_server_seed';
+const NONCE_KEY = 'lootx_nonce';
 
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
@@ -90,7 +91,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (typeof window === 'undefined') return 'lootx-player';
     return localStorage.getItem(CLIENT_SEED_KEY) || 'lootx-player';
   });
-  const [nonce, setNonce] = useState(0);
+  const [nonce, setNonce] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    const storedNonce = localStorage.getItem(NONCE_KEY);
+    const parsedNonce = storedNonce ? Number.parseInt(storedNonce, 10) : 0;
+    return Number.isFinite(parsedNonce) && parsedNonce >= 0 ? parsedNonce : 0;
+  });
   const [lastRoll, setLastRoll] = useState<RollData | null>(null);
   const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
   const [showFairModal, setShowFairModal] = useState(false);
@@ -101,7 +107,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
   
-  const nonceRef = useRef(0);
+  const nonceRef = useRef(nonce);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
 
@@ -120,6 +126,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
       if (typeof window !== 'undefined') {
         localStorage.setItem(SERVER_SEED_KEY, nextSeed);
+        localStorage.setItem(NONCE_KEY, '0');
       }
 
       return nextSeed;
@@ -141,15 +148,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return serverSeed;
   }, [serverSeed, serverSeedHash, setNewServerSeed]);
 
-  const getNextFairRoll = useCallback(async (): Promise<RollData> => {
+  const getNextFairRoll = useCallback(async ({ incrementNonce = true }: { incrementNonce?: boolean } = {}): Promise<RollData> => {
     const activeSeed = await ensureSeedReady();
     const currentNonce = nonceRef.current;
     const combinedSeed = `${activeSeed}:${clientSeed}:${currentNonce}`;
     const rollHash = await hashString(combinedSeed);
     const rollValue = deriveRollValue(rollHash);
 
-    nonceRef.current = currentNonce + 1;
-    setNonce(nonceRef.current);
+    if (incrementNonce) {
+      const nextNonce = currentNonce + 1;
+      nonceRef.current = nextNonce;
+      setNonce(nextNonce);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(NONCE_KEY, String(nextNonce));
+      }
+    }
 
     return {
       nonce: currentNonce,
@@ -164,6 +177,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       localStorage.setItem(CLIENT_SEED_KEY, clientSeed);
     }
   }, [clientSeed]);
+
+  useEffect(() => {
+    nonceRef.current = nonce;
+  }, [nonce]);
 
   useEffect(() => {
     ensureSeedReady();
@@ -303,8 +320,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     // 2. Gold spin only triggers when the winner is guaranteed legendary
     const isGoldEligible = winner.rarity === 'legendary';
-    const goldRoll = await getNextFairRoll();
-    const triggerGold = isGoldEligible && goldRoll.rollValue < 0.2;
+    const goldRollHash = await hashString(`${winningRoll.rollHash}:gold`);
+    const goldRollValue = deriveRollValue(goldRollHash);
+    const triggerGold = isGoldEligible && goldRollValue < 0.2;
 
     if (!isDemo) {
       const inventoryItem = addToInventory(winner, { sourceType: 'case_open', sourceId: box.id });
