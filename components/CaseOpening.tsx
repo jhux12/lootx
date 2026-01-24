@@ -291,8 +291,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         outcome: winner.name
     });
 
-    // 2. Check for Gold Spin Eligibility (only Epic or Legendary items)
-    const isGoldEligible = ['legendary', 'epic'].includes(winner.rarity);
+    // 2. Gold spin only triggers when the winner is guaranteed legendary
+    const isGoldEligible = winner.rarity === 'legendary';
     const goldRoll = await getNextFairRoll();
     const triggerGold = isGoldEligible && goldRoll.rollValue < 0.2;
 
@@ -318,10 +318,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             
             // Wait a moment to see the ticket
             setTimeout(() => {
-                // Stage 2: Spin to Actual Winner (using only High Tier items in reel)
-                const highTierPool = items.filter(i => ['legendary', 'epic'].includes(i.rarity));
-                // Fallback if no high tier items exist in box
-                const pool = highTierPool.length > 0 ? highTierPool : items;
+                // Stage 2: Spin to Actual Winner (using only legendary items in reel)
+                const legendaryPool = items.filter(i => i.rarity === 'legendary');
+                const pool = legendaryPool.length > 0 ? legendaryPool : items;
                 const goldReel = generateReel(winner, pool);
                 setReelItems(goldReel);
                 
@@ -423,7 +422,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [clientSeed, lastRoll, playSound, serverSeed, serverSeedHash]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-6 animate-in fade-in zoom-in-95 duration-300">
+    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
         {/* Breadcrumb */}
         <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
