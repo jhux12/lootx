@@ -5,7 +5,7 @@ import { useSound } from '../context/SoundContext';
 import { BrandLockup } from './BrandLockup';
 
 export const LoginModal: React.FC = () => {
-  const { login, register, setShowLoginModal } = useGame();
+  const { login, register, resetPassword, setShowLoginModal } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   
@@ -13,17 +13,26 @@ export const LoginModal: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [confirmAdult, setConfirmAdult] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setMessage(null);
     playSound('click');
     
     try {
         if (mode === 'register') {
+            if (!confirmAdult || !acceptTerms) {
+                setError('Please confirm you are 18+ and accept the terms to continue.');
+                setIsLoading(false);
+                return;
+            }
             await register(username, email, password);
         } else {
             await login(email, password);
@@ -38,9 +47,33 @@ export const LoginModal: React.FC = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+      if (!email.trim()) {
+          setError('Enter your email to receive a password reset link.');
+          return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      setMessage(null);
+      playSound('click');
+
+      try {
+          await resetPassword(email.trim());
+          setMessage('Password reset link sent. Check your inbox.');
+      } catch (err: any) {
+          console.error(err);
+          setError(err.message || 'Unable to send reset email.');
+          playSound('error');
+      } finally {
+          setIsLoading(false);
+      }
+  };
+
   const toggleMode = () => {
       setMode(prev => prev === 'login' ? 'register' : 'login');
       setError(null);
+      setMessage(null);
       playSound('click');
   };
 
@@ -79,6 +112,11 @@ export const LoginModal: React.FC = () => {
         {error && (
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2 text-red-400 text-sm">
                 <AlertCircle className="w-4 h-4" /> {error}
+            </div>
+        )}
+        {message && (
+            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2 text-green-300 text-sm">
+                <AlertCircle className="w-4 h-4" /> {message}
             </div>
         )}
 
@@ -130,6 +168,44 @@ export const LoginModal: React.FC = () => {
                     />
                 </div>
             </div>
+
+            {mode === 'login' && (
+                <div className="flex justify-end text-xs">
+                    <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+                        disabled={isLoading}
+                    >
+                        Forgot password?
+                    </button>
+                </div>
+            )}
+
+            {mode === 'register' && (
+                <div className="space-y-3 text-xs text-gray-400">
+                    <label className="flex items-start gap-2">
+                        <input
+                            type="checkbox"
+                            required
+                            checked={confirmAdult}
+                            onChange={(e) => setConfirmAdult(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
+                        />
+                        <span>I confirm that I am 18 years or older.</span>
+                    </label>
+                    <label className="flex items-start gap-2">
+                        <input
+                            type="checkbox"
+                            required
+                            checked={acceptTerms}
+                            onChange={(e) => setAcceptTerms(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
+                        />
+                        <span>I agree to the Terms &amp; Conditions.</span>
+                    </label>
+                </div>
+            )}
 
             <button 
                 type="submit" 

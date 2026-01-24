@@ -7,6 +7,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut
 } from 'firebase/auth';
 import { 
@@ -268,6 +269,7 @@ interface GameContextType {
   // Actions
   login: (email: string, pass: string) => Promise<void>;
   register: (name: string, email: string, pass: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => void;
   setShowLoginModal: (show: boolean) => void;
   setShowTopUpModal: (show: boolean) => void;
@@ -856,6 +858,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setInventory([]);
       setIsAuthenticated(true);
       setShowLoginModal(false);
+  };
+
+  const resetPassword = async (email: string) => {
+      await sendPasswordResetEmail(auth, email);
   };
 
   const logout = () => {
@@ -1506,7 +1512,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       awardCaseOpenXp,
       generateAffiliateCode,
       updateUserProgress,
-      updateShipmentStatus
+      updateShipmentStatus,
+      resetPassword
     }}>
       {children}
     </GameContext.Provider>
