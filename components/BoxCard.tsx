@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CoinAmount } from './CoinAmount';
 import { getRiskLabel } from '../utils/caseOdds';
 import { MysteryBox } from '../types';
@@ -11,13 +11,35 @@ type BoxCardProps = {
 
 export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover }) => {
   const badgeTag = box.tag ?? box.tags?.[0];
+  const [isDropping, setIsDropping] = useState(false);
+  const clickTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) {
+        window.clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleSelect = () => {
+    if (isDropping) return;
+    setIsDropping(true);
+    clickTimeoutRef.current = window.setTimeout(() => {
+      onSelect(box.id);
+    }, 180);
+  };
 
   return (
     <div 
-      onClick={() => onSelect(box.id)}
+      onClick={handleSelect}
       onMouseEnter={onHover}
-      className="group relative bg-[#131720] border border-gray-800 rounded-xl p-4 flex flex-col items-center hover:border-gray-600 transition-all cursor-pointer hover:-translate-y-1"
+      className={`group relative bg-[#131720] border border-gray-800 rounded-xl p-4 flex flex-col items-center cursor-pointer transition-all duration-200 ${isDropping ? 'translate-y-3 scale-[0.98] shadow-inner shadow-black/40' : 'hover:border-gray-600 hover:-translate-y-1'}`}
     >
+      <div
+        className={`pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-200 ${isDropping ? 'opacity-100' : ''}`}
+        style={{ boxShadow: `inset 0 0 25px ${box.accentColor}33, 0 12px 25px -12px ${box.accentColor}66` }}
+      />
       {/* Tag */}
       {badgeTag && (
           <span className="absolute top-3 left-3 px-2 py-0.5 text-[10px] font-bold text-white bg-red-500 rounded uppercase tracking-wide z-10">
