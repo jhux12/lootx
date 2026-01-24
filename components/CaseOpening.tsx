@@ -90,7 +90,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }
 
   const items = box.items || [];
+  const hasItems = items.length > 0;
   const sellBackRate = box.isUserCreated ? 0.75 : 0.82;
+
+  if (!hasItems) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <p className="text-white text-lg font-semibold">Loading case items...</p>
+          <p className="text-gray-400 text-sm mt-2">We&apos;re syncing the drops and odds for this case.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Sort items high to low for display purposes
   const displayItems = [...items].sort((a, b) => b.price - a.price);
@@ -304,6 +316,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleSpin = async ({ isDemo = false }: { isDemo?: boolean } = {}) => {
     if (isSpinning) return;
+    if (items.length === 0) return;
 
     if (isDemo) {
       setIsDemoSpin(true);
