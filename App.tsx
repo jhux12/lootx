@@ -5,7 +5,6 @@ import { ChatSidebar } from './components/ChatSidebar';
 import { Hero } from './components/Hero';
 import { BoxGrid } from './components/BoxGrid';
 import { BoxCatalog } from './components/BoxCatalog';
-import { BattlesList } from './components/BattlesList';
 import { CaseOpening } from './components/CaseOpening';
 import { Profile } from './components/Profile';
 import { BattleArena } from './components/BattleArena';
@@ -18,7 +17,7 @@ import { TopUpModal } from './components/TopUpModal';
 import { BrandLockup } from './components/BrandLockup';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider } from './context/SoundContext';
-import { ShieldAlert, MessageCircle } from 'lucide-react';
+import { ShieldAlert, MessageCircle, Swords } from 'lucide-react';
 import { MobileChatModal } from './components/MobileChatModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 
@@ -30,6 +29,31 @@ const MainContent: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [view]);
 
+  const BattlesComingSoon = () => (
+    <div className="mt-6 rounded-2xl border border-gray-800 bg-[#0b0e14] p-6 sm:p-8">
+      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="rounded-xl bg-purple-500/10 p-3 text-purple-400">
+            <Swords className="h-6 w-6" />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-purple-200">
+              Coming Soon
+            </div>
+            <h2 className="mt-3 text-2xl font-bold text-white">Case Battles are on the way</h2>
+            <p className="mt-2 text-sm text-gray-400 sm:text-base">
+              We&apos;re polishing the battle arena experience. It&apos;s not available yet, but it will launch soon with
+              mobile-first matchups and fair rewards.
+            </p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-gray-800 bg-[#050811] px-4 py-3 text-left text-xs text-gray-400 sm:text-sm md:text-right">
+          Check back soon for launch updates.
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <main className="flex-1 min-w-0 pb-10 xl:mr-80">
       <LiveTicker />
@@ -38,7 +62,15 @@ const MainContent: React.FC = () => {
         <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
           {!isAuthenticated && <Hero />}
           <BoxGrid />
-          <BattlesList />
+          <div className="mt-10">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Case Battles</h2>
+                <p className="text-sm text-gray-400 sm:text-base">Battle mode is in development and not yet available.</p>
+              </div>
+            </div>
+            <BattlesComingSoon />
+          </div>
         </div>
       )}
       
@@ -46,9 +78,9 @@ const MainContent: React.FC = () => {
         <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
            <div className="mb-8">
                <h1 className="text-3xl font-bold text-white mb-2">Case Battles</h1>
-               <p className="text-gray-400">Compete against other players for the best drops.</p>
+               <p className="text-gray-400">This feature is coming soon and is not yet available.</p>
            </div>
-           <BattlesList />
+           <BattlesComingSoon />
         </div>
       )}
 
