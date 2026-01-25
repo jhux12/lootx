@@ -8,7 +8,7 @@ interface Message {
   text: string;
 }
 
-const FALLBACK_GEMINI_API_KEY = "AIzaSyBcVfnAAfylvjRl60rPCkCSGllwsV_nqi8";
+const FALLBACK_GEMINI_API_KEY = "AIzaSyCB04Pk1auWCF-hU6Gnmm3gRDxhpZOylwU";
 
 type ChatVariant = 'sidebar' | 'modal';
 

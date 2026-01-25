@@ -5,7 +5,7 @@ import { db } from '../firebase';
 import { ChatMessage, User } from '../types';
 import { useGame } from '../context/GameContext';
 
-const FALLBACK_GEMINI_API_KEY = "AIzaSyBcVfnAAfylvjRl60rPCkCSGllwsV_nqi8";
+const FALLBACK_GEMINI_API_KEY = "AIzaSyCB04Pk1auWCF-hU6Gnmm3gRDxhpZOylwU";
 const CHAT_EXPIRATION_MS = 20 * 60 * 1000;
 
 type ModerationResult = {
