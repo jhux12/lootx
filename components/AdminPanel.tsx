@@ -793,7 +793,7 @@ export const AdminPanel: React.FC = () => {
       window.setTimeout(() => setStripeSaveNotice(false), 3000);
   };
 
-  const stripeReady = stripeDraft.enabled && Boolean(stripeDraft.publishableKey?.trim());
+  const stripeReady = stripeDraft.enabled && Boolean(stripeDraft.checkoutLinkId?.trim());
 
   return (
     <div className="w-full max-w-7xl mx-auto p-6 animate-in fade-in duration-300">
@@ -2212,6 +2212,17 @@ export const AdminPanel: React.FC = () => {
                                     placeholder="whsec_..."
                                     className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                                 />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Stripe Checkout Link ID</label>
+                                <input
+                                    type="text"
+                                    value={stripeDraft.checkoutLinkId}
+                                    onChange={(event) => setStripeDraft(prev => ({ ...prev, checkoutLinkId: event.target.value }))}
+                                    placeholder="buy_..."
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                />
+                                <p className="mt-2 text-[11px] text-gray-500">Paste the Payment Link ID or full checkout URL.</p>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Default Currency</label>

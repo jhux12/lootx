@@ -204,6 +204,7 @@ export interface StripeSettings {
   currency: string;
   successUrl: string;
   cancelUrl: string;
+  checkoutLinkId: string;
 }
 
 export type ViewState = 

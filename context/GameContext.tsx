@@ -128,7 +128,8 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   webhookSecret: '',
   currency: 'USD',
   successUrl: '',
-  cancelUrl: ''
+  cancelUrl: '',
+  checkoutLinkId: ''
 };
 
 const getStoredStripeSettings = (): StripeSettings => DEFAULT_STRIPE_SETTINGS;
@@ -147,7 +148,8 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
     webhookSecret: settings.webhookSecret?.trim() ?? '',
     currency: normalizedCurrency || DEFAULT_STRIPE_SETTINGS.currency,
     successUrl: settings.successUrl?.trim() ?? '',
-    cancelUrl: settings.cancelUrl?.trim() ?? ''
+    cancelUrl: settings.cancelUrl?.trim() ?? '',
+    checkoutLinkId: settings.checkoutLinkId?.trim() ?? ''
   };
 };
 
