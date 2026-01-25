@@ -105,7 +105,7 @@ export const LoginModal: React.FC = () => {
                 {mode === 'login' ? 'Welcome Back' : 'Create Account'}
             </h2>
             <p className="text-gray-500 text-sm">
-                {mode === 'login' ? 'Sign in to access your LootX account' : 'Join LootX and start winning today'}
+                {mode === 'login' ? 'Sign in to access your Pullz.gg account' : 'Join Pullz.gg and start winning today'}
             </p>
         </div>
 
