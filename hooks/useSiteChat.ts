@@ -5,7 +5,7 @@ import { db } from '../firebase';
 import { ChatMessage, User } from '../types';
 import { useGame } from '../context/GameContext';
 
-const FALLBACK_GEMINI_API_KEY = "AIzaSyBcVfnAAfylvjRl60rPCkCSGllwsV_nqi8";
+const GEMINI_API_KEY = "AIzaSyCB04Pk1auWCF-hU6Gnmm3gRDxhpZOylwU";
 const CHAT_EXPIRATION_MS = 20 * 60 * 1000;
 
 type ModerationResult = {
@@ -65,8 +65,7 @@ const runModeration = async (message: string): Promise<ModerationResult> => {
       };
     }
 
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || FALLBACK_GEMINI_API_KEY;
-    const genAI = new GoogleGenAI({ apiKey });
+    const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
     const response = await genAI.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: [
