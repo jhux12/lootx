@@ -79,6 +79,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const hasItems = items.length > 0;
   const sellBackRate = box?.isUserCreated ? 0.75 : 0.82;
   const isReady = Boolean(box) && hasItems;
+  const isAdmin = Boolean(user?.isAdmin);
 
   // Sort items high to low for display purposes
   const displayItems = [...items].sort((a, b) => b.price - a.price);
@@ -265,9 +266,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setTimeout(onComplete, duration + 200);
   };
 
-  const handleSpin = async ({ isDemo = false }: { isDemo?: boolean } = {}) => {
+  const handleSpin = async ({ isDemo = false, forceGold = false }: { isDemo?: boolean; forceGold?: boolean } = {}) => {
     if (isSpinning) return;
     if (!box || items.length === 0) return;
+
+    if (forceGold) {
+      isDemo = true;
+    }
 
     if (isDemo) {
       setIsDemoSpin(true);
@@ -303,7 +308,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     
     // 1. Determine final winner
     const winningRoll = await getNextFairRoll();
+    const legendaryPool = items.filter((item) => item.rarity === 'legendary');
     let winner = getWinningItem(winningRoll.rollValue);
+
+    if (forceGold && legendaryPool.length > 0) {
+      winner = legendaryPool[Math.floor(winningRoll.rollValue * legendaryPool.length)];
+    }
 
     setLastRoll({
         ...winningRoll,
@@ -314,7 +324,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const isGoldEligible = winner.rarity === 'legendary';
     const goldRollHash = await hashString(`${winningRoll.rollHash}:gold`);
     const goldRollValue = deriveRollValue(goldRollHash);
-    const triggerGold = isGoldEligible && goldRollValue < 0.2;
+    const triggerGold = (forceGold && isGoldEligible) || (isGoldEligible && goldRollValue < 0.5);
 
     if (!isDemo) {
       const inventoryItem = addToInventory(winner, { sourceType: 'case_open', sourceId: box.id });
@@ -339,7 +349,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             // Wait a moment to see the ticket
             setTimeout(() => {
                 // Stage 2: Spin to Actual Winner (using only legendary items in reel)
-                const legendaryPool = items.filter(i => i.rarity === 'legendary');
                 const pool = legendaryPool.length > 0 ? legendaryPool : items;
                 const goldReel = generateReel(winner, pool, true);
                 setReelItems(goldReel);
@@ -583,6 +592,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                      className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Try for Free</span>
+                   </button>
+                 )}
+                 {isAdmin && (
+                   <button
+                     onClick={() => handleSpin({ isDemo: true, forceGold: true })}
+                     disabled={isSpinning || isGeneratingSeed}
+                     className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
+                   >
+                     <span>Test Gold Spin</span>
                    </button>
                  )}
             </div>
