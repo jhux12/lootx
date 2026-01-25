@@ -17,8 +17,6 @@ const AVATAR_PRESETS = [
     'https://api.dicebear.com/7.x/adventurer/svg?seed=Dusty',
     'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Happy',
     'https://api.dicebear.com/7.x/lorelei/svg?seed=Loot',
-    'https://picsum.photos/id/64/200/200',
-    'https://picsum.photos/id/237/200/200',
 ];
 
 type ProfileTab = 'topPulls' | 'inventory' | 'community' | 'settings';
