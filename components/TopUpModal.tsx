@@ -6,12 +6,14 @@ import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 
 export const TopUpModal: React.FC = () => {
-  const { setShowTopUpModal, addBalance } = useGame();
+  const { setShowTopUpModal, addBalance, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [method, setMethod] = useState<'card' | 'crypto'>('card');
   const [amountCoins, setAmountCoins] = useState<number>(5000);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const stripeReady = stripeSettings.enabled && Boolean(stripeSettings.publishableKey?.trim());
+  const stripeUnavailable = method === 'card' && !stripeReady;
   const formattedDepositAmount = new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: 'USD',
@@ -118,6 +120,22 @@ export const TopUpModal: React.FC = () => {
                         </button>
                     </div>
 
+                    {method === 'card' && (
+                      <div className={`mb-5 rounded-2xl border p-4 ${stripeReady ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-yellow-500/20 bg-yellow-500/10'}`}>
+                        <p className="text-xs font-semibold uppercase text-gray-300">Stripe status</p>
+                        <div className="mt-2 text-sm text-gray-200">
+                          {stripeReady ? (
+                            <span>Stripe is ready in {stripeSettings.mode} mode.</span>
+                          ) : (
+                            <span>Stripe is not configured yet. Ask an admin to add keys in Site Settings.</span>
+                          )}
+                        </div>
+                        <div className="mt-2 text-[11px] text-gray-400">
+                          Currency: {stripeSettings.currency || 'USD'}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Amount Selector */}
                     <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Select a pack</label>
                     <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-3">
@@ -209,10 +227,12 @@ export const TopUpModal: React.FC = () => {
                     {/* Submit Button */}
                     <button 
                         onClick={handleDeposit}
-                        disabled={isLoading}
+                        disabled={isLoading || stripeUnavailable}
                         className="w-full rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        {isLoading ? (
+                        {stripeUnavailable ? (
+                            <span className="text-center text-sm font-semibold text-white/90">Configure Stripe in Admin Settings</span>
+                        ) : isLoading ? (
                             <>
                                 <Loader2 className="w-5 h-5 animate-spin" /> Processing...
                             </>

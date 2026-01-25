@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, CreditCard } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, BoxTag, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus, BOX_TAG_OPTIONS } from '../types';
 import { COIN_ICON } from '../constants';
@@ -55,7 +55,9 @@ export const AdminPanel: React.FC = () => {
     updateShipmentStatus,
     updateUserAdminData,
     bonusSettings,
-    updateBonusSettings
+    updateBonusSettings,
+    stripeSettings,
+    updateStripeSettings
   } = useGame();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'bonuses'>('dashboard');
 
@@ -108,6 +110,8 @@ export const AdminPanel: React.FC = () => {
   const [timelineSearch, setTimelineSearch] = useState('');
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
   const [bonusSaveNotice, setBonusSaveNotice] = useState(false);
+  const [stripeDraft, setStripeDraft] = useState(stripeSettings);
+  const [stripeSaveNotice, setStripeSaveNotice] = useState(false);
   const EV_TOLERANCE = 0.01;
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
@@ -778,6 +782,18 @@ export const AdminPanel: React.FC = () => {
       setBonusSaveNotice(true);
       window.setTimeout(() => setBonusSaveNotice(false), 3000);
   };
+
+  useEffect(() => {
+      setStripeDraft(stripeSettings);
+  }, [stripeSettings]);
+
+  const handleSaveStripeSettings = () => {
+      updateStripeSettings(stripeDraft);
+      setStripeSaveNotice(true);
+      window.setTimeout(() => setStripeSaveNotice(false), 3000);
+  };
+
+  const stripeReady = stripeDraft.enabled && Boolean(stripeDraft.publishableKey?.trim());
 
   return (
     <div className="w-full max-w-7xl mx-auto p-6 animate-in fade-in duration-300">
@@ -2122,6 +2138,127 @@ export const AdminPanel: React.FC = () => {
                                     <span className="text-sm text-gray-400">Disabled</span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                            <div className="flex items-center gap-2">
+                                <CreditCard className="w-5 h-5 text-brand-purple" />
+                                <h3 className="text-lg font-bold text-white">Stripe Payments</h3>
+                            </div>
+                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${stripeReady ? 'bg-emerald-500/10 text-emerald-300' : 'bg-yellow-500/10 text-yellow-300'}`}>
+                                {stripeReady ? 'Ready' : 'Needs configuration'}
+                            </span>
+                        </div>
+                        <p className="text-sm text-gray-400 mb-6">
+                            Store Stripe keys and checkout defaults here to begin card payment integration. Secrets are synced to Firestore, so keep admin access tightly controlled.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex items-center justify-between rounded-xl border border-gray-800 bg-[#0b0e14] px-4 py-3">
+                                <div>
+                                    <div className="text-sm font-semibold text-white">Stripe Enabled</div>
+                                    <div className="text-xs text-gray-500">Turn on card deposits</div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setStripeDraft(prev => ({ ...prev, enabled: !prev.enabled }))}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${stripeDraft.enabled ? 'bg-emerald-500' : 'bg-gray-700'}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${stripeDraft.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+                            <div className="rounded-xl border border-gray-800 bg-[#0b0e14] px-4 py-3">
+                                <div className="text-xs font-bold text-gray-500 uppercase mb-2">Mode</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {(['test', 'live'] as const).map((mode) => (
+                                        <button
+                                            key={mode}
+                                            type="button"
+                                            onClick={() => setStripeDraft(prev => ({ ...prev, mode }))}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide border transition ${stripeDraft.mode === mode ? 'bg-brand-purple/20 border-brand-purple text-purple-200' : 'border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                                        >
+                                            {mode}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Publishable Key</label>
+                                <input
+                                    type="text"
+                                    value={stripeDraft.publishableKey}
+                                    onChange={(event) => setStripeDraft(prev => ({ ...prev, publishableKey: event.target.value }))}
+                                    placeholder="pk_test_..."
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Secret Key</label>
+                                <input
+                                    type="password"
+                                    value={stripeDraft.secretKey}
+                                    onChange={(event) => setStripeDraft(prev => ({ ...prev, secretKey: event.target.value }))}
+                                    placeholder="sk_test_..."
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                />
+                                <p className="mt-2 text-[11px] text-gray-500">Use server-side environment variables when possible.</p>
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Webhook Signing Secret</label>
+                                <input
+                                    type="password"
+                                    value={stripeDraft.webhookSecret}
+                                    onChange={(event) => setStripeDraft(prev => ({ ...prev, webhookSecret: event.target.value }))}
+                                    placeholder="whsec_..."
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Default Currency</label>
+                                <input
+                                    type="text"
+                                    value={stripeDraft.currency}
+                                    onChange={(event) => setStripeDraft(prev => ({ ...prev, currency: event.target.value.toUpperCase() }))}
+                                    placeholder="USD"
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Success URL</label>
+                                <input
+                                    type="text"
+                                    value={stripeDraft.successUrl}
+                                    onChange={(event) => setStripeDraft(prev => ({ ...prev, successUrl: event.target.value }))}
+                                    placeholder="https://yourdomain.com/top-up/success"
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Cancel URL</label>
+                                <input
+                                    type="text"
+                                    value={stripeDraft.cancelUrl}
+                                    onChange={(event) => setStripeDraft(prev => ({ ...prev, cancelUrl: event.target.value }))}
+                                    placeholder="https://yourdomain.com/top-up/cancel"
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-800 mt-6 pt-4">
+                            <div className="text-xs text-gray-500">
+                                Stripe mode: {stripeDraft.mode === 'live' ? 'Live' : 'Test'} • Currency: {stripeDraft.currency || 'USD'}
+                            </div>
+                            <button
+                                onClick={handleSaveStripeSettings}
+                                className="w-full sm:w-auto px-5 py-2 bg-brand-purple/20 text-brand-purple border border-brand-purple/40 rounded-lg text-sm font-bold hover:bg-brand-purple hover:text-white transition-colors"
+                            >
+                                Save Stripe settings
+                            </button>
+                            {stripeSaveNotice && (
+                                <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+                                    Stripe settings saved.
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
