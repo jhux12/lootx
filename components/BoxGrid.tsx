@@ -74,7 +74,7 @@ export const BoxGrid: React.FC = () => {
           <img
             src={caselabImage}
             alt="Caselab showcase"
-            className="h-full w-full object-cover object-center"
+            className="h-full w-full object-contain"
             loading="lazy"
           />
         </button>
