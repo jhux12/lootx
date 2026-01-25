@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, CreditCard } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, BoxTag, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus, BOX_TAG_OPTIONS } from '../types';
+import { AdminActionLog, BoxTag, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, StripeCoinPack, UserLocks, UserStatus, BOX_TAG_OPTIONS } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -793,7 +793,35 @@ export const AdminPanel: React.FC = () => {
       window.setTimeout(() => setStripeSaveNotice(false), 3000);
   };
 
-  const stripeReady = stripeDraft.enabled && Boolean(stripeDraft.checkoutLinkId?.trim());
+  const stripeReady = stripeDraft.enabled && (stripeDraft.packs ?? []).some((pack) => pack.checkoutLinkId?.trim());
+  const formatPackCoins = (coins: number) => `${Math.max(0, Math.floor(coins)).toLocaleString()} coins`;
+  const updateStripePack = (packId: string, updates: Partial<StripeCoinPack>) => {
+      setStripeDraft((prev) => ({
+          ...prev,
+          packs: (prev.packs ?? []).map((pack) => (pack.id === packId ? { ...pack, ...updates } : pack))
+      }));
+  };
+  const removeStripePack = (packId: string) => {
+      setStripeDraft((prev) => ({
+          ...prev,
+          packs: (prev.packs ?? []).filter((pack) => pack.id !== packId)
+      }));
+  };
+  const addStripePack = () => {
+      setStripeDraft((prev) => ({
+          ...prev,
+          packs: [
+              ...(prev.packs ?? []),
+              {
+                  id: `pack-${Date.now().toString(36)}`,
+                  name: 'New Pack',
+                  coins: 5000,
+                  bonusPercent: 0,
+                  checkoutLinkId: ''
+              }
+          ]
+      }));
+  };
 
   return (
     <div className="w-full max-w-7xl mx-auto p-6 animate-in fade-in duration-300">
@@ -2151,7 +2179,7 @@ export const AdminPanel: React.FC = () => {
                             </span>
                         </div>
                         <p className="text-sm text-gray-400 mb-6">
-                            Store Stripe keys and checkout defaults here to begin card payment integration. Secrets are synced to Firestore, so keep admin access tightly controlled.
+                            Store Stripe keys and coin pack links here to begin card payment integration. Secrets are synced to Firestore, so keep admin access tightly controlled.
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="flex items-center justify-between rounded-xl border border-gray-800 bg-[#0b0e14] px-4 py-3">
@@ -2222,7 +2250,83 @@ export const AdminPanel: React.FC = () => {
                                     placeholder="buy_..."
                                     className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                                 />
-                                <p className="mt-2 text-[11px] text-gray-500">Paste the Payment Link ID or full checkout URL.</p>
+                                <p className="mt-2 text-[11px] text-gray-500">Optional default link used when a pack is missing a link.</p>
+                            </div>
+                            <div className="md:col-span-2 rounded-xl border border-gray-800 bg-[#0b0e14] p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                        <div className="text-sm font-semibold text-white">Coin Packs</div>
+                                        <div className="text-xs text-gray-500">Configure pricing tiers and Checkout links.</div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={addStripePack}
+                                        className="px-3 py-1.5 rounded-lg border border-brand-purple/40 text-brand-purple text-xs font-semibold hover:bg-brand-purple/20"
+                                    >
+                                        Add pack
+                                    </button>
+                                </div>
+                                <div className="mt-4 space-y-4">
+                                    {(stripeDraft.packs ?? []).length === 0 && (
+                                        <div className="text-xs text-gray-500">No packs yet. Add your first pack to enable checkout.</div>
+                                    )}
+                                    {(stripeDraft.packs ?? []).map((pack) => (
+                                        <div key={pack.id} className="rounded-xl border border-gray-800 bg-[#111522] p-4">
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="text-sm font-semibold text-white">{pack.name}</div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeStripePack(pack.id)}
+                                                    className="text-xs text-red-400 hover:text-red-300"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Pack Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={pack.name}
+                                                        onChange={(event) => updateStripePack(pack.id, { name: event.target.value })}
+                                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Coins</label>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        value={pack.coins}
+                                                        onChange={(event) => updateStripePack(pack.id, { coins: Number(event.target.value) })}
+                                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                                    />
+                                                    <div className="mt-1 text-[10px] text-gray-500">{formatPackCoins(pack.coins)}</div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Bonus %</label>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        value={pack.bonusPercent}
+                                                        onChange={(event) => updateStripePack(pack.id, { bonusPercent: Number(event.target.value) })}
+                                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Checkout Link</label>
+                                                    <input
+                                                        type="text"
+                                                        value={pack.checkoutLinkId}
+                                                        onChange={(event) => updateStripePack(pack.id, { checkoutLinkId: event.target.value })}
+                                                        placeholder="buy_..."
+                                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Default Currency</label>

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, StripeSettings, UserLocks } from '../types';
+import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, StripeSettings, StripeCoinPack, UserLocks } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { 
@@ -129,7 +129,8 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   currency: 'USD',
   successUrl: '',
   cancelUrl: '',
-  checkoutLinkId: ''
+  checkoutLinkId: '',
+  packs: []
 };
 
 const getStoredStripeSettings = (): StripeSettings => DEFAULT_STRIPE_SETTINGS;
@@ -139,6 +140,23 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
     .toString()
     .trim()
     .toUpperCase();
+  const rawPacks = Array.isArray(settings.packs) ? settings.packs : [];
+  const normalizedPacks = rawPacks
+    .map((pack, index): StripeCoinPack | null => {
+      if (!pack || typeof pack !== 'object') return null;
+      const typedPack = pack as Partial<StripeCoinPack>;
+      const coinsValue = Number(typedPack.coins ?? 0);
+      const bonusValue = Number(typedPack.bonusPercent ?? 0);
+      const idValue = typedPack.id?.trim() || `pack-${index + 1}`;
+      return {
+        id: idValue,
+        name: typedPack.name?.trim() || `Pack ${index + 1}`,
+        coins: Math.max(0, Math.floor(coinsValue)),
+        bonusPercent: Math.max(0, Math.floor(bonusValue)),
+        checkoutLinkId: typedPack.checkoutLinkId?.trim() ?? ''
+      };
+    })
+    .filter((pack): pack is StripeCoinPack => Boolean(pack));
 
   return {
     enabled: Boolean(settings.enabled),
@@ -149,7 +167,8 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
     currency: normalizedCurrency || DEFAULT_STRIPE_SETTINGS.currency,
     successUrl: settings.successUrl?.trim() ?? '',
     cancelUrl: settings.cancelUrl?.trim() ?? '',
-    checkoutLinkId: settings.checkoutLinkId?.trim() ?? ''
+    checkoutLinkId: settings.checkoutLinkId?.trim() ?? '',
+    packs: normalizedPacks
   };
 };
 

@@ -205,6 +205,15 @@ export interface StripeSettings {
   successUrl: string;
   cancelUrl: string;
   checkoutLinkId: string;
+  packs: StripeCoinPack[];
+}
+
+export interface StripeCoinPack {
+  id: string;
+  name: string;
+  coins: number;
+  bonusPercent: number;
+  checkoutLinkId: string;
 }
 
 export type ViewState = 

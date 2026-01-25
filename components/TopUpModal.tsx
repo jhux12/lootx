@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Wallet, Loader2, ExternalLink } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { X, Wallet, Loader2, ExternalLink, Sparkles } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
@@ -7,13 +7,28 @@ export const TopUpModal: React.FC = () => {
   const { setShowTopUpModal, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [isLoading, setIsLoading] = useState(false);
-  const stripeReady = stripeSettings.enabled && Boolean(stripeSettings.checkoutLinkId?.trim());
-  const checkoutValue = stripeSettings.checkoutLinkId?.trim();
-  const checkoutUrl = checkoutValue
-    ? checkoutValue.startsWith('http')
-      ? checkoutValue
-      : `https://buy.stripe.com/${checkoutValue}`
+  const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
+  const packs = stripeSettings.packs ?? [];
+  const selectedPack = packs.find((pack) => pack.id === selectedPackId) ?? packs[0];
+  const selectedCheckoutLink = selectedPack?.checkoutLinkId?.trim() || stripeSettings.checkoutLinkId?.trim();
+  const checkoutUrl = selectedCheckoutLink
+    ? selectedCheckoutLink.startsWith('http')
+      ? selectedCheckoutLink
+      : `https://buy.stripe.com/${selectedCheckoutLink}`
     : '';
+  const stripeReady = stripeSettings.enabled && Boolean(checkoutUrl);
+  const formattedDepositAmount = useMemo(() => {
+    if (!selectedPack) return '';
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: stripeSettings.currency || 'USD',
+      maximumFractionDigits: 2
+    }).format((selectedPack.coins || 0) / 100);
+  }, [selectedPack, stripeSettings.currency]);
+  const bonusCoins = selectedPack
+    ? Math.floor((selectedPack.coins || 0) * ((selectedPack.bonusPercent || 0) / 100))
+    : 0;
+  const totalCoins = selectedPack ? (selectedPack.coins || 0) + bonusCoins : 0;
 
   const handleCheckout = () => {
       if (!stripeReady || !checkoutUrl) return;
@@ -50,7 +65,7 @@ export const TopUpModal: React.FC = () => {
                 </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+                <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
                     <div className={`mb-5 rounded-2xl border p-4 ${stripeReady ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-yellow-500/20 bg-yellow-500/10'}`}>
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -72,20 +87,71 @@ export const TopUpModal: React.FC = () => {
                       </div>
                     </div>
 
+                    <div className="mb-5">
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Select a pack</label>
+                      {packs.length === 0 ? (
+                        <div className="rounded-2xl border border-white/10 bg-[#121826] p-4 text-sm text-gray-300">
+                          <p className="font-semibold text-white">No packs available</p>
+                          <p className="mt-2 text-xs text-gray-400">Ask an admin to add coin packs.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {packs.map((pack) => {
+                            const packBonusCoins = Math.floor((pack.coins || 0) * ((pack.bonusPercent || 0) / 100));
+                            const packTotalCoins = (pack.coins || 0) + packBonusCoins;
+                            const packPrice = new Intl.NumberFormat(undefined, {
+                              style: 'currency',
+                              currency: stripeSettings.currency || 'USD',
+                              maximumFractionDigits: 2
+                            }).format((pack.coins || 0) / 100);
+                            const isSelected = (selectedPack?.id ?? packs[0]?.id) === pack.id;
+
+                            return (
+                              <button
+                                key={pack.id}
+                                onClick={() => { setSelectedPackId(pack.id); playSound('click'); }}
+                                className={`relative rounded-xl border px-4 py-3 text-left transition-all ${isSelected ? 'border-emerald-400 bg-emerald-500/10 text-white shadow-lg shadow-emerald-900/20' : 'border-white/10 bg-[#0b0e14] text-gray-300 hover:border-white/30'}`}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm font-semibold">{pack.name}</span>
+                                  {pack.bonusPercent > 0 && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                                      <Sparkles className="h-3 w-3" />
+                                      +{pack.bonusPercent}%
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="mt-2 text-xs text-gray-400">{packPrice} • {packTotalCoins.toLocaleString()} coins</div>
+                                {packBonusCoins > 0 && (
+                                  <div className="mt-1 text-[11px] text-emerald-300">Includes +{packBonusCoins.toLocaleString()} bonus</div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
                     <div className="rounded-2xl border border-white/10 bg-[#121826] p-4 text-sm text-gray-300">
                       <p className="font-semibold text-white">Ready to purchase?</p>
                       <p className="mt-2 text-xs text-gray-400">
                         Clicking purchase will open Stripe Checkout in a new page.
                       </p>
+                      {selectedPack && (
+                        <div className="mt-3 text-xs text-gray-300">
+                          <div>{formattedDepositAmount} deposit</div>
+                          <div>Total {totalCoins.toLocaleString()} coins</div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Submit Button */}
                     <button 
                         onClick={handleCheckout}
-                        disabled={isLoading || !stripeReady}
+                        disabled={isLoading || !stripeReady || !selectedPack}
                         className="w-full rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        {!stripeReady ? (
+                        {!stripeReady || !selectedPack ? (
                             <span className="text-center text-sm font-semibold text-white/90">Configure Stripe in Admin Settings</span>
                         ) : isLoading ? (
                             <>
