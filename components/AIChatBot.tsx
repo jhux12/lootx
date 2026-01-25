@@ -24,7 +24,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
   variant = 'sidebar' 
 }) => {
   const [messages, setMessages] = useState<Message[]>([
-      { id: 'welcome', role: 'model', text: "Hi! I'm the LootX AI Assistant. How can I help you today?" }
+      { id: 'welcome', role: 'model', text: "Hi! I'm the Pullz Assistant. How can I help you today?" }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +46,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
         const chat = ai.chats.create({
             model: 'gemini-2.0-flash',
             config: {
-                systemInstruction: "You are the AI Support Assistant for LootX, a premier mystery box and case battle platform. Your tone is professional, helpful, and slightly gamer-centric. \n\nKey Knowledge:\n- LootX allows users to open mystery boxes containing real-world items (simulated).\n- Case Battles: Users compete against each other. The highest total value wins everything.\n- Case Lab: Users can create custom cases with specific odds.\n- Provably Fair: All outcomes are random and verifiable.\n- Currency: Users use site coins (simulated).\n\nDo not answer questions unrelated to LootX, gaming, or general support. Keep answers concise."
+                systemInstruction: "You are the Pullz Assistant for LootX, a premier mystery box and case battle platform. Your tone is professional, helpful, and slightly gamer-centric. \n\nKey Knowledge:\n- LootX allows users to open mystery boxes containing real-world items (simulated).\n- Case Battles: Users compete against each other. The highest total value wins everything.\n- Case Lab: Users can create custom cases with specific odds.\n- Provably Fair: All outcomes are random and verifiable.\n- Currency: Users use site coins (simulated).\n\nDo not answer questions unrelated to LootX, gaming, or general support. Keep answers concise."
             }
         });
         setChatSession(chat);
@@ -101,7 +101,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
             </div>
             <div className="flex-1">
                 <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                  LootX Assistant
+                  Pullz Assistant
                   <span className="px-2 py-0.5 text-[10px] font-bold bg-brand-purple/20 text-brand-purple rounded-full border border-brand-purple/30">
                     AI Support
                   </span>
