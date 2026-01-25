@@ -24,7 +24,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
   variant = 'sidebar' 
 }) => {
   const [messages, setMessages] = useState<Message[]>([
-      { id: 'welcome', role: 'model', text: "Hi! I'm the Pullz Assistant. How can I help you today?" }
+      { id: 'welcome', role: 'model', text: "Hi! I'm the Pullz Assistant from Pullz.gg. How can I help you today?" }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +46,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
         const chat = ai.chats.create({
             model: 'gemini-2.0-flash',
             config: {
-                systemInstruction: "You are the Pullz Assistant for LootX, a premier mystery box and case battle platform. Your tone is professional, helpful, and slightly gamer-centric. \n\nKey Knowledge:\n- LootX allows users to open mystery boxes containing real-world items (simulated).\n- Case Battles: Users compete against each other. The highest total value wins everything.\n- Case Lab: Users can create custom cases with specific odds.\n- Provably Fair: All outcomes are random and verifiable.\n- Currency: Users use site coins (simulated).\n\nDo not answer questions unrelated to LootX, gaming, or general support. Keep answers concise."
+                systemInstruction: "You are the Pullz Assistant for Pullz.gg, a premier mystery box and case battle platform. Your tone is professional, helpful, and slightly gamer-centric. \n\nKey Knowledge:\n- Pullz.gg allows users to open mystery boxes containing real-world items (simulated).\n- Case Battles: Users compete against each other. The highest total value wins everything.\n- Case Lab: Users can create custom cases with specific odds.\n- Provably Fair: All outcomes are random and verifiable.\n- Currency: Users use site coins (simulated).\n\nDo not answer questions unrelated to Pullz.gg, gaming, or general support. Keep answers concise."
             }
         });
         setChatSession(chat);
