@@ -72,9 +72,6 @@ export const FreeRainBanner: React.FC<FreeRainBannerProps> = ({ className }) => 
               <span className="font-semibold text-white">{timeLabel}</span>
             </div>
           </div>
-          <div className="mt-1 text-[11px] text-gray-400">
-            +{Math.round(joinBonus * 100)} coins per join • randomly split when timer ends
-          </div>
           {!eligibility.eligible && (
             <div className="mt-2 text-[11px] text-amber-300/90">{eligibility.reason}</div>
           )}
