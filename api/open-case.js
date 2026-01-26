@@ -59,7 +59,8 @@ export default async function handler(req, res) {
         : DEFAULT_CLIENT_SEED;
       const nonce = Number.isFinite(provablyData.nonce) ? Number(provablyData.nonce) : 0;
 
-      const rawCoins = userSnap.exists ? userSnap.data()?.coins : undefined;
+      const userData = userSnap.exists ? userSnap.data() ?? {} : {};
+      const rawCoins = userSnap.exists ? (userData.coins ?? userData.balance) : undefined;
       const hasCoins = Number.isFinite(Number(rawCoins));
       const currentCoins = hasCoins ? Number(rawCoins) : (userSnap.exists ? 0 : STARTER_COINS);
 

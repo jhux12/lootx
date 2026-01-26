@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
@@ -466,6 +466,7 @@ const persistUserData = async (payload: PersistUserData) => {
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const hasInventorySubcollectionRef = useRef(false);
   
   // -- PERSISTENT STATE INITIALIZATION --
   
@@ -565,6 +566,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setBalance(0);
         setInventory([]);
         setNotifications([]);
+        hasInventorySubcollectionRef.current = false;
         return;
       }
 
@@ -594,12 +596,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           ...profile
         }));
         setBalance(profile.balance ?? 0);
+        if (!hasInventorySubcollectionRef.current && Array.isArray(data.inventory)) {
+          const legacyInventory = normalizeInventoryItems(data.inventory);
+          setInventory(legacyInventory);
+          const nextTopPulls = rankTopPullsByValue(legacyInventory);
+          setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
+        }
       }, (error) => {
         console.error('Failed to load user profile from Firebase', error);
       });
 
       const inventoryRef = collection(db, 'users', firebaseUser.uid, 'inventory');
       inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
+        hasInventorySubcollectionRef.current = snapshot.size > 0;
         const loaded = snapshot.docs
           .map(mapInventoryDoc)
           .sort((a, b) => b.obtainedAt - a.obtainedAt);
