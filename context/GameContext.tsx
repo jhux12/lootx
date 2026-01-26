@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db, rtdb } from '../firebase';
+import { authedFetch } from '../utils/authedFetch';
 import { 
   User as FirebaseUser,
   onAuthStateChanged,
@@ -656,17 +657,29 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       const uid = firebaseUser.uid;
-      coinsUnsubscribe = onValue(rtdbRef(rtdb, `users/${uid}/coins`), (snapshot) => {
-        const coins = Number(snapshot.val() ?? 0);
-        setBalance(coins);
-        setUser((prev) => ({ ...prev, balance: coins }));
-      });
+      coinsUnsubscribe = onValue(
+        rtdbRef(rtdb, `users/${uid}/coins`),
+        (snapshot) => {
+          const coins = Number(snapshot.val() ?? 0);
+          setBalance(coins);
+          setUser((prev) => ({ ...prev, balance: coins }));
+        },
+        (error) => {
+          console.error('Failed to load RTDB coins', error);
+        }
+      );
 
-      inventoryUnsubscribe = onValue(rtdbRef(rtdb, `users/${uid}/inventory`), (snapshot) => {
-        const normalizedInventory = normalizeInventoryFromRtdb(snapshot.val());
-        setInventory(normalizedInventory);
-        setUser((prev) => ({ ...prev, topPulls: rankTopPullsByValue(normalizedInventory) }));
-      });
+      inventoryUnsubscribe = onValue(
+        rtdbRef(rtdb, `users/${uid}/inventory`),
+        (snapshot) => {
+          const normalizedInventory = normalizeInventoryFromRtdb(snapshot.val());
+          setInventory(normalizedInventory);
+          setUser((prev) => ({ ...prev, topPulls: rankTopPullsByValue(normalizedInventory) }));
+        },
+        (error) => {
+          console.error('Failed to load RTDB inventory', error);
+        }
+      );
     });
 
     return () => {
@@ -1216,22 +1229,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       console.log('Selling inventory item', { inventoryId: instanceId });
-      const token = await auth.currentUser.getIdToken();
-      const response = await fetch('/api/sell-item', {
+      const data = await authedFetch('/api/sell-item', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify({ inventoryId: instanceId })
       });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || 'Sell back failed');
-      }
-
-      await response.json();
+      console.log('Sell item response', data);
     } catch (error) {
       console.error('Failed to sell item', error);
       alert('Unable to sell item right now. Please try again.');
@@ -1239,20 +1241,35 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const shipItem = async (instanceId: string) => {
-    const itemToShip = inventory.find(item => item.instanceId === instanceId);
-    setInventory(prev => {
-      const updated = prev.map(item => 
-        item.instanceId === instanceId 
-        ? { ...item, status: 'shipping' }
-        : item
-      );
-      return updated;
-    });
-    if (itemToShip) {
-      addNotification({
-        message: `${itemToShip.name} is now shipping to your saved address.`,
-        type: 'shipping'
+    if (!auth.currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    const shippingAddress = user.shippingAddress;
+    if (!shippingAddress) {
+      alert('Please add a shipping address before requesting shipment.');
+      return;
+    }
+
+    try {
+      console.log('Requesting shipment', { inventoryId: instanceId });
+      const data = await authedFetch('/api/request-shipment', {
+        method: 'POST',
+        body: JSON.stringify({ inventoryId: instanceId, address: shippingAddress })
       });
+      console.log('Request shipment response', data);
+
+      const itemToShip = inventory.find(item => item.instanceId === instanceId);
+      if (itemToShip) {
+        addNotification({
+          message: `${itemToShip.name} is now shipping to your saved address.`,
+          type: 'shipping'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to request shipment', error);
+      alert('Unable to request shipment right now. Please try again.');
     }
   };
 

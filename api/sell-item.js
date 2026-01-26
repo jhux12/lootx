@@ -1,4 +1,4 @@
-import { adminAuth, rtdb, adminDb } from './_lib/firebaseAdmin.js';
+import { adminAuth, rtdb } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 
 const getSellBackValue = (price, rate) => {
@@ -28,31 +28,19 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Missing inventoryId' });
     }
 
-    const inventoryRef = rtdb.ref(`users/${decoded.uid}/inventory/${inventoryId}`);
+    const checkedPath = `users/${decoded.uid}/inventory/${inventoryId}`;
+    const inventoryRef = rtdb.ref(checkedPath);
     const inventorySnap = await inventoryRef.get();
     const inventoryItem = inventorySnap.val();
 
+    console.info('sell-item', { uid: decoded.uid, inventoryId, checkedPath });
+
     if (!inventoryItem) {
-      return sendJson(res, 404, { error: 'Inventory item not found' });
+      return sendJson(res, 404, { error: 'Inventory item not found', inventoryId, checkedPath });
     }
 
-    let sellBackRate = 0.82;
-    if (inventoryItem.provenance?.sourceType === 'case_open' && inventoryItem.provenance?.sourceId) {
-      const caseId = inventoryItem.provenance.sourceId;
-      const caseSnap = await rtdb.ref(`cases/${caseId}`).get();
-      let caseData = caseSnap.val();
-
-      if (!caseData) {
-        const boxSnap = await adminDb.collection('boxes').doc(caseId).get();
-        if (boxSnap.exists) {
-          caseData = boxSnap.data() ?? {};
-        }
-      }
-
-      if (caseData?.isUserCreated) {
-        sellBackRate = 0.75;
-      }
-    }
+    const rawSellBackRate = Number(inventoryItem.sellBackRate ?? 0.8);
+    const sellBackRate = Number.isFinite(rawSellBackRate) && rawSellBackRate > 0 ? rawSellBackRate : 0.8;
 
     const itemValue = Number(inventoryItem.value ?? inventoryItem.price ?? 0);
     const sellBackValue = getSellBackValue(itemValue, sellBackRate);

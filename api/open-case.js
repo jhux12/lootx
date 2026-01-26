@@ -1,4 +1,4 @@
-import { adminAuth, rtdb, adminDb } from './_lib/firebaseAdmin.js';
+import { adminAuth, rtdb } from './_lib/firebaseAdmin.js';
 import { computeRoll, pickPrizeByWeight } from './_lib/provablyFair.js';
 import { ensureProvablyFairState } from './_lib/provablyFairState.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
@@ -22,34 +22,26 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Missing caseId' });
     }
 
-    const caseSnap = await rtdb.ref(`cases/${caseId}`).get();
-    let caseData = caseSnap.val();
+    const checkedPath = `cases/${caseId}`;
+    const caseSnap = await rtdb.ref(checkedPath).get();
+    const caseData = caseSnap.val();
+
+    console.info('open-case', { uid: decoded.uid, caseId, checkedPath });
 
     if (!caseData) {
-      const boxSnap = await adminDb.collection('boxes').doc(caseId).get();
-      if (boxSnap.exists) {
-        const boxData = boxSnap.data() ?? {};
-        caseData = {
-          price: boxData.price ?? 0,
-          prizes: Array.isArray(boxData.items) ? boxData.items : [],
-          isUserCreated: boxData.isUserCreated ?? false
-        };
-      }
-    }
-
-    if (!caseData) {
-      return sendJson(res, 404, { error: 'Case not found' });
+      return sendJson(res, 404, { error: 'Case not found', caseId, checkedPath });
     }
 
     const price = Number(caseData.price ?? 0);
     const prizes = Array.isArray(caseData.prizes) ? caseData.prizes : [];
     if (!prizes.length) {
-      return sendJson(res, 400, { error: 'Case has no prizes' });
+      return sendJson(res, 400, { error: 'Case has no prizes', caseId, checkedPath });
     }
 
     const { serverSeed, serverSeedHash } = await ensureProvablyFairState(rtdb, decoded.uid);
 
-    const coinsRef = rtdb.ref(`users/${decoded.uid}/coins`);
+    const coinsPath = `users/${decoded.uid}/coins`;
+    const coinsRef = rtdb.ref(coinsPath);
     const coinsResult = await coinsRef.transaction((current) => {
       const balance = Number(current ?? 0);
       if (balance < price) {
@@ -59,7 +51,7 @@ export default async function handler(req, res) {
     });
 
     if (!coinsResult.committed) {
-      return sendJson(res, 400, { error: 'Insufficient coins' });
+      return sendJson(res, 400, { error: 'Insufficient coins', caseId, checkedPath: coinsPath });
     }
 
     const publicRef = rtdb.ref(`provablyFairPublic/${decoded.uid}`);
@@ -95,6 +87,8 @@ export default async function handler(req, res) {
     const openId = openRef.key;
     const obtainedAt = Date.now();
 
+    const sellBackRateRaw = Number(caseData.sellBackRate ?? 0.8);
+    const sellBackRate = Number.isFinite(sellBackRateRaw) && sellBackRateRaw > 0 ? sellBackRateRaw : 0.8;
     const inventoryItem = {
       id: prize.id ?? inventoryId,
       name: prize.name,
@@ -102,7 +96,9 @@ export default async function handler(req, res) {
       price: Number(prize.value ?? prize.price ?? 0),
       image: prize.image ?? '',
       rarity: prize.rarity ?? 'common',
+      caseId,
       obtainedAt,
+      sellBackRate,
       status: 'available',
       provenance: {
         sourceType: 'case_open',
@@ -126,6 +122,8 @@ export default async function handler(req, res) {
         message
       }
     };
+
+    console.info('open-case inventory created', { uid: decoded.uid, inventoryId });
 
     await rtdb.ref().update({
       [`users/${decoded.uid}/inventory/${inventoryId}`]: inventoryItem,
