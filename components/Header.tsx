@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Gamepad2, 
   Trophy, 
@@ -40,6 +40,9 @@ export const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [lootRevealActive, setLootRevealActive] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [balancePulse, setBalancePulse] = useState<'up' | 'down' | null>(null);
+  const balanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousBalanceRef = useRef<number | null>(null);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -59,6 +62,34 @@ export const Header: React.FC = () => {
       clearInterval(intervalId);
     };
   }, []);
+
+  useEffect(() => {
+    if (previousBalanceRef.current === null) {
+      previousBalanceRef.current = balance;
+      return;
+    }
+
+    if (previousBalanceRef.current !== balance) {
+      const direction = balance > previousBalanceRef.current ? 'up' : 'down';
+      setBalancePulse(direction);
+
+      if (balanceTimeoutRef.current) {
+        clearTimeout(balanceTimeoutRef.current);
+      }
+
+      balanceTimeoutRef.current = setTimeout(() => {
+        setBalancePulse(null);
+      }, 1400);
+    }
+
+    previousBalanceRef.current = balance;
+
+    return () => {
+      if (balanceTimeoutRef.current) {
+        clearTimeout(balanceTimeoutRef.current);
+      }
+    };
+  }, [balance]);
 
   const handleNav = (view: any) => {
     playSound('click');
@@ -115,6 +146,86 @@ export const Header: React.FC = () => {
 
         .animate-gamified-pop {
           animation: gamified-pop 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes balance-boost {
+          0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 rgba(34, 211, 238, 0);
+          }
+          35% {
+            transform: scale(1.08);
+            box-shadow: 0 0 18px rgba(34, 211, 238, 0.8), 0 0 36px rgba(14, 116, 144, 0.5);
+          }
+          70% {
+            transform: scale(1.02);
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.5), 0 0 20px rgba(139, 92, 246, 0.4);
+          }
+          100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 rgba(34, 211, 238, 0);
+          }
+        }
+
+        @keyframes balance-dip {
+          0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 rgba(248, 113, 113, 0);
+          }
+          35% {
+            transform: scale(0.96);
+            box-shadow: 0 0 16px rgba(248, 113, 113, 0.6), 0 0 28px rgba(190, 24, 93, 0.4);
+          }
+          70% {
+            transform: scale(1.01);
+            box-shadow: 0 0 10px rgba(248, 113, 113, 0.45), 0 0 18px rgba(190, 24, 93, 0.3);
+          }
+          100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 rgba(248, 113, 113, 0);
+          }
+        }
+
+        @keyframes balance-sparkle {
+          0% {
+            opacity: 0;
+            transform: scale(0.85) rotate(0deg);
+          }
+          40% {
+            opacity: 0.8;
+            transform: scale(1.1) rotate(40deg);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(1.35) rotate(90deg);
+          }
+        }
+
+        .balance-pulse {
+          position: relative;
+          transform-origin: center;
+        }
+
+        .balance-pulse-up {
+          animation: balance-boost 1.4s ease-out;
+        }
+
+        .balance-pulse-down {
+          animation: balance-dip 1.4s ease-out;
+        }
+
+        .balance-sparkle {
+          position: absolute;
+          inset: -10px;
+          border-radius: 14px;
+          background: conic-gradient(from 160deg, rgba(34, 211, 238, 0.6), rgba(139, 92, 246, 0.4), rgba(16, 185, 129, 0.5), rgba(34, 211, 238, 0.6));
+          filter: blur(12px);
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .balance-sparkle-active {
+          animation: balance-sparkle 1.2s ease-out;
         }
       `}</style>
 
@@ -193,8 +304,20 @@ export const Header: React.FC = () => {
 
           {isAuthenticated ? (
             <>
-              <div className="flex items-center bg-[#111621] rounded-lg p-1 pr-3 border border-gray-800">
-                <div className="bg-[#1a2130] px-2 md:px-3 py-1 rounded text-xs md:text-sm mr-2 md:mr-3">
+              <div
+                className={`flex items-center bg-[#111621] rounded-lg p-1 pr-3 border border-gray-800 balance-pulse ${
+                  balancePulse === 'up'
+                    ? 'balance-pulse-up'
+                    : balancePulse === 'down'
+                      ? 'balance-pulse-down'
+                      : ''
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`balance-sparkle ${balancePulse ? 'balance-sparkle-active' : ''}`}
+                />
+                <div className="bg-[#1a2130] px-2 md:px-3 py-1 rounded text-xs md:text-sm mr-2 md:mr-3 relative z-10">
                   <CoinAmount
                     amount={balance}
                     formatOptions={{ maximumFractionDigits: 0 }}
