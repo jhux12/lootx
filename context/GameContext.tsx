@@ -114,6 +114,9 @@ const DEFAULT_BONUS_SETTINGS: BonusSettings = {
   rakebackDailyCapCoins: 15000
 };
 
+const PENDING_SELL_GRACE_MS = 4000;
+const PENDING_BALANCE_GRACE_MS = 4000;
+
 const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
 
 const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings => ({
@@ -467,6 +470,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const hasInventorySubcollectionRef = useRef(false);
+  const pendingSoldIdsRef = useRef<Map<string, number>>(new Map());
+  const pendingBalanceRef = useRef<{ value: number; updatedAt: number } | null>(null);
   
   // -- PERSISTENT STATE INITIALIZATION --
   
@@ -591,11 +596,25 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           profile.isAdmin = true;
         }
 
+        const incomingBalance = profile.balance ?? 0;
+        const pendingBalance = pendingBalanceRef.current;
+        const now = Date.now();
+        const pendingStillValid = pendingBalance
+          ? now - pendingBalance.updatedAt < PENDING_BALANCE_GRACE_MS
+          : false;
+        const shouldHoldPending = pendingBalance && pendingStillValid && incomingBalance < pendingBalance.value;
+        const resolvedBalance = shouldHoldPending ? pendingBalance.value : incomingBalance;
+
+        if (pendingBalance && (incomingBalance >= pendingBalance.value || !pendingStillValid)) {
+          pendingBalanceRef.current = null;
+        }
+
         setUser((prev) => ({
           ...prev,
-          ...profile
+          ...profile,
+          balance: resolvedBalance
         }));
-        setBalance(profile.balance ?? 0);
+        setBalance(resolvedBalance);
         if (!hasInventorySubcollectionRef.current && Array.isArray(data.inventory)) {
           const legacyInventory = normalizeInventoryItems(data.inventory);
           setInventory(legacyInventory);
@@ -612,8 +631,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const loaded = snapshot.docs
           .map(mapInventoryDoc)
           .sort((a, b) => b.obtainedAt - a.obtainedAt);
-        setInventory(loaded);
-        const nextTopPulls = rankTopPullsByValue(loaded);
+        const pendingIds = pendingSoldIdsRef.current;
+        const filtered = loaded.filter((item) => !pendingIds.has(item.instanceId));
+        if (pendingIds.size > 0) {
+          const now = Date.now();
+          const nextPending = new Map<string, number>();
+          pendingIds.forEach((soldAt, id) => {
+            const stillPresent = loaded.some((item) => item.instanceId === id);
+            const keepPending = stillPresent || now - soldAt < PENDING_SELL_GRACE_MS;
+            if (keepPending) {
+              nextPending.set(id, soldAt);
+            }
+          });
+          pendingSoldIdsRef.current = nextPending;
+        }
+        setInventory(filtered);
+        const nextTopPulls = rankTopPullsByValue(filtered);
         setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
       }, (error) => {
         console.error('Failed to load inventory from Firebase', error);
@@ -642,7 +675,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!latestUser) return;
 
     const nextBalance = Number(latestUser.balance ?? 0);
-    const needsBalanceUpdate = nextBalance !== balance;
+    const pendingBalance = pendingBalanceRef.current;
+    const now = Date.now();
+    const pendingStillValid = pendingBalance
+      ? now - pendingBalance.updatedAt < PENDING_BALANCE_GRACE_MS
+      : false;
+    const shouldHoldPending = pendingBalance && pendingStillValid && nextBalance < pendingBalance.value;
+    const resolvedBalance = shouldHoldPending ? pendingBalance.value : nextBalance;
+    const needsBalanceUpdate = resolvedBalance !== balance;
     const needsCreatedAtUpdate = !user.createdAt && !!latestUser.createdAt;
     const needsLastChatUpdate = latestUser.lastChatAt !== undefined && latestUser.lastChatAt !== user.lastChatAt;
     const nextTopPullsPublic = latestUser.topPullsPublic ?? false;
@@ -653,11 +693,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!needsBalanceUpdate && !needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate && !needsTopPullsUpdate) return;
 
     if (needsBalanceUpdate) {
-      setBalance(nextBalance);
+      setBalance(resolvedBalance);
+    }
+
+    if (pendingBalance && (nextBalance >= pendingBalance.value || !pendingStillValid)) {
+      pendingBalanceRef.current = null;
     }
 
     const updates: Partial<User> = {};
-    if (needsBalanceUpdate) updates.balance = nextBalance;
+    if (needsBalanceUpdate) updates.balance = resolvedBalance;
     if (needsCreatedAtUpdate) updates.createdAt = latestUser.createdAt;
     if (needsLastChatUpdate) updates.lastChatAt = latestUser.lastChatAt;
     if (needsTopPullsPublicUpdate) updates.topPullsPublic = nextTopPullsPublic;
@@ -1128,15 +1172,31 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    const itemIndex = inventory.findIndex((item) => item.instanceId === instanceId);
+    const itemToSell = itemIndex >= 0 ? inventory[itemIndex] : undefined;
     try {
+      pendingSoldIdsRef.current.set(instanceId, Date.now());
+      setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
+
       const data = await authedFetch<{ newCoins?: number }>('/api/sell-item', {
         method: 'POST',
         body: JSON.stringify({ inventoryId: instanceId })
       });
 
-      setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
-      syncBalance(Number(data.newCoins ?? balance));
+      if (typeof data.newCoins === 'number' && !Number.isNaN(data.newCoins)) {
+        pendingBalanceRef.current = { value: data.newCoins, updatedAt: Date.now() };
+        syncBalance(data.newCoins);
+      }
     } catch (error) {
+      pendingSoldIdsRef.current.delete(instanceId);
+      if (itemToSell) {
+        setInventory((prev) => {
+          const next = [...prev];
+          const insertAt = Math.min(Math.max(itemIndex, 0), next.length);
+          next.splice(insertAt, 0, itemToSell);
+          return next;
+        });
+      }
       console.error('Failed to sell item', error);
       alert('Unable to sell item right now. Please try again.');
     }
