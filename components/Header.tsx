@@ -251,16 +251,24 @@ export const Header: React.FC = () => {
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-8">
             <button 
-              onClick={() => handleNav({ type: 'HOME' })} 
+              onClick={() => handleNav({ type: 'BOXES' })} 
               className="flex items-center gap-2 text-white hover:text-blue-400 transition-colors text-sm font-semibold"
             >
-              <PackageOpen className="w-4 h-4" /> Cases
+              <PackageOpen className="w-4 h-4" /> Boxes
             </button>
             <button 
               onClick={() => handleNav({ type: 'BATTLES' })} 
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-medium"
             >
               <Swords className="w-4 h-4" /> Battles
+            </button>
+            
+            {/* Case Lab - Always Visible */}
+            <button 
+              onClick={() => handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' }))} 
+              className="flex items-center gap-2 text-brand-purple hover:text-purple-400 transition-colors text-sm font-bold"
+            >
+              <FlaskConical className="w-4 h-4" /> Case Lab
             </button>
             <button 
               onClick={() => handleNav({ type: 'LEADERBOARD' })} 
@@ -273,14 +281,6 @@ export const Header: React.FC = () => {
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-medium"
             >
               <Gift className="w-4 h-4" /> Bonuses
-            </button>
-            
-            {/* Case Lab - Always Visible */}
-            <button 
-              onClick={() => handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' }))} 
-              className="flex items-center gap-2 text-brand-purple hover:text-purple-400 transition-colors text-sm font-bold"
-            >
-              <FlaskConical className="w-4 h-4" /> Case Lab
             </button>
 
             {/* Admin Panel Link - Only visible to Admins */}
@@ -491,16 +491,26 @@ export const Header: React.FC = () => {
           <div className="fixed inset-0 top-[72px] md:top-[80px] bg-[#0b0e14] opacity-100 backdrop-blur-none z-40 lg:hidden flex flex-col animate-in slide-in-from-left-full duration-200">
             <nav className="flex flex-col gap-2 bg-[#0b0e14] w-full flex-1 px-4 pb-4">
               <button 
-                onClick={() => { handleNav({ type: 'HOME' }); setIsMobileMenuOpen(false); }} 
+                onClick={() => { handleNav({ type: 'BOXES' }); setIsMobileMenuOpen(false); }} 
                 className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-white font-medium"
               >
-                <PackageOpen className="w-5 h-5 text-blue-500" /> Cases
+                <PackageOpen className="w-5 h-5 text-blue-500" /> Boxes
               </button>
               <button 
                 onClick={() => { handleNav({ type: 'BATTLES' }); setIsMobileMenuOpen(false); }} 
                 className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
               >
                 <Swords className="w-5 h-5 text-purple-500" /> Battles
+              </button>
+              {/* Case Lab Mobile */}
+              <button 
+                onClick={() => { 
+                  handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' })); 
+                  if (isAuthenticated) setIsMobileMenuOpen(false);
+                }} 
+                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-brand-purple font-medium"
+              >
+                <FlaskConical className="w-5 h-5" /> Case Lab
               </button>
               <button 
                 onClick={() => { handleNav({ type: 'LEADERBOARD' }); setIsMobileMenuOpen(false); }} 
@@ -513,16 +523,6 @@ export const Header: React.FC = () => {
                 className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
               >
                 <Gift className="w-5 h-5 text-green-500" /> Bonuses
-              </button>
-              {/* Case Lab Mobile */}
-              <button 
-                onClick={() => { 
-                  handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' })); 
-                  if (isAuthenticated) setIsMobileMenuOpen(false);
-                }} 
-                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-brand-purple font-medium"
-              >
-                <FlaskConical className="w-5 h-5" /> Case Lab
               </button>
 
               {user.isAdmin && (
