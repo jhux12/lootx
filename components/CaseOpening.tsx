@@ -7,7 +7,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getRiskLabel } from '../utils/caseOdds';
 import { getSellBackValue } from '../utils/sellBack';
-import { auth } from '../firebase';
+import { authedFetch } from '../utils/authedFetch';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -19,7 +19,7 @@ interface RollData {
   rollHash: string;
   rollValue: number;
   message: string;
-  caseId: string;
+  boxId: string;
   serverSeedHash: string;
   clientSeed: string;
   outcome?: string;
@@ -58,27 +58,6 @@ const deriveRollValue = (hash: string) => {
   return intValue / 0x10000000000000; // 2^52
 };
 
-const getAuthToken = async () => auth.currentUser?.getIdToken();
-
-const fetchWithAuth = async <T,>(url: string, options: RequestInit = {}): Promise<T> => {
-  const token = await getAuthToken();
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-
-  const headers = new Headers(options.headers || {});
-  headers.set('Authorization', `Bearer ${token}`);
-  if (!headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-
-  const response = await fetch(url, { ...options, headers });
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || 'Request failed');
-  }
-  return response.json() as Promise<T>;
-};
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
   const { user, addInventoryItemFromServer, syncBalance, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily, awardCaseOpenXp } = useGame();
@@ -136,7 +115,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (!isAuthenticated) return;
     setIsSyncingFair(true);
     try {
-      const data = await fetchWithAuth<{ serverSeedHash: string; clientSeed: string; nonce: number }>('/api/provably-fair');
+      const data = await authedFetch<{ serverSeedHash: string; clientSeed: string; nonce: number }>('/api/provably-fair');
       setServerSeedHash(data.serverSeedHash);
       setClientSeed(data.clientSeed);
       setClientSeedInput(data.clientSeed);
@@ -223,7 +202,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     setIsUpdatingClientSeed(true);
     try {
-      const data = await fetchWithAuth<{ serverSeedHash: string; clientSeed: string; nonce: number }>(
+      const data = await authedFetch<{ serverSeedHash: string; clientSeed: string; nonce: number }>(
         '/api/provably-fair/client-seed',
         {
           method: 'POST',
@@ -251,7 +230,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     setIsRotatingSeed(true);
     try {
-      const data = await fetchWithAuth<{
+      const data = await authedFetch<{
         revealed: RevealData;
         current: { serverSeedHash: string; clientSeed: string; nonce: number };
       }>('/api/provably-fair/rotate', { method: 'POST' });
@@ -359,7 +338,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     } else {
       try {
         // Server now authoritatively selects the prize + updates coins/inventory.
-        const data = await fetchWithAuth<{
+        const data = await authedFetch<{
           ok: boolean;
           prize: CaseItem & { price?: number };
           newCoins: number;
@@ -375,7 +354,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           };
         }>('/api/open-case', {
           method: 'POST',
-          body: JSON.stringify({ caseId: box.id })
+          body: JSON.stringify({ boxId: box.id })
         });
 
         const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
@@ -432,7 +411,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         rollHash,
         rollValue,
         message: rollMessage,
-        caseId: box.id,
+        boxId: box.id,
         serverSeedHash: rollServerHash,
         clientSeed: rollClientSeed,
         outcome: winner.name
@@ -572,8 +551,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       `Server Seed Hash (committed): ${lastRoll.serverSeedHash}`,
       `Client Seed: ${lastRoll.clientSeed}`,
       `Nonce: ${lastRoll.nonce}`,
-      `Case ID: ${lastRoll.caseId}`,
-      `HMAC Message (clientSeed:nonce:caseId): ${lastRoll.message}`,
+      `Box ID: ${lastRoll.boxId}`,
+      `HMAC Message (clientSeed:nonce:boxId): ${lastRoll.message}`,
       `Roll Hash (HMAC): ${lastRoll.rollHash}`,
       `Roll Value: ${lastRoll.rollValue}`,
       `Outcome: ${lastRoll.outcome ?? 'N/A'}`

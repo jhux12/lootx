@@ -201,11 +201,11 @@ export const AdminPanel: React.FC = () => {
             item,
             key: `${profile.id}-${item.instanceId || item.id}-${index}`
         }))
-        .filter(({ item }) => item.status === 'shipping' || item.status === 'shipped');
+        .filter(({ item }) => item.status === 'shipping' || item.status === 'shipping_requested' || item.status === 'shipped');
   });
 
   const filteredShipments = shipmentRecords.filter(({ item }) => {
-      if (shipmentFilter === 'processing') return item.status === 'shipping';
+      if (shipmentFilter === 'processing') return item.status === 'shipping' || item.status === 'shipping_requested';
       if (shipmentFilter === 'shipped') return item.status === 'shipped';
       return true;
   });

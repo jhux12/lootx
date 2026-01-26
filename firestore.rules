@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /boxes/{boxId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && !('coins' in request.resource.data);
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.coins == resource.data.coins;
+      allow delete: if false;
+    }
+
+    match /users/{uid}/inventory/{inventoryId} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /opens/{openId} {
+      allow read, write: if false;
+    }
+
+    match /shipments/{shipmentId} {
+      allow read, write: if false;
+    }
+
+    match /provablyFair/{uid} {
+      allow read, write: if false;
+    }
+
+    match /provablyFairReveals/{uid}/reveals/{revealId} {
+      allow read, write: if false;
+    }
+  }
+}

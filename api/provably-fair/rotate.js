@@ -1,4 +1,4 @@
-import { adminAuth, rtdb } from '../_lib/firebaseAdmin.js';
+import { adminAuth, firestore } from '../_lib/firebaseAdmin.js';
 import { ensureProvablyFairState } from '../_lib/provablyFairState.js';
 import { randomSeed, sha256 } from '../_lib/provablyFair.js';
 import { getBearerToken, sendJson } from '../_lib/http.js';
@@ -16,9 +16,13 @@ export default async function handler(req, res) {
     }
 
     const decoded = await adminAuth.verifyIdToken(token);
-    const { serverSeed, serverSeedHash, clientSeed } = await ensureProvablyFairState(rtdb, decoded.uid);
+    const { serverSeed, serverSeedHash, clientSeed } = await ensureProvablyFairState(firestore, decoded.uid);
 
-    const revealRef = rtdb.ref(`provablyFairReveals/${decoded.uid}`).push();
+    const revealRef = firestore
+      .collection('provablyFairReveals')
+      .doc(decoded.uid)
+      .collection('reveals')
+      .doc();
     const rotatedAt = Date.now();
     const reveal = {
       serverSeed,
@@ -31,12 +35,12 @@ export default async function handler(req, res) {
 
     await Promise.all([
       revealRef.set(reveal),
-      rtdb.ref(`provablyFairSecret/${decoded.uid}`).set({ serverSeed: nextServerSeed }),
-      rtdb.ref(`provablyFairPublic/${decoded.uid}`).update({
+      firestore.collection('provablyFair').doc(decoded.uid).set({
+        serverSeed: nextServerSeed,
         serverSeedHash: nextHash,
         clientSeed,
         nonce: 0
-      })
+      }, { merge: true })
     ]);
 
     return sendJson(res, 200, {

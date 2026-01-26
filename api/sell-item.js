@@ -1,4 +1,4 @@
-import { adminAuth, rtdb } from './_lib/firebaseAdmin.js';
+import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 
 const getSellBackValue = (price, rate) => {
@@ -28,41 +28,54 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Missing inventoryId' });
     }
 
-    const inventoryRef = rtdb.ref(`users/${decoded.uid}/inventory/${inventoryId}`);
-    const inventorySnap = await inventoryRef.get();
-    const inventoryItem = inventorySnap.val();
+    const userRef = firestore.collection('users').doc(decoded.uid);
+    const inventoryRef = userRef.collection('inventory').doc(inventoryId);
 
-    if (!inventoryItem) {
-      return sendJson(res, 404, { error: 'Inventory item not found' });
-    }
+    let responsePayload;
 
-    let sellBackRate = 0.82;
-    if (inventoryItem.provenance?.sourceType === 'case_open' && inventoryItem.provenance?.sourceId) {
-      const caseSnap = await rtdb.ref(`cases/${inventoryItem.provenance.sourceId}`).get();
-      const caseData = caseSnap.val();
-      if (caseData?.isUserCreated) {
-        sellBackRate = 0.75;
+    await firestore.runTransaction(async (transaction) => {
+      const [userSnap, inventorySnap] = await Promise.all([
+        transaction.get(userRef),
+        transaction.get(inventoryRef)
+      ]);
+
+      if (!inventorySnap.exists) {
+        throw { status: 404, error: 'Inventory item not found' };
       }
-    }
 
-    const itemValue = Number(inventoryItem.value ?? inventoryItem.price ?? 0);
-    const sellBackValue = getSellBackValue(itemValue, sellBackRate);
+      const inventoryItem = inventorySnap.data() ?? {};
+      const status = inventoryItem.status ?? 'available';
+      if (status !== 'available') {
+        throw { status: 400, error: 'Item is not available for sale' };
+      }
 
-    const coinsRef = rtdb.ref(`users/${decoded.uid}/coins`);
-    const coinsResult = await coinsRef.transaction((current) => Number(current ?? 0) + sellBackValue);
+      const sellBackRate = Number(inventoryItem.sellBackRate ?? 0.8);
+      const itemValue = Number(inventoryItem.value ?? 0);
+      const sellBackValue = getSellBackValue(itemValue, sellBackRate);
 
-    if (!coinsResult.committed) {
-      return sendJson(res, 500, { error: 'Unable to apply sell back value' });
-    }
+      const currentCoins = Number(userSnap.data()?.coins ?? 0);
+      const newCoins = currentCoins + sellBackValue;
 
-    await inventoryRef.remove();
+      if (!userSnap.exists) {
+        transaction.set(userRef, { coins: 0, createdAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      }
 
-    return sendJson(res, 200, {
-      ok: true,
-      soldValue: sellBackValue,
-      newCoins: coinsResult.snapshot.val()
+      transaction.set(userRef, { coins: newCoins }, { merge: true });
+      transaction.set(inventoryRef, { status: 'sold' }, { merge: true });
+
+      responsePayload = {
+        ok: true,
+        soldValue: sellBackValue,
+        newCoins
+      };
     });
+
+    return sendJson(res, 200, responsePayload);
   } catch (error) {
+    const status = error?.status;
+    if (status) {
+      return sendJson(res, status, { error: error.error || 'Unable to sell item' });
+    }
     console.error('sell-item error', error);
     return sendJson(res, 500, { error: 'Unable to sell item' });
   }

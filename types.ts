@@ -82,7 +82,7 @@ export interface MysteryBox {
 export interface InventoryItem extends CaseItem {
   instanceId: string;
   obtainedAt: number;
-  status: 'available' | 'sold' | 'shipping' | 'shipped';
+  status: 'available' | 'sold' | 'shipping' | 'shipping_requested' | 'shipped';
   locked?: boolean;
   trackingNumber?: string;
   provenance?: InventoryProvenance;
