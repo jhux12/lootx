@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks } from '../types';
+import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, StripeSettings, StripeCoinPack, UserLocks } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { 
@@ -119,6 +119,60 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
 });
 
 const BONUS_SETTINGS_DOC = 'bonus-settings';
+
+const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
+  enabled: false,
+  mode: 'test',
+  publishableKey: '',
+  secretKey: '',
+  webhookSecret: '',
+  currency: 'USD',
+  successUrl: '',
+  cancelUrl: '',
+  checkoutLinkId: '',
+  packs: []
+};
+
+const getStoredStripeSettings = (): StripeSettings => DEFAULT_STRIPE_SETTINGS;
+
+const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSettings => {
+  const normalizedCurrency = (settings.currency ?? DEFAULT_STRIPE_SETTINGS.currency)
+    .toString()
+    .trim()
+    .toUpperCase();
+  const rawPacks = Array.isArray(settings.packs) ? settings.packs : [];
+  const normalizedPacks = rawPacks
+    .map((pack, index): StripeCoinPack | null => {
+      if (!pack || typeof pack !== 'object') return null;
+      const typedPack = pack as Partial<StripeCoinPack>;
+      const coinsValue = Number(typedPack.coins ?? 0);
+      const bonusValue = Number(typedPack.bonusPercent ?? 0);
+      const idValue = typedPack.id?.trim() || `pack-${index + 1}`;
+      return {
+        id: idValue,
+        name: typedPack.name?.trim() || `Pack ${index + 1}`,
+        coins: Math.max(0, Math.floor(coinsValue)),
+        bonusPercent: Math.max(0, Math.floor(bonusValue)),
+        checkoutLinkId: typedPack.checkoutLinkId?.trim() ?? ''
+      };
+    })
+    .filter((pack): pack is StripeCoinPack => Boolean(pack));
+
+  return {
+    enabled: Boolean(settings.enabled),
+    mode: settings.mode === 'live' ? 'live' : 'test',
+    publishableKey: settings.publishableKey?.trim() ?? '',
+    secretKey: settings.secretKey?.trim() ?? '',
+    webhookSecret: settings.webhookSecret?.trim() ?? '',
+    currency: normalizedCurrency || DEFAULT_STRIPE_SETTINGS.currency,
+    successUrl: settings.successUrl?.trim() ?? '',
+    cancelUrl: settings.cancelUrl?.trim() ?? '',
+    checkoutLinkId: settings.checkoutLinkId?.trim() ?? '',
+    packs: normalizedPacks
+  };
+};
+
+const STRIPE_SETTINGS_DOC = 'stripe-settings';
 
 export const calculateLevelProgress = (totalXp: number, overrides?: Partial<BonusSettings>) => {
   const settings = { ...DEFAULT_BONUS_SETTINGS, ...(overrides ?? {}) };
@@ -270,6 +324,7 @@ interface GameContextType {
   boxes: MysteryBox[];
   items: CaseItem[];
   bonusSettings: BonusSettings;
+  stripeSettings: StripeSettings;
   showLoginModal: boolean;
   showTopUpModal: boolean;
   
@@ -311,6 +366,7 @@ interface GameContextType {
   claimDaily: () => void;
   claimRakeback: () => void;
   updateBonusSettings: (settings: BonusSettings) => void;
+  updateStripeSettings: (settings: StripeSettings) => void;
   awardCaseOpenXp: () => void;
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
@@ -548,6 +604,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [items, setItems] = useState<CaseItem[]>(() => CASE_ITEMS);
 
   const [bonusSettings, setBonusSettings] = useState<BonusSettings>(() => getStoredBonusSettings());
+  const [stripeSettings, setStripeSettings] = useState<StripeSettings>(() => getStoredStripeSettings());
 
   useEffect(() => {
     const bonusSettingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC);
@@ -557,6 +614,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setBonusSettings(normalized);
     }, (error) => {
       console.error('Failed to load bonus settings from Firebase', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const stripeSettingsRef = doc(db, 'settings', STRIPE_SETTINGS_DOC);
+    const unsubscribe = onSnapshot(stripeSettingsRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const normalized = normalizeStripeSettings(snapshot.data() as Partial<StripeSettings>);
+      setStripeSettings(normalized);
+    }, (error) => {
+      console.error('Failed to load Stripe settings from Firebase', error);
     });
 
     return () => unsubscribe();
@@ -899,6 +969,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const bonusSettingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC);
     void setDoc(bonusSettingsRef, normalized, { merge: true }).catch((error) => {
       console.error('Failed to save bonus settings to Firebase', error);
+    });
+  };
+
+  const updateStripeSettings = (settings: StripeSettings) => {
+    const normalized = normalizeStripeSettings(settings);
+
+    setStripeSettings(normalized);
+    const stripeSettingsRef = doc(db, 'settings', STRIPE_SETTINGS_DOC);
+    void setDoc(stripeSettingsRef, normalized, { merge: true }).catch((error) => {
+      console.error('Failed to save Stripe settings to Firebase', error);
     });
   };
 
@@ -1599,6 +1679,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       boxes,
       items,
       bonusSettings,
+      stripeSettings,
       login,
       register,
       logout,
@@ -1635,6 +1716,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       claimDaily,
       claimRakeback,
       updateBonusSettings,
+      updateStripeSettings,
       awardCaseOpenXp,
       generateAffiliateCode,
       updateUserProgress,

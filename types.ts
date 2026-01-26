@@ -195,6 +195,27 @@ export interface AppNotification {
   type: 'shipping' | 'admin';
 }
 
+export interface StripeSettings {
+  enabled: boolean;
+  mode: 'test' | 'live';
+  publishableKey: string;
+  secretKey: string;
+  webhookSecret: string;
+  currency: string;
+  successUrl: string;
+  cancelUrl: string;
+  checkoutLinkId: string;
+  packs: StripeCoinPack[];
+}
+
+export interface StripeCoinPack {
+  id: string;
+  name: string;
+  coins: number;
+  bonusPercent: number;
+  checkoutLinkId: string;
+}
+
 export type ViewState = 
   | { type: 'HOME' }
   | { type: 'BOXES' }
