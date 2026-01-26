@@ -98,13 +98,17 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   }, []);
 
   const normalizeItems = (items: typeof inventory) =>
-    (items ?? []).map((item, index) => ({
-      ...item,
-      instanceId: item.instanceId || `${item.id}-${index}`,
-      status: item.status ?? 'available',
-      obtainedAt: item.obtainedAt ?? 0,
-      rarity: item.rarity ?? 'common'
-    }));
+    (items ?? []).map((item, index) => {
+      const fallbackId = item.id ?? `item-${index}`;
+      const fallbackInstanceId = `${fallbackId}-${item.obtainedAt ?? 0}-${item.price ?? 0}-${item.name ?? ''}`;
+      return {
+        ...item,
+        instanceId: item.instanceId || fallbackInstanceId,
+        status: item.status ?? 'available',
+        obtainedAt: item.obtainedAt ?? 0,
+        rarity: item.rarity ?? 'common'
+      };
+    });
 
   const inventorySource = isOwnProfile ? inventory : displayUser.inventory ?? [];
   const normalizedInventory = normalizeItems(inventorySource).sort((a, b) => b.obtainedAt - a.obtainedAt);

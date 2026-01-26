@@ -41,6 +41,13 @@ const sanitizeDeep = (value: any): any => {
   return value;
 };
 
+const buildFallbackInstanceId = (item: Partial<InventoryItem>, fallbackId: string) => {
+  const obtainedAt = Number(item.obtainedAt ?? 0);
+  const price = Number(item.price ?? 0);
+  const name = item.name ?? 'Mystery Item';
+  return `${fallbackId}-${obtainedAt}-${price}-${name}`;
+};
+
 const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
   if (!Array.isArray(items)) return [];
   return items.map((item, index) => {
@@ -49,7 +56,7 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
     return {
       ...(typed as InventoryItem),
       id: fallbackId,
-      instanceId: typed.instanceId || `${fallbackId}-${index}`,
+      instanceId: typed.instanceId || buildFallbackInstanceId(typed, fallbackId),
       obtainedAt: Number(typed.obtainedAt ?? 0),
       status: (typed.status ?? 'available') as InventoryItem['status'],
       rarity: (typed.rarity ?? 'common') as InventoryItem['rarity'],
@@ -467,6 +474,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const hasInventorySubcollectionRef = useRef(false);
+  const pendingSoldIdsRef = useRef<Set<string>>(new Set());
+  const pendingBalanceRef = useRef<number | null>(null);
   
   // -- PERSISTENT STATE INITIALIZATION --
   
@@ -591,11 +600,23 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           profile.isAdmin = true;
         }
 
+        const incomingBalance = profile.balance ?? 0;
+        const pendingBalance = pendingBalanceRef.current;
+        const resolvedBalance = pendingBalance !== null && incomingBalance < pendingBalance
+          ? pendingBalance
+          : incomingBalance;
+
+        if (pendingBalance !== null && incomingBalance >= pendingBalance) {
+          pendingBalanceRef.current = null;
+        }
+
         setUser((prev) => ({
           ...prev,
-          ...profile
+          ...profile,
+          balance: resolvedBalance,
+          topPulls: hasInventorySubcollectionRef.current ? prev.topPulls : profile.topPulls
         }));
-        setBalance(profile.balance ?? 0);
+        setBalance(resolvedBalance);
         if (!hasInventorySubcollectionRef.current && Array.isArray(data.inventory)) {
           const legacyInventory = normalizeInventoryItems(data.inventory);
           setInventory(legacyInventory);
@@ -612,8 +633,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const loaded = snapshot.docs
           .map(mapInventoryDoc)
           .sort((a, b) => b.obtainedAt - a.obtainedAt);
-        setInventory(loaded);
-        const nextTopPulls = rankTopPullsByValue(loaded);
+        const pendingIds = pendingSoldIdsRef.current;
+        const filtered = loaded.filter((item) => !pendingIds.has(item.instanceId));
+        if (pendingIds.size > 0) {
+          const nextPending = new Set<string>();
+          pendingIds.forEach((id) => {
+            if (loaded.some((item) => item.instanceId === id)) {
+              nextPending.add(id);
+            }
+          });
+          pendingSoldIdsRef.current = nextPending;
+        }
+        setInventory(filtered);
+        const nextTopPulls = rankTopPullsByValue(filtered);
         setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
       }, (error) => {
         console.error('Failed to load inventory from Firebase', error);
@@ -641,30 +673,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const latestUser = users.find((entry) => entry.id === user.id);
     if (!latestUser) return;
 
-    const nextBalance = Number(latestUser.balance ?? 0);
-    const needsBalanceUpdate = nextBalance !== balance;
     const needsCreatedAtUpdate = !user.createdAt && !!latestUser.createdAt;
     const needsLastChatUpdate = latestUser.lastChatAt !== undefined && latestUser.lastChatAt !== user.lastChatAt;
     const nextTopPullsPublic = latestUser.topPullsPublic ?? false;
     const needsTopPullsPublicUpdate = nextTopPullsPublic !== (user.topPullsPublic ?? false);
-    const nextTopPulls = normalizeInventoryItems(latestUser.topPulls);
-    const needsTopPullsUpdate = inventorySignature(nextTopPulls) !== inventorySignature(normalizeInventoryItems(user.topPulls));
-
-    if (!needsBalanceUpdate && !needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate && !needsTopPullsUpdate) return;
-
-    if (needsBalanceUpdate) {
-      setBalance(nextBalance);
-    }
+    if (!needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate) return;
 
     const updates: Partial<User> = {};
-    if (needsBalanceUpdate) updates.balance = nextBalance;
     if (needsCreatedAtUpdate) updates.createdAt = latestUser.createdAt;
     if (needsLastChatUpdate) updates.lastChatAt = latestUser.lastChatAt;
     if (needsTopPullsPublicUpdate) updates.topPullsPublic = nextTopPullsPublic;
-    if (needsTopPullsUpdate) updates.topPulls = nextTopPulls;
 
     setUser((prev) => ({ ...prev, ...updates }));
-  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic, user.topPulls, balance]);
+  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic]);
 
   useEffect(() => {
     const itemsRef = collection(db, 'items');
@@ -1128,15 +1149,32 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    const itemIndex = inventory.findIndex((item) => item.instanceId === instanceId);
+    const itemToSell = itemIndex >= 0 ? inventory[itemIndex] : undefined;
     try {
+      pendingSoldIdsRef.current.add(instanceId);
+      setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
+
       const data = await authedFetch<{ newCoins?: number }>('/api/sell-item', {
         method: 'POST',
         body: JSON.stringify({ inventoryId: instanceId })
       });
 
-      setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
-      syncBalance(Number(data.newCoins ?? balance));
+      const nextCoins = Number(data.newCoins);
+      if (Number.isFinite(nextCoins)) {
+        pendingBalanceRef.current = nextCoins;
+        syncBalance(nextCoins);
+      }
     } catch (error) {
+      pendingSoldIdsRef.current.delete(instanceId);
+      if (itemToSell) {
+        setInventory((prev) => {
+          const next = [...prev];
+          const insertAt = Math.min(Math.max(itemIndex, 0), next.length);
+          next.splice(insertAt, 0, itemToSell);
+          return next;
+        });
+      }
       console.error('Failed to sell item', error);
       alert('Unable to sell item right now. Please try again.');
     }
