@@ -1,0 +1,49 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "coins": {
+          ".write": false
+        },
+        "inventory": {
+          ".write": false
+        }
+      }
+    },
+    "cases": {
+      ".read": true,
+      ".write": false
+    },
+    "provablyFairPublic": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false,
+        "clientSeed": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "provablyFairSecret": {
+      ".read": false,
+      ".write": false
+    },
+    "provablyFairReveals": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+    "opens": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "shipments": {
+      ".read": "auth != null",
+      ".write": false
+    }
+  }
+}
