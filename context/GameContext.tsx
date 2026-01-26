@@ -672,12 +672,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const latestUser = users.find((entry) => entry.id === user.id);
     if (!latestUser) return;
 
-    const nextBalance = Number(latestUser.balance ?? 0);
-    const pendingBalance = pendingBalanceRef.current;
-    const resolvedBalance = pendingBalance !== null && nextBalance < pendingBalance
-      ? pendingBalance
-      : nextBalance;
-    const needsBalanceUpdate = resolvedBalance !== balance;
     const needsCreatedAtUpdate = !user.createdAt && !!latestUser.createdAt;
     const needsLastChatUpdate = latestUser.lastChatAt !== undefined && latestUser.lastChatAt !== user.lastChatAt;
     const nextTopPullsPublic = latestUser.topPullsPublic ?? false;
@@ -685,21 +679,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const nextTopPulls = normalizeInventoryItems(latestUser.topPulls);
     const needsTopPullsUpdate = inventorySignature(nextTopPulls) !== inventorySignature(normalizeInventoryItems(user.topPulls));
 
-    if (!needsBalanceUpdate && !needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate && !needsTopPullsUpdate) return;
-
-    if (needsBalanceUpdate) {
-      setBalance(resolvedBalance);
-    }
+    if (!needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate && !needsTopPullsUpdate) return;
 
     const updates: Partial<User> = {};
-    if (needsBalanceUpdate) updates.balance = resolvedBalance;
     if (needsCreatedAtUpdate) updates.createdAt = latestUser.createdAt;
     if (needsLastChatUpdate) updates.lastChatAt = latestUser.lastChatAt;
     if (needsTopPullsPublicUpdate) updates.topPullsPublic = nextTopPullsPublic;
     if (needsTopPullsUpdate) updates.topPulls = nextTopPulls;
 
     setUser((prev) => ({ ...prev, ...updates }));
-  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic, user.topPulls, balance]);
+  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic, user.topPulls]);
 
   useEffect(() => {
     const itemsRef = collection(db, 'items');
