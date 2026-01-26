@@ -613,7 +613,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser((prev) => ({
           ...prev,
           ...profile,
-          balance: resolvedBalance
+          balance: resolvedBalance,
+          topPulls: hasInventorySubcollectionRef.current ? prev.topPulls : profile.topPulls
         }));
         setBalance(resolvedBalance);
         if (!hasInventorySubcollectionRef.current && Array.isArray(data.inventory)) {
@@ -676,19 +677,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const needsLastChatUpdate = latestUser.lastChatAt !== undefined && latestUser.lastChatAt !== user.lastChatAt;
     const nextTopPullsPublic = latestUser.topPullsPublic ?? false;
     const needsTopPullsPublicUpdate = nextTopPullsPublic !== (user.topPullsPublic ?? false);
-    const nextTopPulls = normalizeInventoryItems(latestUser.topPulls);
-    const needsTopPullsUpdate = inventorySignature(nextTopPulls) !== inventorySignature(normalizeInventoryItems(user.topPulls));
-
-    if (!needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate && !needsTopPullsUpdate) return;
+    if (!needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate) return;
 
     const updates: Partial<User> = {};
     if (needsCreatedAtUpdate) updates.createdAt = latestUser.createdAt;
     if (needsLastChatUpdate) updates.lastChatAt = latestUser.lastChatAt;
     if (needsTopPullsPublicUpdate) updates.topPullsPublic = nextTopPullsPublic;
-    if (needsTopPullsUpdate) updates.topPulls = nextTopPulls;
 
     setUser((prev) => ({ ...prev, ...updates }));
-  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic, user.topPulls]);
+  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic]);
 
   useEffect(() => {
     const itemsRef = collection(db, 'items');
