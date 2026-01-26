@@ -474,7 +474,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                           <div>
                               <div className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-400/80 mb-1">Daily Free Case Available</div>
                               <h4 className="text-lg font-bold text-white">Open your daily case</h4>
-                              <p className="text-sm text-gray-400 mt-1">Daily box ID: <span className="text-yellow-200 font-semibold">{dailyBox.id}</span></p>
                           </div>
                           <button
                               onClick={() => setView({ type: 'CASE_OPENING', boxId: dailyBox.id, isFree: true })}
