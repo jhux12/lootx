@@ -24,6 +24,15 @@ export const BoxGrid: React.FC = () => {
         <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
           <Boxes className="w-5 h-5 text-sky-400" /> Popular Mystery Boxes
         </h3>
+        <button
+          className="w-full sm:w-auto px-4 py-2 bg-brand-card hover:bg-gray-700 rounded-lg text-sm font-bold text-gray-300 transition-colors"
+          onClick={() => {
+            playSound('click');
+            setView({ type: 'BOXES' });
+          }}
+        >
+          View all
+        </button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -51,15 +60,6 @@ export const BoxGrid: React.FC = () => {
             View more
           </button>
         )}
-        <button
-          className="px-4 py-2 bg-brand-card hover:bg-gray-700 rounded-lg text-sm font-bold text-gray-300 transition-colors"
-          onClick={() => {
-            playSound('click');
-            setView({ type: 'BOXES' });
-          }}
-        >
-          View all
-        </button>
       </div>
       <div className="mt-6 w-full">
         <button
