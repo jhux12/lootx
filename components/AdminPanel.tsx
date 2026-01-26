@@ -54,6 +54,7 @@ export const AdminPanel: React.FC = () => {
     sendAdminNotification,
     updateShipmentStatus,
     updateUserAdminData,
+    updateUserBalance,
     bonusSettings,
     updateBonusSettings
   } = useGame();
@@ -108,6 +109,16 @@ export const AdminPanel: React.FC = () => {
   const [timelineSearch, setTimelineSearch] = useState('');
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
   const [bonusSaveNotice, setBonusSaveNotice] = useState(false);
+  const [isEditingBalance, setIsEditingBalance] = useState(false);
+  const [balanceDraft, setBalanceDraft] = useState('');
+  const [isEditingInventory, setIsEditingInventory] = useState(false);
+  const [inventoryDraft, setInventoryDraft] = useState({
+      name: '',
+      price: '',
+      image: '',
+      rarity: 'common',
+      status: 'available'
+  });
   const EV_TOLERANCE = 0.01;
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
@@ -407,6 +418,103 @@ export const AdminPanel: React.FC = () => {
           void updateUserAdminData(targetUserId, { inventory: nextItems });
           return { ...prev, [targetUserId]: nextItems };
       });
+  };
+
+  const startBalanceEdit = () => {
+      if (!selectedUser) return;
+      setBalanceDraft(String(selectedUser.balance ?? 0));
+      setIsEditingBalance(true);
+  };
+
+  const cancelBalanceEdit = () => {
+      setIsEditingBalance(false);
+      setBalanceDraft('');
+  };
+
+  const saveBalanceEdit = async () => {
+      if (!selectedUser) return;
+      const nextBalance = Number(balanceDraft);
+      if (!Number.isFinite(nextBalance)) return;
+      const previousBalance = selectedUser.balance ?? 0;
+      await updateUserBalance(selectedUser.id, nextBalance);
+      const delta = nextBalance - previousBalance;
+      if (delta !== 0) {
+          appendLedgerEntry(selectedUser.id, {
+              id: makeId('ledger'),
+              userId: selectedUser.id,
+              type: 'admin_adjustment',
+              amount: delta,
+              createdAt: Date.now(),
+              sourceId: `admin-balance-${selectedUser.id.slice(0, 6)}`,
+              memo: 'Admin balance edit'
+          });
+      }
+      logAdminAction(
+          selectedUser.id,
+          'balance_update',
+          { balance: previousBalance },
+          { balance: nextBalance },
+          'Updated user balance'
+      );
+      setIsEditingBalance(false);
+      setBalanceDraft('');
+  };
+
+  const handleAddInventoryItem = () => {
+      if (!selectedUserId) return;
+      const name = inventoryDraft.name.trim();
+      const price = Number(inventoryDraft.price);
+      if (!name || !Number.isFinite(price)) return;
+      const rarity = inventoryDraft.rarity as InventoryItem['rarity'];
+      const now = Date.now();
+      const newItem: InventoryItem = {
+          id: makeId('inv'),
+          instanceId: makeId('inv-instance'),
+          name,
+          price,
+          image: inventoryDraft.image.trim() || 'https://picsum.photos/200',
+          rarity,
+          chance: 0,
+          color: rarityColorMap[rarity] ?? '#9ca3af',
+          obtainedAt: now,
+          status: inventoryDraft.status as InventoryItem['status'],
+          locked: false,
+          history: [
+              {
+                  id: makeId('history'),
+                  action: 'added',
+                  createdAt: now,
+                  note: 'Added by admin',
+                  adminUid: adminUser?.id ?? 'admin'
+              }
+          ]
+      };
+      updateInventoryRecords(selectedUserId, (items) => [newItem, ...items]);
+      logAdminAction(
+          selectedUserId,
+          'inventory_add',
+          {},
+          { instanceId: newItem.instanceId, name: newItem.name, price: newItem.price },
+          'Added inventory item'
+      );
+      setInventoryDraft({
+          name: '',
+          price: '',
+          image: '',
+          rarity: 'common',
+          status: 'available'
+      });
+  };
+
+  const handleRemoveInventoryItem = (targetUserId: string, instanceId: string) => {
+      updateInventoryRecords(targetUserId, (items) => items.filter((item) => item.instanceId !== instanceId));
+      logAdminAction(
+          targetUserId,
+          'inventory_remove',
+          { instanceId },
+          { instanceId },
+          'Removed inventory item'
+      );
   };
 
   const logAdminAction = (targetUserId: string, actionType: string, before: Record<string, unknown>, after: Record<string, unknown>, reason: string) => {
@@ -1498,7 +1606,48 @@ export const AdminPanel: React.FC = () => {
                                             Ledger entries: <span className="text-gray-200 font-semibold">{selectedLedgerEntries.length}</span>
                                         </span>
                                     </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            onClick={startBalanceEdit}
+                                            className="px-3 py-2 rounded-lg bg-green-500/10 text-green-300 text-xs font-semibold"
+                                        >
+                                            Edit Balance
+                                        </button>
+                                        <button
+                                            onClick={() => setIsEditingInventory((prev) => !prev)}
+                                            className="px-3 py-2 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-semibold"
+                                        >
+                                            {isEditingInventory ? 'Done Editing Inventory' : 'Edit Inventory'}
+                                        </button>
+                                    </div>
                                 </div>
+                                {isEditingBalance && (
+                                    <div className="mt-4 bg-[#0b0e14] border border-gray-800 rounded-lg p-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+                                        <div className="flex-1">
+                                            <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Set Coin Balance</label>
+                                            <input
+                                                type="number"
+                                                value={balanceDraft}
+                                                onChange={(event) => setBalanceDraft(event.target.value)}
+                                                className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                            />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={saveBalanceEdit}
+                                                className="px-3 py-2 rounded-lg bg-green-500/20 text-green-300 text-xs font-semibold"
+                                            >
+                                                Save Balance
+                                            </button>
+                                            <button
+                                                onClick={cancelBalanceEdit}
+                                                className="px-3 py-2 rounded-lg bg-gray-700/40 text-gray-200 text-xs font-semibold"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -1692,6 +1841,70 @@ export const AdminPanel: React.FC = () => {
                                             <Package className="w-4 h-4 text-blue-400" />
                                             <h3 className="text-sm font-bold text-white">Inventory Locks & Provenance</h3>
                                         </div>
+                                        {isEditingInventory && (
+                                            <div className="mb-4 bg-[#0b0e14] border border-gray-800 rounded-lg p-4 space-y-3">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Item name</label>
+                                                        <input
+                                                            type="text"
+                                                            value={inventoryDraft.name}
+                                                            onChange={(event) => setInventoryDraft((prev) => ({ ...prev, name: event.target.value }))}
+                                                            className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Value</label>
+                                                        <input
+                                                            type="number"
+                                                            value={inventoryDraft.price}
+                                                            onChange={(event) => setInventoryDraft((prev) => ({ ...prev, price: event.target.value }))}
+                                                            className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Image URL</label>
+                                                        <input
+                                                            type="text"
+                                                            value={inventoryDraft.image}
+                                                            onChange={(event) => setInventoryDraft((prev) => ({ ...prev, image: event.target.value }))}
+                                                            className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Rarity</label>
+                                                        <select
+                                                            value={inventoryDraft.rarity}
+                                                            onChange={(event) => setInventoryDraft((prev) => ({ ...prev, rarity: event.target.value }))}
+                                                            className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                                        >
+                                                            {rarityColorOptions.map((option) => (
+                                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Status</label>
+                                                        <select
+                                                            value={inventoryDraft.status}
+                                                            onChange={(event) => setInventoryDraft((prev) => ({ ...prev, status: event.target.value }))}
+                                                            className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                                        >
+                                                            <option value="available">Available</option>
+                                                            <option value="shipping_requested">Shipping requested</option>
+                                                            <option value="shipping">Shipping</option>
+                                                            <option value="shipped">Shipped</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={handleAddInventoryItem}
+                                                    className="w-full sm:w-auto px-3 py-2 rounded-lg bg-blue-500/20 text-blue-300 text-xs font-semibold"
+                                                >
+                                                    Add inventory item
+                                                </button>
+                                            </div>
+                                        )}
                                         <div className="space-y-3">
                                             {selectedInventory.length === 0 ? (
                                                 <div className="text-sm text-gray-500">No inventory items available.</div>
@@ -1719,6 +1932,14 @@ export const AdminPanel: React.FC = () => {
                                                             >
                                                                 {item.locked ? 'Unlock' : 'Lock'}
                                                             </button>
+                                                            {isEditingInventory && (
+                                                                <button
+                                                                    onClick={() => handleRemoveInventoryItem(selectedUser.id, item.instanceId)}
+                                                                    className="px-3 py-2 rounded-lg text-xs font-bold uppercase bg-red-500/20 text-red-300"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            )}
                                                             <div className="text-[10px] text-gray-500">
                                                                 {(item.history ?? []).slice(0, 2).map((history) => (
                                                                     <div key={history.id}>
