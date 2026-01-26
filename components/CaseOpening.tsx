@@ -60,7 +60,7 @@ const deriveRollValue = (hash: string) => {
 
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
-  const { user, addInventoryItemFromServer, syncBalance, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily, awardCaseOpenXp } = useGame();
+  const { user, addInventoryItemFromServer, syncBalance, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily, awardCaseOpenXp, registerSpend } = useGame();
   const { playSound } = useSound();
   
   const matchedBox = boxes.find(b => b.id === boxId);
@@ -340,6 +340,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         // Server now authoritatively selects the prize + updates coins/inventory.
         const data = await authedFetch<{
           ok: boolean;
+          price: number;
           prize: CaseItem & { price?: number };
           newCoins: number;
           inventoryId: string;
@@ -378,6 +379,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         addInventoryItemFromServer(inventoryItem);
         syncBalance(Number(data.newCoins ?? 0));
+        if (!isFree) {
+          const spentAmount = Number(data.price ?? box?.price ?? 0);
+          registerSpend(spentAmount);
+        }
         setWonInventoryItem(inventoryItem);
         awardCaseOpenXp();
 
