@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks } from '../types';
 import { CASE_ITEMS } from '../constants';
-import { auth, db } from '../firebase';
+import { auth, db, rtdb } from '../firebase';
+import { authedFetch } from '../utils/authedFetch';
 import { 
   User as FirebaseUser,
   onAuthStateChanged,
@@ -10,6 +11,7 @@ import {
   sendPasswordResetEmail,
   signOut
 } from 'firebase/auth';
+import { onValue, ref as rtdbRef } from 'firebase/database';
 import { 
   addDoc,
   collection,
@@ -59,6 +61,37 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
       color: typed.color ?? '#9ca3af'
     };
   });
+};
+
+const normalizeInventoryFromRtdb = (invObj: Record<string, unknown> | null | undefined): InventoryItem[] => {
+  if (!invObj || typeof invObj !== 'object') return [];
+
+  return Object.entries(invObj)
+    .map(([inventoryId, rawItem]) => {
+      const item = (rawItem ?? {}) as Partial<InventoryItem> & { value?: number };
+      const obtainedAt = Number(item.obtainedAt ?? 0);
+      const price = Number(item.value ?? item.price ?? 0);
+      const rarity = (item.rarity ?? 'common') as InventoryItem['rarity'];
+      const status = (item.status ?? 'available') as InventoryItem['status'];
+
+      return {
+        id: item.id ?? inventoryId,
+        instanceId: inventoryId,
+        name: item.name ?? 'Mystery Item',
+        price,
+        image: item.image ?? 'https://picsum.photos/200',
+        rarity,
+        chance: Number(item.chance ?? 0),
+        color: item.color ?? '#9ca3af',
+        status,
+        obtainedAt,
+        trackingNumber: item.trackingNumber,
+        locked: item.locked,
+        provenance: item.provenance,
+        history: item.history
+      };
+    })
+    .sort((a, b) => b.obtainedAt - a.obtainedAt);
 };
 
 const inventorySignature = (items: InventoryItem[]) =>
@@ -595,7 +628,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
+    let coinsUnsubscribe: (() => void) | null = null;
+    let inventoryUnsubscribe: (() => void) | null = null;
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (coinsUnsubscribe) {
+        coinsUnsubscribe();
+        coinsUnsubscribe = null;
+      }
+      if (inventoryUnsubscribe) {
+        inventoryUnsubscribe();
+        inventoryUnsubscribe = null;
+      }
       if (!firebaseUser) {
         setIsAuthenticated(false);
         setUser(GUEST_USER);
@@ -609,14 +652,41 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const profile = await loadUserFromFirestore(firebaseUser);
         setUser((prev) => ({ ...prev, ...profile.user, topPulls: profile.topPulls }));
-        setBalance(profile.balance);
-        setInventory(profile.inventory);
       } catch (error) {
         console.error('Failed to load user from Firebase', error);
       }
+
+      const uid = firebaseUser.uid;
+      coinsUnsubscribe = onValue(
+        rtdbRef(rtdb, `users/${uid}/coins`),
+        (snapshot) => {
+          const coins = Number(snapshot.val() ?? 0);
+          setBalance(coins);
+          setUser((prev) => ({ ...prev, balance: coins }));
+        },
+        (error) => {
+          console.error('Failed to load RTDB coins', error);
+        }
+      );
+
+      inventoryUnsubscribe = onValue(
+        rtdbRef(rtdb, `users/${uid}/inventory`),
+        (snapshot) => {
+          const normalizedInventory = normalizeInventoryFromRtdb(snapshot.val());
+          setInventory(normalizedInventory);
+          setUser((prev) => ({ ...prev, topPulls: rankTopPullsByValue(normalizedInventory) }));
+        },
+        (error) => {
+          console.error('Failed to load RTDB inventory', error);
+        }
+      );
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (coinsUnsubscribe) coinsUnsubscribe();
+      if (inventoryUnsubscribe) inventoryUnsubscribe();
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -681,8 +751,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const latestUser = users.find((entry) => entry.id === user.id);
     if (!latestUser) return;
 
-    const nextBalance = Number(latestUser.balance ?? 0);
-    const needsBalanceUpdate = nextBalance !== balance;
     const needsCreatedAtUpdate = !user.createdAt && !!latestUser.createdAt;
     const needsLastChatUpdate = latestUser.lastChatAt !== undefined && latestUser.lastChatAt !== user.lastChatAt;
     const nextTopPullsPublic = latestUser.topPullsPublic ?? false;
@@ -690,21 +758,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const nextTopPulls = normalizeInventoryItems(latestUser.topPulls);
     const needsTopPullsUpdate = inventorySignature(nextTopPulls) !== inventorySignature(normalizeInventoryItems(user.topPulls));
 
-    if (!needsBalanceUpdate && !needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate && !needsTopPullsUpdate) return;
-
-    if (needsBalanceUpdate) {
-      setBalance(nextBalance);
-    }
+    if (!needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate && !needsTopPullsUpdate) return;
 
     const updates: Partial<User> = {};
-    if (needsBalanceUpdate) updates.balance = nextBalance;
     if (needsCreatedAtUpdate) updates.createdAt = latestUser.createdAt;
     if (needsLastChatUpdate) updates.lastChatAt = latestUser.lastChatAt;
     if (needsTopPullsPublicUpdate) updates.topPullsPublic = nextTopPullsPublic;
     if (needsTopPullsUpdate) updates.topPulls = nextTopPulls;
 
     setUser((prev) => ({ ...prev, ...updates }));
-  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic, user.topPulls, balance]);
+  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic, user.topPulls]);
 
   useEffect(() => {
     const itemsRef = collection(db, 'items');
@@ -1000,7 +1063,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addBalance = async (amount: number) => {
     setBalance(prev => {
       const updated = prev + amount;
-      persistUserData({ balance: updated });
       return updated;
     }); 
   };
@@ -1015,7 +1077,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (balance >= amount) {
       setBalance(prev => {
         const updated = prev - amount;
-        persistUserData({ balance: updated });
         return updated;
       });
       if (options?.trackRewards !== false) {
@@ -1040,7 +1101,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setUser(current => ({ ...current, topPulls: nextTopPulls }));
       setUsers(current => current.map(u => u.id === auth.currentUser?.uid ? { ...u, topPulls: nextTopPulls } : u));
-      persistUserData({ inventory: nextInventory, topPulls: nextTopPulls });
 
       return nextInventory;
     });
@@ -1168,24 +1228,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
-      const token = await auth.currentUser.getIdToken();
-      const response = await fetch('/api/sell-item', {
+      console.log('Selling inventory item', { inventoryId: instanceId });
+      const data = await authedFetch('/api/sell-item', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify({ inventoryId: instanceId })
       });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || 'Sell back failed');
-      }
-
-      const data = await response.json();
-      setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
-      syncBalance(Number(data.newCoins ?? balance));
+      console.log('Sell item response', data);
     } catch (error) {
       console.error('Failed to sell item', error);
       alert('Unable to sell item right now. Please try again.');
@@ -1193,21 +1241,35 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const shipItem = async (instanceId: string) => {
-    const itemToShip = inventory.find(item => item.instanceId === instanceId);
-    setInventory(prev => {
-      const updated = prev.map(item => 
-        item.instanceId === instanceId 
-        ? { ...item, status: 'shipping' }
-        : item
-      );
-      persistUserData({ inventory: updated });
-      return updated;
-    });
-    if (itemToShip) {
-      addNotification({
-        message: `${itemToShip.name} is now shipping to your saved address.`,
-        type: 'shipping'
+    if (!auth.currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    const shippingAddress = user.shippingAddress;
+    if (!shippingAddress) {
+      alert('Please add a shipping address before requesting shipment.');
+      return;
+    }
+
+    try {
+      console.log('Requesting shipment', { inventoryId: instanceId });
+      const data = await authedFetch('/api/request-shipment', {
+        method: 'POST',
+        body: JSON.stringify({ inventoryId: instanceId, address: shippingAddress })
       });
+      console.log('Request shipment response', data);
+
+      const itemToShip = inventory.find(item => item.instanceId === instanceId);
+      if (itemToShip) {
+        addNotification({
+          message: `${itemToShip.name} is now shipping to your saved address.`,
+          type: 'shipping'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to request shipment', error);
+      alert('Unable to request shipment right now. Please try again.');
     }
   };
 
