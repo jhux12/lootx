@@ -45,7 +45,7 @@ export default async function handler(req, res) {
 
       const boxData = boxSnap.data() ?? {};
       const price = Number(boxData.price ?? 0);
-      const prizes = Array.isArray(boxData.prizes) ? boxData.prizes : [];
+      const prizes = Array.isArray(boxData.items) ? boxData.items : (Array.isArray(boxData.prizes) ? boxData.prizes : []);
       if (!prizes.length) {
         throw { status: 400, error: 'Box has no prizes', boxId };
       }

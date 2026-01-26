@@ -433,7 +433,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
 const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
   const data = docSnap.data() as Record<string, any>;
   const rarity = (data.rarity ?? 'common') as InventoryItem['rarity'];
-  const value = Number(data.value ?? 0);
+  const value = Number(data.value ?? data.price ?? 0);
   const obtainedAt = normalizeTimestamp(data.obtainedAt, Date.now());
   const status = (data.status ?? 'available') as InventoryItem['status'];
 
@@ -692,7 +692,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const firebaseBoxes = snapshot.docs
         .map((docSnap) => {
           const data = docSnap.data();
-          const items = Array.isArray(data.prizes) ? data.prizes.map((item: any, index: number) => {
+          const prizeSource = Array.isArray(data.items) ? data.items : data.prizes;
+          const items = Array.isArray(prizeSource) ? prizeSource.map((item: any, index: number) => {
             const rarity = (item.rarity ?? 'common') as CaseItem['rarity'];
             const price = Number(item.value ?? item.price ?? 0);
             return {
