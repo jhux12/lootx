@@ -1,4 +1,4 @@
-import { adminAuth, rtdb } from './_lib/firebaseAdmin.js';
+import { adminAuth, rtdb, adminDb } from './_lib/firebaseAdmin.js';
 import { computeRoll, pickPrizeByWeight } from './_lib/provablyFair.js';
 import { ensureProvablyFairState } from './_lib/provablyFairState.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
@@ -23,7 +23,20 @@ export default async function handler(req, res) {
     }
 
     const caseSnap = await rtdb.ref(`cases/${caseId}`).get();
-    const caseData = caseSnap.val();
+    let caseData = caseSnap.val();
+
+    if (!caseData) {
+      const boxSnap = await adminDb.collection('boxes').doc(caseId).get();
+      if (boxSnap.exists) {
+        const boxData = boxSnap.data() ?? {};
+        caseData = {
+          price: boxData.price ?? 0,
+          prizes: Array.isArray(boxData.items) ? boxData.items : [],
+          isUserCreated: boxData.isUserCreated ?? false
+        };
+      }
+    }
+
     if (!caseData) {
       return sendJson(res, 404, { error: 'Case not found' });
     }

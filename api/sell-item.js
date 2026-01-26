@@ -1,4 +1,4 @@
-import { adminAuth, rtdb } from './_lib/firebaseAdmin.js';
+import { adminAuth, rtdb, adminDb } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 
 const getSellBackValue = (price, rate) => {
@@ -38,8 +38,17 @@ export default async function handler(req, res) {
 
     let sellBackRate = 0.82;
     if (inventoryItem.provenance?.sourceType === 'case_open' && inventoryItem.provenance?.sourceId) {
-      const caseSnap = await rtdb.ref(`cases/${inventoryItem.provenance.sourceId}`).get();
-      const caseData = caseSnap.val();
+      const caseId = inventoryItem.provenance.sourceId;
+      const caseSnap = await rtdb.ref(`cases/${caseId}`).get();
+      let caseData = caseSnap.val();
+
+      if (!caseData) {
+        const boxSnap = await adminDb.collection('boxes').doc(caseId).get();
+        if (boxSnap.exists) {
+          caseData = boxSnap.data() ?? {};
+        }
+      }
+
       if (caseData?.isUserCreated) {
         sellBackRate = 0.75;
       }
