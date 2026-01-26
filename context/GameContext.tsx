@@ -666,7 +666,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!latestUser) return;
 
     const nextBalance = Number(latestUser.balance ?? 0);
-    const needsBalanceUpdate = nextBalance !== balance;
+    const pendingBalance = pendingBalanceRef.current;
+    const resolvedBalance = pendingBalance !== null && nextBalance < pendingBalance
+      ? pendingBalance
+      : nextBalance;
+    const needsBalanceUpdate = resolvedBalance !== balance;
     const needsCreatedAtUpdate = !user.createdAt && !!latestUser.createdAt;
     const needsLastChatUpdate = latestUser.lastChatAt !== undefined && latestUser.lastChatAt !== user.lastChatAt;
     const nextTopPullsPublic = latestUser.topPullsPublic ?? false;
@@ -677,11 +681,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!needsBalanceUpdate && !needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate && !needsTopPullsUpdate) return;
 
     if (needsBalanceUpdate) {
-      setBalance(nextBalance);
+      setBalance(resolvedBalance);
     }
 
     const updates: Partial<User> = {};
-    if (needsBalanceUpdate) updates.balance = nextBalance;
+    if (needsBalanceUpdate) updates.balance = resolvedBalance;
     if (needsCreatedAtUpdate) updates.createdAt = latestUser.createdAt;
     if (needsLastChatUpdate) updates.lastChatAt = latestUser.lastChatAt;
     if (needsTopPullsPublicUpdate) updates.topPullsPublic = nextTopPullsPublic;
@@ -1152,7 +1156,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    const itemToSell = inventory.find((item) => item.instanceId === instanceId);
+    const itemIndex = inventory.findIndex((item) => item.instanceId === instanceId);
+    const itemToSell = itemIndex >= 0 ? inventory[itemIndex] : undefined;
     try {
       pendingSoldIdsRef.current.add(instanceId);
       setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
@@ -1169,7 +1174,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       pendingSoldIdsRef.current.delete(instanceId);
       if (itemToSell) {
-        setInventory((prev) => [itemToSell, ...prev]);
+        setInventory((prev) => {
+          const next = [...prev];
+          const insertAt = Math.min(Math.max(itemIndex, 0), next.length);
+          next.splice(insertAt, 0, itemToSell);
+          return next;
+        });
       }
       console.error('Failed to sell item', error);
       alert('Unable to sell item right now. Please try again.');
