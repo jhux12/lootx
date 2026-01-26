@@ -282,11 +282,13 @@ interface GameContextType {
   setShowTopUpModal: (show: boolean) => void;
   setView: (view: ViewState) => void;
   addBalance: (amount: number) => void;
+  syncBalance: (amount: number) => void;
   deductBalance: (amount: number, options?: { trackRewards?: boolean }) => boolean;
   addToInventory: (item: CaseItem, provenance?: InventoryProvenance) => InventoryItem;
+  addInventoryItemFromServer: (item: InventoryItem) => void;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
-  sellItem: (instanceId: string, value: number) => void;
+  sellItem: (instanceId: string) => Promise<void>;
   shipItem: (instanceId: string) => void;
   updateAddress: (address: ShippingAddress) => void;
   updateUserInfo: (name: string, avatar: string) => Promise<void>;
@@ -1003,6 +1005,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }); 
   };
 
+  // Server-authoritative balance updates (no client-side persistence).
+  const syncBalance = (amount: number) => {
+    setBalance(amount);
+    setUser(prev => ({ ...prev, balance: amount }));
+  };
+
   const deductBalance = (amount: number, options?: { trackRewards?: boolean }): boolean => {
     if (balance >= amount) {
       setBalance(prev => {
@@ -1037,6 +1045,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return nextInventory;
     });
     return newItem;
+  };
+
+  // Inventory updates from serverless APIs (avoid client-side writes).
+  const addInventoryItemFromServer = (item: InventoryItem) => {
+    setInventory(prev => {
+      const nextInventory = [item, ...prev];
+      const nextTopPulls = rankTopPullsByValue(nextInventory);
+
+      setUser(current => ({ ...current, topPulls: nextTopPulls }));
+      setUsers(current => current.map(u => u.id === auth.currentUser?.uid ? { ...u, topPulls: nextTopPulls } : u));
+
+      return nextInventory;
+    });
   };
 
   const addNotification = (
@@ -1140,18 +1161,34 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
   };
 
-  const sellItem = async (instanceId: string, value: number) => {
-    let soldItem = false;
-    setInventory(prev => {
-      const itemToSell = prev.find(i => i.instanceId === instanceId);
-      if (!itemToSell) return prev;
-      soldItem = true;
-      const updated = prev.filter(item => item.instanceId !== instanceId);
-      persistUserData({ inventory: updated });
-      return updated;
-    });
-    if (soldItem) {
-      addBalance(value);
+  const sellItem = async (instanceId: string) => {
+    if (!auth.currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/sell-item', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ inventoryId: instanceId })
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || 'Sell back failed');
+      }
+
+      const data = await response.json();
+      setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
+      syncBalance(Number(data.newCoins ?? balance));
+    } catch (error) {
+      console.error('Failed to sell item', error);
+      alert('Unable to sell item right now. Please try again.');
     }
   };
 
@@ -1569,8 +1606,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setShowTopUpModal,
       setView,
       addBalance,
+      syncBalance,
       deductBalance,
       addToInventory,
+      addInventoryItemFromServer,
       followUser,
       unfollowUser,
       sellItem,

@@ -586,8 +586,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                                     sellOfferTimersRef.current[item.instanceId] = timerId;
                                                     return;
                                                   }
-                                                  const sellBackPrice = getSellBackValue(item.price, getSellBackRate(item));
-                                                  sellItem(item.instanceId, sellBackPrice);
+                                                  sellItem(item.instanceId);
                                                   if (sellOfferTimersRef.current[item.instanceId]) {
                                                     window.clearTimeout(sellOfferTimersRef.current[item.instanceId]);
                                                     delete sellOfferTimersRef.current[item.instanceId];
