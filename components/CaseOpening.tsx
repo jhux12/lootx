@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, Zap, Volume2, Info, Plus, X, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, Zap, Volume2, Info, Plus, X, ShieldCheck, RefreshCcw } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -7,6 +7,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getRiskLabel } from '../utils/caseOdds';
 import { getSellBackValue } from '../utils/sellBack';
+import { auth } from '../firebase';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -15,54 +16,39 @@ interface CaseOpeningProps {
 
 interface RollData {
   nonce: number;
-  rollHash: string;
   rollValue: number;
-  combinedSeed: string;
+  serverSeedHash: string;
+  clientSeed: string;
   outcome?: string;
+}
+
+interface RevealData {
+  serverSeed: string;
+  serverSeedHash: string;
+  rotatedAt: number;
 }
 
 const CARD_WIDTH = 160;
 const GAP_WIDTH = 16;
 const ITEM_WIDTH = CARD_WIDTH + GAP_WIDTH;
 const BUFFER_COUNT = 45; // Items before winner
-const toHex = (buffer: ArrayBuffer) =>
-  Array.from(new Uint8Array(buffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-
-const hashString = async (value: string) => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(value);
-  if (typeof crypto === 'undefined' || !crypto.subtle) {
-    const fallback = data.reduce((acc, byte, idx) => acc + byte * (idx + 1), 0);
-    return fallback.toString(16).padStart(64, '0').slice(0, 64);
+const getRarityColor = (rarity: CaseItem['rarity']) => {
+  switch (rarity) {
+    case 'legendary':
+      return '#facc15';
+    case 'epic':
+      return '#c084fc';
+    case 'rare':
+      return '#38bdf8';
+    case 'uncommon':
+      return '#4ade80';
+    default:
+      return '#9ca3af';
   }
-
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return toHex(hashBuffer);
-};
-
-const deriveRollValue = (hash: string) => {
-  const significantPart = hash.slice(0, 13); // 52 bits
-  const intValue = parseInt(significantPart, 16);
-  return intValue / 0x10000000000000; // 2^52
-};
-
-const generateServerSeed = () => {
-  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
-    const bytes = new Uint32Array(8);
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes).map((b) => b.toString(16).padStart(8, '0')).join('');
-  }
-
-  return Array.from({ length: 8 })
-    .map(() => Math.random().toString(16).slice(2, 10))
-    .join('')
-    .slice(0, 64);
 };
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
-  const { user, balance, deductBalance, addToInventory, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily, awardCaseOpenXp } = useGame();
+  const { user, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily, syncBalance, syncInventoryItem } = useGame();
   const { playSound } = useSound();
   
   const matchedBox = boxes.find(b => b.id === boxId);
@@ -92,12 +78,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [sellOfferGenerated, setSellOfferGenerated] = useState(false);
   const [isGeneratingSellOffer, setIsGeneratingSellOffer] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
-  const [serverSeed, setServerSeed] = useState('');
   const [serverSeedHash, setServerSeedHash] = useState('');
   const [clientSeed, setClientSeed] = useState('lootx-player');
   const [nonce, setNonce] = useState(0);
   const [lastRoll, setLastRoll] = useState<RollData | null>(null);
   const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
+  const [lastReveal, setLastReveal] = useState<RevealData | null>(null);
+  const [isSeedSaving, setIsSeedSaving] = useState(false);
+  const [seedSaveMessage, setSeedSaveMessage] = useState('');
   const [showFairModal, setShowFairModal] = useState(false);
   const [fairTab, setFairTab] = useState<'active' | 'verify'>('active');
   const [showFairTooltip, setShowFairTooltip] = useState(false);
@@ -106,71 +94,103 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
   
-  const nonceRef = useRef(nonce);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sellOfferTimerRef = useRef<number | null>(null);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
 
-  const setNewServerSeed = useCallback(async (seedOverride?: string) => {
+  const fetchProvablyFairState = useCallback(async () => {
+    if (!auth.currentUser) return;
+    const token = await auth.currentUser.getIdToken();
+    const response = await fetch('/api/provably-fair', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (!response.ok) {
+      throw new Error('Failed to load provably fair state.');
+    }
+    const data = await response.json();
+    setServerSeedHash(data.serverSeedHash ?? '');
+    setClientSeed(data.clientSeed ?? 'lootx-player');
+    setNonce(Number(data.nonce ?? 0));
+  }, []);
+
+  const rotateServerSeed = useCallback(async () => {
+    if (!auth.currentUser) return;
     setIsGeneratingSeed(true);
-    const nextSeed = seedOverride || generateServerSeed();
-
     try {
-      const hash = await hashString(nextSeed);
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/provably-fair/rotate', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-      setServerSeed(nextSeed);
-      setServerSeedHash(hash);
-      nonceRef.current = 0;
-      setNonce(0);
+      if (!response.ok) {
+        throw new Error('Unable to rotate server seed.');
+      }
+
+      const data = await response.json();
+      if (data.revealed) {
+        setLastReveal(data.revealed);
+      }
+      if (data.current) {
+        setServerSeedHash(data.current.serverSeedHash ?? '');
+        setClientSeed(data.current.clientSeed ?? 'lootx-player');
+        setNonce(Number(data.current.nonce ?? 0));
+      }
       setLastRoll(null);
-
-      return nextSeed;
     } finally {
       setIsGeneratingSeed(false);
     }
   }, []);
 
-  const ensureSeedReady = useCallback(async (): Promise<string> => {
-    if (!serverSeed) {
-      return setNewServerSeed();
+  const saveClientSeed = useCallback(async () => {
+    if (!auth.currentUser) return;
+    setIsSeedSaving(true);
+    setSeedSaveMessage('');
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/provably-fair/client-seed', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ clientSeed })
+      });
+
+      if (!response.ok) {
+        throw new Error('Unable to update client seed.');
+      }
+
+      const data = await response.json();
+      setClientSeed(data.clientSeed ?? clientSeed);
+      setNonce(Number(data.nonce ?? 0));
+      setServerSeedHash(data.serverSeedHash ?? serverSeedHash);
+      setSeedSaveMessage('Client seed updated (nonce reset).');
+    } catch (error) {
+      setSeedSaveMessage('Unable to save client seed.');
+      console.error(error);
+    } finally {
+      setIsSeedSaving(false);
     }
-
-    if (!serverSeedHash) {
-      const hash = await hashString(serverSeed);
-      setServerSeedHash(hash);
-    }
-
-    return serverSeed;
-  }, [serverSeed, serverSeedHash, setNewServerSeed]);
-
-  const getNextFairRoll = useCallback(async ({ incrementNonce = true }: { incrementNonce?: boolean } = {}): Promise<RollData> => {
-    const activeSeed = await ensureSeedReady();
-    const currentNonce = nonceRef.current;
-    const combinedSeed = `${activeSeed}:${clientSeed}:${currentNonce}`;
-    const rollHash = await hashString(combinedSeed);
-    const rollValue = deriveRollValue(rollHash);
-
-    if (incrementNonce) {
-      const nextNonce = currentNonce + 1;
-      nonceRef.current = nextNonce;
-      setNonce(nextNonce);
-    }
-
-    return {
-      nonce: currentNonce,
-      rollHash,
-      rollValue,
-      combinedSeed
-    };
-  }, [clientSeed, ensureSeedReady]);
-  
-  useEffect(() => {
-    nonceRef.current = nonce;
-  }, [nonce]);
+  }, [clientSeed, serverSeedHash]);
 
   useEffect(() => {
-    ensureSeedReady();
-  }, [ensureSeedReady]);
+    if (!isAuthenticated) {
+      setServerSeedHash('');
+      setClientSeed('lootx-player');
+      setNonce(0);
+      return;
+    }
+
+    fetchProvablyFairState().catch((error) => {
+      console.error(error);
+    });
+  }, [fetchProvablyFairState, isAuthenticated]);
 
   useEffect(() => () => {
     if (sellOfferTimerRef.current) {
@@ -292,11 +312,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       claimDaily();
     }
     
-    if (!isDemo && !isFree && !deductBalance(box.price)) {
-        alert("Insufficient coins! Click the + button in header to add test coins.");
-        return;
-    }
-
     setIsSpinning(true);
     setShowWinModal(false);
     setIsGoldMode(false);
@@ -305,31 +320,101 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setRewardResolved(false);
     setSellOfferGenerated(false);
     playSound('click');
-    
-    // 1. Determine final winner
-    const winningRoll = await getNextFairRoll();
-    const legendaryPool = items.filter((item) => item.rarity === 'legendary');
-    let winner = getWinningItem(winningRoll.rollValue);
 
-    if (forceGold && legendaryPool.length > 0) {
-      winner = legendaryPool[Math.floor(winningRoll.rollValue * legendaryPool.length)];
+    const legendaryPool = items.filter((item) => item.rarity === 'legendary');
+    let winner: CaseItem | null = null;
+    let triggerGold = false;
+
+    if (isDemo) {
+      const rollValue = Math.random();
+      const demoWinner = getWinningItem(rollValue);
+      winner = demoWinner;
+      triggerGold = demoWinner.rarity === 'legendary' && (forceGold || Math.random() < 0.5);
+    } else {
+      try {
+        if (!auth.currentUser) {
+          throw new Error('Please sign in to open a case.');
+        }
+
+        // Server-side open handles coins, inventory, and prize selection.
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/open-case', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ caseId: box.id })
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          throw new Error(errorBody.error || 'Unable to open case.');
+        }
+
+        const data = await response.json();
+        const prizeId = data.prize?.id;
+        const matchedPrize = items.find((item) => item.id === prizeId);
+        const fallbackPrize = {
+          id: data.prize?.id ?? `server-${Date.now()}`,
+          name: data.prize?.name ?? 'Mystery Item',
+          price: Number(data.prize?.value ?? data.prize?.price ?? 0),
+          image: data.prize?.image ?? 'https://picsum.photos/200',
+          rarity: data.prize?.rarity ?? 'common',
+          chance: Number(data.prize?.weight ?? 0),
+          color: getRarityColor(data.prize?.rarity ?? 'common')
+        } as CaseItem;
+
+        winner = matchedPrize ?? fallbackPrize;
+        setLastRoll({
+          nonce: Number(data.provablyFair?.nonce ?? 0),
+          rollValue: Number(data.provablyFair?.roll ?? 0),
+          serverSeedHash: data.provablyFair?.serverSeedHash ?? '',
+          clientSeed: data.provablyFair?.clientSeed ?? ''
+        });
+        setServerSeedHash(data.provablyFair?.serverSeedHash ?? serverSeedHash);
+        setClientSeed(data.provablyFair?.clientSeed ?? clientSeed);
+        setNonce(Number(data.provablyFair?.nonce ?? 0) + 1);
+
+        if (typeof data.newCoins === 'number') {
+          syncBalance(data.newCoins);
+        }
+
+        if (data.inventoryId) {
+          const inventoryItem: InventoryItem = {
+            ...winner,
+            instanceId: data.inventoryId,
+            obtainedAt: Date.now(),
+            status: 'available',
+            provenance: { sourceType: 'case_open', sourceId: box.id }
+          };
+          syncInventoryItem(inventoryItem);
+          setWonInventoryItem(inventoryItem);
+        }
+      } catch (error) {
+        setIsSpinning(false);
+        alert(error instanceof Error ? error.message : 'Unable to open case.');
+        return;
+      }
     }
 
-    setLastRoll({
-        ...winningRoll,
-        outcome: winner.name
-    });
-
-    // 2. Gold spin only triggers when the winner is guaranteed legendary
-    const isGoldEligible = winner.rarity === 'legendary';
-    const goldRollHash = await hashString(`${winningRoll.rollHash}:gold`);
-    const goldRollValue = deriveRollValue(goldRollHash);
-    const triggerGold = (forceGold && isGoldEligible) || (isGoldEligible && goldRollValue < 0.5);
+    if (!winner) {
+      setIsSpinning(false);
+      return;
+    }
 
     if (!isDemo) {
-      const inventoryItem = addToInventory(winner, { sourceType: 'case_open', sourceId: box.id });
-      setWonInventoryItem(inventoryItem);
-      awardCaseOpenXp();
+      setLastRoll((prev) =>
+        prev
+          ? { ...prev, outcome: winner?.name }
+          : {
+              nonce,
+              rollValue: 0,
+              serverSeedHash,
+              clientSeed,
+              outcome: winner?.name
+            }
+      );
     }
 
     if (triggerGold) {
@@ -419,9 +504,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return;
     }
     if (wonInventoryItem && !rewardResolved) {
-        const sellBackPrice = getSellBackValue(wonInventoryItem.price, sellBackRate);
-        sellItem(wonInventoryItem.instanceId, sellBackPrice);
+        // Server-side sell flow should be handled via secure endpoints.
         setRewardResolved(true);
+        alert('Sell requests are handled server-side. Please use the inventory screen.');
     }
     if (sellOfferTimerRef.current) {
       window.clearTimeout(sellOfferTimerRef.current);
@@ -454,12 +539,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (!lastRoll) return;
 
     const proof = [
-      `Server Seed: ${serverSeed}`,
-      `Server Seed Hash: ${serverSeedHash}`,
-      `Client Seed: ${clientSeed}`,
+      `Server Seed: ${lastReveal?.serverSeed ?? 'Rotate to reveal'}`,
+      `Server Seed Hash: ${lastRoll.serverSeedHash}`,
+      `Client Seed: ${lastRoll.clientSeed}`,
       `Nonce: ${lastRoll.nonce}`,
-      `Combined Seed: ${lastRoll.combinedSeed}`,
-      `Roll Hash: ${lastRoll.rollHash}`,
       `Roll Value: ${lastRoll.rollValue}`,
       `Outcome: ${lastRoll.outcome ?? 'N/A'}`
     ].join('\n');
@@ -470,7 +553,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     } else {
       alert(proof);
     }
-  }, [clientSeed, lastRoll, playSound, serverSeed, serverSeedHash]);
+  }, [lastReveal?.serverSeed, lastRoll, playSound]);
 
   return (
     <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
@@ -668,21 +751,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                                 Server Seed
                                             </div>
                                             <button
-                                                onClick={async () => { playSound('click'); await setNewServerSeed(); }}
+                                                onClick={async () => { playSound('click'); await rotateServerSeed(); }}
                                                 disabled={isGeneratingSeed || isSpinning}
                                                 className="text-xs px-3 py-1.5 bg-[#131825] border border-gray-700 rounded-lg text-gray-200 hover:border-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                {isGeneratingSeed ? 'Generating...' : 'New Server Seed'}
+                                                {isGeneratingSeed ? 'Rotating...' : 'Rotate Seed'}
                                             </button>
                                         </div>
                                         <div className="space-y-2">
                                             <div>
                                                 <div className="text-xs text-gray-500 mb-1">Server seed hash (committed)</div>
-                                                <div className="font-mono text-xs text-white bg-black/30 rounded p-2 break-all border border-gray-800">{serverSeedHash || 'Generating hash...'}</div>
+                                                <div className="font-mono text-xs text-white bg-black/30 rounded p-2 break-all border border-gray-800">{serverSeedHash || 'Loading...'}</div>
                                             </div>
                                             <div>
-                                                <div className="text-xs text-gray-500 mb-1">Revealed server seed</div>
-                                                <div className="font-mono text-xs text-gray-300 bg-black/20 rounded p-2 break-all border border-gray-800">{serverSeed || 'Generating...'}</div>
+                                                <div className="text-xs text-gray-500 mb-1">Last revealed server seed</div>
+                                                <div className="font-mono text-xs text-gray-300 bg-black/20 rounded p-2 break-all border border-gray-800">
+                                                  {lastReveal?.serverSeed || 'Rotate to reveal'}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -695,15 +780,29 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                             <div className="text-[10px] uppercase font-semibold text-gray-500 bg-black/20 px-2 py-1 rounded border border-gray-800">Nonce {nonce}</div>
                                         </div>
                                         <label className="text-xs text-gray-400 mb-2 block">Customize your seed to verify rolls independently</label>
-                                        <input 
-                                            value={clientSeed}
-                                            onChange={(e) => setClientSeed(e.target.value)}
-                                            className="w-full bg-[#0b0e14] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
-                                            placeholder="Enter your own client seed"
-                                            disabled={isSpinning}
-                                        />
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                            <input 
+                                                value={clientSeed}
+                                                onChange={(e) => setClientSeed(e.target.value)}
+                                                className="w-full bg-[#0b0e14] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
+                                                placeholder="Enter your own client seed"
+                                                disabled={isSpinning || isSeedSaving}
+                                                maxLength={64}
+                                            />
+                                            <button
+                                                onClick={async () => { playSound('click'); await saveClientSeed(); }}
+                                                disabled={isSpinning || isSeedSaving}
+                                                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border border-gray-700 bg-[#131825] text-gray-200 hover:border-cyan-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <RefreshCcw className="w-3.5 h-3.5" />
+                                                Save
+                                            </button>
+                                        </div>
+                                        {seedSaveMessage && (
+                                            <div className="text-[11px] text-gray-400 mt-2">{seedSaveMessage}</div>
+                                        )}
                                         <p className="text-xs text-gray-500 mt-3 leading-relaxed">
-                                            Each roll combines the hashed server seed, your client seed, and the nonce to generate a deterministic SHA-256 hash. Changing the client seed gives you a new set of verifiable outcomes.
+                                            Each roll combines the hashed server seed, your client seed, and the nonce on the server. Updating the client seed resets the nonce to 0.
                                         </p>
                                     </div>
                                 </div>
@@ -716,7 +815,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                     <Info className="w-5 h-5 mt-0.5" />
                                     <div>
                                         <div className="font-semibold text-white">Previous Seeds Revealed</div>
-                                        <p className="text-blue-100/90">Use the values below to re-hash the combined seed (server + client + nonce) and confirm it matches the roll hash shown.</p>
+                                        <p className="text-blue-100/90">Use the values below with the revealed server seed to recompute the HMAC roll and verify the outcome.</p>
                                     </div>
                                 </div>
                                 <div className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4 space-y-3">
@@ -737,11 +836,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                     <div className="grid md:grid-cols-2 gap-3">
                                         <div>
                                             <div className="text-xs text-gray-500 mb-1">Revealed server seed</div>
-                                            <div className="font-mono text-xs text-gray-300 bg-black/20 rounded p-2 break-all border border-gray-800">{serverSeed || 'Spin to reveal'}</div>
+                                            <div className="font-mono text-xs text-gray-300 bg-black/20 rounded p-2 break-all border border-gray-800">{lastReveal?.serverSeed || 'Rotate to reveal'}</div>
                                         </div>
                                         <div>
                                             <div className="text-xs text-gray-500 mb-1">Committed server hash</div>
-                                            <div className="font-mono text-xs text-gray-300 bg-black/20 rounded p-2 break-all border border-gray-800">{serverSeedHash || 'Spin to reveal'}</div>
+                                            <div className="font-mono text-xs text-gray-300 bg-black/20 rounded p-2 break-all border border-gray-800">{lastRoll?.serverSeedHash || serverSeedHash || 'Spin to reveal'}</div>
                                         </div>
                                     </div>
 
@@ -750,14 +849,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                             <div className="flex items-center justify-between"><span className="text-gray-500">Outcome</span><span className="text-white">{lastRoll.outcome}</span></div>
                                             <div className="flex items-center justify-between"><span className="text-gray-500">Nonce</span><span>{lastRoll.nonce}</span></div>
                                             <div className="flex items-center justify-between"><span className="text-gray-500">Roll Value</span><span>{lastRoll.rollValue.toFixed(6)}</span></div>
-                                            <div>
-                                                <div className="text-gray-500">Roll Hash</div>
-                                                <div className="break-all text-gray-200">{lastRoll.rollHash}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-gray-500">Combined Seed (server:client:nonce)</div>
-                                                <div className="break-all text-gray-400">{lastRoll.combinedSeed}</div>
-                                            </div>
+                                            <div className="flex items-center justify-between"><span className="text-gray-500">Client Seed</span><span>{lastRoll.clientSeed}</span></div>
                                         </div>
                                     ) : (
                                         <p className="text-sm text-gray-500">Spin the case to generate verifiable proof data for your result.</p>

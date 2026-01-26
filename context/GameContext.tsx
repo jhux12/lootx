@@ -284,6 +284,8 @@ interface GameContextType {
   addBalance: (amount: number) => void;
   deductBalance: (amount: number, options?: { trackRewards?: boolean }) => boolean;
   addToInventory: (item: CaseItem, provenance?: InventoryProvenance) => InventoryItem;
+  syncBalance: (amount: number) => void;
+  syncInventoryItem: (item: InventoryItem) => void;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string, value: number) => void;
@@ -1039,6 +1041,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return newItem;
   };
 
+  const syncBalance = (amount: number) => {
+    setBalance(Number(amount ?? 0));
+  };
+
+  const syncInventoryItem = (item: InventoryItem) => {
+    setInventory((prev) => {
+      const nextInventory = [item, ...prev];
+      const nextTopPulls = rankTopPullsByValue(nextInventory);
+      setUser((current) => ({ ...current, topPulls: nextTopPulls }));
+      setUsers((current) =>
+        current.map((u) => (u.id === auth.currentUser?.uid ? { ...u, topPulls: nextTopPulls } : u))
+      );
+      return nextInventory;
+    });
+  };
+
   const addNotification = (
     notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>
   ) => {
@@ -1571,6 +1589,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       addBalance,
       deductBalance,
       addToInventory,
+      syncBalance,
+      syncInventoryItem,
       followUser,
       unfollowUser,
       sellItem,
