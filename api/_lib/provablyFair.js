@@ -8,8 +8,8 @@ export const hmacSha256Hex = (key, message) =>
 
 export const randomSeed = () => crypto.randomBytes(32).toString('hex');
 
-export const computeRoll = (serverSeed, clientSeed, nonce, caseId) => {
-  const message = `${clientSeed}:${nonce}:${caseId}`;
+export const computeRoll = (serverSeed, clientSeed, nonce, boxId) => {
+  const message = `${clientSeed}:${nonce}:${boxId}`;
   const rollHash = hmacSha256Hex(serverSeed, message);
   const intValue = parseInt(rollHash.slice(0, 13), 16);
   const roll = intValue / 0x10000000000000;

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
+import { authedFetch } from '../utils/authedFetch';
 import { 
   User as FirebaseUser,
   onAuthStateChanged,
@@ -15,8 +16,8 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
   onSnapshot,
+  QueryDocumentSnapshot,
   runTransaction,
   setDoc,
   Timestamp
@@ -59,6 +60,14 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
       color: typed.color ?? '#9ca3af'
     };
   });
+};
+
+const RARITY_COLORS: Record<InventoryItem['rarity'], string> = {
+  common: '#9ca3af',
+  uncommon: '#22c55e',
+  rare: '#3b82f6',
+  epic: '#a855f7',
+  legendary: '#fbbf24'
 };
 
 const inventorySignature = (items: InventoryItem[]) =>
@@ -361,8 +370,10 @@ const normalizeTimestamp = (value: unknown, fallback: number) => {
   return fallback;
 };
 
-const buildUserDocument = (user: User, extras: { balance: number; inventory: InventoryItem[] }) => {
-  const payload: Record<string, unknown> = { ...user, ...extras };
+const buildUserDocument = (user: User) => {
+  const payload: Record<string, unknown> = { ...user };
+  delete payload.balance;
+  delete payload.inventory;
 
   if (payload.shippingAddress === undefined) {
     delete payload.shippingAddress;
@@ -371,57 +382,12 @@ const buildUserDocument = (user: User, extras: { balance: number; inventory: Inv
   return sanitizeDeep(payload);
 };
 
-const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
-  const userRef = getUserRef(firebaseUser.uid);
-  const snapshot = await getDoc(userRef);
-
-  if (!snapshot.exists()) {
-    const createdAt = Date.now();
-    const initialProgress = calculateLevelProgress(0);
-    const newUser: User = {
-      id: firebaseUser.uid,
-      createdAt,
-      name: firebaseUser.email?.split('@')[0] || 'Player',
-      email: firebaseUser.email || '',
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
-      balance: 0,
-      level: initialProgress.level,
-      xp: 0,
-      lastDailyClaim: undefined,
-      totalSpent: 0,
-      rakebackBalance: 0,
-      rakebackEarnedToday: 0,
-      rakebackEarnedAt: getDayStart(),
-      followers: [],
-      shippingAddress: undefined,
-      isAdmin: false,
-      chatWarnings: 0,
-      chatDisabled: false,
-      termsFlagged: false,
-      status: 'active',
-      locks: DEFAULT_LOCKS,
-      ledger: [],
-      adminLogs: []
-    };
-
-    await setDoc(userRef, buildUserDocument(newUser, { balance: 0, inventory: [] }));
-
-    return { user: newUser, balance: 0, inventory: [] as InventoryItem[] };
-  }
-
-  const data = snapshot.data();
+const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> = {}) => {
   const now = Date.now();
   const metadataCreatedAt = firebaseUser.metadata.creationTime ? Date.parse(firebaseUser.metadata.creationTime) : NaN;
   const fallbackCreatedAt = Number.isFinite(metadataCreatedAt) ? metadataCreatedAt : now;
   const createdAt = normalizeTimestamp(data.createdAt, fallbackCreatedAt);
   const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
-
-  if (data.createdAt === undefined) {
-    void setDoc(userRef, { createdAt }, { merge: true }).catch((error) => {
-      console.error('Failed to backfill user createdAt timestamp', error);
-    });
-  }
-
   const xp = Number(data.xp ?? 0);
   const progress = calculateLevelProgress(xp);
   const followerIds = Array.isArray(data.followers)
@@ -429,14 +395,16 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     : Array.isArray(data.friends)
       ? data.friends
       : [];
-  const profile: User = {
+  const balance = Number(data.coins ?? data.balance ?? 0);
+
+  return {
     id: firebaseUser.uid,
     createdAt,
     lastChatAt,
     name: data.name || firebaseUser.email?.split('@')[0] || 'Player',
     email: data.email || firebaseUser.email || '',
     avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
-    balance: Number(data.balance ?? 0),
+    balance,
     level: data.level ?? progress.level,
     xp,
     lastDailyClaim: data.lastDailyClaim,
@@ -459,57 +427,40 @@ const loadUserFromFirestore = async (firebaseUser: FirebaseUser) => {
     adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
     topPullsPublic: data.topPullsPublic ?? false,
     topPulls: normalizeInventoryItems(data.topPulls)
-  };
-  const inventoryItems = normalizeInventoryItems(data.inventory);
-  const storedTopPulls = normalizeInventoryItems(data.topPulls);
+  } as User;
+};
 
-  const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
-  const updates: Record<string, unknown> = {};
-
-  if (shouldBeAdmin && !profile.isAdmin) {
-    profile.isAdmin = true;
-    updates.isAdmin = true;
-  }
-
-  if (profile.level !== data.level) {
-    updates.level = profile.level;
-  }
-
-  if (profile.chatWarnings !== data.chatWarnings) {
-    updates.chatWarnings = profile.chatWarnings;
-  }
-
-  if (profile.chatDisabled !== data.chatDisabled) {
-    updates.chatDisabled = profile.chatDisabled;
-  }
-
-  if (profile.termsFlagged !== data.termsFlagged) {
-    updates.termsFlagged = profile.termsFlagged;
-  }
-
-  if (storedTopPulls.length === 0 && inventoryItems.length > 0) {
-    const computedTopPulls = rankTopPullsByValue(inventoryItems);
-    profile.topPulls = computedTopPulls;
-    updates.topPulls = computedTopPulls;
-  }
-
-  if (Object.keys(updates).length > 0) {
-    await setDoc(userRef, updates, { merge: true });
-  }
+const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
+  const data = docSnap.data() as Record<string, any>;
+  const rarity = (data.rarity ?? 'common') as InventoryItem['rarity'];
+  const value = Number(data.value ?? 0);
+  const obtainedAt = normalizeTimestamp(data.obtainedAt, Date.now());
+  const status = (data.status ?? 'available') as InventoryItem['status'];
 
   return {
-    user: profile,
-    balance: data.balance ?? 0,
-    inventory: inventoryItems,
-    topPulls: profile.topPulls ?? storedTopPulls
-  };
+    id: data.prizeId ?? docSnap.id,
+    instanceId: docSnap.id,
+    name: data.name ?? 'Mystery Item',
+    price: value,
+    image: data.image ?? 'https://picsum.photos/200',
+    rarity,
+    chance: 0,
+    color: RARITY_COLORS[rarity] ?? '#9ca3af',
+    obtainedAt,
+    status,
+    provenance: data.boxId ? { sourceType: 'case_open', sourceId: data.boxId } : undefined
+  } as InventoryItem;
 };
 
 const persistUserData = async (payload: PersistUserData) => {
   const currentUser = auth.currentUser;
   if (!currentUser) return;
   const userRef = getUserRef(currentUser.uid);
-  await setDoc(userRef, sanitizeDeep(payload), { merge: true });
+  const sanitized = sanitizeDeep(payload);
+  delete sanitized.balance;
+  delete sanitized.inventory;
+  delete sanitized.coins;
+  await setDoc(userRef, sanitized, { merge: true });
 };
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -595,7 +546,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let userUnsubscribe: (() => void) | null = null;
+    let inventoryUnsubscribe: (() => void) | null = null;
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (userUnsubscribe) {
+        userUnsubscribe();
+        userUnsubscribe = null;
+      }
+      if (inventoryUnsubscribe) {
+        inventoryUnsubscribe();
+        inventoryUnsubscribe = null;
+      }
+
       if (!firebaseUser) {
         setIsAuthenticated(false);
         setUser(GUEST_USER);
@@ -606,74 +569,62 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       setIsAuthenticated(true);
-      try {
-        const profile = await loadUserFromFirestore(firebaseUser);
-        setUser((prev) => ({ ...prev, ...profile.user, topPulls: profile.topPulls }));
-        setBalance(profile.balance);
-        setInventory(profile.inventory);
-      } catch (error) {
-        console.error('Failed to load user from Firebase', error);
-      }
+
+      const userRef = getUserRef(firebaseUser.uid);
+      userUnsubscribe = onSnapshot(userRef, (snapshot) => {
+        if (!snapshot.exists()) {
+          const profile = buildUserProfile(firebaseUser);
+          setUser(profile);
+          setBalance(0);
+          return;
+        }
+
+        const data = snapshot.data();
+        const profile = buildUserProfile(firebaseUser, data);
+        const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
+        if (shouldBeAdmin && !profile.isAdmin) {
+          void setDoc(userRef, { isAdmin: true }, { merge: true }).catch((error) => {
+            console.error('Failed to backfill admin flag', error);
+          });
+          profile.isAdmin = true;
+        }
+
+        setUser((prev) => ({
+          ...prev,
+          ...profile
+        }));
+        setBalance(profile.balance ?? 0);
+      }, (error) => {
+        console.error('Failed to load user profile from Firebase', error);
+      });
+
+      const inventoryRef = collection(db, 'users', firebaseUser.uid, 'inventory');
+      inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
+        const loaded = snapshot.docs
+          .map(mapInventoryDoc)
+          .sort((a, b) => b.obtainedAt - a.obtainedAt);
+        setInventory(loaded);
+        const nextTopPulls = rankTopPullsByValue(loaded);
+        setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
+      }, (error) => {
+        console.error('Failed to load inventory from Firebase', error);
+      });
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (userUnsubscribe) userUnsubscribe();
+      if (inventoryUnsubscribe) inventoryUnsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    const usersRef = collection(db, 'users');
-    const unsubscribe = onSnapshot(usersRef, (snapshot) => {
-    const loaded: User[] = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data();
-      const now = Date.now();
-      const createdAt = normalizeTimestamp(data.createdAt, now);
-      const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
-      const xp = Number(data.xp ?? 0);
-      const progress = calculateLevelProgress(xp);
-      const followerIds = Array.isArray(data.followers)
-          ? data.followers
-          : Array.isArray(data.friends)
-            ? data.friends
-            : [];
-        return {
-          id: docSnap.id,
-          createdAt,
-          lastChatAt,
-          name: data.name || 'Player',
-          email: data.email,
-          avatar: data.avatar || 'https://picsum.photos/id/64/100/100',
-          balance: Number(data.balance ?? 0),
-          level: data.level ?? progress.level,
-          xp,
-          lastDailyClaim: data.lastDailyClaim,
-          totalSpent: Number(data.totalSpent ?? 0),
-          rakebackBalance: Number(data.rakebackBalance ?? 0),
-          rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
-          rakebackEarnedAt: Number(data.rakebackEarnedAt ?? 0),
-          affiliateCode: data.affiliateCode,
-          referredBy: data.referredBy,
-          followers: followerIds,
-          shippingAddress: data.shippingAddress,
-          inventory: normalizeInventoryItems(data.inventory),
-          isAdmin: data.isAdmin ?? false,
-          chatWarnings: data.chatWarnings ?? 0,
-          chatDisabled: data.chatDisabled ?? false,
-          chatDisabledAt: data.chatDisabledAt,
-          termsFlagged: data.termsFlagged ?? false,
-          status: data.status ?? 'active',
-          locks: data.locks ?? DEFAULT_LOCKS,
-          ledger: Array.isArray(data.ledger) ? data.ledger : undefined,
-          adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
-          topPullsPublic: data.topPullsPublic ?? false,
-          topPulls: normalizeInventoryItems(data.topPulls)
-        } as User;
-      });
-      setUsers(loaded);
-    }, (error) => {
-      console.error('Failed to load users from Firebase', error);
-    });
-
-    return () => unsubscribe();
-  }, []);
+    if (!isAuthenticated) {
+      setUsers([]);
+      return;
+    }
+    setUsers([user]);
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -741,16 +692,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const firebaseBoxes = snapshot.docs
         .map((docSnap) => {
           const data = docSnap.data();
-          const items = Array.isArray(data.items) ? data.items.map((item: any, index: number) => {
+          const items = Array.isArray(data.prizes) ? data.prizes.map((item: any, index: number) => {
             const rarity = (item.rarity ?? 'common') as CaseItem['rarity'];
+            const price = Number(item.value ?? item.price ?? 0);
             return {
               id: item.id ?? `${docSnap.id}-item-${index}`,
               name: item.name ?? 'Mystery Item',
-              price: Number(item.price ?? 0),
+              price,
               image: item.image ?? 'https://picsum.photos/300',
               rarity,
-              chance: Number(item.chance ?? 0),
-              color: item.color ?? '#9ca3af',
+              chance: Number(item.weight ?? item.chance ?? 0),
+              color: item.color ?? RARITY_COLORS[rarity] ?? '#9ca3af',
               tags: Array.isArray(item.tags) ? (item.tags as CaseItem['tags']) : undefined
             };
           }) : [];
@@ -931,7 +883,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       termsFlagged: false
     };
 
-    await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser, { balance: 0, inventory: [] }));
+    await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser));
 
     setUser(newUser);
     setBalance(0);
@@ -1000,7 +952,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addBalance = async (amount: number) => {
     setBalance(prev => {
       const updated = prev + amount;
-      persistUserData({ balance: updated });
+      setUser(current => ({ ...current, balance: updated }));
       return updated;
     }); 
   };
@@ -1015,7 +967,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (balance >= amount) {
       setBalance(prev => {
         const updated = prev - amount;
-        persistUserData({ balance: updated });
+        setUser(current => ({ ...current, balance: updated }));
         return updated;
       });
       if (options?.trackRewards !== false) {
@@ -1040,7 +992,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setUser(current => ({ ...current, topPulls: nextTopPulls }));
       setUsers(current => current.map(u => u.id === auth.currentUser?.uid ? { ...u, topPulls: nextTopPulls } : u));
-      persistUserData({ inventory: nextInventory, topPulls: nextTopPulls });
 
       return nextInventory;
     });
@@ -1168,22 +1119,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
-      const token = await auth.currentUser.getIdToken();
-      const response = await fetch('/api/sell-item', {
+      const data = await authedFetch<{ newCoins?: number }>('/api/sell-item', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify({ inventoryId: instanceId })
       });
 
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || 'Sell back failed');
-      }
-
-      const data = await response.json();
       setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
       syncBalance(Number(data.newCoins ?? balance));
     } catch (error) {
@@ -1193,21 +1133,41 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const shipItem = async (instanceId: string) => {
+    if (!auth.currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+
     const itemToShip = inventory.find(item => item.instanceId === instanceId);
-    setInventory(prev => {
-      const updated = prev.map(item => 
-        item.instanceId === instanceId 
-        ? { ...item, status: 'shipping' }
-        : item
+    if (!itemToShip || !user.shippingAddress) {
+      alert('Please add a shipping address before requesting shipment.');
+      return;
+    }
+
+    try {
+      await authedFetch('/api/request-shipment', {
+        method: 'POST',
+        body: JSON.stringify({
+          inventoryId: instanceId,
+          shippingInfo: user.shippingAddress
+        })
+      });
+
+      setInventory(prev =>
+        prev.map(item =>
+          item.instanceId === instanceId
+            ? { ...item, status: 'shipping_requested' }
+            : item
+        )
       );
-      persistUserData({ inventory: updated });
-      return updated;
-    });
-    if (itemToShip) {
+
       addNotification({
         message: `${itemToShip.name} is now shipping to your saved address.`,
         type: 'shipping'
       });
+    } catch (error) {
+      console.error('Failed to request shipment', error);
+      alert('Unable to request shipment right now. Please try again.');
     }
   };
 
@@ -1248,6 +1208,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateUserAdminData = async (userId: string, updates: Partial<User>) => {
       if (!isAuthenticated || !auth.currentUser) return;
       const sanitizedUpdates = sanitizeDeep(updates);
+      delete sanitizedUpdates.balance;
+      delete sanitizedUpdates.inventory;
+      delete sanitizedUpdates.coins;
 
       try {
         await setDoc(getUserRef(userId), sanitizedUpdates, { merge: true });

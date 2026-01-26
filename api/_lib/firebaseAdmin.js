@@ -12,12 +12,11 @@ if (!admin.apps.length) {
       projectId,
       clientEmail,
       privateKey
-    }),
-    databaseURL: process.env.FIREBASE_DATABASE_URL
+    })
   });
 }
 
 const adminAuth = admin.auth();
-const rtdb = admin.database();
+const firestore = admin.firestore();
 
-export { adminAuth, rtdb };
+export { admin, adminAuth, firestore };

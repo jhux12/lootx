@@ -2,44 +2,52 @@ import { randomSeed, sha256 } from './provablyFair.js';
 
 const DEFAULT_CLIENT_SEED = 'lootx-player';
 
-export const ensureProvablyFairState = async (rtdb, uid) => {
-  const secretRef = rtdb.ref(`provablyFairSecret/${uid}`);
-  const publicRef = rtdb.ref(`provablyFairPublic/${uid}`);
+export const ensureProvablyFairState = async (firestore, uid) => {
+  const docRef = firestore.collection('provablyFair').doc(uid);
+  const snap = await docRef.get();
 
-  const secretSnap = await secretRef.get();
-  let serverSeed = secretSnap.val()?.serverSeed;
-  if (!serverSeed) {
-    serverSeed = randomSeed();
-    await secretRef.set({ serverSeed });
+  if (!snap.exists) {
+    const serverSeed = randomSeed();
+    const serverSeedHash = sha256(serverSeed);
+    const clientSeed = DEFAULT_CLIENT_SEED;
+    const nonce = 0;
+    await docRef.set({
+      serverSeed,
+      serverSeedHash,
+      clientSeed,
+      nonce
+    });
+    return { serverSeed, serverSeedHash, clientSeed, nonce };
   }
 
-  const serverSeedHash = sha256(serverSeed);
-  const publicSnap = await publicRef.get();
-  const publicData = publicSnap.val() ?? {};
-  const clientSeed = typeof publicData.clientSeed === 'string' && publicData.clientSeed.trim().length
-    ? publicData.clientSeed
+  const data = snap.data() ?? {};
+  const serverSeed = data.serverSeed || randomSeed();
+  const serverSeedHash = data.serverSeedHash || sha256(serverSeed);
+  const clientSeed = typeof data.clientSeed === 'string' && data.clientSeed.trim().length
+    ? data.clientSeed
     : DEFAULT_CLIENT_SEED;
-  const nonce = Number.isFinite(publicData.nonce) ? Number(publicData.nonce) : 0;
+  const nonce = Number.isFinite(data.nonce) ? Number(data.nonce) : 0;
 
   const updates = {};
-  if (publicData.serverSeedHash !== serverSeedHash) updates.serverSeedHash = serverSeedHash;
-  if (publicData.clientSeed !== clientSeed) updates.clientSeed = clientSeed;
-  if (publicData.nonce !== nonce) updates.nonce = nonce;
+  if (data.serverSeed !== serverSeed) updates.serverSeed = serverSeed;
+  if (data.serverSeedHash !== serverSeedHash) updates.serverSeedHash = serverSeedHash;
+  if (data.clientSeed !== clientSeed) updates.clientSeed = clientSeed;
+  if (data.nonce !== nonce) updates.nonce = nonce;
 
   if (Object.keys(updates).length) {
-    await publicRef.update(updates);
+    await docRef.set(updates, { merge: true });
   }
 
   return { serverSeed, serverSeedHash, clientSeed, nonce };
 };
 
-export const getPublicState = async (rtdb, uid) => {
-  const publicSnap = await rtdb.ref(`provablyFairPublic/${uid}`).get();
-  const publicData = publicSnap.val() ?? {};
+export const getPublicState = async (firestore, uid) => {
+  const snap = await firestore.collection('provablyFair').doc(uid).get();
+  const data = snap.data() ?? {};
   return {
-    serverSeedHash: publicData.serverSeedHash ?? '',
-    clientSeed: publicData.clientSeed ?? DEFAULT_CLIENT_SEED,
-    nonce: Number.isFinite(publicData.nonce) ? Number(publicData.nonce) : 0
+    serverSeedHash: data.serverSeedHash ?? '',
+    clientSeed: data.clientSeed ?? DEFAULT_CLIENT_SEED,
+    nonce: Number.isFinite(data.nonce) ? Number(data.nonce) : 0
   };
 };
 

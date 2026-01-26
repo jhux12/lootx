@@ -1,4 +1,4 @@
-import { adminAuth, rtdb } from './_lib/firebaseAdmin.js';
+import { adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { ensureProvablyFairState } from './_lib/provablyFairState.js';
 import { getBearerToken, sendJson } from './_lib/http.js';
 
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     }
 
     const decoded = await adminAuth.verifyIdToken(token);
-    const { serverSeedHash, clientSeed, nonce } = await ensureProvablyFairState(rtdb, decoded.uid);
+    const { serverSeedHash, clientSeed, nonce } = await ensureProvablyFairState(firestore, decoded.uid);
 
     return sendJson(res, 200, { serverSeedHash, clientSeed, nonce });
   } catch (error) {

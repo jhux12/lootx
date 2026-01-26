@@ -1,4 +1,4 @@
-import { adminAuth, rtdb } from '../_lib/firebaseAdmin.js';
+import { adminAuth, firestore } from '../_lib/firebaseAdmin.js';
 import { ensureProvablyFairState } from '../_lib/provablyFairState.js';
 import { getBearerToken, readJsonBody, sendJson } from '../_lib/http.js';
 
@@ -25,14 +25,14 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Client seed must be 1-64 characters' });
     }
 
-    const state = await ensureProvablyFairState(rtdb, decoded.uid);
-    const publicRef = rtdb.ref(`provablyFairPublic/${decoded.uid}`);
+    const state = await ensureProvablyFairState(firestore, decoded.uid);
+    const docRef = firestore.collection('provablyFair').doc(decoded.uid);
 
-    await publicRef.update({
+    await docRef.set({
       clientSeed,
       nonce: 0,
       serverSeedHash: state.serverSeedHash
-    });
+    }, { merge: true });
 
     return sendJson(res, 200, {
       serverSeedHash: state.serverSeedHash,

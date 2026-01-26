@@ -110,7 +110,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   const normalizedInventory = normalizeItems(inventorySource).sort((a, b) => b.obtainedAt - a.obtainedAt);
 
   const filteredInventory = normalizedInventory.filter((item) => {
-    if (inventoryFilter === 'processing') return item.status === 'shipping';
+    if (inventoryFilter === 'processing') return item.status === 'shipping' || item.status === 'shipping_requested';
     if (inventoryFilter === 'shipped') return item.status === 'shipped';
     return item.status === 'available';
   });
@@ -515,14 +515,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                               const isLocked = !!item.locked;
                               const canShip = isAvailable && !isLocked && !!user.shippingAddress;
                               const canSell = isAvailable && !isLocked;
-                              const statusLabel = item.status === 'shipping'
+                              const statusLabel = item.status === 'shipping' || item.status === 'shipping_requested'
                                 ? 'Shipping'
                                 : item.status === 'shipped'
                                   ? 'Shipped'
                                   : isLocked
                                     ? 'Locked'
                                     : 'Available';
-                              const statusTone = item.status === 'shipping'
+                              const statusTone = item.status === 'shipping' || item.status === 'shipping_requested'
                                 ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
                                 : item.status === 'shipped'
                                   ? 'bg-green-500/20 text-green-300 border-green-500/40'
