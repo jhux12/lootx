@@ -60,7 +60,7 @@ const deriveRollValue = (hash: string) => {
 
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
-  const { user, addInventoryItemFromServer, syncBalance, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily, awardCaseOpenXp } = useGame();
+  const { user, addInventoryItemFromServer, syncBalance, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily, awardCaseOpenXp, registerSpend } = useGame();
   const { playSound } = useSound();
   
   const matchedBox = boxes.find(b => b.id === boxId);
@@ -378,6 +378,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         addInventoryItemFromServer(inventoryItem);
         syncBalance(Number(data.newCoins ?? 0));
+        if (!isFree) {
+          registerSpend(Number(box?.price ?? 0));
+        }
         setWonInventoryItem(inventoryItem);
         awardCaseOpenXp();
 
