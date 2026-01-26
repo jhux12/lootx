@@ -329,6 +329,7 @@ interface GameContextType {
   claimRakeback: () => void;
   updateBonusSettings: (settings: BonusSettings) => void;
   awardCaseOpenXp: () => void;
+  registerSpend: (amount: number) => void;
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
   updateShipmentStatus: (userId: string, instanceId: string, status: InventoryItem['status'], trackingNumber?: string) => Promise<void>;
@@ -1724,6 +1725,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       claimRakeback,
       updateBonusSettings,
       awardCaseOpenXp,
+      registerSpend,
       generateAffiliateCode,
       updateUserProgress,
       updateShipmentStatus,
