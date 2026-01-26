@@ -320,6 +320,7 @@ interface GameContextType {
   deleteItem: (itemId: string) => Promise<void>;
   updateUserFlags: (updates: Partial<User>) => Promise<void>;
   updateUserAdminData: (userId: string, updates: Partial<User>) => Promise<void>;
+  updateUserBalance: (userId: string, balance: number) => Promise<void>;
   createBox: (box: MysteryBox) => void; // Admin
   createUserBox: (box: MysteryBox) => void; // User Custom
   updateBox: (box: MysteryBox) => void;
@@ -434,6 +435,54 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
     topPullsPublic: data.topPullsPublic ?? false,
     topPulls: normalizeInventoryItems(data.topPulls)
+  } as User;
+};
+
+const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {}) => {
+  const now = Date.now();
+  const createdAt = normalizeTimestamp(data.createdAt, now);
+  const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
+  const xp = Number(data.xp ?? 0);
+  const progress = calculateLevelProgress(xp);
+  const followerIds = Array.isArray(data.followers)
+    ? data.followers
+    : Array.isArray(data.friends)
+      ? data.friends
+      : [];
+  const balance = Number(data.coins ?? data.balance ?? 0);
+  const name = data.name || (data.email ? data.email.split('@')[0] : 'Player');
+
+  return {
+    id: userId,
+    createdAt,
+    lastChatAt,
+    name,
+    email: data.email || '',
+    avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
+    balance,
+    level: data.level ?? progress.level,
+    xp,
+    lastDailyClaim: data.lastDailyClaim,
+    totalSpent: Number(data.totalSpent ?? 0),
+    rakebackBalance: Number(data.rakebackBalance ?? 0),
+    rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
+    rakebackEarnedAt: Number(data.rakebackEarnedAt ?? 0),
+    affiliateCode: data.affiliateCode,
+    referredBy: data.referredBy,
+    followers: followerIds,
+    shippingAddress: data.shippingAddress,
+    isAdmin: data.isAdmin ?? false,
+    chatWarnings: data.chatWarnings ?? 0,
+    chatDisabled: data.chatDisabled ?? false,
+    chatDisabledAt: data.chatDisabledAt,
+    termsFlagged: data.termsFlagged ?? false,
+    status: data.status ?? 'active',
+    locks: data.locks ?? DEFAULT_LOCKS,
+    ledger: Array.isArray(data.ledger) ? data.ledger : undefined,
+    adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
+    topPullsPublic: data.topPullsPublic ?? false,
+    topPulls: normalizeInventoryItems(data.topPulls),
+    inventory: normalizeInventoryItems(data.inventory)
   } as User;
 };
 
@@ -664,8 +713,23 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUsers([]);
       return;
     }
-    setUsers([user]);
-  }, [isAuthenticated, user]);
+
+    if (!user.isAdmin) {
+      setUsers([user]);
+      return;
+    }
+
+    const usersRef = collection(db, 'users');
+    const unsubscribe = onSnapshot(usersRef, (snapshot) => {
+      const loaded = snapshot.docs.map((docSnap) => buildUserProfileFromDoc(docSnap.id, docSnap.data()));
+      setUsers(loaded.length ? loaded : [user]);
+    }, (error) => {
+      console.error('Failed to load users from Firebase', error);
+      setUsers([user]);
+    });
+
+    return () => unsubscribe();
+  }, [isAuthenticated, user.id, user.isAdmin]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -1257,7 +1321,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!isAuthenticated || !auth.currentUser) return;
       const sanitizedUpdates = sanitizeDeep(updates);
       delete sanitizedUpdates.balance;
-      delete sanitizedUpdates.inventory;
       delete sanitizedUpdates.coins;
 
       try {
@@ -1268,6 +1331,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
       setUser(prev => prev.id === userId ? { ...prev, ...updates } : prev);
+  };
+
+  const updateUserBalance = async (userId: string, nextBalance: number) => {
+      if (!isAuthenticated || !auth.currentUser) return;
+      const balanceValue = Number.isFinite(nextBalance) ? Math.max(0, nextBalance) : 0;
+      try {
+        await setDoc(getUserRef(userId), { coins: balanceValue }, { merge: true });
+      } catch (error) {
+        console.error('Failed to update user balance in Firebase', error);
+      }
+
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, balance: balanceValue } : u));
+      setUser(prev => prev.id === userId ? { ...prev, balance: balanceValue } : prev);
   };
 
   const createBattle = async (boxIds: string[], maxPlayers: number) => {
@@ -1633,6 +1709,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       sendAdminNotification,
       updateUserFlags,
       updateUserAdminData,
+      updateUserBalance,
       createBattle,
       joinBattle,
       updateBattle,
