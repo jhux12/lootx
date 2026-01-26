@@ -124,6 +124,7 @@ export default async function handler(req, res) {
 
       responsePayload = {
         ok: true,
+        price,
         prize: {
           ...prize,
           price: prizeValue,

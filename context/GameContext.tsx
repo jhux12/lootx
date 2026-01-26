@@ -329,6 +329,7 @@ interface GameContextType {
   claimRakeback: () => void;
   updateBonusSettings: (settings: BonusSettings) => void;
   awardCaseOpenXp: () => void;
+  registerSpend: (amount: number) => void;
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
   updateShipmentStatus: (userId: string, instanceId: string, status: InventoryItem['status'], trackingNumber?: string) => Promise<void>;
@@ -1009,7 +1010,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!isAuthenticated || amount <= 0) return;
 
     setUser(prev => {
-      const xpGain = Math.max(0, Math.floor(amount * bonusSettings.xpPer100Coins));
+      const xpGain = Math.max(0, Math.floor((amount / 100) * bonusSettings.xpPer100Coins));
       const nextXp = Math.max(0, prev.xp + xpGain);
       const progress = calculateLevelProgress(nextXp, bonusSettings);
       const totalSpent = Math.max(0, (prev.totalSpent ?? 0) + amount);
@@ -1724,6 +1725,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       claimRakeback,
       updateBonusSettings,
       awardCaseOpenXp,
+      registerSpend,
       generateAffiliateCode,
       updateUserProgress,
       updateShipmentStatus,
