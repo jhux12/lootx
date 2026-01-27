@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, BoxTag, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus, BOX_TAG_OPTIONS } from '../types';
@@ -21,6 +21,12 @@ const rarityColorOptions = [
     { value: 'epic' as const, label: 'Epic', color: rarityColorMap.epic },
     { value: 'legendary' as const, label: 'Legendary', color: rarityColorMap.legendary }
 ];
+
+const ITEM_SPREADSHEET_HEADERS = ['name', 'price', 'image', 'rarity', 'chance', 'color', 'tags'] as const;
+const ITEM_SPREADSHEET_TEMPLATE = `name,price,image,rarity,chance,color,tags
+Neon Headset,450,https://picsum.photos/200,rare,12,#3b82f6,tech|hot
+Pixel Booster,120,https://picsum.photos/200,common,35,#9ca3af,digital
+`;
 
 const DEFAULT_LOCKS: UserLocks = {
     openCases: false,
@@ -119,6 +125,9 @@ export const AdminPanel: React.FC = () => {
       rarity: 'common',
       status: 'available'
   });
+  const [spreadsheetStatus, setSpreadsheetStatus] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
+  const [isSpreadsheetUploading, setIsSpreadsheetUploading] = useState(false);
+  const spreadsheetInputRef = useRef<HTMLInputElement | null>(null);
   const EV_TOLERANCE = 0.01;
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
@@ -324,6 +333,200 @@ export const AdminPanel: React.FC = () => {
   const resetItemForm = () => {
       setEditingItemId(null);
       setNewItem({ name: '', price: 0, image: 'https://picsum.photos/200', rarity: 'common', chance: 10, color: '#9ca3af', tags: [] });
+  };
+
+  const parseCsvRows = (content: string) => {
+      const rows: string[][] = [];
+      let current = '';
+      let row: string[] = [];
+      let inQuotes = false;
+
+      for (let index = 0; index < content.length; index += 1) {
+          const char = content[index];
+          const nextChar = content[index + 1];
+
+          if (char === '"' && inQuotes && nextChar === '"') {
+              current += '"';
+              index += 1;
+              continue;
+          }
+
+          if (char === '"') {
+              inQuotes = !inQuotes;
+              continue;
+          }
+
+          if (!inQuotes && (char === '\n' || char === '\r')) {
+              if (char === '\r' && nextChar === '\n') {
+                  index += 1;
+              }
+              row.push(current);
+              rows.push(row);
+              row = [];
+              current = '';
+              continue;
+          }
+
+          if (!inQuotes && char === ',') {
+              row.push(current);
+              current = '';
+              continue;
+          }
+
+          current += char;
+      }
+
+      if (current.length > 0 || row.length > 0) {
+          row.push(current);
+          rows.push(row);
+      }
+
+      return rows;
+  };
+
+  const parseSpreadsheetItems = (content: string) => {
+      const trimmed = content.trim();
+      if (!trimmed) {
+          return { items: [], errors: ['Spreadsheet is empty.'] };
+      }
+
+      const rows = parseCsvRows(trimmed).filter((row) => row.some((cell) => cell.trim() !== ''));
+      if (rows.length === 0) {
+          return { items: [], errors: ['Spreadsheet has no usable rows.'] };
+      }
+
+      const headers = rows[0].map((header) => header.trim().toLowerCase());
+      const headerIndex = ITEM_SPREADSHEET_HEADERS.reduce<Record<string, number>>((acc, header) => {
+          const index = headers.indexOf(header);
+          if (index !== -1) {
+              acc[header] = index;
+          }
+          return acc;
+      }, {});
+
+      const missingHeaders = ITEM_SPREADSHEET_HEADERS.filter((header) => headerIndex[header] === undefined);
+      if (missingHeaders.length) {
+          return { items: [], errors: [`Missing required headers: ${missingHeaders.join(', ')}.`] };
+      }
+
+      const errors: string[] = [];
+      const items: CaseItem[] = [];
+
+      rows.slice(1).forEach((row, rowIndex) => {
+          const lineNumber = rowIndex + 2;
+          const rowErrors: string[] = [];
+          const getValue = (header: typeof ITEM_SPREADSHEET_HEADERS[number]) => row[headerIndex[header]]?.trim() ?? '';
+          const name = getValue('name');
+          const priceValue = getValue('price');
+          const image = getValue('image');
+          const rarityValue = getValue('rarity').toLowerCase() as CaseItem['rarity'];
+          const chanceValue = getValue('chance');
+          const color = getValue('color');
+          const tagsValue = getValue('tags');
+
+          if (!name) {
+              rowErrors.push(`Row ${lineNumber}: name is required.`);
+          }
+
+          const price = Number(priceValue);
+          if (!Number.isFinite(price) || price <= 0) {
+              rowErrors.push(`Row ${lineNumber}: price must be a positive number.`);
+          }
+
+          if (!image) {
+              rowErrors.push(`Row ${lineNumber}: image URL is required.`);
+          }
+
+          const isValidRarity = ['common', 'uncommon', 'rare', 'epic', 'legendary'].includes(rarityValue);
+          if (!isValidRarity) {
+              rowErrors.push(`Row ${lineNumber}: rarity must be common, uncommon, rare, epic, or legendary.`);
+          }
+
+          const chance = Number(chanceValue);
+          if (!Number.isFinite(chance) || chance < 0 || chance > 100) {
+              rowErrors.push(`Row ${lineNumber}: chance must be between 0 and 100.`);
+          }
+
+          if (!color) {
+              rowErrors.push(`Row ${lineNumber}: color is required.`);
+          }
+
+          const tags = tagsValue
+              ? tagsValue
+                    .split(/[|;]/)
+                    .map((tag) => tag.trim().toLowerCase())
+                    .filter(Boolean)
+              : [];
+
+          const invalidTags = tags.filter((tag) => !BOX_TAG_OPTIONS.includes(tag as BoxTag));
+          if (invalidTags.length) {
+              rowErrors.push(`Row ${lineNumber}: invalid tags (${invalidTags.join(', ')}).`);
+          }
+
+          if (rowErrors.length === 0) {
+              items.push({
+                  id: `spreadsheet-${Date.now()}-${rowIndex}`,
+                  name,
+                  price,
+                  image,
+                  rarity: rarityValue,
+                  chance,
+                  color,
+                  tags: tags.filter((tag) => BOX_TAG_OPTIONS.includes(tag as BoxTag)) as BoxTag[]
+              });
+          }
+          errors.push(...rowErrors);
+      });
+
+      return { items, errors };
+  };
+
+  const handleSpreadsheetUpload = async (file: File) => {
+      setSpreadsheetStatus(null);
+      setIsSpreadsheetUploading(true);
+
+      try {
+          const content = await file.text();
+          const { items, errors } = parseSpreadsheetItems(content);
+
+          if (errors.length) {
+              setSpreadsheetStatus({ tone: 'error', message: errors.slice(0, 6).join(' ') });
+              return;
+          }
+
+          if (!items.length) {
+              setSpreadsheetStatus({ tone: 'error', message: 'No valid rows found to import.' });
+              return;
+          }
+
+          for (const item of items) {
+              await createItem(item);
+          }
+
+          setSpreadsheetStatus({
+              tone: 'success',
+              message: `Imported ${items.length} item${items.length === 1 ? '' : 's'} successfully.`
+          });
+          if (spreadsheetInputRef.current) {
+              spreadsheetInputRef.current.value = '';
+          }
+      } catch (error) {
+          setSpreadsheetStatus({ tone: 'error', message: 'Unable to read the spreadsheet. Please try again.' });
+      } finally {
+          setIsSpreadsheetUploading(false);
+      }
+  };
+
+  const handleDownloadTemplate = () => {
+      const blob = new Blob([ITEM_SPREADSHEET_TEMPLATE], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'lootx-item-upload-template.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
   };
 
   const startEditUser = (userId: string, xp: number) => {
@@ -1025,6 +1228,52 @@ export const AdminPanel: React.FC = () => {
             {/* TAB: ITEMS */}
             {activeTab === 'items' && (
                 <div className="space-y-8">
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Bulk upload via spreadsheet</h3>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Upload a CSV export with columns: {ITEM_SPREADSHEET_HEADERS.join(', ')}. Separate multiple tags with
+                                    a <span className="text-gray-300">|</span> or <span className="text-gray-300">;</span>.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleDownloadTemplate}
+                                className="w-full sm:w-auto px-4 py-2 rounded-lg border border-gray-700 text-xs font-semibold uppercase tracking-wide text-gray-200 hover:border-gray-500"
+                            >
+                                Download template
+                            </button>
+                        </div>
+                        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <input
+                                ref={spreadsheetInputRef}
+                                type="file"
+                                accept=".csv"
+                                onChange={(event) => {
+                                    const file = event.target.files?.[0];
+                                    if (file) {
+                                        handleSpreadsheetUpload(file);
+                                    }
+                                }}
+                                className="w-full text-xs text-gray-400 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-blue-500"
+                            />
+                            {isSpreadsheetUploading && (
+                                <span className="text-xs text-gray-400">Importing items...</span>
+                            )}
+                        </div>
+                        {spreadsheetStatus && (
+                            <div
+                                className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+                                    spreadsheetStatus.tone === 'success'
+                                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                                        : 'border-red-500/40 bg-red-500/10 text-red-200'
+                                }`}
+                            >
+                                {spreadsheetStatus.message}
+                            </div>
+                        )}
+                    </div>
                     {/* Create Item Form */}
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex justify-between items-center mb-4">
