@@ -75,7 +75,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const items = box?.items ?? [];
   const hasItems = items.length > 0;
-  const sellBackRate = box?.isUserCreated ? 0.75 : 0.82;
+  const rawSellBackRate = Number(
+    box?.sellBackRate ?? (box?.isUserCreated ? 0.75 : 0.82)
+  );
+  const sellBackRate = Number.isFinite(rawSellBackRate)
+    ? Math.min(1, Math.max(0, rawSellBackRate))
+    : 0.82;
   const isReady = Boolean(box) && hasItems;
   const isAdmin = Boolean(user?.isAdmin);
 
@@ -103,6 +108,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [fairTab, setFairTab] = useState<'active' | 'verify'>('active');
   const [showFairTooltip, setShowFairTooltip] = useState(false);
   const [rewardResolved, setRewardResolved] = useState(false);
+  const [selectedCaseItem, setSelectedCaseItem] = useState<CaseItem | null>(null);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -345,6 +351,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           newCoins: number;
           inventoryId: string;
           openId: string;
+          sellBackRate?: number;
           provablyFair: {
             serverSeedHash: string;
             clientSeed: string;
@@ -362,19 +369,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const fallbackPrice = Number(
           (data.prize as { value?: number }).value ?? data.prize.price ?? 0
         );
-        winner = matchedPrize ?? {
-          ...data.prize,
-          price: fallbackPrice,
-          chance: 0,
-          color: '#9ca3af'
-        };
+        const resolvedRedeemable = data.prize.redeemable ?? matchedPrize?.redeemable ?? true;
+        winner = matchedPrize
+          ? { ...matchedPrize, redeemable: resolvedRedeemable, price: matchedPrize.price ?? fallbackPrice }
+          : {
+              ...data.prize,
+              price: fallbackPrice,
+              chance: 0,
+              color: '#9ca3af',
+              redeemable: resolvedRedeemable
+            };
 
         const inventoryItem: InventoryItem = {
           ...(winner as CaseItem),
           instanceId: data.inventoryId,
           obtainedAt: Date.now(),
           status: 'available',
-          provenance: { sourceType: 'case_open', sourceId: box.id }
+          provenance: { sourceType: 'case_open', sourceId: box.id },
+          sellBackRate: data.sellBackRate
         };
 
         addInventoryItemFromServer(inventoryItem);
@@ -502,6 +514,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleSell = async () => {
     playSound('click');
+    if (wonItem?.redeemable === false) {
+        alert('This item is not redeemable and cannot be sold back.');
+        return;
+    }
     if (isDemoSpin || isGeneratingSellOffer) {
         if (isDemoSpin) {
           setShowWinModal(false);
@@ -918,36 +934,45 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 Close
                             </button>
                         ) : (
+                            <div className="w-full">
+                                {wonItem.redeemable === false && (
+                                  <div className="mb-3 w-full rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wide text-amber-200">
+                                    Not redeemable for coins
+                                  </div>
+                                )}
                             <div className="flex w-full flex-col gap-3 sm:flex-row">
-                                <button
-                                  onClick={handleSell}
-                                  disabled={isGeneratingSellOffer}
-                                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-80"
-                                >
-                                    <span className="flex flex-col items-center justify-center gap-1">
-                                      <span className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-wide text-gray-400">
-                                        {isGeneratingSellOffer && (
-                                          <span className="h-3 w-3 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
+                                {wonItem.redeemable !== false && (
+                                  <button
+                                    onClick={handleSell}
+                                    disabled={isGeneratingSellOffer}
+                                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-80"
+                                  >
+                                      <span className="flex flex-col items-center justify-center gap-1">
+                                        <span className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-wide text-gray-400">
+                                          {isGeneratingSellOffer && (
+                                            <span className="h-3 w-3 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
+                                          )}
+                                          {isGeneratingSellOffer
+                                            ? 'Generating offer...'
+                                            : sellOfferGenerated
+                                              ? 'Accept buy back offer'
+                                              : 'Generate buy back offer'}
+                                        </span>
+                                        {sellOfferGenerated && !isGeneratingSellOffer && (
+                                          <CoinAmount
+                                            amount={getSellBackValue(wonItem.price, sellBackRate)}
+                                            formatOptions={{ maximumFractionDigits: 0 }}
+                                            className="text-gray-200"
+                                            iconClassName="w-4 h-4"
+                                          />
                                         )}
-                                        {isGeneratingSellOffer
-                                          ? 'Generating offer...'
-                                          : sellOfferGenerated
-                                            ? 'Accept buy back offer'
-                                            : 'Generate buy back offer'}
                                       </span>
-                                      {sellOfferGenerated && !isGeneratingSellOffer && (
-                                        <CoinAmount
-                                          amount={getSellBackValue(wonItem.price, sellBackRate)}
-                                          formatOptions={{ maximumFractionDigits: 0 }}
-                                          className="text-gray-200"
-                                          iconClassName="w-4 h-4"
-                                        />
-                                      )}
-                                    </span>
-                                </button>
+                                  </button>
+                                )}
                                 <button onClick={handleKeep} className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-500 hover:to-blue-400">
                                     Keep Item
                                 </button>
+                            </div>
                             </div>
                         )}
                      </div>
@@ -961,22 +986,35 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <div className="w-1 h-4 bg-gray-600 rounded-full"></div>
                 Case contains
             </div>
+            <div className="-mt-4 mb-6 flex items-center gap-2 text-[11px] text-gray-500">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-black/40 text-amber-200">
+                    <Info className="h-3.5 w-3.5" />
+                </span>
+                <span>Icon means not redeemable for coins.</span>
+            </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {displayItems.map((item) => (
-                    <div 
+                    <button
                         key={item.id} 
-                        className="group relative bg-[#0f1219] hover:bg-[#151a23] border border-gray-800 hover:border-gray-700 rounded-xl p-3 flex flex-col items-center transition-all"
+                        type="button"
+                        onClick={() => setSelectedCaseItem(item)}
+                        className="group relative flex flex-col items-center rounded-xl border border-gray-800 bg-[#0f1219] p-3 text-left transition-all hover:border-gray-700 hover:bg-[#151a23]"
                     >
                         <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#1a2130] rounded border border-gray-700 text-[10px] font-bold text-yellow-500">
                             {item.chance}%
                         </div>
 
-                        <div className="relative w-full aspect-square flex items-center justify-center mb-3">
+                        <div className="relative mb-3 flex w-full aspect-square items-center justify-center">
                             <div 
                                 className="absolute inset-4 opacity-0 group-hover:opacity-20 transition-opacity blur-xl rounded-full"
                                 style={{ backgroundColor: item.color }}
                             ></div>
+                            {item.redeemable === false && (
+                              <div className="absolute right-2 top-2 rounded border border-gray-700 bg-[#1a2130] px-1.5 py-0.5 text-[10px] font-bold text-amber-200">
+                                <Info className="h-3.5 w-3.5" />
+                              </div>
+                            )}
                             <img src={item.image} alt={item.name} className="relative z-10 w-3/4 h-3/4 object-contain group-hover:scale-110 transition-transform duration-300" />
                         </div>
 
@@ -994,10 +1032,57 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             className="absolute bottom-0 left-0 right-0 h-[2px] rounded-b-xl opacity-50 group-hover:opacity-100 transition-opacity"
                             style={{ backgroundColor: item.color, boxShadow: `0 0 8px ${item.color}` }}
                         ></div>
-                    </div>
+                    </button>
                 ))}
             </div>
         </div>
+        {selectedCaseItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setSelectedCaseItem(null)}
+              aria-label="Close item details"
+            />
+            <div
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl border bg-gradient-to-br from-[#151a23] via-[#111722] to-[#0b0f18] p-5 text-gray-200 shadow-2xl sm:p-6"
+              style={{ borderColor: selectedCaseItem.color }}
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedCaseItem(null)}
+                className="absolute right-4 top-4 rounded-full border border-white/10 bg-black/30 p-2 text-gray-300 transition hover:border-white/30 hover:text-white"
+                aria-label="Close item details"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-4 flex h-32 w-32 items-center justify-center rounded-2xl border border-white/10 bg-white/5 sm:h-36 sm:w-36">
+                  <img
+                    src={selectedCaseItem.image}
+                    alt={selectedCaseItem.name}
+                    className="h-24 w-24 object-contain sm:h-28 sm:w-28"
+                  />
+                </div>
+                <h3 className="text-lg font-bold text-white">{selectedCaseItem.name}</h3>
+                <CoinAmount
+                  amount={selectedCaseItem.price}
+                  formatOptions={{ maximumFractionDigits: 0 }}
+                  className="mt-2 text-gray-200"
+                  iconClassName="w-4 h-4"
+                />
+                <div className="mt-3 text-xs uppercase tracking-wide text-gray-400">
+                  Brand: <span className="font-semibold text-gray-200">{selectedCaseItem.brand || 'Unknown'}</span>
+                </div>
+                {selectedCaseItem.redeemable === false && (
+                  <div className="mt-4 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
+                    Not redeemable for coins
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         </>
       )}
     </div>
