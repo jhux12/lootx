@@ -61,7 +61,9 @@ export interface CaseItem {
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   chance: number; // Percentage 0-100
   color: string;
-  tags?: BoxTag[];
+  brand?: string;
+  category?: string;
+  tags?: string[];
 }
 
 export interface MysteryBox {

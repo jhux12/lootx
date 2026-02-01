@@ -67,7 +67,10 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
       name: typed.name ?? 'Mystery Item',
       image: typed.image ?? 'https://picsum.photos/200',
       chance: Number(typed.chance ?? 0),
-      color: typed.color ?? '#9ca3af'
+      color: typed.color ?? '#9ca3af',
+      brand: typeof typed.brand === 'string' ? typed.brand : '',
+      category: typeof typed.category === 'string' ? typed.category : '',
+      tags: Array.isArray(typed.tags) ? typed.tags : []
     };
   });
 };
@@ -777,12 +780,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             rarity,
             chance: Number(data.chance ?? 0),
             color: data.color ?? '#9ca3af',
-            tags: Array.isArray(data.tags) ? (data.tags as CaseItem['tags']) : undefined
+            brand: typeof data.brand === 'string' ? data.brand : '',
+            category: typeof data.category === 'string' ? data.category : '',
+            tags: Array.isArray(data.tags) ? (data.tags as CaseItem['tags']) : []
           } as CaseItem;
         })
         .sort((a, b) => a.price - b.price);
 
-      setItems(loaded.length ? loaded : CASE_ITEMS);
+      const fallbackItems = CASE_ITEMS.map((item) => ({
+        ...item,
+        brand: item.brand ?? '',
+        category: item.category ?? '',
+        tags: Array.isArray(item.tags) ? item.tags : []
+      }));
+      setItems(loaded.length ? loaded : fallbackItems);
     }, (error) => {
       console.error('Failed to load items from Firebase', error);
     });
@@ -808,7 +819,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               rarity,
               chance: Number(item.weight ?? item.chance ?? 0),
               color: item.color ?? RARITY_COLORS[rarity] ?? '#9ca3af',
-              tags: Array.isArray(item.tags) ? (item.tags as CaseItem['tags']) : undefined
+              brand: typeof item.brand === 'string' ? item.brand : '',
+              category: typeof item.category === 'string' ? item.category : '',
+              tags: Array.isArray(item.tags) ? (item.tags as CaseItem['tags']) : []
             };
           }) : [];
 
