@@ -48,6 +48,9 @@ export default async function handler(req, res) {
       if (status !== 'available') {
         throw { status: 400, error: 'Item is not available for sale' };
       }
+      if (inventoryItem.redeemable === false) {
+        throw { status: 400, error: 'Item is not redeemable' };
+      }
 
       const sellBackRate = Number(inventoryItem.sellBackRate ?? 0.8);
       const itemValue = Number(inventoryItem.value ?? 0);

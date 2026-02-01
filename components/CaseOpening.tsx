@@ -75,7 +75,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const items = box?.items ?? [];
   const hasItems = items.length > 0;
-  const sellBackRate = box?.isUserCreated ? 0.75 : 0.82;
+  const rawSellBackRate = Number(
+    box?.sellBackRate ?? (box?.isUserCreated ? 0.75 : 0.82)
+  );
+  const sellBackRate = Number.isFinite(rawSellBackRate)
+    ? Math.min(1, Math.max(0, rawSellBackRate))
+    : 0.82;
   const isReady = Boolean(box) && hasItems;
   const isAdmin = Boolean(user?.isAdmin);
 
@@ -345,6 +350,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           newCoins: number;
           inventoryId: string;
           openId: string;
+          sellBackRate?: number;
           provablyFair: {
             serverSeedHash: string;
             clientSeed: string;
@@ -374,7 +380,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           instanceId: data.inventoryId,
           obtainedAt: Date.now(),
           status: 'available',
-          provenance: { sourceType: 'case_open', sourceId: box.id }
+          provenance: { sourceType: 'case_open', sourceId: box.id },
+          sellBackRate: data.sellBackRate
         };
 
         addInventoryItemFromServer(inventoryItem);
@@ -502,6 +509,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleSell = async () => {
     playSound('click');
+    if (wonItem?.redeemable === false) {
+        alert('This item is not redeemable and cannot be sold back.');
+        return;
+    }
     if (isDemoSpin || isGeneratingSellOffer) {
         if (isDemoSpin) {
           setShowWinModal(false);
@@ -918,10 +929,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 Close
                             </button>
                         ) : (
+                            <div className="w-full">
+                                {wonItem.redeemable === false && (
+                                  <div className="mb-3 w-full rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wide text-amber-200">
+                                    Not redeemable
+                                  </div>
+                                )}
                             <div className="flex w-full flex-col gap-3 sm:flex-row">
                                 <button
                                   onClick={handleSell}
-                                  disabled={isGeneratingSellOffer}
+                                  disabled={isGeneratingSellOffer || wonItem.redeemable === false}
                                   className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-80"
                                 >
                                     <span className="flex flex-col items-center justify-center gap-1">
@@ -935,7 +952,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                             ? 'Accept buy back offer'
                                             : 'Generate buy back offer'}
                                       </span>
-                                      {sellOfferGenerated && !isGeneratingSellOffer && (
+                                      {sellOfferGenerated && !isGeneratingSellOffer && wonItem.redeemable !== false && (
                                         <CoinAmount
                                           amount={getSellBackValue(wonItem.price, sellBackRate)}
                                           formatOptions={{ maximumFractionDigits: 0 }}
@@ -948,6 +965,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 <button onClick={handleKeep} className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-500 hover:to-blue-400">
                                     Keep Item
                                 </button>
+                            </div>
                             </div>
                         )}
                      </div>

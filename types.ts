@@ -64,6 +64,7 @@ export interface CaseItem {
   brand?: string;
   category?: string;
   tags?: string[];
+  redeemable?: boolean;
 }
 
 export interface MysteryBox {
@@ -79,6 +80,7 @@ export interface MysteryBox {
   riskLevel?: number;
   isUserCreated?: boolean;
   isDaily?: boolean;
+  sellBackRate?: number;
 }
 
 export interface CoinPackage {
@@ -103,6 +105,7 @@ export interface InventoryItem extends CaseItem {
   trackingNumber?: string;
   provenance?: InventoryProvenance;
   history?: InventoryHistoryEntry[];
+  sellBackRate?: number;
 }
 
 export type UserStatus = 'active' | 'suspended' | 'banned';

@@ -102,7 +102,8 @@ export const AdminPanel: React.FC = () => {
       color: '#9ca3af',
       brand: '',
       category: '',
-      tags: []
+      tags: [],
+      redeemable: true
   });
   const [itemTagInput, setItemTagInput] = useState('');
 
@@ -114,7 +115,8 @@ export const AdminPanel: React.FC = () => {
       image: 'https://picsum.photos/300',
       accentColor: '#3b82f6',
       isDaily: false,
-      tags: []
+      tags: [],
+      sellBackRate: 0.82
   });
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
@@ -415,7 +417,8 @@ export const AdminPanel: React.FC = () => {
           color: newItem.color || '#9ca3af',
           brand,
           category,
-          tags
+          tags,
+          redeemable: newItem.redeemable ?? true
       };
 
       if (editingItemId) {
@@ -439,7 +442,8 @@ export const AdminPanel: React.FC = () => {
           color: item.color,
           brand: item.brand ?? '',
           category: item.category ?? '',
-          tags: item.tags ?? []
+          tags: item.tags ?? [],
+          redeemable: item.redeemable ?? true
       });
       setItemTagInput('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -462,7 +466,8 @@ export const AdminPanel: React.FC = () => {
           color: '#9ca3af',
           brand: '',
           category: '',
-          tags: []
+          tags: [],
+          redeemable: true
       });
       setItemTagInput('');
   };
@@ -714,7 +719,8 @@ export const AdminPanel: React.FC = () => {
                   color,
                   brand: brand.trim(),
                   category: category.trim(),
-                  tags: normalizedTags
+                  tags: normalizedTags,
+                  redeemable: true
               });
           }
           errors.push(...rowErrors);
@@ -1240,6 +1246,7 @@ export const AdminPanel: React.FC = () => {
           tag: newBox.tag,
           tags: newBox.tags ?? [],
           isDaily: newBox.isDaily,
+          sellBackRate: newBox.sellBackRate ?? (newBox.isDaily ? 0.75 : 0.82),
           items: boxItems,
           targetEV: clampedTargetEV,
           riskLevel: riskBalance
@@ -1265,7 +1272,8 @@ export const AdminPanel: React.FC = () => {
           accentColor: box.accentColor,
           tag: box.tag,
           tags: box.tags ?? (box.tag ? [box.tag] : []),
-          isDaily: box.isDaily
+          isDaily: box.isDaily,
+          sellBackRate: box.sellBackRate ?? (box.isUserCreated ? 0.75 : 0.82)
       });
       setSelectedItems(box.items.map(i => ({...i})));
       setRiskBalance(box.riskLevel ?? 50);
@@ -1291,7 +1299,15 @@ export const AdminPanel: React.FC = () => {
 
   const resetBoxForm = () => {
       setEditingBoxId(null);
-      setNewBox({ name: '', price: 0, image: 'https://picsum.photos/300', accentColor: '#3b82f6', isDaily: false, tags: [] });
+      setNewBox({
+        name: '',
+        price: 0,
+        image: 'https://picsum.photos/300',
+        accentColor: '#3b82f6',
+        isDaily: false,
+        tags: [],
+        sellBackRate: 0.82
+      });
       setSelectedItems([]);
       setRiskBalance(50);
       setTargetEV(0.85);
@@ -1562,6 +1578,15 @@ export const AdminPanel: React.FC = () => {
                             </select>
                             <input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.image} onChange={e => setNewItem({...newItem, image: e.target.value})} />
                             <input type="number" placeholder="Chance % (0-100)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.chance} onChange={e => setNewItem({...newItem, chance: Number(e.target.value)})} />
+                            <label className="col-span-1 md:col-span-2 flex items-center gap-3 rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300">
+                                <input
+                                  type="checkbox"
+                                  checked={newItem.redeemable ?? true}
+                                  onChange={(event) => setNewItem({ ...newItem, redeemable: event.target.checked })}
+                                  className="h-4 w-4 rounded border-gray-600 bg-transparent text-emerald-500 focus:ring-emerald-400"
+                                />
+                                Redeemable (allow sell back)
+                            </label>
                         </div>
                         <div className="mb-4">
                             <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Item Tags</label>
@@ -1718,7 +1743,7 @@ export const AdminPanel: React.FC = () => {
                             </div>
 
                             <div className="flex flex-col gap-4">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                     <div>
                                         <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Price (coins)</label>
                                         <input type="number" placeholder="Box Price (coins)" className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold text-green-400" value={newBox.price || ''} onChange={e => setNewBox({...newBox, price: Number(e.target.value)})} />
@@ -1749,6 +1774,23 @@ export const AdminPanel: React.FC = () => {
                                             onChange={e => setTargetEV(Number(e.target.value))}
                                         />
                                         <p className="text-[10px] text-gray-500 mt-1">0.85 = 85% payout target.</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Sell back %</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            max={100}
+                                            step={1}
+                                            placeholder="82"
+                                            className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold"
+                                            value={Math.round((newBox.sellBackRate ?? 0.82) * 100)}
+                                            onChange={e => {
+                                              const nextRate = Math.min(100, Math.max(0, Number(e.target.value)));
+                                              setNewBox({ ...newBox, sellBackRate: Number.isFinite(nextRate) ? nextRate / 100 : 0.82 });
+                                            }}
+                                        />
+                                        <p className="text-[10px] text-gray-500 mt-1">Percent of item value paid on sell back.</p>
                                     </div>
                                 </div>
                                 <div>

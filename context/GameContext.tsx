@@ -70,7 +70,9 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
       color: typed.color ?? '#9ca3af',
       brand: typeof typed.brand === 'string' ? typed.brand : '',
       category: typeof typed.category === 'string' ? typed.category : '',
-      tags: Array.isArray(typed.tags) ? typed.tags : []
+      tags: Array.isArray(typed.tags) ? typed.tags : [],
+      redeemable: typed.redeemable ?? true,
+      sellBackRate: Number(typed.sellBackRate ?? 0)
     };
   });
 };
@@ -515,7 +517,9 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     color: RARITY_COLORS[rarity] ?? '#9ca3af',
     obtainedAt,
     status,
-    provenance: data.boxId ? { sourceType: 'case_open', sourceId: data.boxId } : undefined
+    provenance: data.boxId ? { sourceType: 'case_open', sourceId: data.boxId } : undefined,
+    redeemable: data.redeemable ?? true,
+    sellBackRate: Number(data.sellBackRate ?? 0)
   } as InventoryItem;
 };
 
@@ -1267,6 +1271,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const itemIndex = inventory.findIndex((item) => item.instanceId === instanceId);
     const itemToSell = itemIndex >= 0 ? inventory[itemIndex] : undefined;
+    if (itemToSell?.redeemable === false) {
+      alert('This item is not redeemable and cannot be sold back.');
+      return;
+    }
     try {
       pendingSoldIdsRef.current.add(instanceId);
       setInventory(prev => prev.filter(item => item.instanceId !== instanceId));

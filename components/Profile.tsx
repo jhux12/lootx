@@ -165,8 +165,15 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
     : [];
 
   const getSellBackRate = (item: typeof normalizedInventory[number]) => {
+    const storedRate = Number(item.sellBackRate);
+    if (Number.isFinite(storedRate) && storedRate > 0) {
+      return Math.min(1, Math.max(0, storedRate));
+    }
     if (item.provenance?.sourceType === 'case_open' && item.provenance?.sourceId) {
       const sourceBox = boxes.find((box) => box.id === item.provenance?.sourceId);
+      if (sourceBox?.sellBackRate !== undefined) {
+        return Math.min(1, Math.max(0, Number(sourceBox.sellBackRate)));
+      }
       if (sourceBox?.isUserCreated) {
         return 0.75;
       }
@@ -535,7 +542,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                               const isAvailable = item.status === 'available';
                               const isLocked = !!item.locked;
                               const canShip = isAvailable && !isLocked && !!user.shippingAddress;
-                              const canSell = isAvailable && !isLocked;
+                              const canSell = isAvailable && !isLocked && item.redeemable !== false;
                               const statusLabel = item.status === 'shipping' || item.status === 'shipping_requested'
                                 ? 'Shipping'
                                 : item.status === 'shipped'
@@ -565,6 +572,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                           <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">{item.rarity}</div>
                                           <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${statusTone}`}>{statusLabel}</span>
                                       </div>
+                                      {item.redeemable === false && (
+                                        <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                                          Not redeemable
+                                        </div>
+                                      )}
                                       <h4 className="text-white font-bold text-sm mt-2 mb-2 line-clamp-2 min-h-[2.5rem]">{item.name}</h4>
                                       <CoinAmount
                                         amount={item.price}
@@ -631,9 +643,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                                       ? 'Generating offer...'
                                                       : sellOffers[item.instanceId]
                                                         ? 'Accept buy back offer'
-                                                        : 'Generate buy back offer'}
+                                                        : item.redeemable === false
+                                                          ? 'Not redeemable'
+                                                          : 'Generate buy back offer'}
                                                   </span>
-                                                  {sellOffers[item.instanceId] && !isGeneratingSellOffers[item.instanceId] && (
+                                                  {sellOffers[item.instanceId] && !isGeneratingSellOffers[item.instanceId] && item.redeemable !== false && (
                                                     <CoinAmount
                                                       amount={getSellBackValue(item.price, getSellBackRate(item))}
                                                       formatOptions={{ maximumFractionDigits: 0 }}
