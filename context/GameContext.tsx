@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
-import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks } from '../types';
+import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
@@ -17,8 +17,11 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
+  orderBy,
   QueryDocumentSnapshot,
+  query,
   runTransaction,
+  serverTimestamp,
   setDoc,
   Timestamp
 } from 'firebase/firestore';
@@ -285,6 +288,7 @@ interface GameContextType {
   battles: Battle[];
   boxes: MysteryBox[];
   items: CaseItem[];
+  coinPackages: CoinPackage[];
   bonusSettings: BonusSettings;
   showLoginModal: boolean;
   showTopUpModal: boolean;
@@ -318,6 +322,9 @@ interface GameContextType {
   createItem: (item: CaseItem) => Promise<void>;
   updateItem: (item: CaseItem) => Promise<void>;
   deleteItem: (itemId: string) => Promise<void>;
+  createCoinPackage: (pkg: Omit<CoinPackage, 'id'> & { id?: string }) => Promise<void>;
+  updateCoinPackage: (id: string, updates: Partial<CoinPackage>) => Promise<void>;
+  deleteCoinPackage: (id: string) => Promise<void>;
   updateUserFlags: (updates: Partial<User>) => Promise<void>;
   updateUserAdminData: (userId: string, updates: Partial<User>) => Promise<void>;
   updateUserBalance: (userId: string, balance: number) => Promise<void>;
@@ -593,6 +600,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
+  const [coinPackages, setCoinPackages] = useState<CoinPackage[]>([]);
+
   const [battles, setBattles] = useState<Battle[]>([]);
 
   // -- FIREBASE SYNC --
@@ -825,6 +834,31 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     }, (error) => {
       console.error('Failed to load boxes from Firebase', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const packagesRef = query(collection(db, 'coin_packages'), orderBy('sortOrder', 'asc'));
+    const unsubscribe = onSnapshot(packagesRef, (snapshot) => {
+      const loaded = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          name: data.name ?? 'Coin Package',
+          coins: Number(data.coins ?? 0),
+          displayPrice: data.displayPrice ?? '',
+          stripePriceId: data.stripePriceId ?? '',
+          active: data.active ?? false,
+          sortOrder: Number(data.sortOrder ?? 0),
+          createdAt: normalizeTimestamp(data.createdAt, 0),
+          updatedAt: normalizeTimestamp(data.updatedAt, 0)
+        } as CoinPackage;
+      });
+      setCoinPackages(loaded);
+    }, (error) => {
+      console.error('Failed to load coin packages from Firebase', error);
     });
 
     return () => unsubscribe();
@@ -1511,6 +1545,70 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setItems(prev => prev.filter(i => i.id !== itemId));
   };
 
+  const ensureAdmin = () => {
+    if (!user.isAdmin) {
+      console.warn('Unauthorized admin action attempted');
+      throw new Error('Not authorized');
+    }
+  };
+
+  const createCoinPackage = async (pkg: Omit<CoinPackage, 'id'> & { id?: string }) => {
+    ensureAdmin();
+    const { id, ...rawData } = pkg;
+    const packageData = sanitizeDeep({
+      ...rawData,
+      coins: Math.max(0, Number(rawData.coins ?? 0)),
+      sortOrder: Number(rawData.sortOrder ?? 0),
+      active: !!rawData.active,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    try {
+      if (id) {
+        await setDoc(doc(db, 'coin_packages', id), packageData, { merge: true });
+      } else {
+        await addDoc(collection(db, 'coin_packages'), packageData);
+      }
+    } catch (error) {
+      console.error('Failed to save coin package in Firebase', error);
+      throw error;
+    }
+  };
+
+  const updateCoinPackage = async (id: string, updates: Partial<CoinPackage>) => {
+    ensureAdmin();
+    if (!id) {
+      console.warn('Attempted to update a coin package without an id');
+      return;
+    }
+
+    const packageData = sanitizeDeep({
+      ...updates,
+      coins: updates.coins !== undefined ? Math.max(0, Number(updates.coins ?? 0)) : undefined,
+      sortOrder: updates.sortOrder !== undefined ? Number(updates.sortOrder ?? 0) : undefined,
+      active: updates.active !== undefined ? !!updates.active : undefined,
+      updatedAt: serverTimestamp()
+    });
+
+    try {
+      await setDoc(doc(db, 'coin_packages', id), packageData, { merge: true });
+    } catch (error) {
+      console.error('Failed to update coin package in Firebase', error);
+      throw error;
+    }
+  };
+
+  const deleteCoinPackage = async (id: string) => {
+    ensureAdmin();
+    try {
+      await deleteDoc(doc(db, 'coin_packages', id));
+    } catch (error) {
+      console.error('Failed to delete coin package from Firebase', error);
+      throw error;
+    }
+  };
+
   const createBox = async (box: MysteryBox) => {
       const { id, ...boxDataRaw } = box;
       const boxData = sanitizeDeep(boxDataRaw);
@@ -1686,6 +1784,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       battles,
       boxes,
       items,
+      coinPackages,
       bonusSettings,
       login,
       register,
@@ -1717,6 +1816,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       createItem,
       updateItem,
       deleteItem,
+      createCoinPackage,
+      updateCoinPackage,
+      deleteCoinPackage,
       createBox,
       createUserBox,
       updateBox,

@@ -79,6 +79,18 @@ export interface MysteryBox {
   isDaily?: boolean;
 }
 
+export interface CoinPackage {
+  id: string;
+  name: string;
+  coins: number;
+  displayPrice: string;
+  stripePriceId: string;
+  active: boolean;
+  sortOrder: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
 export interface InventoryItem extends CaseItem {
   instanceId: string;
   obtainedAt: number;
