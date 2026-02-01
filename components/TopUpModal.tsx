@@ -233,7 +233,7 @@ export const TopUpModal: React.FC = () => {
                     <img
   src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2F12.png?alt=media&token=a82f5343-7e3e-4cb9-9d7a-b0451d4e49b0"
   alt="Secure checkout"
-  className="mx-auto mt-4 h-24 opacity-80"
+  className="mx-auto mt-3 h-24 opacity-80"
 />
 
 <p className="text-center text-[10px] text-gray-500 mt-2">
