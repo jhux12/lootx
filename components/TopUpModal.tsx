@@ -229,7 +229,16 @@ export const TopUpModal: React.FC = () => {
                             </span>
                         )}
                     </button>
-                    
+
+                    <img
+  src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2Fpaymenticons.png?alt=media&token=3d0ffe13-70a5-455a-9bde-ffec5a5369e4"
+  alt="Secure checkout"
+  className="mx-auto mt-4 h-6 opacity-80"
+/>
+
+<p className="text-center text-[10px] text-gray-500 mt-2">
+  By depositing you agree to our Terms of Service.
+</p>
                     <p className="text-center text-[10px] text-gray-500 mt-4">
                         By depositing you agree to our Terms of Service.
                     </p>
