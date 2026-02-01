@@ -574,7 +574,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                       </div>
                                       {item.redeemable === false && (
                                         <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
-                                          Not redeemable
+                                          Not redeemable for coins
                                         </div>
                                       )}
                                       <h4 className="text-white font-bold text-sm mt-2 mb-2 line-clamp-2 min-h-[2.5rem]">{item.name}</h4>
