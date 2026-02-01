@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, BoxTag, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus, BOX_TAG_OPTIONS } from '../types';
+import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -22,10 +22,31 @@ const rarityColorOptions = [
     { value: 'legendary' as const, label: 'Legendary', color: rarityColorMap.legendary }
 ];
 
-const ITEM_SPREADSHEET_HEADERS = ['name', 'price', 'image', 'rarity', 'chance', 'color', 'tags'] as const;
-const ITEM_SPREADSHEET_TEMPLATE = `name,price,image,rarity,chance,color,tags
-Neon Headset,450,https://picsum.photos/200,rare,12,#3b82f6,tech|hot
-Pixel Booster,120,https://picsum.photos/200,common,35,#9ca3af,digital
+const ITEM_TAG_SUGGESTIONS = [
+    'pokemon',
+    'sealed',
+    'slab',
+    'psa10',
+    'booster-pack',
+    'booster-box',
+    'etb',
+    'sneakers',
+    'tech',
+    'apple',
+    'nike',
+    'gaming',
+    'graded',
+    'raw',
+    'vintage',
+    'modern'
+] as const;
+
+const ITEM_SPREADSHEET_REQUIRED_HEADERS = ['name', 'price', 'image', 'rarity', 'chance', 'color'] as const;
+const ITEM_SPREADSHEET_OPTIONAL_HEADERS = ['brand', 'category', 'tags'] as const;
+const ITEM_SPREADSHEET_HEADERS = [...ITEM_SPREADSHEET_REQUIRED_HEADERS, ...ITEM_SPREADSHEET_OPTIONAL_HEADERS] as const;
+const ITEM_SPREADSHEET_TEMPLATE = `name,price,image,rarity,chance,color,brand,category,tags
+Neon Headset,450,https://picsum.photos/200,rare,12,#3b82f6,NeonX,tech,tech|gaming
+Pixel Booster,120,https://picsum.photos/200,common,35,#9ca3af,,pokemon,booster-pack|sealed
 `;
 
 const DEFAULT_LOCKS: UserLocks = {
@@ -79,8 +100,11 @@ export const AdminPanel: React.FC = () => {
       rarity: 'common',
       chance: 10,
       color: '#9ca3af',
+      brand: '',
+      category: '',
       tags: []
   });
+  const [itemTagInput, setItemTagInput] = useState('');
 
   // --- BOX FORM STATE ---
   const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
@@ -108,6 +132,9 @@ export const AdminPanel: React.FC = () => {
   const [riskBalance, setRiskBalance] = useState(50);
   const [targetEV, setTargetEV] = useState(0.85);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
+  const [itemBrandFilter, setItemBrandFilter] = useState('');
+  const [itemCategoryFilter, setItemCategoryFilter] = useState('');
+  const [itemTagFilters, setItemTagFilters] = useState<string[]>([]);
   const [deletingBoxId, setDeletingBoxId] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userXpInput, setUserXpInput] = useState<number>(0);
@@ -149,7 +176,6 @@ export const AdminPanel: React.FC = () => {
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
   const boxTagOptions = ['Tech Boxes', 'Pokemon', 'Digital Codes', 'Hot', 'Deals'];
-  const itemTagOptions = BOX_TAG_OPTIONS;
   const sortedPackages = useMemo(() => {
       return [...coinPackages].sort((a, b) => a.sortOrder - b.sortOrder);
   }, [coinPackages]);
@@ -306,9 +332,79 @@ export const AdminPanel: React.FC = () => {
       setBonusDraft(bonusSettings);
   }, [bonusSettings]);
 
+  const normalizeTagList = (tags: string[]) => Array.from(new Set(
+      tags
+          .map((tag) => tag.trim().toLowerCase())
+          .filter(Boolean)
+  ));
+
+  const addItemTag = (tag: string) => {
+      const normalized = tag.trim().toLowerCase();
+      if (!normalized) return;
+      setNewItem((prev) => ({
+          ...prev,
+          tags: normalizeTagList([...(prev.tags ?? []), normalized])
+      }));
+  };
+
+  const removeItemTag = (tag: string) => {
+      const normalized = tag.trim().toLowerCase();
+      setNewItem((prev) => ({
+          ...prev,
+          tags: (prev.tags ?? []).filter((existing) => existing.toLowerCase() !== normalized)
+      }));
+  };
+
+  const itemBrandOptions = useMemo(() => {
+      const brands = new Set<string>();
+      items.forEach((item) => {
+          const brand = item.brand?.trim();
+          if (brand) brands.add(brand);
+      });
+      return Array.from(brands).sort((a, b) => a.localeCompare(b));
+  }, [items]);
+
+  const itemCategoryOptions = useMemo(() => {
+      const categories = new Set<string>();
+      items.forEach((item) => {
+          const category = item.category?.trim();
+          if (category) categories.add(category);
+      });
+      return Array.from(categories).sort((a, b) => a.localeCompare(b));
+  }, [items]);
+
+  const itemTagOptions = useMemo(() => {
+      const tags = new Set<string>(ITEM_TAG_SUGGESTIONS);
+      items.forEach((item) => {
+          (item.tags ?? []).forEach((tag) => {
+              if (tag) tags.add(tag.toLowerCase());
+          });
+      });
+      return Array.from(tags).sort((a, b) => a.localeCompare(b));
+  }, [items]);
+
+  const filteredItemsForBox = useMemo(() => {
+      const normalizedBrand = itemBrandFilter.trim().toLowerCase();
+      const normalizedCategory = itemCategoryFilter.trim().toLowerCase();
+      const normalizedTagFilters = itemTagFilters.map((tag) => tag.toLowerCase());
+
+      return items.filter((item) => {
+          const brand = item.brand?.toLowerCase() ?? '';
+          const category = item.category?.toLowerCase() ?? '';
+          const tags = (item.tags ?? []).map((tag) => tag.toLowerCase());
+          const matchesBrand = !normalizedBrand || brand === normalizedBrand;
+          const matchesCategory = !normalizedCategory || category === normalizedCategory;
+          const matchesTags = normalizedTagFilters.length === 0 || normalizedTagFilters.some((tag) => tags.includes(tag));
+          return matchesBrand && matchesCategory && matchesTags;
+      });
+  }, [items, itemBrandFilter, itemCategoryFilter, itemTagFilters]);
+
   const handleSaveItem = async () => {
       if(!newItem.name || !newItem.price) return;
-      
+      const brand = newItem.brand?.trim() ?? '';
+      const category = newItem.category?.trim() ?? '';
+      const tags = normalizeTagList(newItem.tags ?? []);
+
       const item: CaseItem = {
           id: editingItemId || `custom-item-${Date.now()}`,
           name: newItem.name!,
@@ -317,7 +413,9 @@ export const AdminPanel: React.FC = () => {
           rarity: newItem.rarity as any || 'common',
           chance: Number(newItem.chance),
           color: newItem.color || '#9ca3af',
-          tags: newItem.tags ?? []
+          brand,
+          category,
+          tags
       };
 
       if (editingItemId) {
@@ -339,8 +437,11 @@ export const AdminPanel: React.FC = () => {
           rarity: item.rarity,
           chance: item.chance,
           color: item.color,
+          brand: item.brand ?? '',
+          category: item.category ?? '',
           tags: item.tags ?? []
       });
+      setItemTagInput('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -352,7 +453,18 @@ export const AdminPanel: React.FC = () => {
 
   const resetItemForm = () => {
       setEditingItemId(null);
-      setNewItem({ name: '', price: 0, image: 'https://picsum.photos/200', rarity: 'common', chance: 10, color: '#9ca3af', tags: [] });
+      setNewItem({
+          name: '',
+          price: 0,
+          image: 'https://picsum.photos/200',
+          rarity: 'common',
+          chance: 10,
+          color: '#9ca3af',
+          brand: '',
+          category: '',
+          tags: []
+      });
+      setItemTagInput('');
   };
 
   const resetPackageForm = () => {
@@ -530,7 +642,7 @@ export const AdminPanel: React.FC = () => {
           return acc;
       }, {});
 
-      const missingHeaders = ITEM_SPREADSHEET_HEADERS.filter((header) => headerIndex[header] === undefined);
+      const missingHeaders = ITEM_SPREADSHEET_REQUIRED_HEADERS.filter((header) => headerIndex[header] === undefined);
       if (missingHeaders.length) {
           return { items: [], errors: [`Missing required headers: ${missingHeaders.join(', ')}.`] };
       }
@@ -541,13 +653,19 @@ export const AdminPanel: React.FC = () => {
       rows.slice(1).forEach((row, rowIndex) => {
           const lineNumber = rowIndex + 2;
           const rowErrors: string[] = [];
-          const getValue = (header: typeof ITEM_SPREADSHEET_HEADERS[number]) => row[headerIndex[header]]?.trim() ?? '';
+          const getValue = (header: typeof ITEM_SPREADSHEET_HEADERS[number]) => {
+              const index = headerIndex[header];
+              if (index === undefined) return '';
+              return row[index]?.trim() ?? '';
+          };
           const name = getValue('name');
           const priceValue = getValue('price');
           const image = getValue('image');
           const rarityValue = getValue('rarity').toLowerCase() as CaseItem['rarity'];
           const chanceValue = getValue('chance');
           const color = getValue('color');
+          const brand = getValue('brand');
+          const category = getValue('category');
           const tagsValue = getValue('tags');
 
           if (!name) {
@@ -583,11 +701,7 @@ export const AdminPanel: React.FC = () => {
                     .map((tag) => tag.trim().toLowerCase())
                     .filter(Boolean)
               : [];
-
-          const invalidTags = tags.filter((tag) => !BOX_TAG_OPTIONS.includes(tag as BoxTag));
-          if (invalidTags.length) {
-              rowErrors.push(`Row ${lineNumber}: invalid tags (${invalidTags.join(', ')}).`);
-          }
+          const normalizedTags = normalizeTagList(tags);
 
           if (rowErrors.length === 0) {
               items.push({
@@ -598,7 +712,9 @@ export const AdminPanel: React.FC = () => {
                   rarity: rarityValue,
                   chance,
                   color,
-                  tags: tags.filter((tag) => BOX_TAG_OPTIONS.includes(tag as BoxTag)) as BoxTag[]
+                  brand: brand.trim(),
+                  category: category.trim(),
+                  tags: normalizedTags
               });
           }
           errors.push(...rowErrors);
@@ -1191,14 +1307,12 @@ export const AdminPanel: React.FC = () => {
       });
   };
 
-  const toggleItemTag = (tag: BoxTag) => {
-      setNewItem(prev => {
-          const currentTags = prev.tags ?? [];
-          const nextTags = currentTags.includes(tag)
-              ? currentTags.filter(existing => existing !== tag)
-              : [...currentTags, tag];
-          return { ...prev, tags: nextTags };
-      });
+  const toggleItemFilterTag = (tag: string) => {
+      setItemTagFilters((prev) => (
+          prev.includes(tag)
+              ? prev.filter((existing) => existing !== tag)
+              : [...prev, tag]
+      ));
   };
 
   const toggleItemSelection = (item: CaseItem) => {
@@ -1416,6 +1530,8 @@ export const AdminPanel: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <input type="text" placeholder="Item Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} />
                             <input type="number" placeholder="Price (coins)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.price || ''} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} />
+                            <input type="text" placeholder="Brand (e.g. Nike)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.brand ?? ''} onChange={e => setNewItem({...newItem, brand: e.target.value})} />
+                            <input type="text" placeholder="Category (e.g. sneakers)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.category ?? ''} onChange={e => setNewItem({...newItem, category: e.target.value})} />
                             <select className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300" value={newItem.rarity} onChange={e => setNewItem({...newItem, rarity: e.target.value as any})}>
                                 <option value="common">Common</option>
                                 <option value="uncommon">Uncommon</option>
@@ -1449,23 +1565,55 @@ export const AdminPanel: React.FC = () => {
                         </div>
                         <div className="mb-4">
                             <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Item Tags</label>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {itemTagOptions.map((tag) => {
-                                    const isSelected = (newItem.tags ?? []).includes(tag);
-                                    return (
+                            <div className="flex flex-col gap-3">
+                                <input
+                                    type="text"
+                                    placeholder="Add a tag and press Enter"
+                                    className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white"
+                                    value={itemTagInput}
+                                    onChange={(event) => setItemTagInput(event.target.value)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter') {
+                                            event.preventDefault();
+                                            addItemTag(itemTagInput);
+                                            setItemTagInput('');
+                                        }
+                                    }}
+                                />
+                                <div className="flex flex-wrap gap-2">
+                                    {ITEM_TAG_SUGGESTIONS.map((tag) => (
                                         <button
                                             key={tag}
                                             type="button"
-                                            aria-pressed={isSelected}
-                                            onClick={() => toggleItemTag(tag)}
-                                            className={`px-2 py-1.5 rounded border text-[11px] font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-brand-purple/20 border-brand-purple text-purple-200' : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                                            onClick={() => addItemTag(tag)}
+                                            className="px-2 py-1.5 rounded border text-[11px] font-semibold uppercase tracking-wide transition bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200"
                                         >
                                             {tag}
                                         </button>
-                                    );
-                                })}
+                                    ))}
+                                </div>
+                                {(newItem.tags ?? []).length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {(newItem.tags ?? []).map((tag) => (
+                                            <span
+                                                key={tag}
+                                                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-200"
+                                            >
+                                                {tag}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeItemTag(tag)}
+                                                    className="rounded-full p-0.5 text-gray-400 hover:text-white"
+                                                    aria-label={`Remove ${tag}`}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            <p className="mt-2 text-[10px] text-gray-500">Tags power Case Lab filters.</p>
+                            <p className="mt-2 text-[10px] text-gray-500">Tags power Case Lab filters and box item search.</p>
                         </div>
                         <button onClick={handleSaveItem} className={`px-6 py-2 ${editingItemId ? 'bg-orange-600 hover:bg-orange-500' : 'bg-blue-600 hover:bg-blue-500'} text-white font-bold rounded`}>
                             {editingItemId ? 'Update Item' : 'Add Item'}
@@ -1491,6 +1639,11 @@ export const AdminPanel: React.FC = () => {
                                                 <img src={item.image} className="w-8 h-8 object-contain" />
                                                 <div>
                                                     <div className="text-white">{item.name}</div>
+                                                    {(item.brand || item.category) && (
+                                                        <div className="mt-0.5 text-[10px] uppercase tracking-wide text-gray-500">
+                                                            {[item.brand, item.category].filter(Boolean).join(' • ')}
+                                                        </div>
+                                                    )}
                                                     {item.tags?.length ? (
                                                         <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-gray-500">
                                                             {item.tags.map(tag => (
@@ -1661,10 +1814,76 @@ export const AdminPanel: React.FC = () => {
                                     <Calculator className="w-3 h-3" /> Auto-Calculate Odds & Price
                                  </button>
                              </div>
+
+                             <div className="mb-4 flex flex-col gap-3">
+                                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                     <label className="text-[10px] uppercase text-gray-500 font-bold">
+                                         Brand
+                                         <select
+                                             className="mt-1 w-full bg-[#131720] border border-gray-800 rounded p-2 text-xs text-gray-200"
+                                             value={itemBrandFilter}
+                                             onChange={(event) => setItemBrandFilter(event.target.value)}
+                                         >
+                                             <option value="">All brands</option>
+                                             {itemBrandOptions.map((brand) => (
+                                                 <option key={brand} value={brand}>
+                                                     {brand}
+                                                 </option>
+                                             ))}
+                                         </select>
+                                     </label>
+                                     <label className="text-[10px] uppercase text-gray-500 font-bold">
+                                         Category
+                                         <select
+                                             className="mt-1 w-full bg-[#131720] border border-gray-800 rounded p-2 text-xs text-gray-200"
+                                             value={itemCategoryFilter}
+                                             onChange={(event) => setItemCategoryFilter(event.target.value)}
+                                         >
+                                             <option value="">All categories</option>
+                                             {itemCategoryOptions.map((category) => (
+                                                 <option key={category} value={category}>
+                                                     {category}
+                                                 </option>
+                                             ))}
+                                         </select>
+                                     </label>
+                                     <div className="flex items-end">
+                                         <button
+                                             type="button"
+                                             onClick={() => {
+                                                 setItemBrandFilter('');
+                                                 setItemCategoryFilter('');
+                                                 setItemTagFilters([]);
+                                             }}
+                                             className="w-full rounded border border-gray-700 px-3 py-2 text-[11px] font-semibold uppercase text-gray-400 transition hover:border-gray-500 hover:text-gray-200"
+                                         >
+                                             Clear Filters
+                                         </button>
+                                     </div>
+                                 </div>
+                                 <div>
+                                     <div className="text-[10px] uppercase text-gray-500 font-bold mb-2">Tags (match any)</div>
+                                     <div className="flex flex-wrap gap-2">
+                                         {itemTagOptions.map((tag) => {
+                                             const isSelected = itemTagFilters.includes(tag);
+                                             return (
+                                                 <button
+                                                     key={tag}
+                                                     type="button"
+                                                     onClick={() => toggleItemFilterTag(tag)}
+                                                     className={`px-2 py-1.5 rounded border text-[11px] font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-brand-purple/20 border-brand-purple text-purple-200' : 'bg-[#131720] border-gray-800 text-gray-400 hover:border-gray-600'}`}
+                                                 >
+                                                     {tag}
+                                                 </button>
+                                             );
+                                         })}
+                                     </div>
+                                 </div>
+                             </div>
                              
                              {/* Item Pool */}
                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-48 overflow-y-auto mb-4 pr-1">
-                                {items.map(item => {
+                                {filteredItemsForBox.map(item => {
                                     const isSelected = selectedItems.some(i => i.id === item.id);
                                     return (
                                         <div 
