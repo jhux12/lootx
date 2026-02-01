@@ -936,32 +936,34 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   </div>
                                 )}
                             <div className="flex w-full flex-col gap-3 sm:flex-row">
-                                <button
-                                  onClick={handleSell}
-                                  disabled={isGeneratingSellOffer || wonItem.redeemable === false}
-                                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-80"
-                                >
-                                    <span className="flex flex-col items-center justify-center gap-1">
-                                      <span className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-wide text-gray-400">
-                                        {isGeneratingSellOffer && (
-                                          <span className="h-3 w-3 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
+                                {wonItem.redeemable !== false && (
+                                  <button
+                                    onClick={handleSell}
+                                    disabled={isGeneratingSellOffer}
+                                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-80"
+                                  >
+                                      <span className="flex flex-col items-center justify-center gap-1">
+                                        <span className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-wide text-gray-400">
+                                          {isGeneratingSellOffer && (
+                                            <span className="h-3 w-3 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
+                                          )}
+                                          {isGeneratingSellOffer
+                                            ? 'Generating offer...'
+                                            : sellOfferGenerated
+                                              ? 'Accept buy back offer'
+                                              : 'Generate buy back offer'}
+                                        </span>
+                                        {sellOfferGenerated && !isGeneratingSellOffer && (
+                                          <CoinAmount
+                                            amount={getSellBackValue(wonItem.price, sellBackRate)}
+                                            formatOptions={{ maximumFractionDigits: 0 }}
+                                            className="text-gray-200"
+                                            iconClassName="w-4 h-4"
+                                          />
                                         )}
-                                        {isGeneratingSellOffer
-                                          ? 'Generating offer...'
-                                          : sellOfferGenerated
-                                            ? 'Accept buy back offer'
-                                            : 'Generate buy back offer'}
                                       </span>
-                                      {sellOfferGenerated && !isGeneratingSellOffer && wonItem.redeemable !== false && (
-                                        <CoinAmount
-                                          amount={getSellBackValue(wonItem.price, sellBackRate)}
-                                          formatOptions={{ maximumFractionDigits: 0 }}
-                                          className="text-gray-200"
-                                          iconClassName="w-4 h-4"
-                                        />
-                                      )}
-                                    </span>
-                                </button>
+                                  </button>
+                                )}
                                 <button onClick={handleKeep} className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-500 hover:to-blue-400">
                                     Keep Item
                                 </button>

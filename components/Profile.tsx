@@ -605,7 +605,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                           >
                                             Ship item
                                           </button>
-                                          {inventoryFilter === 'inventory' && (
+                                          {inventoryFilter === 'inventory' && item.redeemable !== false && (
                                               <button
                                                 onClick={() => {
                                                   if (!canSell || isGeneratingSellOffers[item.instanceId]) return;
