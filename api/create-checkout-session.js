@@ -32,7 +32,9 @@ export default async function handler(req, res) {
     const data = packageSnap.data() ?? {};
     const active = data.active === true;
     const stripePriceId = data.stripePriceId;
-    const coins = Number(data.coins ?? 0);
+    const baseCoins = Number(data.coins ?? 0);
+    const bonusCoins = Number(data.bonusCoins ?? 0);
+    const totalCoins = baseCoins + bonusCoins;
 
     if (!active) {
       return sendJson(res, 400, { error: 'Package is inactive' });
@@ -42,8 +44,12 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Invalid Stripe price ID' });
     }
 
-    if (!Number.isFinite(coins) || coins <= 0) {
+    if (!Number.isFinite(baseCoins) || baseCoins <= 0) {
       return sendJson(res, 400, { error: 'Invalid coin amount' });
+    }
+
+    if (!Number.isFinite(bonusCoins) || bonusCoins < 0) {
+      return sendJson(res, 400, { error: 'Invalid bonus coins' });
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -53,8 +59,10 @@ export default async function handler(req, res) {
       line_items: [{ price: stripePriceId, quantity: 1 }],
       metadata: {
         uid: decoded.uid,
-        coins: String(coins),
-        packageId
+        packageId,
+        baseCoins: String(baseCoins),
+        bonusCoins: String(bonusCoins),
+        coins: String(totalCoins),
       }
     });
 

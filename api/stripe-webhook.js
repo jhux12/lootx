@@ -40,12 +40,26 @@ export default async function handler(req, res) {
     const session = event.data.object;
     const metadata = session.metadata ?? {};
     const uid = metadata.uid;
-    const coins = Number(metadata.coins ?? 0);
+    const totalCoins = Number(metadata.coins ?? 0);
+    let baseCoins = Number(metadata.baseCoins ?? 0);
+    let bonusCoins = Number(metadata.bonusCoins ?? 0);
     const packageId = metadata.packageId ?? null;
 
-    if (!uid || !Number.isFinite(coins) || coins <= 0) {
-      console.warn('stripe-webhook missing metadata', { uid, coins, packageId });
+    if (!Number.isFinite(baseCoins)) {
+      baseCoins = 0;
+    }
+    if (!Number.isFinite(bonusCoins)) {
+      bonusCoins = 0;
+    }
+
+    if (!uid || !Number.isFinite(totalCoins) || totalCoins <= 0) {
+      console.warn('stripe-webhook missing metadata', { uid, totalCoins, packageId });
       return sendJson(res, 200, { received: true });
+    }
+
+    if (baseCoins <= 0 && bonusCoins <= 0) {
+      baseCoins = totalCoins;
+      bonusCoins = 0;
     }
 
     const creditRef = firestore.collection('stripe_credits').doc(session.id);
@@ -59,12 +73,14 @@ export default async function handler(req, res) {
         }
 
         transaction.set(userRef, {
-          coins: admin.firestore.FieldValue.increment(coins)
+          coins: admin.firestore.FieldValue.increment(totalCoins)
         }, { merge: true });
 
         transaction.set(creditRef, {
           uid,
-          coins,
+          coins: totalCoins,
+          baseCoins,
+          bonusCoins,
           packageId,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });

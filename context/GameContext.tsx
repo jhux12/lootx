@@ -844,10 +844,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubscribe = onSnapshot(packagesRef, (snapshot) => {
       const loaded = snapshot.docs.map((docSnap) => {
         const data = docSnap.data();
+        const coins = Number(data.coins ?? 0);
+        const bonusCoins = Number(data.bonusCoins ?? 0);
         return {
           id: docSnap.id,
           name: data.name ?? 'Coin Package',
-          coins: Number(data.coins ?? 0),
+          coins,
+          bonusCoins,
+          totalCoins: coins + bonusCoins,
           displayPrice: data.displayPrice ?? '',
           stripePriceId: data.stripePriceId ?? '',
           active: data.active ?? false,
@@ -1558,6 +1562,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const packageData = sanitizeDeep({
       ...rawData,
       coins: Math.max(0, Number(rawData.coins ?? 0)),
+      bonusCoins: Math.max(0, Number(rawData.bonusCoins ?? 0)),
       sortOrder: Number(rawData.sortOrder ?? 0),
       active: !!rawData.active,
       createdAt: serverTimestamp(),
@@ -1586,6 +1591,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const packageData = sanitizeDeep({
       ...updates,
       coins: updates.coins !== undefined ? Math.max(0, Number(updates.coins ?? 0)) : undefined,
+      bonusCoins: updates.bonusCoins !== undefined ? Math.max(0, Number(updates.bonusCoins ?? 0)) : undefined,
       sortOrder: updates.sortOrder !== undefined ? Number(updates.sortOrder ?? 0) : undefined,
       active: updates.active !== undefined ? !!updates.active : undefined,
       updatedAt: serverTimestamp()
