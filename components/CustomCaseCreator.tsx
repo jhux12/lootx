@@ -16,6 +16,7 @@ export const CustomCaseCreator: React.FC = () => {
   const [boxPrice, setBoxPrice] = useState<number>(0);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [lastCalculated, setLastCalculated] = useState(false);
+  const [sellBackPercent, setSellBackPercent] = useState(75);
   const [searchQuery, setSearchQuery] = useState('');
   const [showLabInfo, setShowLabInfo] = useState(false);
   const [activeTag, setActiveTag] = useState<'All' | BoxTag>('All');
@@ -78,7 +79,8 @@ export const CustomCaseCreator: React.FC = () => {
           tag: 'New',
           items: selectedItems,
           targetEV: DEFAULT_TARGET_EV,
-          riskLevel: FIXED_RISK_LEVEL
+          riskLevel: FIXED_RISK_LEVEL,
+          sellBackRate: Math.min(1, Math.max(0, sellBackPercent / 100))
       };
 
       createUserBox(newBox);
@@ -161,7 +163,10 @@ export const CustomCaseCreator: React.FC = () => {
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">3</span>
-                <p>Create and open your case instantly. Case Lab wins can be sold back for <span className="font-semibold text-emerald-300">75% of item value</span>.</p>
+                <p>
+                  Create and open your case instantly. Case Lab wins can be sold back for{' '}
+                  <span className="font-semibold text-emerald-300">{sellBackPercent}% of item value</span>.
+                </p>
               </li>
             </ol>
             <div className="mt-5 flex flex-col gap-2 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
@@ -318,6 +323,25 @@ export const CustomCaseCreator: React.FC = () => {
                             className="text-2xl font-black text-green-500"
                             iconClassName="w-4 h-4"
                           />
+                      </div>
+                      <div className="mt-4">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sell back %</label>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={sellBackPercent}
+                            onChange={(event) => {
+                              const nextValue = Number(event.target.value);
+                              if (!Number.isFinite(nextValue)) return;
+                              setSellBackPercent(Math.min(100, Math.max(0, nextValue)));
+                            }}
+                            className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-white focus:border-brand-purple focus:outline-none"
+                          />
+                          <p className="text-xs text-gray-500">Percent of item value paid on sell back.</p>
+                        </div>
                       </div>
                   </div>
 
