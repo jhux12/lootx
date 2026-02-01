@@ -368,12 +368,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const fallbackPrice = Number(
           (data.prize as { value?: number }).value ?? data.prize.price ?? 0
         );
-        winner = matchedPrize ?? {
-          ...data.prize,
-          price: fallbackPrice,
-          chance: 0,
-          color: '#9ca3af'
-        };
+        const resolvedRedeemable = data.prize.redeemable ?? matchedPrize?.redeemable ?? true;
+        winner = matchedPrize
+          ? { ...matchedPrize, redeemable: resolvedRedeemable, price: matchedPrize.price ?? fallbackPrice }
+          : {
+              ...data.prize,
+              price: fallbackPrice,
+              chance: 0,
+              color: '#9ca3af',
+              redeemable: resolvedRedeemable
+            };
 
         const inventoryItem: InventoryItem = {
           ...(winner as CaseItem),

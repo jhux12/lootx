@@ -786,7 +786,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             color: data.color ?? '#9ca3af',
             brand: typeof data.brand === 'string' ? data.brand : '',
             category: typeof data.category === 'string' ? data.category : '',
-            tags: Array.isArray(data.tags) ? (data.tags as CaseItem['tags']) : []
+            tags: Array.isArray(data.tags) ? (data.tags as CaseItem['tags']) : [],
+            redeemable: data.redeemable ?? true
           } as CaseItem;
         })
         .sort((a, b) => a.price - b.price);
@@ -825,7 +826,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               color: item.color ?? RARITY_COLORS[rarity] ?? '#9ca3af',
               brand: typeof item.brand === 'string' ? item.brand : '',
               category: typeof item.category === 'string' ? item.category : '',
-              tags: Array.isArray(item.tags) ? (item.tags as CaseItem['tags']) : []
+              tags: Array.isArray(item.tags) ? (item.tags as CaseItem['tags']) : [],
+              redeemable: item.redeemable ?? true
             };
           }) : [];
 
