@@ -990,7 +990,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <span className="flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-black/40 text-amber-200">
                     <Info className="h-3.5 w-3.5" />
                 </span>
-                <span>Icon means not redeemable for coins.</span>
+                <span>Not redeemable for coins.</span>
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
