@@ -75,7 +75,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const items = box?.items ?? [];
   const hasItems = items.length > 0;
-  const sellBackRate = box?.isUserCreated ? 0.75 : 0.82;
+  const sellBackRate = box?.sellBackRate ?? (box?.isUserCreated ? 0.75 : 0.82);
   const isReady = Boolean(box) && hasItems;
   const isAdmin = Boolean(user?.isAdmin);
 

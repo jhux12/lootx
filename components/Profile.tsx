@@ -167,6 +167,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   const getSellBackRate = (item: typeof normalizedInventory[number]) => {
     if (item.provenance?.sourceType === 'case_open' && item.provenance?.sourceId) {
       const sourceBox = boxes.find((box) => box.id === item.provenance?.sourceId);
+      if (sourceBox?.sellBackRate !== undefined) {
+        return sourceBox.sellBackRate;
+      }
       if (sourceBox?.isUserCreated) {
         return 0.75;
       }

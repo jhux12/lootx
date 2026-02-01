@@ -77,6 +77,7 @@ export interface MysteryBox {
   items: CaseItem[];
   targetEV?: number;
   riskLevel?: number;
+  sellBackRate?: number;
   isUserCreated?: boolean;
   isDaily?: boolean;
 }
@@ -103,6 +104,7 @@ export interface InventoryItem extends CaseItem {
   trackingNumber?: string;
   provenance?: InventoryProvenance;
   history?: InventoryHistoryEntry[];
+  sellBackRate?: number;
 }
 
 export type UserStatus = 'active' | 'suspended' | 'banned';
