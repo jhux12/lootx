@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, BoxTag, CaseItem, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus, BOX_TAG_OPTIONS } from '../types';
+import { AdminActionLog, BoxTag, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus, BOX_TAG_OPTIONS } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -50,6 +50,10 @@ export const AdminPanel: React.FC = () => {
     createItem,
     updateItem,
     deleteItem,
+    coinPackages,
+    createCoinPackage,
+    updateCoinPackage,
+    deleteCoinPackage,
     createBox,
     updateBox,
     deleteBox,
@@ -64,7 +68,7 @@ export const AdminPanel: React.FC = () => {
     bonusSettings,
     updateBonusSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'bonuses'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'bonuses' | 'packages'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -88,6 +92,18 @@ export const AdminPanel: React.FC = () => {
       isDaily: false,
       tags: []
   });
+  const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
+  const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
+  const [packageDraft, setPackageDraft] = useState<Partial<CoinPackage>>({
+      name: '',
+      coins: 0,
+      displayPrice: '',
+      stripePriceId: '',
+      active: true,
+      sortOrder: 0
+  });
+  const [packageError, setPackageError] = useState<string | null>(null);
+  const [isSavingPackage, setIsSavingPackage] = useState(false);
   const [riskBalance, setRiskBalance] = useState(50);
   const [targetEV, setTargetEV] = useState(0.85);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
@@ -133,6 +149,9 @@ export const AdminPanel: React.FC = () => {
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
   const boxTagOptions = ['Tech Boxes', 'Pokemon', 'Digital Codes', 'Hot', 'Deals'];
   const itemTagOptions = BOX_TAG_OPTIONS;
+  const sortedPackages = useMemo(() => {
+      return [...coinPackages].sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [coinPackages]);
   
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
@@ -333,6 +352,104 @@ export const AdminPanel: React.FC = () => {
   const resetItemForm = () => {
       setEditingItemId(null);
       setNewItem({ name: '', price: 0, image: 'https://picsum.photos/200', rarity: 'common', chance: 10, color: '#9ca3af', tags: [] });
+  };
+
+  const resetPackageForm = () => {
+      setEditingPackageId(null);
+      setPackageDraft({
+          name: '',
+          coins: 0,
+          displayPrice: '',
+          stripePriceId: '',
+          active: true,
+          sortOrder: 0
+      });
+      setPackageError(null);
+  };
+
+  const openNewPackageModal = () => {
+      resetPackageForm();
+      setIsPackageModalOpen(true);
+  };
+
+  const handleEditPackage = (pkg: CoinPackage) => {
+      setEditingPackageId(pkg.id);
+      setPackageDraft({ ...pkg });
+      setPackageError(null);
+      setIsPackageModalOpen(true);
+  };
+
+  const handleSavePackage = async () => {
+      const name = packageDraft.name?.trim() ?? '';
+      const coins = Number(packageDraft.coins ?? 0);
+      const displayPrice = packageDraft.displayPrice?.trim() ?? '';
+      const stripePriceId = packageDraft.stripePriceId?.trim() ?? '';
+      const sortOrder = Number.isFinite(Number(packageDraft.sortOrder)) ? Number(packageDraft.sortOrder) : 0;
+      const active = packageDraft.active ?? true;
+
+      if (!name) {
+          setPackageError('Package name is required.');
+          return;
+      }
+      if (!Number.isFinite(coins) || coins <= 0) {
+          setPackageError('Coins must be a positive number.');
+          return;
+      }
+      if (!displayPrice) {
+          setPackageError('Display price is required.');
+          return;
+      }
+      if (!stripePriceId.startsWith('price_')) {
+          setPackageError('Stripe price ID must start with "price_".');
+          return;
+      }
+
+      setIsSavingPackage(true);
+      setPackageError(null);
+      try {
+          if (editingPackageId) {
+              await updateCoinPackage(editingPackageId, {
+                  name,
+                  coins,
+                  displayPrice,
+                  stripePriceId,
+                  sortOrder,
+                  active
+              });
+          } else {
+              await createCoinPackage({
+                  name,
+                  coins,
+                  displayPrice,
+                  stripePriceId,
+                  sortOrder,
+                  active
+              });
+          }
+          setIsPackageModalOpen(false);
+          resetPackageForm();
+      } catch (error) {
+          setPackageError('Failed to save package. Please try again.');
+      } finally {
+          setIsSavingPackage(false);
+      }
+  };
+
+  const handleDeletePackage = async (id: string) => {
+      if (!confirm('Delete this coin package? This cannot be undone.')) return;
+      try {
+          await deleteCoinPackage(id);
+      } catch (error) {
+          alert('Failed to delete package.');
+      }
+  };
+
+  const handleTogglePackageActive = async (pkg: CoinPackage) => {
+      try {
+          await updateCoinPackage(pkg.id, { active: !pkg.active });
+      } catch (error) {
+          alert('Failed to update package status.');
+      }
   };
 
   const parseCsvRows = (content: string) => {
@@ -1119,6 +1236,12 @@ export const AdminPanel: React.FC = () => {
                        <BoxIcon className="w-4 h-4" /> Manage Boxes
                    </button>
                    <button 
+                     onClick={() => setActiveTab('packages')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'packages' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <PackageCheck className="w-4 h-4" /> Coin Packages
+                   </button>
+                   <button 
                      onClick={() => setActiveTab('users')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'users' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -1157,6 +1280,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'settings' && 'System Configuration'}
                     {activeTab === 'items' && 'Item Manager'}
                     {activeTab === 'boxes' && 'Box Manager'}
+                    {activeTab === 'packages' && 'Coin Packages'}
                     {activeTab === 'shipments' && 'Shipment Manager'}
                     {activeTab === 'bonuses' && 'Bonuses & XP'}
                 </h1>
@@ -1641,6 +1765,107 @@ export const AdminPanel: React.FC = () => {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB: COIN PACKAGES */}
+            {activeTab === 'packages' && (
+                <div className="space-y-6">
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Coin Packages</h3>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Manage Stripe price-based packages shown in the top up modal. Use Stripe price IDs (price_...).
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={openNewPackageModal}
+                                className="w-full sm:w-auto px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-500"
+                            >
+                                New Package
+                            </button>
+                        </div>
+                    </div>
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[900px] text-left text-sm">
+                                <thead className="bg-[#0b0e14] text-gray-400 font-medium">
+                                    <tr>
+                                        <th className="px-4 py-3">Name</th>
+                                        <th className="px-4 py-3">Coins</th>
+                                        <th className="px-4 py-3">Display Price</th>
+                                        <th className="px-4 py-3">Stripe Price ID</th>
+                                        <th className="px-4 py-3">Active</th>
+                                        <th className="px-4 py-3">Sort</th>
+                                        <th className="px-4 py-3">Updated</th>
+                                        <th className="px-4 py-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-800">
+                                    {sortedPackages.length ? (
+                                        sortedPackages.map((pkg) => (
+                                            <tr key={pkg.id}>
+                                                <td className="px-4 py-3 text-white font-semibold">{pkg.name}</td>
+                                                <td className="px-4 py-3">
+                                                    <CoinAmount
+                                                        amount={pkg.coins / 100}
+                                                        formatOptions={{ maximumFractionDigits: 0 }}
+                                                        className="text-green-400 font-semibold"
+                                                        iconClassName="w-3.5 h-3.5"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-300">{pkg.displayPrice}</td>
+                                                <td className="px-4 py-3 text-xs text-gray-400">
+                                                    <span className="rounded bg-black/30 px-2 py-1 font-mono">{pkg.stripePriceId}</span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleTogglePackageActive(pkg)}
+                                                        className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                                                            pkg.active
+                                                                ? 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                                                                : 'bg-gray-500/10 text-gray-400 hover:bg-gray-500/20'
+                                                        }`}
+                                                    >
+                                                        {pkg.active ? 'Active' : 'Inactive'}
+                                                    </button>
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-300">{pkg.sortOrder}</td>
+                                                <td className="px-4 py-3 text-gray-400 text-xs">
+                                                    {pkg.updatedAt ? formatTimestamp(pkg.updatedAt) : '--'}
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => handleEditPackage(pkg)}
+                                                            className="p-1.5 hover:bg-blue-500/10 text-blue-400 rounded transition-colors"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeletePackage(pkg.id)}
+                                                            className="p-1.5 hover:bg-red-500/10 text-red-400 rounded transition-colors"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={8} className="px-4 py-6 text-center text-gray-500 text-sm">
+                                                No coin packages yet. Create one to enable deposits.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}
@@ -2634,6 +2859,118 @@ export const AdminPanel: React.FC = () => {
 
         </div>
       </div>
+
+      {isPackageModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div
+                  className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in"
+                  onClick={() => setIsPackageModalOpen(false)}
+              ></div>
+              <div className="relative w-full max-w-lg bg-[#131720] border border-gray-700 rounded-2xl shadow-2xl p-6 animate-in zoom-in-95">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                      <div>
+                          <h3 className="text-xl font-bold text-white">{editingPackageId ? 'Edit Package' : 'New Package'}</h3>
+                          <p className="text-xs text-gray-400 mt-1">
+                              Enter the Stripe price ID (price_...) so checkout uses secure price references.
+                          </p>
+                      </div>
+                      <button
+                          type="button"
+                          onClick={() => setIsPackageModalOpen(false)}
+                          className="text-gray-400 hover:text-white"
+                      >
+                          <X className="w-5 h-5" />
+                      </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="sm:col-span-2">
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Package Name</label>
+                          <input
+                              type="text"
+                              value={packageDraft.name ?? ''}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, name: event.target.value }))}
+                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Coins</label>
+                          <input
+                              type="number"
+                              min={1}
+                              step={1}
+                              value={packageDraft.coins ?? 0}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, coins: Number(event.target.value) }))}
+                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Display Price</label>
+                          <input
+                              type="text"
+                              placeholder="$9.99"
+                              value={packageDraft.displayPrice ?? ''}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, displayPrice: event.target.value }))}
+                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                          />
+                      </div>
+                      <div className="sm:col-span-2">
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Stripe Price ID</label>
+                          <input
+                              type="text"
+                              placeholder="price_123..."
+                              value={packageDraft.stripePriceId ?? ''}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, stripePriceId: event.target.value }))}
+                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white font-mono text-sm"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sort Order</label>
+                          <input
+                              type="number"
+                              step={1}
+                              value={packageDraft.sortOrder ?? 0}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, sortOrder: Number(event.target.value) }))}
+                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                          />
+                      </div>
+                      <div className="flex items-center gap-2 mt-6">
+                          <input
+                              id="package-active"
+                              type="checkbox"
+                              checked={packageDraft.active ?? true}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, active: event.target.checked }))}
+                              className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-emerald-500 focus:ring-emerald-500"
+                          />
+                          <label htmlFor="package-active" className="text-sm text-gray-300">
+                              Active
+                          </label>
+                      </div>
+                  </div>
+                  {packageError && (
+                      <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                          {packageError}
+                      </div>
+                  )}
+                  <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                      <button
+                          type="button"
+                          onClick={() => setIsPackageModalOpen(false)}
+                          className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-700 text-white text-sm font-bold rounded-lg transition-colors"
+                      >
+                          Cancel
+                      </button>
+                      <button
+                          type="button"
+                          onClick={handleSavePackage}
+                          disabled={isSavingPackage}
+                          className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-blue-900/20 transition-colors disabled:opacity-50"
+                      >
+                          {isSavingPackage ? 'Saving...' : (editingPackageId ? 'Save Changes' : 'Create Package')}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {boxToDelete && (
