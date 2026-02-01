@@ -45,6 +45,10 @@ export default async function handler(req, res) {
 
       const boxData = boxSnap.data() ?? {};
       const price = Number(boxData.price ?? 0);
+      const rawSellBackRate = Number(boxData.sellBackRate);
+      const sellBackRate = Number.isFinite(rawSellBackRate)
+        ? Math.min(1, Math.max(0, rawSellBackRate))
+        : 0.82;
       const prizes = Array.isArray(boxData.items) ? boxData.items : (Array.isArray(boxData.prizes) ? boxData.prizes : []);
       if (!prizes.length) {
         throw { status: 400, error: 'Box has no prizes', boxId };
@@ -98,7 +102,7 @@ export default async function handler(req, res) {
         rarity: prize.rarity ?? 'common',
         status: 'available',
         obtainedAt,
-        sellBackRate: 0.8
+        sellBackRate
       });
 
       transaction.set(openRef, {

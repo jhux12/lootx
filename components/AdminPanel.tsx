@@ -109,12 +109,13 @@ export const AdminPanel: React.FC = () => {
   // --- BOX FORM STATE ---
   const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
   const [newBox, setNewBox] = useState<Partial<MysteryBox>>({
-      name: '',
-      price: 0,
-      image: 'https://picsum.photos/300',
-      accentColor: '#3b82f6',
-      isDaily: false,
-      tags: []
+    name: '',
+    price: 0,
+    image: 'https://picsum.photos/300',
+    accentColor: '#3b82f6',
+    isDaily: false,
+    tags: [],
+    sellBackRate: 0.82
   });
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
@@ -1184,6 +1185,11 @@ export const AdminPanel: React.FC = () => {
   const evOutOfBounds = newBox.price ? Math.abs(evRatio - clampedTargetEV) > EV_TOLERANCE : false;
   const oddsOutOfBounds = Math.abs(oddsTotal - 100) > 0.001;
   const canSaveBox = !!newBox.name && !!newBox.price && selectedItems.length > 0 && !evOutOfBounds && !oddsOutOfBounds;
+  const clampSellBackRate = (value: number | undefined, fallback: number) => {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return fallback;
+      return Math.min(1, Math.max(0, numeric));
+  };
 
   const handleSaveBox = () => {
       if(!newBox.name || !newBox.price) {
@@ -1242,7 +1248,8 @@ export const AdminPanel: React.FC = () => {
           isDaily: newBox.isDaily,
           items: boxItems,
           targetEV: clampedTargetEV,
-          riskLevel: riskBalance
+          riskLevel: riskBalance,
+          sellBackRate: clampSellBackRate(newBox.sellBackRate, 0.82)
       };
 
       if (editingBoxId) {
@@ -1265,7 +1272,8 @@ export const AdminPanel: React.FC = () => {
           accentColor: box.accentColor,
           tag: box.tag,
           tags: box.tags ?? (box.tag ? [box.tag] : []),
-          isDaily: box.isDaily
+          isDaily: box.isDaily,
+          sellBackRate: clampSellBackRate(box.sellBackRate, 0.82)
       });
       setSelectedItems(box.items.map(i => ({...i})));
       setRiskBalance(box.riskLevel ?? 50);
@@ -1291,7 +1299,7 @@ export const AdminPanel: React.FC = () => {
 
   const resetBoxForm = () => {
       setEditingBoxId(null);
-      setNewBox({ name: '', price: 0, image: 'https://picsum.photos/300', accentColor: '#3b82f6', isDaily: false, tags: [] });
+      setNewBox({ name: '', price: 0, image: 'https://picsum.photos/300', accentColor: '#3b82f6', isDaily: false, tags: [], sellBackRate: 0.82 });
       setSelectedItems([]);
       setRiskBalance(50);
       setTargetEV(0.85);
@@ -1718,7 +1726,7 @@ export const AdminPanel: React.FC = () => {
                             </div>
 
                             <div className="flex flex-col gap-4">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                     <div>
                                         <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Price (coins)</label>
                                         <input type="number" placeholder="Box Price (coins)" className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold text-green-400" value={newBox.price || ''} onChange={e => setNewBox({...newBox, price: Number(e.target.value)})} />
@@ -1749,6 +1757,26 @@ export const AdminPanel: React.FC = () => {
                                             onChange={e => setTargetEV(Number(e.target.value))}
                                         />
                                         <p className="text-[10px] text-gray-500 mt-1">0.85 = 85% payout target.</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Sell back (%)</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            max={100}
+                                            step={1}
+                                            placeholder="82"
+                                            className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold"
+                                            value={Math.round((newBox.sellBackRate ?? 0.82) * 100)}
+                                            onChange={e => {
+                                                const nextPercent = Number(e.target.value);
+                                                const nextValue = Number.isFinite(nextPercent)
+                                                    ? Math.min(100, Math.max(0, nextPercent)) / 100
+                                                    : 0.82;
+                                                setNewBox({ ...newBox, sellBackRate: nextValue });
+                                            }}
+                                        />
+                                        <p className="text-[10px] text-gray-500 mt-1">Controls the payout when items are sold back.</p>
                                     </div>
                                 </div>
                                 <div>

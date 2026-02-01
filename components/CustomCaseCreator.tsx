@@ -14,6 +14,7 @@ export const CustomCaseCreator: React.FC = () => {
   const FIXED_RISK_LEVEL = 50;
   const [boxName, setBoxName] = useState('');
   const [boxPrice, setBoxPrice] = useState<number>(0);
+  const [sellBackRate, setSellBackRate] = useState(0.75);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [lastCalculated, setLastCalculated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,7 +79,8 @@ export const CustomCaseCreator: React.FC = () => {
           tag: 'New',
           items: selectedItems,
           targetEV: DEFAULT_TARGET_EV,
-          riskLevel: FIXED_RISK_LEVEL
+          riskLevel: FIXED_RISK_LEVEL,
+          sellBackRate
       };
 
       createUserBox(newBox);
@@ -87,6 +89,7 @@ export const CustomCaseCreator: React.FC = () => {
   };
 
   const tagOptions = useMemo(() => ['All', ...BOX_TAG_OPTIONS], []);
+  const sellBackPercent = Math.round(sellBackRate * 100);
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -161,7 +164,7 @@ export const CustomCaseCreator: React.FC = () => {
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">3</span>
-                <p>Create and open your case instantly. Case Lab wins can be sold back for <span className="font-semibold text-emerald-300">75% of item value</span>.</p>
+                <p>Create and open your case instantly. Case Lab wins can be sold back for <span className="font-semibold text-emerald-300">{sellBackPercent}% of item value</span>.</p>
               </li>
             </ol>
             <div className="mt-5 flex flex-col gap-2 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
@@ -278,6 +281,28 @@ export const CustomCaseCreator: React.FC = () => {
                         onChange={(e) => setBoxName(e.target.value)}
                         className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all"
                       />
+                  </div>
+                  <div className="mb-6">
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sell back percentage</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={sellBackPercent}
+                          onChange={(e) => {
+                            const nextPercent = Number(e.target.value);
+                            const nextValue = Number.isFinite(nextPercent)
+                              ? Math.min(100, Math.max(0, nextPercent)) / 100
+                              : 0.75;
+                            setSellBackRate(nextValue);
+                          }}
+                          className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all"
+                        />
+                        <span className="text-xs text-gray-400">% of item value</span>
+                      </div>
+                      <p className="mt-2 text-[11px] text-gray-500">Sets the buy back payout for items won in this case.</p>
                   </div>
 
                   <div className="mb-6">

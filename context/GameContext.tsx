@@ -836,6 +836,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isDaily: data.isDaily ?? false,
             targetEV: data.targetEV !== undefined ? Number(data.targetEV) : undefined,
             riskLevel: data.riskLevel !== undefined ? Number(data.riskLevel) : undefined,
+            sellBackRate: data.sellBackRate !== undefined ? Number(data.sellBackRate) : undefined,
             items
           } as MysteryBox;
         })
