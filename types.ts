@@ -83,6 +83,8 @@ export interface CoinPackage {
   id: string;
   name: string;
   coins: number;
+  bonusCoins?: number;
+  totalCoins?: number;
   displayPrice: string;
   stripePriceId: string;
   active: boolean;

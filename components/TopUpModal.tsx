@@ -143,6 +143,8 @@ export const TopUpModal: React.FC = () => {
                         ) : (
                           activePackages.map((pack) => {
                             const isSelected = selectedPackage?.id === pack.id;
+                            const bonusCoins = pack.bonusCoins ?? 0;
+                            const totalCoins = pack.totalCoins ?? pack.coins + bonusCoins;
                             return (
                               <button
                                   key={pack.id}
@@ -152,14 +154,19 @@ export const TopUpModal: React.FC = () => {
                                   <div className="flex flex-col gap-1">
                                     <span className="text-[11px] font-semibold text-gray-400">{pack.displayPrice}</span>
                                     <CoinAmount
-                                      amount={pack.coins / 100}
+                                      amount={totalCoins / 100}
                                       formatOptions={{ maximumFractionDigits: 0 }}
                                       className="text-white"
                                       iconClassName="w-3.5 h-3.5"
                                     />
-                                    <span className="text-[10px] text-gray-500">
-                                      {pack.coins.toLocaleString()} coins
-                                    </span>
+                                    <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500">
+                                      <span>{pack.coins.toLocaleString()} base</span>
+                                      {bonusCoins > 0 && (
+                                        <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-semibold text-emerald-200">
+                                          +{bonusCoins.toLocaleString()} bonus
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                               </button>
                             );
@@ -171,14 +178,23 @@ export const TopUpModal: React.FC = () => {
                       <p className="text-xs font-semibold uppercase text-emerald-200">You get</p>
                       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
                         <CoinAmount
-                          amount={(selectedPackage?.coins ?? 0) / 100}
+                          amount={(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))) / 100}
                           formatOptions={{ maximumFractionDigits: 0 }}
                           className="text-lg font-black text-white"
                           iconClassName="w-5 h-5"
                         />
                         <div className="text-right text-xs text-emerald-200">
                           <div>{formattedDepositAmount} deposit</div>
+                          {(selectedPackage?.bonusCoins ?? 0) > 0 && (
+                            <div className="text-[11px] text-emerald-100">
+                              +{(selectedPackage?.bonusCoins ?? 0).toLocaleString()} bonus coins
+                            </div>
+                          )}
                         </div>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-[11px] text-emerald-100/80">
+                        <span>Base coins</span>
+                        <span>{(selectedPackage?.coins ?? 0).toLocaleString()}</span>
                       </div>
                     </div>
 
@@ -203,7 +219,7 @@ export const TopUpModal: React.FC = () => {
                               <span>Deposit {formattedDepositAmount}</span>
                               <span className="inline-flex items-center gap-1 text-xs font-semibold text-white/80 sm:text-sm">
                                 <CoinAmount
-                                  amount={(selectedPackage?.coins ?? 0) / 100}
+                                  amount={(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))) / 100}
                                   formatOptions={{ maximumFractionDigits: 0 }}
                                   className="text-white"
                                   iconClassName="w-4 h-4"

@@ -97,6 +97,7 @@ export const AdminPanel: React.FC = () => {
   const [packageDraft, setPackageDraft] = useState<Partial<CoinPackage>>({
       name: '',
       coins: 0,
+      bonusCoins: 0,
       displayPrice: '',
       stripePriceId: '',
       active: true,
@@ -359,6 +360,7 @@ export const AdminPanel: React.FC = () => {
       setPackageDraft({
           name: '',
           coins: 0,
+          bonusCoins: 0,
           displayPrice: '',
           stripePriceId: '',
           active: true,
@@ -382,6 +384,7 @@ export const AdminPanel: React.FC = () => {
   const handleSavePackage = async () => {
       const name = packageDraft.name?.trim() ?? '';
       const coins = Number(packageDraft.coins ?? 0);
+      const bonusCoins = Number(packageDraft.bonusCoins ?? 0);
       const displayPrice = packageDraft.displayPrice?.trim() ?? '';
       const stripePriceId = packageDraft.stripePriceId?.trim() ?? '';
       const sortOrder = Number.isFinite(Number(packageDraft.sortOrder)) ? Number(packageDraft.sortOrder) : 0;
@@ -393,6 +396,10 @@ export const AdminPanel: React.FC = () => {
       }
       if (!Number.isFinite(coins) || coins <= 0) {
           setPackageError('Coins must be a positive number.');
+          return;
+      }
+      if (!Number.isFinite(bonusCoins) || bonusCoins < 0 || !Number.isInteger(bonusCoins)) {
+          setPackageError('Bonus coins must be a whole number greater than or equal to 0.');
           return;
       }
       if (!displayPrice) {
@@ -411,6 +418,7 @@ export const AdminPanel: React.FC = () => {
               await updateCoinPackage(editingPackageId, {
                   name,
                   coins,
+                  bonusCoins,
                   displayPrice,
                   stripePriceId,
                   sortOrder,
@@ -420,6 +428,7 @@ export const AdminPanel: React.FC = () => {
               await createCoinPackage({
                   name,
                   coins,
+                  bonusCoins,
                   displayPrice,
                   stripePriceId,
                   sortOrder,
@@ -1795,7 +1804,9 @@ export const AdminPanel: React.FC = () => {
                                 <thead className="bg-[#0b0e14] text-gray-400 font-medium">
                                     <tr>
                                         <th className="px-4 py-3">Name</th>
-                                        <th className="px-4 py-3">Coins</th>
+                                        <th className="px-4 py-3">Base Coins</th>
+                                        <th className="px-4 py-3">Bonus Coins</th>
+                                        <th className="px-4 py-3">Total</th>
                                         <th className="px-4 py-3">Display Price</th>
                                         <th className="px-4 py-3">Stripe Price ID</th>
                                         <th className="px-4 py-3">Active</th>
@@ -1814,6 +1825,17 @@ export const AdminPanel: React.FC = () => {
                                                         amount={pkg.coins / 100}
                                                         formatOptions={{ maximumFractionDigits: 0 }}
                                                         className="text-green-400 font-semibold"
+                                                        iconClassName="w-3.5 h-3.5"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-300">
+                                                    {(pkg.bonusCoins ?? 0).toLocaleString()}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <CoinAmount
+                                                        amount={((pkg.totalCoins ?? (pkg.coins + (pkg.bonusCoins ?? 0))) / 100)}
+                                                        formatOptions={{ maximumFractionDigits: 0 }}
+                                                        className="text-white font-semibold"
                                                         iconClassName="w-3.5 h-3.5"
                                                     />
                                                 </td>
@@ -1858,7 +1880,7 @@ export const AdminPanel: React.FC = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={8} className="px-4 py-6 text-center text-gray-500 text-sm">
+                                            <td colSpan={10} className="px-4 py-6 text-center text-gray-500 text-sm">
                                                 No coin packages yet. Create one to enable deposits.
                                             </td>
                                         </tr>
@@ -2900,6 +2922,17 @@ export const AdminPanel: React.FC = () => {
                               step={1}
                               value={packageDraft.coins ?? 0}
                               onChange={(event) => setPackageDraft((prev) => ({ ...prev, coins: Number(event.target.value) }))}
+                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Bonus Coins</label>
+                          <input
+                              type="number"
+                              min={0}
+                              step={1}
+                              value={packageDraft.bonusCoins ?? 0}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, bonusCoins: Number(event.target.value) }))}
                               className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                           />
                       </div>
