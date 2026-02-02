@@ -125,6 +125,35 @@ export interface InventoryItem extends CaseItem {
   sellBackRate?: number;
 }
 
+export type ShipmentStatus = 'shipping_requested' | 'shipping' | 'shipped';
+
+export interface ShipmentItem {
+  name: string;
+  value: number;
+  image: string;
+  rarity: CaseItem['rarity'];
+  sellBackRate?: number;
+  size?: string | null;
+  boxId?: string | null;
+  prizeId?: string | null;
+}
+
+export interface Shipment {
+  id: string;
+  uid: string;
+  inventoryId?: string;
+  item: ShipmentItem;
+  shippingInfo?: ShippingAddress;
+  shippingCost?: number;
+  shippingPaid?: boolean;
+  shippingPaymentMethod?: 'coins' | 'cash';
+  shippingCashAmountCents?: number;
+  status: ShipmentStatus;
+  trackingNumber?: string;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
 export type UserStatus = 'active' | 'suspended' | 'banned';
 
 export interface UserLocks {
