@@ -99,6 +99,12 @@ export interface CoinPackage {
   updatedAt?: number;
 }
 
+export interface StripeSettings {
+  shippingCashEnabled: boolean;
+  shippingFlatRateCents: number;
+  stripeShippingKeyOrId: string;
+}
+
 export interface InventoryItem extends CaseItem {
   instanceId: string;
   obtainedAt: number;

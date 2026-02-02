@@ -102,7 +102,9 @@ export const AdminPanel: React.FC = () => {
     updateUserAdminData,
     updateUserBalance,
     bonusSettings,
-    updateBonusSettings
+    updateBonusSettings,
+    stripeSettings,
+    updateStripeSettings
   } = useGame();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'bonuses' | 'packages'>('dashboard');
 
@@ -178,6 +180,12 @@ export const AdminPanel: React.FC = () => {
   const [timelineSearch, setTimelineSearch] = useState('');
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
   const [bonusSaveNotice, setBonusSaveNotice] = useState(false);
+  const [stripeSettingsDraft, setStripeSettingsDraft] = useState({
+      shippingCashEnabled: stripeSettings.shippingCashEnabled,
+      shippingFlatRateInput: (stripeSettings.shippingFlatRateCents / 100).toFixed(2),
+      stripeShippingKeyOrId: stripeSettings.stripeShippingKeyOrId
+  });
+  const [stripeSettingsNotice, setStripeSettingsNotice] = useState(false);
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [balanceDraft, setBalanceDraft] = useState('');
   const [isEditingInventory, setIsEditingInventory] = useState(false);
@@ -350,6 +358,14 @@ export const AdminPanel: React.FC = () => {
   useEffect(() => {
       setBonusDraft(bonusSettings);
   }, [bonusSettings]);
+
+  useEffect(() => {
+      setStripeSettingsDraft({
+          shippingCashEnabled: stripeSettings.shippingCashEnabled,
+          shippingFlatRateInput: (stripeSettings.shippingFlatRateCents / 100).toFixed(2),
+          stripeShippingKeyOrId: stripeSettings.stripeShippingKeyOrId
+      });
+  }, [stripeSettings]);
 
   const normalizeTagList = (tags: string[]) => Array.from(new Set(
       tags
@@ -1397,6 +1413,18 @@ export const AdminPanel: React.FC = () => {
       updateBonusSettings(bonusDraft);
       setBonusSaveNotice(true);
       window.setTimeout(() => setBonusSaveNotice(false), 3000);
+  };
+
+  const handleSaveStripeSettings = () => {
+      const rawRate = Number(stripeSettingsDraft.shippingFlatRateInput);
+      const shippingFlatRateCents = Number.isFinite(rawRate) ? Math.max(0, Math.round(rawRate * 100)) : 0;
+      updateStripeSettings({
+          shippingCashEnabled: stripeSettingsDraft.shippingCashEnabled,
+          shippingFlatRateCents,
+          stripeShippingKeyOrId: stripeSettingsDraft.stripeShippingKeyOrId
+      });
+      setStripeSettingsNotice(true);
+      window.setTimeout(() => setStripeSettingsNotice(false), 3000);
   };
 
   return (
@@ -3252,6 +3280,88 @@ export const AdminPanel: React.FC = () => {
                             {adminNoticeSent && (
                                 <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
                                     Notification sent.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Shipping (Cash)</h3>
+                                <p className="text-sm text-gray-400">
+                                    Enable cash shipping via Stripe Checkout and set the flat rate per shipment.
+                                </p>
+                            </div>
+                            <div className={`text-xs font-semibold px-3 py-1 rounded-full ${stripeSettingsDraft.shippingCashEnabled ? 'bg-emerald-500/10 text-emerald-300' : 'bg-gray-800 text-gray-400'}`}>
+                                {stripeSettingsDraft.shippingCashEnabled ? 'Enabled' : 'Disabled'}
+                            </div>
+                        </div>
+                        <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                            <div className="flex items-center gap-3 bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-3">
+                                <input
+                                    id="shipping-cash-enabled"
+                                    type="checkbox"
+                                    checked={stripeSettingsDraft.shippingCashEnabled}
+                                    onChange={(event) =>
+                                        setStripeSettingsDraft((prev) => ({
+                                            ...prev,
+                                            shippingCashEnabled: event.target.checked
+                                        }))
+                                    }
+                                    className="h-4 w-4 rounded border-gray-700 bg-[#0b0e14] text-emerald-500 focus:ring-emerald-500"
+                                />
+                                <label htmlFor="shipping-cash-enabled" className="text-sm text-gray-200">
+                                    Enable cash shipping
+                                </label>
+                            </div>
+                            <div className="lg:col-span-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Shipping flat rate (USD)</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    step={0.01}
+                                    value={stripeSettingsDraft.shippingFlatRateInput}
+                                    onChange={(event) =>
+                                        setStripeSettingsDraft((prev) => ({
+                                            ...prev,
+                                            shippingFlatRateInput: event.target.value
+                                        }))
+                                    }
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                    placeholder="6.99"
+                                />
+                            </div>
+                            <div className="lg:col-span-3">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Stripe Shipping Key/ID (paste whatever Stripe ID you need)</label>
+                                <input
+                                    type="text"
+                                    value={stripeSettingsDraft.stripeShippingKeyOrId}
+                                    onChange={(event) =>
+                                        setStripeSettingsDraft((prev) => ({
+                                            ...prev,
+                                            stripeShippingKeyOrId: event.target.value
+                                        }))
+                                    }
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                />
+                                <p className="mt-2 text-xs text-gray-500">
+                                    Optional. If you&apos;re not sure, leave blank for now.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <span className="text-xs text-gray-500">
+                                Cash shipping settings are stored with Stripe configuration in Firestore.
+                            </span>
+                            <button
+                                onClick={handleSaveStripeSettings}
+                                className="w-full sm:w-auto px-5 py-2 bg-brand-purple/20 text-brand-purple border border-brand-purple/40 rounded-lg text-sm font-bold hover:bg-brand-purple hover:text-white transition-colors"
+                            >
+                                Save shipping settings
+                            </button>
+                            {stripeSettingsNotice && (
+                                <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+                                    Shipping settings saved.
                                 </div>
                             )}
                         </div>

@@ -59,6 +59,8 @@ export default async function handler(req, res) {
         },
         shippingInfo,
         shippingCost: Number.isFinite(shippingCost) ? Math.max(0, shippingCost) : 0,
+        shippingPaid: true,
+        shippingPaymentMethod: 'coins',
         status: 'shipping_requested',
         createdAt: new Date()
       });

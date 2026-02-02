@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
 import { getSellBackValue } from '../utils/sellBack';
 import { CoinAmount } from './CoinAmount';
 import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Upload, Trash2, ExternalLink, Search, Package } from 'lucide-react';
+import { auth } from '../firebase';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const AVATAR_PRESETS = [
     'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
@@ -26,7 +30,7 @@ interface ProfileProps {
 }
 
 export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => {
-  const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem, deductBalance } = useGame();
+  const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem, deductBalance, stripeSettings, setShowLoginModal } = useGame();
   const { playSound } = useSound();
   
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
@@ -39,6 +43,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const [showShippingReview, setShowShippingReview] = useState(false);
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
+  const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sellOfferTimersRef = useRef<Record<string, number>>({});
 
@@ -128,9 +133,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   });
 
   const shippingCostPerItem = Math.max(0, Number(user.shippingCost ?? 0));
+  const shippingCashEnabled = stripeSettings.shippingCashEnabled && stripeSettings.shippingFlatRateCents > 0;
+  const shippingFlatRateCents = Math.max(0, stripeSettings.shippingFlatRateCents);
   const selectedShipmentItems = normalizedInventory.filter((item) =>
     selectedShipments.includes(item.instanceId)
   );
+  const shippingCashTotalCents = shippingFlatRateCents * selectedShipmentItems.length;
+  const formatUsd = (cents: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 
   const canSelectShipment = (item: typeof normalizedInventory[number]) =>
     item.status === 'available' && !item.locked && !!user.shippingAddress;
@@ -259,6 +269,60 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
       alert('Unable to request shipment right now. Please try again.');
     } finally {
       setIsSubmittingShipment(false);
+    }
+  };
+
+  const handleCashShipping = async () => {
+    if (!shippingCashEnabled) {
+      alert('Cash shipping is currently unavailable.');
+      return;
+    }
+
+    if (!auth.currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (!user.shippingAddress) {
+      alert('Please add a shipping address before requesting shipment.');
+      return;
+    }
+
+    const itemsToShip = selectedShipmentItems.filter((item) => canSelectShipment(item));
+    if (itemsToShip.length === 0) {
+      setShowShippingReview(false);
+      return;
+    }
+
+    setIsSubmittingCashShipping(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/create-shipping-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ inventoryIds: itemsToShip.map((item) => item.instanceId) })
+      });
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || 'Unable to start checkout.');
+      }
+      const data = await response.json();
+      const stripe = await stripePromise;
+      if (!stripe) {
+        throw new Error('Stripe failed to initialize.');
+      }
+      const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+      if (result.error) {
+        throw result.error;
+      }
+    } catch (error) {
+      console.error('Failed to start cash shipping checkout', error);
+      alert('Unable to start cash checkout. Please try again.');
+    } finally {
+      setIsSubmittingCashShipping(false);
     }
   };
 
@@ -863,7 +927,21 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                         iconClassName="w-4 h-4"
                                       />
                                   </div>
-                              </div>
+                              {shippingCashEnabled && (
+                                  <div className="flex items-center justify-between text-gray-400">
+                                      <span>Cash shipping total</span>
+                                      <span className="text-emerald-300 font-semibold">
+                                          {formatUsd(shippingCashTotalCents)}
+                                      </span>
+                                  </div>
+                              )}
+                          </div>
+
+                              {shippingCashEnabled && (
+                                  <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+                                      Cash shipping uses Stripe Checkout. Your shipment is queued after payment succeeds.
+                                  </div>
+                              )}
 
                               {!user.shippingAddress && (
                                   <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
@@ -871,28 +949,47 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                   </div>
                               )}
 
-                              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                              <div className="mt-5 flex flex-col gap-3">
                                   <button
                                       onClick={() => setShowShippingReview(false)}
                                       className="flex-1 rounded-lg border border-gray-700 bg-[#0b0e14] px-4 py-2 text-xs font-bold uppercase tracking-wide text-gray-300 hover:border-gray-500"
                                   >
                                       Cancel
                                   </button>
-                                  <button
-                                      onClick={handleConfirmShipping}
-                                      disabled={
-                                        isSubmittingShipment ||
-                                        selectedShipmentItems.length === 0 ||
-                                        !user.shippingAddress
-                                      }
-                                      className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
-                                        !isSubmittingShipment && selectedShipmentItems.length > 0 && user.shippingAddress
-                                          ? 'border-blue-500/40 bg-blue-600/20 text-blue-200 hover:bg-blue-600/30'
-                                          : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
-                                      }`}
-                                  >
-                                      {isSubmittingShipment ? 'Submitting...' : 'Confirm shipping'}
-                                  </button>
+                                  <div className="flex flex-col gap-3 sm:flex-row">
+                                      <button
+                                          onClick={handleConfirmShipping}
+                                          disabled={
+                                            isSubmittingShipment ||
+                                            selectedShipmentItems.length === 0 ||
+                                            !user.shippingAddress
+                                          }
+                                          className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+                                            !isSubmittingShipment && selectedShipmentItems.length > 0 && user.shippingAddress
+                                              ? 'border-blue-500/40 bg-blue-600/20 text-blue-200 hover:bg-blue-600/30'
+                                              : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
+                                          }`}
+                                      >
+                                          {isSubmittingShipment ? 'Submitting...' : 'Ship with coins'}
+                                      </button>
+                                      {shippingCashEnabled && (
+                                          <button
+                                              onClick={handleCashShipping}
+                                              disabled={
+                                                isSubmittingCashShipping ||
+                                                selectedShipmentItems.length === 0 ||
+                                                !user.shippingAddress
+                                              }
+                                              className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+                                                !isSubmittingCashShipping && selectedShipmentItems.length > 0 && user.shippingAddress
+                                                  ? 'border-emerald-500/40 bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30'
+                                                  : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
+                                              }`}
+                                          >
+                                              {isSubmittingCashShipping ? 'Redirecting...' : `Ship – ${formatUsd(shippingCashTotalCents)}`}
+                                          </button>
+                                      )}
+                                  </div>
                               </div>
                           </div>
                       </div>
