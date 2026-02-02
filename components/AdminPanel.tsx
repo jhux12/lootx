@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, UserLocks, UserStatus } from '../types';
+import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -96,6 +96,7 @@ export const AdminPanel: React.FC = () => {
     items,
     boxes,
     users,
+    shipments,
     updateUserProgress,
     sendAdminNotification,
     updateShipmentStatus,
@@ -290,20 +291,20 @@ export const AdminPanel: React.FC = () => {
       });
   };
 
-  const shipmentRecords = users.flatMap((profile) => {
-      const inventory = Array.isArray(profile.inventory) ? profile.inventory : [];
-      return inventory
-        .map((item, index) => ({
-            user: profile,
-            item,
-            key: `${profile.id}-${item.instanceId || item.id}-${index}`
-        }))
-        .filter(({ item }) => item.status === 'shipping' || item.status === 'shipping_requested' || item.status === 'shipped');
-  });
+  const shipmentRecords = useMemo(() => {
+      return shipments.map((shipment, index) => {
+          const shipmentUser = users.find((profile) => profile.id === shipment.uid);
+          return {
+              shipment,
+              user: shipmentUser,
+              key: shipment.id || `${shipment.uid}-${shipment.inventoryId ?? index}`
+          };
+      });
+  }, [shipments, users]);
 
-  const filteredShipments = shipmentRecords.filter(({ item }) => {
-      if (shipmentFilter === 'processing') return item.status === 'shipping' || item.status === 'shipping_requested';
-      if (shipmentFilter === 'shipped') return item.status === 'shipped';
+  const filteredShipments = shipmentRecords.filter(({ shipment }) => {
+      if (shipmentFilter === 'processing') return shipment.status === 'shipping' || shipment.status === 'shipping_requested';
+      if (shipmentFilter === 'shipped') return shipment.status === 'shipped';
       return true;
   });
   const stats = [
@@ -3008,42 +3009,45 @@ export const AdminPanel: React.FC = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            {filteredShipments.map(({ user: shipmentUser, item, key }) => {
-                                const address = shipmentUser.shippingAddress;
-                                const canUpdate = Boolean(item.instanceId);
-                                const trackingKey = `${shipmentUser.id}-${item.instanceId || key}`;
-                                const trackingValue = shipmentTracking[trackingKey] ?? item.trackingNumber ?? '';
+                            {filteredShipments.map(({ user: shipmentUser, shipment, key }) => {
+                                const address = shipment.shippingInfo ?? shipmentUser?.shippingAddress;
+                                const canUpdate = Boolean(shipment.id);
+                                const trackingKey = shipment.id || key;
+                                const trackingValue = shipmentTracking[trackingKey] ?? shipment.trackingNumber ?? '';
+                                const shipmentItem = shipment.item ?? ({ name: 'Mystery Item', value: 0, image: 'https://picsum.photos/200', rarity: 'common' } as Shipment['item']);
+                                const displayName = shipmentUser?.name ?? address?.fullName ?? 'Unknown user';
+                                const displayEmail = shipmentUser?.email || 'No email on file';
                                 return (
                                     <div key={key} className="bg-[#131720] border border-gray-800 rounded-xl p-5 flex flex-col gap-4">
                                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                                             <div className="flex items-center gap-3">
-                                                <img src={item.image} alt={item.name} className="w-12 h-12 rounded-lg bg-[#0b0e14] object-contain" />
+                                                <img src={shipmentItem.image} alt={shipmentItem.name} className="w-12 h-12 rounded-lg bg-[#0b0e14] object-contain" />
                                                 <div>
-                                                    <div className="text-white font-bold">{item.name}</div>
+                                                    <div className="text-white font-bold">{shipmentItem.name}</div>
                                                     <CoinAmount
-                                                      amount={item.price}
+                                                      amount={shipmentItem.value}
                                                       formatOptions={{ maximumFractionDigits: 0 }}
                                                       className="text-xs text-green-400 font-semibold"
                                                       iconClassName="w-3 h-3"
                                                     />
-                                                    {item.size && (
+                                                    {shipmentItem.size && (
                                                         <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-blue-200">
-                                                            Size: {item.size}
+                                                            Size: {shipmentItem.size}
                                                         </div>
                                                     )}
                                                     <div className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full mt-1 ${
-                                                        item.status === 'shipped'
+                                                        shipment.status === 'shipped'
                                                             ? 'bg-green-500/10 text-green-400'
                                                             : 'bg-yellow-500/10 text-yellow-400'
                                                     }`}>
-                                                        {item.status === 'shipped' ? <PackageCheck className="w-3 h-3" /> : <Truck className="w-3 h-3" />}
-                                                        {item.status === 'shipped' ? 'Shipped' : 'Processing'}
+                                                        {shipment.status === 'shipped' ? <PackageCheck className="w-3 h-3" /> : <Truck className="w-3 h-3" />}
+                                                        {shipment.status === 'shipped' ? 'Shipped' : 'Processing'}
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="text-sm text-gray-300 sm:text-right">
-                                                <div className="font-semibold">{shipmentUser.name}</div>
-                                                <div className="text-xs text-gray-500 break-all">{shipmentUser.email || 'No email on file'}</div>
+                                                <div className="font-semibold">{displayName}</div>
+                                                <div className="text-xs text-gray-500 break-all">{displayEmail}</div>
                                             </div>
                                         </div>
 
@@ -3063,7 +3067,7 @@ export const AdminPanel: React.FC = () => {
                                             </div>
                                             <div className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 text-xs text-gray-400 flex flex-col gap-3">
                                                 <div className="text-[10px] uppercase font-bold text-gray-500">Shipment Actions</div>
-                                                <div className="text-gray-500">Instance ID: <span className="text-gray-300">{item.instanceId || 'Unavailable'}</span></div>
+                                                <div className="text-gray-500">Instance ID: <span className="text-gray-300">{shipment.inventoryId || 'Unavailable'}</span></div>
                                                 <label className="text-[10px] uppercase font-bold text-gray-500">Tracking number</label>
                                                 <input
                                                     type="text"
@@ -3080,13 +3084,14 @@ export const AdminPanel: React.FC = () => {
                                                 <button
                                                     onClick={() =>
                                                         updateShipmentStatus(
-                                                            shipmentUser.id,
-                                                            item.instanceId || '',
+                                                            shipment.id,
+                                                            shipment.uid,
+                                                            shipment.inventoryId,
                                                             'shipped',
                                                             trackingValue
                                                         )
                                                     }
-                                                    disabled={item.status === 'shipped' || !canUpdate}
+                                                    disabled={shipment.status === 'shipped' || !canUpdate}
                                                     className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     Mark as shipped

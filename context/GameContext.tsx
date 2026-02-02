@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
-import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage, StripeSettings } from '../types';
+import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage, StripeSettings, Shipment, ShipmentStatus } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
@@ -336,6 +336,7 @@ interface GameContextType {
   isAuthenticated: boolean;
   balance: number;
   inventory: InventoryItem[];
+  shipments: Shipment[];
   users: User[];
   notifications: AppNotification[];
   view: ViewState;
@@ -397,7 +398,7 @@ interface GameContextType {
   registerSpend: (amount: number) => void;
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
-  updateShipmentStatus: (userId: string, instanceId: string, status: InventoryItem['status'], trackingNumber?: string) => Promise<void>;
+  updateShipmentStatus: (shipmentId: string, userId: string, inventoryId: string | undefined, status: ShipmentStatus, trackingNumber?: string) => Promise<void>;
 }
 
 const getDayStart = (timestamp: number = Date.now()) => {
@@ -617,6 +618,39 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
   } as InventoryItem;
 };
 
+const mapShipmentDoc = (docSnap: QueryDocumentSnapshot) => {
+  const data = docSnap.data() as Record<string, any>;
+  const itemData = data.item ?? {};
+  const status = (data.status ?? 'shipping_requested') as Shipment['status'];
+  const createdAt = data.createdAt ? normalizeTimestamp(data.createdAt, Date.now()) : undefined;
+  const updatedAt = data.updatedAt ? normalizeTimestamp(data.updatedAt, 0) : undefined;
+
+  return {
+    id: docSnap.id,
+    uid: String(data.uid ?? ''),
+    inventoryId: typeof data.inventoryId === 'string' ? data.inventoryId : undefined,
+    item: {
+      name: itemData.name ?? 'Mystery Item',
+      value: Number(itemData.value ?? 0),
+      image: itemData.image ?? 'https://picsum.photos/200',
+      rarity: (itemData.rarity ?? 'common') as Shipment['item']['rarity'],
+      sellBackRate: Number(itemData.sellBackRate ?? 0),
+      size: itemData.size ?? null,
+      boxId: itemData.boxId ?? null,
+      prizeId: itemData.prizeId ?? null
+    },
+    shippingInfo: data.shippingInfo as ShippingAddress | undefined,
+    shippingCost: Number(data.shippingCost ?? 0),
+    shippingPaid: data.shippingPaid ?? false,
+    shippingPaymentMethod: data.shippingPaymentMethod ?? undefined,
+    shippingCashAmountCents: Number(data.shippingCashAmountCents ?? 0),
+    status,
+    trackingNumber: typeof data.trackingNumber === 'string' ? data.trackingNumber : undefined,
+    createdAt,
+    updatedAt
+  } as Shipment;
+};
+
 const persistUserData = async (payload: PersistUserData) => {
   const currentUser = auth.currentUser;
   if (!currentUser) return;
@@ -643,6 +677,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [users, setUsers] = useState<User[]>([]);
   const [balance, setBalance] = useState<number>(0);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [shipments, setShipments] = useState<Shipment[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   
   const [view, setViewState] = useState<ViewState>(() => {
@@ -855,6 +890,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return () => unsubscribe();
   }, [isAuthenticated, user.id, user.isAdmin]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user.isAdmin) {
+      setShipments([]);
+      return;
+    }
+
+    const shipmentsRef = collection(db, 'shipments');
+    const unsubscribe = onSnapshot(shipmentsRef, (snapshot) => {
+      const loaded = snapshot.docs
+        .map(mapShipmentDoc)
+        .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+      setShipments(loaded);
+    }, (error) => {
+      console.error('Failed to load shipments from Firebase', error);
+      setShipments([]);
+    });
+
+    return () => unsubscribe();
+  }, [isAuthenticated, user.isAdmin]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -2033,34 +2088,58 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(prev => prev.id === userId ? { ...prev, xp: sanitizedXp, level: progress.level } : prev);
   };
 
-  const updateShipmentStatus = async (userId: string, instanceId: string, status: InventoryItem['status'], trackingNumber?: string) => {
-    const targetUser = users.find((u) => u.id === userId);
-    if (!targetUser) {
-      console.warn('Attempted to update shipment for unknown user');
+  const updateShipmentStatus = async (
+    shipmentId: string,
+    userId: string,
+    inventoryId: string | undefined,
+    status: ShipmentStatus,
+    trackingNumber?: string
+  ) => {
+    const sanitizedTrackingNumber = trackingNumber?.trim();
+    if (!shipmentId) {
+      console.warn('Attempted to update shipment without a shipment id');
       return;
     }
 
-    const inventoryList = Array.isArray(targetUser.inventory) ? targetUser.inventory : [];
-    const sanitizedTrackingNumber = trackingNumber?.trim();
-    const updatedInventory = inventoryList.map((item) =>
-      item.instanceId === instanceId
-        ? {
-            ...item,
-            status,
-            trackingNumber: sanitizedTrackingNumber || item.trackingNumber
-          }
-        : item
-    );
+    const shipmentUpdates = sanitizeDeep({
+      status,
+      trackingNumber: sanitizedTrackingNumber,
+      updatedAt: serverTimestamp()
+    });
 
     try {
-      await setDoc(getUserRef(userId), { inventory: updatedInventory }, { merge: true });
+      await setDoc(doc(db, 'shipments', shipmentId), shipmentUpdates, { merge: true });
     } catch (error) {
       console.error('Failed to update shipment status in Firebase', error);
       return;
     }
 
+    if (userId && inventoryId) {
+      try {
+        await setDoc(doc(db, 'users', userId, 'inventory', inventoryId), {
+          status,
+          trackingNumber: sanitizedTrackingNumber
+        }, { merge: true });
+      } catch (error) {
+        console.error('Failed to update inventory shipment status in Firebase', error);
+      }
+    }
+
     setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, inventory: updatedInventory } : u))
+      prev.map((u) => {
+        if (u.id !== userId) return u;
+        if (!Array.isArray(u.inventory)) return u;
+        const updatedInventory = u.inventory.map((item) =>
+          item.instanceId === inventoryId
+            ? {
+                ...item,
+                status,
+                trackingNumber: sanitizedTrackingNumber || item.trackingNumber
+              }
+            : item
+        );
+        return { ...u, inventory: updatedInventory };
+      })
     );
   };
 
@@ -2074,6 +2153,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       showTopUpModal,
       balance,
       inventory,
+      shipments,
       view,
       battles,
       boxes,
