@@ -39,6 +39,60 @@ export default async function handler(req, res) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const metadata = session.metadata ?? {};
+    if (metadata.paymentType === 'shipping') {
+      const shipmentBatchId = metadata.shipmentId;
+      const uid = metadata.userId;
+      if (!shipmentBatchId || !uid) {
+        console.warn('stripe-webhook missing shipping metadata', { shipmentBatchId, uid });
+        return sendJson(res, 200, { received: true });
+      }
+
+      const shipmentsSnap = await firestore
+        .collection('shipments')
+        .where('shippingBatchId', '==', shipmentBatchId)
+        .get();
+
+      if (shipmentsSnap.empty) {
+        console.warn('stripe-webhook shipment batch not found', { shipmentBatchId });
+        return sendJson(res, 200, { received: true });
+      }
+
+      const totalAmount = Number(session.amount_total ?? 0);
+      const perItemAmount = shipmentsSnap.size > 0 ? Math.round(totalAmount / shipmentsSnap.size) : 0;
+
+      try {
+        await firestore.runTransaction(async (transaction) => {
+          shipmentsSnap.docs.forEach((docSnap) => {
+            const shipmentRef = docSnap.ref;
+            const shipmentData = docSnap.data() ?? {};
+            if (shipmentData.shippingPaid) {
+              return;
+            }
+
+            transaction.set(shipmentRef, {
+              shippingPaid: true,
+              shippingPaymentMethod: 'cash',
+              shippingCashAmountCents: perItemAmount,
+              stripeCheckoutSessionId: session.id,
+              status: 'shipping_requested',
+              updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            const inventoryId = shipmentData.inventoryId;
+            if (inventoryId) {
+              const inventoryRef = firestore.collection('users').doc(uid).collection('inventory').doc(inventoryId);
+              transaction.set(inventoryRef, { status: 'shipping_requested' }, { merge: true });
+            }
+          });
+        });
+      } catch (error) {
+        console.error('stripe-webhook failed to mark shipping paid', error);
+        return sendJson(res, 500, { error: 'Failed to update shipping payment' });
+      }
+
+      return sendJson(res, 200, { received: true });
+    }
+
     const uid = metadata.uid;
     const totalCoins = Number(metadata.coins ?? 0);
     let baseCoins = Number(metadata.baseCoins ?? 0);
