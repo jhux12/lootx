@@ -278,6 +278,7 @@ type PersistUserData = Partial<{
   affiliateCode?: string;
   referredBy?: string;
   shippingAddress: ShippingAddress;
+  shippingCost: number;
   name: string;
   avatar: string;
   lastDailyClaim: number;
@@ -316,8 +317,8 @@ interface GameContextType {
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string) => Promise<void>;
-  shipItem: (instanceId: string) => void;
-  updateAddress: (address: ShippingAddress) => void;
+  shipItem: (instanceId: string, shippingCost?: number) => Promise<void>;
+  updateAddress: (address: ShippingAddress, shippingCost?: number) => void;
   updateUserInfo: (name: string, avatar: string) => Promise<void>;
   addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>) => void;
   dismissNotification: (id: string) => void;
@@ -439,6 +440,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     referredBy: data.referredBy,
     followers: followerIds,
     shippingAddress: data.shippingAddress,
+    shippingCost: Number(data.shippingCost ?? 0),
     isAdmin: data.isAdmin ?? false,
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
@@ -486,6 +488,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     referredBy: data.referredBy,
     followers: followerIds,
     shippingAddress: data.shippingAddress,
+    shippingCost: Number(data.shippingCost ?? 0),
     isAdmin: data.isAdmin ?? false,
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
@@ -1311,7 +1314,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const shipItem = async (instanceId: string) => {
+  const shipItem = async (instanceId: string, shippingCost?: number) => {
     if (!auth.currentUser) {
       setShowLoginModal(true);
       return;
@@ -1328,7 +1331,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         method: 'POST',
         body: JSON.stringify({
           inventoryId: instanceId,
-          shippingInfo: user.shippingAddress
+          shippingInfo: user.shippingAddress,
+          shippingCost: shippingCost ?? user.shippingCost ?? 0
         })
       });
 
@@ -1350,10 +1354,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const updateAddress = async (address: ShippingAddress) => {
+  const updateAddress = async (address: ShippingAddress, shippingCost?: number) => {
       setUser(prev => {
-        const updated = { ...prev, shippingAddress: address };
-        persistUserData({ shippingAddress: address });
+        const updatedShippingCost = shippingCost ?? prev.shippingCost ?? 0;
+        const updated = { ...prev, shippingAddress: address, shippingCost: updatedShippingCost };
+        persistUserData({ shippingAddress: address, shippingCost: updatedShippingCost });
         return updated;
       });
   };

@@ -25,6 +25,7 @@ export interface User {
   affiliateCode?: string;
   referredBy?: string;
   shippingAddress?: ShippingAddress;
+  shippingCost?: number;
   inventory?: InventoryItem[];
   isAdmin?: boolean;
   chatWarnings?: number;
