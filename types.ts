@@ -97,6 +97,7 @@ export interface CoinPackage {
   totalCoins?: number;
   displayPrice: string;
   stripePriceId: string;
+  badge?: 'best' | 'good';
   active: boolean;
   sortOrder: number;
   createdAt?: number;

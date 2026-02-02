@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, CreditCard, Wallet, Bitcoin, Loader2, CheckCircle } from 'lucide-react';
+import { X, Wallet, Loader2, CheckCircle } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -11,7 +11,6 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 export const TopUpModal: React.FC = () => {
   const { setShowTopUpModal, coinPackages } = useGame();
   const { playSound } = useSound();
-  const [method, setMethod] = useState<'card' | 'crypto'>('card');
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -23,6 +22,31 @@ export const TopUpModal: React.FC = () => {
   }, [coinPackages]);
   const selectedPackage = activePackages.find((pkg) => pkg.id === selectedPackageId) ?? activePackages[0];
   const formattedDepositAmount = selectedPackage?.displayPrice ?? '$0.00';
+  const priceValue = useMemo(() => {
+    const raw = formattedDepositAmount.replace(/[^0-9.]/g, '');
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }, [formattedDepositAmount]);
+  const totalCoins = (selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0)));
+  const effectiveRate = priceValue > 0 ? Math.round(totalCoins / priceValue) : null;
+  const getBadgeClasses = (badge?: string) => {
+    if (badge === 'best') {
+      return 'border-amber-400/80 bg-amber-500/10 text-amber-100';
+    }
+    if (badge === 'good') {
+      return 'border-sky-400/80 bg-sky-500/10 text-sky-100';
+    }
+    return 'border-white/10 bg-[#0b0e14] text-gray-300';
+  };
+  const getSelectedClasses = (badge?: string) => {
+    if (badge === 'best') {
+      return 'border-amber-400 bg-amber-500/20 text-white shadow-lg shadow-amber-900/20';
+    }
+    if (badge === 'good') {
+      return 'border-sky-400 bg-sky-500/20 text-white shadow-lg shadow-sky-900/20';
+    }
+    return 'border-emerald-400 bg-emerald-500/10 text-white shadow-lg shadow-emerald-900/20';
+  };
 
   React.useEffect(() => {
     if (!selectedPackageId && activePackages[0]) {
@@ -109,30 +133,6 @@ export const TopUpModal: React.FC = () => {
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
-                    {/* Method Selector */}
-                    <div className="flex gap-3 mb-5">
-                        <button 
-                            onClick={() => { setMethod('card'); playSound('click'); }}
-                            className={`flex-1 rounded-xl border px-3 py-3 text-left transition-all ${method === 'card' ? 'border-blue-400 bg-blue-500/10 text-white shadow-lg shadow-blue-900/10' : 'border-white/10 bg-[#0b0e14] text-gray-400 hover:border-white/30'}`}
-                        >
-                            <div className="flex items-center gap-2">
-                              <CreditCard className="w-5 h-5" />
-                              <span className="text-xs font-semibold">Card</span>
-                            </div>
-                            <span className="mt-2 block text-[11px] text-gray-500">Instant approval</span>
-                        </button>
-                        <button 
-                            onClick={() => { setMethod('crypto'); playSound('click'); }}
-                            className={`flex-1 rounded-xl border px-3 py-3 text-left transition-all ${method === 'crypto' ? 'border-orange-400 bg-orange-500/10 text-white shadow-lg shadow-orange-900/10' : 'border-white/10 bg-[#0b0e14] text-gray-400 hover:border-white/30'}`}
-                        >
-                            <div className="flex items-center gap-2">
-                              <Bitcoin className="w-5 h-5" />
-                              <span className="text-xs font-semibold">Crypto</span>
-                            </div>
-                            <span className="mt-2 block text-[11px] text-gray-500">BTC, ETH, USDC</span>
-                        </button>
-                    </div>
-
                     {/* Amount Selector */}
                     <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Select a pack</label>
                     <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-3">
@@ -149,8 +149,19 @@ export const TopUpModal: React.FC = () => {
                               <button
                                   key={pack.id}
                                   onClick={() => { setSelectedPackageId(pack.id); playSound('click'); }}
-                                  className={`relative rounded-xl border px-3 py-3 text-left transition-all ${isSelected ? 'border-emerald-400 bg-emerald-500/10 text-white shadow-lg shadow-emerald-900/20' : 'border-white/10 bg-[#0b0e14] text-gray-300 hover:border-white/30'}`}
+                                  className={`relative rounded-xl border px-3 py-3 text-left transition-all ${isSelected ? getSelectedClasses(pack.badge) : `${getBadgeClasses(pack.badge)} hover:border-white/30`}`}
                               >
+                                  {pack.badge && (
+                                    <span
+                                      className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+                                        pack.badge === 'best'
+                                          ? 'bg-amber-500 text-black'
+                                          : 'bg-sky-500 text-black'
+                                      }`}
+                                    >
+                                      {pack.badge === 'best' ? 'Best value' : 'Good value'}
+                                    </span>
+                                  )}
                                   <div className="flex flex-col gap-1">
                                     <span className="text-[11px] font-semibold text-gray-400">{pack.displayPrice}</span>
                                     <CoinAmount
@@ -175,19 +186,19 @@ export const TopUpModal: React.FC = () => {
                     </div>
 
                     <div className="mb-5 rounded-2xl border border-white/10 bg-[#121826] p-4">
-                      <p className="text-xs font-semibold uppercase text-emerald-200">You get</p>
+                      <p className="text-xs font-semibold uppercase text-emerald-200">Value breakdown</p>
                       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
                         <CoinAmount
-                          amount={(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))) / 100}
+                          amount={totalCoins / 100}
                           formatOptions={{ maximumFractionDigits: 0 }}
                           className="text-lg font-black text-white"
                           iconClassName="w-5 h-5"
                         />
                         <div className="text-right text-xs text-emerald-200">
                           <div>{formattedDepositAmount} deposit</div>
-                          {(selectedPackage?.bonusCoins ?? 0) > 0 && (
+                          {effectiveRate && (
                             <div className="text-[11px] text-emerald-100">
-                              +{(selectedPackage?.bonusCoins ?? 0).toLocaleString()} bonus coins
+                              ~{effectiveRate.toLocaleString()} coins / $1
                             </div>
                           )}
                         </div>
@@ -195,6 +206,10 @@ export const TopUpModal: React.FC = () => {
                       <div className="mt-2 flex items-center justify-between text-[11px] text-emerald-100/80">
                         <span>Base coins</span>
                         <span>{(selectedPackage?.coins ?? 0).toLocaleString()}</span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-[11px] text-emerald-100/80">
+                        <span>Bonus coins</span>
+                        <span>{(selectedPackage?.bonusCoins ?? 0).toLocaleString()}</span>
                       </div>
                     </div>
 
