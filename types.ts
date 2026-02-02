@@ -64,6 +64,7 @@ export interface CaseItem {
   brand?: string;
   category?: string;
   tags?: string[];
+  sizes?: string[];
   redeemable?: boolean;
 }
 
@@ -103,6 +104,7 @@ export interface InventoryItem extends CaseItem {
   status: 'available' | 'sold' | 'shipping' | 'shipping_requested' | 'shipped';
   locked?: boolean;
   trackingNumber?: string;
+  size?: string;
   provenance?: InventoryProvenance;
   history?: InventoryHistoryEntry[];
   sellBackRate?: number;

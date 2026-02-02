@@ -53,7 +53,8 @@ export default async function handler(req, res) {
           value: Number(inventoryItem.value ?? 0),
           image: inventoryItem.image ?? '',
           rarity: inventoryItem.rarity ?? 'common',
-          sellBackRate: Number(inventoryItem.sellBackRate ?? 0.8)
+          sellBackRate: Number(inventoryItem.sellBackRate ?? 0.8),
+          size: inventoryItem.size ?? null
         },
         shippingInfo,
         status: 'shipping_requested',

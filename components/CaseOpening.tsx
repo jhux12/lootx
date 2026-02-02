@@ -347,7 +347,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const data = await authedFetch<{
           ok: boolean;
           price: number;
-          prize: CaseItem & { price?: number };
+          prize: CaseItem & { price?: number; size?: string };
           newCoins: number;
           inventoryId: string;
           openId: string;
@@ -371,13 +371,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         );
         const resolvedRedeemable = data.prize.redeemable ?? matchedPrize?.redeemable ?? true;
         winner = matchedPrize
-          ? { ...matchedPrize, redeemable: resolvedRedeemable, price: matchedPrize.price ?? fallbackPrice }
+          ? { ...matchedPrize, redeemable: resolvedRedeemable, price: matchedPrize.price ?? fallbackPrice, size: data.prize.size }
           : {
               ...data.prize,
               price: fallbackPrice,
               chance: 0,
               color: '#9ca3af',
-              redeemable: resolvedRedeemable
+              redeemable: resolvedRedeemable,
+              size: data.prize.size
             };
 
         const inventoryItem: InventoryItem = {
@@ -385,6 +386,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           instanceId: data.inventoryId,
           obtainedAt: Date.now(),
           status: 'available',
+          size: data.prize.size,
           provenance: { sourceType: 'case_open', sourceId: box.id },
           sellBackRate: data.sellBackRate
         };

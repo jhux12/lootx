@@ -56,7 +56,7 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
   return items.map((item, index) => {
     const typed = item as Partial<InventoryItem>;
     const fallbackId = typeof typed.id === 'string' ? typed.id : `item-${index}`;
-    return {
+      return {
       ...(typed as InventoryItem),
       id: fallbackId,
       instanceId: typed.instanceId || buildFallbackInstanceId(typed, fallbackId),
@@ -71,6 +71,8 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
       brand: typeof typed.brand === 'string' ? typed.brand : '',
       category: typeof typed.category === 'string' ? typed.category : '',
       tags: Array.isArray(typed.tags) ? typed.tags : [],
+      sizes: Array.isArray(typed.sizes) ? typed.sizes.filter((size) => typeof size === 'string') : [],
+      size: typeof typed.size === 'string' ? typed.size : undefined,
       redeemable: typed.redeemable ?? true,
       sellBackRate: Number(typed.sellBackRate ?? 0)
     };
@@ -517,6 +519,7 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     color: RARITY_COLORS[rarity] ?? '#9ca3af',
     obtainedAt,
     status,
+    size: typeof data.size === 'string' ? data.size : undefined,
     provenance: data.boxId ? { sourceType: 'case_open', sourceId: data.boxId } : undefined,
     redeemable: data.redeemable ?? true,
     sellBackRate: Number(data.sellBackRate ?? 0)
@@ -787,6 +790,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             brand: typeof data.brand === 'string' ? data.brand : '',
             category: typeof data.category === 'string' ? data.category : '',
             tags: Array.isArray(data.tags) ? (data.tags as CaseItem['tags']) : [],
+            sizes: Array.isArray(data.sizes) ? data.sizes.filter((size: unknown) => typeof size === 'string') : [],
             redeemable: data.redeemable ?? true
           } as CaseItem;
         })
@@ -827,6 +831,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               brand: typeof item.brand === 'string' ? item.brand : '',
               category: typeof item.category === 'string' ? item.category : '',
               tags: Array.isArray(item.tags) ? (item.tags as CaseItem['tags']) : [],
+              sizes: Array.isArray(item.sizes) ? item.sizes.filter((size: unknown) => typeof size === 'string') : [],
               redeemable: item.redeemable ?? true
             };
           }) : [];
