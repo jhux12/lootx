@@ -7,7 +7,7 @@ import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue } from '../utils/caseOdds';
 
 export const CustomCaseCreator: React.FC = () => {
-  const { createItem, createUserBox, items, setView } = useGame();
+  const { createUserBox, items, boxes, stripeSettings, setView } = useGame();
   const { playSound } = useSound();
 
   const DEFAULT_TARGET_EV = 0.85;
@@ -16,7 +16,7 @@ export const CustomCaseCreator: React.FC = () => {
   const [boxPrice, setBoxPrice] = useState<number>(0);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [lastCalculated, setLastCalculated] = useState(false);
-  const [sellBackPercent, setSellBackPercent] = useState(75);
+  const [selectedBoxImage, setSelectedBoxImage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showLabInfo, setShowLabInfo] = useState(false);
   const [activeTag, setActiveTag] = useState<'All' | BoxTag>('All');
@@ -74,13 +74,13 @@ export const CustomCaseCreator: React.FC = () => {
           id: `user-box-${Date.now()}`,
           name: boxName,
           price: boxPrice,
-          image: 'https://picsum.photos/300', // Default image for custom boxes
+          image: selectedBoxImage || 'https://picsum.photos/300', // Default image for custom boxes
           accentColor: '#8b5cf6', // Brand purple for custom
           tag: 'New',
           items: selectedItems,
           targetEV: DEFAULT_TARGET_EV,
           riskLevel: FIXED_RISK_LEVEL,
-          sellBackRate: Math.min(1, Math.max(0, sellBackPercent / 100))
+          sellBackRate: Math.min(1, Math.max(0, stripeSettings.caseLabSellBackPercent / 100))
       };
 
       try {
@@ -94,6 +94,10 @@ export const CustomCaseCreator: React.FC = () => {
   };
 
   const tagOptions = useMemo(() => ['All', ...BOX_TAG_OPTIONS], []);
+  const imageOptions = useMemo(
+    () => boxes.filter((box) => !box.isUserCreated).slice(0, 12),
+    [boxes]
+  );
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -170,7 +174,7 @@ export const CustomCaseCreator: React.FC = () => {
                 <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">3</span>
                 <p>
                   Create and open your case instantly. Case Lab wins can be sold back for{' '}
-                  <span className="font-semibold text-emerald-300">{sellBackPercent}% of item value</span>.
+                  <span className="font-semibold text-emerald-300">{stripeSettings.caseLabSellBackPercent}% of item value</span>.
                 </p>
               </li>
             </ol>
@@ -289,6 +293,29 @@ export const CustomCaseCreator: React.FC = () => {
                         className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all"
                       />
                   </div>
+                  <div className="mb-6">
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Choose a cover image</label>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {imageOptions.map((box) => (
+                              <button
+                                  key={box.id}
+                                  type="button"
+                                  onClick={() => setSelectedBoxImage(box.image)}
+                                  className={`rounded-lg border p-2 transition ${
+                                    selectedBoxImage === box.image
+                                      ? 'border-brand-purple/70 bg-brand-purple/10'
+                                      : 'border-gray-700 bg-[#0b0e14] hover:border-gray-500'
+                                  }`}
+                                  aria-label={`Use ${box.name} image`}
+                              >
+                                  <img src={box.image} alt={box.name} className="h-12 w-full object-contain" />
+                              </button>
+                          ))}
+                      </div>
+                      {selectedBoxImage && (
+                          <p className="mt-2 text-xs text-gray-500">Selected image is ready for your Case Lab box.</p>
+                      )}
+                  </div>
 
                   <div className="mb-6">
                       <div className="flex justify-between items-end mb-2">
@@ -329,24 +356,19 @@ export const CustomCaseCreator: React.FC = () => {
                             iconClassName="w-4 h-4"
                           />
                       </div>
-                      <div className="mt-4">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sell back %</label>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={1}
-                            value={sellBackPercent}
-                            onChange={(event) => {
-                              const nextValue = Number(event.target.value);
-                              if (!Number.isFinite(nextValue)) return;
-                              setSellBackPercent(Math.min(100, Math.max(0, nextValue)));
-                            }}
-                            className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-white focus:border-brand-purple focus:outline-none"
-                          />
-                          <p className="text-xs text-gray-500">Percent of item value paid on sell back.</p>
-                        </div>
+                      <div className="mt-4 rounded-lg border border-gray-800 bg-[#0b0e14] px-4 py-3">
+                          <div className="flex items-center justify-between text-sm text-gray-400">
+                              <span>Cost to create</span>
+                              <CoinAmount
+                                amount={stripeSettings.caseLabPublishFeeCoins}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="text-emerald-300 font-semibold"
+                                iconClassName="w-4 h-4"
+                              />
+                          </div>
+                          <p className="mt-2 text-xs text-gray-500">
+                              One-time fee charged when publishing a Case Lab box.
+                          </p>
                       </div>
                   </div>
 

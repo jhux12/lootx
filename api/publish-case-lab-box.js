@@ -45,6 +45,10 @@ export default async function handler(req, res) {
     const settingsSnap = await firestore.collection('settings').doc(STRIPE_SETTINGS_DOC).get();
     const settings = settingsSnap.data() ?? {};
     const caseLabPublishFeeCoins = Math.max(0, Math.round(toNumber(settings.caseLabPublishFeeCoins)));
+    const caseLabSellBackPercent = Math.min(
+      100,
+      Math.max(0, Math.round(toNumber(settings.caseLabSellBackPercent, 75)))
+    );
 
     const userRef = firestore.collection('users').doc(decoded.uid);
     const boxRef = firestore.collection('boxes').doc();
@@ -90,7 +94,7 @@ export default async function handler(req, res) {
         items: sanitizedItems,
         targetEV: toNumber(rawBox.targetEV, 0.85),
         riskLevel: toNumber(rawBox.riskLevel, 50),
-        sellBackRate: toNumber(rawBox.sellBackRate, 0.75),
+        sellBackRate: caseLabSellBackPercent / 100,
         isUserCreated: true,
         createdBy: decoded.uid,
         createdAt: admin.firestore.FieldValue.serverTimestamp()

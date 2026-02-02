@@ -20,23 +20,28 @@ export const BoxCatalog: React.FC = () => {
   const [activeTag, setActiveTag] = useState<string>('All');
 
   const displayBoxes = useMemo(
-    () => boxes.filter(box => !box.isUserCreated && !box.isDaily),
+    () => boxes.filter(box => !box.isDaily),
     [boxes]
   );
 
   const tagOptions = useMemo(() => {
     const tagSet = new Set<string>();
-    displayBoxes.forEach(box => {
+    displayBoxes.filter(box => !box.isUserCreated).forEach(box => {
       getBoxTags(box).forEach(tag => tagSet.add(tag));
     });
-    return ['All', ...Array.from(tagSet).sort((a, b) => a.localeCompare(b))];
+    const options = ['All', ...Array.from(tagSet).sort((a, b) => a.localeCompare(b))];
+    if (displayBoxes.some(box => box.isUserCreated)) {
+      options.push('User Created');
+    }
+    return options;
   }, [displayBoxes]);
 
   const filteredBoxes = useMemo(() => {
-    if (activeTag === 'All') return displayBoxes;
+    if (activeTag === 'All') return displayBoxes.filter(box => !box.isUserCreated);
+    if (activeTag === 'User Created') return displayBoxes.filter(box => box.isUserCreated);
     const target = normalizeTag(activeTag);
     return displayBoxes.filter(box =>
-      getBoxTags(box).some(tag => normalizeTag(tag) === target)
+      !box.isUserCreated && getBoxTags(box).some(tag => normalizeTag(tag) === target)
     );
   }, [activeTag, displayBoxes]);
 
@@ -78,7 +83,9 @@ export const BoxCatalog: React.FC = () => {
               {tag}
               {tag !== 'All' && (
                 <span className="text-[10px] text-gray-500 font-semibold">
-                  ({displayBoxes.filter(box => getBoxTags(box).some(boxTag => normalizeTag(boxTag) === normalizeTag(tag))).length})
+                  ({tag === 'User Created'
+                    ? displayBoxes.filter(box => box.isUserCreated).length
+                    : displayBoxes.filter(box => !box.isUserCreated && getBoxTags(box).some(boxTag => normalizeTag(boxTag) === normalizeTag(tag))).length})
                 </span>
               )}
             </button>

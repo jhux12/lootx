@@ -105,6 +105,7 @@ export interface StripeSettings {
   shippingCoinCostCoins: number;
   stripeShippingProductId: string;
   caseLabPublishFeeCoins: number;
+  caseLabSellBackPercent: number;
 }
 
 export interface InventoryItem extends CaseItem {
