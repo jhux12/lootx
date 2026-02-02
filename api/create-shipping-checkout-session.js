@@ -33,6 +33,8 @@ export default async function handler(req, res) {
     const settings = settingsSnap.data() ?? {};
     const shippingCashEnabled = settings.shippingCashEnabled === true;
     const shippingFlatRateCents = Math.max(0, Math.round(Number(settings.shippingFlatRateCents) || 0));
+    const stripeShippingProductId =
+      typeof settings.stripeShippingProductId === 'string' ? settings.stripeShippingProductId : '';
 
     if (!shippingCashEnabled) {
       return sendJson(res, 400, { error: 'Cash shipping is disabled' });
@@ -102,7 +104,9 @@ export default async function handler(req, res) {
         {
           price_data: {
             currency: 'usd',
-            product_data: { name: 'Shipping & Handling' },
+            ...(stripeShippingProductId
+              ? { product: stripeShippingProductId }
+              : { product_data: { name: 'Shipping & Handling' } }),
             unit_amount: shippingFlatRateCents
           },
           quantity: inventoryIds.length

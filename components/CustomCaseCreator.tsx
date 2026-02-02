@@ -56,7 +56,7 @@ export const CustomCaseCreator: React.FC = () => {
       // Removed 'coins' sound on calculate
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
       if (!boxName) {
           alert('Please name your box');
           return;
@@ -83,9 +83,14 @@ export const CustomCaseCreator: React.FC = () => {
           sellBackRate: Math.min(1, Math.max(0, sellBackPercent / 100))
       };
 
-      createUserBox(newBox);
-      // Removed 'success' sound on create
-      setView({ type: 'CASE_OPENING', boxId: newBox.id });
+      try {
+        const publishedBoxId = await createUserBox(newBox);
+        // Removed 'success' sound on create
+        setView({ type: 'CASE_OPENING', boxId: publishedBoxId });
+      } catch (error) {
+        console.error('Failed to publish Case Lab box', error);
+        alert('Unable to publish your Case Lab box right now. Please try again.');
+      }
   };
 
   const tagOptions = useMemo(() => ['All', ...BOX_TAG_OPTIONS], []);

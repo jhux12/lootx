@@ -25,7 +25,6 @@ export interface User {
   affiliateCode?: string;
   referredBy?: string;
   shippingAddress?: ShippingAddress;
-  shippingCost?: number;
   inventory?: InventoryItem[];
   isAdmin?: boolean;
   chatWarnings?: number;
@@ -102,7 +101,10 @@ export interface CoinPackage {
 export interface StripeSettings {
   shippingCashEnabled: boolean;
   shippingFlatRateCents: number;
-  stripeShippingKeyOrId: string;
+  shippingCoinEnabled: boolean;
+  shippingCoinCostCoins: number;
+  stripeShippingProductId: string;
+  caseLabPublishFeeCoins: number;
 }
 
 export interface InventoryItem extends CaseItem {

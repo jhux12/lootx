@@ -136,14 +136,28 @@ const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
 const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   shippingCashEnabled: false,
   shippingFlatRateCents: 0,
-  stripeShippingKeyOrId: ''
+  shippingCoinEnabled: false,
+  shippingCoinCostCoins: 0,
+  stripeShippingProductId: '',
+  caseLabPublishFeeCoins: 0
 };
 
-const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSettings => ({
-  shippingCashEnabled: settings.shippingCashEnabled === true,
-  shippingFlatRateCents: Math.max(0, Math.round(Number(settings.shippingFlatRateCents) || 0)),
-  stripeShippingKeyOrId: typeof settings.stripeShippingKeyOrId === 'string' ? settings.stripeShippingKeyOrId : ''
-});
+const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSettings => {
+  const legacyProductId =
+    typeof (settings as { stripeShippingKeyOrId?: string }).stripeShippingKeyOrId === 'string'
+      ? (settings as { stripeShippingKeyOrId?: string }).stripeShippingKeyOrId
+      : '';
+
+  return {
+    shippingCashEnabled: settings.shippingCashEnabled === true,
+    shippingFlatRateCents: Math.max(0, Math.round(Number(settings.shippingFlatRateCents) || 0)),
+    shippingCoinEnabled: settings.shippingCoinEnabled === true,
+    shippingCoinCostCoins: Math.max(0, Math.round(Number(settings.shippingCoinCostCoins) || 0)),
+    stripeShippingProductId:
+      typeof settings.stripeShippingProductId === 'string' ? settings.stripeShippingProductId : legacyProductId,
+    caseLabPublishFeeCoins: Math.max(0, Math.round(Number(settings.caseLabPublishFeeCoins) || 0))
+  };
+};
 
 const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings => ({
   xpPer100Coins: Math.max(0, Number(settings.xpPer100Coins) || 0),
@@ -291,7 +305,6 @@ type PersistUserData = Partial<{
   affiliateCode?: string;
   referredBy?: string;
   shippingAddress: ShippingAddress;
-  shippingCost: number;
   name: string;
   avatar: string;
   lastDailyClaim: number;
@@ -331,8 +344,8 @@ interface GameContextType {
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string) => Promise<void>;
-  shipItem: (instanceId: string, shippingCost?: number) => Promise<void>;
-  updateAddress: (address: ShippingAddress, shippingCost?: number) => void;
+  shipItem: (instanceId: string) => Promise<void>;
+  updateAddress: (address: ShippingAddress) => void;
   updateUserInfo: (name: string, avatar: string) => Promise<void>;
   addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>) => void;
   dismissNotification: (id: string) => void;
@@ -351,7 +364,7 @@ interface GameContextType {
   updateUserAdminData: (userId: string, updates: Partial<User>) => Promise<void>;
   updateUserBalance: (userId: string, balance: number) => Promise<void>;
   createBox: (box: MysteryBox) => void; // Admin
-  createUserBox: (box: MysteryBox) => void; // User Custom
+  createUserBox: (box: MysteryBox) => Promise<string>; // User Custom
   updateBox: (box: MysteryBox) => void;
   deleteBox: (boxId: string) => Promise<void>;
   claimDaily: () => void;
@@ -455,7 +468,6 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     referredBy: data.referredBy,
     followers: followerIds,
     shippingAddress: data.shippingAddress,
-    shippingCost: Number(data.shippingCost ?? 0),
     isAdmin: data.isAdmin ?? false,
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
@@ -503,7 +515,6 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     referredBy: data.referredBy,
     followers: followerIds,
     shippingAddress: data.shippingAddress,
-    shippingCost: Number(data.shippingCost ?? 0),
     isAdmin: data.isAdmin ?? false,
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
@@ -879,14 +890,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isDaily: data.isDaily ?? false,
             targetEV: data.targetEV !== undefined ? Number(data.targetEV) : undefined,
             riskLevel: data.riskLevel !== undefined ? Number(data.riskLevel) : undefined,
-            items
+            items,
+            isUserCreated: data.isUserCreated ?? false,
+            sellBackRate: data.sellBackRate !== undefined ? Number(data.sellBackRate) : undefined
           } as MysteryBox;
         })
         .sort((a, b) => a.price - b.price);
 
       setBoxes(prev => {
-        const userCreated = prev.filter(b => b.isUserCreated);
-        return [...userCreated, ...firebaseBoxes];
+        const pendingUserCreated = prev.filter(
+          (box) => box.isUserCreated && !firebaseBoxes.some((firebaseBox) => firebaseBox.id === box.id)
+        );
+        return [...pendingUserCreated, ...firebaseBoxes].sort((a, b) => a.price - b.price);
       });
     }, (error) => {
       console.error('Failed to load boxes from Firebase', error);
@@ -1352,7 +1367,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const shipItem = async (instanceId: string, shippingCost?: number) => {
+  const shipItem = async (instanceId: string) => {
     if (!auth.currentUser) {
       setShowLoginModal(true);
       return;
@@ -1365,14 +1380,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
-      await authedFetch('/api/request-shipment', {
+      const data = await authedFetch<{ newCoins?: number }>('/api/request-shipment', {
         method: 'POST',
         body: JSON.stringify({
           inventoryId: instanceId,
-          shippingInfo: user.shippingAddress,
-          shippingCost: shippingCost ?? user.shippingCost ?? 0
+          shippingInfo: user.shippingAddress
         })
       });
+
+      const nextCoins = Number(data?.newCoins);
+      if (Number.isFinite(nextCoins)) {
+        syncBalance(nextCoins);
+      }
 
       setInventory(prev =>
         prev.map(item =>
@@ -1392,11 +1411,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const updateAddress = async (address: ShippingAddress, shippingCost?: number) => {
+  const updateAddress = async (address: ShippingAddress) => {
       setUser(prev => {
-        const updatedShippingCost = shippingCost ?? prev.shippingCost ?? 0;
-        const updated = { ...prev, shippingAddress: address, shippingCost: updatedShippingCost };
-        persistUserData({ shippingAddress: address, shippingCost: updatedShippingCost });
+        const updated = { ...prev, shippingAddress: address };
+        persistUserData({ shippingAddress: address });
         return updated;
       });
   };
@@ -1708,8 +1726,29 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const createUserBox = async (box: MysteryBox) => {
+      if (!auth.currentUser) {
+        setShowLoginModal(true);
+        throw new Error('Login required');
+      }
+
       const userBox = { ...box, isUserCreated: true };
-      setBoxes(prev => [...prev, userBox]);
+      const response = await authedFetch<{ boxId: string; newCoins?: number }>('/api/publish-case-lab-box', {
+        method: 'POST',
+        body: JSON.stringify({ box: userBox })
+      });
+
+      if (!response?.boxId) {
+        throw new Error('Missing published box id');
+      }
+
+      setBoxes(prev => [...prev, { ...userBox, id: response.boxId }]);
+
+      const nextCoins = Number(response?.newCoins);
+      if (Number.isFinite(nextCoins)) {
+        syncBalance(nextCoins);
+      }
+
+      return response.boxId;
   };
 
   const updateBox = async (updatedBox: MysteryBox) => {
