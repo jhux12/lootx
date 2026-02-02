@@ -26,7 +26,7 @@ interface ProfileProps {
 }
 
 export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => {
-  const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem } = useGame();
+  const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem, deductBalance } = useGame();
   const { playSound } = useSound();
   
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
@@ -36,6 +36,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   const [topPullsPublic, setTopPullsPublic] = useState(user.topPullsPublic ?? false);
   const [sellOffers, setSellOffers] = useState<Record<string, boolean>>({});
   const [isGeneratingSellOffers, setIsGeneratingSellOffers] = useState<Record<string, boolean>>({});
+  const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
+  const [showShippingReview, setShowShippingReview] = useState(false);
+  const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sellOfferTimersRef = useRef<Record<string, number>>({});
 
@@ -68,6 +71,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   const [addressForm, setAddressForm] = useState(user.shippingAddress || {
       fullName: '', street: '', city: '', state: '', zipCode: '', country: ''
   });
+  const [shippingCostForm, setShippingCostForm] = useState(user.shippingCost ?? 0);
   
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
 
@@ -82,6 +86,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
       if (user.shippingAddress) {
           setAddressForm(user.shippingAddress);
       }
+      setShippingCostForm(user.shippingCost ?? 0);
   }, [user, isOwnProfile]);
 
   useEffect(() => {
@@ -121,6 +126,21 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
     if (inventoryFilter === 'shipped') return item.status === 'shipped';
     return item.status === 'available';
   });
+
+  const shippingCostPerItem = Math.max(0, Number(user.shippingCost ?? 0));
+  const selectedShipmentItems = normalizedInventory.filter((item) =>
+    selectedShipments.includes(item.instanceId)
+  );
+
+  const canSelectShipment = (item: typeof normalizedInventory[number]) =>
+    item.status === 'available' && !item.locked && !!user.shippingAddress;
+
+  useEffect(() => {
+    const selectableIds = new Set(
+      normalizedInventory.filter((item) => canSelectShipment(item)).map((item) => item.instanceId)
+    );
+    setSelectedShipments((prev) => prev.filter((id) => selectableIds.has(id)));
+  }, [normalizedInventory, user.shippingAddress]);
 
   useEffect(() => {
     setSellOffers((prev) => {
@@ -193,9 +213,53 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   };
 
   const handleSaveAddress = async () => {
-      await updateAddress(addressForm);
+      await updateAddress(addressForm, shippingCostForm);
       playSound('success');
       alert("Shipping address saved!");
+  };
+
+  const handleToggleShipment = (instanceId: string) => {
+    setSelectedShipments((prev) =>
+      prev.includes(instanceId) ? prev.filter((id) => id !== instanceId) : [...prev, instanceId]
+    );
+  };
+
+  const handleOpenShippingReview = (instanceIds: string[]) => {
+    setSelectedShipments(instanceIds);
+    setShowShippingReview(true);
+  };
+
+  const handleConfirmShipping = async () => {
+    if (!user.shippingAddress) {
+      alert('Please add a shipping address before requesting shipment.');
+      return;
+    }
+
+    const itemsToShip = selectedShipmentItems.filter((item) => canSelectShipment(item));
+    if (itemsToShip.length === 0) {
+      setShowShippingReview(false);
+      return;
+    }
+
+    const totalShippingCost = shippingCostPerItem * itemsToShip.length;
+    if (totalShippingCost > 0 && !deductBalance(totalShippingCost, { trackRewards: false })) {
+      playSound('error');
+      alert('Insufficient balance to cover shipping costs.');
+      return;
+    }
+
+    setIsSubmittingShipment(true);
+    try {
+      await Promise.all(itemsToShip.map((item) => shipItem(item.instanceId, shippingCostPerItem)));
+      setSelectedShipments([]);
+      setShowShippingReview(false);
+      playSound('success');
+    } catch (error) {
+      console.error('Failed to request shipments', error);
+      alert('Unable to request shipment right now. Please try again.');
+    } finally {
+      setIsSubmittingShipment(false);
+    }
   };
 
   const handleUpdatePassword = () => {
@@ -512,6 +576,39 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                       </div>
                   </div>
 
+                  {inventoryFilter === 'inventory' && (
+                      <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                              <p className="text-sm font-bold text-white">Ship multiple items</p>
+                              <p className="text-xs text-gray-500">Select items below to ship together.</p>
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                              <div className="flex items-center gap-2 text-xs text-gray-400">
+                                  <span>{selectedShipments.length} selected</span>
+                                  <span className="text-gray-600">•</span>
+                                  <span>Per item</span>
+                                  <CoinAmount
+                                    amount={shippingCostPerItem}
+                                    formatOptions={{ maximumFractionDigits: 0 }}
+                                    className="text-blue-200 font-semibold"
+                                    iconClassName="w-3 h-3"
+                                  />
+                              </div>
+                              <button
+                                  onClick={() => setShowShippingReview(true)}
+                                  disabled={!user.shippingAddress || selectedShipments.length === 0}
+                                  className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wide border transition-colors ${
+                                    user.shippingAddress && selectedShipments.length > 0
+                                      ? 'bg-blue-600/20 text-blue-200 border-blue-500/40 hover:bg-blue-600/30'
+                                      : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
+                                  }`}
+                              >
+                                  Review shipping
+                              </button>
+                          </div>
+                      </div>
+                  )}
+
                   {filteredInventory.length === 0 ? (
                       <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
                           <Package className="w-12 h-12 text-gray-700 mx-auto mb-4" />
@@ -561,6 +658,17 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                               return (
                                   <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all flex flex-col">
                                       <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
+                                          {inventoryFilter === 'inventory' && canShip && (
+                                              <label className="absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 border border-white/20">
+                                                  <input
+                                                      type="checkbox"
+                                                      checked={selectedShipments.includes(item.instanceId)}
+                                                      onChange={() => handleToggleShipment(item.instanceId)}
+                                                      className="h-3 w-3 accent-brand-purple"
+                                                      aria-label={`Select ${item.name} for shipping`}
+                                                  />
+                                              </label>
+                                          )}
                                           <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
                                           <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
                                               item.rarity === 'legendary' ? 'from-yellow-500' :
@@ -595,7 +703,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
 
                                       <div className="mt-4 flex flex-col gap-2">
                                           <button
-                                            onClick={() => shipItem(item.instanceId)}
+                                            onClick={() => handleOpenShippingReview([item.instanceId])}
                                             disabled={!canShip}
                                             className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${
                                               canShip
@@ -689,6 +797,104 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                   </div>
                               );
                           })}
+                      </div>
+                  )}
+
+                  {showShippingReview && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+                          <div className="w-full max-w-lg rounded-2xl border border-gray-800 bg-[#0b0e14] p-6 shadow-2xl">
+                              <div className="flex items-center justify-between">
+                                  <h3 className="text-lg font-bold text-white">Confirm shipment</h3>
+                                  <button
+                                      onClick={() => setShowShippingReview(false)}
+                                      className="text-gray-500 hover:text-white transition-colors"
+                                      aria-label="Close shipping review"
+                                  >
+                                      ✕
+                                  </button>
+                              </div>
+                              <p className="mt-2 text-sm text-gray-500">
+                                  Review the shipping cost breakdown before confirming.
+                              </p>
+
+                              <div className="mt-4 space-y-3 max-h-48 overflow-y-auto pr-1">
+                                  {selectedShipmentItems.map((item) => (
+                                      <div key={item.instanceId} className="flex items-center gap-3 rounded-xl border border-gray-800 bg-[#131720] p-3">
+                                          <img src={item.image} alt={item.name} className="h-10 w-10 rounded-lg object-contain bg-[#0b0e14]" />
+                                          <div className="flex-1">
+                                              <div className="text-sm font-semibold text-white">{item.name}</div>
+                                              <div className="text-xs text-gray-500">{item.rarity}</div>
+                                          </div>
+                                          <CoinAmount
+                                            amount={shippingCostPerItem}
+                                            formatOptions={{ maximumFractionDigits: 0 }}
+                                            className="text-blue-200 font-semibold text-xs"
+                                            iconClassName="w-3 h-3"
+                                          />
+                                      </div>
+                                  ))}
+                                  {selectedShipmentItems.length === 0 && (
+                                      <div className="text-sm text-gray-500 text-center py-6">
+                                          No shippable items selected.
+                                      </div>
+                                  )}
+                              </div>
+
+                              <div className="mt-4 space-y-2 border-t border-gray-800 pt-4 text-sm">
+                                  <div className="flex items-center justify-between text-gray-400">
+                                      <span>Items selected</span>
+                                      <span>{selectedShipmentItems.length}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-gray-400">
+                                      <span>Shipping cost per item</span>
+                                      <CoinAmount
+                                        amount={shippingCostPerItem}
+                                        formatOptions={{ maximumFractionDigits: 0 }}
+                                        className="text-gray-200"
+                                        iconClassName="w-3 h-3"
+                                      />
+                                  </div>
+                                  <div className="flex items-center justify-between text-white font-bold">
+                                      <span>Total shipping cost</span>
+                                      <CoinAmount
+                                        amount={shippingCostPerItem * selectedShipmentItems.length}
+                                        formatOptions={{ maximumFractionDigits: 0 }}
+                                        className="text-blue-200"
+                                        iconClassName="w-4 h-4"
+                                      />
+                                  </div>
+                              </div>
+
+                              {!user.shippingAddress && (
+                                  <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                                      Add a shipping address in Settings to enable shipping.
+                                  </div>
+                              )}
+
+                              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                                  <button
+                                      onClick={() => setShowShippingReview(false)}
+                                      className="flex-1 rounded-lg border border-gray-700 bg-[#0b0e14] px-4 py-2 text-xs font-bold uppercase tracking-wide text-gray-300 hover:border-gray-500"
+                                  >
+                                      Cancel
+                                  </button>
+                                  <button
+                                      onClick={handleConfirmShipping}
+                                      disabled={
+                                        isSubmittingShipment ||
+                                        selectedShipmentItems.length === 0 ||
+                                        !user.shippingAddress
+                                      }
+                                      className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+                                        !isSubmittingShipment && selectedShipmentItems.length > 0 && user.shippingAddress
+                                          ? 'border-blue-500/40 bg-blue-600/20 text-blue-200 hover:bg-blue-600/30'
+                                          : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
+                                      }`}
+                                  >
+                                      {isSubmittingShipment ? 'Submitting...' : 'Confirm shipping'}
+                                  </button>
+                              </div>
+                          </div>
                       </div>
                   )}
               </div>
@@ -947,6 +1153,17 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                       value={addressForm.country}
                                       onChange={(e) => setAddressForm({...addressForm, country: e.target.value})}
                                       className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                  />
+                              </div>
+                              <div>
+                                  <label className="block text-sm font-bold text-gray-400 mb-2">Shipping Cost (coins)</label>
+                                  <input
+                                      type="number"
+                                      min="0"
+                                      value={shippingCostForm}
+                                      onChange={(e) => setShippingCostForm(Math.max(0, Number(e.target.value) || 0))}
+                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                      placeholder="0"
                                   />
                               </div>
                           </div>

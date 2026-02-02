@@ -17,6 +17,7 @@ export default async function handler(req, res) {
     const body = await readJsonBody(req);
     const inventoryId = body?.inventoryId;
     const shippingInfo = body?.shippingInfo;
+    const shippingCost = Number(body?.shippingCost ?? 0);
 
     if (!inventoryId || typeof inventoryId !== 'string') {
       return sendJson(res, 400, { error: 'Missing inventoryId' });
@@ -57,6 +58,7 @@ export default async function handler(req, res) {
           size: inventoryItem.size ?? null
         },
         shippingInfo,
+        shippingCost: Number.isFinite(shippingCost) ? Math.max(0, shippingCost) : 0,
         status: 'shipping_requested',
         createdAt: new Date()
       });
