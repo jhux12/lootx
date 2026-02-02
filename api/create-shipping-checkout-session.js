@@ -87,7 +87,7 @@ export default async function handler(req, res) {
           },
           shippingInfo,
           shippingPaid: false,
-          shippingBatchId,
+          shippingBatchId: shipmentBatchId,
           status: 'payment_pending',
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
