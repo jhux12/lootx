@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import spinSoundUrl from '../assets/spinsound.mp3';
 
 type SoundType = 'click' | 'hover' | 'spin-start' | 'spin-tick' | 'win-common' | 'win-rare' | 'win-gold' | 'gold-mode' | 'coins' | 'error' | 'success';
 
@@ -13,7 +14,7 @@ const SoundContext = createContext<SoundContextType | undefined>(undefined);
 const SOUND_URLS: Record<SoundType, string> = {
   'click': 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_2769490204.mp3?filename=ui-click-43196.mp3',
   'hover': 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_3f7601614f.mp3?filename=interface-124464.mp3', 
-  'spin-start': 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3?filename=whoosh-6316.mp3',
+  'spin-start': spinSoundUrl,
   'spin-tick': 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_736a623910.mp3?filename=click-21156.mp3',
   'win-common': 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c153e1.mp3?filename=success-1-6297.mp3',
   'win-rare': 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_804a54df5b.mp3?filename=bell-notification-9336.mp3', // CHANGED: Simple chime
