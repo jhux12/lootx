@@ -186,7 +186,7 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
 const BONUS_SETTINGS_DOC = 'bonus-settings';
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
 const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;
-const SIGNUP_CREDIT_COINS = 5;
+const SIGNUP_CREDIT_COINS = 0.05;
 
 export const calculateLevelProgress = (totalXp: number, overrides?: Partial<BonusSettings>) => {
   const settings = { ...DEFAULT_BONUS_SETTINGS, ...(overrides ?? {}) };
