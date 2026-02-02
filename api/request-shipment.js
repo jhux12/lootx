@@ -1,6 +1,8 @@
 import { adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 
+const STRIPE_SETTINGS_DOC = 'stripe-settings';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -17,7 +19,6 @@ export default async function handler(req, res) {
     const body = await readJsonBody(req);
     const inventoryId = body?.inventoryId;
     const shippingInfo = body?.shippingInfo;
-    const shippingCost = Number(body?.shippingCost ?? 0);
 
     if (!inventoryId || typeof inventoryId !== 'string') {
       return sendJson(res, 400, { error: 'Missing inventoryId' });
@@ -27,11 +28,29 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Missing shippingInfo' });
     }
 
+    const settingsSnap = await firestore.collection('settings').doc(STRIPE_SETTINGS_DOC).get();
+    const settings = settingsSnap.data() ?? {};
+    const shippingCoinEnabled = settings.shippingCoinEnabled === true;
+    const shippingCoinCostCoins = Math.max(0, Math.round(Number(settings.shippingCoinCostCoins) || 0));
+
+    if (!shippingCoinEnabled) {
+      return sendJson(res, 400, { error: 'Coin shipping is disabled' });
+    }
+
     const userRef = firestore.collection('users').doc(decoded.uid);
     const inventoryRef = userRef.collection('inventory').doc(inventoryId);
     const shipmentRef = firestore.collection('shipments').doc();
 
+    let updatedCoins = null;
     await firestore.runTransaction(async (transaction) => {
+      const userSnap = await transaction.get(userRef);
+      const userData = userSnap.data() ?? {};
+      const currentCoins = Number(userData.coins ?? userData.balance ?? 0);
+
+      if (shippingCoinCostCoins > 0 && currentCoins < shippingCoinCostCoins) {
+        throw { status: 400, error: 'Insufficient coins for shipping' };
+      }
+
       const inventorySnap = await transaction.get(inventoryRef);
       if (!inventorySnap.exists) {
         throw { status: 404, error: 'Inventory item not found' };
@@ -41,6 +60,13 @@ export default async function handler(req, res) {
       const status = inventoryItem.status ?? 'available';
       if (status !== 'available') {
         throw { status: 400, error: 'Item is not available for shipping' };
+      }
+
+      if (shippingCoinCostCoins > 0) {
+        updatedCoins = currentCoins - shippingCoinCostCoins;
+        transaction.set(userRef, { coins: updatedCoins }, { merge: true });
+      } else {
+        updatedCoins = currentCoins;
       }
 
       transaction.set(inventoryRef, { status: 'shipping_requested' }, { merge: true });
@@ -58,7 +84,7 @@ export default async function handler(req, res) {
           size: inventoryItem.size ?? null
         },
         shippingInfo,
-        shippingCost: Number.isFinite(shippingCost) ? Math.max(0, shippingCost) : 0,
+        shippingCost: shippingCoinCostCoins,
         shippingPaid: true,
         shippingPaymentMethod: 'coins',
         status: 'shipping_requested',
@@ -66,7 +92,7 @@ export default async function handler(req, res) {
       });
     });
 
-    return sendJson(res, 200, { ok: true, shipmentId: shipmentRef.id });
+    return sendJson(res, 200, { ok: true, shipmentId: shipmentRef.id, newCoins: updatedCoins });
   } catch (error) {
     const status = error?.status;
     if (status) {

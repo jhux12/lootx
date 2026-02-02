@@ -30,7 +30,7 @@ interface ProfileProps {
 }
 
 export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => {
-  const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem, deductBalance, stripeSettings, setShowLoginModal } = useGame();
+  const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem, stripeSettings, setShowLoginModal } = useGame();
   const { playSound } = useSound();
   
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
@@ -76,7 +76,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   const [addressForm, setAddressForm] = useState(user.shippingAddress || {
       fullName: '', street: '', city: '', state: '', zipCode: '', country: ''
   });
-  const [shippingCostForm, setShippingCostForm] = useState(user.shippingCost ?? 0);
   
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
 
@@ -91,7 +90,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
       if (user.shippingAddress) {
           setAddressForm(user.shippingAddress);
       }
-      setShippingCostForm(user.shippingCost ?? 0);
   }, [user, isOwnProfile]);
 
   useEffect(() => {
@@ -132,7 +130,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
     return item.status === 'available';
   });
 
-  const shippingCostPerItem = Math.max(0, Number(user.shippingCost ?? 0));
+  const shippingCoinEnabled = stripeSettings.shippingCoinEnabled;
+  const shippingCoinCostCoins = Math.max(0, stripeSettings.shippingCoinCostCoins);
   const shippingCashEnabled = stripeSettings.shippingCashEnabled && stripeSettings.shippingFlatRateCents > 0;
   const shippingFlatRateCents = Math.max(0, stripeSettings.shippingFlatRateCents);
   const selectedShipmentItems = normalizedInventory.filter((item) =>
@@ -223,7 +222,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   };
 
   const handleSaveAddress = async () => {
-      await updateAddress(addressForm, shippingCostForm);
+      await updateAddress(addressForm);
       playSound('success');
       alert("Shipping address saved!");
   };
@@ -240,6 +239,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   };
 
   const handleConfirmShipping = async () => {
+    if (!shippingCoinEnabled) {
+      alert('Coin shipping is currently unavailable.');
+      return;
+    }
     if (!user.shippingAddress) {
       alert('Please add a shipping address before requesting shipment.');
       return;
@@ -251,16 +254,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
       return;
     }
 
-    const totalShippingCost = shippingCostPerItem * itemsToShip.length;
-    if (totalShippingCost > 0 && !deductBalance(totalShippingCost, { trackRewards: false })) {
-      playSound('error');
-      alert('Insufficient balance to cover shipping costs.');
-      return;
-    }
-
     setIsSubmittingShipment(true);
     try {
-      await Promise.all(itemsToShip.map((item) => shipItem(item.instanceId, shippingCostPerItem)));
+      await Promise.all(itemsToShip.map((item) => shipItem(item.instanceId)));
       setSelectedShipments([]);
       setShowShippingReview(false);
       playSound('success');
@@ -649,14 +645,24 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                               <div className="flex items-center gap-2 text-xs text-gray-400">
                                   <span>{selectedShipments.length} selected</span>
-                                  <span className="text-gray-600">•</span>
-                                  <span>Per item</span>
-                                  <CoinAmount
-                                    amount={shippingCostPerItem}
-                                    formatOptions={{ maximumFractionDigits: 0 }}
-                                    className="text-blue-200 font-semibold"
-                                    iconClassName="w-3 h-3"
-                                  />
+                                  {shippingCoinEnabled && (
+                                    <>
+                                      <span className="text-gray-600">•</span>
+                                      <span>Per item</span>
+                                      <CoinAmount
+                                        amount={shippingCoinCostCoins}
+                                        formatOptions={{ maximumFractionDigits: 0 }}
+                                        className="text-blue-200 font-semibold"
+                                        iconClassName="w-3 h-3"
+                                      />
+                                    </>
+                                  )}
+                                  {!shippingCoinEnabled && shippingCashEnabled && (
+                                    <>
+                                      <span className="text-gray-600">•</span>
+                                      <span>Cash shipping only</span>
+                                    </>
+                                  )}
                               </div>
                               <button
                                   onClick={() => setShowShippingReview(true)}
@@ -889,12 +895,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                               <div className="text-sm font-semibold text-white">{item.name}</div>
                                               <div className="text-xs text-gray-500">{item.rarity}</div>
                                           </div>
-                                          <CoinAmount
-                                            amount={shippingCostPerItem}
-                                            formatOptions={{ maximumFractionDigits: 0 }}
-                                            className="text-blue-200 font-semibold text-xs"
-                                            iconClassName="w-3 h-3"
-                                          />
+                                          {shippingCoinEnabled && (
+                                            <CoinAmount
+                                              amount={shippingCoinCostCoins}
+                                              formatOptions={{ maximumFractionDigits: 0 }}
+                                              className="text-blue-200 font-semibold text-xs"
+                                              iconClassName="w-3 h-3"
+                                            />
+                                          )}
                                       </div>
                                   ))}
                                   {selectedShipmentItems.length === 0 && (
@@ -909,24 +917,28 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                       <span>Items selected</span>
                                       <span>{selectedShipmentItems.length}</span>
                                   </div>
-                                  <div className="flex items-center justify-between text-gray-400">
-                                      <span>Shipping cost per item</span>
-                                      <CoinAmount
-                                        amount={shippingCostPerItem}
-                                        formatOptions={{ maximumFractionDigits: 0 }}
-                                        className="text-gray-200"
-                                        iconClassName="w-3 h-3"
-                                      />
-                                  </div>
-                                  <div className="flex items-center justify-between text-white font-bold">
-                                      <span>Total shipping cost</span>
-                                      <CoinAmount
-                                        amount={shippingCostPerItem * selectedShipmentItems.length}
-                                        formatOptions={{ maximumFractionDigits: 0 }}
-                                        className="text-blue-200"
-                                        iconClassName="w-4 h-4"
-                                      />
-                                  </div>
+                                  {shippingCoinEnabled && (
+                                    <>
+                                      <div className="flex items-center justify-between text-gray-400">
+                                          <span>Shipping cost per item</span>
+                                          <CoinAmount
+                                            amount={shippingCoinCostCoins}
+                                            formatOptions={{ maximumFractionDigits: 0 }}
+                                            className="text-gray-200"
+                                            iconClassName="w-3 h-3"
+                                          />
+                                      </div>
+                                      <div className="flex items-center justify-between text-white font-bold">
+                                          <span>Total shipping cost</span>
+                                          <CoinAmount
+                                            amount={shippingCoinCostCoins * selectedShipmentItems.length}
+                                            formatOptions={{ maximumFractionDigits: 0 }}
+                                            className="text-blue-200"
+                                            iconClassName="w-4 h-4"
+                                          />
+                                      </div>
+                                    </>
+                                  )}
                               {shippingCashEnabled && (
                                   <div className="flex items-center justify-between text-gray-400">
                                       <span>Cash shipping total</span>
@@ -957,21 +969,23 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                       Cancel
                                   </button>
                                   <div className="flex flex-col gap-3 sm:flex-row">
-                                      <button
-                                          onClick={handleConfirmShipping}
-                                          disabled={
-                                            isSubmittingShipment ||
-                                            selectedShipmentItems.length === 0 ||
-                                            !user.shippingAddress
-                                          }
-                                          className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
-                                            !isSubmittingShipment && selectedShipmentItems.length > 0 && user.shippingAddress
-                                              ? 'border-blue-500/40 bg-blue-600/20 text-blue-200 hover:bg-blue-600/30'
-                                              : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
-                                          }`}
-                                      >
-                                          {isSubmittingShipment ? 'Submitting...' : 'Ship with coins'}
-                                      </button>
+                                      {shippingCoinEnabled && (
+                                          <button
+                                              onClick={handleConfirmShipping}
+                                              disabled={
+                                                isSubmittingShipment ||
+                                                selectedShipmentItems.length === 0 ||
+                                                !user.shippingAddress
+                                              }
+                                              className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+                                                !isSubmittingShipment && selectedShipmentItems.length > 0 && user.shippingAddress
+                                                  ? 'border-blue-500/40 bg-blue-600/20 text-blue-200 hover:bg-blue-600/30'
+                                                  : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
+                                              }`}
+                                          >
+                                              {isSubmittingShipment ? 'Submitting...' : 'Ship with coins'}
+                                          </button>
+                                      )}
                                       {shippingCashEnabled && (
                                           <button
                                               onClick={handleCashShipping}
@@ -1250,17 +1264,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                       value={addressForm.country}
                                       onChange={(e) => setAddressForm({...addressForm, country: e.target.value})}
                                       className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-purple transition-colors"
-                                  />
-                              </div>
-                              <div>
-                                  <label className="block text-sm font-bold text-gray-400 mb-2">Shipping Cost (coins)</label>
-                                  <input
-                                      type="number"
-                                      min="0"
-                                      value={shippingCostForm}
-                                      onChange={(e) => setShippingCostForm(Math.max(0, Number(e.target.value) || 0))}
-                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-purple transition-colors"
-                                      placeholder="0"
                                   />
                               </div>
                           </div>
