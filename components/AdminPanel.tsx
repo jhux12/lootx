@@ -146,6 +146,7 @@ export const AdminPanel: React.FC = () => {
       bonusCoins: 0,
       displayPrice: '',
       stripePriceId: '',
+      badge: undefined,
       active: true,
       sortOrder: 0
   });
@@ -558,6 +559,7 @@ export const AdminPanel: React.FC = () => {
           bonusCoins: 0,
           displayPrice: '',
           stripePriceId: '',
+          badge: undefined,
           active: true,
           sortOrder: 0
       });
@@ -584,6 +586,7 @@ export const AdminPanel: React.FC = () => {
       const stripePriceId = packageDraft.stripePriceId?.trim() ?? '';
       const sortOrder = Number.isFinite(Number(packageDraft.sortOrder)) ? Number(packageDraft.sortOrder) : 0;
       const active = packageDraft.active ?? true;
+      const badge = packageDraft.badge ?? undefined;
 
       if (!name) {
           setPackageError('Package name is required.');
@@ -616,6 +619,7 @@ export const AdminPanel: React.FC = () => {
                   bonusCoins,
                   displayPrice,
                   stripePriceId,
+                  badge,
                   sortOrder,
                   active
               });
@@ -626,6 +630,7 @@ export const AdminPanel: React.FC = () => {
                   bonusCoins,
                   displayPrice,
                   stripePriceId,
+                  badge,
                   sortOrder,
                   active
               });
@@ -2254,6 +2259,7 @@ export const AdminPanel: React.FC = () => {
                                         <th className="px-4 py-3">Total</th>
                                         <th className="px-4 py-3">Display Price</th>
                                         <th className="px-4 py-3">Stripe Price ID</th>
+                                        <th className="px-4 py-3">Badge</th>
                                         <th className="px-4 py-3">Active</th>
                                         <th className="px-4 py-3">Sort</th>
                                         <th className="px-4 py-3">Updated</th>
@@ -2287,6 +2293,15 @@ export const AdminPanel: React.FC = () => {
                                                 <td className="px-4 py-3 text-gray-300">{pkg.displayPrice}</td>
                                                 <td className="px-4 py-3 text-xs text-gray-400">
                                                     <span className="rounded bg-black/30 px-2 py-1 font-mono">{pkg.stripePriceId}</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-xs text-gray-300">
+                                                    {pkg.badge ? (
+                                                        <span className={`rounded-full px-2 py-1 font-semibold ${pkg.badge === 'best' ? 'bg-amber-500/20 text-amber-200' : 'bg-sky-500/20 text-sky-200'}`}>
+                                                            {pkg.badge === 'best' ? 'Best value' : 'Good value'}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-500">—</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <button
@@ -2325,7 +2340,7 @@ export const AdminPanel: React.FC = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={10} className="px-4 py-6 text-center text-gray-500 text-sm">
+                                            <td colSpan={11} className="px-4 py-6 text-center text-gray-500 text-sm">
                                                 No coin packages yet. Create one to enable deposits.
                                             </td>
                                         </tr>
@@ -3651,6 +3666,23 @@ export const AdminPanel: React.FC = () => {
                               onChange={(event) => setPackageDraft((prev) => ({ ...prev, stripePriceId: event.target.value }))}
                               className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white font-mono text-sm"
                           />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Badge</label>
+                          <select
+                              value={packageDraft.badge ?? ''}
+                              onChange={(event) =>
+                                  setPackageDraft((prev) => ({
+                                      ...prev,
+                                      badge: event.target.value ? (event.target.value as CoinPackage['badge']) : undefined
+                                  }))
+                              }
+                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                          >
+                              <option value="">None</option>
+                              <option value="good">Good value</option>
+                              <option value="best">Best value</option>
+                          </select>
                       </div>
                       <div>
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sort Order</label>

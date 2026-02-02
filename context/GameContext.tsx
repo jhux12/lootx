@@ -1048,6 +1048,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           totalCoins: coins + bonusCoins,
           displayPrice: data.displayPrice ?? '',
           stripePriceId: data.stripePriceId ?? '',
+          badge: data.badge ?? undefined,
           active: data.active ?? false,
           sortOrder: Number(data.sortOrder ?? 0),
           createdAt: normalizeTimestamp(data.createdAt, 0),
