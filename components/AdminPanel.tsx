@@ -889,12 +889,14 @@ export const AdminPanel: React.FC = () => {
       setTimeout(() => setAdminNoticeSent(false), 3000);
   };
 
+  const hasExplicitBoxPrice = typeof newBox.price === 'number' && Number.isFinite(newBox.price) && newBox.price >= 0;
+
   const calculateBoxConfig = () => {
       if (selectedItems.length === 0) return;
       const baseSelection = selectedItems.map(item => ({ ...item, chance: 0 }));
       const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
       const baseEv = calculateExpectedValue(baseItems);
-      const calculatedPrice = (newBox.price && newBox.price > 0)
+      const calculatedPrice = hasExplicitBoxPrice
         ? newBox.price
         : baseEv / clampedTargetEV;
       const updatedItems = buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice);
@@ -911,12 +913,12 @@ export const AdminPanel: React.FC = () => {
           const baseSelection = prev.map(item => ({ ...item, chance: 0 }));
           const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
           const baseEv = calculateExpectedValue(baseItems);
-          const calculatedPrice = (newBox.price && newBox.price > 0)
+          const calculatedPrice = hasExplicitBoxPrice
             ? newBox.price
             : baseEv / clampedTargetEV;
           const updatedItems = buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice);
 
-          if (!newBox.price || newBox.price <= 0) {
+          if (!hasExplicitBoxPrice) {
               setNewBox((current) => ({ ...current, price: parseFloat(calculatedPrice.toFixed(2)) }));
           }
 
@@ -1260,16 +1262,18 @@ export const AdminPanel: React.FC = () => {
   const oddsTotal = useMemo(() => calculateOddsTotal(selectedItems), [selectedItems]);
   const expectedValue = useMemo(() => calculateExpectedValue(selectedItems), [selectedItems]);
   const evRatio = useMemo(() => {
-      if (!newBox.price || newBox.price <= 0) return 0;
+      if (!hasExplicitBoxPrice || newBox.price <= 0) return 0;
       return expectedValue / Number(newBox.price);
-  }, [expectedValue, newBox.price]);
-  const marginPercent = newBox.price && newBox.price > 0 ? (1 - evRatio) * 100 : NaN;
-  const evOutOfBounds = newBox.price ? Math.abs(evRatio - clampedTargetEV) > EV_TOLERANCE : false;
+  }, [expectedValue, hasExplicitBoxPrice, newBox.price]);
+  const marginPercent = hasExplicitBoxPrice && newBox.price > 0 ? (1 - evRatio) * 100 : NaN;
+  const evOutOfBounds = hasExplicitBoxPrice && newBox.price > 0
+    ? Math.abs(evRatio - clampedTargetEV) > EV_TOLERANCE
+    : false;
   const oddsOutOfBounds = Math.abs(oddsTotal - 100) > 0.001;
-  const canSaveBox = !!newBox.name && !!newBox.price && selectedItems.length > 0 && !evOutOfBounds && !oddsOutOfBounds;
+  const canSaveBox = !!newBox.name && hasExplicitBoxPrice && selectedItems.length > 0 && !evOutOfBounds && !oddsOutOfBounds;
 
   const handleSaveBox = () => {
-      if(!newBox.name || !newBox.price) {
+      if(!newBox.name || !hasExplicitBoxPrice) {
           alert("Please fill in box details");
           return;
       }
@@ -1287,9 +1291,11 @@ export const AdminPanel: React.FC = () => {
       );
       const refreshedOddsTotal = calculateOddsTotal(refreshedItems);
       const refreshedEv = calculateExpectedValue(refreshedItems);
-      const refreshedEvRatio = refreshedEv / Number(newBox.price);
+      const refreshedEvRatio = newBox.price > 0 ? refreshedEv / Number(newBox.price) : 0;
       const refreshedOddsOutOfBounds = Math.abs(refreshedOddsTotal - 100) > 0.001;
-      const refreshedEvOutOfBounds = Math.abs(refreshedEvRatio - clampedTargetEV) > EV_TOLERANCE;
+      const refreshedEvOutOfBounds = newBox.price > 0
+        ? Math.abs(refreshedEvRatio - clampedTargetEV) > EV_TOLERANCE
+        : false;
 
       setSelectedItems(refreshedItems);
 
@@ -1914,10 +1920,19 @@ export const AdminPanel: React.FC = () => {
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                     <div>
                                         <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Price (coins)</label>
-                                        <input type="number" placeholder="Box Price (coins)" className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold text-green-400" value={newBox.price || ''} onChange={e => setNewBox({...newBox, price: Number(e.target.value)})} />
+                                        <input
+                                          type="number"
+                                          placeholder="Box Price (coins)"
+                                          className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold text-green-400"
+                                          value={newBox.price ?? ''}
+                                          onChange={(e) => {
+                                              const nextValue = e.target.value === '' ? undefined : Math.max(0, Number(e.target.value));
+                                              setNewBox({ ...newBox, price: Number.isFinite(nextValue) ? nextValue : undefined });
+                                          }}
+                                        />
                                         <div className="text-[10px] text-gray-500 mt-1 flex items-center gap-1">
                                             <span>Calculated:</span>
-                                            {newBox.price ? (
+                                            {hasExplicitBoxPrice ? (
                                                 <CoinAmount
                                                     amount={Number(newBox.price)}
                                                     formatOptions={{ maximumFractionDigits: 0 }}
