@@ -5,9 +5,16 @@ import { auth, db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
 import { 
   User as FirebaseUser,
+  AuthCredential,
+  EmailAuthProvider,
+  GoogleAuthProvider,
   onAuthStateChanged,
+  signInWithCredential,
   signInWithEmailAndPassword,
+  signInWithPopup,
   createUserWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
+  linkWithCredential,
   sendPasswordResetEmail,
   signOut
 } from 'firebase/auth';
@@ -16,6 +23,9 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
+  getDocs,
+  limit,
   onSnapshot,
   orderBy,
   QueryDocumentSnapshot,
@@ -23,7 +33,8 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
-  Timestamp
+  Timestamp,
+  where
 } from 'firebase/firestore';
 
 const sanitizeData = <T extends Record<string, any>>(data: T): T => {
@@ -314,6 +325,11 @@ type PersistUserData = Partial<{
   isAdmin: boolean;
 }>;
 
+type GoogleAuthResult =
+  | { status: 'success' }
+  | { status: 'link-required'; email: string; credential: AuthCredential }
+  | { status: 'error'; message: string };
+
 interface GameContextType {
   user: User;
   isAuthenticated: boolean;
@@ -333,6 +349,8 @@ interface GameContextType {
   
   // Actions
   login: (email: string, pass: string) => Promise<void>;
+  loginWithGoogle: () => Promise<GoogleAuthResult>;
+  linkGoogleAccount: (email: string, password: string, credential: AuthCredential) => Promise<GoogleAuthResult>;
   register: (name: string, email: string, pass: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => void;
@@ -437,6 +455,38 @@ const buildUserDocument = (user: User) => {
   return sanitizeDeep(payload);
 };
 
+const normalizeUsername = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_]/g, '')
+    .replace(/^_+|_+$/g, '');
+
+const buildBaseUsername = (displayName: string | null | undefined, email: string | null | undefined) => {
+  const fromDisplayName = normalizeUsername(displayName ?? '');
+  if (fromDisplayName) return fromDisplayName;
+  const emailPrefix = (email ?? '').split('@')[0] ?? '';
+  const fromEmail = normalizeUsername(emailPrefix);
+  return fromEmail || 'player';
+};
+
+const ensureUniqueUsername = async (base: string) => {
+  const usersRef = collection(db, 'users');
+  let attempt = 1;
+  let candidate = base;
+
+  while (true) {
+    const [usernameSnapshot, nameSnapshot] = await Promise.all([
+      getDocs(query(usersRef, where('username', '==', candidate), limit(1))),
+      getDocs(query(usersRef, where('name', '==', candidate), limit(1)))
+    ]);
+
+    if (usernameSnapshot.empty && nameSnapshot.empty) return candidate;
+    attempt += 1;
+    candidate = `${base}_${attempt}`;
+  }
+};
+
 const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> = {}) => {
   const now = Date.now();
   const metadataCreatedAt = firebaseUser.metadata.creationTime ? Date.parse(firebaseUser.metadata.creationTime) : NaN;
@@ -457,8 +507,12 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     createdAt,
     lastChatAt,
     name: data.name || firebaseUser.email?.split('@')[0] || 'Player',
+    username: data.username ?? data.name,
+    displayName: data.displayName ?? firebaseUser.displayName ?? undefined,
     email: data.email || firebaseUser.email || '',
     avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
+    photoURL: data.photoURL ?? firebaseUser.photoURL ?? undefined,
+    provider: data.provider,
     balance,
     level: data.level ?? progress.level,
     xp,
@@ -504,8 +558,12 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     createdAt,
     lastChatAt,
     name,
+    username: data.username ?? name,
+    displayName: data.displayName,
     email: data.email || '',
     avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
+    photoURL: data.photoURL,
+    provider: data.provider,
     balance,
     level: data.level ?? progress.level,
     xp,
@@ -1077,9 +1135,115 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
+  const ensureGoogleUserProfile = async (firebaseUser: FirebaseUser) => {
+    const userRef = getUserRef(firebaseUser.uid);
+    const userSnapshot = await getDoc(userRef);
+    const email = firebaseUser.email ?? '';
+    const displayName = firebaseUser.displayName ?? '';
+    const photoURL = firebaseUser.photoURL ?? undefined;
+
+    if (!userSnapshot.exists()) {
+      const baseUsername = buildBaseUsername(displayName, email);
+      const username = await ensureUniqueUsername(baseUsername);
+      const createdAt = Date.now();
+      const avatarName = displayName || username;
+      const avatar = photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&background=111827&color=10b981`;
+      const newUser: User = {
+        id: firebaseUser.uid,
+        createdAt,
+        name: username,
+        username,
+        displayName: displayName || undefined,
+        email,
+        avatar,
+        photoURL,
+        provider: 'google',
+        level: 1,
+        xp: 0,
+        lastDailyClaim: undefined,
+        totalSpent: 0,
+        rakebackBalance: 0,
+        rakebackEarnedToday: 0,
+        rakebackEarnedAt: getDayStart(),
+        followers: [],
+        shippingAddress: undefined,
+        isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+        chatWarnings: 0,
+        chatDisabled: false,
+        termsFlagged: false
+      };
+
+      await setDoc(userRef, buildUserDocument(newUser));
+      return;
+    }
+
+    const data = userSnapshot.data() as Record<string, any>;
+    const updates: Record<string, unknown> = {};
+
+    if (!data.email && email) updates.email = email;
+    if (!data.displayName && displayName) updates.displayName = displayName;
+    if (!data.photoURL && photoURL) updates.photoURL = photoURL;
+    if (!data.avatar && photoURL) updates.avatar = photoURL;
+    if (!data.provider) updates.provider = 'google';
+
+    if (Object.keys(updates).length > 0) {
+      await setDoc(userRef, updates, { merge: true });
+    }
+  };
+
   const login = async (email: string, pass: string) => {
       await signInWithEmailAndPassword(auth, email, pass);
       setShowLoginModal(false);
+  };
+
+  const loginWithGoogle = async (): Promise<GoogleAuthResult> => {
+    const provider = new GoogleAuthProvider();
+
+    try {
+      const credential = await signInWithPopup(auth, provider);
+      await ensureGoogleUserProfile(credential.user);
+      setShowLoginModal(false);
+      return { status: 'success' };
+    } catch (error: any) {
+      const errorCode = error?.code;
+      if (errorCode === 'auth/account-exists-with-different-credential') {
+        const pendingCredential = GoogleAuthProvider.credentialFromError(error);
+        const email = error?.customData?.email ?? error?.email;
+
+        if (pendingCredential && email) {
+          const methods = await fetchSignInMethodsForEmail(auth, email);
+          if (methods.includes('password')) {
+            // Account linking: prompt for password before linking Google.
+            return { status: 'link-required', email, credential: pendingCredential };
+          }
+        }
+
+        return {
+          status: 'error',
+          message: 'That email already has an account. Please sign in using the original provider to link Google.'
+        };
+      }
+
+      return { status: 'error', message: error?.message || 'Google sign-in failed.' };
+    }
+  };
+
+  const linkGoogleAccount = async (
+    email: string,
+    password: string,
+    credential: AuthCredential
+  ): Promise<GoogleAuthResult> => {
+    try {
+      const emailCredential = EmailAuthProvider.credential(email, password);
+      const signInResult = await signInWithCredential(auth, emailCredential);
+      // Account linking happens here after password authentication succeeds.
+      await linkWithCredential(signInResult.user, credential);
+      await ensureGoogleUserProfile(signInResult.user);
+      setShowLoginModal(false);
+      return { status: 'success' };
+    } catch (error: any) {
+      return { status: 'error', message: error?.message || 'Unable to link Google account.' };
+    }
   };
 
   const register = async (name: string, email: string, pass: string) => {
@@ -1089,8 +1253,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       id: credential.user.uid,
       createdAt,
       name,
+      username: name,
+      displayName: name,
       email,
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
+      provider: 'password',
       level: 1,
       xp: 0,
       lastDailyClaim: undefined,
@@ -1913,6 +2080,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       bonusSettings,
       stripeSettings,
       login,
+      loginWithGoogle,
+      linkGoogleAccount,
       register,
       logout,
       setShowLoginModal,
