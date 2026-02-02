@@ -82,6 +82,7 @@ export interface MysteryBox {
   isUserCreated?: boolean;
   isDaily?: boolean;
   sellBackRate?: number;
+  createdAt?: number;
 }
 
 export interface CoinPackage {

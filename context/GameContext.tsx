@@ -174,6 +174,7 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
 
 const BONUS_SETTINGS_DOC = 'bonus-settings';
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
+const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 export const calculateLevelProgress = (totalXp: number, overrides?: Partial<BonusSettings>) => {
   const settings = { ...DEFAULT_BONUS_SETTINGS, ...(overrides ?? {}) };
@@ -880,6 +881,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               redeemable: item.redeemable ?? true
             };
           }) : [];
+          const createdAt = data.createdAt ? normalizeTimestamp(data.createdAt, Date.now()) : undefined;
 
           return {
             id: docSnap.id,
@@ -894,14 +896,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             riskLevel: data.riskLevel !== undefined ? Number(data.riskLevel) : undefined,
             items,
             isUserCreated: data.isUserCreated ?? false,
-            sellBackRate: data.sellBackRate !== undefined ? Number(data.sellBackRate) : undefined
+            sellBackRate: data.sellBackRate !== undefined ? Number(data.sellBackRate) : undefined,
+            createdAt
           } as MysteryBox;
         })
+        .filter((box) => !box.isUserCreated || !box.createdAt || Date.now() - box.createdAt < USER_BOX_EXPIRY_MS)
         .sort((a, b) => a.price - b.price);
 
       setBoxes(prev => {
         const pendingUserCreated = prev.filter(
-          (box) => box.isUserCreated && !firebaseBoxes.some((firebaseBox) => firebaseBox.id === box.id)
+          (box) =>
+            box.isUserCreated &&
+            !firebaseBoxes.some((firebaseBox) => firebaseBox.id === box.id) &&
+            (!box.createdAt || Date.now() - box.createdAt < USER_BOX_EXPIRY_MS)
         );
         return [...pendingUserCreated, ...firebaseBoxes].sort((a, b) => a.price - b.price);
       });
@@ -1733,7 +1740,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('Login required');
       }
 
-      const userBox = { ...box, isUserCreated: true };
+      const userBox = { ...box, isUserCreated: true, createdAt: Date.now() };
       const response = await authedFetch<{ boxId: string; newCoins?: number }>('/api/publish-case-lab-box', {
         method: 'POST',
         body: JSON.stringify({ box: userBox })

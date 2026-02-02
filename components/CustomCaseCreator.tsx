@@ -295,13 +295,13 @@ export const CustomCaseCreator: React.FC = () => {
                   </div>
                   <div className="mb-6">
                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Choose a cover image</label>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      <div className="flex gap-2 overflow-x-auto pb-2">
                           {imageOptions.map((box) => (
                               <button
                                   key={box.id}
                                   type="button"
                                   onClick={() => setSelectedBoxImage(box.image)}
-                                  className={`rounded-lg border p-2 transition ${
+                                  className={`min-w-[72px] rounded-lg border p-2 transition ${
                                     selectedBoxImage === box.image
                                       ? 'border-brand-purple/70 bg-brand-purple/10'
                                       : 'border-gray-700 bg-[#0b0e14] hover:border-gray-500'
