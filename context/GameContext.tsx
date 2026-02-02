@@ -186,6 +186,7 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
 const BONUS_SETTINGS_DOC = 'bonus-settings';
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
 const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;
+const SIGNUP_CREDIT_COINS = 5;
 
 export const calculateLevelProgress = (totalXp: number, overrides?: Partial<BonusSettings>) => {
   const settings = { ...DEFAULT_BONUS_SETTINGS, ...(overrides ?? {}) };
@@ -1173,7 +1174,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         termsFlagged: false
       };
 
-      await setDoc(userRef, buildUserDocument(newUser));
+      await setDoc(userRef, { ...buildUserDocument(newUser), coins: SIGNUP_CREDIT_COINS });
       return;
     }
 
@@ -1260,6 +1261,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       provider: 'password',
       level: 1,
       xp: 0,
+      balance: SIGNUP_CREDIT_COINS,
       lastDailyClaim: undefined,
       totalSpent: 0,
       rakebackBalance: 0,
@@ -1273,10 +1275,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       termsFlagged: false
     };
 
-    await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser));
+    await setDoc(doc(db, 'users', newUser.id), { ...buildUserDocument(newUser), coins: SIGNUP_CREDIT_COINS });
 
     setUser(newUser);
-    setBalance(0);
+    setBalance(SIGNUP_CREDIT_COINS);
     setInventory([]);
     setIsAuthenticated(true);
     setShowLoginModal(false);
