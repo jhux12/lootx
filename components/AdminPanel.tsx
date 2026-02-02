@@ -41,6 +41,21 @@ const ITEM_TAG_SUGGESTIONS = [
     'modern'
 ] as const;
 
+const ITEM_SIZE_SUGGESTIONS = [
+    'XS',
+    'S',
+    'M',
+    'L',
+    'XL',
+    'XXL',
+    'US 7',
+    'US 8',
+    'US 9',
+    'US 10',
+    'US 11',
+    'US 12'
+] as const;
+
 const ITEM_SPREADSHEET_REQUIRED_HEADERS = ['name', 'price', 'image', 'rarity', 'chance', 'color'] as const;
 const ITEM_SPREADSHEET_OPTIONAL_HEADERS = ['brand', 'category', 'tags'] as const;
 const ITEM_SPREADSHEET_HEADERS = [...ITEM_SPREADSHEET_REQUIRED_HEADERS, ...ITEM_SPREADSHEET_OPTIONAL_HEADERS] as const;
@@ -103,9 +118,11 @@ export const AdminPanel: React.FC = () => {
       brand: '',
       category: '',
       tags: [],
+      sizes: [],
       redeemable: true
   });
   const [itemTagInput, setItemTagInput] = useState('');
+  const [itemSizeInput, setItemSizeInput] = useState('');
 
   // --- BOX FORM STATE ---
   const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
@@ -340,6 +357,19 @@ export const AdminPanel: React.FC = () => {
           .filter(Boolean)
   ));
 
+  const normalizeSizeList = (sizes: string[]) => {
+      const seen = new Set<string>();
+      return sizes
+          .map((size) => size.trim())
+          .filter(Boolean)
+          .filter((size) => {
+              const key = size.toLowerCase();
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+          });
+  };
+
   const addItemTag = (tag: string) => {
       const normalized = tag.trim().toLowerCase();
       if (!normalized) return;
@@ -354,6 +384,23 @@ export const AdminPanel: React.FC = () => {
       setNewItem((prev) => ({
           ...prev,
           tags: (prev.tags ?? []).filter((existing) => existing.toLowerCase() !== normalized)
+      }));
+  };
+
+  const addItemSize = (size: string) => {
+      const normalized = size.trim();
+      if (!normalized) return;
+      setNewItem((prev) => ({
+          ...prev,
+          sizes: normalizeSizeList([...(prev.sizes ?? []), normalized])
+      }));
+  };
+
+  const removeItemSize = (size: string) => {
+      const normalized = size.trim().toLowerCase();
+      setNewItem((prev) => ({
+          ...prev,
+          sizes: (prev.sizes ?? []).filter((existing) => existing.toLowerCase() !== normalized)
       }));
   };
 
@@ -406,6 +453,7 @@ export const AdminPanel: React.FC = () => {
       const brand = newItem.brand?.trim() ?? '';
       const category = newItem.category?.trim() ?? '';
       const tags = normalizeTagList(newItem.tags ?? []);
+      const sizes = normalizeSizeList(newItem.sizes ?? []);
 
       const item: CaseItem = {
           id: editingItemId || `custom-item-${Date.now()}`,
@@ -418,6 +466,7 @@ export const AdminPanel: React.FC = () => {
           brand,
           category,
           tags,
+          sizes: sizes.length ? sizes : undefined,
           redeemable: newItem.redeemable ?? true
       };
 
@@ -443,9 +492,11 @@ export const AdminPanel: React.FC = () => {
           brand: item.brand ?? '',
           category: item.category ?? '',
           tags: item.tags ?? [],
+          sizes: item.sizes ?? [],
           redeemable: item.redeemable ?? true
       });
       setItemTagInput('');
+      setItemSizeInput('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -467,9 +518,11 @@ export const AdminPanel: React.FC = () => {
           brand: '',
           category: '',
           tags: [],
+          sizes: [],
           redeemable: true
       });
       setItemTagInput('');
+      setItemSizeInput('');
   };
 
   const resetPackageForm = () => {
@@ -1640,6 +1693,58 @@ export const AdminPanel: React.FC = () => {
                             </div>
                             <p className="mt-2 text-[10px] text-gray-500">Tags power Case Lab filters and box item search.</p>
                         </div>
+                        <div className="mb-4">
+                            <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Size Options</label>
+                            <div className="flex flex-col gap-3">
+                                <input
+                                    type="text"
+                                    placeholder="Add a size and press Enter (optional)"
+                                    className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white"
+                                    value={itemSizeInput}
+                                    onChange={(event) => setItemSizeInput(event.target.value)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter') {
+                                            event.preventDefault();
+                                            addItemSize(itemSizeInput);
+                                            setItemSizeInput('');
+                                        }
+                                    }}
+                                />
+                                <div className="flex flex-wrap gap-2">
+                                    {ITEM_SIZE_SUGGESTIONS.map((size) => (
+                                        <button
+                                            key={size}
+                                            type="button"
+                                            onClick={() => addItemSize(size)}
+                                            className="px-2 py-1.5 rounded border text-[11px] font-semibold uppercase tracking-wide transition bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200"
+                                        >
+                                            {size}
+                                        </button>
+                                    ))}
+                                </div>
+                                {(newItem.sizes ?? []).length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {(newItem.sizes ?? []).map((size) => (
+                                            <span
+                                                key={size}
+                                                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-200"
+                                            >
+                                                {size}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeItemSize(size)}
+                                                    className="rounded-full p-0.5 text-gray-400 hover:text-white"
+                                                    aria-label={`Remove ${size}`}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <p className="mt-2 text-[10px] text-gray-500">If provided, winners receive a random size from this list.</p>
+                        </div>
                         <button onClick={handleSaveItem} className={`px-6 py-2 ${editingItemId ? 'bg-orange-600 hover:bg-orange-500' : 'bg-blue-600 hover:bg-blue-500'} text-white font-bold rounded`}>
                             {editingItemId ? 'Update Item' : 'Add Item'}
                         </button>
@@ -1674,6 +1779,15 @@ export const AdminPanel: React.FC = () => {
                                                             {item.tags.map(tag => (
                                                                 <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 uppercase tracking-wide text-gray-300">
                                                                     {tag}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ) : null}
+                                                    {item.sizes?.length ? (
+                                                        <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-gray-500">
+                                                            {item.sizes.map((size) => (
+                                                                <span key={size} className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 uppercase tracking-wide text-blue-200">
+                                                                    {size}
                                                                 </span>
                                                             ))}
                                                         </div>
@@ -2843,6 +2957,11 @@ export const AdminPanel: React.FC = () => {
                                                       className="text-xs text-green-400 font-semibold"
                                                       iconClassName="w-3 h-3"
                                                     />
+                                                    {item.size && (
+                                                        <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-blue-200">
+                                                            Size: {item.size}
+                                                        </div>
+                                                    )}
                                                     <div className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full mt-1 ${
                                                         item.status === 'shipped'
                                                             ? 'bg-green-500/10 text-green-400'

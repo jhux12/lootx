@@ -5,6 +5,14 @@ import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 const DEFAULT_CLIENT_SEED = 'lootx-player';
 const STARTER_COINS = 1000;
 
+const normalizeSizes = (sizes = []) =>
+  sizes
+    .filter((size) => typeof size === 'string')
+    .map((size) => size.trim())
+    .filter(Boolean);
+
+const pickRandomSize = (sizes = []) => sizes[Math.floor(Math.random() * sizes.length)];
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -83,6 +91,8 @@ export default async function handler(req, res) {
 
       const { roll, rollHash, message } = computeRoll(serverSeed, clientSeed, nonce, boxId);
       const prize = pickPrizeByWeight(prizes, roll);
+      const sizeOptions = normalizeSizes(prize.sizes ?? []);
+      const selectedSize = sizeOptions.length ? pickRandomSize(sizeOptions) : null;
       const prizeValue = Number(prize.value ?? prize.price ?? 0);
       const newCoins = currentCoins - price;
 
@@ -95,7 +105,7 @@ export default async function handler(req, res) {
       }, { merge: true });
 
       const obtainedAt = admin.firestore.FieldValue.serverTimestamp();
-      transaction.set(inventoryRef, {
+      const inventoryPayload = {
         boxId,
         prizeId: prize.id ?? null,
         name: prize.name ?? 'Mystery Item',
@@ -106,9 +116,13 @@ export default async function handler(req, res) {
         obtainedAt,
         sellBackRate,
         redeemable: prize.redeemable ?? true
-      });
+      };
+      if (selectedSize) {
+        inventoryPayload.size = selectedSize;
+      }
+      transaction.set(inventoryRef, inventoryPayload);
 
-      transaction.set(openRef, {
+      const openPayload = {
         uid: decoded.uid,
         boxId,
         price,
@@ -119,7 +133,8 @@ export default async function handler(req, res) {
           image: prize.image ?? '',
           rarity: prize.rarity ?? 'common',
           weight: Number(prize.weight ?? prize.chance ?? 0),
-          redeemable: prize.redeemable ?? true
+          redeemable: prize.redeemable ?? true,
+          size: selectedSize || null
         },
         createdAt: obtainedAt,
         provablyFair: {
@@ -128,7 +143,8 @@ export default async function handler(req, res) {
           nonce,
           roll
         }
-      });
+      };
+      transaction.set(openRef, openPayload);
 
       responsePayload = {
         ok: true,
@@ -137,7 +153,8 @@ export default async function handler(req, res) {
           ...prize,
           price: prizeValue,
           value: prizeValue,
-          redeemable: prize.redeemable ?? true
+          redeemable: prize.redeemable ?? true,
+          size: selectedSize || undefined
         },
         sellBackRate,
         newCoins,
