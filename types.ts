@@ -11,8 +11,12 @@ export interface ShippingAddress {
 export interface User {
   id: string;
   name: string;
+  username?: string;
+  displayName?: string;
   email?: string;
   avatar: string;
+  photoURL?: string;
+  provider?: string;
   level: number;
   xp: number;
   balance?: number;

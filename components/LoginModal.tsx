@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { BrandLockup } from './BrandLockup';
 
 export const LoginModal: React.FC = () => {
-  const { login, register, resetPassword, setShowLoginModal } = useGame();
+  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   
@@ -13,11 +14,16 @@ export const LoginModal: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [googleLinkEmail, setGoogleLinkEmail] = useState('');
+  const [googleLinkPassword, setGoogleLinkPassword] = useState('');
+  const [googleLinkCredential, setGoogleLinkCredential] = useState<AuthCredential | null>(null);
   const [confirmAdult, setConfirmAdult] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const isLinkingGoogle = Boolean(googleLinkCredential);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +50,59 @@ export const LoginModal: React.FC = () => {
         playSound('error');
     } finally {
         setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setError(null);
+    setMessage(null);
+    playSound('click');
+
+    try {
+      const result = await loginWithGoogle();
+      if (result.status === 'link-required') {
+        setGoogleLinkEmail(result.email);
+        setGoogleLinkCredential(result.credential);
+        setGoogleLinkPassword('');
+        setMessage('Enter your password to link your Google account.');
+        return;
+      }
+
+      if (result.status === 'error') {
+        setError(result.message || 'Google sign-in failed.');
+        playSound('error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Google sign-in failed');
+      playSound('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLinkGoogleAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!googleLinkCredential) return;
+
+    setIsLoading(true);
+    setError(null);
+    setMessage(null);
+    playSound('click');
+
+    try {
+      const result = await linkGoogleAccount(googleLinkEmail, googleLinkPassword, googleLinkCredential);
+      if (result.status === 'error') {
+        setError(result.message || 'Unable to link Google account.');
+        playSound('error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Unable to link Google account.');
+      playSound('error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -74,7 +133,18 @@ export const LoginModal: React.FC = () => {
       setMode(prev => prev === 'login' ? 'register' : 'login');
       setError(null);
       setMessage(null);
+      setGoogleLinkEmail('');
+      setGoogleLinkPassword('');
+      setGoogleLinkCredential(null);
       playSound('click');
+  };
+
+  const clearGoogleLinkState = () => {
+    setGoogleLinkEmail('');
+    setGoogleLinkPassword('');
+    setGoogleLinkCredential(null);
+    setError(null);
+    setMessage(null);
   };
 
   return (
@@ -102,10 +172,14 @@ export const LoginModal: React.FC = () => {
                 />
             </div>
             <h2 className="text-2xl font-black text-white mb-1">
-                {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+                {isLinkingGoogle ? 'Link Google Account' : mode === 'login' ? 'Welcome Back' : 'Create Account'}
             </h2>
             <p className="text-gray-500 text-sm">
-                {mode === 'login' ? 'Sign in to access your Pullz.gg account' : 'Join Pullz.gg and start winning today'}
+                {isLinkingGoogle
+                    ? 'Confirm your password to link Google with your existing account.'
+                    : mode === 'login'
+                        ? 'Sign in to access your Pullz.gg account'
+                        : 'Join Pullz.gg and start winning today'}
             </p>
         </div>
 
@@ -120,111 +194,179 @@ export const LoginModal: React.FC = () => {
             </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-            
-            {mode === 'register' && (
-                <div className="animate-in slide-in-from-left-2">
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Username</label>
+        {!isLinkingGoogle && (
+            <>
+                <button
+                    type="button"
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-3 rounded-lg border border-gray-700 bg-white text-gray-900 py-3 font-bold shadow-lg transition-all active:scale-95 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span className="text-sm">Continue with Google</span>
+                </button>
+
+                <div className="flex items-center gap-3 my-4">
+                    <div className="h-px flex-1 bg-gray-700" />
+                    <span className="text-xs uppercase text-gray-500">or</span>
+                    <div className="h-px flex-1 bg-gray-700" />
+                </div>
+            </>
+        )}
+
+        {isLinkingGoogle ? (
+            <form onSubmit={handleLinkGoogleAccount} className="space-y-4">
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
                     <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <input 
-                            type="text" 
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <input
+                            type="email"
+                            value={googleLinkEmail}
+                            readOnly
+                            className="w-full bg-[#0b0e14] border border-gray-700 text-gray-400 rounded-lg py-3 pl-10 pr-4"
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Password</label>
+                    <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <input
+                            type="password"
+                            value={googleLinkPassword}
+                            onChange={(e) => setGoogleLinkPassword(e.target.value)}
                             className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:border-brand-purple transition-colors"
-                            placeholder="Display Name"
+                            placeholder="••••••••"
                             required
                         />
                     </div>
                 </div>
-            )}
 
-            <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
-                <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                    <input 
-                        type="email" 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:border-brand-purple transition-colors"
-                        placeholder="user@example.com"
-                        required
-                    />
-                </div>
-            </div>
-            
-            <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Password</label>
-                <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                    <input 
-                        type="password" 
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:border-brand-purple transition-colors"
-                        placeholder="••••••••"
-                        required
-                    />
-                </div>
-            </div>
+                <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 shadow-blue-600/20"
+                >
+                    {isLoading ? 'Linking...' : 'Link Google'}
+                </button>
 
-            {mode === 'login' && (
-                <div className="flex justify-end text-xs">
-                    <button
-                        type="button"
-                        onClick={handleForgotPassword}
-                        className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
-                        disabled={isLoading}
-                    >
-                        Forgot password?
-                    </button>
-                </div>
-            )}
+                <button
+                    type="button"
+                    onClick={clearGoogleLinkState}
+                    className="w-full text-xs text-gray-400 hover:text-gray-200"
+                >
+                    Back to sign in
+                </button>
+            </form>
+        ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {mode === 'register' && (
+                    <div className="animate-in slide-in-from-left-2">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Username</label>
+                        <div className="relative">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                            <input 
+                                type="text" 
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:border-brand-purple transition-colors"
+                                placeholder="Display Name"
+                                required
+                            />
+                        </div>
+                    </div>
+                )}
 
-            {mode === 'register' && (
-                <div className="space-y-3 text-xs text-gray-400">
-                    <label className="flex items-start gap-2">
-                        <input
-                            type="checkbox"
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
+                    <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <input 
+                            type="email" 
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:border-brand-purple transition-colors"
+                            placeholder="user@example.com"
                             required
-                            checked={confirmAdult}
-                            onChange={(e) => setConfirmAdult(e.target.checked)}
-                            className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
                         />
-                        <span>I confirm that I am 18 years or older.</span>
-                    </label>
-                    <label className="flex items-start gap-2">
-                        <input
-                            type="checkbox"
-                            required
-                            checked={acceptTerms}
-                            onChange={(e) => setAcceptTerms(e.target.checked)}
-                            className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
-                        />
-                        <span>I agree to the Terms &amp; Conditions.</span>
-                    </label>
+                    </div>
                 </div>
-            )}
+                
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Password</label>
+                    <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <input 
+                            type="password" 
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:border-brand-purple transition-colors"
+                            placeholder="••••••••"
+                            required
+                        />
+                    </div>
+                </div>
 
-            <button 
-                type="submit" 
-                disabled={isLoading}
-                className={`w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${mode === 'login' ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20' : 'bg-green-600 hover:bg-green-500 shadow-green-600/20'}`}
-            >
-                {isLoading ? 'Processing...' : (mode === 'login' ? 'Sign In' : 'Create Account')}
-            </button>
-        </form>
+                {mode === 'login' && (
+                    <div className="flex justify-end text-xs">
+                        <button
+                            type="button"
+                            onClick={handleForgotPassword}
+                            className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+                            disabled={isLoading}
+                        >
+                            Forgot password?
+                        </button>
+                    </div>
+                )}
 
-        <div className="mt-6 text-center text-xs text-gray-500">
-            {mode === 'login' ? "Don't have an account?" : "Already have an account?"}
-            <span 
-                onClick={toggleMode}
-                className="text-blue-400 font-bold cursor-pointer hover:underline ml-1"
-            >
-                {mode === 'login' ? 'Register now' : 'Sign in'}
-            </span>
-        </div>
+                {mode === 'register' && (
+                    <div className="space-y-3 text-xs text-gray-400">
+                        <label className="flex items-start gap-2">
+                            <input
+                                type="checkbox"
+                                required
+                                checked={confirmAdult}
+                                onChange={(e) => setConfirmAdult(e.target.checked)}
+                                className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
+                            />
+                            <span>I confirm that I am 18 years or older.</span>
+                        </label>
+                        <label className="flex items-start gap-2">
+                            <input
+                                type="checkbox"
+                                required
+                                checked={acceptTerms}
+                                onChange={(e) => setAcceptTerms(e.target.checked)}
+                                className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
+                            />
+                            <span>I agree to the Terms &amp; Conditions.</span>
+                        </label>
+                    </div>
+                )}
+
+                <button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className={`w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${mode === 'login' ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20' : 'bg-green-600 hover:bg-green-500 shadow-green-600/20'}`}
+                >
+                    {isLoading ? 'Processing...' : (mode === 'login' ? 'Sign In' : 'Create Account')}
+                </button>
+            </form>
+        )}
+
+        {!isLinkingGoogle && (
+            <div className="mt-6 text-center text-xs text-gray-500">
+                {mode === 'login' ? "Don't have an account?" : "Already have an account?"}
+                <span 
+                    onClick={toggleMode}
+                    className="text-blue-400 font-bold cursor-pointer hover:underline ml-1"
+                >
+                    {mode === 'login' ? 'Register now' : 'Sign in'}
+                </span>
+            </div>
+        )}
       </div>
     </div>
   );
