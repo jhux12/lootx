@@ -4,6 +4,7 @@ import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { BrandLockup } from './BrandLockup';
+import googleLogo from '../assets/google-logo.svg';
 
 export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal } = useGame();
@@ -200,9 +201,14 @@ export const LoginModal: React.FC = () => {
                     type="button"
                     onClick={handleGoogleSignIn}
                     disabled={isLoading}
-                    className="w-full flex items-center justify-center gap-3 rounded-lg border border-gray-700 bg-white text-gray-900 py-3 font-bold shadow-lg transition-all active:scale-95 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-[#1f1f1f] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#2a2a2a] disabled:opacity-50"
                 >
-                    <span className="text-sm">Continue with Google</span>
+                    <img
+                        src={googleLogo}
+                        alt="Google"
+                        className="h-5 w-5"
+                    />
+                    Continue with Google
                 </button>
 
                 <div className="flex items-center gap-3 my-4">
