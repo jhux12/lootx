@@ -4,6 +4,7 @@ import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { BrandLockup } from './BrandLockup';
+import googleLogo from '../assets/google-logo.svg';
 
 export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal } = useGame();
@@ -203,7 +204,7 @@ export const LoginModal: React.FC = () => {
                     className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-[#1f1f1f] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#2a2a2a] disabled:opacity-50"
                 >
                     <img
-                        src="/assets/google-logo.svg"
+                        src={googleLogo}
                         alt="Google"
                         className="h-5 w-5"
                     />
