@@ -84,9 +84,10 @@ export default async function handler(req, res) {
         sizes: sanitizeSizes(item?.sizes)
       }));
 
+      const sanitizedPrice = Math.max(0, toNumber(rawBox.price, 0));
       transaction.set(boxRef, {
         name,
-        price: toNumber(rawBox.price, 0),
+        price: sanitizedPrice,
         image: toString(rawBox.image, ''),
         accentColor: toString(rawBox.accentColor, '#8b5cf6'),
         tag: toString(rawBox.tag, ''),
