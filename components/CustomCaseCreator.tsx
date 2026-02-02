@@ -65,6 +65,10 @@ export const CustomCaseCreator: React.FC = () => {
           alert('Please select items');
           return;
       }
+      if (!selectedBoxImage) {
+          alert('Please choose a cover image');
+          return;
+      }
       if (!lastCalculated) {
           alert('Please calculate the box price first');
           return;
@@ -312,8 +316,10 @@ export const CustomCaseCreator: React.FC = () => {
                               </button>
                           ))}
                       </div>
-                      {selectedBoxImage && (
+                      {selectedBoxImage ? (
                           <p className="mt-2 text-xs text-gray-500">Selected image is ready for your Case Lab box.</p>
+                      ) : (
+                          <p className="mt-2 text-xs text-amber-300">Choose a cover image to publish your Case Lab box.</p>
                       )}
                   </div>
 
@@ -374,7 +380,7 @@ export const CustomCaseCreator: React.FC = () => {
 
                   <button 
                     onClick={handleCreate}
-                    disabled={!lastCalculated || !boxName}
+                    disabled={!lastCalculated || !boxName || !selectedBoxImage}
                     className="w-full py-4 bg-brand-purple hover:bg-purple-600 text-white font-bold rounded-xl shadow-lg shadow-purple-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
                   >
                       Create & Open <ArrowRight className="w-4 h-4" />
