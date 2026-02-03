@@ -55,10 +55,10 @@ export const Hero: React.FC = () => {
           </div>
         </div>
         <div className="relative flex h-full items-center justify-center">
-          <div className="relative w-full h-[44vh] max-h-[360px] sm:h-[40vh] sm:max-h-[440px] lg:h-[58vh] lg:max-h-[660px] lg:-mr-10 lg:translate-x-6">
+          <div className="relative w-full h-[46vh] max-h-[380px] sm:h-[40vh] sm:max-h-[440px] lg:h-[58vh] lg:max-h-[660px] lg:-mr-10 lg:translate-x-6">
             <img
               src={heroImage}
-              className="relative z-10 h-full w-full object-contain object-top scale-110 sm:scale-100 animate-hero-float"
+              className="relative z-10 h-full w-full object-contain object-top scale-110 sm:scale-100 -translate-y-3 sm:translate-y-0 animate-hero-float"
               alt="Pullz.gg hero"
               loading="eager"
             />
