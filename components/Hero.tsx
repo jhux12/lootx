@@ -1,5 +1,5 @@
 import React from 'react';
-import heroImage from '../assets/hero.gif';
+import heroImage from '../assets/hero.png';
 import pullzPattern from '../assets/pullz-p.PNG';
 import { useGame } from '../context/GameContext';
 
@@ -22,7 +22,7 @@ export const Hero: React.FC = () => {
   };
 
   return (
-    <section className="relative w-full overflow-visible rounded-[32px] border border-white/5 bg-gradient-to-br from-[#0b101a] via-[#0d121e] to-[#0b1323] px-6 py-12 sm:px-10 lg:px-14 lg:py-16 h-[60vh] min-h-[420px] max-h-[700px]">
+    <section className="relative w-full overflow-hidden rounded-[32px] border border-white/5 bg-gradient-to-br from-[#0b101a] via-[#0d121e] to-[#0b1323] px-6 py-12 sm:px-10 lg:px-14 lg:py-16 h-[60vh] min-h-[420px] max-h-[700px] lg:overflow-visible">
       <div className="pointer-events-none absolute inset-0 rounded-[32px] overflow-hidden">
         <div
           className="absolute -inset-[35%] opacity-[0.06] blur-[2px] rotate-[-12deg] bg-repeat animate-hero-drift"
@@ -55,8 +55,7 @@ export const Hero: React.FC = () => {
           </div>
         </div>
         <div className="relative flex h-full items-center justify-center">
-          <div className="relative h-[42vh] min-h-[260px] max-h-[520px] w-full lg:h-[58vh] lg:min-h-[420px] lg:max-h-[660px] lg:-mr-10 lg:translate-x-6">
-            <div className="absolute inset-0 rounded-[28px] border border-white/10 bg-[#0b0e14] shadow-[0_30px_80px_-45px_rgba(0,0,0,0.9)]" />
+          <div className="relative h-[34vh] min-h-[220px] max-h-[380px] w-full sm:h-[40vh] sm:min-h-[260px] sm:max-h-[440px] lg:h-[58vh] lg:min-h-[420px] lg:max-h-[660px] lg:-mr-10 lg:translate-x-6">
             <img
               src={heroImage}
               className="relative z-10 h-full w-full object-contain animate-hero-float"
