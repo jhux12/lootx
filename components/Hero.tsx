@@ -22,7 +22,7 @@ export const Hero: React.FC = () => {
   };
 
   return (
-    <section className="relative w-full overflow-hidden lg:overflow-visible rounded-[32px] border border-white/5 bg-gradient-to-br from-[#0b101a] via-[#0d121e] to-[#0b1323] px-6 py-8 sm:py-12 sm:px-10 lg:px-14 lg:py-16 h-[60vh] min-h-[420px] max-h-[700px]">
+    <section className="relative w-full overflow-hidden lg:overflow-visible rounded-[32px] border border-white/5 bg-gradient-to-br from-[#0b101a] via-[#0d121e] to-[#0b1323] px-6 py-8 sm:py-12 sm:px-10 lg:px-14 lg:py-16 h-[78vh] min-h-[560px] max-h-[900px] sm:h-[60vh] sm:min-h-[420px] sm:max-h-[700px]">
       <div className="pointer-events-none absolute inset-0 rounded-[32px] overflow-hidden">
         <div
           className="absolute -inset-[35%] opacity-[0.06] blur-[2px] rotate-[-12deg] bg-repeat animate-hero-drift"
@@ -31,8 +31,8 @@ export const Hero: React.FC = () => {
         <div className="absolute -top-28 left-6 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
         <div className="absolute -bottom-24 right-0 h-80 w-80 rounded-full bg-cyan-500/15 blur-3xl" />
       </div>
-      <div className="relative z-10 mx-auto grid h-full max-w-6xl items-center gap-10 lg:grid-cols-[1.05fr_1fr]">
-        <div className="space-y-6">
+<div className="relative z-10 mx-auto grid h-full max-w-6xl items-start gap-10 lg:items-center lg:grid-cols-[1.05fr_1fr]">
+  <div className="space-y-6">
           <div className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-200/70">
             Mystery Box Website
           </div>
