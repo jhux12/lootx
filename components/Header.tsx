@@ -227,17 +227,98 @@ export const Header: React.FC = () => {
         .balance-sparkle-active {
           animation: balance-sparkle 1.2s ease-out;
         }
+
+        .mobile-menu-button {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: transparent;
+          transition: background-color 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            border-color 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .mobile-menu-button:hover {
+          background-color: rgba(255, 255, 255, 0.04);
+          border-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .mobile-menu-icon {
+          width: 22px;
+          height: 16px;
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .mobile-menu-line {
+          position: absolute;
+          left: 0;
+          right: 0;
+          height: 2px;
+          border-radius: 999px;
+          background-color: rgba(248, 250, 252, 0.95);
+          transform-origin: center;
+          transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            opacity 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            box-shadow 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .mobile-menu-line-top {
+          transform: translateY(-6px);
+        }
+
+        .mobile-menu-line-middle {
+          transform: translateY(0);
+        }
+
+        .mobile-menu-line-bottom {
+          transform: translateY(6px);
+        }
+
+        .mobile-menu-button-open .mobile-menu-line-top {
+          transform: translateY(0) rotate(45deg);
+          box-shadow: 0 0 8px rgba(34, 211, 238, 0.55);
+        }
+
+        .mobile-menu-button-open .mobile-menu-line-middle {
+          opacity: 0;
+          transform: translateY(0) scaleX(0.6);
+        }
+
+        .mobile-menu-button-open .mobile-menu-line-bottom {
+          transform: translateY(0) rotate(-45deg);
+          box-shadow: 0 0 8px rgba(168, 85, 247, 0.55);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .mobile-menu-line,
+          .mobile-menu-button {
+            transition: none;
+          }
+        }
       `}</style>
 
       <header className="fixed top-0 left-0 right-0 z-50 w-full flex items-center justify-between px-4 md:px-6 py-3 min-h-[72px] md:min-h-[80px] lg:min-h-[88px] bg-[#080b14]/95 border-b border-gray-800/50 backdrop-blur">
         <div className="flex items-center gap-4 lg:gap-10">
           
           {/* Mobile Menu Button */}
-          <button 
-            className="lg:hidden text-gray-400 hover:text-white"
+          <button
+            className={`mobile-menu-button lg:hidden ${isMobileMenuOpen ? 'mobile-menu-button-open' : ''}`}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle mobile menu"
+            aria-expanded={isMobileMenuOpen}
           >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            <span className="mobile-menu-icon" aria-hidden="true">
+              <span className="mobile-menu-line mobile-menu-line-top" />
+              <span className="mobile-menu-line mobile-menu-line-middle" />
+              <span className="mobile-menu-line mobile-menu-line-bottom" />
+            </span>
           </button>
 
           {/* Logo */}
