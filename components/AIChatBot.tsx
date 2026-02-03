@@ -1,14 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Loader2, Sparkles } from 'lucide-react';
-import { GoogleGenAI, Chat } from "@google/genai";
 
 interface Message {
   id: string;
   role: 'user' | 'model';
   text: string;
+  sources?: string[];
 }
-
-const GEMINI_API_KEY = "AIzaSyCB04Pk1auWCF-hU6Gnmm3gRDxhpZOylwU";
 
 type ChatVariant = 'sidebar' | 'modal';
 
@@ -28,7 +26,6 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [chatSession, setChatSession] = useState<Chat | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -39,38 +36,33 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
     scrollToBottom();
   }, [messages, isOpen]);
 
-  useEffect(() => {
-      // Initialize Gemini Chat
-      try {
-        const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-        const chat = ai.chats.create({
-            model: 'gemini-2.0-flash',
-            config: {
-                systemInstruction: "You are the Pullz Assistant for Pullz.gg, a premier mystery box and case battle platform. Your tone is professional, helpful, and slightly gamer-centric. \n\nKey Knowledge:\n- Pullz.gg allows users to open mystery boxes containing real-world items (simulated).\n- Case Battles: Users compete against each other. The highest total value wins everything.\n- Case Lab: Users can create custom cases with specific odds.\n- Provably Fair: All outcomes are random and verifiable.\n- Currency: Users use site coins (simulated).\n\nDo not answer questions unrelated to Pullz.gg, gaming, or general support. Keep answers concise."
-            }
-        });
-        setChatSession(chat);
-      } catch (error) {
-          console.error("Failed to init AI", error);
-      }
-  }, []);
-
   const handleSend = async () => {
-      if (!input.trim() || !chatSession) return;
+      if (!input.trim()) return;
 
       const userMsg: Message = { id: Date.now().toString(), role: 'user', text: input };
-      setMessages(prev => [...prev, userMsg]);
+      const nextMessages = [...messages, userMsg];
+      setMessages(nextMessages);
       setInput('');
       setIsLoading(true);
 
       try {
-          const result = await chatSession.sendMessage({ message: userMsg.text });
-          const text = result.text; // Access .text property directly
+          const response = await fetch('/api/support-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: nextMessages.map(({ role, text }) => ({ role, text }))
+            })
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data?.error || 'Support chat error');
+          }
           
           const aiMsg: Message = { 
               id: (Date.now() + 1).toString(), 
               role: 'model', 
-              text: text || "I'm having trouble connecting to the mainframe. Try again?" 
+              text: data?.reply || "I'm having trouble connecting to the mainframe. Try again?",
+              sources: Array.isArray(data?.usedSources) ? data.usedSources : undefined
           };
           setMessages(prev => [...prev, aiMsg]);
       } catch (error) {
@@ -127,7 +119,12 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
             {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-wrap break-words ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-[#1a2130] text-gray-200 rounded-tl-none border border-gray-700'}`}>
-                        {msg.text}
+                        <div>{msg.text}</div>
+                        {msg.role === 'model' && msg.sources?.length ? (
+                          <div className="mt-2 text-[10px] text-gray-400 border-t border-gray-700/60 pt-2">
+                            Sources used: {msg.sources.join(', ')}
+                          </div>
+                        ) : null}
                     </div>
                 </div>
             ))}

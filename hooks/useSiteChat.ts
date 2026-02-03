@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { addDoc, collection, deleteDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, Timestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ChatMessage, User } from '../types';
 import { useGame } from '../context/GameContext';
 
-const GEMINI_API_KEY = "AIzaSyCB04Pk1auWCF-hU6Gnmm3gRDxhpZOylwU";
 const CHAT_EXPIRATION_MS = 20 * 60 * 1000;
 
 type ModerationResult = {
@@ -55,58 +53,16 @@ const formatRelativeTime = (createdAt: number, now: number) => {
 };
 
 const runModeration = async (message: string): Promise<ModerationResult> => {
-  try {
-    const localCheck = sanitizeProfanity(message);
-    if (localCheck.found) {
-      return {
-        safe: false,
-        reason: 'Contains profanity',
-        sanitizedText: localCheck.sanitizedText
-      };
-    }
-
-    const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-    const response = await genAI.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `You are a safety filter that only returns JSON. 
-- If the message is acceptable, respond with {"safe":true,"sanitizedText":"original message"}.
-- If the message contains profanity, hate speech, harassment, sexual content, violence, self-harm, spam, scams, or unsafe content, respond with {"safe":false,"reason":"brief reason","sanitizedText":"message with unsafe words replaced by asterisks"}.
-- Always include the sanitizedText field. Do not add commentary or additional keys.
-Message: """${message}"""`
-            }
-          ]
-        }
-      ],
-      config: {
-        responseMimeType: 'application/json'
-      }
-    });
-
-    const raw = response.text ?? response.response?.text?.() ?? '{}';
-    const parsed = JSON.parse(raw) as Partial<ModerationResult>;
+  const localCheck = sanitizeProfanity(message);
+  if (localCheck.found) {
     return {
-      safe: parsed.safe !== false,
-      reason: parsed.reason,
-      sanitizedText: parsed.sanitizedText?.trim() || message
+      safe: false,
+      reason: 'Contains profanity',
+      sanitizedText: localCheck.sanitizedText
     };
-  } catch (error) {
-    console.error('Gemini moderation failed, allowing message by default', error);
-    const fallback = sanitizeProfanity(message);
-    if (fallback.found) {
-      return {
-        safe: false,
-        reason: 'Contains profanity',
-        sanitizedText: fallback.sanitizedText
-      };
-    }
-
-    return { safe: true, sanitizedText: message };
   }
+
+  return { safe: true, sanitizedText: message };
 };
 
 export const useSiteChat = () => {
