@@ -9,6 +9,7 @@ import { FreeRainBanner } from './FreeRainBanner';
 export const ChatSidebar: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'chat' | 'support' | 'users'>('chat');
   const [messageText, setMessageText] = useState('');
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playSound } = useSound();
   const { isAuthenticated, setView } = useGame();
@@ -20,6 +21,10 @@ export const ChatSidebar: React.FC = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages.length]);
+
+  useEffect(() => {
+    setIsCollapsed(!isAuthenticated);
+  }, [isAuthenticated]);
 
   const handleSend = async () => {
     if (!messageText.trim() || isSending) return;
@@ -44,123 +49,163 @@ export const ChatSidebar: React.FC = () => {
   );
 
   return (
-    <div className="w-80 bg-[#11141d] border-l border-gray-800 flex flex-col fixed right-0 hidden xl:flex z-40 top-[72px] md:top-[80px] lg:top-[88px] h-[calc(100vh-72px)] md:h-[calc(100vh-80px)] lg:h-[calc(100vh-88px)]">
-      
-      {/* Sidebar Header */}
-      <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-gray-300 font-bold text-sm cursor-pointer hover:text-white" onClick={() => playSound('click')}>
-          <Globe className="w-4 h-4" />
-          <span>English</span>
+    <div
+      className={`fixed right-0 top-[72px] z-40 hidden h-[calc(100vh-72px)] flex-col border-l border-white/10 bg-[#0f131c]/90 backdrop-blur xl:flex md:top-[80px] md:h-[calc(100vh-80px)] lg:top-[88px] lg:h-[calc(100vh-88px)] ${
+        isCollapsed ? 'w-16' : 'w-72'
+      }`}
+    >
+      <div className="flex h-full w-full flex-col">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+          <button
+            onClick={() => {
+              playSound('click');
+              setIsCollapsed((prev) => !prev);
+            }}
+            className="flex items-center gap-2 text-xs font-semibold text-gray-400 transition hover:text-white"
+            aria-label={isCollapsed ? 'Expand chat' : 'Collapse chat'}
+          >
+            <MessageSquare className="h-4 w-4" />
+            {!isCollapsed && <span>Chat</span>}
+          </button>
+          {!isCollapsed && (
+            <div className="flex gap-2 text-gray-500">
+              <div className="mt-1.5 h-2 w-2 rounded-full bg-green-500" />
+              <span className="text-xs font-mono">1,420 Online</span>
+            </div>
+          )}
         </div>
-        <div className="flex gap-2 text-gray-500">
-           <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5"></div>
-           <span className="text-xs font-mono">1,420 Online</span>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="grid grid-cols-3 bg-[#0c1019] border-b border-gray-800">
-        <TabButton id="chat" icon={<MessageSquare className="w-3 h-3" />} label="Chat" />
-        <TabButton id="support" icon={<Bot className="w-3 h-3" />} label="Support" />
-        <TabButton id="users" icon={<Users className="w-3 h-3" />} label="Users" />
-      </div>
-
-      {activeTab === 'chat' && (
-        <>
-          {/* Rain Promotion */}
-          <FreeRainBanner />
-
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-4" ref={scrollRef}>
-            {messages.length === 0 && (
-              <div className="text-center text-gray-500 text-sm py-6 border border-dashed border-gray-800 rounded-xl">
-                No messages yet. Start the conversation!
+        {isCollapsed ? (
+          <div className="flex flex-1 flex-col items-center justify-end gap-3 pb-6 text-gray-500">
+            <button
+              onClick={() => {
+                playSound('click');
+                setIsCollapsed(false);
+              }}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:border-white/30 hover:text-white"
+              aria-label="Open chat sidebar"
+            >
+              <MessageSquare className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="px-4 pb-2 pt-3">
+              <div
+                className="flex items-center gap-2 text-xs font-semibold text-gray-400 transition hover:text-white"
+                onClick={() => playSound('click')}
+              >
+                <Globe className="h-4 w-4" />
+                <span>English</span>
               </div>
-            )}
-            {messages.map((msg) => (
-              <div key={msg.id} className="group flex gap-3">
-                <img 
-                    src={msg.user.avatar} 
-                    alt={msg.user.name} 
-                    className="w-8 h-8 rounded-lg mt-1 border border-gray-700 cursor-pointer" 
-                    onClick={() => openProfile(msg.user.id)}
-                />
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                        <button 
-                            onClick={() => openProfile(msg.user.id)}
-                            className={`text-xs font-bold ${msg.user.name === 'ZEUS' ? 'text-green-400' : 'text-gray-300'} hover:underline cursor-pointer`}
-                        >
-                            {msg.user.name}
-                        </button>
-                        <span className="text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {msg.timestamp}
-                        </span>
+            </div>
+
+            {/* Tabs */}
+            <div className="grid grid-cols-3 border-b border-white/10 bg-[#0c1019]">
+              <TabButton id="chat" icon={<MessageSquare className="w-3 h-3" />} label="Chat" />
+              <TabButton id="support" icon={<Bot className="w-3 h-3" />} label="Support" />
+              <TabButton id="users" icon={<Users className="w-3 h-3" />} label="Users" />
+            </div>
+
+            {activeTab === 'chat' && (
+              <>
+                {/* Rain Promotion */}
+                <FreeRainBanner />
+
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-4" ref={scrollRef}>
+                  {messages.length === 0 && (
+                    <div className="text-center text-gray-500 text-sm py-6 border border-dashed border-gray-800 rounded-xl">
+                      No messages yet. Start the conversation!
                     </div>
-                    <div className={`p-2 rounded-r-lg rounded-bl-lg text-sm font-medium leading-snug break-words ${msg.isSystem ? 'bg-amber-500/10 text-amber-200 border border-amber-500/30' : 'bg-[#1a202c] text-gray-300'}`}>
-                       {msg.message.split(' ').map((word, i) => 
-                          word.startsWith('@') ? <span key={i} className="text-brand-purple cursor-pointer hover:underline">{word} </span> : word + ' '
-                       )}
+                  )}
+                  {messages.map((msg) => (
+                    <div key={msg.id} className="group flex gap-3">
+                      <img 
+                          src={msg.user.avatar} 
+                          alt={msg.user.name} 
+                          className="w-8 h-8 rounded-lg mt-1 border border-gray-700 cursor-pointer" 
+                          onClick={() => openProfile(msg.user.id)}
+                      />
+                      <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                              <button 
+                                  onClick={() => openProfile(msg.user.id)}
+                                  className={`text-xs font-bold ${msg.user.name === 'ZEUS' ? 'text-green-400' : 'text-gray-300'} hover:underline cursor-pointer`}
+                              >
+                                  {msg.user.name}
+                              </button>
+                              <span className="text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {msg.timestamp}
+                              </span>
+                          </div>
+                          <div className={`p-2 rounded-r-lg rounded-bl-lg text-sm font-medium leading-snug break-words ${msg.isSystem ? 'bg-amber-500/10 text-amber-200 border border-amber-500/30' : 'bg-[#1a202c] text-gray-300'}`}>
+                             {msg.message.split(' ').map((word, i) => 
+                                word.startsWith('@') ? <span key={i} className="text-brand-purple cursor-pointer hover:underline">{word} </span> : word + ' '
+                             )}
+                          </div>
+                      </div>
                     </div>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
 
-          {/* Chat Input */}
-          <div className="p-4 bg-[#11141d] border-t border-gray-800">
-            <div className="relative">
-                <input 
-                    type="text" 
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    placeholder={isChatDisabled ? 'Chat disabled' : isAuthenticated ? 'Your message' : 'Log in to chat'} 
-                    className="w-full bg-[#0b0e14] border border-gray-700 text-gray-200 text-sm rounded-lg pl-4 pr-10 py-3 focus:outline-none focus:border-brand-purple transition-colors"
-                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                    disabled={isChatDisabled}
-                />
-                <button 
-                    onClick={handleSend} 
-                    disabled={isChatDisabled || isSending}
-                    className="absolute right-2 top-2 p-1.5 bg-brand-purple rounded-md text-white hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <Send className="w-4 h-4" />
-                </button>
-            </div>
-            {notice && (
-              <div className="mt-3 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs text-amber-100 flex items-center gap-2">
-                <Shield className="w-4 h-4" /> {notice}
+                {/* Chat Input */}
+                <div className="p-4 bg-[#11141d] border-t border-gray-800">
+                  <div className="relative">
+                      <input 
+                          type="text" 
+                          value={messageText}
+                          onChange={(e) => setMessageText(e.target.value)}
+                          placeholder={isChatDisabled ? 'Chat disabled' : isAuthenticated ? 'Your message' : 'Log in to chat'} 
+                          className="w-full bg-[#0b0e14] border border-gray-700 text-gray-200 text-sm rounded-lg pl-4 pr-10 py-3 focus:outline-none focus:border-brand-purple transition-colors"
+                          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                          disabled={isChatDisabled}
+                      />
+                      <button 
+                          onClick={handleSend} 
+                          disabled={isChatDisabled || isSending}
+                          className="absolute right-2 top-2 p-1.5 bg-brand-purple rounded-md text-white hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                          <Send className="w-4 h-4" />
+                      </button>
+                  </div>
+                  {notice && (
+                    <div className="mt-3 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs text-amber-100 flex items-center gap-2">
+                      <Shield className="w-4 h-4" /> {notice}
+                    </div>
+                  )}
+                  {!isChatDisabled && isAuthenticated && warningsRemaining < 3 && (
+                    <div className="mt-2 text-[11px] text-gray-500">
+                      Warnings remaining before chat lock: <span className="text-white font-semibold">{warningsRemaining}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-4 mt-3 text-xs font-bold text-gray-500">
+                      <button className="flex items-center gap-1 hover:text-gray-300 transition-colors" onClick={() => playSound('click')}>
+                          <Users className="w-3 h-3" /> Rules
+                      </button>
+                      <button className="flex items-center gap-1 hover:text-gray-300 transition-colors" onClick={() => playSound('click')}>
+                          <MessageSquare className="w-3 h-3" /> Emojis
+                      </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'support' && (
+              <div className="flex-1 min-h-0 p-4">
+                <AIChatBot isOpen variant="sidebar" />
               </div>
             )}
-            {!isChatDisabled && isAuthenticated && warningsRemaining < 3 && (
-              <div className="mt-2 text-[11px] text-gray-500">
-                Warnings remaining before chat lock: <span className="text-white font-semibold">{warningsRemaining}</span>
+
+            {activeTab === 'users' && (
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-500 text-sm px-6 text-center">
+                <Users className="w-6 h-6 mb-2" />
+                <p>View online users and their recent wins coming soon.</p>
               </div>
             )}
-            <div className="flex items-center gap-4 mt-3 text-xs font-bold text-gray-500">
-                <button className="flex items-center gap-1 hover:text-gray-300 transition-colors" onClick={() => playSound('click')}>
-                    <Users className="w-3 h-3" /> Rules
-                </button>
-                <button className="flex items-center gap-1 hover:text-gray-300 transition-colors" onClick={() => playSound('click')}>
-                    <MessageSquare className="w-3 h-3" /> Emojis
-                </button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {activeTab === 'support' && (
-        <div className="flex-1 min-h-0 p-4">
-          <AIChatBot isOpen variant="sidebar" />
-        </div>
-      )}
-
-      {activeTab === 'users' && (
-        <div className="flex-1 flex flex-col items-center justify-center text-gray-500 text-sm px-6 text-center">
-          <Users className="w-6 h-6 mb-2" />
-          <p>View online users and their recent wins coming soon.</p>
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

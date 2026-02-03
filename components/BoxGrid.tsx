@@ -19,13 +19,14 @@ export const BoxGrid: React.FC = () => {
   const visibleBoxes = displayBoxes.slice(0, visibleCount);
   const canViewMore = visibleCount < displayBoxes.length;
   return (
-    <section className="mt-12 px-4 md:px-0">
+    <section id="popular-boxes" className="mt-14 px-4 md:px-0 scroll-mt-32">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
-          <Boxes className="w-5 h-5 text-sky-400" /> Popular Mystery Boxes
-        </h3>
+        <div className="flex items-center gap-2 text-left">
+          <Boxes className="w-5 h-5 text-sky-400" />
+          <h2 className="text-xl font-semibold text-white">Popular Mystery Boxes</h2>
+        </div>
         <button
-          className="w-full sm:w-auto px-4 py-2 bg-brand-card hover:bg-gray-700 rounded-lg text-sm font-bold text-gray-300 transition-colors"
+          className="w-full sm:w-auto px-4 py-2 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-gray-200 transition hover:border-white/30 hover:text-white"
           onClick={() => {
             playSound('click');
             setView({ type: 'BOXES' });
@@ -35,7 +36,7 @@ export const BoxGrid: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {visibleBoxes.map((box) => (
           <BoxCard
             key={box.id}
@@ -51,7 +52,7 @@ export const BoxGrid: React.FC = () => {
       <div className="mt-6 flex flex-wrap gap-2">
         {canViewMore && (
           <button
-            className="px-4 py-2 bg-brand-card hover:bg-gray-700 rounded-lg text-sm font-bold text-gray-300 transition-colors"
+            className="px-4 py-2 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-gray-200 transition hover:border-white/30 hover:text-white"
             onClick={() => {
               playSound('click');
               setVisibleCount((count) => Math.min(count + perPage, displayBoxes.length));
