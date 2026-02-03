@@ -73,7 +73,7 @@ export const Hero: React.FC = () => {
         }
         @keyframes hero-float {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
+          50% { transform: translateY(-6px); }
         }
         .animate-hero-drift {
           animation: hero-drift 38s ease-in-out infinite;
