@@ -157,7 +157,7 @@ export default async function handler(req, res) {
       }
     });
 
-    return sendJson(res, 200, { sessionId: session.id });
+    return sendJson(res, 200, { sessionId: session.id, shipmentBatchId });
   } catch (error) {
     const status = error?.status;
     if (status) {

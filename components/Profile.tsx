@@ -9,6 +9,7 @@ import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, Alert
 import { auth } from '../firebase';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const SHIPPING_BATCH_STORAGE_KEY = 'lootx_shipping_batch';
 
 const AVATAR_PRESETS = [
     'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
@@ -108,6 +109,66 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
     Object.values(sellOfferTimersRef.current).forEach((timerId) => window.clearTimeout(timerId));
     sellOfferTimersRef.current = {};
   }, []);
+
+  useEffect(() => {
+    if (!isOwnProfile) return;
+    const params = new URLSearchParams(window.location.search);
+    const shippingStatus = params.get('shipping');
+    if (!shippingStatus) return;
+
+    const clearUrlParams = () => {
+      params.delete('shipping');
+      params.delete('session_id');
+      const nextQuery = params.toString();
+      const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, '', nextUrl);
+    };
+
+    const clearStoredBatch = () => {
+      window.sessionStorage.removeItem(SHIPPING_BATCH_STORAGE_KEY);
+      setSelectedShipments([]);
+      setShowShippingReview(false);
+    };
+
+    if (shippingStatus === 'cancel') {
+      const shipmentBatchId = window.sessionStorage.getItem(SHIPPING_BATCH_STORAGE_KEY);
+      if (shipmentBatchId && auth.currentUser) {
+        const cancelShipment = async () => {
+          try {
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) return;
+            const response = await fetch('/api/cancel-shipping-checkout-session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({ shipmentBatchId })
+            });
+            if (!response.ok) {
+              const message = await response.text();
+              throw new Error(message || 'Unable to cancel shipment.');
+            }
+          } catch (error) {
+            console.error('Failed to cancel cash shipping checkout', error);
+          } finally {
+            clearStoredBatch();
+            clearUrlParams();
+          }
+        };
+        void cancelShipment();
+        return;
+      }
+      clearStoredBatch();
+      clearUrlParams();
+      return;
+    }
+
+    if (shippingStatus === 'success') {
+      clearStoredBatch();
+      clearUrlParams();
+    }
+  }, [isOwnProfile]);
 
   const profileTabs = useMemo(
     () => ([
@@ -351,6 +412,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
         throw new Error(message || 'Unable to start checkout.');
       }
       const data = await response.json();
+      if (typeof data.shipmentBatchId === 'string') {
+        window.sessionStorage.setItem(SHIPPING_BATCH_STORAGE_KEY, data.shipmentBatchId);
+      }
       const stripe = await stripePromise;
       if (!stripe) {
         throw new Error('Stripe failed to initialize.');
