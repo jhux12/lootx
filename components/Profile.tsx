@@ -5,7 +5,7 @@ import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
 import { getSellBackValue } from '../utils/sellBack';
 import { CoinAmount } from './CoinAmount';
-import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Upload, Trash2, ExternalLink, Search, Package } from 'lucide-react';
+import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Upload, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight } from 'lucide-react';
 import { auth } from '../firebase';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -29,11 +29,10 @@ interface ProfileProps {
   initialTab?: ProfileTab;
 }
 
-export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => {
+export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem, stripeSettings, setShowLoginModal } = useGame();
   const { playSound } = useSound();
-  
-  const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
+
   const [inventoryFilter, setInventoryFilter] = useState<'inventory' | 'processing' | 'shipped'>('inventory');
   const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
   const [communitySearch, setCommunitySearch] = useState('');
@@ -46,12 +45,17 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sellOfferTimersRef = useRef<Record<string, number>>({});
+  const tabScrollRef = useRef<HTMLDivElement>(null);
+  const [tabScrollState, setTabScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
 
   const selectedUserId = view.type === 'PROFILE' ? view.userId : undefined;
   const profileUser = selectedUserId ? users.find((u) => u.id === selectedUserId) : user;
   const isOwnProfile = !selectedUserId || selectedUserId === user.id;
   const displayUser = profileUser || user;
   const canViewTopPulls = isOwnProfile || !!displayUser.topPullsPublic;
+  const defaultTab = isOwnProfile ? 'inventory' : 'topPulls';
+
+  const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab ?? defaultTab);
   
   const viewedFollowerIds = Array.isArray(displayUser.followers) ? displayUser.followers : [];
   const viewedFollowers = users.filter((u) => viewedFollowerIds.includes(u.id));
@@ -97,8 +101,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
   }, [displayUser.id]);
 
   useEffect(() => {
-      setActiveTab(initialTab);
-  }, [initialTab, displayUser.id]);
+      setActiveTab(initialTab ?? defaultTab);
+  }, [initialTab, defaultTab, displayUser.id]);
 
   useEffect(() => () => {
     Object.values(sellOfferTimersRef.current).forEach((timerId) => window.clearTimeout(timerId));
@@ -119,9 +123,32 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
 
   useEffect(() => {
     if (!visibleProfileTabs.some((tab) => tab.id === activeTab)) {
-      setActiveTab('topPulls');
+      setActiveTab(visibleProfileTabs[0]?.id ?? defaultTab);
     }
-  }, [activeTab, visibleProfileTabs]);
+  }, [activeTab, defaultTab, visibleProfileTabs]);
+
+  // Scroll hint logic: show gradient fades + chevrons only when tabs overflow horizontally.
+  useEffect(() => {
+    const container = tabScrollRef.current;
+    if (!container) return;
+
+    const updateScrollState = () => {
+      const maxScrollLeft = container.scrollWidth - container.clientWidth;
+      setTabScrollState({
+        canScrollLeft: container.scrollLeft > 4,
+        canScrollRight: maxScrollLeft > 0 && container.scrollLeft < maxScrollLeft - 4
+      });
+    };
+
+    updateScrollState();
+    container.addEventListener('scroll', updateScrollState, { passive: true });
+    window.addEventListener('resize', updateScrollState);
+
+    return () => {
+      container.removeEventListener('scroll', updateScrollState);
+      window.removeEventListener('resize', updateScrollState);
+    };
+  }, [visibleProfileTabs.length]);
 
   const normalizeItems = (items: typeof inventory) =>
     (items ?? []).map((item, index) => {
@@ -509,19 +536,45 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
             </div>
 
             {/* Main Tabs */}
-            <div className="flex items-center gap-2 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-full max-w-full overflow-x-auto whitespace-nowrap">
-              {visibleProfileTabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-                  >
-                    <Icon className="w-4 h-4" /> {tab.label}
-                  </button>
-                );
-              })}
+            <div className="relative w-full max-w-full">
+              <div
+                ref={tabScrollRef}
+                className="flex items-center gap-2 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-full max-w-full overflow-x-auto whitespace-nowrap scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {visibleProfileTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all snap-start ${activeTab === tab.id ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                      <Icon className="w-4 h-4" /> {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div
+                className={`pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[#0b0e14] to-transparent transition-opacity ${
+                  tabScrollState.canScrollLeft ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+              <div
+                className={`pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[#0b0e14] to-transparent transition-opacity ${
+                  tabScrollState.canScrollRight ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+              <ChevronLeft
+                className={`pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 transition-opacity ${
+                  tabScrollState.canScrollLeft ? 'opacity-80' : 'opacity-0'
+                }`}
+              />
+              <ChevronRight
+                className={`pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 transition-opacity ${
+                  tabScrollState.canScrollRight ? 'opacity-80' : 'opacity-0'
+                }`}
+              />
             </div>
           </div>
         </div>
