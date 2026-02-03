@@ -42,18 +42,18 @@ export const LiveTicker: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-20 bg-[#0f1219] overflow-hidden border-b border-gray-800 flex items-center">
+    <div className="relative w-full h-16 bg-[#0c111a] overflow-hidden flex items-center">
       {/* Gradient fade overlays */}
-      <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-brand-bg to-transparent z-10 pointer-events-none"></div>
-      <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-brand-bg to-transparent z-10 pointer-events-none"></div>
+      <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#0c111a] to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#0c111a] to-transparent z-10 pointer-events-none" />
 
-      <div className="flex gap-4 px-4 ticker-animation whitespace-nowrap">
+      <div className="flex gap-3 px-4 ticker-animation whitespace-nowrap">
         {drops.map((drop, idx) => (
           <div 
             key={`${drop.id}-${idx}`} 
             className={`
-              flex-shrink-0 w-40 h-14 bg-brand-card rounded flex items-center p-2 gap-3 min-w-0
-              border-b-2 transition-transform hover:scale-105 cursor-pointer
+              flex-shrink-0 w-36 h-12 bg-brand-card/80 rounded-xl flex items-center p-2 gap-3 min-w-0
+              border-b-2 transition-transform hover:scale-[1.02] cursor-pointer
               ${getRarityColor(drop.rarity)}
             `}
           >
