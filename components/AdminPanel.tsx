@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker } from 'lucide-react';
+import { collection, deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
+import { db } from '../firebase';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -292,6 +294,32 @@ export const AdminPanel: React.FC = () => {
       });
   };
 
+  const mapAdminInventoryDoc = (docId: string, data: Record<string, any>): InventoryItem => {
+      const rarity = (data.rarity ?? 'common') as InventoryItem['rarity'];
+      const obtainedAt = Number(data.obtainedAt ?? Date.now());
+      const status = (data.status ?? 'available') as InventoryItem['status'];
+      const history = Array.isArray(data.history) ? data.history : [];
+
+      return {
+          id: data.prizeId ?? docId,
+          instanceId: docId,
+          name: data.name ?? 'Mystery Item',
+          price: Number(data.value ?? data.price ?? 0),
+          image: data.image ?? 'https://picsum.photos/200',
+          rarity,
+          chance: 0,
+          color: data.color ?? rarityColorMap[rarity] ?? '#9ca3af',
+          obtainedAt,
+          status,
+          locked: data.locked ?? false,
+          size: typeof data.size === 'string' ? data.size : undefined,
+          provenance: data.provenance ?? (data.boxId ? { sourceType: 'case_open', sourceId: data.boxId } : undefined),
+          redeemable: data.redeemable ?? true,
+          sellBackRate: Number(data.sellBackRate ?? 0),
+          history
+      };
+  };
+
   const shipmentRecords = useMemo(() => {
       return shipments.map((shipment, index) => {
           const shipmentUser = users.find((profile) => profile.id === shipment.uid);
@@ -355,7 +383,9 @@ export const AdminPanel: React.FC = () => {
       setInventoryState((prev) => {
           const next = { ...prev };
           users.forEach((profile, index) => {
-              next[profile.id] = seedInventory(profile.inventory, profile.id, index);
+              if (!next[profile.id] && profile.inventory) {
+                  next[profile.id] = seedInventory(profile.inventory, profile.id, index);
+              }
           });
           return next;
       });
@@ -364,6 +394,21 @@ export const AdminPanel: React.FC = () => {
   useEffect(() => {
       setBonusDraft(bonusSettings);
   }, [bonusSettings]);
+
+  useEffect(() => {
+      if (!selectedUserId) return;
+      const inventoryRef = collection(db, 'users', selectedUserId, 'inventory');
+      const unsubscribe = onSnapshot(inventoryRef, (snapshot) => {
+          const loaded = snapshot.docs
+              .map((docSnap) => mapAdminInventoryDoc(docSnap.id, docSnap.data()))
+              .sort((a, b) => b.obtainedAt - a.obtainedAt);
+          setInventoryState((prev) => ({ ...prev, [selectedUserId]: loaded }));
+      }, (error) => {
+          console.error('Failed to load user inventory from Firebase', error);
+      });
+
+      return () => unsubscribe();
+  }, [selectedUserId]);
 
   useEffect(() => {
       setStripeSettingsDraft({
@@ -996,16 +1041,17 @@ export const AdminPanel: React.FC = () => {
       setBalanceDraft('');
   };
 
-  const handleAddInventoryItem = () => {
+  const handleAddInventoryItem = async () => {
       if (!selectedUserId) return;
       const name = inventoryDraft.name.trim();
       const price = Number(inventoryDraft.price);
       if (!name || !Number.isFinite(price)) return;
       const rarity = inventoryDraft.rarity as InventoryItem['rarity'];
       const now = Date.now();
+      const instanceId = makeId('inv-instance');
       const newItem: InventoryItem = {
           id: makeId('inv'),
-          instanceId: makeId('inv-instance'),
+          instanceId,
           name,
           price,
           image: inventoryDraft.image.trim() || 'https://picsum.photos/200',
@@ -1025,6 +1071,25 @@ export const AdminPanel: React.FC = () => {
               }
           ]
       };
+
+      try {
+          await setDoc(doc(db, 'users', selectedUserId, 'inventory', instanceId), {
+              name: newItem.name,
+              value: newItem.price,
+              image: newItem.image,
+              rarity: newItem.rarity,
+              status: newItem.status,
+              obtainedAt: newItem.obtainedAt,
+              locked: newItem.locked,
+              history: newItem.history ?? [],
+              provenance: newItem.provenance ?? null,
+              redeemable: newItem.redeemable ?? true,
+              sellBackRate: newItem.sellBackRate ?? 0
+          });
+      } catch (error) {
+          console.error('Failed to add inventory item to Firebase', error);
+      }
+
       updateInventoryRecords(selectedUserId, (items) => [newItem, ...items]);
       logAdminAction(
           selectedUserId,
@@ -1042,7 +1107,12 @@ export const AdminPanel: React.FC = () => {
       });
   };
 
-  const handleRemoveInventoryItem = (targetUserId: string, instanceId: string) => {
+  const handleRemoveInventoryItem = async (targetUserId: string, instanceId: string) => {
+      try {
+          await deleteDoc(doc(db, 'users', targetUserId, 'inventory', instanceId));
+      } catch (error) {
+          console.error('Failed to remove inventory item from Firebase', error);
+      }
       updateInventoryRecords(targetUserId, (items) => items.filter((item) => item.instanceId !== instanceId));
       logAdminAction(
           targetUserId,
@@ -1125,11 +1195,26 @@ export const AdminPanel: React.FC = () => {
                   history: [historyEntry, ...(item.history ?? [])]
               };
           });
+
+          const updatedItem = nextItems.find((item) => item.instanceId === instanceId);
+          if (updatedItem) {
+              void setDoc(
+                  doc(db, 'users', targetUserId, 'inventory', instanceId),
+                  {
+                      locked: updatedItem.locked,
+                      history: updatedItem.history ?? []
+                  },
+                  { merge: true }
+              ).catch((error) => {
+                  console.error('Failed to toggle inventory lock in Firebase', error);
+              });
+          }
+
           logAdminAction(
               targetUserId,
               'inventory_lock',
               { instanceId },
-              { instanceId, locked: nextItems.find((item) => item.instanceId === instanceId)?.locked },
+              { instanceId, locked: updatedItem?.locked },
               'Inventory lock toggled'
           );
           return nextItems;

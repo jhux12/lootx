@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -104,6 +104,24 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
     Object.values(sellOfferTimersRef.current).forEach((timerId) => window.clearTimeout(timerId));
     sellOfferTimersRef.current = {};
   }, []);
+
+  const profileTabs = useMemo(
+    () => ([
+      { id: 'inventory', label: 'Inventory', icon: Package, visible: isOwnProfile },
+      { id: 'community', label: 'Community', icon: UsersIcon, visible: true },
+      { id: 'topPulls', label: 'Top Pulls', icon: Sparkles, visible: true },
+      { id: 'settings', label: 'Settings', icon: Settings, visible: isOwnProfile }
+    ] as Array<{ id: ProfileTab; label: string; icon: React.ComponentType<{ className?: string }>; visible: boolean }>),
+    [isOwnProfile]
+  );
+
+  const visibleProfileTabs = useMemo(() => profileTabs.filter((tab) => tab.visible), [profileTabs]);
+
+  useEffect(() => {
+    if (!visibleProfileTabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab('topPulls');
+    }
+  }, [activeTab, visibleProfileTabs]);
 
   const normalizeItems = (items: typeof inventory) =>
     (items ?? []).map((item, index) => {
@@ -491,35 +509,19 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
             </div>
 
             {/* Main Tabs */}
-            <div className="flex flex-wrap md:flex-nowrap items-center gap-2 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-full max-w-full overflow-x-auto">
-              <button
-                onClick={() => setActiveTab('topPulls')}
-                className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'topPulls' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-              >
-                <Sparkles className="w-4 h-4" /> Top Pulls
-              </button>
-              {isOwnProfile && (
-                <button
-                  onClick={() => setActiveTab('inventory')}
-                  className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'inventory' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-                >
-                  <Package className="w-4 h-4" /> Inventory
-                </button>
-              )}
-              <button
-                onClick={() => setActiveTab('community')}
-                className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'community' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-              >
-                <UsersIcon className="w-4 h-4" /> Community
-              </button>
-              {isOwnProfile && (
-                <button
-                  onClick={() => setActiveTab('settings')}
-                  className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'settings' ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-                >
-                  <Settings className="w-4 h-4" /> Settings
-                </button>
-              )}
+            <div className="flex items-center gap-2 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-full max-w-full overflow-x-auto whitespace-nowrap">
+              {visibleProfileTabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                  >
+                    <Icon className="w-4 h-4" /> {tab.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

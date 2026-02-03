@@ -20,6 +20,7 @@ export const LoginModal: React.FC = () => {
   const [googleLinkCredential, setGoogleLinkCredential] = useState<AuthCredential | null>(null);
   const [confirmAdult, setConfirmAdult] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export const LoginModal: React.FC = () => {
             }
             await register(username, email, password);
         } else {
-            await login(email, password);
+            await login(email, password, rememberMe);
         }
         // Success - modal closes inside context functions
     } catch (err: any) {
@@ -61,7 +62,7 @@ export const LoginModal: React.FC = () => {
     playSound('click');
 
     try {
-      const result = await loginWithGoogle();
+      const result = await loginWithGoogle(rememberMe);
       if (result.status === 'link-required') {
         setGoogleLinkEmail(result.email);
         setGoogleLinkCredential(result.credential);
@@ -137,6 +138,7 @@ export const LoginModal: React.FC = () => {
       setGoogleLinkEmail('');
       setGoogleLinkPassword('');
       setGoogleLinkCredential(null);
+      setRememberMe(true);
       playSound('click');
   };
 
@@ -315,7 +317,16 @@ export const LoginModal: React.FC = () => {
                 </div>
 
                 {mode === 'login' && (
-                    <div className="flex justify-end text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+                        <label className="flex items-center gap-2 text-gray-400">
+                            <input
+                                type="checkbox"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                                className="h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
+                            />
+                            <span>Remember me</span>
+                        </label>
                         <button
                             type="button"
                             onClick={handleForgotPassword}

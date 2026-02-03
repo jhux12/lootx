@@ -8,7 +8,10 @@ import {
   AuthCredential,
   EmailAuthProvider,
   GoogleAuthProvider,
+  browserLocalPersistence,
+  browserSessionPersistence,
   onAuthStateChanged,
+  setPersistence,
   signInWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -350,8 +353,8 @@ interface GameContextType {
   showTopUpModal: boolean;
   
   // Actions
-  login: (email: string, pass: string) => Promise<void>;
-  loginWithGoogle: () => Promise<GoogleAuthResult>;
+  login: (email: string, pass: string, remember?: boolean) => Promise<void>;
+  loginWithGoogle: (remember?: boolean) => Promise<GoogleAuthResult>;
   linkGoogleAccount: (email: string, password: string, credential: AuthCredential) => Promise<GoogleAuthResult>;
   register: (name: string, email: string, pass: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -599,6 +602,7 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
   const value = Number(data.value ?? data.price ?? 0);
   const obtainedAt = normalizeTimestamp(data.obtainedAt, Date.now());
   const status = (data.status ?? 'available') as InventoryItem['status'];
+  const history = Array.isArray(data.history) ? data.history : undefined;
 
   return {
     id: data.prizeId ?? docSnap.id,
@@ -612,9 +616,11 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     obtainedAt,
     status,
     size: typeof data.size === 'string' ? data.size : undefined,
-    provenance: data.boxId ? { sourceType: 'case_open', sourceId: data.boxId } : undefined,
+    provenance: data.provenance ?? (data.boxId ? { sourceType: 'case_open', sourceId: data.boxId } : undefined),
     redeemable: data.redeemable ?? true,
-    sellBackRate: Number(data.sellBackRate ?? 0)
+    sellBackRate: Number(data.sellBackRate ?? 0),
+    locked: data.locked ?? false,
+    history
   } as InventoryItem;
 };
 
@@ -668,6 +674,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const hasInventorySubcollectionRef = useRef(false);
   const pendingSoldIdsRef = useRef<Set<string>>(new Set());
   const pendingBalanceRef = useRef<number | null>(null);
+
+  const setAuthPersistence = async (remember: boolean) => {
+    const persistence = remember ? browserLocalPersistence : browserSessionPersistence;
+    await setPersistence(auth, persistence);
+  };
   
   // -- PERSISTENT STATE INITIALIZATION --
   
@@ -1248,15 +1259,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const login = async (email: string, pass: string) => {
+  const login = async (email: string, pass: string, remember: boolean = true) => {
+      await setAuthPersistence(remember);
       await signInWithEmailAndPassword(auth, email, pass);
       setShowLoginModal(false);
   };
 
-  const loginWithGoogle = async (): Promise<GoogleAuthResult> => {
+  const loginWithGoogle = async (remember: boolean = true): Promise<GoogleAuthResult> => {
     const provider = new GoogleAuthProvider();
 
     try {
+      await setAuthPersistence(remember);
       const credential = await signInWithPopup(auth, provider);
       await ensureGoogleUserProfile(credential.user);
       setShowLoginModal(false);
