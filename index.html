@@ -60,6 +60,22 @@
         0% { transform: translateX(0); }
         100% { transform: translateX(-50%); }
       }
+      .hero-logo-drift {
+        animation: hero-logo-drift 80s linear infinite;
+        will-change: background-position;
+      }
+      @keyframes hero-logo-drift {
+        0% { background-position: 0 0; }
+        100% { background-position: 600px 600px; }
+      }
+      .hero-float {
+        animation: hero-float 14s ease-in-out infinite;
+        will-change: transform;
+      }
+      @keyframes hero-float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-6px); }
+      }
     </style>
     <script>
       // Prevent pinch and double-tap zooming on mobile
