@@ -60,7 +60,7 @@ const MainContent: React.FC = () => {
   return (
     <main className="flex-1 min-w-0 pb-10 xl:mr-72">
       {view.type === 'HOME' && (
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-12 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 pb-16 pt-10 sm:gap-10 sm:px-6 sm:pt-14 lg:px-8 animate-in fade-in duration-300">
           <Hero />
           <section className="space-y-3">
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
@@ -102,7 +102,7 @@ const MainContent: React.FC = () => {
               <p className="text-gray-400 mb-6">Bonuses, rakeback, and affiliate rewards are available to registered players only.</p>
               <button
                 onClick={() => setShowLoginModal(true)}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors"
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-all duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 active:translate-y-[1px]"
               >
                 Sign in
               </button>
@@ -201,7 +201,7 @@ function App() {
           {/* Mobile Chat Icon */}
           <button
             onClick={() => setShowSupportChat(true)}
-            className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl bg-gradient-to-r from-brand-purple to-blue-600 text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
+            className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl bg-gradient-to-r from-brand-purple to-blue-600 text-white flex items-center justify-center border border-white/10 sm:hidden transition-all duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:scale-105 active:translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
             aria-label="Open support chat"
           >
             <MessageCircle className="w-5 h-5" />

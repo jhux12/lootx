@@ -9,7 +9,6 @@ import {
   ChevronDown, 
   User, 
   LogOut, 
-  Menu, 
   X, 
   Swords, 
   Volume2, 
@@ -29,6 +28,7 @@ export const Header: React.FC = () => {
     balance,
     setView,
     isAuthenticated,
+    view,
     setShowLoginModal,
     setShowTopUpModal,
     logout,
@@ -38,11 +38,43 @@ export const Header: React.FC = () => {
   } = useGame();
   const { muted, toggleMute, playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileMenuVisible, setIsMobileMenuVisible] = useState(false);
   const [lootRevealActive, setLootRevealActive] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [balancePulse, setBalancePulse] = useState<'up' | 'down' | null>(null);
   const balanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousBalanceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      setIsMobileMenuVisible(true);
+      document.body.classList.add('overflow-hidden');
+      return;
+    }
+
+    document.body.classList.remove('overflow-hidden');
+    const timeout = setTimeout(() => setIsMobileMenuVisible(false), 200);
+    return () => clearTimeout(timeout);
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      setIsMobileMenuOpen(false);
+    }
+  }, [view.type]);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -93,6 +125,7 @@ export const Header: React.FC = () => {
 
   const handleNav = (view: any) => {
     playSound('click');
+    setIsMobileMenuOpen(false);
     if (view?.type === 'BONUSES' && !isAuthenticated) {
       setShowLoginModal(true);
       return;
@@ -102,6 +135,7 @@ export const Header: React.FC = () => {
 
   const handleAuthAction = (action: () => void) => {
     playSound('click');
+    setIsMobileMenuOpen(false);
     if (!isAuthenticated) {
       setShowLoginModal(true);
     } else {
@@ -110,6 +144,11 @@ export const Header: React.FC = () => {
   };
 
   const notificationCount = notifications.length;
+  const isActiveView = (type: string) => view.type === type;
+  const baseButtonClasses =
+    'transition-all duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 active:translate-y-[1px]';
+  const primaryButtonClasses = `${baseButtonClasses} hover:brightness-110`;
+  const secondaryButtonClasses = `${baseButtonClasses} hover:bg-white/10`;
 
   return (
     <>
@@ -301,6 +340,21 @@ export const Header: React.FC = () => {
           .mobile-menu-button {
             transition: none;
           }
+
+          .mobile-menu-button-open .mobile-menu-line-top {
+            transform: translateY(-6px);
+            box-shadow: none;
+          }
+
+          .mobile-menu-button-open .mobile-menu-line-middle {
+            opacity: 1;
+            transform: translateY(0);
+          }
+
+          .mobile-menu-button-open .mobile-menu-line-bottom {
+            transform: translateY(6px);
+            box-shadow: none;
+          }
         }
       `}</style>
 
@@ -309,7 +363,7 @@ export const Header: React.FC = () => {
           
           {/* Mobile Menu Button */}
           <button
-            className={`mobile-menu-button lg:hidden ${isMobileMenuOpen ? 'mobile-menu-button-open' : ''}`}
+            className={`mobile-menu-button lg:hidden focus-visible:ring-2 focus-visible:ring-cyan-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#080b14] ${isMobileMenuOpen ? 'mobile-menu-button-open' : ''}`}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle mobile menu"
             aria-expanded={isMobileMenuOpen}
@@ -333,13 +387,13 @@ export const Header: React.FC = () => {
           <nav className="hidden lg:flex items-center gap-8">
             <button 
               onClick={() => handleNav({ type: 'BOXES' })} 
-              className="flex items-center gap-2 text-white hover:text-blue-400 transition-colors text-sm font-semibold"
+              className={`flex items-center gap-2 border-b-2 border-transparent pb-1 text-sm font-semibold ${isActiveView('BOXES') ? 'text-white border-cyan-300/60' : 'text-white/80 hover:text-white'} ${secondaryButtonClasses}`}
             >
               <PackageOpen className="w-4 h-4" /> Boxes
             </button>
             <button 
               onClick={() => handleNav({ type: 'BATTLES' })} 
-              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-medium"
+              className={`flex items-center gap-2 border-b-2 border-transparent pb-1 text-sm font-medium ${isActiveView('BATTLES') ? 'text-white border-purple-400/60' : 'text-gray-400 hover:text-white'} ${secondaryButtonClasses}`}
             >
               <Swords className="w-4 h-4" /> Battles
             </button>
@@ -347,19 +401,19 @@ export const Header: React.FC = () => {
             {/* Case Lab - Always Visible */}
             <button 
               onClick={() => handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' }))} 
-              className="flex items-center gap-2 text-brand-purple hover:text-purple-400 transition-colors text-sm font-bold"
+              className={`flex items-center gap-2 border-b-2 border-transparent pb-1 text-sm font-bold ${isActiveView('CUSTOM_CREATOR') ? 'text-purple-200 border-purple-400/60' : 'text-brand-purple hover:text-purple-400'} ${secondaryButtonClasses}`}
             >
               <FlaskConical className="w-4 h-4" /> Case Lab
             </button>
             <button 
               onClick={() => handleNav({ type: 'LEADERBOARD' })} 
-              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-medium"
+              className={`flex items-center gap-2 border-b-2 border-transparent pb-1 text-sm font-medium ${isActiveView('LEADERBOARD') ? 'text-white border-yellow-400/60' : 'text-gray-400 hover:text-white'} ${secondaryButtonClasses}`}
             >
               <Trophy className="w-4 h-4" /> Leaderboard
             </button>
             <button 
               onClick={() => handleNav({ type: 'BONUSES' })} 
-              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-medium"
+              className={`flex items-center gap-2 border-b-2 border-transparent pb-1 text-sm font-medium ${isActiveView('BONUSES') ? 'text-white border-green-400/60' : 'text-gray-400 hover:text-white'} ${secondaryButtonClasses}`}
             >
               <Gift className="w-4 h-4" /> Bonuses
             </button>
@@ -368,7 +422,7 @@ export const Header: React.FC = () => {
             {user.isAdmin && (
               <button 
                 onClick={() => handleNav({ type: 'ADMIN' })} 
-                className="flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors text-sm font-bold ml-4 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20"
+                className={`flex items-center gap-2 text-sm font-bold ml-4 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20 ${isActiveView('ADMIN') ? 'text-red-200' : 'text-red-500 hover:text-red-400'} ${secondaryButtonClasses}`}
               >
                 <ShieldCheck className="w-4 h-4" /> Admin
               </button>
@@ -408,7 +462,7 @@ export const Header: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => setShowTopUpModal(true)}
-                  className="bg-blue-600 hover:bg-blue-500 text-white rounded p-1 transition-colors active:scale-95"
+                  className={`bg-blue-600 hover:bg-blue-500 text-white rounded p-1 ${primaryButtonClasses}`}
                   title="Add Coins"
                 >
                   <Plus className="w-3 h-3" />
@@ -553,13 +607,13 @@ export const Header: React.FC = () => {
             <div className="flex items-center gap-3">
               <button 
                 onClick={() => { playSound('click'); setShowLoginModal(true); }}
-                className="px-5 py-2 text-sm font-bold text-white bg-[#1a2130] hover:bg-[#232b3d] border border-gray-700 rounded-lg transition-colors"
+                className={`px-5 py-2 text-sm font-bold text-white bg-[#1a2130] hover:bg-[#232b3d] border border-gray-700 rounded-lg ${secondaryButtonClasses}`}
               >
                 Sign In
               </button>
               <button 
                 onClick={() => { playSound('click'); setShowLoginModal(true); }}
-                className="px-5 py-2 text-sm font-bold text-black bg-green-500 hover:bg-green-400 rounded-lg transition-colors hidden sm:block shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                className={`px-5 py-2 text-sm font-bold text-black bg-green-500 hover:bg-green-400 rounded-lg hidden sm:block shadow-[0_0_15px_rgba(34,197,94,0.4)] ${primaryButtonClasses}`}
               >
                 Register
               </button>
@@ -568,78 +622,91 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Mobile Menu Overlay */}
-        {isMobileMenuOpen && (
-          <div className="fixed inset-0 top-[72px] md:top-[80px] bg-[#0b0e14] opacity-100 backdrop-blur-none z-40 lg:hidden flex flex-col animate-in slide-in-from-left-full duration-200">
-            <nav className="flex flex-col gap-2 bg-[#0b0e14] w-full flex-1 px-4 pb-4">
-              <button 
-                onClick={() => { handleNav({ type: 'BOXES' }); setIsMobileMenuOpen(false); }} 
-                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-white font-medium"
-              >
-                <PackageOpen className="w-5 h-5 text-blue-500" /> Boxes
-              </button>
-              <button 
-                onClick={() => { handleNav({ type: 'BATTLES' }); setIsMobileMenuOpen(false); }} 
-                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
-              >
-                <Swords className="w-5 h-5 text-purple-500" /> Battles
-              </button>
-              {/* Case Lab Mobile */}
-              <button 
-                onClick={() => { 
-                  handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' })); 
-                  if (isAuthenticated) setIsMobileMenuOpen(false);
-                }} 
-                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-brand-purple font-medium"
-              >
-                <FlaskConical className="w-5 h-5" /> Case Lab
-              </button>
-              <button 
-                onClick={() => { handleNav({ type: 'LEADERBOARD' }); setIsMobileMenuOpen(false); }} 
-                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
-              >
-                <Trophy className="w-5 h-5 text-yellow-500" /> Leaderboard
-              </button>
-              <button 
-                onClick={() => { handleNav({ type: 'BONUSES' }); setIsMobileMenuOpen(false); }} 
-                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
-              >
-                <Gift className="w-5 h-5 text-green-500" /> Bonuses
-              </button>
+        {isMobileMenuVisible && (
+          <div className="fixed inset-0 z-40 lg:hidden">
+            <button
+              type="button"
+              aria-label="Close mobile menu"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`absolute inset-0 bg-black/50 backdrop-blur-md transition-opacity duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+                isMobileMenuOpen ? 'opacity-100' : 'opacity-0'
+              } motion-reduce:transition-none`}
+            />
+            <div
+              className={`absolute right-0 top-0 h-full w-full max-w-[320px] sm:max-w-[360px] bg-gradient-to-b from-[#0b0e14] via-[#0c1019] to-[#0a0e18] border-l border-white/10 rounded-l-3xl shadow-2xl transition-all duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+                isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+              } motion-reduce:transition-none motion-reduce:transform-none`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="absolute left-0 top-0 h-full w-2 bg-gradient-to-b from-[rgba(168,85,247,0.15)] to-[rgba(34,211,238,0.15)]" />
+              <nav className="flex h-full flex-col gap-2 px-5 pb-6 pt-20 sm:pt-24">
+                <button 
+                  onClick={() => handleNav({ type: 'BOXES' })} 
+                  className={`flex w-full items-center gap-3 rounded-xl border border-white/5 px-4 py-3 text-sm font-medium ${isActiveView('BOXES') ? 'bg-white/10 text-white shadow-[0_0_18px_rgba(34,211,238,0.18)]' : 'bg-white/5 text-gray-300 hover:text-white'} ${secondaryButtonClasses}`}
+                >
+                  <PackageOpen className="w-5 h-5 text-blue-400" /> Boxes
+                </button>
+                <button 
+                  onClick={() => handleNav({ type: 'BATTLES' })} 
+                  className={`flex w-full items-center gap-3 rounded-xl border border-white/5 px-4 py-3 text-sm font-medium ${isActiveView('BATTLES') ? 'bg-white/10 text-white shadow-[0_0_18px_rgba(139,92,246,0.18)]' : 'bg-white/5 text-gray-300 hover:text-white'} ${secondaryButtonClasses}`}
+                >
+                  <Swords className="w-5 h-5 text-purple-400" /> Battles
+                </button>
+                {/* Case Lab Mobile */}
+                <button 
+                  onClick={() => handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' }))} 
+                  className={`flex w-full items-center gap-3 rounded-xl border border-white/5 px-4 py-3 text-sm font-semibold ${isActiveView('CUSTOM_CREATOR') ? 'bg-purple-500/15 text-purple-200' : 'bg-white/5 text-brand-purple hover:text-purple-300'} ${secondaryButtonClasses}`}
+                >
+                  <FlaskConical className="w-5 h-5" /> Case Lab
+                </button>
+                <button 
+                  onClick={() => handleNav({ type: 'LEADERBOARD' })} 
+                  className={`flex w-full items-center gap-3 rounded-xl border border-white/5 px-4 py-3 text-sm font-medium ${isActiveView('LEADERBOARD') ? 'bg-white/10 text-white shadow-[0_0_18px_rgba(234,179,8,0.18)]' : 'bg-white/5 text-gray-300 hover:text-white'} ${secondaryButtonClasses}`}
+                >
+                  <Trophy className="w-5 h-5 text-yellow-400" /> Leaderboard
+                </button>
+                <button 
+                  onClick={() => handleNav({ type: 'BONUSES' })} 
+                  className={`flex w-full items-center gap-3 rounded-xl border border-white/5 px-4 py-3 text-sm font-medium ${isActiveView('BONUSES') ? 'bg-white/10 text-white shadow-[0_0_18px_rgba(34,197,94,0.18)]' : 'bg-white/5 text-gray-300 hover:text-white'} ${secondaryButtonClasses}`}
+                >
+                  <Gift className="w-5 h-5 text-green-400" /> Bonuses
+                </button>
 
-              {user.isAdmin && (
-                <button 
-                  onClick={() => { handleNav({ type: 'ADMIN' }); setIsMobileMenuOpen(false); }} 
-                  className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-red-400 font-medium"
-                >
-                  <ShieldCheck className="w-5 h-5 text-red-500" /> Admin Panel
-                </button>
-              )}
-              <hr className="border-gray-800 my-2" />
-              
-              {isAuthenticated ? (
-                <>
+                {user.isAdmin && (
                   <button 
-                    onClick={() => { handleNav({ type: 'PROFILE' }); setIsMobileMenuOpen(false); }} 
-                    className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
+                    onClick={() => handleNav({ type: 'ADMIN' })} 
+                    className={`flex w-full items-center gap-3 rounded-xl border border-white/5 px-4 py-3 text-sm font-semibold ${isActiveView('ADMIN') ? 'bg-red-500/20 text-red-200' : 'bg-white/5 text-red-400 hover:text-red-300'} ${secondaryButtonClasses}`}
                   >
-                    <User className="w-5 h-5 text-gray-400" /> Profile
+                    <ShieldCheck className="w-5 h-5 text-red-400" /> Admin Panel
                   </button>
+                )}
+                <hr className="border-white/10 my-2" />
+                
+                {isAuthenticated ? (
+                  <>
+                    <button 
+                      onClick={() => handleNav({ type: 'PROFILE' })} 
+                      className={`flex w-full items-center gap-3 rounded-xl border border-white/5 px-4 py-3 text-sm font-medium ${isActiveView('PROFILE') ? 'bg-white/10 text-white' : 'bg-white/5 text-gray-300 hover:text-white'} ${secondaryButtonClasses}`}
+                    >
+                      <User className="w-5 h-5 text-gray-400" /> Profile
+                    </button>
+                    <button 
+                      onClick={() => { logout(); setIsMobileMenuOpen(false); }} 
+                      className={`flex w-full items-center gap-3 rounded-xl border border-white/5 px-4 py-3 text-sm font-medium bg-white/5 text-red-300 hover:text-red-200 ${secondaryButtonClasses}`}
+                    >
+                      <LogOut className="w-5 h-5" /> Sign out
+                    </button>
+                  </>
+                ) : (
                   <button 
-                    onClick={() => { logout(); setIsMobileMenuOpen(false); }} 
-                    className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-red-400 font-medium"
+                    onClick={() => { setShowLoginModal(true); setIsMobileMenuOpen(false); }} 
+                    className={`flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white ${primaryButtonClasses}`}
                   >
-                    <LogOut className="w-5 h-5" /> Sign out
+                    Sign In
                   </button>
-                </>
-              ) : (
-                <button 
-                  onClick={() => { setShowLoginModal(true); setIsMobileMenuOpen(false); }} 
-                  className="flex w-full items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg text-white font-medium justify-center"
-                >
-                  Sign In
-                </button>
-              )}
-            </nav>
+                )}
+              </nav>
+            </div>
           </div>
         )}
       </header>
