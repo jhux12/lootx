@@ -14,12 +14,15 @@ import { LoginModal } from './components/LoginModal';
 import { CustomCaseCreator } from './components/CustomCaseCreator';
 import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
-import { BrandLockup } from './components/BrandLockup';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider } from './context/SoundContext';
 import { ShieldAlert, MessageCircle, Swords } from 'lucide-react';
 import { MobileChatModal } from './components/MobileChatModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
+import { HowItWorks } from './components/HowItWorks';
+import { TrustSection } from './components/TrustSection';
+import { FinalCTA } from './components/FinalCTA';
+import { Footer } from './components/Footer';
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC = () => {
@@ -55,22 +58,18 @@ const MainContent: React.FC = () => {
   );
 
   return (
-    <main className="flex-1 min-w-0 pb-10 xl:mr-80">
-      <LiveTicker />
+    <main className={`flex-1 min-w-0 pb-10 ${isAuthenticated ? 'xl:mr-72' : 'xl:mr-0'}`}>
       
       {view.type === 'HOME' && (
-        <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
-          {!isAuthenticated && <Hero />}
-          <BoxGrid />
-          <div className="mt-10">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-white">Case Battles</h2>
-                <p className="text-sm text-gray-400 sm:text-base">Battle mode is in development and not yet available.</p>
-              </div>
-            </div>
-            <BattlesComingSoon />
+        <div className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
+          <Hero />
+          <div className="mt-8">
+            <LiveTicker />
           </div>
+          <BoxGrid />
+          <HowItWorks />
+          <TrustSection />
+          <FinalCTA />
         </div>
       )}
       
@@ -178,24 +177,7 @@ const MainContent: React.FC = () => {
       {showLoginModal && <LoginModal />}
       {showTopUpModal && <TopUpModal />}
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-gray-800/50 py-8 text-center text-gray-600 text-sm">
-          <div className="flex justify-center mb-6 px-4">
-            <BrandLockup
-              className="justify-center"
-              logoClassName="h-10 md:h-12"
-              textClassName="text-lg"
-              showTextOnMobile
-            />
-          </div>
-          <div className="flex justify-center gap-6 mb-4 font-medium flex-wrap px-4">
-            <span className="cursor-pointer hover:text-gray-400">Terms of Service</span>
-            <span className="cursor-pointer hover:text-gray-400">Privacy Policy</span>
-            <span className="cursor-pointer hover:text-gray-400">Fairness</span>
-            <span className="cursor-pointer hover:text-gray-400">Support</span>
-          </div>
-          <p>&copy; 2024 LootX. All rights reserved.</p>
-      </footer>
+      <Footer />
     </main>
   );
 };

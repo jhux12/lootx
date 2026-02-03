@@ -60,7 +60,8 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover }) => {
           <img 
               src={box.image} 
               alt={box.name} 
-              className="relative z-10 h-32 w-32 object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-110 sm:h-36 sm:w-36" 
+              className="relative z-10 h-32 w-32 object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-110 sm:h-36 sm:w-36"
+              loading="lazy"
           />
       </div>
 
