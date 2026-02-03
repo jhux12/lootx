@@ -13,6 +13,7 @@ export const ChatSidebar: React.FC = () => {
   const { playSound } = useSound();
   const { isAuthenticated, setView } = useGame();
   const { messages, sendMessage, isSending, notice, isChatDisabled, warningsRemaining } = useSiteChat();
+  const [isCollapsed, setIsCollapsed] = useState(!isAuthenticated);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -20,6 +21,10 @@ export const ChatSidebar: React.FC = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages.length]);
+
+  useEffect(() => {
+    setIsCollapsed(!isAuthenticated);
+  }, [isAuthenticated]);
 
   const handleSend = async () => {
     if (!messageText.trim() || isSending) return;
@@ -43,23 +48,44 @@ export const ChatSidebar: React.FC = () => {
     </button>
   );
 
+  if (!isAuthenticated && isCollapsed) {
+    return (
+      <button
+        onClick={() => { setIsCollapsed(false); playSound('click'); }}
+        className="fixed bottom-6 right-6 z-40 hidden items-center gap-2 rounded-full border border-white/10 bg-[#0f1420]/90 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-gray-300 shadow-lg transition-colors hover:text-white xl:flex"
+        aria-label="Open chat"
+      >
+        <MessageSquare className="h-4 w-4 text-purple-300" />
+        Chat
+      </button>
+    );
+  }
+
   return (
-    <div className="w-80 bg-[#11141d] border-l border-gray-800 flex flex-col fixed right-0 hidden xl:flex z-40 top-[72px] md:top-[80px] lg:top-[88px] h-[calc(100vh-72px)] md:h-[calc(100vh-80px)] lg:h-[calc(100vh-88px)]">
+    <div className="w-72 bg-[#0f1420]/95 border-l border-white/5 flex flex-col fixed right-0 hidden xl:flex z-40 top-[72px] md:top-[80px] lg:top-[88px] h-[calc(100vh-72px)] md:h-[calc(100vh-80px)] lg:h-[calc(100vh-88px)] backdrop-blur">
       
       {/* Sidebar Header */}
-      <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-gray-300 font-bold text-sm cursor-pointer hover:text-white" onClick={() => playSound('click')}>
+      <div className="p-4 border-b border-white/5 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-gray-300 font-semibold text-xs uppercase tracking-[0.2em] cursor-pointer hover:text-white" onClick={() => playSound('click')}>
           <Globe className="w-4 h-4" />
           <span>English</span>
         </div>
-        <div className="flex gap-2 text-gray-500">
-           <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5"></div>
-           <span className="text-xs font-mono">1,420 Online</span>
+        <div className="flex items-center gap-3 text-gray-500">
+           <div className="flex items-center gap-2 text-xs font-mono">
+             <div className="h-2 w-2 rounded-full bg-green-500" />
+             1,420 Online
+           </div>
+           <button
+             onClick={() => { setIsCollapsed(true); playSound('click'); }}
+             className="text-[10px] uppercase tracking-[0.2em] text-gray-500 transition-colors hover:text-white"
+           >
+             Hide
+           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-3 bg-[#0c1019] border-b border-gray-800">
+      <div className="grid grid-cols-3 bg-[#0c111b] border-b border-white/5">
         <TabButton id="chat" icon={<MessageSquare className="w-3 h-3" />} label="Chat" />
         <TabButton id="support" icon={<Bot className="w-3 h-3" />} label="Support" />
         <TabButton id="users" icon={<Users className="w-3 h-3" />} label="Users" />
@@ -97,7 +123,7 @@ export const ChatSidebar: React.FC = () => {
                             {msg.timestamp}
                         </span>
                     </div>
-                    <div className={`p-2 rounded-r-lg rounded-bl-lg text-sm font-medium leading-snug break-words ${msg.isSystem ? 'bg-amber-500/10 text-amber-200 border border-amber-500/30' : 'bg-[#1a202c] text-gray-300'}`}>
+                    <div className={`p-2 rounded-r-lg rounded-bl-lg text-sm font-medium leading-snug break-words ${msg.isSystem ? 'bg-amber-500/10 text-amber-200 border border-amber-500/30' : 'bg-[#141a26] text-gray-300'}`}>
                        {msg.message.split(' ').map((word, i) => 
                           word.startsWith('@') ? <span key={i} className="text-brand-purple cursor-pointer hover:underline">{word} </span> : word + ' '
                        )}
@@ -108,7 +134,7 @@ export const ChatSidebar: React.FC = () => {
           </div>
 
           {/* Chat Input */}
-          <div className="p-4 bg-[#11141d] border-t border-gray-800">
+          <div className="p-4 bg-[#0f1420] border-t border-white/5">
             <div className="relative">
                 <input 
                     type="text" 
