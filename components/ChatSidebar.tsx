@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Users, Globe, Send, Bot, Shield } from 'lucide-react';
+import { MessageSquare, Users, Globe, Send, Bot, Shield, MessageCircle, ChevronRight } from 'lucide-react';
 import { useSound } from '../context/SoundContext';
 import { AIChatBot } from './AIChatBot';
 import { useSiteChat } from '../hooks/useSiteChat';
@@ -12,6 +12,7 @@ export const ChatSidebar: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playSound } = useSound();
   const { isAuthenticated, setView } = useGame();
+  const [isCollapsed, setIsCollapsed] = useState(!isAuthenticated);
   const { messages, sendMessage, isSending, notice, isChatDisabled, warningsRemaining } = useSiteChat();
 
   // Auto scroll to bottom
@@ -20,6 +21,14 @@ export const ChatSidebar: React.FC = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages.length]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setIsCollapsed(false);
+    } else {
+      setIsCollapsed(true);
+    }
+  }, [isAuthenticated]);
 
   const handleSend = async () => {
     if (!messageText.trim() || isSending) return;
@@ -43,23 +52,46 @@ export const ChatSidebar: React.FC = () => {
     </button>
   );
 
+  if (!isAuthenticated && isCollapsed) {
+    return (
+      <button
+        onClick={() => setIsCollapsed(false)}
+        className="fixed bottom-6 right-6 z-40 hidden xl:flex items-center gap-2 rounded-full border border-white/10 bg-[#0c111a]/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-300 shadow-lg shadow-black/30 transition hover:text-white hover:border-white/20"
+        aria-label="Open chat panel"
+      >
+        <MessageCircle className="h-4 w-4" />
+        Chat
+      </button>
+    );
+  }
+
   return (
-    <div className="w-80 bg-[#11141d] border-l border-gray-800 flex flex-col fixed right-0 hidden xl:flex z-40 top-[72px] md:top-[80px] lg:top-[88px] h-[calc(100vh-72px)] md:h-[calc(100vh-80px)] lg:h-[calc(100vh-88px)]">
+    <div className="w-72 bg-[#0c111a]/95 border-l border-gray-800/70 flex flex-col fixed right-0 hidden xl:flex z-40 top-[72px] md:top-[80px] lg:top-[88px] h-[calc(100vh-72px)] md:h-[calc(100vh-80px)] lg:h-[calc(100vh-88px)] backdrop-blur transition-opacity opacity-90 hover:opacity-100">
       
       {/* Sidebar Header */}
-      <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+      <div className="p-4 border-b border-gray-800/80 flex items-center justify-between">
         <div className="flex items-center gap-2 text-gray-300 font-bold text-sm cursor-pointer hover:text-white" onClick={() => playSound('click')}>
           <Globe className="w-4 h-4" />
           <span>English</span>
         </div>
-        <div className="flex gap-2 text-gray-500">
+        <div className="flex items-center gap-3 text-gray-500">
            <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5"></div>
            <span className="text-xs font-mono">1,420 Online</span>
+           {!isAuthenticated && (
+             <button
+               type="button"
+               onClick={() => setIsCollapsed(true)}
+               className="rounded-full border border-white/10 p-1 text-gray-400 transition hover:text-white"
+               aria-label="Collapse chat panel"
+             >
+               <ChevronRight className="h-3 w-3" />
+             </button>
+           )}
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-3 bg-[#0c1019] border-b border-gray-800">
+      <div className="grid grid-cols-3 bg-[#0c1019]/80 border-b border-gray-800/80">
         <TabButton id="chat" icon={<MessageSquare className="w-3 h-3" />} label="Chat" />
         <TabButton id="support" icon={<Bot className="w-3 h-3" />} label="Support" />
         <TabButton id="users" icon={<Users className="w-3 h-3" />} label="Users" />
@@ -108,7 +140,7 @@ export const ChatSidebar: React.FC = () => {
           </div>
 
           {/* Chat Input */}
-          <div className="p-4 bg-[#11141d] border-t border-gray-800">
+          <div className="p-4 bg-[#11141d]/80 border-t border-gray-800/80">
             <div className="relative">
                 <input 
                     type="text" 
