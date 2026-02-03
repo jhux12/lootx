@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Header } from './components/Header';
-import { LiveTicker } from './components/LiveTicker';
+import { LiveWinsStrip } from './components/LiveWinsStrip';
 import { ChatSidebar } from './components/ChatSidebar';
 import { Hero } from './components/Hero';
 import { BoxGrid } from './components/BoxGrid';
@@ -14,7 +14,10 @@ import { LoginModal } from './components/LoginModal';
 import { CustomCaseCreator } from './components/CustomCaseCreator';
 import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
-import { BrandLockup } from './components/BrandLockup';
+import { HowItWorks } from './components/HowItWorks';
+import { TrustSection } from './components/TrustSection';
+import { FinalCTA } from './components/FinalCTA';
+import { SiteFooter } from './components/SiteFooter';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider } from './context/SoundContext';
 import { ShieldAlert, MessageCircle, Swords } from 'lucide-react';
@@ -55,22 +58,16 @@ const MainContent: React.FC = () => {
   );
 
   return (
-    <main className="flex-1 min-w-0 pb-10 xl:mr-80">
-      <LiveTicker />
-      
+    <main className={`flex-1 min-w-0 pb-10 ${isAuthenticated ? 'xl:mr-72' : 'xl:mr-0'}`}>
       {view.type === 'HOME' && (
-        <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
-          {!isAuthenticated && <Hero />}
+        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-14 p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
+          <Hero />
+          <LiveWinsStrip />
           <BoxGrid />
-          <div className="mt-10">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-white">Case Battles</h2>
-                <p className="text-sm text-gray-400 sm:text-base">Battle mode is in development and not yet available.</p>
-              </div>
-            </div>
-            <BattlesComingSoon />
-          </div>
+          <HowItWorks />
+          <TrustSection />
+          <FinalCTA />
+          <SiteFooter />
         </div>
       )}
       
@@ -178,24 +175,7 @@ const MainContent: React.FC = () => {
       {showLoginModal && <LoginModal />}
       {showTopUpModal && <TopUpModal />}
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-gray-800/50 py-8 text-center text-gray-600 text-sm">
-          <div className="flex justify-center mb-6 px-4">
-            <BrandLockup
-              className="justify-center"
-              logoClassName="h-10 md:h-12"
-              textClassName="text-lg"
-              showTextOnMobile
-            />
-          </div>
-          <div className="flex justify-center gap-6 mb-4 font-medium flex-wrap px-4">
-            <span className="cursor-pointer hover:text-gray-400">Terms of Service</span>
-            <span className="cursor-pointer hover:text-gray-400">Privacy Policy</span>
-            <span className="cursor-pointer hover:text-gray-400">Fairness</span>
-            <span className="cursor-pointer hover:text-gray-400">Support</span>
-          </div>
-          <p>&copy; 2024 LootX. All rights reserved.</p>
-      </footer>
+      {view.type !== 'HOME' && <SiteFooter />}
     </main>
   );
 };
@@ -217,7 +197,7 @@ function App() {
           {/* Mobile Chat Icon */}
           <button
             onClick={() => setShowSupportChat(true)}
-            className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl bg-gradient-to-r from-brand-purple to-blue-600 text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
+            className="fixed bottom-5 right-5 z-50 flex items-center justify-center rounded-full border border-white/10 bg-[#0f1422] p-3 text-gray-200 shadow-[0_12px_30px_-18px_rgba(0,0,0,0.9)] transition hover:border-white/20 hover:text-white sm:hidden"
             aria-label="Open support chat"
           >
             <MessageCircle className="w-5 h-5" />

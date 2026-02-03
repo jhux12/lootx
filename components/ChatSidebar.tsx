@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Users, Globe, Send, Bot, Shield } from 'lucide-react';
+import { MessageSquare, Users, Globe, Send, Bot, Shield, MessageCircle, X } from 'lucide-react';
 import { useSound } from '../context/SoundContext';
 import { AIChatBot } from './AIChatBot';
 import { useSiteChat } from '../hooks/useSiteChat';
@@ -13,6 +13,11 @@ export const ChatSidebar: React.FC = () => {
   const { playSound } = useSound();
   const { isAuthenticated, setView } = useGame();
   const { messages, sendMessage, isSending, notice, isChatDisabled, warningsRemaining } = useSiteChat();
+  const [isCollapsed, setIsCollapsed] = useState(!isAuthenticated);
+
+  useEffect(() => {
+    setIsCollapsed(!isAuthenticated);
+  }, [isAuthenticated]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -43,8 +48,25 @@ export const ChatSidebar: React.FC = () => {
     </button>
   );
 
+  if (!isAuthenticated && isCollapsed) {
+    return (
+      <button
+        onClick={() => setIsCollapsed(false)}
+        className="fixed bottom-6 right-6 z-40 hidden xl:flex items-center gap-2 rounded-full border border-white/10 bg-[#0f1422] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-300 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.9)] transition hover:border-white/20 hover:text-white"
+        aria-label="Open chat"
+      >
+        <MessageCircle className="h-4 w-4" />
+        Chat
+      </button>
+    );
+  }
+
   return (
-    <div className="w-80 bg-[#11141d] border-l border-gray-800 flex flex-col fixed right-0 hidden xl:flex z-40 top-[72px] md:top-[80px] lg:top-[88px] h-[calc(100vh-72px)] md:h-[calc(100vh-80px)] lg:h-[calc(100vh-88px)]">
+    <div
+      className={`${
+        isAuthenticated ? 'w-72 bg-[#0c111a] opacity-90 hover:opacity-100' : 'w-80 bg-[#11141d]'
+      } border-l border-gray-800 flex flex-col fixed right-0 hidden xl:flex z-40 top-[72px] md:top-[80px] lg:top-[88px] h-[calc(100vh-72px)] md:h-[calc(100vh-80px)] lg:h-[calc(100vh-88px)] transition-opacity`}
+    >
       
       {/* Sidebar Header */}
       <div className="p-4 border-b border-gray-800 flex items-center justify-between">
@@ -52,9 +74,18 @@ export const ChatSidebar: React.FC = () => {
           <Globe className="w-4 h-4" />
           <span>English</span>
         </div>
-        <div className="flex gap-2 text-gray-500">
+        <div className="flex items-center gap-3 text-gray-500">
            <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5"></div>
            <span className="text-xs font-mono">1,420 Online</span>
+           {!isAuthenticated && (
+             <button
+               onClick={() => setIsCollapsed(true)}
+               className="rounded-full border border-white/10 p-1 text-gray-400 transition hover:text-white"
+               aria-label="Collapse chat"
+             >
+               <X className="h-3 w-3" />
+             </button>
+           )}
         </div>
       </div>
 
