@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         : [];
 
     if (inventoryIds.length === 0) {
-      return sendJson(res, 400, { error: 'Missing inventoryId' });
+      return sendJson(res, 400, { error: 'No items selected' });
     }
 
     const settingsSnap = await firestore.collection('settings').doc(STRIPE_SETTINGS_DOC).get();
@@ -35,6 +35,8 @@ export default async function handler(req, res) {
     const shippingFlatRateCents = Math.max(0, Math.round(Number(settings.shippingFlatRateCents) || 0));
     const stripeShippingProductId =
       typeof settings.stripeShippingProductId === 'string' ? settings.stripeShippingProductId : '';
+    const usesPriceId = stripeShippingProductId.startsWith('price_');
+    const usesProductId = stripeShippingProductId.startsWith('prod_');
 
     if (!shippingCashEnabled) {
       return sendJson(res, 400, { error: 'Cash shipping is disabled' });
@@ -59,24 +61,41 @@ export default async function handler(req, res) {
       userRef.collection('inventory').doc(inventoryId)
     );
 
+    // Firestore requires all reads to complete before any writes in a transaction.
     await firestore.runTransaction(async (transaction) => {
-      for (let index = 0; index < inventoryRefs.length; index += 1) {
-        const inventoryRef = inventoryRefs[index];
-        const inventorySnap = await transaction.get(inventoryRef);
+      const [userSnap, ...inventorySnaps] = await Promise.all([
+        transaction.get(userRef),
+        ...inventoryRefs.map((inventoryRef) => transaction.get(inventoryRef))
+      ]);
+
+      if (!userSnap.exists) {
+        throw { status: 403, error: 'Unauthorized' };
+      }
+
+      const shipmentItems = inventorySnaps.map((inventorySnap, index) => {
         if (!inventorySnap.exists) {
-          throw { status: 404, error: 'Inventory item not found' };
+          throw { status: 404, error: 'Item not found' };
         }
 
         const inventoryItem = inventorySnap.data() ?? {};
-        const status = inventoryItem.status ?? 'available';
-        if (status !== 'available') {
-          throw { status: 400, error: 'Item is not available for shipping' };
+        if (inventoryItem.uid && inventoryItem.uid !== decoded.uid) {
+          throw { status: 403, error: 'Unauthorized' };
         }
 
+        const status = inventoryItem.status ?? 'available';
+        if (status !== 'available' || inventoryItem.shipmentId) {
+          throw { status: 400, error: 'Item already in shipment' };
+        }
+
+        return { inventoryItem, inventoryId: inventoryIds[index], inventoryRef: inventoryRefs[index] };
+      });
+
+      const now = admin.firestore.FieldValue.serverTimestamp();
+      shipmentItems.forEach(({ inventoryItem, inventoryId, inventoryRef }, index) => {
         const shipmentRef = shipmentRefs[index];
         transaction.set(shipmentRef, {
           uid: decoded.uid,
-          inventoryId: inventoryIds[index],
+          inventoryId,
           item: {
             boxId: inventoryItem.boxId ?? null,
             prizeId: inventoryItem.prizeId ?? null,
@@ -90,28 +109,46 @@ export default async function handler(req, res) {
           shippingInfo,
           shippingPaid: false,
           shippingBatchId: shipmentBatchId,
-          status: 'payment_pending',
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
+          status: 'pending_payment',
+          createdAt: now
         });
-      }
+
+        transaction.set(inventoryRef, {
+          status: 'pending_shipment',
+          shipmentId: shipmentRef.id,
+          shipmentBatchId,
+          updatedAt: now
+        }, { merge: true });
+      });
     });
+
+    console.info('create-shipping-checkout-session', {
+      selectedCount: inventoryIds.length,
+      shipmentBatchId,
+      shippingFlatRateCents,
+      shippingTotalCents: shippingFlatRateCents * inventoryIds.length
+    });
+
+    const lineItems = usesPriceId
+      ? [{ price: stripeShippingProductId, quantity: inventoryIds.length }]
+      : [
+          {
+            price_data: {
+              currency: 'usd',
+              ...(usesProductId
+                ? { product: stripeShippingProductId }
+                : { product_data: { name: 'Shipping & Handling' } }),
+              unit_amount: shippingFlatRateCents
+            },
+            quantity: inventoryIds.length
+          }
+        ];
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: `${process.env.APP_URL}/inventory?shipping=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.APP_URL}/inventory?shipping=cancel`,
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            ...(stripeShippingProductId
-              ? { product: stripeShippingProductId }
-              : { product_data: { name: 'Shipping & Handling' } }),
-            unit_amount: shippingFlatRateCents
-          },
-          quantity: inventoryIds.length
-        }
-      ],
+      line_items: lineItems,
       metadata: {
         userId: decoded.uid,
         shipmentId: shipmentBatchId,
