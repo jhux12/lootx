@@ -754,11 +754,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const removeAdminBox = (boxId: string) => {
-    setBoxes(prev => {
-      const userCreated = prev.filter(b => b.isUserCreated);
-      const adminBoxes = prev.filter(b => !b.isUserCreated && b.id !== boxId);
-      return [...userCreated, ...adminBoxes];
-    });
+    setBoxes(prev => prev.filter((box) => box.id !== boxId));
   };
 
   const [coinPackages, setCoinPackages] = useState<CoinPackage[]>([]);
@@ -981,9 +977,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => unsubscribe();
   }, []);
 
+  const expiredUserBoxDeletesRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     const boxesRef = collection(db, 'boxes');
     const unsubscribe = onSnapshot(boxesRef, (snapshot) => {
+      const expiredUserBoxIds: string[] = [];
       const firebaseBoxes = snapshot.docs
         .map((docSnap) => {
           const data = docSnap.data();
@@ -1007,6 +1006,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
           }) : [];
           const createdAt = data.createdAt ? normalizeTimestamp(data.createdAt, Date.now()) : undefined;
+          if (
+            data.isUserCreated &&
+            createdAt &&
+            Date.now() - createdAt >= USER_BOX_EXPIRY_MS
+          ) {
+            expiredUserBoxIds.push(docSnap.id);
+          }
 
           return {
             id: docSnap.id,
@@ -1025,15 +1031,24 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             createdAt
           } as MysteryBox;
         })
-        .filter((box) => !box.isUserCreated || !box.createdAt || Date.now() - box.createdAt < USER_BOX_EXPIRY_MS)
+        .filter((box) => !box.isUserCreated || (box.createdAt && Date.now() - box.createdAt < USER_BOX_EXPIRY_MS))
         .sort((a, b) => a.price - b.price);
+
+      if (isAuthenticated && user.isAdmin && expiredUserBoxIds.length > 0) {
+        expiredUserBoxIds.forEach((boxId) => {
+          if (expiredUserBoxDeletesRef.current.has(boxId)) return;
+          expiredUserBoxDeletesRef.current.add(boxId);
+          void deleteBox(boxId);
+        });
+      }
 
       setBoxes(prev => {
         const pendingUserCreated = prev.filter(
           (box) =>
             box.isUserCreated &&
             !firebaseBoxes.some((firebaseBox) => firebaseBox.id === box.id) &&
-            (!box.createdAt || Date.now() - box.createdAt < USER_BOX_EXPIRY_MS)
+            !!box.createdAt &&
+            Date.now() - box.createdAt < USER_BOX_EXPIRY_MS
         );
         return [...pendingUserCreated, ...firebaseBoxes].sort((a, b) => a.price - b.price);
       });
@@ -1042,6 +1057,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     return () => unsubscribe();
+  }, [isAuthenticated, user.isAdmin]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBoxes((prev) => {
+        const now = Date.now();
+        const next = prev.filter(
+          (box) =>
+            !box.isUserCreated ||
+            (box.createdAt !== undefined && now - box.createdAt < USER_BOX_EXPIRY_MS)
+        );
+        return next.length === prev.length ? prev : next;
+      });
+    }, 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -1073,6 +1104,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return () => unsubscribe();
   }, []);
+
 
   // Battles Realtime Sync
   useEffect(() => {

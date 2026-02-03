@@ -65,6 +65,7 @@ const ITEM_SPREADSHEET_TEMPLATE = `name,price,image,rarity,chance,color,brand,ca
 Neon Headset,450,https://picsum.photos/200,rare,12,#3b82f6,NeonX,tech,tech|gaming
 Pixel Booster,120,https://picsum.photos/200,common,35,#9ca3af,,pokemon,booster-pack|sealed
 `;
+const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 const DEFAULT_LOCKS: UserLocks = {
     openCases: false,
@@ -214,12 +215,24 @@ export const AdminPanel: React.FC = () => {
   const sortedPackages = useMemo(() => {
       return [...coinPackages].sort((a, b) => a.sortOrder - b.sortOrder);
   }, [coinPackages]);
+  const userCaseLabBoxes = useMemo(() => {
+      return [...boxes]
+          .filter((box) => box.isUserCreated)
+          .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+  }, [boxes]);
   
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
 
   const makeId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
   const formatTimestamp = (ts: number) => new Date(ts).toLocaleString();
+  const getBoxExpiryLabel = (box: MysteryBox) => {
+      if (!box.createdAt) return 'Created time unavailable';
+      const timeRemaining = USER_BOX_EXPIRY_MS - (Date.now() - box.createdAt);
+      if (timeRemaining <= 0) return 'Expired (ready to remove)';
+      const hoursRemaining = Math.ceil(timeRemaining / (1000 * 60 * 60));
+      return `Expires in ${hoursRemaining}h`;
+  };
   const formatCoinText = (amount: number, { showSign = true }: { showSign?: boolean } = {}) => {
       const absoluteAmount = showSign ? Math.abs(amount) : amount;
       const coins = absoluteAmount * 100;
@@ -3610,6 +3623,65 @@ export const AdminPanel: React.FC = () => {
                                 <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
                                     Case Lab settings saved.
                                 </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">User Created Boxes</h3>
+                                <p className="text-sm text-gray-400">
+                                    Remove Case Lab boxes that are expired or no longer needed.
+                                </p>
+                            </div>
+                            <span className="text-xs text-gray-500">
+                                {userCaseLabBoxes.length} total
+                            </span>
+                        </div>
+                        <div className="mt-4 space-y-3">
+                            {userCaseLabBoxes.length === 0 ? (
+                                <div className="text-sm text-gray-500 border border-dashed border-gray-700 rounded-lg px-4 py-6 text-center">
+                                    No user-created boxes are currently active.
+                                </div>
+                            ) : (
+                                userCaseLabBoxes.map((box) => {
+                                    const expiryLabel = getBoxExpiryLabel(box);
+                                    const isExpired = expiryLabel.startsWith('Expired');
+                                    return (
+                                        <div
+                                            key={box.id}
+                                            className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[#0b0e14] border border-gray-800 rounded-xl p-4"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <img
+                                                    src={box.image}
+                                                    alt={box.name}
+                                                    className="h-12 w-12 rounded-lg object-cover bg-black/40"
+                                                />
+                                                <div>
+                                                    <div className="text-sm font-semibold text-white">{box.name}</div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {box.createdAt ? formatTimestamp(box.createdAt) : 'Created time unavailable'}
+                                                    </div>
+                                                    <div className={`text-xs ${isExpired ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                        {expiryLabel}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                                <div className="text-xs text-gray-400">
+                                                    Price: <span className="text-white font-semibold">{box.price}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => initiateDeleteBox(box.id)}
+                                                    className="px-4 py-2 text-xs font-bold rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/20 transition-colors"
+                                                >
+                                                    Remove box
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     </div>

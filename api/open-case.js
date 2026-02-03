@@ -33,6 +33,7 @@ export default async function handler(req, res) {
     }
 
     const boxRef = firestore.collection('boxes').doc(boxId);
+    const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;
     const userRef = firestore.collection('users').doc(decoded.uid);
     const provablyRef = firestore.collection('provablyFair').doc(decoded.uid);
     const inventoryRef = userRef.collection('inventory').doc();
@@ -52,6 +53,14 @@ export default async function handler(req, res) {
       }
 
       const boxData = boxSnap.data() ?? {};
+      if (boxData.isUserCreated && boxData.createdAt) {
+        const createdAt = typeof boxData.createdAt.toMillis === 'function'
+          ? boxData.createdAt.toMillis()
+          : Number(boxData.createdAt);
+        if (Number.isFinite(createdAt) && Date.now() - createdAt >= USER_BOX_EXPIRY_MS) {
+          throw { status: 404, error: 'Box not found', boxId };
+        }
+      }
       const price = Number(boxData.price ?? 0);
       const rawSellBackRate = Number(
         boxData.sellBackRate ?? (boxData.isUserCreated ? 0.75 : 0.82)
