@@ -727,10 +727,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                     ? 'bg-red-500/20 text-red-300 border-red-500/40'
                                     : 'bg-gray-700/40 text-gray-300 border-gray-600';
 
+                              const isSelectable = inventoryFilter === 'inventory' && canShip;
                               return (
                                   <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all flex flex-col">
                                       <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
-                                          {inventoryFilter === 'inventory' && canShip && (
+                                          {isSelectable && (
                                               <label className="absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 border border-white/20">
                                                   <input
                                                       type="checkbox"
@@ -741,12 +742,26 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab = 'topPulls' }) => 
                                                   />
                                               </label>
                                           )}
-                                          <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
-                                          <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
-                                              item.rarity === 'legendary' ? 'from-yellow-500' :
-                                              item.rarity === 'epic' ? 'from-purple-500' :
-                                              item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
-                                          }`} />
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              if (isSelectable) {
+                                                handleToggleShipment(item.instanceId);
+                                              }
+                                            }}
+                                            disabled={!isSelectable}
+                                            aria-pressed={selectedShipments.includes(item.instanceId)}
+                                            className={`relative h-full w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple/60 ${
+                                              isSelectable ? 'cursor-pointer' : 'cursor-default'
+                                            }`}
+                                          >
+                                            <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                                            <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
+                                                item.rarity === 'legendary' ? 'from-yellow-500' :
+                                                item.rarity === 'epic' ? 'from-purple-500' :
+                                                item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
+                                            }`} />
+                                          </button>
                                       </div>
                                       <div className="flex items-start justify-between gap-2">
                                           <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">{item.rarity}</div>

@@ -35,6 +35,8 @@ export default async function handler(req, res) {
     const shippingFlatRateCents = Math.max(0, Math.round(Number(settings.shippingFlatRateCents) || 0));
     const stripeShippingProductId =
       typeof settings.stripeShippingProductId === 'string' ? settings.stripeShippingProductId : '';
+    const usesPriceId = stripeShippingProductId.startsWith('price_');
+    const usesProductId = stripeShippingProductId.startsWith('prod_');
 
     if (!shippingCashEnabled) {
       return sendJson(res, 400, { error: 'Cash shipping is disabled' });
@@ -96,22 +98,26 @@ export default async function handler(req, res) {
       }
     });
 
+    const lineItems = usesPriceId
+      ? [{ price: stripeShippingProductId, quantity: inventoryIds.length }]
+      : [
+          {
+            price_data: {
+              currency: 'usd',
+              ...(usesProductId
+                ? { product: stripeShippingProductId }
+                : { product_data: { name: 'Shipping & Handling' } }),
+              unit_amount: shippingFlatRateCents
+            },
+            quantity: inventoryIds.length
+          }
+        ];
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: `${process.env.APP_URL}/inventory?shipping=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.APP_URL}/inventory?shipping=cancel`,
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            ...(stripeShippingProductId
-              ? { product: stripeShippingProductId }
-              : { product_data: { name: 'Shipping & Handling' } }),
-            unit_amount: shippingFlatRateCents
-          },
-          quantity: inventoryIds.length
-        }
-      ],
+      line_items: lineItems,
       metadata: {
         userId: decoded.uid,
         shipmentId: shipmentBatchId,
