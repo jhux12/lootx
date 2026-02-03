@@ -22,7 +22,7 @@ export const Hero: React.FC = () => {
   };
 
   return (
-    <section className="relative w-full overflow-hidden rounded-[32px] border border-white/5 bg-gradient-to-br from-[#0b101a] via-[#0d121e] to-[#0b1323] px-6 py-12 sm:px-10 lg:px-14 lg:py-16 h-[60vh] min-h-[420px] max-h-[700px] lg:overflow-visible">
+    <section className="relative w-full overflow-hidden rounded-[32px] border border-white/5 bg-gradient-to-br from-[#0b101a] via-[#0d121e] to-[#0b1323] px-6 py-8 sm:py-12 sm:px-10 lg:px-14 lg:py-16 h-[60vh] min-h-[420px] max-h-[700px] lg:overflow-visible">
       <div className="pointer-events-none absolute inset-0 rounded-[32px] overflow-hidden">
         <div
           className="absolute -inset-[35%] opacity-[0.06] blur-[2px] rotate-[-12deg] bg-repeat animate-hero-drift"
@@ -55,10 +55,10 @@ export const Hero: React.FC = () => {
           </div>
         </div>
         <div className="relative flex h-full items-center justify-center">
-          <div className="relative h-[34vh] min-h-[220px] max-h-[380px] w-full sm:h-[40vh] sm:min-h-[260px] sm:max-h-[440px] lg:h-[58vh] lg:min-h-[420px] lg:max-h-[660px] lg:-mr-10 lg:translate-x-6">
+          <div className="relative w-full h-[48vh] min-h-[300px] sm:h-[40vh] sm:min-h-[260px] sm:max-h-[440px] lg:h-[58vh] lg:min-h-[420px] lg:max-h-[660px] lg:-mr-10 lg:translate-x-6">
             <img
               src={heroImage}
-              className="relative z-10 h-full w-full object-contain animate-hero-float"
+              className="relative z-10 h-full w-full object-contain scale-110 sm:scale-100 animate-hero-float"
               alt="Pullz.gg hero"
               loading="eager"
             />
