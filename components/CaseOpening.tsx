@@ -8,6 +8,7 @@ import { useSound } from '../context/SoundContext';
 import { getRiskLabel } from '../utils/caseOdds';
 import { getSellBackValue } from '../utils/sellBack';
 import { authedFetch } from '../utils/authedFetch';
+import pullzPattern from '../assets/pullz-p.PNG';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -114,6 +115,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isGoldMode, setIsGoldMode] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const itemModalRef = useRef<HTMLDivElement>(null);
+  const itemModalCloseRef = useRef<HTMLButtonElement>(null);
+  const lastFocusedElementRef = useRef<HTMLElement | null>(null);
+  const bodyOverflowRef = useRef<string>('');
   const sellOfferTimerRef = useRef<number | null>(null);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
 
@@ -152,6 +157,63 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         setReelItems(staticItems);
     }
   }, [items]);
+
+  useEffect(() => {
+    if (!selectedCaseItem) return;
+
+    lastFocusedElementRef.current = document.activeElement as HTMLElement | null;
+    bodyOverflowRef.current = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const focusableSelectors = [
+      'button',
+      '[href]',
+      'input',
+      'select',
+      'textarea',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+
+    const focusFirstElement = () => {
+      const focusable = itemModalRef.current?.querySelectorAll<HTMLElement>(focusableSelectors);
+      const firstFocusable = focusable && focusable.length > 0 ? focusable[0] : itemModalCloseRef.current;
+      firstFocusable?.focus();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setSelectedCaseItem(null);
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+      const focusable = itemModalRef.current?.querySelectorAll<HTMLElement>(focusableSelectors);
+      if (!focusable || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const isShift = event.shiftKey;
+      const activeElement = document.activeElement as HTMLElement | null;
+
+      if (isShift && activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!isShift && activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    const focusTimer = window.setTimeout(focusFirstElement, 0);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = bodyOverflowRef.current;
+      document.removeEventListener('keydown', handleKeyDown);
+      lastFocusedElementRef.current?.focus();
+    };
+  }, [selectedCaseItem]);
 
   const getWinningItem = (randomValue: number) => {
     // Weighted Randomness
@@ -1047,44 +1109,147 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               aria-label="Close item details"
             />
             <div
-              className="relative w-full max-w-sm overflow-hidden rounded-2xl border bg-gradient-to-br from-[#151a23] via-[#111722] to-[#0b0f18] p-5 text-gray-200 shadow-2xl sm:p-6"
-              style={{ borderColor: selectedCaseItem.color }}
+              ref={itemModalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="item-details-title"
+              className="relative w-full max-w-[640px] max-h-[85vh] overflow-hidden rounded-[26px] border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111824] to-[#0b0f18] text-gray-200 shadow-[0_25px_80px_-40px_rgba(15,23,42,0.9)] shadow-purple-500/10 animate-item-modal-in"
+              style={{
+                borderColor: 'rgba(255,255,255,0.08)',
+                boxShadow:
+                  '0 30px 80px -45px rgba(15,23,42,0.9), 0 0 60px -35px rgba(124,58,237,0.45), 0 0 40px -32px rgba(34,211,238,0.45)',
+              }}
             >
-              <button
-                type="button"
-                onClick={() => setSelectedCaseItem(null)}
-                className="absolute right-4 top-4 rounded-full border border-white/10 bg-black/30 p-2 text-gray-300 transition hover:border-white/30 hover:text-white"
-                aria-label="Close item details"
-              >
-                <X className="h-4 w-4" />
-              </button>
-              <div className="flex flex-col items-center text-center">
-                <div className="mb-4 flex h-32 w-32 items-center justify-center rounded-2xl border border-white/10 bg-white/5 sm:h-36 sm:w-36">
-                  <img
-                    src={selectedCaseItem.image}
-                    alt={selectedCaseItem.name}
-                    className="h-24 w-24 object-contain sm:h-28 sm:w-28"
-                  />
+              <div
+                className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.05]"
+                style={{ backgroundImage: `url(${pullzPattern})` }}
+              />
+              <div className="relative flex max-h-[85vh] flex-col gap-6 overflow-hidden p-6 sm:p-8">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                    Item Details
+                  </span>
+                  <button
+                    ref={itemModalCloseRef}
+                    type="button"
+                    onClick={() => setSelectedCaseItem(null)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:border-white/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+                    aria-label="Close item details"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-                <h3 className="text-lg font-bold text-white">{selectedCaseItem.name}</h3>
-                <CoinAmount
-                  amount={selectedCaseItem.price}
-                  formatOptions={{ maximumFractionDigits: 0 }}
-                  className="mt-2 text-gray-200"
-                  iconClassName="w-4 h-4"
-                />
-                <div className="mt-3 text-xs uppercase tracking-wide text-gray-400">
-                  Brand: <span className="font-semibold text-gray-200">{selectedCaseItem.brand || 'Unknown'}</span>
-                </div>
-                {selectedCaseItem.redeemable === false && (
-                  <div className="mt-4 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
-                    Not redeemable for coins
+                <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-1 md:flex-row">
+                  <div className="flex w-full items-center justify-center md:w-5/12">
+                    <div
+                      className="relative flex h-48 w-full max-w-[220px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_20px_45px_-35px_rgba(34,211,238,0.45)] sm:h-56 sm:max-w-[240px]"
+                      style={{ boxShadow: `0 30px 55px -45px ${selectedCaseItem.color}` }}
+                    >
+                      <img
+                        src={selectedCaseItem.image}
+                        alt={selectedCaseItem.name}
+                        className="h-32 w-32 object-contain sm:h-40 sm:w-40"
+                      />
+                    </div>
                   </div>
-                )}
+                  <div className="flex min-h-0 flex-1 flex-col gap-4 text-left">
+                    <h3
+                      id="item-details-title"
+                      className="text-2xl font-bold text-white sm:text-3xl"
+                    >
+                      {selectedCaseItem.name}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
+                        <CoinAmount
+                          amount={selectedCaseItem.price}
+                          formatOptions={{ maximumFractionDigits: 0 }}
+                          className="text-base font-semibold text-white"
+                          iconClassName="w-4 h-4"
+                        />
+                      </div>
+                      {selectedCaseItem.rarity && (
+                        <span
+                          className="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em]"
+                          style={{
+                            borderColor: selectedCaseItem.color,
+                            color: selectedCaseItem.color,
+                            backgroundColor: `${selectedCaseItem.color}1a`,
+                          }}
+                        >
+                          {selectedCaseItem.rarity}
+                        </span>
+                      )}
+                      {selectedCaseItem.redeemable === false && (
+                        <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-200">
+                          Not redeemable
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid gap-3 text-[11px] uppercase tracking-[0.18em] text-gray-400">
+                      <div className="flex items-center justify-between gap-4">
+                        <span>Brand</span>
+                        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-200">
+                          {selectedCaseItem.brand || 'Unknown'}
+                        </span>
+                      </div>
+                      {selectedCaseItem.category && (
+                        <div className="flex items-center justify-between gap-4">
+                          <span>Category</span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-200">
+                            {selectedCaseItem.category}
+                          </span>
+                        </div>
+                      )}
+                      {typeof selectedCaseItem.chance === 'number' && (
+                        <div className="flex items-center justify-between gap-4">
+                          <span>Odds</span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-200">
+                            {selectedCaseItem.chance}%
+                          </span>
+                        </div>
+                      )}
+                      {selectedCaseItem.tags && selectedCaseItem.tags.length > 0 && (
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <span>Tags</span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-200">
+                            {selectedCaseItem.tags.join(', ')}
+                          </span>
+                        </div>
+                      )}
+                      {selectedCaseItem.sizes && selectedCaseItem.sizes.length > 0 && (
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <span>Sizes</span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-200">
+                            {selectedCaseItem.sizes.join(', ')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end border-t border-white/5 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCaseItem(null)}
+                    className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_-18px_rgba(124,58,237,0.8)] transition hover:shadow-[0_0_24px_rgba(34,211,238,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+                  >
+                    Back to Items
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
+        <style>{`
+          @keyframes item-modal-in {
+            0% { opacity: 0; transform: scale(0.96) translateY(8px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+          }
+          .animate-item-modal-in {
+            animation: item-modal-in 200ms ease-out;
+          }
+        `}</style>
         </>
       )}
     </div>
