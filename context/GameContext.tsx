@@ -1751,6 +1751,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, balance: balanceValue } : u));
       setUser(prev => prev.id === userId ? { ...prev, balance: balanceValue } : prev);
+      if (auth.currentUser.uid === userId) {
+        setBalance(balanceValue);
+      }
   };
 
   const createBattle = async (boxIds: string[], maxPlayers: number) => {
@@ -2077,7 +2080,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const payout = capAmount > 0 ? Math.min(available, capAmount) : available;
     if (payout <= 0) return;
 
-    addBalance(payout);
+    void updateUserBalance(user.id, balance + payout);
     const remaining = Math.max(0, available - payout);
     setUser(prev => ({ ...prev, rakebackBalance: remaining }));
     persistUserData({ rakebackBalance: remaining });

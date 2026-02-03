@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Gift, Calendar, Lock, Copy, TrendingUp, ShieldCheck, ClipboardList, Loader2 } from 'lucide-react';
+import { Gift, Calendar, Lock, Copy, TrendingUp, ShieldCheck, ClipboardList } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
@@ -25,7 +25,7 @@ export const Bonuses: React.FC = () => {
   
   const [affiliateInput, setAffiliateInput] = useState('');
   const [affiliateMessage, setAffiliateMessage] = useState('');
-  const [isOfferLoading, setIsOfferLoading] = useState(false);
+  const [offerMessage, setOfferMessage] = useState('');
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
   // Identify daily box from context
@@ -62,18 +62,9 @@ export const Bonuses: React.FC = () => {
   };
 
   const handleOfferWall = () => {
-     if (isOfferLoading) return;
-     
      playSound('click');
-     setIsOfferLoading(true);
-
-     // Simulate connecting to offer partner and completing a task for demo purposes
-     setTimeout(() => {
-         playSound('coins');
-         addBalance(45.50); // Simulate a specific offer payout
-         setIsOfferLoading(false);
-         // Optional: You could show a notification here
-     }, 2000);
+     setOfferMessage('Offer wall is coming soon. Check back for new partners and offers.');
+     setTimeout(() => setOfferMessage(''), 4000);
   };
 
   const handleApplyAffiliateCode = async () => {
@@ -284,15 +275,13 @@ export const Bonuses: React.FC = () => {
                   <p className="text-xs text-gray-500 mb-4">Complete surveys, install apps, and play games to earn free coins.</p>
                   <button 
                     onClick={handleOfferWall} 
-                    disabled={isOfferLoading}
                     className="w-full py-2 bg-[#0b0e14] hover:bg-gray-800 border border-gray-700 text-gray-300 font-bold rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
                   >
-                      {isOfferLoading ? (
-                        <>
-                            <Loader2 className="w-4 h-4 animate-spin" /> Connecting...
-                        </>
-                      ) : 'Browse Offers'}
+                      Coming Soon
                   </button>
+                  {offerMessage && (
+                    <p className="mt-2 text-xs text-gray-500 text-center">{offerMessage}</p>
+                  )}
               </div>
 
               {/* Rakeback */}
