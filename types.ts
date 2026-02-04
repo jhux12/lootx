@@ -58,6 +58,7 @@ export type BoxTag = 'tech' | 'pokemon' | 'hot' | 'digital' | 'holiday';
 export const BOX_TAG_OPTIONS: BoxTag[] = ['tech', 'pokemon', 'hot', 'digital', 'holiday'];
 
 export interface HomeRowQuery {
+  boxIds?: string[];
   tags?: string[];
   maxPrice?: number;
   minPrice?: number;

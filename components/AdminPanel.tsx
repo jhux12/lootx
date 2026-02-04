@@ -199,6 +199,7 @@ export const AdminPanel: React.FC = () => {
   });
   const [stripeSettingsNotice, setStripeSettingsNotice] = useState(false);
   const [homeRowsDraft, setHomeRowsDraft] = useState<HomeRowConfig[]>(homeRows);
+  const [homeBoxSearch, setHomeBoxSearch] = useState<Record<string, string>>({});
   const [homeRowsNotice, setHomeRowsNotice] = useState(false);
   const [homeRowsError, setHomeRowsError] = useState<string | null>(null);
   const [isEditingBalance, setIsEditingBalance] = useState(false);
@@ -1592,6 +1593,19 @@ export const AdminPanel: React.FC = () => {
   const updateHomeRow = (rowId: string, updates: Partial<HomeRowConfig>) => {
       setHomeRowsDraft((prev) =>
           prev.map((row) => (row.id === rowId ? { ...row, ...updates, query: { ...row.query, ...updates.query } } : row))
+      );
+  };
+
+  const toggleHomeRowBox = (rowId: string, boxId: string) => {
+      setHomeRowsDraft((prev) =>
+          prev.map((row) => {
+              if (row.id !== rowId) return row;
+              const current = row.query.boxIds ?? [];
+              const next = current.includes(boxId)
+                  ? current.filter((id) => id !== boxId)
+                  : [...current, boxId];
+              return { ...row, query: { ...row.query, boxIds: next.length ? next : undefined } };
+          })
       );
   };
 
@@ -3872,7 +3886,7 @@ export const AdminPanel: React.FC = () => {
                             <div>
                                 <h3 className="text-lg font-bold text-white">Homepage box rows</h3>
                                 <p className="text-xs text-gray-400 mt-1">
-                                    Control the homepage box rows, their filters, and ordering. Leave filters blank to show all boxes.
+                                    Choose the boxes shown in each homepage row, then order and toggle rows.
                                 </p>
                             </div>
                             <button
@@ -3926,54 +3940,6 @@ export const AdminPanel: React.FC = () => {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tags (comma-separated)</label>
-                                            <input
-                                                type="text"
-                                                value={row.query.tags?.join(', ') ?? ''}
-                                                onChange={(event) => {
-                                                    const tags = event.target.value
-                                                        .split(',')
-                                                        .map((tag) => tag.trim().toLowerCase())
-                                                        .filter(Boolean);
-                                                    updateHomeRow(row.id, { query: { tags: tags.length ? tags : undefined } });
-                                                }}
-                                                placeholder="new, trending"
-                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Min price</label>
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                step={1}
-                                                value={row.query.minPrice ?? ''}
-                                                onChange={(event) => {
-                                                    const value = event.target.value;
-                                                    updateHomeRow(row.id, {
-                                                        query: { minPrice: value === '' ? undefined : Number(value) }
-                                                    });
-                                                }}
-                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Max price</label>
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                step={1}
-                                                value={row.query.maxPrice ?? ''}
-                                                onChange={(event) => {
-                                                    const value = event.target.value;
-                                                    updateHomeRow(row.id, {
-                                                        query: { maxPrice: value === '' ? undefined : Number(value) }
-                                                    });
-                                                }}
-                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
-                                            />
-                                        </div>
-                                        <div>
                                             <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Row limit</label>
                                             <input
                                                 type="number"
@@ -3996,6 +3962,47 @@ export const AdminPanel: React.FC = () => {
                                                 Active row
                                             </label>
                                         </div>
+                                    </div>
+                                    <div>
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <label className="block text-xs font-bold text-gray-500 uppercase">Select boxes</label>
+                                            <input
+                                                type="text"
+                                                value={homeBoxSearch[row.id] ?? ''}
+                                                onChange={(event) => setHomeBoxSearch((prev) => ({ ...prev, [row.id]: event.target.value }))}
+                                                placeholder="Search boxes..."
+                                                className="w-full sm:w-64 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white"
+                                            />
+                                        </div>
+                                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-72 overflow-y-auto pr-1">
+                                            {boxes
+                                                .filter((box) => !box.isUserCreated)
+                                                .filter((box) => {
+                                                    const query = (homeBoxSearch[row.id] ?? '').trim().toLowerCase();
+                                                    if (!query) return true;
+                                                    return box.name.toLowerCase().includes(query);
+                                                })
+                                                .map((box) => {
+                                                    const selected = row.query.boxIds?.includes(box.id) ?? false;
+                                                    return (
+                                                        <button
+                                                            key={box.id}
+                                                            type="button"
+                                                            onClick={() => toggleHomeRowBox(row.id, box.id)}
+                                                            className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
+                                                                selected ? 'border-blue-500 bg-blue-500/10 text-white' : 'border-gray-800 bg-[#0b0e14] text-gray-300 hover:border-gray-700'
+                                                            }`}
+                                                        >
+                                                            <img src={box.image} alt={box.name} className="h-10 w-10 rounded-md object-cover bg-black/40" />
+                                                            <div className="min-w-0">
+                                                                <div className="text-xs font-semibold truncate">{box.name}</div>
+                                                                <div className="text-[10px] text-gray-500">ID: {box.id}</div>
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+                                        </div>
+                                        <p className="mt-2 text-[10px] text-gray-500">Tap boxes to include them in the row.</p>
                                     </div>
                                 </div>
                             ))}

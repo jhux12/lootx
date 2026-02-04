@@ -60,6 +60,10 @@ const MainContent: React.FC = () => {
       .map((row) => {
       let filtered = baseHomeBoxes;
       const { maxPrice, minPrice } = row.query;
+      if (row.query.boxIds?.length) {
+        const targetIds = new Set(row.query.boxIds);
+        filtered = filtered.filter((box) => targetIds.has(box.id));
+      }
       if (row.query.tags?.length) {
         const targetTags = row.query.tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
         filtered = filtered.filter((box) => {

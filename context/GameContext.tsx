@@ -203,6 +203,9 @@ const normalizeHomeRows = (rows: unknown): HomeRowConfig[] => {
       const title = typeof typed.title === 'string' && typed.title.trim() ? typed.title : 'Homepage Row';
       const limit = Math.max(1, Math.round(Number(typed.limit) || 0)) || 8;
       const query = {
+        boxIds: Array.isArray(rawQuery.boxIds)
+          ? rawQuery.boxIds.map((id) => String(id).trim()).filter(Boolean)
+          : undefined,
         tags: Array.isArray(rawQuery.tags)
           ? rawQuery.tags.map((tag) => String(tag).trim()).filter(Boolean)
           : undefined,
@@ -1294,7 +1297,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const normalized = normalizeHomeRows(rows);
     setHomeRows(normalized);
     const homeRowsRef = doc(db, 'settings', HOME_ROWS_DOC);
-    void setDoc(homeRowsRef, { rows: normalized, updatedAt: serverTimestamp() }, { merge: true }).catch((error) => {
+    const payload = sanitizeDeep({ rows: normalized, updatedAt: serverTimestamp() });
+    void setDoc(homeRowsRef, payload, { merge: true }).catch((error) => {
       console.error('Failed to save home rows to Firebase', error);
     });
   };
