@@ -5,6 +5,7 @@ import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { Input } from './ui/Input';
 import { getRiskLabel } from '../utils/caseOdds';
 import { getSellBackValue } from '../utils/sellBack';
 import { authedFetch } from '../utils/authedFetch';
@@ -874,7 +875,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                             <div className="text-[10px] uppercase font-semibold text-gray-500 bg-black/20 px-2 py-1 rounded border border-gray-800">Nonce {nonce}</div>
                                         </div>
                                         <label className="text-xs text-gray-400 mb-2 block">Customize your seed to verify rolls independently</label>
-                                        <input 
+                                        <Input 
                                             value={clientSeedInput}
                                             onChange={(e) => setClientSeedInput(e.target.value)}
                                             onBlur={() => { if (clientSeedInput !== clientSeed) updateClientSeed(); }}
@@ -884,7 +885,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                                 updateClientSeed();
                                               }
                                             }}
-                                            className="w-full bg-[#0b0e14] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
+                                            className="px-3 py-2 text-sm"
                                             placeholder="Enter your own client seed"
                                             disabled={isSpinning || isUpdatingClientSeed}
                                         />

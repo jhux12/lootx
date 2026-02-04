@@ -3,6 +3,7 @@ import { AlertCircle, Lock, X } from 'lucide-react';
 import { confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
 import { auth } from '../firebase';
 import { BrandLockup } from './BrandLockup';
+import { Input } from './ui/Input';
 
 const clearResetParams = () => {
   const { pathname, hash } = window.location;
@@ -114,11 +115,11 @@ export const ResetPasswordModal: React.FC = () => {
               </label>
               <div className="relative mt-2">
                 <Lock className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-                <input
+                <Input
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-slate-900/60 py-3 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none"
+                  className="pl-10 pr-4"
                   placeholder="Enter your new password"
                   autoComplete="new-password"
                   required
@@ -132,11 +133,11 @@ export const ResetPasswordModal: React.FC = () => {
               </label>
               <div className="relative mt-2">
                 <Lock className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-                <input
+                <Input
                   type="password"
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-slate-900/60 py-3 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none"
+                  className="pl-10 pr-4"
                   placeholder="Re-enter your new password"
                   autoComplete="new-password"
                   required

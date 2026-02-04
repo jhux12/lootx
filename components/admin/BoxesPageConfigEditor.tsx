@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { MysteryBox } from '../../types';
 import { usePreview } from '../../context/PreviewContext';
+import { Checkbox } from '../ui/Checkbox';
+import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
 import {
   BoxesPageConfig,
   BoxesPageCuratedRow,
@@ -164,8 +167,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
         <h3 className="text-lg font-semibold text-white mb-4">Tabs</h3>
         <div className="space-y-3">
           <label className="flex items-center gap-3 text-sm text-gray-300">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={draft.tabs.enabled}
               onChange={(event) => updateTabs({ enabled: event.target.checked })}
             />
@@ -175,8 +177,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
             {tabOptions.map((tab) => (
               <div key={tab.id} className="rounded-xl border border-white/10 bg-[#0b0f1a] p-3 space-y-2">
                 <label className="flex items-center gap-2 text-xs text-gray-400 uppercase tracking-wide">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={tab.enabled}
                     onChange={(event) =>
                       updateTabs({
@@ -188,7 +189,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
                   />
                   {tab.id}
                 </label>
-                <input
+                <Input
                   value={tab.label}
                   onChange={(event) =>
                     updateTabs({
@@ -197,24 +198,22 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
                       )
                     })
                   }
-                  className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                 />
               </div>
             ))}
           </div>
           <div className="max-w-xs">
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Default tab</label>
-            <select
+            <Select
               value={selectedDefaultTab}
               onChange={(event) => updateTabs({ defaultTabId: event.target.value as BoxesPageConfig['tabs']['defaultTabId'] })}
-              className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
             >
               {tabOptions.map((tab) => (
                 <option key={tab.id} value={tab.id}>
                   {tab.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       </div>
@@ -224,14 +223,13 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-3 rounded-xl border border-white/10 bg-[#0b0f1a] p-4">
             <label className="flex items-center gap-3 text-sm text-gray-300">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={draft.filters.search.enabled}
                 onChange={(event) => updateFilters({ search: { ...draft.filters.search, enabled: event.target.checked } })}
               />
               Enable search
             </label>
-            <input
+            <Input
               value={draft.filters.search.placeholder ?? ''}
               onChange={(event) => updateFilters({ search: { ...draft.filters.search, placeholder: event.target.value } })}
               placeholder="Search placeholder"
@@ -241,79 +239,70 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
 
           <div className="space-y-3 rounded-xl border border-white/10 bg-[#0b0f1a] p-4">
             <label className="flex items-center gap-3 text-sm text-gray-300">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={draft.filters.category.enabled}
                 onChange={(event) => updateFilters({ category: { ...draft.filters.category, enabled: event.target.checked } })}
               />
               Enable category
             </label>
-            <input
+            <Input
               value={draft.filters.category.default ?? ''}
               onChange={(event) => updateFilters({ category: { ...draft.filters.category, default: event.target.value } })}
               placeholder="Default category"
-              className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
             />
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Options (comma separated)</label>
-            <input
+            <Input
               value={listToString(draft.filters.category.options)}
               onChange={(event) =>
                 updateFilters({ category: { ...draft.filters.category, options: optionListFromString(event.target.value) } })
               }
               placeholder="All, Tech, Pokemon"
-              className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
             />
           </div>
 
           <div className="space-y-3 rounded-xl border border-white/10 bg-[#0b0f1a] p-4">
             <label className="flex items-center gap-3 text-sm text-gray-300">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={draft.filters.sort.enabled}
                 onChange={(event) => updateFilters({ sort: { ...draft.filters.sort, enabled: event.target.checked } })}
               />
               Enable sort
             </label>
-            <input
+            <Input
               value={draft.filters.sort.default ?? ''}
               onChange={(event) => updateFilters({ sort: { ...draft.filters.sort, default: event.target.value } })}
               placeholder="Default sort"
-              className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
             />
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Options (comma separated)</label>
-            <input
+            <Input
               value={listToString(draft.filters.sort.options)}
               onChange={(event) =>
                 updateFilters({ sort: { ...draft.filters.sort, options: optionListFromString(event.target.value) } })
               }
               placeholder="Popular, Price Low, Price High"
-              className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
             />
           </div>
 
           <div className="space-y-3 rounded-xl border border-white/10 bg-[#0b0f1a] p-4">
             <label className="flex items-center gap-3 text-sm text-gray-300">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={draft.filters.tagChips.enabled}
                 onChange={(event) => updateFilters({ tagChips: { ...draft.filters.tagChips, enabled: event.target.checked } })}
               />
               Enable tag chips
             </label>
-            <input
+            <Input
               value={draft.filters.tagChips.label ?? ''}
               onChange={(event) => updateFilters({ tagChips: { ...draft.filters.tagChips, label: event.target.value } })}
               placeholder="Label"
-              className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
             />
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Popular tags (comma separated)</label>
-            <input
+            <Input
               value={listToString(draft.filters.tagChips.popularTags)}
               onChange={(event) =>
                 updateFilters({ tagChips: { ...draft.filters.tagChips, popularTags: optionListFromString(event.target.value) } })
               }
               placeholder="pokemon, tech, holiday"
-              className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
             />
           </div>
         </div>
@@ -322,24 +311,21 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
           <h4 className="text-sm font-semibold text-white mb-3">Mobile layout</h4>
           <div className="flex flex-wrap gap-4 text-sm text-gray-300">
             <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={draft.filters.mobile.compactTop}
                 onChange={(event) => updateFilters({ mobile: { ...draft.filters.mobile, compactTop: event.target.checked } })}
               />
               Compact header
             </label>
             <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={draft.filters.mobile.collapseTagChips}
                 onChange={(event) => updateFilters({ mobile: { ...draft.filters.mobile, collapseTagChips: event.target.checked } })}
               />
               Collapse tags
             </label>
             <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={draft.filters.mobile.minimalTopRow}
                 onChange={(event) => updateFilters({ mobile: { ...draft.filters.mobile, minimalTopRow: event.target.checked } })}
               />
@@ -379,8 +365,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={row.enabled}
                         onChange={(event) => updateRow(row.id, { enabled: event.target.checked })}
                       />
@@ -417,57 +402,50 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <input
+                  <Input
                     value={row.title}
                     onChange={(event) => updateRow(row.id, { title: event.target.value })}
                     placeholder="Row title"
-                    className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                   />
-                  <input
+                  <Input
                     value={row.subtitle ?? ''}
                     onChange={(event) => updateRow(row.id, { subtitle: event.target.value })}
                     placeholder="Subtitle (optional)"
-                    className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                   />
-                  <select
+                  <Select
                     value={row.layout}
                     onChange={(event) => updateRow(row.id, { layout: event.target.value as BoxesPageCuratedRow['layout'] })}
-                    className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                   >
                     <option value="grid">Grid</option>
                     <option value="carousel">Carousel</option>
-                  </select>
-                  <select
+                  </Select>
+                  <Select
                     value={row.mode}
                     onChange={(event) => updateRow(row.id, { mode: event.target.value as BoxesPageCuratedRow['mode'] })}
-                    className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                   >
                     <option value="byIds">By IDs</option>
                     <option value="byFilter">By Filter</option>
-                  </select>
-                  <input
+                  </Select>
+                  <Input
                     type="number"
                     value={row.maxDesktop ?? ''}
                     onChange={(event) => updateRow(row.id, { maxDesktop: Number(event.target.value) || undefined })}
                     placeholder="Max desktop"
-                    className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                   />
-                  <input
+                  <Input
                     type="number"
                     value={row.maxMobile ?? ''}
                     onChange={(event) => updateRow(row.id, { maxMobile: Number(event.target.value) || undefined })}
                     placeholder="Max mobile"
-                    className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                   />
                 </div>
 
                 {row.mode === 'byIds' ? (
                   <div className="space-y-3">
-                    <input
+                    <Input
                       value={searchValue}
                       onChange={(event) => setBoxSearch((prev) => ({ ...prev, [row.id]: event.target.value }))}
                       placeholder="Search boxes to add"
-                      className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                     />
                     <div className="flex flex-wrap gap-2">
                       {filteredBoxes.map((box) => (
@@ -527,37 +505,32 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
                   </div>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
-                    <input
+                    <Input
                       value={row.filter?.tag ?? ''}
                       onChange={(event) => updateRow(row.id, { filter: { ...row.filter, tag: event.target.value } })}
                       placeholder="Tag"
-                      className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                     />
-                    <input
+                    <Input
                       value={row.filter?.category ?? ''}
                       onChange={(event) => updateRow(row.id, { filter: { ...row.filter, category: event.target.value } })}
                       placeholder="Category"
-                      className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                     />
-                    <input
+                    <Input
                       type="number"
                       value={row.filter?.minPrice ?? ''}
                       onChange={(event) => updateRow(row.id, { filter: { ...row.filter, minPrice: Number(event.target.value) || undefined } })}
                       placeholder="Min price"
-                      className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                     />
-                    <input
+                    <Input
                       type="number"
                       value={row.filter?.maxPrice ?? ''}
                       onChange={(event) => updateRow(row.id, { filter: { ...row.filter, maxPrice: Number(event.target.value) || undefined } })}
                       placeholder="Max price"
-                      className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                     />
-                    <input
+                    <Input
                       value={row.filter?.sort ?? ''}
                       onChange={(event) => updateRow(row.id, { filter: { ...row.filter, sort: event.target.value } })}
                       placeholder="Sort (e.g. Popular)"
-                      className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                     />
                   </div>
                 )}

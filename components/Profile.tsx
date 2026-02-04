@@ -7,6 +7,8 @@ import { getSellBackValue } from '../utils/sellBack';
 import { CoinAmount } from './CoinAmount';
 import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Upload, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight } from 'lucide-react';
 import { auth } from '../firebase';
+import { Checkbox } from './ui/Checkbox';
+import { Input } from './ui/Input';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 const SHIPPING_BATCH_STORAGE_KEY = 'lootx_shipping_batch';
@@ -850,8 +852,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
                                           {isSelectable && (
                                               <label className="absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 border border-white/20">
-                                                  <input
-                                                      type="checkbox"
+                                                  <Checkbox
                                                       checked={selectedShipments.includes(item.instanceId)}
                                                       onChange={() => handleToggleShipment(item.instanceId)}
                                                       className="h-3 w-3 accent-brand-purple"
@@ -1151,7 +1152,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                       <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Search players</label>
                       <div className="mt-2 flex items-center gap-3 bg-[#0b0e14] border border-gray-800 rounded-xl px-3 py-2">
                           <Search className="w-4 h-4 text-gray-500" />
-                          <input 
+                          <Input 
                             type="text"
                             value={communitySearch}
                             onChange={(e) => setCommunitySearch(e.target.value)}
@@ -1259,7 +1260,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           <div className="space-y-6">
                               <div>
                                   <label className="block text-sm font-bold text-gray-400 mb-2">Display Name</label>
-                                  <input 
+                                  <Input 
                                       type="text" 
                                       value={profileForm.name}
                                       onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
@@ -1291,7 +1292,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           <Upload className="w-5 h-5" />
                                           <span className="text-[10px] font-bold">Upload</span>
                                       </button>
-                                      <input 
+                                      <Input 
                                           type="file" 
                                           ref={fileInputRef} 
                                           onChange={handleFileUpload} 
@@ -1346,7 +1347,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="md:col-span-2">
                                   <label className="block text-sm font-bold text-gray-400 mb-2">Full Name</label>
-                                  <input 
+                                  <Input 
                                       type="text" 
                                       value={addressForm.fullName}
                                       onChange={(e) => setAddressForm({...addressForm, fullName: e.target.value})}
@@ -1356,7 +1357,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               </div>
                               <div className="md:col-span-2">
                                   <label className="block text-sm font-bold text-gray-400 mb-2">Street Address</label>
-                                  <input 
+                                  <Input 
                                       type="text" 
                                       value={addressForm.street}
                                       onChange={(e) => setAddressForm({...addressForm, street: e.target.value})}
@@ -1366,7 +1367,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               </div>
                               <div>
                                   <label className="block text-sm font-bold text-gray-400 mb-2">City</label>
-                                  <input 
+                                  <Input 
                                       type="text" 
                                       value={addressForm.city}
                                       onChange={(e) => setAddressForm({...addressForm, city: e.target.value})}
@@ -1375,7 +1376,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               </div>
                               <div>
                                   <label className="block text-sm font-bold text-gray-400 mb-2">State / Province</label>
-                                  <input 
+                                  <Input 
                                       type="text" 
                                       value={addressForm.state}
                                       onChange={(e) => setAddressForm({...addressForm, state: e.target.value})}
@@ -1384,7 +1385,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               </div>
                               <div>
                                   <label className="block text-sm font-bold text-gray-400 mb-2">Zip / Postal Code</label>
-                                  <input 
+                                  <Input 
                                       type="text" 
                                       value={addressForm.zipCode}
                                       onChange={(e) => setAddressForm({...addressForm, zipCode: e.target.value})}
@@ -1393,7 +1394,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               </div>
                               <div>
                                   <label className="block text-sm font-bold text-gray-400 mb-2">Country</label>
-                                  <input 
+                                  <Input 
                                       type="text" 
                                       value={addressForm.country}
                                       onChange={(e) => setAddressForm({...addressForm, country: e.target.value})}
@@ -1421,7 +1422,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           <div className="space-y-4">
                               <div>
                                   <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Current Password</label>
-                                  <input 
+                                  <Input 
                                       type="password" 
                                       value={passwordForm.current}
                                       onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
@@ -1430,7 +1431,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               </div>
                               <div>
                                   <label className="block text-xs font-bold text-gray-500 uppercase mb-2">New Password</label>
-                                  <input 
+                                  <Input 
                                       type="password" 
                                       value={passwordForm.new}
                                       onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
@@ -1439,7 +1440,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               </div>
                               <div>
                                   <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Confirm New Password</label>
-                                  <input 
+                                  <Input 
                                       type="password" 
                                       value={passwordForm.confirm}
                                       onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}

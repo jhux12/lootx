@@ -5,6 +5,7 @@ import { AIChatBot } from './AIChatBot';
 import { useSiteChat } from '../hooks/useSiteChat';
 import { useGame } from '../context/GameContext';
 import { FreeRainBanner } from './FreeRainBanner';
+import { Input } from './ui/Input';
 
 type MobileChatTab = 'chat' | 'support';
 
@@ -109,12 +110,12 @@ export const MobileChatModal: React.FC<MobileChatModalProps> = ({ isOpen, onClos
 
               <div className="p-4 border-t border-gray-800 bg-[#111621]">
                 <div className="relative">
-                  <input
+                  <Input
                     type="text"
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     placeholder={isChatDisabled ? 'Chat disabled' : isAuthenticated ? 'Your message' : 'Log in to chat'}
-                    className="w-full bg-[#0b0e14] border border-gray-700 text-gray-200 text-sm rounded-lg pl-4 pr-10 py-3 focus:outline-none focus:border-brand-purple transition-colors disabled:opacity-50"
+                    className="pl-4 pr-10 py-3 text-sm"
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                     disabled={isChatDisabled}
                   />
