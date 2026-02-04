@@ -142,6 +142,11 @@ const setPendingEmailVerification = (redirectPath?: string) => {
   }
 };
 
+const getCurrentPath = () => {
+  if (typeof window === 'undefined') return '/';
+  return `${window.location.pathname}${window.location.search}`;
+};
+
 const setEmailVerificationCompleted = () => {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(EMAIL_VERIFICATION_COMPLETED_KEY, 'true');
@@ -733,6 +738,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const hasInventorySubcollectionRef = useRef(false);
   const pendingSoldIdsRef = useRef<Set<string>>(new Set());
   const pendingBalanceRef = useRef<number | null>(null);
+  const activeUserIdRef = useRef<string | null>(null);
+  const userUnsubscribeRef = useRef<(() => void) | null>(null);
+  const inventoryUnsubscribeRef = useRef<(() => void) | null>(null);
 
   const setAuthPersistence = async (remember: boolean) => {
     const persistence = remember ? browserLocalPersistence : browserSessionPersistence;
@@ -785,6 +793,94 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setViewState(getViewFromLocation(url.pathname, url.search));
   };
 
+  const clearUserSubscriptions = () => {
+    if (userUnsubscribeRef.current) {
+      userUnsubscribeRef.current();
+      userUnsubscribeRef.current = null;
+    }
+    if (inventoryUnsubscribeRef.current) {
+      inventoryUnsubscribeRef.current();
+      inventoryUnsubscribeRef.current = null;
+    }
+  };
+
+  const startAuthenticatedSession = (firebaseUser: FirebaseUser) => {
+    if (activeUserIdRef.current === firebaseUser.uid) return;
+    clearUserSubscriptions();
+    activeUserIdRef.current = firebaseUser.uid;
+    setIsAuthenticated(true);
+
+    const userRef = getUserRef(firebaseUser.uid);
+    userUnsubscribeRef.current = onSnapshot(userRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        const profile = buildUserProfile(firebaseUser);
+        setUser(profile);
+        setBalance(0);
+        return;
+      }
+
+      const data = snapshot.data();
+      const profile = buildUserProfile(firebaseUser, data);
+      const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
+      if (shouldBeAdmin && !profile.isAdmin) {
+        void setDoc(userRef, { isAdmin: true }, { merge: true }).catch((error) => {
+          console.error('Failed to backfill admin flag', error);
+        });
+        profile.isAdmin = true;
+      }
+
+      const incomingBalance = profile.balance ?? 0;
+      const pendingBalance = pendingBalanceRef.current;
+      const resolvedBalance = pendingBalance !== null && incomingBalance < pendingBalance
+        ? pendingBalance
+        : incomingBalance;
+
+      if (pendingBalance !== null && incomingBalance >= pendingBalance) {
+        pendingBalanceRef.current = null;
+      }
+
+      setUser((prev) => ({
+        ...prev,
+        ...profile,
+        balance: resolvedBalance,
+        topPulls: hasInventorySubcollectionRef.current ? prev.topPulls : profile.topPulls
+      }));
+      setBalance(resolvedBalance);
+      if (!hasInventorySubcollectionRef.current && Array.isArray(data.inventory)) {
+        const legacyInventory = normalizeInventoryItems(data.inventory);
+        setInventory(legacyInventory);
+        const nextTopPulls = rankTopPullsByValue(legacyInventory);
+        setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
+      }
+    }, (error) => {
+      console.error('Failed to load user profile from Firebase', error);
+    });
+
+    const inventoryRef = collection(db, 'users', firebaseUser.uid, 'inventory');
+    inventoryUnsubscribeRef.current = onSnapshot(inventoryRef, (snapshot) => {
+      hasInventorySubcollectionRef.current = snapshot.size > 0;
+      const loaded = snapshot.docs
+        .map(mapInventoryDoc)
+        .sort((a, b) => b.obtainedAt - a.obtainedAt);
+      const pendingIds = pendingSoldIdsRef.current;
+      const filtered = loaded.filter((item) => !pendingIds.has(item.instanceId));
+      if (pendingIds.size > 0) {
+        const nextPending = new Set<string>();
+        pendingIds.forEach((id) => {
+          if (loaded.some((item) => item.instanceId === id)) {
+            nextPending.add(id);
+          }
+        });
+        pendingSoldIdsRef.current = nextPending;
+      }
+      setInventory(filtered);
+      const nextTopPulls = rankTopPullsByValue(filtered);
+      setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
+    }, (error) => {
+      console.error('Failed to load inventory from Firebase', error);
+    });
+  };
+
   const checkEmailVerificationStatus = async (firebaseUser?: FirebaseUser | null) => {
     if (!hasPendingEmailVerification()) {
       setEmailVerificationStatus('idle');
@@ -829,6 +925,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setShowEmailVerificationModal(false);
       setShowEmailVerifiedModal(false);
       resolveEmailRedirect(getPendingEmailRedirect());
+      if (firebaseUser) {
+        startAuthenticatedSession(firebaseUser);
+      }
       return;
     }
 
@@ -930,19 +1029,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    let userUnsubscribe: (() => void) | null = null;
-    let inventoryUnsubscribe: (() => void) | null = null;
-
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
+      const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified);
+      if (requiresVerification && !hasPendingEmailVerification()) {
+        setPendingEmailVerification(getCurrentPath());
+      }
+
       void checkEmailVerificationStatus(firebaseUser);
-      if (userUnsubscribe) {
-        userUnsubscribe();
-        userUnsubscribe = null;
-      }
-      if (inventoryUnsubscribe) {
-        inventoryUnsubscribe();
-        inventoryUnsubscribe = null;
-      }
+      clearUserSubscriptions();
 
       if (!firebaseUser) {
         setIsAuthenticated(false);
@@ -951,86 +1046,28 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setInventory([]);
         setNotifications([]);
         hasInventorySubcollectionRef.current = false;
+        activeUserIdRef.current = null;
         return;
       }
 
-      setIsAuthenticated(true);
+      if (requiresVerification) {
+        setIsAuthenticated(false);
+        setUser(GUEST_USER);
+        setBalance(0);
+        setInventory([]);
+        setNotifications([]);
+        hasInventorySubcollectionRef.current = false;
+        activeUserIdRef.current = null;
+        return;
+      }
 
-      const userRef = getUserRef(firebaseUser.uid);
-      userUnsubscribe = onSnapshot(userRef, (snapshot) => {
-        if (!snapshot.exists()) {
-          const profile = buildUserProfile(firebaseUser);
-          setUser(profile);
-          setBalance(0);
-          return;
-        }
-
-        const data = snapshot.data();
-        const profile = buildUserProfile(firebaseUser, data);
-        const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
-        if (shouldBeAdmin && !profile.isAdmin) {
-          void setDoc(userRef, { isAdmin: true }, { merge: true }).catch((error) => {
-            console.error('Failed to backfill admin flag', error);
-          });
-          profile.isAdmin = true;
-        }
-
-        const incomingBalance = profile.balance ?? 0;
-        const pendingBalance = pendingBalanceRef.current;
-        const resolvedBalance = pendingBalance !== null && incomingBalance < pendingBalance
-          ? pendingBalance
-          : incomingBalance;
-
-        if (pendingBalance !== null && incomingBalance >= pendingBalance) {
-          pendingBalanceRef.current = null;
-        }
-
-        setUser((prev) => ({
-          ...prev,
-          ...profile,
-          balance: resolvedBalance,
-          topPulls: hasInventorySubcollectionRef.current ? prev.topPulls : profile.topPulls
-        }));
-        setBalance(resolvedBalance);
-        if (!hasInventorySubcollectionRef.current && Array.isArray(data.inventory)) {
-          const legacyInventory = normalizeInventoryItems(data.inventory);
-          setInventory(legacyInventory);
-          const nextTopPulls = rankTopPullsByValue(legacyInventory);
-          setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
-        }
-      }, (error) => {
-        console.error('Failed to load user profile from Firebase', error);
-      });
-
-      const inventoryRef = collection(db, 'users', firebaseUser.uid, 'inventory');
-      inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
-        hasInventorySubcollectionRef.current = snapshot.size > 0;
-        const loaded = snapshot.docs
-          .map(mapInventoryDoc)
-          .sort((a, b) => b.obtainedAt - a.obtainedAt);
-        const pendingIds = pendingSoldIdsRef.current;
-        const filtered = loaded.filter((item) => !pendingIds.has(item.instanceId));
-        if (pendingIds.size > 0) {
-          const nextPending = new Set<string>();
-          pendingIds.forEach((id) => {
-            if (loaded.some((item) => item.instanceId === id)) {
-              nextPending.add(id);
-            }
-          });
-          pendingSoldIdsRef.current = nextPending;
-        }
-        setInventory(filtered);
-        const nextTopPulls = rankTopPullsByValue(filtered);
-        setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
-      }, (error) => {
-        console.error('Failed to load inventory from Firebase', error);
-      });
+      startAuthenticatedSession(firebaseUser);
     });
 
     return () => {
       unsubscribe();
-      if (userUnsubscribe) userUnsubscribe();
-      if (inventoryUnsubscribe) inventoryUnsubscribe();
+      clearUserSubscriptions();
+      activeUserIdRef.current = null;
     };
   }, []);
 
@@ -1459,7 +1496,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const resendEmailVerification = async () => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser) {
+      throw new Error('Please sign in to resend the verification email.');
+    }
     await sendEmailVerification(auth.currentUser, {
       url: window.location.origin,
       handleCodeInApp: true
@@ -1472,7 +1511,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, pass: string, remember: boolean = true) => {
       await setAuthPersistence(remember);
-      await signInWithEmailAndPassword(auth, email, pass);
+      const credential = await signInWithEmailAndPassword(auth, email, pass);
+      if (!credential.user.emailVerified) {
+        const redirectPath = getCurrentPath();
+        setPendingEmailVerification(redirectPath);
+        await sendEmailVerification(credential.user, {
+          url: window.location.origin,
+          handleCodeInApp: true
+        });
+        setEmailVerificationStatus('pending');
+        setShowEmailVerificationModal(true);
+        setShowLoginModal(false);
+        return;
+      }
       setShowLoginModal(false);
   };
 
@@ -1528,50 +1579,71 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const register = async (name: string, email: string, pass: string) => {
-    const credential = await createUserWithEmailAndPassword(auth, email, pass);
-    const redirectPath = typeof window !== 'undefined'
-      ? `${window.location.pathname}${window.location.search}`
-      : '/';
-    setPendingEmailVerification(redirectPath);
-    await sendEmailVerification(credential.user, {
-      url: window.location.origin,
-      handleCodeInApp: true
-    });
-    const createdAt = Date.now();
-    const newUser: User = {
-      id: credential.user.uid,
-      createdAt,
-      name,
-      username: name,
-      displayName: name,
-      email,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
-      provider: 'password',
-      level: 1,
-      xp: 0,
-      balance: SIGNUP_CREDIT_COINS,
-      lastDailyClaim: undefined,
-      totalSpent: 0,
-      rakebackBalance: 0,
-      rakebackEarnedToday: 0,
-      rakebackEarnedAt: getDayStart(),
-      followers: [],
-      shippingAddress: undefined,
-      isAdmin: email.toLowerCase() === ADMIN_EMAIL,
-      chatWarnings: 0,
-      chatDisabled: false,
-      termsFlagged: false
-    };
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, email, pass);
+      const redirectPath = getCurrentPath();
+      setPendingEmailVerification(redirectPath);
+      await sendEmailVerification(credential.user, {
+        url: window.location.origin,
+        handleCodeInApp: true
+      });
+      const createdAt = Date.now();
+      const newUser: User = {
+        id: credential.user.uid,
+        createdAt,
+        name,
+        username: name,
+        displayName: name,
+        email,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
+        provider: 'password',
+        level: 1,
+        xp: 0,
+        balance: SIGNUP_CREDIT_COINS,
+        lastDailyClaim: undefined,
+        totalSpent: 0,
+        rakebackBalance: 0,
+        rakebackEarnedToday: 0,
+        rakebackEarnedAt: getDayStart(),
+        followers: [],
+        shippingAddress: undefined,
+        isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+        chatWarnings: 0,
+        chatDisabled: false,
+        termsFlagged: false
+      };
 
-    await setDoc(doc(db, 'users', newUser.id), { ...buildUserDocument(newUser), coins: SIGNUP_CREDIT_COINS });
-
-    setUser(newUser);
-    setBalance(SIGNUP_CREDIT_COINS);
-    setInventory([]);
-    setIsAuthenticated(true);
-    setShowLoginModal(false);
-    setEmailVerificationStatus('pending');
-    setShowEmailVerificationModal(true);
+      await setDoc(doc(db, 'users', newUser.id), { ...buildUserDocument(newUser), coins: SIGNUP_CREDIT_COINS });
+      setShowLoginModal(false);
+      setEmailVerificationStatus('pending');
+      setShowEmailVerificationModal(true);
+    } catch (error: any) {
+      if (error?.code === 'auth/email-already-in-use') {
+        try {
+          const signInCredential = await signInWithEmailAndPassword(auth, email, pass);
+          if (!signInCredential.user.emailVerified) {
+            const redirectPath = getCurrentPath();
+            setPendingEmailVerification(redirectPath);
+            await sendEmailVerification(signInCredential.user, {
+              url: window.location.origin,
+              handleCodeInApp: true
+            });
+            setEmailVerificationStatus('pending');
+            setShowEmailVerificationModal(true);
+            setShowLoginModal(false);
+            return;
+          }
+          throw new Error('That email is already registered. Please sign in.');
+        } catch (signInError: any) {
+          const signInCode = signInError?.code;
+          if (signInCode === 'auth/wrong-password' || signInCode === 'auth/invalid-credential') {
+            throw new Error('That email is already registered. Please sign in or reset your password.');
+          }
+          throw signInError;
+        }
+      }
+      throw error;
+    }
   };
 
   const resetPassword = async (email: string) => {
