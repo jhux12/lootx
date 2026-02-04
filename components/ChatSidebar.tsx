@@ -6,10 +6,14 @@ import { useSiteChat } from '../hooks/useSiteChat';
 import { useGame } from '../context/GameContext';
 import { FreeRainBanner } from './FreeRainBanner';
 
-export const ChatSidebar: React.FC = () => {
+type ChatSidebarProps = {
+  isCollapsed: boolean;
+  onToggle: (nextValue: boolean) => void;
+};
+
+export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isCollapsed, onToggle }) => {
   const [activeTab, setActiveTab] = useState<'chat' | 'support' | 'users'>('chat');
   const [messageText, setMessageText] = useState('');
-  const [isCollapsed, setIsCollapsed] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playSound } = useSound();
   const { isAuthenticated, setView } = useGame();
@@ -21,10 +25,6 @@ export const ChatSidebar: React.FC = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages.length]);
-
-  useEffect(() => {
-    setIsCollapsed(!isAuthenticated);
-  }, [isAuthenticated]);
 
   const handleSend = async () => {
     if (!messageText.trim() || isSending) return;
@@ -52,16 +52,15 @@ export const ChatSidebar: React.FC = () => {
     <div
       data-chat-sidebar
       data-collapsed={isCollapsed}
-      className={`fixed right-0 top-[72px] z-40 hidden h-[calc(100vh-72px)] flex-col border-l border-white/10 bg-[#0f131c]/90 backdrop-blur xl:flex md:top-[80px] md:h-[calc(100vh-80px)] lg:top-[88px] lg:h-[calc(100vh-88px)] ${
-        isCollapsed ? 'w-16' : 'w-72'
-      }`}
+      style={{ width: 'var(--chatw)' }}
+      className="fixed right-0 top-[72px] z-40 hidden h-[calc(100vh-72px)] flex-col border-l border-white/10 bg-[#0f131c]/90 backdrop-blur transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] xl:flex md:top-[80px] md:h-[calc(100vh-80px)] lg:top-[88px] lg:h-[calc(100vh-88px)]"
     >
       <div className="flex h-full w-full flex-col">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <button
             onClick={() => {
               playSound('click');
-              setIsCollapsed((prev) => !prev);
+              onToggle(!isCollapsed);
             }}
             className="flex items-center gap-2 text-xs font-semibold text-gray-400 transition hover:text-white"
             aria-label={isCollapsed ? 'Expand chat' : 'Collapse chat'}
@@ -82,7 +81,7 @@ export const ChatSidebar: React.FC = () => {
             <button
               onClick={() => {
                 playSound('click');
-                setIsCollapsed(false);
+                onToggle(false);
               }}
               className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:border-white/30 hover:text-white"
               aria-label="Open chat sidebar"
