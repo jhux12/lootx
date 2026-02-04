@@ -31,8 +31,8 @@ export const Hero: React.FC = () => {
         <div className="absolute -top-28 left-6 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
         <div className="absolute -bottom-24 right-0 h-80 w-80 rounded-full bg-cyan-500/15 blur-3xl" />
       </div>
-<div className="relative z-10 mx-auto grid h-full max-w-6xl items-start gap-10 lg:items-center lg:grid-cols-[1.05fr_1fr]">
-  <div className="space-y-6">
+      <div className="relative z-10 mx-auto grid h-full max-w-6xl items-start gap-10 lg:items-center lg:grid-cols-[1.05fr_1fr]">
+        <div className="space-y-6">
           <div className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-200/70">
             Mystery Box Website
           </div>
@@ -48,7 +48,7 @@ export const Hero: React.FC = () => {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               onClick={handleGetStarted}
-              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_-18px_rgba(124,58,237,0.8)] transition hover:shadow-[0_0_24px_rgba(34,211,238,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_-18px_rgba(124,58,237,0.8)] transition-all duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:shadow-[0_0_24px_rgba(34,211,238,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 active:translate-y-[1px]"
             >
               Get Started
             </button>
