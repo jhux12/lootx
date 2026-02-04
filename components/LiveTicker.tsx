@@ -15,19 +15,37 @@ export const LiveTicker: React.FC = () => {
       xp: 0
     }];
 
-    const filteredItems = (items.length ? items : CASE_ITEMS)
-      .filter(item => ['legendary', 'epic'].includes(item.rarity));
+    const liveWins = users.flatMap((user) => {
+      const inventoryItems = user.inventory?.length ? user.inventory : user.topPulls ?? [];
+      return inventoryItems.map((item) => ({
+        item,
+        user
+      }));
+    })
+      .filter(({ item }) => ['legendary', 'epic'].includes(item.rarity))
+      .sort((a, b) => (b.item.obtainedAt ?? 0) - (a.item.obtainedAt ?? 0))
+      .slice(0, 12);
 
-    const mapped = filteredItems.map((item, index) => ({
-      id: item.id,
-      itemName: item.name,
-      itemImage: item.image,
-      value: item.price,
-      user: availableUsers[index % availableUsers.length],
-      rarity: item.rarity
-    }));
+    const mapped = liveWins.length
+      ? liveWins.map(({ item, user }) => ({
+          id: item.instanceId ?? item.id,
+          itemName: item.name,
+          itemImage: item.image,
+          value: item.price,
+          user,
+          rarity: item.rarity
+        }))
+      : (items.length ? items : CASE_ITEMS)
+          .filter(item => ['legendary', 'epic'].includes(item.rarity))
+          .map((item, index) => ({
+            id: item.id,
+            itemName: item.name,
+            itemImage: item.image,
+            value: item.price,
+            user: availableUsers[index % availableUsers.length],
+            rarity: item.rarity
+          }));
 
-    // Duplicate for smooth ticker scrolling
     return mapped.length ? [...mapped, ...mapped, ...mapped] : [];
   }, [items, users]);
 
