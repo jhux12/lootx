@@ -25,7 +25,7 @@ export const Hero: React.FC = () => {
     <section className="relative w-full overflow-hidden lg:overflow-visible rounded-[32px] border border-white/5 bg-gradient-to-br from-[#0b101a] via-[#0d121e] to-[#0b1323] px-6 py-8 sm:py-12 sm:px-10 lg:px-14 lg:py-16 h-[78vh] min-h-[560px] max-h-[900px] sm:h-[60vh] sm:min-h-[420px] sm:max-h-[700px]">
       <div className="pointer-events-none absolute inset-0 rounded-[32px] overflow-hidden">
         <div
-          className="absolute -inset-[35%] opacity-[0.06] blur-[2px] rotate-[-12deg] bg-repeat animate-hero-drift"
+          className="absolute -inset-[35%] opacity-[0.06] blur-[2px] rotate-[-12deg] bg-repeat animate-hero-drift will-change-transform"
           style={{ backgroundImage: `url(${pullzPattern})`, backgroundSize: '280px 280px' }}
         />
         <div className="absolute -top-28 left-6 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
@@ -56,12 +56,14 @@ export const Hero: React.FC = () => {
         </div>
         <div className="relative flex h-full items-center justify-center">
           <div className="relative w-full h-[46vh] max-h-[380px] sm:h-[40vh] sm:max-h-[440px] lg:h-[58vh] lg:max-h-[660px] lg:-mr-10 lg:translate-x-6">
-            <img
-              src={heroImage}
-              className="relative z-10 h-full w-full object-contain object-top scale-110 sm:scale-100 -translate-y-4 sm:translate-y-0 animate-hero-float"
-              alt="Pullz.gg hero"
-              loading="eager"
-            />
+            <div className="relative h-full w-full animate-hero-float will-change-transform transform-gpu">
+              <img
+                src={heroImage}
+                className="relative z-10 h-full w-full object-contain object-top scale-110 sm:scale-100 -translate-y-4 sm:translate-y-0"
+                alt="Pullz.gg hero"
+                loading="eager"
+              />
+            </div>
           </div>
         </div>
       </div>
