@@ -686,7 +686,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
 
       {isFiltersOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:hidden">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 pb-10 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h3 className="text-sm font-semibold text-white">Filters</h3>
               <button
@@ -735,7 +735,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                 </div>
               )}
             </div>
-            <div className="mt-6 flex items-center justify-between">
+            <div className="mt-6 flex items-center justify-between pb-4">
               <button
                 type="button"
                 onClick={() => {
@@ -760,7 +760,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
 
       {isTagsOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:hidden">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 pb-10 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h3 className="text-sm font-semibold text-white">Tags</h3>
               <button
@@ -803,7 +803,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                 <p className="text-sm text-gray-500">No tags configured.</p>
               )}
             </div>
-            <div className="mt-6 flex items-center justify-between">
+            <div className="mt-6 flex items-center justify-between pb-4">
               <button
                 type="button"
                 onClick={() => {
