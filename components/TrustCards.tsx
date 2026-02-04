@@ -21,7 +21,7 @@ const trustItems = [
 
 export const TrustCards: React.FC = () => {
   return (
-    <section className="mt-16">
+    <section>
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-white">Trusted and transparent</h2>
       </div>

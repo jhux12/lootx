@@ -23,6 +23,8 @@ import { HowItWorks } from './components/HowItWorks';
 import { TrustCards } from './components/TrustCards';
 import { FinalCTA } from './components/FinalCTA';
 import { SiteFooter } from './components/SiteFooter';
+import { HomeBanners } from './components/HomeBanners';
+import { CaseLabPromo } from './components/CaseLabPromo';
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC = () => {
@@ -60,17 +62,19 @@ const MainContent: React.FC = () => {
   return (
     <main className="flex-1 min-w-0 pb-10 xl:mr-72">
       {view.type === 'HOME' && (
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-12 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300">
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300">
           <Hero />
+          <BoxGrid />
+          <TrustCards />
+          <HowItWorks />
+          <HomeBanners />
+          <CaseLabPromo />
           <section className="space-y-3">
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
               <span>Live Wins</span>
             </div>
             <LiveTicker />
           </section>
-          <BoxGrid />
-          <HowItWorks />
-          <TrustCards />
           <FinalCTA />
         </div>
       )}

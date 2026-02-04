@@ -21,7 +21,7 @@ const steps = [
 
 export const HowItWorks: React.FC = () => {
   return (
-    <section id="how-it-works" className="mt-16 scroll-mt-28">
+    <section id="how-it-works" className="scroll-mt-28">
       <div className="mb-8 flex items-center justify-between gap-4">
         <h2 className="text-2xl font-semibold text-white">How it works</h2>
       </div>
