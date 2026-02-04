@@ -1,49 +1,123 @@
-import React, { useMemo, useState } from 'react';
-import { Tag, ChevronLeft } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Tag, ChevronLeft, Search, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
-import { MysteryBox } from '../types';
 import { BoxCard } from './BoxCard';
-
-const normalizeTag = (tag: string) => tag.trim().toLowerCase();
-
-const getBoxTags = (box: MysteryBox) => {
-  const tags = new Set<string>();
-  if (box.tag) tags.add(box.tag);
-  box.tags?.forEach(tag => tags.add(tag));
-  return Array.from(tags);
-};
+import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 
 export const BoxCatalog: React.FC = () => {
   const { boxes, setView } = useGame();
   const { playSound } = useSound();
-  const [activeTag, setActiveTag] = useState<string>('All');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagSearch, setTagSearch] = useState('');
+  const [priceFilter, setPriceFilter] = useState<{ min?: number; max?: number }>({});
 
   const displayBoxes = useMemo(
     () => boxes.filter(box => !box.isDaily),
     [boxes]
   );
 
-  const tagOptions = useMemo(() => {
-    const tagSet = new Set<string>();
-    displayBoxes.filter(box => !box.isUserCreated).forEach(box => {
-      getBoxTags(box).forEach(tag => tagSet.add(tag));
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tagsParam = params.get('tags');
+    const minPriceParam = params.get('minPrice');
+    const maxPriceParam = params.get('maxPrice');
+    const tags = tagsParam
+      ? tagsParam.split(',').map(normalizeBoxTag).filter(Boolean)
+      : [];
+    const minPrice = minPriceParam ? Number(minPriceParam) : undefined;
+    const maxPrice = maxPriceParam ? Number(maxPriceParam) : undefined;
+    setSelectedTags(tags);
+    setPriceFilter({
+      min: Number.isFinite(minPrice) ? minPrice : undefined,
+      max: Number.isFinite(maxPrice) ? maxPrice : undefined
     });
-    const options = ['All', ...Array.from(tagSet).sort((a, b) => a.localeCompare(b))];
-    if (displayBoxes.some(box => box.isUserCreated)) {
-      options.push('User Created');
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (selectedTags.length > 0) {
+      params.set('tags', selectedTags.join(','));
+    } else {
+      params.delete('tags');
     }
-    return options;
+    if (typeof priceFilter.min === 'number') {
+      params.set('minPrice', String(priceFilter.min));
+    } else {
+      params.delete('minPrice');
+    }
+    if (typeof priceFilter.max === 'number') {
+      params.set('maxPrice', String(priceFilter.max));
+    } else {
+      params.delete('maxPrice');
+    }
+    const search = params.toString();
+    window.history.replaceState({}, '', `/boxes${search ? `?${search}` : ''}`);
+  }, [priceFilter.max, priceFilter.min, selectedTags]);
+
+  const tagStats = useMemo(() => {
+    const counts = new Map<string, number>();
+    displayBoxes.filter(box => !box.isUserCreated).forEach(box => {
+      getBoxTags(box).forEach(tag => {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      });
+    });
+    return counts;
   }, [displayBoxes]);
 
+  const popularTags = useMemo(
+    () =>
+      Array.from(tagStats.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([tag]) => tag),
+    [tagStats]
+  );
+
+  const tagOptions = useMemo(() => {
+    const options = Array.from(tagStats.keys()).sort((a, b) => a.localeCompare(b));
+    if (displayBoxes.some(box => box.isUserCreated)) {
+      options.unshift('User Created');
+    }
+    return options;
+  }, [displayBoxes, tagStats]);
+
   const filteredBoxes = useMemo(() => {
-    if (activeTag === 'All') return displayBoxes.filter(box => !box.isUserCreated);
-    if (activeTag === 'User Created') return displayBoxes.filter(box => box.isUserCreated);
-    const target = normalizeTag(activeTag);
-    return displayBoxes.filter(box =>
-      !box.isUserCreated && getBoxTags(box).some(tag => normalizeTag(tag) === target)
-    );
-  }, [activeTag, displayBoxes]);
+    const normalizedSelected = selectedTags
+      .filter(tag => tag !== 'User Created')
+      .map(normalizeBoxTag);
+    const includeUserCreated = selectedTags.includes('User Created');
+
+    return displayBoxes.filter((box) => {
+      if (typeof priceFilter.min === 'number' && box.price < priceFilter.min) return false;
+      if (typeof priceFilter.max === 'number' && box.price > priceFilter.max) return false;
+
+      if (normalizedSelected.length === 0 && !includeUserCreated) {
+        return !box.isUserCreated;
+      }
+
+      const matchesUserCreated = includeUserCreated && box.isUserCreated;
+      const boxTags = getBoxTags(box);
+      const matchesTag = normalizedSelected.length > 0
+        && !box.isUserCreated
+        && normalizedSelected.some(tag => boxTags.includes(tag));
+      return matchesUserCreated || matchesTag;
+    });
+  }, [displayBoxes, priceFilter.max, priceFilter.min, selectedTags]);
+
+  const filteredTagOptions = useMemo(() => {
+    const search = tagSearch.trim().toLowerCase();
+    if (!search) return tagOptions;
+    return tagOptions.filter(tag => tag.toLowerCase().includes(search));
+  }, [tagOptions, tagSearch]);
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) => (
+      prev.includes(tag)
+        ? prev.filter(existing => existing !== tag)
+        : [...prev, tag]
+    ));
+  };
 
   return (
     <section className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
@@ -66,31 +140,85 @@ export const BoxCatalog: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        {tagOptions.map(tag => {
-          const isSelected = activeTag === tag;
-          return (
+      <div className="space-y-4 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+            <input
+              type="text"
+              value={tagSearch}
+              onChange={(event) => setTagSearch(event.target.value)}
+              placeholder="Search tags"
+              className="w-full rounded-full border border-gray-700 bg-[#0b0e14] py-2 pl-9 pr-3 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
+            />
+          </div>
+          {selectedTags.length > 0 && (
             <button
-              key={tag}
               type="button"
               onClick={() => {
                 playSound('click');
-                setActiveTag(tag);
+                setSelectedTags([]);
               }}
-              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-blue-600/20 border-blue-500 text-blue-200' : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'}`}
+              className="inline-flex items-center gap-2 rounded-full border border-gray-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400 transition hover:border-gray-500"
             >
-              <Tag className="w-3 h-3" />
-              {tag}
-              {tag !== 'All' && (
-                <span className="text-[10px] text-gray-500 font-semibold">
-                  ({tag === 'User Created'
-                    ? displayBoxes.filter(box => box.isUserCreated).length
-                    : displayBoxes.filter(box => !box.isUserCreated && getBoxTags(box).some(boxTag => normalizeTag(boxTag) === normalizeTag(tag))).length})
-                </span>
-              )}
+              <X className="h-3 w-3" /> Clear filters
             </button>
-          );
-        })}
+          )}
+        </div>
+
+        {popularTags.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Popular tags</p>
+            <div className="flex flex-wrap gap-2">
+              {popularTags.map((tag) => {
+                const isSelected = selectedTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      playSound('click');
+                      toggleTag(tag);
+                    }}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-blue-600/20 border-blue-500 text-blue-200' : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                  >
+                    <Tag className="w-3 h-3" />
+                    {tag}
+                    <span className="text-[10px] text-gray-500 font-semibold">
+                      ({tagStats.get(tag) ?? 0})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {filteredTagOptions.map(tag => {
+            const isSelected = selectedTags.includes(tag);
+            const tagCount = tag === 'User Created'
+              ? displayBoxes.filter(box => box.isUserCreated).length
+              : tagStats.get(tag) ?? 0;
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  toggleTag(tag);
+                }}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-blue-600/20 border-blue-500 text-blue-200' : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'}`}
+              >
+                <Tag className="w-3 h-3" />
+                {tag}
+                <span className="text-[10px] text-gray-500 font-semibold">
+                  ({tagCount})
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {filteredBoxes.length > 0 ? (

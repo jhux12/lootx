@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Header } from './components/Header';
 import { LiveTicker } from './components/LiveTicker';
 import { ChatSidebar } from './components/ChatSidebar';
 import { Hero } from './components/Hero';
 import { BoxGrid } from './components/BoxGrid';
+import { BoxRow } from './components/BoxRow';
 import { BoxCatalog } from './components/BoxCatalog';
 import { CaseOpening } from './components/CaseOpening';
 import { Profile } from './components/Profile';
@@ -23,14 +24,79 @@ import { HowItWorks } from './components/HowItWorks';
 import { TrustCards } from './components/TrustCards';
 import { FinalCTA } from './components/FinalCTA';
 import { SiteFooter } from './components/SiteFooter';
+import { HomeBanners } from './components/HomeBanners';
+import { CaseLabPromo } from './components/CaseLabPromo';
+import { getBoxTags } from './utils/boxTags';
+
+type HomeRowConfig = {
+  id: string;
+  title: string;
+  query: {
+    tags?: string[];
+    maxPrice?: number;
+    minPrice?: number;
+  };
+  limit: number;
+};
+
+const HOME_ROWS: HomeRowConfig[] = [
+  { id: 'new', title: 'New Drops', query: { tags: ['new'] }, limit: 8 },
+  { id: 'trending', title: 'Trending Now', query: { tags: ['trending'] }, limit: 8 },
+  { id: 'budget', title: 'Budget Picks', query: { maxPrice: 500 }, limit: 8 },
+  { id: 'high-roller', title: 'High Roller', query: { minPrice: 2000 }, limit: 8 }
+];
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC = () => {
-  const { view, showLoginModal, showTopUpModal, isAuthenticated, user, setView, setShowLoginModal } = useGame();
+  const { view, showLoginModal, showTopUpModal, isAuthenticated, user, setView, setShowLoginModal, boxes } = useGame();
+  const [isChatCollapsed, setIsChatCollapsed] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [view]);
+
+  useEffect(() => {
+    const sidebar = document.querySelector('[data-chat-sidebar]');
+    if (!sidebar) return;
+    const updateState = () => {
+      setIsChatCollapsed(sidebar.getAttribute('data-collapsed') === 'true');
+    };
+    updateState();
+    const observer = new MutationObserver(updateState);
+    observer.observe(sidebar, { attributes: true, attributeFilter: ['data-collapsed'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const baseHomeBoxes = useMemo(
+    () => boxes.filter(box => !box.isUserCreated && !box.isDaily),
+    [boxes]
+  );
+
+  const homeRows = useMemo(() => (
+    HOME_ROWS.map((row) => {
+      let filtered = baseHomeBoxes;
+      const { maxPrice, minPrice } = row.query;
+      if (row.query.tags?.length) {
+        const targetTags = row.query.tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
+        filtered = filtered.filter((box) => {
+          const boxTags = getBoxTags(box);
+          return targetTags.some((tag) => boxTags.includes(tag));
+        });
+      }
+      if (typeof maxPrice === 'number') {
+        filtered = filtered.filter((box) => box.price <= maxPrice);
+      }
+      if (typeof minPrice === 'number') {
+        filtered = filtered.filter((box) => box.price >= minPrice);
+      }
+      return {
+        ...row,
+        boxes: filtered.slice(0, row.limit)
+      };
+    })
+  ), [baseHomeBoxes]);
+
+  const mainOffsetClass = view.type === 'HOME' && isChatCollapsed ? 'xl:mr-16' : 'xl:mr-72';
 
   const BattlesComingSoon = () => (
     <div className="mt-6 rounded-2xl border border-gray-800 bg-[#0b0e14] p-6 sm:p-8">
@@ -58,19 +124,24 @@ const MainContent: React.FC = () => {
   );
 
   return (
-    <main className="flex-1 min-w-0 pb-10 xl:mr-72">
+    <main className={`flex-1 min-w-0 pb-10 ${mainOffsetClass}`}>
       {view.type === 'HOME' && (
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-12 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300">
+        <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
           <Hero />
+          <BoxGrid />
+          {homeRows.map((row) => (
+            <BoxRow key={row.id} title={row.title} boxes={row.boxes} viewAllQuery={row.query} />
+          ))}
+          <TrustCards />
+          <HowItWorks />
+          <HomeBanners />
+          <CaseLabPromo />
           <section className="space-y-3">
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
               <span>Live Wins</span>
             </div>
             <LiveTicker />
           </section>
-          <BoxGrid />
-          <HowItWorks />
-          <TrustCards />
           <FinalCTA />
         </div>
       )}

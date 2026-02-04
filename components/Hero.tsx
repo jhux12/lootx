@@ -22,7 +22,7 @@ export const Hero: React.FC = () => {
   };
 
   return (
-    <section className="relative w-full overflow-hidden lg:overflow-visible rounded-[32px] border border-white/5 bg-gradient-to-br from-[#0b101a] via-[#0d121e] to-[#0b1323] px-6 py-8 sm:py-12 sm:px-10 lg:px-14 lg:py-16 h-[78vh] min-h-[560px] max-h-[900px] sm:h-[60vh] sm:min-h-[420px] sm:max-h-[700px]">
+    <section className="relative w-full overflow-hidden lg:overflow-visible rounded-[32px] border border-white/5 bg-gradient-to-br from-[#0b101a] via-[#0d121e] to-[#0b1323] px-6 py-8 sm:py-12 sm:px-10 lg:px-14 lg:py-16 h-[62vh] min-h-[520px] max-h-[760px] sm:h-[58vh] sm:min-h-[440px] sm:max-h-[640px]">
       <div className="pointer-events-none absolute inset-0 rounded-[32px] overflow-hidden">
         <div
           className="absolute -inset-[35%] opacity-[0.06] blur-[2px] rotate-[-12deg] bg-repeat animate-hero-drift"
@@ -31,8 +31,8 @@ export const Hero: React.FC = () => {
         <div className="absolute -top-28 left-6 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
         <div className="absolute -bottom-24 right-0 h-80 w-80 rounded-full bg-cyan-500/15 blur-3xl" />
       </div>
-<div className="relative z-10 mx-auto grid h-full max-w-6xl items-start gap-10 lg:items-center lg:grid-cols-[1.05fr_1fr]">
-  <div className="space-y-6">
+      <div className="relative z-10 mx-auto grid h-full max-w-6xl items-start gap-10 lg:items-center lg:grid-cols-[1.05fr_1fr]">
+        <div className="space-y-6">
           <div className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-200/70">
             Mystery Box Website
           </div>
@@ -53,9 +53,16 @@ export const Hero: React.FC = () => {
               Get Started
             </button>
           </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-gray-400">
+            <span>Provably fair</span>
+            <span className="text-gray-600">•</span>
+            <span>Real inventory</span>
+            <span className="text-gray-600">•</span>
+            <span>Instant sellback</span>
+          </div>
         </div>
         <div className="relative flex h-full items-center justify-center">
-          <div className="relative w-full h-[46vh] max-h-[380px] sm:h-[40vh] sm:max-h-[440px] lg:h-[58vh] lg:max-h-[660px] lg:-mr-10 lg:translate-x-6">
+          <div className="relative w-full h-[40vh] max-h-[340px] sm:h-[38vh] sm:max-h-[400px] lg:h-[52vh] lg:max-h-[560px] lg:-mr-10 lg:translate-x-6">
             <img
               src={heroImage}
               className="relative z-10 h-full w-full object-contain object-top scale-110 sm:scale-100 -translate-y-4 sm:translate-y-0 animate-hero-float"

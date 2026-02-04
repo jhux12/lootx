@@ -16,7 +16,7 @@ export const FinalCTA: React.FC = () => {
   };
 
   return (
-    <section className="mt-16">
+    <section>
       <div className="rounded-3xl border border-white/10 bg-gradient-to-r from-purple-500/15 via-[#101724] to-cyan-500/15 p-8 text-center sm:p-10">
         <h2 className="text-2xl font-semibold text-white">Ready to open your first case?</h2>
         <p className="mt-2 text-sm text-gray-300">

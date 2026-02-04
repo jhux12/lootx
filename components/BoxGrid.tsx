@@ -2,41 +2,70 @@ import React, { useMemo, useState } from 'react';
 import { Boxes } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
-import caselabImage from '../assets/caselab.gif';
 import { BoxCard } from './BoxCard';
+import { MysteryBox } from '../types';
 
-export const BoxGrid: React.FC = () => {
-  const { setView, boxes } = useGame();
+type BoxGridQuery = {
+  tags?: string[];
+  maxPrice?: number;
+  minPrice?: number;
+};
+
+type BoxGridProps = {
+  title?: string;
+  boxes?: MysteryBox[];
+  viewAllQuery?: BoxGridQuery;
+  viewAllLabel?: string;
+  initialVisibleCount?: number;
+  perPage?: number;
+};
+
+export const BoxGrid: React.FC<BoxGridProps> = ({
+  title = 'Popular Mystery Boxes',
+  boxes: boxesOverride,
+  viewAllQuery,
+  viewAllLabel = 'View all',
+  initialVisibleCount = 4,
+  perPage = 4
+}) => {
+  const { setView, boxes: allBoxes } = useGame();
   const { playSound } = useSound();
-  const [visibleCount, setVisibleCount] = useState(4);
-  const perPage = 4;
+  const [visibleCount, setVisibleCount] = useState(initialVisibleCount);
 
   // Filter out user-created and daily free boxes from the main shop/grid
   const displayBoxes = useMemo(
-    () => boxes.filter(box => !box.isUserCreated && !box.isDaily),
-    [boxes]
+    () => (boxesOverride ?? allBoxes).filter(box => !box.isUserCreated && !box.isDaily),
+    [allBoxes, boxesOverride]
   );
   const visibleBoxes = displayBoxes.slice(0, visibleCount);
   const canViewMore = visibleCount < displayBoxes.length;
   return (
-    <section id="popular-boxes" className="mt-14 px-4 md:px-0 scroll-mt-32">
+    <section id="popular-boxes" className="px-4 md:px-0 scroll-mt-32">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-2 text-left">
           <Boxes className="w-5 h-5 text-sky-400" />
-          <h2 className="text-xl font-semibold text-white">Popular Mystery Boxes</h2>
+          <h2 className="text-xl font-semibold text-white">{title}</h2>
         </div>
         <button
           className="w-full sm:w-auto px-4 py-2 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-gray-200 transition hover:border-white/30 hover:text-white"
           onClick={() => {
             playSound('click');
             setView({ type: 'BOXES' });
+            if (viewAllQuery) {
+              const params = new URLSearchParams();
+              if (viewAllQuery.tags?.length) params.set('tags', viewAllQuery.tags.join(','));
+              if (typeof viewAllQuery.minPrice === 'number') params.set('minPrice', String(viewAllQuery.minPrice));
+              if (typeof viewAllQuery.maxPrice === 'number') params.set('maxPrice', String(viewAllQuery.maxPrice));
+              const search = params.toString();
+              window.history.replaceState({}, '', `/boxes${search ? `?${search}` : ''}`);
+            }
           }}
         >
-          View all
+          {viewAllLabel}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {visibleBoxes.map((box) => (
           <BoxCard
             key={box.id}
@@ -49,10 +78,10 @@ export const BoxGrid: React.FC = () => {
           />
         ))}
       </div>
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-6 flex justify-center">
         {canViewMore && (
           <button
-            className="px-4 py-2 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-gray-200 transition hover:border-white/30 hover:text-white"
+            className="px-6 py-2 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-gray-200 transition hover:border-white/30 hover:text-white"
             onClick={() => {
               playSound('click');
               setVisibleCount((count) => Math.min(count + perPage, displayBoxes.length));
@@ -61,24 +90,6 @@ export const BoxGrid: React.FC = () => {
             View more
           </button>
         )}
-      </div>
-      <div className="mt-6 w-full">
-        <button
-          type="button"
-          onClick={() => {
-            playSound('click');
-            setView({ type: 'CUSTOM_CREATOR' });
-          }}
-          aria-label="Open Case Lab"
-          className="relative w-full overflow-hidden rounded-xl border border-gray-800 bg-[#131720] transition hover:border-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 h-[180px] sm:h-[220px] md:h-[260px] lg:h-[300px]"
-        >
-          <img
-            src={caselabImage}
-            alt="Caselab showcase"
-            className="h-full w-full object-contain"
-            loading="lazy"
-          />
-        </button>
       </div>
     </section>
   );

@@ -129,6 +129,7 @@ export const AdminPanel: React.FC = () => {
   });
   const [itemTagInput, setItemTagInput] = useState('');
   const [itemSizeInput, setItemSizeInput] = useState('');
+  const [boxTagInput, setBoxTagInput] = useState('');
 
   // --- BOX FORM STATE ---
   const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
@@ -211,7 +212,9 @@ export const AdminPanel: React.FC = () => {
   const EV_TOLERANCE = 0.01;
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
-  const boxTagOptions = ['Tech Boxes', 'Pokemon', 'Digital Codes', 'Hot', 'Deals'];
+  const MAX_BOX_TAGS = 10;
+  const MAX_BOX_TAG_LENGTH = 24;
+  const boxTagOptions = ['tech boxes', 'pokemon', 'digital codes', 'hot', 'deals'];
   const sortedPackages = useMemo(() => {
       return [...coinPackages].sort((a, b) => a.sortOrder - b.sortOrder);
   }, [coinPackages]);
@@ -441,6 +444,14 @@ export const AdminPanel: React.FC = () => {
           .filter(Boolean)
   ));
 
+  const normalizeBoxTagList = (tags: string[]) => {
+      const normalized = tags
+          .map((tag) => tag.trim().toLowerCase())
+          .filter(Boolean)
+          .map((tag) => tag.slice(0, MAX_BOX_TAG_LENGTH));
+      return Array.from(new Set(normalized)).slice(0, MAX_BOX_TAGS);
+  };
+
   const normalizeSizeList = (sizes: string[]) => {
       const seen = new Set<string>();
       return sizes
@@ -466,6 +477,23 @@ export const AdminPanel: React.FC = () => {
   const removeItemTag = (tag: string) => {
       const normalized = tag.trim().toLowerCase();
       setNewItem((prev) => ({
+          ...prev,
+          tags: (prev.tags ?? []).filter((existing) => existing.toLowerCase() !== normalized)
+      }));
+  };
+
+  const addBoxTag = (tag: string) => {
+      const normalized = tag.trim().toLowerCase();
+      if (!normalized) return;
+      setNewBox((prev) => ({
+          ...prev,
+          tags: normalizeBoxTagList([...(prev.tags ?? []), normalized])
+      }));
+  };
+
+  const removeBoxTag = (tag: string) => {
+      const normalized = tag.trim().toLowerCase();
+      setNewBox((prev) => ({
           ...prev,
           tags: (prev.tags ?? []).filter((existing) => existing.toLowerCase() !== normalized)
       }));
@@ -1431,7 +1459,7 @@ export const AdminPanel: React.FC = () => {
           image: newBox.image || 'https://picsum.photos/300',
           accentColor: newBox.accentColor || '#3b82f6',
           tag: newBox.tag,
-          tags: newBox.tags ?? [],
+          tags: normalizeBoxTagList(newBox.tags ?? []),
           isDaily: newBox.isDaily,
           sellBackRate: newBox.sellBackRate ?? (newBox.isDaily ? 0.75 : 0.82),
           items: boxItems,
@@ -1458,10 +1486,11 @@ export const AdminPanel: React.FC = () => {
           image: box.image,
           accentColor: box.accentColor,
           tag: box.tag,
-          tags: box.tags ?? (box.tag ? [box.tag] : []),
+          tags: normalizeBoxTagList(box.tags ?? (box.tag ? [box.tag] : [])),
           isDaily: box.isDaily,
           sellBackRate: box.sellBackRate ?? (box.isUserCreated ? 0.75 : 0.82)
       });
+      setBoxTagInput('');
       setSelectedItems(box.items.map(i => ({...i})));
       setRiskBalance(box.riskLevel ?? 50);
       setTargetEV(box.targetEV ?? 0.85);
@@ -1495,17 +1524,19 @@ export const AdminPanel: React.FC = () => {
         tags: [],
         sellBackRate: 0.82
       });
+      setBoxTagInput('');
       setSelectedItems([]);
       setRiskBalance(50);
       setTargetEV(0.85);
   };
 
   const toggleBoxTag = (tag: string) => {
+      const normalized = tag.trim().toLowerCase();
       setNewBox(prev => {
           const currentTags = prev.tags ?? [];
-          const nextTags = currentTags.includes(tag)
-              ? currentTags.filter(existing => existing !== tag)
-              : [...currentTags, tag];
+          const nextTags = currentTags.includes(normalized)
+              ? currentTags.filter(existing => existing !== normalized)
+              : normalizeBoxTagList([...currentTags, normalized]);
           return { ...prev, tags: nextTags };
       });
   };
@@ -2016,7 +2047,48 @@ export const AdminPanel: React.FC = () => {
                                             );
                                         })}
                                     </div>
-                                    <p className="mt-2 text-[10px] text-gray-500">Tags power homepage filters. Select all that apply.</p>
+                                    <div className="mt-3 space-y-2">
+                                        <div className="flex flex-wrap gap-2">
+                                            {(newBox.tags ?? []).map((tag) => (
+                                                <span key={tag} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-300">
+                                                    {tag}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeBoxTag(tag)}
+                                                        className="text-gray-500 hover:text-white"
+                                                        aria-label={`Remove ${tag}`}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Add tags (comma or enter)"
+                                            className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white text-sm"
+                                            value={boxTagInput}
+                                            onChange={(e) => setBoxTagInput(e.target.value)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === 'Enter' || event.key === ',') {
+                                                    event.preventDefault();
+                                                    const entries = boxTagInput.split(',').map((tagValue) => tagValue.trim()).filter(Boolean);
+                                                    entries.forEach((entry) => addBoxTag(entry));
+                                                    setBoxTagInput('');
+                                                }
+                                            }}
+                                            onBlur={() => {
+                                                const entries = boxTagInput.split(',').map((tagValue) => tagValue.trim()).filter(Boolean);
+                                                if (entries.length > 0) {
+                                                    entries.forEach((entry) => addBoxTag(entry));
+                                                    setBoxTagInput('');
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <p className="mt-2 text-[10px] text-gray-500">
+                                      Tags power homepage filters. Max {MAX_BOX_TAGS} tags, {MAX_BOX_TAG_LENGTH} characters each.
+                                    </p>
                                 </div>
                             </div>
 
