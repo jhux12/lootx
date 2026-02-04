@@ -1,7 +1,7 @@
 import React from 'react';
 // Upload banner images manually into /assets/home-banners and reference them here.
-const banner1 = new URL('../assets/home-banners/banner.png', import.meta.url).href;
-const banner2 = new URL('../assets/home-banners/banner2.png', import.meta.url).href;
+const banner1 = '/assets/home-banners/banner.png';
+const banner2 = '/assets/home-banners/banner2.png';
 const HOME_BANNERS = [
   {
     src: banner1,
