@@ -144,7 +144,6 @@ export const TopUpModal: React.FC = () => {
                           activePackages.map((pack) => {
                             const isSelected = selectedPackage?.id === pack.id;
                             const bonusCoins = pack.bonusCoins ?? 0;
-                            const totalCoins = pack.totalCoins ?? pack.coins + bonusCoins;
                             return (
                               <button
                                   key={pack.id}
@@ -165,13 +164,13 @@ export const TopUpModal: React.FC = () => {
                                   <div className="flex flex-col gap-1">
                                     <span className="text-[11px] font-semibold text-gray-400">{pack.displayPrice}</span>
                                     <CoinAmount
-                                      amount={totalCoins / 100}
+                                      amount={pack.coins / 100}
                                       formatOptions={{ maximumFractionDigits: 0 }}
                                       className="text-white"
                                       iconClassName="w-3.5 h-3.5"
                                     />
                                     <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500">
-                                      <span>{pack.coins.toLocaleString()} base</span>
+                                      <span>{pack.coins.toLocaleString()}</span>
                                       {bonusCoins > 0 && (
                                         <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-semibold text-emerald-200">
                                           +{bonusCoins.toLocaleString()} bonus
@@ -183,34 +182,6 @@ export const TopUpModal: React.FC = () => {
                             );
                           })
                         )}
-                    </div>
-
-                    <div className="mb-5 rounded-2xl border border-white/10 bg-[#121826] p-4">
-                      <p className="text-xs font-semibold uppercase text-emerald-200">Value breakdown</p>
-                      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-                        <CoinAmount
-                          amount={totalCoins / 100}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          className="text-lg font-black text-white"
-                          iconClassName="w-5 h-5"
-                        />
-                        <div className="text-right text-xs text-emerald-200">
-                          <div>{formattedDepositAmount} deposit</div>
-                          {effectiveRate && (
-                            <div className="text-[11px] text-emerald-100">
-                              ~{effectiveRate.toLocaleString()} coins / $1
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between text-[11px] text-emerald-100/80">
-                        <span>Base coins</span>
-                        <span>{(selectedPackage?.coins ?? 0).toLocaleString()}</span>
-                      </div>
-                      <div className="mt-1 flex items-center justify-between text-[11px] text-emerald-100/80">
-                        <span>Bonus coins</span>
-                        <span>{(selectedPackage?.bonusCoins ?? 0).toLocaleString()}</span>
-                      </div>
                     </div>
 
                     {errorMessage && (
