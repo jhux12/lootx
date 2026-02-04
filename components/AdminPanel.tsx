@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker } from 'lucide-react';
 import { collection, deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
+import { AdminActionLog, CaseItem, CoinPackage, HomeRowConfig, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -108,7 +108,9 @@ export const AdminPanel: React.FC = () => {
     bonusSettings,
     updateBonusSettings,
     stripeSettings,
-    updateStripeSettings
+    updateStripeSettings,
+    homeRows,
+    updateHomeRows
   } = useGame();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'bonuses' | 'packages' | 'fees' | 'case-lab'>('dashboard');
 
@@ -196,6 +198,9 @@ export const AdminPanel: React.FC = () => {
       caseLabSellBackPercent: stripeSettings.caseLabSellBackPercent
   });
   const [stripeSettingsNotice, setStripeSettingsNotice] = useState(false);
+  const [homeRowsDraft, setHomeRowsDraft] = useState<HomeRowConfig[]>(homeRows);
+  const [homeRowsNotice, setHomeRowsNotice] = useState(false);
+  const [homeRowsError, setHomeRowsError] = useState<string | null>(null);
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [balanceDraft, setBalanceDraft] = useState('');
   const [isEditingInventory, setIsEditingInventory] = useState(false);
@@ -437,6 +442,10 @@ export const AdminPanel: React.FC = () => {
           caseLabSellBackPercent: stripeSettings.caseLabSellBackPercent
       });
   }, [stripeSettings]);
+
+  useEffect(() => {
+      setHomeRowsDraft(homeRows);
+  }, [homeRows]);
 
   const normalizeTagList = (tags: string[]) => Array.from(new Set(
       tags
@@ -1578,6 +1587,48 @@ export const AdminPanel: React.FC = () => {
       });
       setStripeSettingsNotice(true);
       window.setTimeout(() => setStripeSettingsNotice(false), 3000);
+  };
+
+  const updateHomeRow = (rowId: string, updates: Partial<HomeRowConfig>) => {
+      setHomeRowsDraft((prev) =>
+          prev.map((row) => (row.id === rowId ? { ...row, ...updates, query: { ...row.query, ...updates.query } } : row))
+      );
+  };
+
+  const handleAddHomeRow = () => {
+      const newRow: HomeRowConfig = {
+          id: `home-row-${Date.now()}`,
+          title: 'New Homepage Row',
+          query: {},
+          limit: 8,
+          isActive: true
+      };
+      setHomeRowsDraft((prev) => [...prev, newRow]);
+  };
+
+  const handleMoveHomeRow = (rowId: string, direction: 'up' | 'down') => {
+      setHomeRowsDraft((prev) => {
+          const index = prev.findIndex((row) => row.id === rowId);
+          if (index < 0) return prev;
+          const targetIndex = direction === 'up' ? index - 1 : index + 1;
+          if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+          const next = [...prev];
+          const [removed] = next.splice(index, 1);
+          next.splice(targetIndex, 0, removed);
+          return next;
+      });
+  };
+
+  const handleSaveHomeRows = () => {
+      const trimmed = homeRowsDraft.map((row) => ({ ...row, title: row.title.trim() }));
+      if (trimmed.some((row) => !row.title)) {
+          setHomeRowsError('Each homepage row needs a title.');
+          return;
+      }
+      setHomeRowsError(null);
+      updateHomeRows(trimmed);
+      setHomeRowsNotice(true);
+      window.setTimeout(() => setHomeRowsNotice(false), 3000);
   };
 
   return (
@@ -3812,6 +3863,162 @@ export const AdminPanel: React.FC = () => {
                             {adminNoticeSent && (
                                 <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
                                     Notification sent.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Homepage box rows</h3>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Control the homepage box rows, their filters, and ordering. Leave filters blank to show all boxes.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleAddHomeRow}
+                                className="w-full sm:w-auto px-4 py-2 rounded-lg border border-gray-700 text-xs font-semibold uppercase tracking-wide text-gray-200 hover:border-gray-500"
+                            >
+                                Add row
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            {homeRowsDraft.map((row, index) => (
+                                <div key={row.id} className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4 space-y-4">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <div className="text-xs uppercase tracking-wide text-gray-500">Row {index + 1}</div>
+                                            <div className="text-sm text-gray-400">ID: {row.id}</div>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleMoveHomeRow(row.id, 'up')}
+                                                className="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-700 text-gray-300 hover:border-gray-500"
+                                            >
+                                                Move up
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleMoveHomeRow(row.id, 'down')}
+                                                className="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-700 text-gray-300 hover:border-gray-500"
+                                            >
+                                                Move down
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setHomeRowsDraft((prev) => prev.filter((entry) => entry.id !== row.id))}
+                                                className="px-3 py-2 text-xs font-semibold rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/20"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Title</label>
+                                            <input
+                                                type="text"
+                                                value={row.title}
+                                                onChange={(event) => updateHomeRow(row.id, { title: event.target.value })}
+                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tags (comma-separated)</label>
+                                            <input
+                                                type="text"
+                                                value={row.query.tags?.join(', ') ?? ''}
+                                                onChange={(event) => {
+                                                    const tags = event.target.value
+                                                        .split(',')
+                                                        .map((tag) => tag.trim().toLowerCase())
+                                                        .filter(Boolean);
+                                                    updateHomeRow(row.id, { query: { tags: tags.length ? tags : undefined } });
+                                                }}
+                                                placeholder="new, trending"
+                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Min price</label>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                step={1}
+                                                value={row.query.minPrice ?? ''}
+                                                onChange={(event) => {
+                                                    const value = event.target.value;
+                                                    updateHomeRow(row.id, {
+                                                        query: { minPrice: value === '' ? undefined : Number(value) }
+                                                    });
+                                                }}
+                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Max price</label>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                step={1}
+                                                value={row.query.maxPrice ?? ''}
+                                                onChange={(event) => {
+                                                    const value = event.target.value;
+                                                    updateHomeRow(row.id, {
+                                                        query: { maxPrice: value === '' ? undefined : Number(value) }
+                                                    });
+                                                }}
+                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Row limit</label>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                step={1}
+                                                value={row.limit}
+                                                onChange={(event) => updateHomeRow(row.id, { limit: Math.max(1, Number(event.target.value) || 1) })}
+                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                id={`home-row-active-${row.id}`}
+                                                type="checkbox"
+                                                checked={row.isActive !== false}
+                                                onChange={(event) => updateHomeRow(row.id, { isActive: event.target.checked })}
+                                                className="h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-blue-500 focus:ring-blue-500"
+                                            />
+                                            <label htmlFor={`home-row-active-${row.id}`} className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                                Active row
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {homeRowsError && (
+                                <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                                    {homeRowsError}
+                                </div>
+                            )}
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <p className="text-xs text-gray-500">
+                                    Changes update the homepage instantly after saving.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveHomeRows}
+                                    className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-500 transition-colors"
+                                >
+                                    Save homepage rows
+                                </button>
+                            </div>
+                            {homeRowsNotice && (
+                                <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+                                    Homepage rows saved.
                                 </div>
                             )}
                         </div>

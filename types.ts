@@ -57,6 +57,20 @@ export interface ChatMessage {
 export type BoxTag = 'tech' | 'pokemon' | 'hot' | 'digital' | 'holiday';
 export const BOX_TAG_OPTIONS: BoxTag[] = ['tech', 'pokemon', 'hot', 'digital', 'holiday'];
 
+export interface HomeRowQuery {
+  tags?: string[];
+  maxPrice?: number;
+  minPrice?: number;
+}
+
+export interface HomeRowConfig {
+  id: string;
+  title: string;
+  query: HomeRowQuery;
+  limit: number;
+  isActive?: boolean;
+}
+
 export interface CaseItem {
   id: string;
   name: string;
