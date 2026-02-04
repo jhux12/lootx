@@ -5,6 +5,8 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { BrandLockup } from './BrandLockup';
 import googleLogo from '../assets/google-logo.svg';
+import { Checkbox } from './ui/Checkbox';
+import { Input } from './ui/Input';
 
 export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal } = useGame();
@@ -227,11 +229,11 @@ export const LoginModal: React.FC = () => {
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
                     <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <input
+                        <Input
                             type="email"
                             value={googleLinkEmail}
                             readOnly
-                            className="w-full bg-[#0b0e14] border border-gray-700 text-gray-400 rounded-lg py-3 pl-10 pr-4"
+                            className="pl-10 pr-4 py-3 !text-white/60"
                         />
                     </div>
                 </div>
@@ -240,11 +242,11 @@ export const LoginModal: React.FC = () => {
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Password</label>
                     <div className="relative">
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <input
+                        <Input
                             type="password"
                             value={googleLinkPassword}
                             onChange={(e) => setGoogleLinkPassword(e.target.value)}
-                            className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:border-brand-purple transition-colors"
+                            className="pl-10 pr-4 py-3"
                             placeholder="••••••••"
                             required
                         />
@@ -274,11 +276,11 @@ export const LoginModal: React.FC = () => {
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Username</label>
                         <div className="relative">
                             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                            <input 
+                            <Input 
                                 type="text" 
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:border-brand-purple transition-colors"
+                                className="pl-10 pr-4 py-3"
                                 placeholder="Display Name"
                                 required
                             />
@@ -290,11 +292,11 @@ export const LoginModal: React.FC = () => {
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
                     <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <input 
+                        <Input 
                             type="email" 
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:border-brand-purple transition-colors"
+                            className="pl-10 pr-4 py-3"
                             placeholder="user@example.com"
                             required
                         />
@@ -305,11 +307,11 @@ export const LoginModal: React.FC = () => {
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Password</label>
                     <div className="relative">
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <input 
+                        <Input 
                             type="password" 
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:border-brand-purple transition-colors"
+                            className="pl-10 pr-4 py-3"
                             placeholder="••••••••"
                             required
                         />
@@ -319,11 +321,9 @@ export const LoginModal: React.FC = () => {
                 {mode === 'login' && (
                     <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
                         <label className="flex items-center gap-2 text-gray-400">
-                            <input
-                                type="checkbox"
+                            <Checkbox
                                 checked={rememberMe}
                                 onChange={(e) => setRememberMe(e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
                             />
                             <span>Remember me</span>
                         </label>
@@ -341,22 +341,20 @@ export const LoginModal: React.FC = () => {
                 {mode === 'register' && (
                     <div className="space-y-3 text-xs text-gray-400">
                         <label className="flex items-start gap-2">
-                            <input
-                                type="checkbox"
+                            <Checkbox
                                 required
                                 checked={confirmAdult}
                                 onChange={(e) => setConfirmAdult(e.target.checked)}
-                                className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
+                                className="mt-0.5"
                             />
                             <span>I confirm that I am 18 years or older.</span>
                         </label>
                         <label className="flex items-start gap-2">
-                            <input
-                                type="checkbox"
+                            <Checkbox
                                 required
                                 checked={acceptTerms}
                                 onChange={(e) => setAcceptTerms(e.target.checked)}
-                                className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
+                                className="mt-0.5"
                             />
                             <span>I agree to the Terms &amp; Conditions.</span>
                         </label>

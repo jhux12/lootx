@@ -5,6 +5,7 @@ import { BoxTag, BOX_TAG_OPTIONS, CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue } from '../utils/caseOdds';
+import { Input } from './ui/Input';
 
 export const CustomCaseCreator: React.FC = () => {
   const { createUserBox, items, boxes, stripeSettings, setView } = useGame();
@@ -209,12 +210,12 @@ export const CustomCaseCreator: React.FC = () => {
                   {/* Search Bar */}
                   <div className="relative mb-4">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                      <input 
+                      <Input 
                           type="text" 
                           placeholder="Search items..." 
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-brand-purple transition-colors"
+                          className="pl-9 pr-4 py-2 text-sm"
                       />
                   </div>
 
@@ -289,12 +290,12 @@ export const CustomCaseCreator: React.FC = () => {
               <div className="bg-[#131720] border border-gray-800 rounded-xl p-6 sticky top-24">
                   <div className="mb-6">
                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Case Name</label>
-                      <input 
+                      <Input 
                         type="text" 
                         placeholder="My Luck Experiment #1" 
                         value={boxName}
                         onChange={(e) => setBoxName(e.target.value)}
-                        className="w-full bg-[#0b0e14] border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all"
+                        className="px-4 py-3"
                       />
                   </div>
                   <div className="mb-6">

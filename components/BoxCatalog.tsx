@@ -5,6 +5,8 @@ import { useSound } from '../context/SoundContext';
 import { usePreview } from '../context/PreviewContext';
 import { BoxCard } from './BoxCard';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
 import {
   BoxesPageConfig,
   BoxesPageCuratedRow,
@@ -425,12 +427,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         {config.filters.search.enabled && (
           <div className="relative mt-3">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-            <input
+            <Input
               type="text"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder={config.filters.search.placeholder ?? 'Search boxes'}
-              className="w-full rounded-full border border-gray-700 bg-[#0b0e14] py-2 pl-9 pr-3 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
+              className="pl-9 pr-3 py-2 text-sm"
             />
           </div>
         )}
@@ -583,12 +585,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           {config.filters.search.enabled && (
             <div className="relative w-full md:max-w-xs">
               <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-              <input
+              <Input
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder={config.filters.search.placeholder ?? 'Search boxes'}
-                className="w-full rounded-full border border-gray-700 bg-[#0b0e14] py-2 pl-9 pr-3 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
+                className="pl-9 pr-3 py-2 text-sm"
               />
             </div>
           )}
@@ -597,7 +599,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
             {config.filters.category.enabled && (
               <div className={`${categoryVisibilityClass} min-w-[170px] flex-1`}>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Category</label>
-                <select
+                <Select
                   value={selectedCategory}
                   onChange={(event) => {
                     const nextValue = event.target.value;
@@ -605,31 +607,29 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                     setHasCategorySelection(nextValue !== 'All');
                     setActiveTab('category');
                   }}
-                  className="w-full rounded-full border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                 >
                   {categoryOptions.map((option) => (
                     <option key={option} value={option}>
                       {option === 'All' ? 'All Categories' : option}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
 
             {config.filters.sort.enabled && (
               <div className={`${sortVisibilityClass} min-w-[160px] flex-1`}>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Sort</label>
-                <select
+                <Select
                   value={sortOption}
                   onChange={(event) => setSortOption(event.target.value)}
-                  className="w-full rounded-full border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                 >
                   {sortOptions.map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
 
@@ -722,7 +722,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
               {config.filters.category.enabled && (
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Category</label>
-                  <select
+                  <Select
                     value={selectedCategory}
                     onChange={(event) => {
                       const nextValue = event.target.value;
@@ -730,30 +730,28 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                       setHasCategorySelection(nextValue !== 'All');
                       setActiveTab('category');
                     }}
-                    className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                   >
                     {categoryOptions.map((option) => (
                       <option key={option} value={option}>
                         {option === 'All' ? 'All Categories' : option}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
               {config.filters.sort.enabled && (
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Sort</label>
-                  <select
+                  <Select
                     value={sortOption}
                     onChange={(event) => setSortOption(event.target.value)}
-                    className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                   >
                     {sortOptions.map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
             </div>

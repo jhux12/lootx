@@ -9,6 +9,10 @@ import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedV
 import { db } from '../firebase';
 import { HomepageShowcaseEditor } from './admin/HomepageShowcaseEditor';
 import { BoxesPageConfigEditor } from './admin/BoxesPageConfigEditor';
+import { Checkbox } from './ui/Checkbox';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
+import { Textarea } from './ui/Textarea';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -1773,7 +1777,7 @@ export const AdminPanel: React.FC = () => {
                             </button>
                         </div>
                         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-                            <input
+                            <Input
                                 ref={spreadsheetInputRef}
                                 type="file"
                                 accept=".csv"
@@ -1808,18 +1812,18 @@ export const AdminPanel: React.FC = () => {
                             {editingItemId && <button onClick={resetItemForm} className="text-xs text-red-400 hover:text-red-300">Cancel Edit</button>}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <input type="text" placeholder="Item Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} />
-                            <input type="number" placeholder="Price (coins)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.price || ''} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} />
-                            <input type="text" placeholder="Brand (e.g. Nike)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.brand ?? ''} onChange={e => setNewItem({...newItem, brand: e.target.value})} />
-                            <input type="text" placeholder="Category (e.g. sneakers)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.category ?? ''} onChange={e => setNewItem({...newItem, category: e.target.value})} />
-                            <select className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300" value={newItem.rarity} onChange={e => setNewItem({...newItem, rarity: e.target.value as any})}>
+                            <Input type="text" placeholder="Item Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} />
+                            <Input type="number" placeholder="Price (coins)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.price || ''} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} />
+                            <Input type="text" placeholder="Brand (e.g. Nike)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.brand ?? ''} onChange={e => setNewItem({...newItem, brand: e.target.value})} />
+                            <Input type="text" placeholder="Category (e.g. sneakers)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.category ?? ''} onChange={e => setNewItem({...newItem, category: e.target.value})} />
+                            <Select className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300" value={newItem.rarity} onChange={e => setNewItem({...newItem, rarity: e.target.value as any})}>
                                 <option value="common">Common</option>
                                 <option value="uncommon">Uncommon</option>
                                 <option value="rare">Rare</option>
                                 <option value="epic">Epic</option>
                                 <option value="legendary">Legendary</option>
-                            </select>
-                            <select
+                            </Select>
+                            <Select
                                 className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300"
                                 value={rarityColorOptions.find(option => option.color === newItem.color)?.value || 'custom'}
                                 onChange={e => {
@@ -1839,12 +1843,11 @@ export const AdminPanel: React.FC = () => {
                                         Custom Color ({newItem.color})
                                     </option>
                                 )}
-                            </select>
-                            <input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.image} onChange={e => setNewItem({...newItem, image: e.target.value})} />
-                            <input type="number" placeholder="Chance % (0-100)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.chance} onChange={e => setNewItem({...newItem, chance: Number(e.target.value)})} />
+                            </Select>
+                            <Input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.image} onChange={e => setNewItem({...newItem, image: e.target.value})} />
+                            <Input type="number" placeholder="Chance % (0-100)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.chance} onChange={e => setNewItem({...newItem, chance: Number(e.target.value)})} />
                             <label className="col-span-1 md:col-span-2 flex items-center gap-3 rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300">
-                                <input
-                                  type="checkbox"
+                                <Checkbox
                                   checked={newItem.redeemable ?? true}
                                   onChange={(event) => setNewItem({ ...newItem, redeemable: event.target.checked })}
                                   className="h-4 w-4 rounded border-gray-600 bg-transparent text-emerald-500 focus:ring-emerald-400"
@@ -1855,7 +1858,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="mb-4">
                             <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Item Tags</label>
                             <div className="flex flex-col gap-3">
-                                <input
+                                <Input
                                     type="text"
                                     placeholder="Add a tag and press Enter"
                                     className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white"
@@ -1907,7 +1910,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="mb-4">
                             <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Size Options</label>
                             <div className="flex flex-col gap-3">
-                                <input
+                                <Input
                                     type="text"
                                     placeholder="Add a size and press Enter (optional)"
                                     className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white"
@@ -2042,9 +2045,9 @@ export const AdminPanel: React.FC = () => {
                         {/* Top Config Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <div className="space-y-3">
-                                <input type="text" placeholder="Box Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.name} onChange={e => setNewBox({...newBox, name: e.target.value})} />
-                                <input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.image} onChange={e => setNewBox({...newBox, image: e.target.value})} />
-                                <input type="text" placeholder="Accent Color (Hex)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.accentColor} onChange={e => setNewBox({...newBox, accentColor: e.target.value})} />
+                                <Input type="text" placeholder="Box Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.name} onChange={e => setNewBox({...newBox, name: e.target.value})} />
+                                <Input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.image} onChange={e => setNewBox({...newBox, image: e.target.value})} />
+                                <Input type="text" placeholder="Accent Color (Hex)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.accentColor} onChange={e => setNewBox({...newBox, accentColor: e.target.value})} />
                                 <div>
                                     <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Box Tags</label>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -2079,7 +2082,7 @@ export const AdminPanel: React.FC = () => {
                                                 </span>
                                             ))}
                                         </div>
-                                        <input
+                                        <Input
                                             type="text"
                                             placeholder="Add tags (comma or enter)"
                                             className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white text-sm"
@@ -2112,7 +2115,7 @@ export const AdminPanel: React.FC = () => {
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                     <div>
                                         <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Price (coins)</label>
-                                        <input
+                                        <Input
                                           type="number"
                                           placeholder="Box Price (coins)"
                                           className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold text-green-400"
@@ -2138,7 +2141,7 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                     <div>
                                         <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Target EV (ratio)</label>
-                                        <input
+                                        <Input
                                             type="number"
                                             min={0.5}
                                             max={1.5}
@@ -2152,7 +2155,7 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                     <div>
                                         <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Sell back %</label>
-                                        <input
+                                        <Input
                                             type="number"
                                             min={0}
                                             max={100}
@@ -2170,7 +2173,7 @@ export const AdminPanel: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Risk Balance</label>
-                                    <input
+                                    <Input
                                         type="range"
                                         min={0}
                                         max={100}
@@ -2205,8 +2208,7 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                 )}
                                 <div className="flex items-center gap-2">
-                                    <input 
-                                        type="checkbox" 
+                                    <Checkbox 
                                         id="daily-case"
                                         checked={newBox.isDaily || false} 
                                         onChange={e => setNewBox({...newBox, isDaily: e.target.checked})} 
@@ -2236,7 +2238,7 @@ export const AdminPanel: React.FC = () => {
                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                                      <label className="text-[10px] uppercase text-gray-500 font-bold">
                                          Brand
-                                         <select
+                                         <Select
                                              className="mt-1 w-full bg-[#131720] border border-gray-800 rounded p-2 text-xs text-gray-200"
                                              value={itemBrandFilter}
                                              onChange={(event) => setItemBrandFilter(event.target.value)}
@@ -2247,11 +2249,11 @@ export const AdminPanel: React.FC = () => {
                                                      {brand}
                                                  </option>
                                              ))}
-                                         </select>
+                                         </Select>
                                      </label>
                                      <label className="text-[10px] uppercase text-gray-500 font-bold">
                                          Category
-                                         <select
+                                         <Select
                                              className="mt-1 w-full bg-[#131720] border border-gray-800 rounded p-2 text-xs text-gray-200"
                                              value={itemCategoryFilter}
                                              onChange={(event) => setItemCategoryFilter(event.target.value)}
@@ -2262,7 +2264,7 @@ export const AdminPanel: React.FC = () => {
                                                      {category}
                                                  </option>
                                              ))}
-                                         </select>
+                                         </Select>
                                      </label>
                                      <div className="flex items-end">
                                          <button
@@ -2575,7 +2577,7 @@ export const AdminPanel: React.FC = () => {
                                                     <td className="px-6 py-4 text-gray-400">
                                                         {isEditing ? (
                                                             <div className="space-y-1">
-                                                                <input
+                                                                <Input
                                                                     type="number"
                                                                     value={userXpInput}
                                                                     onChange={(e) => setUserXpInput(Number(e.target.value))}
@@ -2674,7 +2676,7 @@ export const AdminPanel: React.FC = () => {
                                             </div>
                                             {isEditing && (
                                                 <div className="space-y-2">
-                                                    <input
+                                                    <Input
                                                         type="number"
                                                         value={userXpInput}
                                                         onChange={(e) => setUserXpInput(Number(e.target.value))}
@@ -2767,7 +2769,7 @@ export const AdminPanel: React.FC = () => {
                                     <div className="mt-4 bg-[#0b0e14] border border-gray-800 rounded-lg p-4 flex flex-col sm:flex-row gap-3 sm:items-center">
                                         <div className="flex-1">
                                             <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Set Coin Balance</label>
-                                            <input
+                                            <Input
                                                 type="number"
                                                 value={balanceDraft}
                                                 onChange={(event) => setBalanceDraft(event.target.value)}
@@ -2802,7 +2804,7 @@ export const AdminPanel: React.FC = () => {
                                         <div className="space-y-4">
                                             <div>
                                                 <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Account Status</label>
-                                                <select
+                                                <Select
                                                     value={userStatuses[selectedUser.id] ?? 'active'}
                                                     onChange={(event) => handleStatusChange(selectedUser.id, event.target.value as UserStatus)}
                                                     className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
@@ -2810,7 +2812,7 @@ export const AdminPanel: React.FC = () => {
                                                     <option value="active">Active</option>
                                                     <option value="suspended">Suspended</option>
                                                     <option value="banned">Banned</option>
-                                                </select>
+                                                </Select>
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Risk Locks</label>
@@ -2845,14 +2847,14 @@ export const AdminPanel: React.FC = () => {
                                         <div className="space-y-4">
                                             <div className="space-y-2">
                                                 <label className="block text-[10px] uppercase text-gray-500 font-bold">Reversal Entry</label>
-                                                <input
+                                                <Input
                                                     type="number"
                                                     value={reversalAmount}
                                                     onChange={(event) => setReversalAmount(event.target.value)}
                                                     placeholder="Amount to reverse"
                                                     className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
                                                 />
-                                                <textarea
+                                                <Textarea
                                                     value={reversalReason}
                                                     onChange={(event) => setReversalReason(event.target.value)}
                                                     rows={2}
@@ -2869,14 +2871,14 @@ export const AdminPanel: React.FC = () => {
                                             </div>
                                             <div className="border-t border-gray-800 pt-4 space-y-2">
                                                 <label className="block text-[10px] uppercase text-gray-500 font-bold">Void Case Open</label>
-                                                <input
+                                                <Input
                                                     type="text"
                                                     value={voidSourceId}
                                                     onChange={(event) => setVoidSourceId(event.target.value)}
                                                     placeholder="Case open ID"
                                                     className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
                                                 />
-                                                <textarea
+                                                <Textarea
                                                     value={voidReason}
                                                     onChange={(event) => setVoidReason(event.target.value)}
                                                     rows={2}
@@ -2919,7 +2921,7 @@ export const AdminPanel: React.FC = () => {
                                             </div>
                                         </div>
                                         <div className="flex flex-col md:flex-row gap-3 mb-4">
-                                            <select
+                                            <Select
                                                 value={ledgerFilter}
                                                 onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)}
                                                 className="w-full md:w-48 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
@@ -2932,8 +2934,8 @@ export const AdminPanel: React.FC = () => {
                                                 <option value="admin_adjustment">Admin adjustment</option>
                                                 <option value="chargeback_reversal">Chargeback reversal</option>
                                                 <option value="reversal">Reversal</option>
-                                            </select>
-                                            <input
+                                            </Select>
+                                            <Input
                                                 type="text"
                                                 value={ledgerSearch}
                                                 onChange={(event) => setLedgerSearch(event.target.value)}
@@ -2988,7 +2990,7 @@ export const AdminPanel: React.FC = () => {
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                     <div>
                                                         <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Item name</label>
-                                                        <input
+                                                        <Input
                                                             type="text"
                                                             value={inventoryDraft.name}
                                                             onChange={(event) => setInventoryDraft((prev) => ({ ...prev, name: event.target.value }))}
@@ -2997,7 +2999,7 @@ export const AdminPanel: React.FC = () => {
                                                     </div>
                                                     <div>
                                                         <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Value</label>
-                                                        <input
+                                                        <Input
                                                             type="number"
                                                             value={inventoryDraft.price}
                                                             onChange={(event) => setInventoryDraft((prev) => ({ ...prev, price: event.target.value }))}
@@ -3006,7 +3008,7 @@ export const AdminPanel: React.FC = () => {
                                                     </div>
                                                     <div>
                                                         <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Image URL</label>
-                                                        <input
+                                                        <Input
                                                             type="text"
                                                             value={inventoryDraft.image}
                                                             onChange={(event) => setInventoryDraft((prev) => ({ ...prev, image: event.target.value }))}
@@ -3015,7 +3017,7 @@ export const AdminPanel: React.FC = () => {
                                                     </div>
                                                     <div>
                                                         <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Rarity</label>
-                                                        <select
+                                                        <Select
                                                             value={inventoryDraft.rarity}
                                                             onChange={(event) => setInventoryDraft((prev) => ({ ...prev, rarity: event.target.value }))}
                                                             className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
@@ -3023,11 +3025,11 @@ export const AdminPanel: React.FC = () => {
                                                             {rarityColorOptions.map((option) => (
                                                                 <option key={option.value} value={option.value}>{option.label}</option>
                                                             ))}
-                                                        </select>
+                                                        </Select>
                                                     </div>
                                                     <div>
                                                         <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Status</label>
-                                                        <select
+                                                        <Select
                                                             value={inventoryDraft.status}
                                                             onChange={(event) => setInventoryDraft((prev) => ({ ...prev, status: event.target.value }))}
                                                             className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
@@ -3036,7 +3038,7 @@ export const AdminPanel: React.FC = () => {
                                                             <option value="shipping_requested">Shipping requested</option>
                                                             <option value="shipping">Shipping</option>
                                                             <option value="shipped">Shipped</option>
-                                                        </select>
+                                                        </Select>
                                                     </div>
                                                 </div>
                                                 <button
@@ -3142,7 +3144,7 @@ export const AdminPanel: React.FC = () => {
                                                     </button>
                                                 ))}
                                             </div>
-                                            <input
+                                            <Input
                                                 type="text"
                                                 value={timelineSearch}
                                                 onChange={(event) => setTimelineSearch(event.target.value)}
@@ -3270,7 +3272,7 @@ export const AdminPanel: React.FC = () => {
                                                 <div className="text-[10px] uppercase font-bold text-gray-500">Shipment Actions</div>
                                                 <div className="text-gray-500">Instance ID: <span className="text-gray-300">{shipment.inventoryId || 'Unavailable'}</span></div>
                                                 <label className="text-[10px] uppercase font-bold text-gray-500">Tracking number</label>
-                                                <input
+                                                <Input
                                                     type="text"
                                                     value={trackingValue}
                                                     onChange={(event) =>
@@ -3326,7 +3328,7 @@ export const AdminPanel: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP per 100 coins wagered</label>
-                                    <input
+                                    <Input
                                         type="number"
                                         min={0}
                                         step={1}
@@ -3340,7 +3342,7 @@ export const AdminPanel: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP per case opened</label>
-                                    <input
+                                    <Input
                                         type="number"
                                         min={0}
                                         step={1}
@@ -3356,7 +3358,7 @@ export const AdminPanel: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Base XP to reach level 2</label>
-                                    <input
+                                    <Input
                                         type="number"
                                         min={0}
                                         step={10}
@@ -3367,7 +3369,7 @@ export const AdminPanel: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Leveling multiplier</label>
-                                    <input
+                                    <Input
                                         type="number"
                                         min={1}
                                         step={0.01}
@@ -3399,7 +3401,7 @@ export const AdminPanel: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Level to unlock rakeback</label>
-                                    <input
+                                    <Input
                                         type="number"
                                         min={1}
                                         step={1}
@@ -3410,7 +3412,7 @@ export const AdminPanel: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Base rakeback rate (%)</label>
-                                    <input
+                                    <Input
                                         type="number"
                                         min={0}
                                         step={0.1}
@@ -3426,7 +3428,7 @@ export const AdminPanel: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Weekly bonus payout (coins)</label>
-                                    <input
+                                    <Input
                                         type="number"
                                         min={0}
                                         step={100}
@@ -3440,7 +3442,7 @@ export const AdminPanel: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Daily rakeback cap (coins)</label>
-                                    <input
+                                    <Input
                                         type="number"
                                         min={0}
                                         step={100}
@@ -3505,7 +3507,7 @@ export const AdminPanel: React.FC = () => {
                                 </div>
                                 <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
                                     <div className="flex items-center gap-3 bg-[#131720] border border-gray-700 rounded-lg px-4 py-3">
-                                        <input
+                                        <Input
                                             id="shipping-cash-enabled"
                                             type="checkbox"
                                             checked={stripeSettingsDraft.shippingCashEnabled}
@@ -3523,7 +3525,7 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                     <div className="lg:col-span-2">
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Shipping flat rate (USD)</label>
-                                        <input
+                                        <Input
                                             type="number"
                                             min={0}
                                             step={0.01}
@@ -3540,7 +3542,7 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                     <div className="lg:col-span-3">
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Stripe Shipping Product ID</label>
-                                        <input
+                                        <Input
                                             type="text"
                                             value={stripeSettingsDraft.stripeShippingProductId}
                                             onChange={(event) =>
@@ -3571,7 +3573,7 @@ export const AdminPanel: React.FC = () => {
                                 </div>
                                 <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
                                     <div className="flex items-center gap-3 bg-[#131720] border border-gray-700 rounded-lg px-4 py-3">
-                                        <input
+                                        <Input
                                             id="shipping-coin-enabled"
                                             type="checkbox"
                                             checked={stripeSettingsDraft.shippingCoinEnabled}
@@ -3589,7 +3591,7 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                     <div className="lg:col-span-2">
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Coin shipping cost (coins)</label>
-                                        <input
+                                        <Input
                                             type="number"
                                             min={0}
                                             step={1}
@@ -3640,7 +3642,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Publish fee (coins)</label>
-                                <input
+                                <Input
                                     type="number"
                                     min={0}
                                     step={1}
@@ -3688,7 +3690,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sell back percentage</label>
-                                <input
+                                <Input
                                     type="number"
                                     min={0}
                                     max={100}
@@ -3794,7 +3796,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Site Name</label>
-                                <input type="text" value="LootX" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white" readOnly />
+                                <Input type="text" value="LootX" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white" readOnly />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Maintenance Mode</label>
@@ -3816,7 +3818,7 @@ export const AdminPanel: React.FC = () => {
                             Broadcast a notification to users. Messages appear in the notification bell.
                         </p>
                         <div className="space-y-4">
-                            <textarea
+                            <Textarea
                                 value={adminNotification}
                                 onChange={(event) => setAdminNotification(event.target.value)}
                                 rows={3}
@@ -3873,7 +3875,7 @@ export const AdminPanel: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="sm:col-span-2">
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Package Name</label>
-                          <input
+                          <Input
                               type="text"
                               value={packageDraft.name ?? ''}
                               onChange={(event) => setPackageDraft((prev) => ({ ...prev, name: event.target.value }))}
@@ -3882,7 +3884,7 @@ export const AdminPanel: React.FC = () => {
                       </div>
                       <div>
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Coins</label>
-                          <input
+                          <Input
                               type="number"
                               min={1}
                               step={1}
@@ -3893,7 +3895,7 @@ export const AdminPanel: React.FC = () => {
                       </div>
                       <div>
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Bonus Coins</label>
-                          <input
+                          <Input
                               type="number"
                               min={0}
                               step={1}
@@ -3904,7 +3906,7 @@ export const AdminPanel: React.FC = () => {
                       </div>
                       <div>
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Display Price</label>
-                          <input
+                          <Input
                               type="text"
                               placeholder="$9.99"
                               value={packageDraft.displayPrice ?? ''}
@@ -3914,7 +3916,7 @@ export const AdminPanel: React.FC = () => {
                       </div>
                       <div className="sm:col-span-2">
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Stripe Price ID</label>
-                          <input
+                          <Input
                               type="text"
                               placeholder="price_123..."
                               value={packageDraft.stripePriceId ?? ''}
@@ -3924,7 +3926,7 @@ export const AdminPanel: React.FC = () => {
                       </div>
                       <div>
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Badge</label>
-                          <select
+                          <Select
                               value={packageDraft.badge ?? ''}
                               onChange={(event) =>
                                   setPackageDraft((prev) => ({
@@ -3937,11 +3939,11 @@ export const AdminPanel: React.FC = () => {
                               <option value="">None</option>
                               <option value="good">Good value</option>
                               <option value="best">Best value</option>
-                          </select>
+                          </Select>
                       </div>
                       <div>
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sort Order</label>
-                          <input
+                          <Input
                               type="number"
                               step={1}
                               value={packageDraft.sortOrder ?? 0}
@@ -3950,7 +3952,7 @@ export const AdminPanel: React.FC = () => {
                           />
                       </div>
                       <div className="flex items-center gap-2 mt-6">
-                          <input
+                          <Input
                               id="package-active"
                               type="checkbox"
                               checked={packageDraft.active ?? true}

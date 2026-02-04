@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Loader2, Sparkles } from 'lucide-react';
 import { GoogleGenAI, Chat } from "@google/genai";
+import { Input } from './ui/Input';
 
 interface Message {
   id: string;
@@ -148,12 +149,12 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
                 onSubmit={(e) => { e.preventDefault(); handleSend(); }}
                 className="relative"
             >
-                <input 
+                <Input 
                     type="text" 
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Ask about battles, cases..."
-                    className="w-full bg-[#151a23] border border-gray-700 text-white text-sm rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:border-brand-purple transition-colors"
+                    className="pl-4 pr-12 py-3 text-sm"
                 />
                 <button 
                     type="submit"

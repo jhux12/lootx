@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
+import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
 import {
   MAX_SHOWCASE_BOXES,
   ShowcaseLayout,
@@ -183,20 +185,18 @@ export const HomepageShowcaseEditor: React.FC = () => {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
                         Title
-                        <input
+                        <Input
                           value={row.title}
                           onChange={(event) => handleRowPatch(row.id, { title: event.target.value })}
                           onBlur={() => handleRowPatch(row.id, { title: row.title }, true)}
-                          className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm font-medium text-white focus:border-blue-500 focus:outline-none"
                         />
                       </label>
                       <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
                         Subtitle (optional)
-                        <input
+                        <Input
                           value={row.subtitle ?? ''}
                           onChange={(event) => handleRowPatch(row.id, { subtitle: event.target.value })}
                           onBlur={() => handleRowPatch(row.id, { subtitle: row.subtitle ?? '' }, true)}
-                          className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm font-medium text-white focus:border-blue-500 focus:outline-none"
                         />
                       </label>
                     </div>
@@ -204,20 +204,19 @@ export const HomepageShowcaseEditor: React.FC = () => {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
                         Layout
-                        <select
+                        <Select
                           value={row.layout}
                           onChange={(event) =>
                             handleRowPatch(row.id, { layout: event.target.value as ShowcaseLayout }, true)
                           }
-                          className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm font-medium text-white focus:border-blue-500 focus:outline-none"
                         >
                           <option value="grid">Grid</option>
                           <option value="carousel">Carousel</option>
-                        </select>
+                        </Select>
                       </label>
                       <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
                         Max desktop
-                        <input
+                        <Input
                           type="number"
                           min={1}
                           max={6}
@@ -228,12 +227,11 @@ export const HomepageShowcaseEditor: React.FC = () => {
                           onBlur={() =>
                             handleRowPatch(row.id, { maxDesktop: row.maxDesktop }, true)
                           }
-                          className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm font-medium text-white focus:border-blue-500 focus:outline-none"
                         />
                       </label>
                       <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
                         Max mobile
-                        <input
+                        <Input
                           type="number"
                           min={1}
                           max={6}
@@ -242,7 +240,6 @@ export const HomepageShowcaseEditor: React.FC = () => {
                             handleRowPatch(row.id, { maxMobile: parseOptionalNumber(event.target.value) })
                           }
                           onBlur={() => handleRowPatch(row.id, { maxMobile: row.maxMobile }, true)}
-                          className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm font-medium text-white focus:border-blue-500 focus:outline-none"
                         />
                       </label>
                     </div>
@@ -338,11 +335,11 @@ export const HomepageShowcaseEditor: React.FC = () => {
                   {activeAddRowId === row.id && (
                     <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <input
+                        <Input
                           value={boxSearch}
                           onChange={(event) => setBoxSearch(event.target.value)}
                           placeholder="Search boxes..."
-                          className="w-full rounded-lg border border-gray-700 bg-[#050811] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+                          className="bg-[#050811]"
                         />
                         <button
                           type="button"
