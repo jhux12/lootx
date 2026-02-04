@@ -22,6 +22,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
+import { getUserDisplayName } from '../utils/userDisplay';
 
 export const Header: React.FC = () => {
   const {
@@ -424,7 +425,7 @@ export const Header: React.FC = () => {
                   />
                   <div className="flex flex-col">
                     <span className="text-sm font-medium leading-none max-w-[120px] truncate flex items-center gap-1">
-                      {user.name}
+                      {getUserDisplayName(user)}
                       {user.isAdmin && (
                         <span className="text-[9px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/30">
                           Admin

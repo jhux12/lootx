@@ -4,6 +4,7 @@ import { addDoc, collection, deleteDoc, getDocs, onSnapshot, orderBy, query, ser
 import { db } from '../firebase';
 import { ChatMessage, User } from '../types';
 import { useGame } from '../context/GameContext';
+import { getUserDisplayName } from '../utils/userDisplay';
 
 const GEMINI_API_KEY = "AIzaSyCB04Pk1auWCF-hU6Gnmm3gRDxhpZOylwU";
 const CHAT_EXPIRATION_MS = 20 * 60 * 1000;
@@ -231,7 +232,7 @@ export const useSiteChat = () => {
       await addDoc(collection(db, 'chatMessages'), {
         user: {
           id: user.id,
-          name: user.name,
+          name: getUserDisplayName(user),
           avatar: user.avatar,
           level: user.level,
           xp: user.xp

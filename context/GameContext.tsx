@@ -18,6 +18,7 @@ import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   linkWithCredential,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signOut
 } from 'firebase/auth';
@@ -351,6 +352,8 @@ interface GameContextType {
   stripeSettings: StripeSettings;
   showLoginModal: boolean;
   showTopUpModal: boolean;
+  requiresEmailVerification: boolean;
+  verificationEmail: string;
   
   // Actions
   login: (email: string, pass: string, remember?: boolean) => Promise<void>;
@@ -359,6 +362,8 @@ interface GameContextType {
   register: (name: string, email: string, pass: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => void;
+  resendVerificationEmail: () => Promise<void>;
+  refreshEmailVerification: () => Promise<void>;
   setShowLoginModal: (show: boolean) => void;
   setShowTopUpModal: (show: boolean) => void;
   setView: (view: ViewState) => void;
@@ -467,29 +472,49 @@ const normalizeUsername = (value: string) =>
     .replace(/[^a-z0-9_]/g, '')
     .replace(/^_+|_+$/g, '');
 
-const buildBaseUsername = (displayName: string | null | undefined, email: string | null | undefined) => {
-  const fromDisplayName = normalizeUsername(displayName ?? '');
-  if (fromDisplayName) return fromDisplayName;
-  const emailPrefix = (email ?? '').split('@')[0] ?? '';
-  const fromEmail = normalizeUsername(emailPrefix);
-  return fromEmail || 'player';
+const USERNAME_PREFIX = 'pullz_';
+const USERNAME_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+const generateUsername = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const values = new Uint32Array(6);
+    crypto.getRandomValues(values);
+    const suffix = Array.from(values, (value) => USERNAME_CHARSET[value % USERNAME_CHARSET.length]).join('');
+    return `${USERNAME_PREFIX}${suffix}`;
+  }
+  const suffix = Array.from({ length: 6 }, () => USERNAME_CHARSET[Math.floor(Math.random() * USERNAME_CHARSET.length)]).join('');
+  return `${USERNAME_PREFIX}${suffix}`;
+};
+
+const isUsernameAvailable = async (candidate: string) => {
+  const usersRef = collection(db, 'users');
+  const usernameSnapshot = await getDocs(query(usersRef, where('username', '==', candidate), limit(1)));
+  return usernameSnapshot.empty;
 };
 
 const ensureUniqueUsername = async (base: string) => {
-  const usersRef = collection(db, 'users');
   let attempt = 1;
   let candidate = base;
 
   while (true) {
-    const [usernameSnapshot, nameSnapshot] = await Promise.all([
-      getDocs(query(usersRef, where('username', '==', candidate), limit(1))),
-      getDocs(query(usersRef, where('name', '==', candidate), limit(1)))
-    ]);
-
-    if (usernameSnapshot.empty && nameSnapshot.empty) return candidate;
+    if (await isUsernameAvailable(candidate)) return candidate;
     attempt += 1;
     candidate = `${base}_${attempt}`;
   }
+};
+
+const generateUniqueUsername = async (maxAttempts = 10) => {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const candidate = generateUsername();
+    if (await isUsernameAvailable(candidate)) return candidate;
+  }
+  throw new Error('Unable to generate a unique username after multiple attempts.');
+};
+
+const resolveUsername = async (preferred?: string) => {
+  const cleaned = normalizeUsername(preferred ?? '');
+  if (cleaned) return ensureUniqueUsername(cleaned);
+  return generateUniqueUsername();
 };
 
 const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> = {}) => {
@@ -500,6 +525,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
   const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
   const xp = Number(data.xp ?? 0);
   const progress = calculateLevelProgress(xp);
+  const resolvedUsername = data.username ?? data.name ?? firebaseUser.email?.split('@')[0] ?? 'Player';
   const followerIds = Array.isArray(data.followers)
     ? data.followers
     : Array.isArray(data.friends)
@@ -511,11 +537,11 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     id: firebaseUser.uid,
     createdAt,
     lastChatAt,
-    name: data.name || firebaseUser.email?.split('@')[0] || 'Player',
+    name: resolvedUsername,
     username: data.username ?? data.name,
     displayName: data.displayName ?? firebaseUser.displayName ?? undefined,
     email: data.email || firebaseUser.email || '',
-    avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
+    avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(resolvedUsername)}&background=111827&color=10b981`,
     photoURL: data.photoURL ?? firebaseUser.photoURL ?? undefined,
     provider: data.provider,
     balance,
@@ -556,7 +582,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
       ? data.friends
       : [];
   const balance = Number(data.coins ?? data.balance ?? 0);
-  const name = data.name || (data.email ? data.email.split('@')[0] : 'Player');
+  const name = data.username ?? data.name ?? (data.email ? data.email.split('@')[0] : 'Player');
 
   return {
     id: userId,
@@ -690,6 +716,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [requiresEmailVerification, setRequiresEmailVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
+  const [emailVerificationTick, setEmailVerificationTick] = useState(0);
   
   const [view, setViewState] = useState<ViewState>(() => {
     if (typeof window === 'undefined') {
@@ -772,108 +802,133 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setAuthUser(firebaseUser);
+      if (!firebaseUser) {
+        setEmailVerificationTick((prev) => prev + 1);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     let userUnsubscribe: (() => void) | null = null;
     let inventoryUnsubscribe: (() => void) | null = null;
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (userUnsubscribe) {
-        userUnsubscribe();
-        userUnsubscribe = null;
-      }
-      if (inventoryUnsubscribe) {
-        inventoryUnsubscribe();
-        inventoryUnsubscribe = null;
-      }
+    const clearSubscriptions = () => {
+      if (userUnsubscribe) userUnsubscribe();
+      if (inventoryUnsubscribe) inventoryUnsubscribe();
+      userUnsubscribe = null;
+      inventoryUnsubscribe = null;
+    };
 
-      if (!firebaseUser) {
-        setIsAuthenticated(false);
-        setUser(GUEST_USER);
+    clearSubscriptions();
+
+    const activeUser = auth.currentUser ?? authUser;
+    if (!activeUser) {
+      setRequiresEmailVerification(false);
+      setVerificationEmail('');
+      setIsAuthenticated(false);
+      setUser(GUEST_USER);
+      setBalance(0);
+      setInventory([]);
+      setNotifications([]);
+      hasInventorySubcollectionRef.current = false;
+      return clearSubscriptions;
+    }
+
+    const hasPasswordProvider = activeUser.providerData.some((provider) => provider.providerId === 'password');
+    const needsVerification = hasPasswordProvider && !activeUser.emailVerified;
+    setVerificationEmail(activeUser.email ?? '');
+
+    if (needsVerification) {
+      setRequiresEmailVerification(true);
+      setIsAuthenticated(false);
+      setUser(GUEST_USER);
+      setBalance(0);
+      setInventory([]);
+      setNotifications([]);
+      hasInventorySubcollectionRef.current = false;
+      setViewState({ type: 'HOME' });
+      return clearSubscriptions;
+    }
+
+    setRequiresEmailVerification(false);
+    setIsAuthenticated(true);
+
+    const userRef = getUserRef(activeUser.uid);
+    userUnsubscribe = onSnapshot(userRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        const profile = buildUserProfile(activeUser);
+        setUser(profile);
         setBalance(0);
-        setInventory([]);
-        setNotifications([]);
-        hasInventorySubcollectionRef.current = false;
         return;
       }
 
-      setIsAuthenticated(true);
+      const data = snapshot.data();
+      const profile = buildUserProfile(activeUser, data);
+      const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
+      if (shouldBeAdmin && !profile.isAdmin) {
+        void setDoc(userRef, { isAdmin: true }, { merge: true }).catch((error) => {
+          console.error('Failed to backfill admin flag', error);
+        });
+        profile.isAdmin = true;
+      }
 
-      const userRef = getUserRef(firebaseUser.uid);
-      userUnsubscribe = onSnapshot(userRef, (snapshot) => {
-        if (!snapshot.exists()) {
-          const profile = buildUserProfile(firebaseUser);
-          setUser(profile);
-          setBalance(0);
-          return;
-        }
+      const incomingBalance = profile.balance ?? 0;
+      const pendingBalance = pendingBalanceRef.current;
+      const resolvedBalance = pendingBalance !== null && incomingBalance < pendingBalance
+        ? pendingBalance
+        : incomingBalance;
 
-        const data = snapshot.data();
-        const profile = buildUserProfile(firebaseUser, data);
-        const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
-        if (shouldBeAdmin && !profile.isAdmin) {
-          void setDoc(userRef, { isAdmin: true }, { merge: true }).catch((error) => {
-            console.error('Failed to backfill admin flag', error);
-          });
-          profile.isAdmin = true;
-        }
+      if (pendingBalance !== null && incomingBalance >= pendingBalance) {
+        pendingBalanceRef.current = null;
+      }
 
-        const incomingBalance = profile.balance ?? 0;
-        const pendingBalance = pendingBalanceRef.current;
-        const resolvedBalance = pendingBalance !== null && incomingBalance < pendingBalance
-          ? pendingBalance
-          : incomingBalance;
-
-        if (pendingBalance !== null && incomingBalance >= pendingBalance) {
-          pendingBalanceRef.current = null;
-        }
-
-        setUser((prev) => ({
-          ...prev,
-          ...profile,
-          balance: resolvedBalance,
-          topPulls: hasInventorySubcollectionRef.current ? prev.topPulls : profile.topPulls
-        }));
-        setBalance(resolvedBalance);
-        if (!hasInventorySubcollectionRef.current && Array.isArray(data.inventory)) {
-          const legacyInventory = normalizeInventoryItems(data.inventory);
-          setInventory(legacyInventory);
-          const nextTopPulls = rankTopPullsByValue(legacyInventory);
-          setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
-        }
-      }, (error) => {
-        console.error('Failed to load user profile from Firebase', error);
-      });
-
-      const inventoryRef = collection(db, 'users', firebaseUser.uid, 'inventory');
-      inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
-        hasInventorySubcollectionRef.current = snapshot.size > 0;
-        const loaded = snapshot.docs
-          .map(mapInventoryDoc)
-          .sort((a, b) => b.obtainedAt - a.obtainedAt);
-        const pendingIds = pendingSoldIdsRef.current;
-        const filtered = loaded.filter((item) => !pendingIds.has(item.instanceId));
-        if (pendingIds.size > 0) {
-          const nextPending = new Set<string>();
-          pendingIds.forEach((id) => {
-            if (loaded.some((item) => item.instanceId === id)) {
-              nextPending.add(id);
-            }
-          });
-          pendingSoldIdsRef.current = nextPending;
-        }
-        setInventory(filtered);
-        const nextTopPulls = rankTopPullsByValue(filtered);
+      setUser((prev) => ({
+        ...prev,
+        ...profile,
+        balance: resolvedBalance,
+        topPulls: hasInventorySubcollectionRef.current ? prev.topPulls : profile.topPulls
+      }));
+      setBalance(resolvedBalance);
+      if (!hasInventorySubcollectionRef.current && Array.isArray(data.inventory)) {
+        const legacyInventory = normalizeInventoryItems(data.inventory);
+        setInventory(legacyInventory);
+        const nextTopPulls = rankTopPullsByValue(legacyInventory);
         setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
-      }, (error) => {
-        console.error('Failed to load inventory from Firebase', error);
-      });
+      }
+    }, (error) => {
+      console.error('Failed to load user profile from Firebase', error);
     });
 
-    return () => {
-      unsubscribe();
-      if (userUnsubscribe) userUnsubscribe();
-      if (inventoryUnsubscribe) inventoryUnsubscribe();
-    };
-  }, []);
+    const inventoryRef = collection(db, 'users', activeUser.uid, 'inventory');
+    inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
+      hasInventorySubcollectionRef.current = snapshot.size > 0;
+      const loaded = snapshot.docs
+        .map(mapInventoryDoc)
+        .sort((a, b) => b.obtainedAt - a.obtainedAt);
+      const pendingIds = pendingSoldIdsRef.current;
+      const filtered = loaded.filter((item) => !pendingIds.has(item.instanceId));
+      if (pendingIds.size > 0) {
+        const nextPending = new Set<string>();
+        pendingIds.forEach((id) => {
+          if (loaded.some((item) => item.instanceId === id)) {
+            nextPending.add(id);
+          }
+        });
+        pendingSoldIdsRef.current = nextPending;
+      }
+      setInventory(filtered);
+      const nextTopPulls = rankTopPullsByValue(filtered);
+      setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
+    }, (error) => {
+      console.error('Failed to load inventory from Firebase', error);
+    });
+
+    return clearSubscriptions;
+  }, [authUser, emailVerificationTick]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -1243,10 +1298,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const photoURL = firebaseUser.photoURL ?? undefined;
 
     if (!userSnapshot.exists()) {
-      const baseUsername = buildBaseUsername(displayName, email);
-      const username = await ensureUniqueUsername(baseUsername);
+      const username = await generateUniqueUsername();
       const createdAt = Date.now();
-      const avatarName = displayName || username;
+      const avatarName = username;
       const avatar = photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&background=111827&color=10b981`;
       const newUser: User = {
         id: firebaseUser.uid,
@@ -1350,15 +1404,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const register = async (name: string, email: string, pass: string) => {
     const credential = await createUserWithEmailAndPassword(auth, email, pass);
+    await sendEmailVerification(credential.user);
+    const username = await resolveUsername(name);
     const createdAt = Date.now();
     const newUser: User = {
       id: credential.user.uid,
       createdAt,
-      name,
-      username: name,
-      displayName: name,
+      name: username,
+      username,
+      displayName: name || undefined,
       email,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=111827&color=10b981`,
       provider: 'password',
       level: 1,
       xp: 0,
@@ -1377,11 +1433,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     await setDoc(doc(db, 'users', newUser.id), { ...buildUserDocument(newUser), coins: SIGNUP_CREDIT_COINS });
-
-    setUser(newUser);
-    setBalance(SIGNUP_CREDIT_COINS);
-    setInventory([]);
-    setIsAuthenticated(true);
     setShowLoginModal(false);
   };
 
@@ -1391,6 +1442,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           handleCodeInApp: true
       };
       await sendPasswordResetEmail(auth, email, actionCodeSettings);
+  };
+
+  const resendVerificationEmail = async () => {
+    if (!auth.currentUser) return;
+    await sendEmailVerification(auth.currentUser);
+  };
+
+  const refreshEmailVerification = async () => {
+    if (!auth.currentUser) return;
+    await auth.currentUser.reload();
+    setEmailVerificationTick((prev) => prev + 1);
   };
 
   const logout = () => {
@@ -2210,6 +2272,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       notifications,
       showLoginModal,
       showTopUpModal,
+      requiresEmailVerification,
+      verificationEmail,
       balance,
       inventory,
       shipments,
@@ -2224,7 +2288,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loginWithGoogle,
       linkGoogleAccount,
       register,
+      resetPassword,
       logout,
+      resendVerificationEmail,
+      refreshEmailVerification,
       setShowLoginModal,
       setShowTopUpModal,
       setView,
@@ -2267,8 +2334,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       registerSpend,
       generateAffiliateCode,
       updateUserProgress,
-      updateShipmentStatus,
-      resetPassword
+      updateShipmentStatus
     }}>
       {children}
     </GameContext.Provider>

@@ -13,6 +13,7 @@ import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
+import { getUserDisplayName } from '../utils/userDisplay';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -2571,7 +2572,7 @@ export const AdminPanel: React.FC = () => {
                                                 <tr key={profile.id} className="hover:bg-[#1a2130] transition-colors">
                                                     <td className="px-6 py-4 flex items-center gap-3">
                                                         <img src={profile.avatar} className="w-8 h-8 rounded-full" />
-                                                        <span className="font-bold text-white">{profile.name}</span>
+                                                        <span className="font-bold text-white">{getUserDisplayName(profile)}</span>
                                                     </td>
                                                     <td className="px-6 py-4 text-gray-400">Lvl {progress.level}</td>
                                                     <td className="px-6 py-4 text-gray-400">
@@ -2658,7 +2659,7 @@ export const AdminPanel: React.FC = () => {
                                             <div className="flex items-center gap-3">
                                                 <img src={profile.avatar} className="w-10 h-10 rounded-full" />
                                                 <div className="flex-1">
-                                                    <div className="text-white font-bold">{profile.name}</div>
+                                                    <div className="text-white font-bold">{getUserDisplayName(profile)}</div>
                                                     <div className="text-xs text-gray-400">Lvl {calculateLevelProgress(profile.xp || 0).level}</div>
                                                 </div>
                                                 <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
@@ -3218,7 +3219,9 @@ export const AdminPanel: React.FC = () => {
                                 const trackingKey = shipment.id || key;
                                 const trackingValue = shipmentTracking[trackingKey] ?? shipment.trackingNumber ?? '';
                                 const shipmentItem = shipment.item ?? ({ name: 'Mystery Item', value: 0, image: 'https://picsum.photos/200', rarity: 'common' } as Shipment['item']);
-                                const displayName = shipmentUser?.name ?? address?.fullName ?? 'Unknown user';
+                                const displayName = shipmentUser
+                                  ? getUserDisplayName(shipmentUser)
+                                  : address?.fullName ?? 'Unknown user';
                                 const displayEmail = shipmentUser?.email || 'No email on file';
                                 return (
                                     <div key={key} className="bg-[#131720] border border-gray-800 rounded-xl p-5 flex flex-col gap-4">

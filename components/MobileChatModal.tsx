@@ -6,6 +6,7 @@ import { useSiteChat } from '../hooks/useSiteChat';
 import { useGame } from '../context/GameContext';
 import { FreeRainBanner } from './FreeRainBanner';
 import { Input } from './ui/Input';
+import { getUserDisplayName } from '../utils/userDisplay';
 
 type MobileChatTab = 'chat' | 'support';
 
@@ -82,30 +83,33 @@ export const MobileChatModal: React.FC<MobileChatModalProps> = ({ isOpen, onClos
                     No messages yet. Say hello!
                   </div>
                 )}
-                {messages.map((msg) => (
-                  <div key={msg.id} className="group flex gap-3">
-                    <img
-                      src={msg.user.avatar}
-                      alt={msg.user.name}
-                      className="w-8 h-8 rounded-lg mt-1 border border-gray-700"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className={`text-xs font-bold ${msg.user.name === 'ZEUS' ? 'text-green-400' : 'text-gray-300'} hover:underline cursor-pointer`}>
-                          {msg.user.name}
-                        </span>
-                        <span className="text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {msg.timestamp}
-                        </span>
-                      </div>
-                      <div className={`p-2 rounded-r-lg rounded-bl-lg text-sm font-medium leading-snug break-words ${msg.isSystem ? 'bg-amber-500/10 text-amber-100 border border-amber-500/30' : 'bg-[#1a202c] text-gray-300'}`}>
-                        {msg.message.split(' ').map((word, i) =>
-                          word.startsWith('@') ? <span key={i} className="text-brand-purple cursor-pointer hover:underline">{word} </span> : word + ' '
-                        )}
+                {messages.map((msg) => {
+                  const displayName = getUserDisplayName(msg.user);
+                  return (
+                    <div key={msg.id} className="group flex gap-3">
+                      <img
+                        src={msg.user.avatar}
+                        alt={displayName}
+                        className="w-8 h-8 rounded-lg mt-1 border border-gray-700"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className={`text-xs font-bold ${displayName === 'ZEUS' ? 'text-green-400' : 'text-gray-300'} hover:underline cursor-pointer`}>
+                            {displayName}
+                          </span>
+                          <span className="text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {msg.timestamp}
+                          </span>
+                        </div>
+                        <div className={`p-2 rounded-r-lg rounded-bl-lg text-sm font-medium leading-snug break-words ${msg.isSystem ? 'bg-amber-500/10 text-amber-100 border border-amber-500/30' : 'bg-[#1a202c] text-gray-300'}`}>
+                          {msg.message.split(' ').map((word, i) =>
+                            word.startsWith('@') ? <span key={i} className="text-brand-purple cursor-pointer hover:underline">{word} </span> : word + ' '
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="p-4 border-t border-gray-800 bg-[#111621]">
