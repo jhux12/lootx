@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
-import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage, StripeSettings, Shipment, ShipmentStatus } from '../types';
+import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage, StripeSettings, Shipment, ShipmentStatus, HomeRowConfig } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
@@ -157,6 +157,13 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   caseLabSellBackPercent: 75
 };
 
+const DEFAULT_HOME_ROWS: HomeRowConfig[] = [
+  { id: 'new', title: 'New Drops', query: { tags: ['new'] }, limit: 8, isActive: true },
+  { id: 'trending', title: 'Trending Now', query: { tags: ['trending'] }, limit: 8, isActive: true },
+  { id: 'budget', title: 'Budget Picks', query: { maxPrice: 500 }, limit: 8, isActive: true },
+  { id: 'high-roller', title: 'High Roller', query: { minPrice: 2000 }, limit: 8, isActive: true }
+];
+
 const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSettings => {
   const legacyProductId =
     typeof (settings as { stripeShippingKeyOrId?: string }).stripeShippingKeyOrId === 'string'
@@ -186,8 +193,41 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
   rakebackDailyCapCoins: Math.max(0, Number(settings.rakebackDailyCapCoins) || 0)
 });
 
+const normalizeHomeRows = (rows: unknown): HomeRowConfig[] => {
+  if (!Array.isArray(rows)) return DEFAULT_HOME_ROWS;
+  const normalized = rows
+    .map((row, index) => {
+      const typed = row as Partial<HomeRowConfig>;
+      const rawQuery = typed.query ?? {};
+      const id = typeof typed.id === 'string' && typed.id.trim() ? typed.id : `row-${index + 1}`;
+      const title = typeof typed.title === 'string' && typed.title.trim() ? typed.title : 'Homepage Row';
+      const limit = Math.max(1, Math.round(Number(typed.limit) || 0)) || 8;
+      const query = {
+        boxIds: Array.isArray(rawQuery.boxIds)
+          ? rawQuery.boxIds.map((id) => String(id).trim()).filter(Boolean)
+          : undefined,
+        tags: Array.isArray(rawQuery.tags)
+          ? rawQuery.tags.map((tag) => String(tag).trim()).filter(Boolean)
+          : undefined,
+        maxPrice: Number.isFinite(Number(rawQuery.maxPrice)) ? Number(rawQuery.maxPrice) : undefined,
+        minPrice: Number.isFinite(Number(rawQuery.minPrice)) ? Number(rawQuery.minPrice) : undefined
+      };
+      const isActive = typed.isActive !== false;
+      return {
+        id,
+        title,
+        query,
+        limit,
+        isActive
+      } satisfies HomeRowConfig;
+    })
+    .filter((row) => row.title.trim().length > 0);
+  return normalized;
+};
+
 const BONUS_SETTINGS_DOC = 'bonus-settings';
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
+const HOME_ROWS_DOC = 'home-rows';
 const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const SIGNUP_CREDIT_COINS = 0.05;
 
@@ -349,6 +389,7 @@ interface GameContextType {
   coinPackages: CoinPackage[];
   bonusSettings: BonusSettings;
   stripeSettings: StripeSettings;
+  homeRows: HomeRowConfig[];
   showLoginModal: boolean;
   showTopUpModal: boolean;
   
@@ -397,6 +438,7 @@ interface GameContextType {
   claimRakeback: () => Promise<void>;
   updateBonusSettings: (settings: BonusSettings) => void;
   updateStripeSettings: (settings: StripeSettings) => void;
+  updateHomeRows: (rows: HomeRowConfig[]) => void;
   awardCaseOpenXp: () => void;
   registerSpend: (amount: number) => void;
   generateAffiliateCode: () => Promise<string | undefined>;
@@ -736,6 +778,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setStripeSettings(normalizeStripeSettings(data));
     }, (error) => {
       console.error('Failed to load stripe settings from Firebase', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const [homeRows, setHomeRows] = useState<HomeRowConfig[]>(() => DEFAULT_HOME_ROWS);
+
+  useEffect(() => {
+    const homeRowsRef = doc(db, 'settings', HOME_ROWS_DOC);
+    const unsubscribe = onSnapshot(homeRowsRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.data() ?? {};
+      const normalized = normalizeHomeRows(data.rows);
+      setHomeRows(normalized);
+    }, (error) => {
+      console.error('Failed to load home rows from Firebase', error);
     });
 
     return () => unsubscribe();
@@ -1232,6 +1290,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const stripeSettingsRef = doc(db, 'settings', STRIPE_SETTINGS_DOC);
     void setDoc(stripeSettingsRef, normalized, { merge: true }).catch((error) => {
       console.error('Failed to save stripe settings to Firebase', error);
+    });
+  };
+
+  const updateHomeRows = (rows: HomeRowConfig[]) => {
+    const normalized = normalizeHomeRows(rows);
+    setHomeRows(normalized);
+    const homeRowsRef = doc(db, 'settings', HOME_ROWS_DOC);
+    const payload = sanitizeDeep({ rows: normalized, updatedAt: serverTimestamp() });
+    void setDoc(homeRowsRef, payload, { merge: true }).catch((error) => {
+      console.error('Failed to save home rows to Firebase', error);
     });
   };
 
@@ -2220,6 +2288,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       coinPackages,
       bonusSettings,
       stripeSettings,
+      homeRows,
       login,
       loginWithGoogle,
       linkGoogleAccount,
@@ -2263,6 +2332,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       claimRakeback,
       updateBonusSettings,
       updateStripeSettings,
+      updateHomeRows,
       awardCaseOpenXp,
       registerSpend,
       generateAffiliateCode,

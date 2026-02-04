@@ -28,27 +28,9 @@ import { HomeBanners } from './components/HomeBanners';
 import { CaseLabPromo } from './components/CaseLabPromo';
 import { getBoxTags } from './utils/boxTags';
 
-type HomeRowConfig = {
-  id: string;
-  title: string;
-  query: {
-    tags?: string[];
-    maxPrice?: number;
-    minPrice?: number;
-  };
-  limit: number;
-};
-
-const HOME_ROWS: HomeRowConfig[] = [
-  { id: 'new', title: 'New Drops', query: { tags: ['new'] }, limit: 8 },
-  { id: 'trending', title: 'Trending Now', query: { tags: ['trending'] }, limit: 8 },
-  { id: 'budget', title: 'Budget Picks', query: { maxPrice: 500 }, limit: 8 },
-  { id: 'high-roller', title: 'High Roller', query: { minPrice: 2000 }, limit: 8 }
-];
-
 // Main content wrapper to handle view switching
 const MainContent: React.FC = () => {
-  const { view, showLoginModal, showTopUpModal, isAuthenticated, user, setView, setShowLoginModal, boxes } = useGame();
+  const { view, showLoginModal, showTopUpModal, isAuthenticated, user, setView, setShowLoginModal, boxes, homeRows } = useGame();
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
 
   useEffect(() => {
@@ -72,29 +54,39 @@ const MainContent: React.FC = () => {
     [boxes]
   );
 
-  const homeRows = useMemo(() => (
-    HOME_ROWS.map((row) => {
+  const resolvedHomeRows = useMemo(() => (
+    homeRows
+      .filter((row) => row.isActive !== false)
+      .map((row) => {
       let filtered = baseHomeBoxes;
       const { maxPrice, minPrice } = row.query;
-      if (row.query.tags?.length) {
-        const targetTags = row.query.tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
-        filtered = filtered.filter((box) => {
-          const boxTags = getBoxTags(box);
-          return targetTags.some((tag) => boxTags.includes(tag));
-        });
-      }
-      if (typeof maxPrice === 'number') {
-        filtered = filtered.filter((box) => box.price <= maxPrice);
-      }
-      if (typeof minPrice === 'number') {
-        filtered = filtered.filter((box) => box.price >= minPrice);
+      const hasBoxSelection = Array.isArray(row.query.boxIds);
+      if (hasBoxSelection) {
+        const boxLookup = new Map(baseHomeBoxes.map((box) => [box.id, box]));
+        filtered = row.query.boxIds
+          ?.map((boxId) => boxLookup.get(boxId))
+          .filter((box): box is typeof baseHomeBoxes[number] => Boolean(box)) ?? [];
+      } else {
+        if (row.query.tags?.length) {
+          const targetTags = row.query.tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
+          filtered = filtered.filter((box) => {
+            const boxTags = getBoxTags(box);
+            return targetTags.some((tag) => boxTags.includes(tag));
+          });
+        }
+        if (typeof maxPrice === 'number') {
+          filtered = filtered.filter((box) => box.price <= maxPrice);
+        }
+        if (typeof minPrice === 'number') {
+          filtered = filtered.filter((box) => box.price >= minPrice);
+        }
       }
       return {
         ...row,
         boxes: filtered.slice(0, row.limit)
       };
     })
-  ), [baseHomeBoxes]);
+  ), [baseHomeBoxes, homeRows]);
 
   const mainOffsetClass = view.type === 'HOME' && isChatCollapsed ? 'xl:mr-16' : 'xl:mr-72';
 
@@ -129,7 +121,7 @@ const MainContent: React.FC = () => {
         <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
           <Hero />
           <BoxGrid />
-          {homeRows.map((row) => (
+          {resolvedHomeRows.map((row) => (
             <BoxRow key={row.id} title={row.title} boxes={row.boxes} viewAllQuery={row.query} />
           ))}
           <TrustCards />
