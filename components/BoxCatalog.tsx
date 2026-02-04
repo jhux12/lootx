@@ -1,59 +1,74 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Tag, ChevronLeft, Search, X } from 'lucide-react';
+import { ChevronLeft, FlaskConical, Search, SlidersHorizontal } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { BoxCard } from './BoxCard';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 
-export const BoxCatalog: React.FC = () => {
+type BoxCatalogProps = {
+  isChatCollapsed: boolean;
+};
+
+const TAB_OPTIONS = [
+  { id: 'official', label: 'Our Mystery Boxes' },
+  { id: 'community', label: 'Community' },
+  { id: 'category', label: 'Browse by Category' }
+] as const;
+
+type TabOption = typeof TAB_OPTIONS[number]['id'];
+
+const SORT_OPTIONS = ['Popular', 'Price: Low to High', 'Price: High to Low', 'Newest'] as const;
+type SortOption = typeof SORT_OPTIONS[number];
+
+export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const { boxes, setView } = useGame();
   const { playSound } = useSound();
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [tagSearch, setTagSearch] = useState('');
-  const [priceFilter, setPriceFilter] = useState<{ min?: number; max?: number }>({});
+  const [activeTab, setActiveTab] = useState<TabOption>('official');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState<SortOption>('Popular');
+  const [riskValue, setRiskValue] = useState(100);
+  const [initialMaxPrice, setInitialMaxPrice] = useState<number | undefined>(undefined);
 
   const displayBoxes = useMemo(
     () => boxes.filter(box => !box.isDaily),
     [boxes]
   );
 
+  const maxBoxPrice = useMemo(
+    () => displayBoxes.reduce((max, box) => Math.max(max, box.price), 0),
+    [displayBoxes]
+  );
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tagsParam = params.get('tags');
-    const minPriceParam = params.get('minPrice');
     const maxPriceParam = params.get('maxPrice');
     const tags = tagsParam
       ? tagsParam.split(',').map(normalizeBoxTag).filter(Boolean)
       : [];
-    const minPrice = minPriceParam ? Number(minPriceParam) : undefined;
     const maxPrice = maxPriceParam ? Number(maxPriceParam) : undefined;
-    setSelectedTags(tags);
-    setPriceFilter({
-      min: Number.isFinite(minPrice) ? minPrice : undefined,
-      max: Number.isFinite(maxPrice) ? maxPrice : undefined
-    });
+    const initialCategory = tags[0] ?? 'All';
+    setSelectedCategory(initialCategory === '' ? 'All' : initialCategory);
+    setInitialMaxPrice(Number.isFinite(maxPrice) ? maxPrice : undefined);
   }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (selectedTags.length > 0) {
-      params.set('tags', selectedTags.join(','));
+    if (selectedCategory !== 'All') {
+      params.set('tags', selectedCategory);
     } else {
       params.delete('tags');
     }
-    if (typeof priceFilter.min === 'number') {
-      params.set('minPrice', String(priceFilter.min));
-    } else {
-      params.delete('minPrice');
-    }
-    if (typeof priceFilter.max === 'number') {
-      params.set('maxPrice', String(priceFilter.max));
+    if (maxBoxPrice > 0 && riskValue < 100) {
+      const maxPriceParam = Math.max(1, Math.round(maxBoxPrice * (riskValue / 100)));
+      params.set('maxPrice', String(maxPriceParam));
     } else {
       params.delete('maxPrice');
     }
     const search = params.toString();
     window.history.replaceState({}, '', `/boxes${search ? `?${search}` : ''}`);
-  }, [priceFilter.max, priceFilter.min, selectedTags]);
+  }, [maxBoxPrice, riskValue, selectedCategory]);
 
   const tagStats = useMemo(() => {
     const counts = new Map<string, number>();
@@ -65,181 +80,236 @@ export const BoxCatalog: React.FC = () => {
     return counts;
   }, [displayBoxes]);
 
-  const popularTags = useMemo(
-    () =>
-      Array.from(tagStats.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8)
-        .map(([tag]) => tag),
-    [tagStats]
-  );
-
   const tagOptions = useMemo(() => {
-    const options = Array.from(tagStats.keys()).sort((a, b) => a.localeCompare(b));
-    if (displayBoxes.some(box => box.isUserCreated)) {
-      options.unshift('User Created');
-    }
-    return options;
+    return Array.from(tagStats.keys()).sort((a, b) => a.localeCompare(b));
   }, [displayBoxes, tagStats]);
 
   const filteredBoxes = useMemo(() => {
-    const normalizedSelected = selectedTags
-      .filter(tag => tag !== 'User Created')
-      .map(normalizeBoxTag);
-    const includeUserCreated = selectedTags.includes('User Created');
+    const normalizedCategory = normalizeBoxTag(selectedCategory);
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    const effectiveMaxPrice = maxBoxPrice > 0 && riskValue < 100
+      ? Math.max(1, Math.round(maxBoxPrice * (riskValue / 100)))
+      : undefined;
 
     return displayBoxes.filter((box) => {
-      if (typeof priceFilter.min === 'number' && box.price < priceFilter.min) return false;
-      if (typeof priceFilter.max === 'number' && box.price > priceFilter.max) return false;
+      if (activeTab === 'official' && box.isUserCreated) return false;
+      if (activeTab === 'community' && !box.isUserCreated) return false;
+      if (activeTab === 'category' && box.isUserCreated) return false;
 
-      if (normalizedSelected.length === 0 && !includeUserCreated) {
-        return !box.isUserCreated;
+      if (effectiveMaxPrice && box.price > effectiveMaxPrice) return false;
+
+      if (normalizedSearch) {
+        const matchesName = box.name.toLowerCase().includes(normalizedSearch);
+        if (!matchesName) return false;
       }
 
-      const matchesUserCreated = includeUserCreated && box.isUserCreated;
-      const boxTags = getBoxTags(box);
-      const matchesTag = normalizedSelected.length > 0
-        && !box.isUserCreated
-        && normalizedSelected.some(tag => boxTags.includes(tag));
-      return matchesUserCreated || matchesTag;
+      if (normalizedCategory && normalizedCategory !== 'all' && !box.isUserCreated) {
+        const boxTags = getBoxTags(box);
+        if (!boxTags.includes(normalizedCategory)) return false;
+      }
+
+      return true;
     });
-  }, [displayBoxes, priceFilter.max, priceFilter.min, selectedTags]);
+  }, [activeTab, displayBoxes, maxBoxPrice, riskValue, searchQuery, selectedCategory]);
 
-  const filteredTagOptions = useMemo(() => {
-    const search = tagSearch.trim().toLowerCase();
-    if (!search) return tagOptions;
-    return tagOptions.filter(tag => tag.toLowerCase().includes(search));
-  }, [tagOptions, tagSearch]);
+  const sortedBoxes = useMemo(() => {
+    const sorted = [...filteredBoxes];
+    switch (sortOption) {
+      case 'Price: Low to High':
+        sorted.sort((a, b) => a.price - b.price);
+        break;
+      case 'Price: High to Low':
+        sorted.sort((a, b) => b.price - a.price);
+        break;
+      case 'Newest':
+        sorted.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+        break;
+      default:
+        break;
+    }
+    return sorted;
+  }, [filteredBoxes, sortOption]);
 
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) => (
-      prev.includes(tag)
-        ? prev.filter(existing => existing !== tag)
-        : [...prev, tag]
-    ));
-  };
+  useEffect(() => {
+    if (!initialMaxPrice || maxBoxPrice <= 0) return;
+    const computedRisk = Math.round((initialMaxPrice / maxBoxPrice) * 100);
+    setRiskValue(Math.min(100, Math.max(10, computedRisk)));
+    setInitialMaxPrice(undefined);
+  }, [initialMaxPrice, maxBoxPrice]);
+
+  const gridClasses = isChatCollapsed
+    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
+    : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
 
   return (
-    <section className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              playSound('click');
-              setView({ type: 'HOME' });
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" /> Back
-          </button>
-          <div>
-            <h2 className="text-2xl font-bold text-white">All Mystery Boxes</h2>
-            <p className="text-sm text-gray-400">Filter by tag to find the box you want.</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-4 mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="relative w-full sm:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-            <input
-              type="text"
-              value={tagSearch}
-              onChange={(event) => setTagSearch(event.target.value)}
-              placeholder="Search tags"
-              className="w-full rounded-full border border-gray-700 bg-[#0b0e14] py-2 pl-9 pr-3 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
-            />
-          </div>
-          {selectedTags.length > 0 && (
+    <section className="max-w-[1440px] mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-col gap-3">
             <button
               type="button"
               onClick={() => {
                 playSound('click');
-                setSelectedTags([]);
+                setView({ type: 'HOME' });
               }}
-              className="inline-flex items-center gap-2 rounded-full border border-gray-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400 transition hover:border-gray-500"
+              className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-300 transition hover:border-white/30 hover:text-white"
             >
-              <X className="h-3 w-3" /> Clear filters
+              <ChevronLeft className="w-4 h-4" /> Back
             </button>
-          )}
-        </div>
-
-        {popularTags.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Popular tags</p>
-            <div className="flex flex-wrap gap-2">
-              {popularTags.map((tag) => {
-                const isSelected = selectedTags.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => {
-                      playSound('click');
-                      toggleTag(tag);
-                    }}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-blue-600/20 border-blue-500 text-blue-200' : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'}`}
-                  >
-                    <Tag className="w-3 h-3" />
-                    {tag}
-                    <span className="text-[10px] text-gray-500 font-semibold">
-                      ({tagStats.get(tag) ?? 0})
-                    </span>
-                  </button>
-                );
-              })}
+            <div>
+              <h1 className="text-3xl font-bold text-white sm:text-4xl">
+                Open Online Mystery Boxes And Win Real-Life Items
+              </h1>
+              <p className="mt-2 text-sm text-gray-400">Filter by tag to find the box you want.</p>
             </div>
           </div>
-        )}
+        </div>
 
-        <div className="flex flex-wrap gap-2">
-          {filteredTagOptions.map(tag => {
-            const isSelected = selectedTags.includes(tag);
-            const tagCount = tag === 'User Created'
-              ? displayBoxes.filter(box => box.isUserCreated).length
-              : tagStats.get(tag) ?? 0;
-            return (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  toggleTag(tag);
-                }}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-blue-600/20 border-blue-500 text-blue-200' : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'}`}
-              >
-                <Tag className="w-3 h-3" />
-                {tag}
-                <span className="text-[10px] text-gray-500 font-semibold">
-                  ({tagCount})
-                </span>
-              </button>
-            );
-          })}
+        <div className="flex flex-wrap items-center gap-3">
+          {TAB_OPTIONS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                playSound('click');
+                setActiveTab(tab.id);
+              }}
+              className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                activeTab === tab.id
+                  ? 'bg-gradient-to-r from-brand-purple/80 to-blue-600/80 text-white shadow-[0_0_12px_rgba(124,58,237,0.35)]'
+                  : 'border border-white/10 bg-white/5 text-gray-400 hover:border-white/30 hover:text-white'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-gradient-to-r from-[#0d111b] via-[#121826] to-[#0c0f1b] p-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl border border-purple-500/30 bg-purple-500/10 p-3 text-purple-300">
+              <FlaskConical className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Create Your Own Custom Cases</h3>
+              <p className="mt-1 text-sm text-gray-400">
+                Create cases with items and odds of your choice. Earn up to 92% sell-back on wins.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                setView({ type: 'CUSTOM_CREATOR' });
+              }}
+              className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
+            >
+              Create Custom Case
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                setView({ type: 'PROFILE' });
+              }}
+              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-300 transition hover:border-white/30 hover:text-white"
+            >
+              View Your Cases
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#0c111b]/90 p-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-1 flex-col gap-3 md:flex-row md:items-center">
+            <div className="relative w-full md:max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-gray-500" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search boxes"
+                className="w-full rounded-full border border-gray-700 bg-[#0b0e14] py-2.5 pl-9 pr-3 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
+              />
+            </div>
+            <div className="flex w-full flex-col gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 md:max-w-[240px]">
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-400">
+                <span>Risk</span>
+                <span className="text-gray-200">{riskValue}%</span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={100}
+                value={riskValue}
+                onChange={(event) => setRiskValue(Number(event.target.value))}
+                className="w-full accent-brand-purple"
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 md:justify-end">
+            <select
+              value={selectedCategory}
+              onChange={(event) => {
+                playSound('click');
+                setSelectedCategory(event.target.value);
+                if (activeTab === 'community') {
+                  setActiveTab('category');
+                }
+              }}
+              className="rounded-full border border-gray-700 bg-[#0b0e14] px-4 py-2.5 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
+            >
+              <option value="All">All Categories</option>
+              {tagOptions.map((tag) => (
+                <option key={tag} value={tag}>
+                  {tag}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sortOption}
+              onChange={(event) => setSortOption(event.target.value as SortOption)}
+              className="rounded-full border border-gray-700 bg-[#0b0e14] px-4 py-2.5 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-400 transition hover:border-white/30 hover:text-white"
+              aria-label="Open advanced filters"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {filteredBoxes.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {filteredBoxes.map(box => (
-            <BoxCard
-              key={box.id}
-              box={box}
-              onSelect={(boxId) => {
-                playSound('click');
-                setView({ type: 'CASE_OPENING', boxId });
-              }}
-              onHover={() => playSound('hover')}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="rounded-xl border border-dashed border-gray-800 bg-[#0b0e14] p-6 text-sm text-gray-500">
-          No boxes found for this tag yet.
-        </div>
-      )}
+      <div className="mt-8">
+        {sortedBoxes.length > 0 ? (
+          <div className={`grid gap-4 ${gridClasses}`}>
+            {sortedBoxes.map(box => (
+              <BoxCard
+                key={box.id}
+                box={box}
+                onSelect={(boxId) => {
+                  playSound('click');
+                  setView({ type: 'CASE_OPENING', boxId });
+                }}
+                onHover={() => playSound('hover')}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-gray-800 bg-[#0b0e14] p-6 text-sm text-gray-500">
+            No boxes found for this filter yet.
+          </div>
+        )}
+      </div>
     </section>
   );
 };
