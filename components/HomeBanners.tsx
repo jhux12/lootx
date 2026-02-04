@@ -1,16 +1,13 @@
 import React from 'react';
-import banner1 from '../assets/home-banners/banner.png';
-import banner2 from '../assets/home-banners/banner2.png';
-
-// Upload banner images manually into /assets/home-banners and import them here.
+// Upload banner images manually into /assets/home-banners and reference them here.
 const HOME_BANNERS = [
   {
-    src: banner1,
+    src: '/assets/home-banners/banner.png',
     alt: 'Promo banner',
     href: '/boxes'
   },
   {
-    src: banner2,
+    src: '/assets/home-banners/banner2.png',
     alt: 'Limited drop banner'
   }
 ];
