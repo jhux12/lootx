@@ -83,17 +83,19 @@ const applyBoxFilters = (boxes: ReturnType<typeof useGame>['boxes'], options: Bo
     filtered = filtered.filter((box) => box.isUserCreated);
   }
 
-  if (options.category && options.category !== 'All') {
-    const category = normalizeBoxTag(options.category);
-    filtered = filtered.filter((box) => getBoxTags(box).includes(category));
-  }
+  if (options.tabId !== 'community') {
+    if (options.category && options.category !== 'All') {
+      const category = normalizeBoxTag(options.category);
+      filtered = filtered.filter((box) => getBoxTags(box).includes(category));
+    }
 
-  if (options.tags && options.tags.length > 0 && !hasSearch) {
-    const normalizedTags = options.tags.map(normalizeBoxTag).filter(Boolean);
-    filtered = filtered.filter((box) => {
-      const tags = getBoxTags(box);
-      return normalizedTags.some((tag) => tags.includes(tag));
-    });
+    if (options.tags && options.tags.length > 0 && !hasSearch) {
+      const normalizedTags = options.tags.map(normalizeBoxTag).filter(Boolean);
+      filtered = filtered.filter((box) => {
+        const tags = getBoxTags(box);
+        return normalizedTags.some((tag) => tags.includes(tag));
+      });
+    }
   }
 
   if (typeof options.minPrice === 'number') {
@@ -250,6 +252,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       setActiveTab(getDefaultTab(config.tabs));
     }
   }, [activeTab, config.tabs, enabledTabs]);
+
+  useEffect(() => {
+    if (activeTab !== 'community') return;
+    setSelectedCategory('All');
+    setHasCategorySelection(false);
+    setSelectedTags([]);
+  }, [activeTab]);
 
   const activeTags = useMemo(() => {
     if (activeTab === 'community') return [];
