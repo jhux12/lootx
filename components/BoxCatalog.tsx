@@ -285,6 +285,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     () => (config.curatedRows ?? []).filter((row) => row.enabled),
     [config.curatedRows]
   );
+  const hasActiveSearch = Boolean(searchTerm.trim());
 
   const gridClassName = isChatCollapsed
     ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
@@ -661,12 +662,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         )}
       </div>
 
-      {curatedRows.length > 0 && (
-        <div className="space-y-10">
-          {curatedRows.map((row) => renderCuratedRow(row))}
-        </div>
-      )}
-
       {filteredBoxes.length > 0 ? (
         <div className={`grid gap-4 ${gridClassName}`}>
           {filteredBoxes.map((box) => (
@@ -684,6 +679,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       ) : (
         <div className="rounded-xl border border-dashed border-gray-800 bg-[#0b0e14] p-6 text-sm text-gray-500">
           No boxes match these filters yet.
+        </div>
+      )}
+
+      {!hasActiveSearch && curatedRows.length > 0 && (
+        <div className="space-y-10">
+          {curatedRows.map((row) => renderCuratedRow(row))}
         </div>
       )}
 
