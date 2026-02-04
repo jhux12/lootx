@@ -14,14 +14,14 @@ import {
   subscribeBoxesPageConfig
 } from '../utils/boxesPageConfig';
 
-const DEFAULT_SORT_OPTIONS = ['Popular', 'Price Low', 'Price High', 'Newest'];
+const DEFAULT_SORT_OPTIONS = ['Price High', 'Price Low', 'Newest', 'Popular'];
 
 const sortLabelToKey = (label?: string) => {
   const normalized = label?.trim().toLowerCase() ?? '';
   if (normalized.includes('price') && normalized.includes('low')) return 'price-low';
   if (normalized.includes('price') && normalized.includes('high')) return 'price-high';
   if (normalized.includes('new')) return 'newest';
-  return 'popular';
+  return 'price-high';
 };
 
 const clampGrid = (value: number | undefined, fallback: number) => {
@@ -81,19 +81,17 @@ const applyBoxFilters = (boxes: ReturnType<typeof useGame>['boxes'], options: Bo
     filtered = filtered.filter((box) => box.isUserCreated);
   }
 
-  if (!hasSearch) {
-    if (options.category && options.category !== 'All') {
-      const category = normalizeBoxTag(options.category);
-      filtered = filtered.filter((box) => getBoxTags(box).includes(category));
-    }
+  if (options.category && options.category !== 'All') {
+    const category = normalizeBoxTag(options.category);
+    filtered = filtered.filter((box) => getBoxTags(box).includes(category));
+  }
 
-    if (options.tags && options.tags.length > 0) {
-      const normalizedTags = options.tags.map(normalizeBoxTag).filter(Boolean);
-      filtered = filtered.filter((box) => {
-        const tags = getBoxTags(box);
-        return normalizedTags.some((tag) => tags.includes(tag));
-      });
-    }
+  if (options.tags && options.tags.length > 0 && !hasSearch) {
+    const normalizedTags = options.tags.map(normalizeBoxTag).filter(Boolean);
+    filtered = filtered.filter((box) => {
+      const tags = getBoxTags(box);
+      return normalizedTags.some((tag) => tags.includes(tag));
+    });
   }
 
   if (typeof options.minPrice === 'number') {
@@ -111,7 +109,7 @@ const applyBoxFilters = (boxes: ReturnType<typeof useGame>['boxes'], options: Bo
     });
   }
 
-  const sortKey = options.sortKey ?? 'popular';
+  const sortKey = options.sortKey ?? 'price-high';
   if (sortKey === 'price-low') {
     filtered = [...filtered].sort((a, b) => a.price - b.price);
   } else if (sortKey === 'price-high') {
@@ -167,7 +165,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         const defaultTab = getDefaultTab(normalized.tabs);
         setActiveTab(defaultTab);
         setSelectedCategory(normalized.filters.category.default ?? 'All');
-        setSortOption(normalized.filters.sort.default ?? 'Popular');
+        setSortOption(normalized.filters.sort.default ?? 'Price High');
         hasInitializedRef.current = true;
       }
     });
@@ -228,7 +226,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
 
   useEffect(() => {
     if (!sortOption && sortOptions.length > 0) {
-      setSortOption(config.filters.sort.default ?? sortOptions[0]);
+      setSortOption(config.filters.sort.default ?? sortOptions[0] ?? 'Price High');
     }
   }, [config.filters.sort.default, sortOption, sortOptions]);
 
