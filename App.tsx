@@ -4,6 +4,7 @@ import { LiveTicker } from './components/LiveTicker';
 import { ChatSidebar } from './components/ChatSidebar';
 import { Hero } from './components/Hero';
 import { BoxGrid } from './components/BoxGrid';
+import { BoxCard } from './components/BoxCard';
 import { BoxRow } from './components/BoxRow';
 import { BoxCatalog } from './components/BoxCatalog';
 import { CaseOpening } from './components/CaseOpening';
@@ -16,7 +17,7 @@ import { CustomCaseCreator } from './components/CustomCaseCreator';
 import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
 import { GameProvider, useGame } from './context/GameContext';
-import { SoundProvider } from './context/SoundContext';
+import { SoundProvider, useSound } from './context/SoundContext';
 import { ShieldAlert, MessageCircle, Swords } from 'lucide-react';
 import { MobileChatModal } from './components/MobileChatModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
@@ -27,6 +28,7 @@ import { SiteFooter } from './components/SiteFooter';
 import { HomeBanners } from './components/HomeBanners';
 import { CaseLabPromo } from './components/CaseLabPromo';
 import { getBoxTags } from './utils/boxTags';
+import { ShowcaseRow, normalizeShowcaseRows, subscribeHomepageConfig } from './utils/homepageShowcase';
 
 type HomeRowConfig = {
   id: string;
@@ -49,7 +51,9 @@ const HOME_ROWS: HomeRowConfig[] = [
 // Main content wrapper to handle view switching
 const MainContent: React.FC = () => {
   const { view, showLoginModal, showTopUpModal, isAuthenticated, user, setView, setShowLoginModal, boxes } = useGame();
+  const { playSound } = useSound();
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+  const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -65,6 +69,19 @@ const MainContent: React.FC = () => {
     const observer = new MutationObserver(updateState);
     observer.observe(sidebar, { attributes: true, attributeFilter: ['data-collapsed'] });
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeHomepageConfig(
+      (config) => {
+        const rows = normalizeShowcaseRows(config?.showcaseRows);
+        setShowcaseRows(rows.length ? rows : null);
+      },
+      () => {
+        setShowcaseRows(null);
+      }
+    );
+    return () => unsubscribe();
   }, []);
 
   const baseHomeBoxes = useMemo(
@@ -95,6 +112,49 @@ const MainContent: React.FC = () => {
       };
     })
   ), [baseHomeBoxes]);
+
+  const showcaseRowsWithBoxes = useMemo(() => {
+    if (!showcaseRows) return null;
+    const boxMap = new Map(baseHomeBoxes.map((box) => [box.id, box]));
+    return showcaseRows.map((row) => {
+      const rowBoxes = (row.boxIds ?? [])
+        .map((id) => boxMap.get(id))
+        .filter((box): box is typeof baseHomeBoxes[number] => Boolean(box));
+      return {
+        ...row,
+        boxes: rowBoxes
+      };
+    });
+  }, [baseHomeBoxes, showcaseRows]);
+
+  const gridCols = {
+    1: 'grid-cols-1',
+    2: 'grid-cols-2',
+    3: 'grid-cols-3',
+    4: 'grid-cols-4',
+    5: 'grid-cols-5',
+    6: 'grid-cols-6'
+  } as const;
+  const smGridCols = {
+    1: 'sm:grid-cols-1',
+    2: 'sm:grid-cols-2',
+    3: 'sm:grid-cols-3',
+    4: 'sm:grid-cols-4',
+    5: 'sm:grid-cols-5',
+    6: 'sm:grid-cols-6'
+  } as const;
+  const lgGridCols = {
+    1: 'lg:grid-cols-1',
+    2: 'lg:grid-cols-2',
+    3: 'lg:grid-cols-3',
+    4: 'lg:grid-cols-4',
+    5: 'lg:grid-cols-5',
+    6: 'lg:grid-cols-6'
+  } as const;
+  const clampGrid = (value: number | undefined, fallback: number) => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+    return Math.min(6, Math.max(1, Math.round(value)));
+  };
 
   const mainOffsetClass = view.type === 'HOME' && isChatCollapsed ? 'xl:mr-16' : 'xl:mr-72';
 
@@ -128,10 +188,80 @@ const MainContent: React.FC = () => {
       {view.type === 'HOME' && (
         <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
           <Hero />
-          <BoxGrid />
-          {homeRows.map((row) => (
-            <BoxRow key={row.id} title={row.title} boxes={row.boxes} viewAllQuery={row.query} />
-          ))}
+          {showcaseRowsWithBoxes && showcaseRowsWithBoxes.length > 0 ? (
+            <div className="space-y-12">
+              {showcaseRowsWithBoxes.map((row) => {
+                if (row.boxes.length === 0) return null;
+                const mobileColumns = clampGrid(row.maxMobile, 2);
+                const desktopColumns = clampGrid(row.maxDesktop, 4);
+                const gridClassName = `grid ${gridCols[1]} gap-4 ${smGridCols[mobileColumns]} ${lgGridCols[desktopColumns]}`;
+                return (
+                  <section key={row.id} className="space-y-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">{row.title}</h3>
+                        {row.subtitle && <p className="text-sm text-gray-400">{row.subtitle}</p>}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playSound('click');
+                          setView({ type: 'BOXES' });
+                          window.history.replaceState({}, '', '/boxes');
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 transition hover:text-white"
+                      >
+                        View all
+                      </button>
+                    </div>
+                    {row.layout === 'carousel' ? (
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 hidden w-10 bg-gradient-to-r from-[#050811] via-[#050811]/80 to-transparent sm:block" />
+                        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 hidden w-10 bg-gradient-to-l from-[#050811] via-[#050811]/80 to-transparent sm:block" />
+                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#050811] via-[#050811]/90 to-transparent sm:hidden" />
+                        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#050811] via-[#050811]/90 to-transparent sm:hidden" />
+                        <div className="flex gap-4 overflow-x-auto pb-2 pt-1 snap-x snap-mandatory sm:overflow-visible">
+                          {row.boxes.map((box) => (
+                            <div key={box.id} className="min-w-[220px] snap-start sm:min-w-0">
+                              <BoxCard
+                                box={box}
+                                onSelect={(boxId) => {
+                                  playSound('click');
+                                  setView({ type: 'CASE_OPENING', boxId });
+                                }}
+                                onHover={() => playSound('hover')}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={gridClassName}>
+                        {row.boxes.map((box) => (
+                          <BoxCard
+                            key={box.id}
+                            box={box}
+                            onSelect={(boxId) => {
+                              playSound('click');
+                              setView({ type: 'CASE_OPENING', boxId });
+                            }}
+                            onHover={() => playSound('hover')}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
+          ) : (
+            <>
+              <BoxGrid />
+              {homeRows.map((row) => (
+                <BoxRow key={row.id} title={row.title} boxes={row.boxes} viewAllQuery={row.query} />
+              ))}
+            </>
+          )}
           <TrustCards />
           <HowItWorks />
           <HomeBanners />

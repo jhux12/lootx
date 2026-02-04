@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon } from 'lucide-react';
 import { collection, deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
@@ -7,6 +7,7 @@ import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
 import { db } from '../firebase';
+import { HomepageShowcaseEditor } from './admin/HomepageShowcaseEditor';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -110,7 +111,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'bonuses' | 'packages' | 'fees' | 'case-lab'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -1639,6 +1640,12 @@ export const AdminPanel: React.FC = () => {
                        <BadgeDollarSign className="w-4 h-4" /> Fees &amp; Shipping
                    </button>
                    <button 
+                     onClick={() => setActiveTab('homepage')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'homepage' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <HomeIcon className="w-4 h-4" /> Homepage
+                   </button>
+                   <button 
                      onClick={() => setActiveTab('case-lab')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'case-lab' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -1669,6 +1676,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'shipments' && 'Shipment Manager'}
                     {activeTab === 'bonuses' && 'Bonuses & XP'}
                     {activeTab === 'fees' && 'Fees & Shipping'}
+                    {activeTab === 'homepage' && 'Homepage Showcase'}
                     {activeTab === 'case-lab' && 'Case Lab'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
@@ -3645,6 +3653,11 @@ export const AdminPanel: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* TAB: HOMEPAGE */}
+            {activeTab === 'homepage' && (
+                <HomepageShowcaseEditor />
             )}
 
             {/* TAB: CASE LAB */}
