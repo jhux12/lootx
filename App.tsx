@@ -18,6 +18,7 @@ import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
+import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert, MessageCircle, Swords } from 'lucide-react';
 import { MobileChatModal } from './components/MobileChatModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
@@ -410,26 +411,28 @@ function App() {
   return (
     <SoundProvider>
       <GameProvider>
-        <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
-          <Header />
-          <AppLayout />
-          
-          {/* Mobile Chat Icon */}
-          <button
-            onClick={() => setShowSupportChat(true)}
-            className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl bg-gradient-to-r from-brand-purple to-blue-600 text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
-            aria-label="Open support chat"
-          >
-            <MessageCircle className="w-5 h-5" />
-          </button>
+        <PreviewProvider>
+          <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+            <Header />
+            <AppLayout />
+            
+            {/* Mobile Chat Icon */}
+            <button
+              onClick={() => setShowSupportChat(true)}
+              className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl bg-gradient-to-r from-brand-purple to-blue-600 text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
+              aria-label="Open support chat"
+            >
+              <MessageCircle className="w-5 h-5" />
+            </button>
 
-          {/* Mobile Chat Modal */}
-          <MobileChatModal 
-            isOpen={showSupportChat} 
-            onClose={() => setShowSupportChat(false)} 
-          />
-          <ResetPasswordModal />
-        </div>
+            {/* Mobile Chat Modal */}
+            <MobileChatModal 
+              isOpen={showSupportChat} 
+              onClose={() => setShowSupportChat(false)} 
+            />
+            <ResetPasswordModal />
+          </div>
+        </PreviewProvider>
       </GameProvider>
     </SoundProvider>
   );
