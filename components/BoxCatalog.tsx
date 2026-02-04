@@ -74,14 +74,14 @@ const applyBoxFilters = (boxes: ReturnType<typeof useGame>['boxes'], options: Bo
   let filtered = boxes;
   const hasSearch = Boolean(options.searchTerm?.trim());
 
-  if (!hasSearch) {
-    if (options.tabId === 'official') {
-      filtered = filtered.filter((box) => !box.isUserCreated);
-    }
-    if (options.tabId === 'community') {
-      filtered = filtered.filter((box) => box.isUserCreated);
-    }
+  if (options.tabId === 'official') {
+    filtered = filtered.filter((box) => !box.isUserCreated);
+  }
+  if (options.tabId === 'community') {
+    filtered = filtered.filter((box) => box.isUserCreated);
+  }
 
+  if (!hasSearch) {
     if (options.category && options.category !== 'All') {
       const category = normalizeBoxTag(options.category);
       filtered = filtered.filter((box) => getBoxTags(box).includes(category));
@@ -152,6 +152,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const displayBoxes = useMemo(
     () => boxes.filter((box) => !box.isDaily),
     [boxes]
+  );
+
+  const officialBoxes = useMemo(
+    () => displayBoxes.filter((box) => !box.isUserCreated),
+    [displayBoxes]
   );
 
   useEffect(() => {
@@ -246,10 +251,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   }, [activeTab, config.tabs, enabledTabs]);
 
   const activeTags = useMemo(() => {
-    if (activeTab === 'community') return ['User Created'];
-    if (activeTab === 'category' && selectedCategory !== 'All') return [selectedCategory];
+    if (activeTab === 'community') return [];
     return selectedTags;
-  }, [activeTab, selectedCategory, selectedTags]);
+  }, [activeTab, selectedTags]);
 
   const handleAuthAction = (action: () => void) => {
     playSound('click');
@@ -274,11 +278,21 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       applyBoxFilters(displayBoxes, {
         tabId: activeTab,
         searchTerm: config.filters.search.enabled ? searchTerm : undefined,
-        tags: activeTags.includes('User Created') ? [] : activeTags,
+        tags: config.filters.tagChips.enabled ? activeTags : [],
         category: config.filters.category.enabled ? selectedCategory : undefined,
         sortKey: config.filters.sort.enabled ? mainSortKey : undefined
       }),
-    [activeTab, activeTags, config.filters.category.enabled, config.filters.sort.enabled, displayBoxes, mainSortKey, searchTerm, selectedCategory]
+    [
+      activeTab,
+      activeTags,
+      config.filters.category.enabled,
+      config.filters.sort.enabled,
+      config.filters.tagChips.enabled,
+      displayBoxes,
+      mainSortKey,
+      searchTerm,
+      selectedCategory
+    ]
   );
 
   const curatedRows = useMemo(
@@ -286,6 +300,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     [config.curatedRows]
   );
   const hasActiveSearch = Boolean(searchTerm.trim());
+  const showCuratedRows = activeTab === 'official' && !hasActiveSearch && curatedRows.length > 0;
 
   const gridClassName = isChatCollapsed
     ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
@@ -298,9 +313,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
 
     const rowBoxes = row.mode === 'byIds'
       ? (row.boxIds ?? [])
-          .map((id) => displayBoxes.find((box) => box.id === id))
-          .filter((box): box is typeof displayBoxes[number] => Boolean(box))
-      : applyBoxFilters(displayBoxes, {
+          .map((id) => officialBoxes.find((box) => box.id === id))
+          .filter((box): box is typeof officialBoxes[number] => Boolean(box))
+      : applyBoxFilters(officialBoxes, {
           tags: row.filter?.tag ? [row.filter.tag] : [],
           category: row.filter?.category,
           minPrice: row.filter?.minPrice,
@@ -662,7 +677,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         )}
       </div>
 
-      {curatedRows.length > 0 && (
+      {showCuratedRows && (
         <div className="space-y-10">
           {curatedRows.map((row) => renderCuratedRow(row))}
         </div>
@@ -685,12 +700,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       ) : (
         <div className="rounded-xl border border-dashed border-gray-800 bg-[#0b0e14] p-6 text-sm text-gray-500">
           No boxes match these filters yet.
-        </div>
-      )}
-
-      {!hasActiveSearch && curatedRows.length > 0 && (
-        <div className="space-y-10">
-          {curatedRows.map((row) => renderCuratedRow(row))}
         </div>
       )}
 
