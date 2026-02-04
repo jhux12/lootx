@@ -72,12 +72,28 @@ type BoxFilterOptions = {
 
 const applyBoxFilters = (boxes: ReturnType<typeof useGame>['boxes'], options: BoxFilterOptions) => {
   let filtered = boxes;
+  const hasSearch = Boolean(options.searchTerm?.trim());
 
-  if (options.tabId === 'official') {
-    filtered = filtered.filter((box) => !box.isUserCreated);
-  }
-  if (options.tabId === 'community') {
-    filtered = filtered.filter((box) => box.isUserCreated);
+  if (!hasSearch) {
+    if (options.tabId === 'official') {
+      filtered = filtered.filter((box) => !box.isUserCreated);
+    }
+    if (options.tabId === 'community') {
+      filtered = filtered.filter((box) => box.isUserCreated);
+    }
+
+    if (options.category && options.category !== 'All') {
+      const category = normalizeBoxTag(options.category);
+      filtered = filtered.filter((box) => getBoxTags(box).includes(category));
+    }
+
+    if (options.tags && options.tags.length > 0) {
+      const normalizedTags = options.tags.map(normalizeBoxTag).filter(Boolean);
+      filtered = filtered.filter((box) => {
+        const tags = getBoxTags(box);
+        return normalizedTags.some((tag) => tags.includes(tag));
+      });
+    }
   }
 
   if (typeof options.minPrice === 'number') {
@@ -87,24 +103,11 @@ const applyBoxFilters = (boxes: ReturnType<typeof useGame>['boxes'], options: Bo
     filtered = filtered.filter((box) => box.price <= options.maxPrice!);
   }
 
-  if (options.searchTerm) {
-    const search = options.searchTerm.toLowerCase();
+  if (hasSearch) {
+    const search = options.searchTerm!.toLowerCase();
     filtered = filtered.filter((box) => {
       const haystack = `${box.name} ${getBoxTags(box).join(' ')}`.toLowerCase();
       return haystack.includes(search);
-    });
-  }
-
-  if (options.category && options.category !== 'All') {
-    const category = normalizeBoxTag(options.category);
-    filtered = filtered.filter((box) => getBoxTags(box).includes(category));
-  }
-
-  if (options.tags && options.tags.length > 0) {
-    const normalizedTags = options.tags.map(normalizeBoxTag).filter(Boolean);
-    filtered = filtered.filter((box) => {
-      const tags = getBoxTags(box);
-      return normalizedTags.some((tag) => tags.includes(tag));
     });
   }
 
@@ -282,6 +285,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     () => (config.curatedRows ?? []).filter((row) => row.enabled),
     [config.curatedRows]
   );
+  const hasActiveSearch = Boolean(searchTerm.trim());
 
   const gridClassName = isChatCollapsed
     ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
@@ -681,6 +685,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       ) : (
         <div className="rounded-xl border border-dashed border-gray-800 bg-[#0b0e14] p-6 text-sm text-gray-500">
           No boxes match these filters yet.
+        </div>
+      )}
+
+      {!hasActiveSearch && curatedRows.length > 0 && (
+        <div className="space-y-10">
+          {curatedRows.map((row) => renderCuratedRow(row))}
         </div>
       )}
 
