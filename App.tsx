@@ -18,6 +18,7 @@ import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
+import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert, MessageCircle, Swords } from 'lucide-react';
 import { MobileChatModal } from './components/MobileChatModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
@@ -48,28 +49,19 @@ const HOME_ROWS: HomeRowConfig[] = [
   { id: 'high-roller', title: 'High Roller', query: { minPrice: 2000 }, limit: 8 }
 ];
 
+type MainContentProps = {
+  isChatCollapsed: boolean;
+};
+
 // Main content wrapper to handle view switching
-const MainContent: React.FC = () => {
+const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const { view, showLoginModal, showTopUpModal, isAuthenticated, user, setView, setShowLoginModal, boxes } = useGame();
   const { playSound } = useSound();
-  const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [view]);
-
-  useEffect(() => {
-    const sidebar = document.querySelector('[data-chat-sidebar]');
-    if (!sidebar) return;
-    const updateState = () => {
-      setIsChatCollapsed(sidebar.getAttribute('data-collapsed') === 'true');
-    };
-    updateState();
-    const observer = new MutationObserver(updateState);
-    observer.observe(sidebar, { attributes: true, attributeFilter: ['data-collapsed'] });
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
@@ -156,8 +148,6 @@ const MainContent: React.FC = () => {
     return Math.min(6, Math.max(1, Math.round(value)));
   };
 
-  const mainOffsetClass = view.type === 'HOME' && isChatCollapsed ? 'xl:mr-16' : 'xl:mr-72';
-
   const BattlesComingSoon = () => (
     <div className="mt-6 rounded-2xl border border-gray-800 bg-[#0b0e14] p-6 sm:p-8">
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -184,7 +174,7 @@ const MainContent: React.FC = () => {
   );
 
   return (
-    <main className={`flex-1 min-w-0 pb-10 ${mainOffsetClass}`}>
+    <main className="flex-1 min-w-0 pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
       {view.type === 'HOME' && (
         <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
           <Hero />
@@ -288,7 +278,7 @@ const MainContent: React.FC = () => {
 
       {view.type === 'BOXES' && (
         <div className="w-full">
-          <BoxCatalog />
+          <BoxCatalog isChatCollapsed={isChatCollapsed} />
         </div>
       )}
 
@@ -388,33 +378,61 @@ const MainContent: React.FC = () => {
 function App() {
   const [showSupportChat, setShowSupportChat] = useState(false);
 
+  const AppLayout = () => {
+    const { isAuthenticated } = useGame();
+    const [isChatCollapsed, setIsChatCollapsed] = useState(!isAuthenticated);
+
+    useEffect(() => {
+      setIsChatCollapsed(!isAuthenticated);
+    }, [isAuthenticated]);
+
+    const chatWidth = isChatCollapsed ? '64px' : '380px';
+
+    return (
+      <div
+        className="flex flex-1 pt-[72px] md:pt-[80px] lg:pt-[88px]"
+        style={{ '--chatw': chatWidth } as React.CSSProperties}
+        data-chat-collapsed={isChatCollapsed}
+      >
+        <MainContent isChatCollapsed={isChatCollapsed} />
+        <div
+          className="relative hidden shrink-0 xl:flex transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+          style={{ width: 'var(--chatw)' }}
+        >
+          <ChatSidebar
+            isCollapsed={isChatCollapsed}
+            onToggle={setIsChatCollapsed}
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <SoundProvider>
       <GameProvider>
-        <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
-          <Header />
-          
-          <div className="flex flex-1 pt-[72px] md:pt-[80px] lg:pt-[88px]">
-            <MainContent />
-            <ChatSidebar />
-          </div>
-          
-          {/* Mobile Chat Icon */}
-          <button
-            onClick={() => setShowSupportChat(true)}
-            className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl bg-gradient-to-r from-brand-purple to-blue-600 text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
-            aria-label="Open support chat"
-          >
-            <MessageCircle className="w-5 h-5" />
-          </button>
+        <PreviewProvider>
+          <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+            <Header />
+            <AppLayout />
+            
+            {/* Mobile Chat Icon */}
+            <button
+              onClick={() => setShowSupportChat(true)}
+              className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl bg-gradient-to-r from-brand-purple to-blue-600 text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
+              aria-label="Open support chat"
+            >
+              <MessageCircle className="w-5 h-5" />
+            </button>
 
-          {/* Mobile Chat Modal */}
-          <MobileChatModal 
-            isOpen={showSupportChat} 
-            onClose={() => setShowSupportChat(false)} 
-          />
-          <ResetPasswordModal />
-        </div>
+            {/* Mobile Chat Modal */}
+            <MobileChatModal 
+              isOpen={showSupportChat} 
+              onClose={() => setShowSupportChat(false)} 
+            />
+            <ResetPasswordModal />
+          </div>
+        </PreviewProvider>
       </GameProvider>
     </SoundProvider>
   );
