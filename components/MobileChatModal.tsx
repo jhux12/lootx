@@ -38,8 +38,8 @@ export const MobileChatModal: React.FC<MobileChatModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-end sm:items-center justify-center p-4">
-      <div className="w-full sm:w-[420px] bg-[#0b0e14] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-end sm:items-center justify-center p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div className="w-full sm:w-[420px] bg-[#0b0e14] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-[#111621]">
           <div className="flex items-center gap-2">

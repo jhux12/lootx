@@ -5,7 +5,7 @@ import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
 import { getSellBackValue } from '../utils/sellBack';
 import { CoinAmount } from './CoinAmount';
-import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Upload, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight } from 'lucide-react';
 import { auth } from '../firebase';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
@@ -46,7 +46,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const [showShippingReview, setShowShippingReview] = useState(false);
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const sellOfferTimersRef = useRef<Record<string, number>>({});
   const tabScrollRef = useRef<HTMLDivElement>(null);
   const [tabScrollState, setTabScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
@@ -460,22 +459,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       if (!profileUser || !isFollowing) return;
       await unfollowUser(profileUser.id);
       alert("You unfollowed this player.");
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-          if (file.size > 2 * 1024 * 1024) {
-              alert("File is too large. Please choose an image under 2MB.");
-              return;
-          }
-          const reader = new FileReader();
-          reader.onloadend = () => {
-              setProfileForm(prev => ({ ...prev, avatar: reader.result as string }));
-              playSound('click');
-          };
-          reader.readAsDataURL(file);
-      }
   };
 
   if (selectedUserId && !profileUser) {
@@ -1285,20 +1268,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               )}
                                           </button>
                                       ))}
-                                      <button 
-                                          onClick={() => fileInputRef.current?.click()}
-                                          className="aspect-square rounded-xl border-2 border-dashed border-gray-800 flex flex-col items-center justify-center gap-1 text-gray-500 hover:border-gray-600 hover:text-gray-400 transition-all"
-                                      >
-                                          <Upload className="w-5 h-5" />
-                                          <span className="text-[10px] font-bold">Upload</span>
-                                      </button>
-                                      <Input 
-                                          type="file" 
-                                          ref={fileInputRef} 
-                                          onChange={handleFileUpload} 
-                                          accept="image/*" 
-                                          className="hidden" 
-                                      />
                                   </div>
                               </div>
                               
