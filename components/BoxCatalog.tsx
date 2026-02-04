@@ -140,6 +140,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const [activeTab, setActiveTab] = useState<BoxesPageTabId>(getDefaultBoxesPageConfig().tabs.defaultTabId);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [hasCategorySelection, setHasCategorySelection] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sortOption, setSortOption] = useState('');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -266,7 +267,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     setSearchTerm('');
     setSelectedTags([]);
     setSelectedCategory(config.filters.category.default ?? 'All');
-    setSortOption(config.filters.sort.default ?? sortOptions[0] ?? 'Popular');
+    setHasCategorySelection(false);
+    setSortOption(config.filters.sort.default ?? sortOptions[0] ?? 'Price High');
   };
 
   const mainSortKey = sortLabelToKey(sortOption);
@@ -300,7 +302,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const hasActiveSearch = Boolean(searchTerm.trim());
   const showCuratedRows = activeTab === 'official'
     && !hasActiveSearch
-    && selectedCategory === 'All'
+    && !hasCategorySelection
     && curatedRows.length > 0;
 
   const gridClassName = isChatCollapsed
@@ -598,7 +600,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                 <select
                   value={selectedCategory}
                   onChange={(event) => {
-                    setSelectedCategory(event.target.value);
+                    const nextValue = event.target.value;
+                    setSelectedCategory(nextValue);
+                    setHasCategorySelection(nextValue !== 'All');
                     setActiveTab('category');
                   }}
                   className="w-full rounded-full border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
@@ -684,7 +688,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         </div>
       )}
 
-      {filteredBoxes.length > 0 ? (
+      {filteredBoxes.length > 0 && (
         <div className={`grid gap-4 ${gridClassName}`}>
           {filteredBoxes.map((box) => (
             <BoxCard
@@ -697,10 +701,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
               onHover={() => playSound('hover')}
             />
           ))}
-        </div>
-      ) : (
-        <div className="rounded-xl border border-dashed border-gray-800 bg-[#0b0e14] p-6 text-sm text-gray-500">
-          No boxes match these filters yet.
         </div>
       )}
 
@@ -725,7 +725,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                   <select
                     value={selectedCategory}
                     onChange={(event) => {
-                      setSelectedCategory(event.target.value);
+                      const nextValue = event.target.value;
+                      setSelectedCategory(nextValue);
+                      setHasCategorySelection(nextValue !== 'All');
                       setActiveTab('category');
                     }}
                     className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
