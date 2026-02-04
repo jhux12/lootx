@@ -50,6 +50,8 @@ export const ChatSidebar: React.FC = () => {
 
   return (
     <div
+      data-chat-sidebar
+      data-collapsed={isCollapsed}
       className={`fixed right-0 top-[72px] z-40 hidden h-[calc(100vh-72px)] flex-col border-l border-white/10 bg-[#0f131c]/90 backdrop-blur xl:flex md:top-[80px] md:h-[calc(100vh-80px)] lg:top-[88px] lg:h-[calc(100vh-88px)] ${
         isCollapsed ? 'w-16' : 'w-72'
       }`}

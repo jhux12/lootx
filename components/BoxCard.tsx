@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CoinAmount } from './CoinAmount';
 import { getRiskLabel } from '../utils/caseOdds';
 import { MysteryBox } from '../types';
+import { BoxTagPills } from './BoxTagPills';
+import { getBoxTags } from '../utils/boxTags';
 
 type BoxCardProps = {
   box: MysteryBox;
@@ -10,7 +12,7 @@ type BoxCardProps = {
 };
 
 export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover }) => {
-  const badgeTag = box.tag ?? box.tags?.[0];
+  const boxTags = getBoxTags(box);
   const [isDropping, setIsDropping] = useState(false);
   const clickTimeoutRef = useRef<number | null>(null);
 
@@ -44,13 +46,6 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover }) => {
         className={`pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 ${isDropping ? 'opacity-100' : ''}`}
         style={{ boxShadow: `inset 0 0 28px ${box.accentColor}33, 0 10px 28px -20px ${box.accentColor}66` }}
       />
-      {/* Tag */}
-      {badgeTag && (
-          <span className="absolute left-3 top-3 z-10 rounded-full border border-white/15 bg-black/40 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur">
-              {badgeTag}
-          </span>
-      )}
-      
       {/* Image Container with Glow */}
       <div className="relative mb-4 flex w-full flex-1 items-center justify-center pt-2">
           <div 
@@ -73,6 +68,7 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover }) => {
             className="mt-1 justify-center text-base font-bold text-white sm:text-lg"
             iconClassName="w-4 h-4"
           />
+          <BoxTagPills tags={boxTags} className="mt-2" />
           <div className="mt-3 flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">
             <span
               className="h-1 w-1 rounded-full"
