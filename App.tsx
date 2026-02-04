@@ -60,22 +60,26 @@ const MainContent: React.FC = () => {
       .map((row) => {
       let filtered = baseHomeBoxes;
       const { maxPrice, minPrice } = row.query;
-      if (row.query.boxIds?.length) {
-        const targetIds = new Set(row.query.boxIds);
-        filtered = filtered.filter((box) => targetIds.has(box.id));
-      }
-      if (row.query.tags?.length) {
-        const targetTags = row.query.tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
-        filtered = filtered.filter((box) => {
-          const boxTags = getBoxTags(box);
-          return targetTags.some((tag) => boxTags.includes(tag));
-        });
-      }
-      if (typeof maxPrice === 'number') {
-        filtered = filtered.filter((box) => box.price <= maxPrice);
-      }
-      if (typeof minPrice === 'number') {
-        filtered = filtered.filter((box) => box.price >= minPrice);
+      const hasBoxSelection = Array.isArray(row.query.boxIds);
+      if (hasBoxSelection) {
+        const boxLookup = new Map(baseHomeBoxes.map((box) => [box.id, box]));
+        filtered = row.query.boxIds
+          ?.map((boxId) => boxLookup.get(boxId))
+          .filter((box): box is typeof baseHomeBoxes[number] => Boolean(box)) ?? [];
+      } else {
+        if (row.query.tags?.length) {
+          const targetTags = row.query.tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
+          filtered = filtered.filter((box) => {
+            const boxTags = getBoxTags(box);
+            return targetTags.some((tag) => boxTags.includes(tag));
+          });
+        }
+        if (typeof maxPrice === 'number') {
+          filtered = filtered.filter((box) => box.price <= maxPrice);
+        }
+        if (typeof minPrice === 'number') {
+          filtered = filtered.filter((box) => box.price >= minPrice);
+        }
       }
       return {
         ...row,

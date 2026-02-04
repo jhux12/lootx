@@ -1604,7 +1604,7 @@ export const AdminPanel: React.FC = () => {
               const next = current.includes(boxId)
                   ? current.filter((id) => id !== boxId)
                   : [...current, boxId];
-              return { ...row, query: { ...row.query, boxIds: next.length ? next : undefined } };
+              return { ...row, query: { ...row.query, boxIds: next } };
           })
       );
   };
@@ -1613,7 +1613,7 @@ export const AdminPanel: React.FC = () => {
       const newRow: HomeRowConfig = {
           id: `home-row-${Date.now()}`,
           title: 'New Homepage Row',
-          query: {},
+          query: { boxIds: [] },
           limit: 8,
           isActive: true
       };
