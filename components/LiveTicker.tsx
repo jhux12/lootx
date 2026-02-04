@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext';
 import { LiveDrop, User } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { CoinAmount } from './CoinAmount';
+import { getUserDisplayName } from '../utils/userDisplay';
 
 export const LiveTicker: React.FC = () => {
   const { items, users } = useGame();
@@ -60,7 +61,7 @@ export const LiveTicker: React.FC = () => {
             <img src={drop.itemImage} alt={drop.itemName} className="w-9 h-9 object-contain rounded bg-gray-900/60" loading="lazy" />
             <div className="flex flex-col overflow-hidden min-w-0">
               <span className="text-[11px] font-semibold text-gray-300 truncate group-hover:text-white transition-colors">{drop.itemName}</span>
-              <span className="text-[10px] text-gray-500 truncate group-hover:text-gray-300 transition-colors">{drop.user.name}</span>
+              <span className="text-[10px] text-gray-500 truncate group-hover:text-gray-300 transition-colors">{getUserDisplayName(drop.user)}</span>
             </div>
             <CoinAmount
               amount={drop.value}

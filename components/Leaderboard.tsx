@@ -4,6 +4,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
+import { getUserDisplayName } from '../utils/userDisplay';
 
 export const Leaderboard: React.FC = () => {
     const { users, setView } = useGame();
@@ -62,7 +63,7 @@ export const Leaderboard: React.FC = () => {
                                 </div>
                             </div>
                             
-                            <h2 className="text-xl font-bold text-white mt-6 mb-1">{user.name}</h2>
+                            <h2 className="text-xl font-bold text-white mt-6 mb-1">{getUserDisplayName(user)}</h2>
                             <div className="text-brand-purple font-black text-lg flex items-center gap-2">
                                 <img src={XP_ICON} alt="XP" className="w-5 h-5 object-contain" />
                                 <span>{user.weeklyXp.toLocaleString()} XP</span>
@@ -105,7 +106,7 @@ export const Leaderboard: React.FC = () => {
                                             >
                                                 <img src={user.avatar} className="w-8 h-8 rounded-lg" />
                                                 <div>
-                                                    <div className="font-bold text-white">{user.name}</div>
+                                                    <div className="font-bold text-white">{getUserDisplayName(user)}</div>
                                                     <div className="text-xs text-gray-500">Level {user.level}</div>
                                                 </div>
                                             </button>

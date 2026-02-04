@@ -9,6 +9,7 @@ import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, Alert
 import { auth } from '../firebase';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
+import { getUserDisplayName } from '../utils/userDisplay';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 const SHIPPING_BATCH_STORAGE_KEY = 'lootx_shipping_batch';
@@ -298,7 +299,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
   const trimmedSearch = communitySearch.trim().toLowerCase();
   const communitySearchResults = trimmedSearch
-    ? users.filter((u) => u.name.toLowerCase().includes(trimmedSearch))
+    ? users.filter((u) => getUserDisplayName(u).toLowerCase().includes(trimmedSearch))
     : [];
 
   const getSellBackRate = (item: typeof normalizedInventory[number]) => {
@@ -516,7 +517,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
             <div className="flex flex-col lg:flex-row lg:items-end gap-6">
               <div className="flex flex-col sm:flex-row sm:items-end gap-4 w-full">
                 <div className="relative group self-center sm:self-auto">
-                  <img src={displayUser.avatar} alt={displayUser.name} className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-[#131720] shadow-2xl object-cover bg-[#0b0e14]" />
+                  <img src={displayUser.avatar} alt={getUserDisplayName(displayUser)} className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-[#131720] shadow-2xl object-cover bg-[#0b0e14]" />
                   <div className="absolute -bottom-3 -right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full border-4 border-[#131720]">
                       Lvl {displayUser.level}
                   </div>
@@ -526,7 +527,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">Player profile</p>
-                      <h2 className="text-3xl sm:text-4xl font-black text-white mt-2">{displayUser.name}</h2>
+                      <h2 className="text-3xl sm:text-4xl font-black text-white mt-2">{getUserDisplayName(displayUser)}</h2>
                       <div className="flex flex-wrap justify-center sm:justify-start gap-3 text-sm text-gray-400 mt-3">
                         <span className="flex items-center gap-1.5 bg-[#0b0e14] px-3 py-1 rounded-full border border-gray-800">
                           <UsersIcon className="w-4 h-4" /> {viewedFollowerIds.length} Followers

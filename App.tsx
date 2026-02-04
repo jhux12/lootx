@@ -22,6 +22,7 @@ import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert, MessageCircle, Swords } from 'lucide-react';
 import { MobileChatModal } from './components/MobileChatModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
+import { EmailVerificationOverlay } from './components/EmailVerificationOverlay';
 import { HowItWorks } from './components/HowItWorks';
 import { TrustCards } from './components/TrustCards';
 import { FinalCTA } from './components/FinalCTA';
@@ -430,6 +431,7 @@ function App() {
               isOpen={showSupportChat} 
               onClose={() => setShowSupportChat(false)} 
             />
+            <EmailVerificationOverlay />
             <ResetPasswordModal />
           </div>
         </PreviewProvider>
