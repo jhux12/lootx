@@ -172,6 +172,7 @@ export const AdminPanel: React.FC = () => {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userXpInput, setUserXpInput] = useState<number>(0);
   const [isSavingUser, setIsSavingUser] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [adminNotification, setAdminNotification] = useState('');
   const [adminNoticeSent, setAdminNoticeSent] = useState(false);
   const [shipmentFilter, setShipmentFilter] = useState<'all' | 'processing' | 'shipped'>('processing');
@@ -218,6 +219,49 @@ export const AdminPanel: React.FC = () => {
   const EV_TOLERANCE = 0.01;
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
+
+  const handleDeleteUser = async (userId: string) => {
+      const targetUser = users.find((profile) => profile.id === userId);
+      const displayName = targetUser?.name ?? 'this user';
+      const confirmed = window.confirm(`Delete ${displayName}? This permanently removes their profile data.`);
+      if (!confirmed) return;
+      setDeletingUserId(userId);
+      try {
+          await deleteDoc(doc(db, 'users', userId));
+          setUserStatuses((current) => {
+              const next = { ...current };
+              delete next[userId];
+              return next;
+          });
+          setUserLocks((current) => {
+              const next = { ...current };
+              delete next[userId];
+              return next;
+          });
+          setLedgerEntries((current) => {
+              const next = { ...current };
+              delete next[userId];
+              return next;
+          });
+          setAdminLogs((current) => {
+              const next = { ...current };
+              delete next[userId];
+              return next;
+          });
+          setInventoryState((current) => {
+              const next = { ...current };
+              delete next[userId];
+              return next;
+          });
+          setSelectedUserId((current) => (current === userId ? null : current));
+          setEditingUserId((current) => (current === userId ? null : current));
+      } catch (error) {
+          console.error('Failed to delete user', error);
+          window.alert('Unable to delete user. Please try again.');
+      } finally {
+          setDeletingUserId((current) => (current === userId ? null : current));
+      }
+  };
   const MAX_BOX_TAGS = 10;
   const MAX_BOX_TAG_LENGTH = 24;
   const boxTagOptions = ['tech boxes', 'pokemon', 'digital codes', 'hot', 'deals'];
@@ -2632,6 +2676,13 @@ export const AdminPanel: React.FC = () => {
                                                                     >
                                                                         View
                                                                     </button>
+                                                                    <button
+                                                                        className="text-red-400 hover:text-red-300 font-bold text-xs disabled:opacity-50"
+                                                                        onClick={() => handleDeleteUser(profile.id)}
+                                                                        disabled={deletingUserId === profile.id}
+                                                                    >
+                                                                        {deletingUserId === profile.id ? 'Deleting...' : 'Delete'}
+                                                                    </button>
                                                                 </>
                                                             )}
                                                         </div>
@@ -2713,6 +2764,13 @@ export const AdminPanel: React.FC = () => {
                                                     >
                                                         View
                                                     </button>
+                                                    <button
+                                                        className="px-3 py-1.5 rounded-lg bg-red-600/20 text-red-300 text-xs font-semibold disabled:opacity-50"
+                                                        onClick={() => handleDeleteUser(profile.id)}
+                                                        disabled={deletingUserId === profile.id}
+                                                    >
+                                                        {deletingUserId === profile.id ? 'Deleting...' : 'Delete'}
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
@@ -2762,6 +2820,13 @@ export const AdminPanel: React.FC = () => {
                                             className="px-3 py-2 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-semibold"
                                         >
                                             {isEditingInventory ? 'Done Editing Inventory' : 'Edit Inventory'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteUser(selectedUser.id)}
+                                            disabled={deletingUserId === selectedUser.id}
+                                            className="px-3 py-2 rounded-lg bg-red-500/10 text-red-300 text-xs font-semibold disabled:opacity-50"
+                                        >
+                                            {deletingUserId === selectedUser.id ? 'Deleting...' : 'Delete User'}
                                         </button>
                                     </div>
                                 </div>
