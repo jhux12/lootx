@@ -5,12 +5,13 @@ import { usePreview } from '../../context/PreviewContext';
 import {
   BoxesPageConfig,
   BoxesPageCuratedRow,
-  DEFAULT_BOXES_PAGE_CONFIG,
   addCuratedRow,
-  buildBoxesPageConfig,
   deleteCuratedRow,
+  getDefaultBoxesPageConfig,
   moveCuratedBox,
   moveCuratedRow,
+  normalizeBoxesPageConfig,
+  prepareBoxesPageConfigForSave,
   saveBoxesPageConfig,
   subscribeBoxesPageConfig,
   updateCuratedRow
@@ -30,15 +31,16 @@ type BoxesPageConfigEditorProps = {
 
 export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ boxes }) => {
   const { previewAsUser, setPreviewAsUser } = usePreview();
-  const [draft, setDraft] = useState<BoxesPageConfig>(DEFAULT_BOXES_PAGE_CONFIG);
+  const [draft, setDraft] = useState<BoxesPageConfig>(getDefaultBoxesPageConfig());
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [boxSearch, setBoxSearch] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const unsubscribe = subscribeBoxesPageConfig((config) => {
-      const normalized = buildBoxesPageConfig(config);
+      const normalized = normalizeBoxesPageConfig(config);
       if (!isDirty) {
         setDraft(normalized);
       }
@@ -61,11 +63,18 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveError('');
     try {
       await saveBoxesPageConfig(draft);
       setIsDirty(false);
       setSaveNotice('Saved boxes page configuration.');
       window.setTimeout(() => setSaveNotice(''), 3000);
+    } catch (error) {
+      console.error('Failed to save boxes page config', error);
+      if (import.meta.env.DEV) {
+        console.debug('Boxes page config payload', prepareBoxesPageConfigForSave(draft));
+      }
+      setSaveError('Unable to save. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -121,6 +130,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
           </div>
           <div className="flex items-center gap-3">
             {saveNotice && <span className="text-xs text-emerald-400">{saveNotice}</span>}
+            {saveError && <span className="text-xs text-red-400">{saveError}</span>}
             <button
               type="button"
               onClick={handleSave}

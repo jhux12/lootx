@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Search, SlidersHorizontal, Sparkles, Tag, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronUp, Search, SlidersHorizontal, Sparkles, Tag, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { usePreview } from '../context/PreviewContext';
@@ -9,8 +9,8 @@ import {
   BoxesPageConfig,
   BoxesPageCuratedRow,
   BoxesPageTabId,
-  DEFAULT_BOXES_PAGE_CONFIG,
-  buildBoxesPageConfig,
+  getDefaultBoxesPageConfig,
+  normalizeBoxesPageConfig,
   subscribeBoxesPageConfig
 } from '../utils/boxesPageConfig';
 
@@ -122,8 +122,9 @@ const applyBoxFilters = (boxes: ReturnType<typeof useGame>['boxes'], options: Bo
 
 const getDefaultTab = (tabs: BoxesPageConfig['tabs']) => {
   const enabledTabs = tabs.items.filter((tab) => tab.enabled);
-  const fallback = enabledTabs[0]?.id ?? DEFAULT_BOXES_PAGE_CONFIG.tabs.defaultTabId;
-  if (!tabs.enabled) return DEFAULT_BOXES_PAGE_CONFIG.tabs.defaultTabId;
+  const defaultConfig = getDefaultBoxesPageConfig();
+  const fallback = enabledTabs[0]?.id ?? defaultConfig.tabs.defaultTabId;
+  if (!tabs.enabled) return defaultConfig.tabs.defaultTabId;
   if (enabledTabs.some((tab) => tab.id === tabs.defaultTabId)) {
     return tabs.defaultTabId;
   }
@@ -134,14 +135,15 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const { boxes, setView, isAuthenticated, setShowLoginModal } = useGame();
   const { playSound } = useSound();
   const { previewAsUser } = usePreview();
-  const [config, setConfig] = useState<BoxesPageConfig>(DEFAULT_BOXES_PAGE_CONFIG);
-  const [activeTab, setActiveTab] = useState<BoxesPageTabId>(DEFAULT_BOXES_PAGE_CONFIG.tabs.defaultTabId);
+  const [config, setConfig] = useState<BoxesPageConfig>(getDefaultBoxesPageConfig());
+  const [activeTab, setActiveTab] = useState<BoxesPageTabId>(getDefaultBoxesPageConfig().tabs.defaultTabId);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sortOption, setSortOption] = useState('');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isTagsOpen, setIsTagsOpen] = useState(false);
+  const [isPromoOpen, setIsPromoOpen] = useState(false);
   const hasInitializedRef = useRef(false);
 
   const displayBoxes = useMemo(
@@ -151,7 +153,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
 
   useEffect(() => {
     const unsubscribe = subscribeBoxesPageConfig((nextConfig) => {
-      const normalized = buildBoxesPageConfig(nextConfig);
+      const normalized = normalizeBoxesPageConfig(nextConfig);
       setConfig(normalized);
       if (!hasInitializedRef.current) {
         const defaultTab = getDefaultTab(normalized.tabs);
@@ -163,6 +165,17 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (isFiltersOpen || isTagsOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+    return undefined;
+  }, [isFiltersOpen, isTagsOpen]);
 
   const tagStats = useMemo(() => {
     const counts = new Map<string, number>();
@@ -271,8 +284,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   );
 
   const gridClassName = isChatCollapsed
-    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
-    : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
+    ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
+    : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4';
 
   const renderCuratedRow = (row: BoxesPageCuratedRow) => {
     const maxMobile = clampGrid(row.maxMobile, 2);
@@ -343,8 +356,84 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const sortVisibilityClass = mobileConfig.minimalTopRow ? 'hidden md:block' : 'block';
 
   return (
-    <section className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-4 pb-16 pt-6 sm:px-6 lg:px-8 animate-in fade-in duration-300">
-      <div className="flex flex-col gap-6">
+    <section className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 pb-16 pt-4 sm:px-6 lg:px-8 animate-in fade-in duration-300 md:gap-8 md:pt-6">
+      <div className="md:hidden sticky top-0 z-20 -mx-4 bg-[#050811]/95 px-4 pb-4 pt-2 backdrop-blur border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              playSound('click');
+              setView({ type: 'HOME' });
+            }}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#0f141f] text-gray-300"
+            aria-label="Back"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="truncate text-lg font-semibold text-white">Mystery Boxes</h1>
+            {!mobileConfig.compactTop && (
+              <p className="text-xs text-gray-400">Filter by tag to find the box you want.</p>
+            )}
+          </div>
+        </div>
+
+        {config.tabs.enabled && enabledTabs.length > 0 && (
+          <div className="mt-3 flex rounded-full border border-white/10 bg-[#0b0f1a] p-1">
+            {enabledTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setActiveTab(tab.id);
+                }}
+                className={`flex-1 truncate rounded-full px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition ${
+                  activeTab === tab.id
+                    ? 'bg-brand-purple/30 text-white shadow-[0_0_12px_rgba(124,58,237,0.35)]'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {config.filters.search.enabled && (
+          <div className="relative mt-3">
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder={config.filters.search.placeholder ?? 'Search boxes'}
+              className="w-full rounded-full border border-gray-700 bg-[#0b0e14] py-2 pl-9 pr-3 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
+            />
+          </div>
+        )}
+
+        <div className="mt-3 flex justify-end gap-2">
+          {config.filters.tagChips.enabled && (
+            <button
+              type="button"
+              onClick={() => setIsTagsOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0f141f] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-300"
+            >
+              <Tag className="h-3 w-3" /> Tags
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsFiltersOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0f141f] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-300"
+          >
+            <SlidersHorizontal className="h-3 w-3" /> Filters
+          </button>
+        </div>
+      </div>
+
+      <div className="hidden md:flex md:flex-col md:gap-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
@@ -358,10 +447,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
             <div>
-              <h1 className={`font-bold text-white ${mobileConfig.compactTop ? 'text-xl md:text-3xl' : 'text-2xl md:text-3xl'}`}>
+              <h1 className="text-3xl font-bold text-white">
                 Open Online Mystery Boxes And Win Real-Life Items
               </h1>
-              <p className="text-sm text-gray-400 line-clamp-2 md:line-clamp-none">Filter by tag to find the box you want.</p>
+              <p className="text-sm text-gray-400">Filter by tag to find the box you want.</p>
             </div>
           </div>
         </div>
@@ -387,164 +476,186 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
             ))}
           </div>
         )}
+      </div>
 
-        <div className="flex flex-col gap-5 rounded-2xl border border-white/10 bg-gradient-to-r from-[#111827]/90 via-[#0f172a]/80 to-[#0b1020]/90 p-5 shadow-[0_0_24px_rgba(124,58,237,0.12)] md:flex-row md:items-center md:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="rounded-xl border border-brand-purple/40 bg-brand-purple/10 p-3 text-brand-purple">
-              <Sparkles className="h-5 w-5" />
+      <div className="md:hidden rounded-2xl border border-white/10 bg-[#0b0f1a]/80 p-4 shadow-[0_0_18px_rgba(15,23,42,0.6)]">
+        <button
+          type="button"
+          onClick={() => setIsPromoOpen((prev) => !prev)}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl border border-brand-purple/40 bg-brand-purple/10 p-2 text-brand-purple">
+              <Sparkles className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Create Your Own Custom Cases</h3>
-              <p className="text-sm text-gray-400">
-                Create cases with items and odds of your choice. Earn up to 70% when your community opens them.
-              </p>
+              <p className="text-sm font-semibold text-white">Case Lab</p>
+              <p className="text-xs text-gray-400">Create custom cases and earn more.</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' }))}
-              className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
-            >
-              Create Custom Case
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                setActiveTab('community');
-              }}
-              className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
-            >
-              View Your Cases
-            </button>
+          {isPromoOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+        </button>
+        {isPromoOpen && (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-gray-400">
+              Create cases with items and odds of your choice. Earn up to 70% when your community opens them.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' }))}
+                className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
+              >
+                Create Custom Case
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setActiveTab('community');
+                }}
+                className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
+              >
+                View Your Cases
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="hidden md:flex rounded-2xl border border-white/10 bg-gradient-to-r from-[#111827]/90 via-[#0f172a]/80 to-[#0b1020]/90 p-5 shadow-[0_0_24px_rgba(124,58,237,0.12)] md:items-center md:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="rounded-xl border border-brand-purple/40 bg-brand-purple/10 p-3 text-brand-purple">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-white">Create Your Own Custom Cases</h3>
+            <p className="text-sm text-gray-400">
+              Create cases with items and odds of your choice. Earn up to 70% when your community opens them.
+            </p>
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' }))}
+            className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
+          >
+            Create Custom Case
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              playSound('click');
+              setActiveTab('community');
+            }}
+            className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
+          >
+            View Your Cases
+          </button>
+        </div>
+      </div>
 
-        <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#0b0f1a]/80 p-4 shadow-[0_0_18px_rgba(15,23,42,0.6)]">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            {config.filters.search.enabled && (
-              <div className="relative w-full md:max-w-xs">
-                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder={config.filters.search.placeholder ?? 'Search boxes'}
-                  className="w-full rounded-full border border-gray-700 bg-[#0b0e14] py-2 pl-9 pr-3 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
-                />
+      <div className="hidden md:flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#0b0f1a]/80 p-4 shadow-[0_0_18px_rgba(15,23,42,0.6)]">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          {config.filters.search.enabled && (
+            <div className="relative w-full md:max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder={config.filters.search.placeholder ?? 'Search boxes'}
+                className="w-full rounded-full border border-gray-700 bg-[#0b0e14] py-2 pl-9 pr-3 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
+              />
+            </div>
+          )}
+
+          <div className="flex w-full items-center justify-between gap-2 md:w-auto md:flex-1">
+            {config.filters.category.enabled && (
+              <div className={`${categoryVisibilityClass} min-w-[170px] flex-1`}>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Category</label>
+                <select
+                  value={selectedCategory}
+                  onChange={(event) => {
+                    setSelectedCategory(event.target.value);
+                    setActiveTab('category');
+                  }}
+                  className="w-full rounded-full border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
+                >
+                  {categoryOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option === 'All' ? 'All Categories' : option}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 
-            <div className="flex w-full items-center justify-between gap-2 md:w-auto md:flex-1">
-              {config.filters.category.enabled && (
-                <div className={`${categoryVisibilityClass} min-w-[170px] flex-1`}>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Category</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={(event) => {
-                      setSelectedCategory(event.target.value);
-                      setActiveTab('category');
-                    }}
-                    className="w-full rounded-full border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
-                  >
-                    {categoryOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option === 'All' ? 'All Categories' : option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {config.filters.sort.enabled && (
-                <div className={`${sortVisibilityClass} min-w-[160px] flex-1`}>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Sort</label>
-                  <select
-                    value={sortOption}
-                    onChange={(event) => setSortOption(event.target.value)}
-                    className="w-full rounded-full border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
-                  >
-                    {sortOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {(mobileConfig.minimalTopRow || mobileConfig.collapseTagChips) && (
-                <div className="flex flex-1 justify-end gap-2 md:hidden">
-                  {config.filters.tagChips.enabled && mobileConfig.collapseTagChips && (
-                    <button
-                      type="button"
-                      onClick={() => setIsTagsOpen(true)}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0f141f] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-300 transition hover:border-white/30"
-                    >
-                      <Tag className="h-3 w-3" /> Tags
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setIsFiltersOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0f141f] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-300 transition hover:border-white/30"
-                  >
-                    <SlidersHorizontal className="h-3 w-3" /> Filters
-                  </button>
-                </div>
-              )}
-
-              {!mobileConfig.minimalTopRow && (
-                <button
-                  type="button"
-                  onClick={() => setIsFiltersOpen(true)}
-                  className="hidden h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#0f141f] text-gray-400 transition hover:border-white/30 hover:text-white md:inline-flex"
-                  aria-label="Open advanced filters"
+            {config.filters.sort.enabled && (
+              <div className={`${sortVisibilityClass} min-w-[160px] flex-1`}>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Sort</label>
+                <select
+                  value={sortOption}
+                  onChange={(event) => setSortOption(event.target.value)}
+                  className="w-full rounded-full border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
                 >
-                  <SlidersHorizontal className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
+                  {sortOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-          {config.filters.tagChips.enabled && showTagChipsInline && popularTags.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
-                {config.filters.tagChips.label ?? 'Popular tags'}
-              </p>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {popularTags.map((tag) => {
-                    const isSelected = selectedTags.includes(tag);
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => {
-                          playSound('click');
-                          setSelectedTags((prev) =>
-                            prev.includes(tag) ? prev.filter((existing) => existing !== tag) : [...prev, tag]
-                          );
-                        }}
-                        className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
-                          isSelected
-                            ? 'bg-blue-600/20 border-blue-500 text-blue-200'
-                            : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'
-                        }`}
-                      >
-                        <Tag className="h-3 w-3" />
-                        {tag}
-                      </button>
-                    );
-                  })}
-                </div>
+            <button
+              type="button"
+              onClick={() => setIsFiltersOpen(true)}
+              className="hidden h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#0f141f] text-gray-400 transition hover:border-white/30 hover:text-white md:inline-flex"
+              aria-label="Open advanced filters"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {config.filters.tagChips.enabled && showTagChipsInline && popularTags.length > 0 && (
+          <div className="space-y-2 hidden md:block">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+              {config.filters.tagChips.label ?? 'Popular tags'}
+            </p>
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {popularTags.map((tag) => {
+                  const isSelected = selectedTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setSelectedTags((prev) =>
+                          prev.includes(tag) ? prev.filter((existing) => existing !== tag) : [...prev, tag]
+                        );
+                      }}
+                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+                        isSelected
+                          ? 'bg-blue-600/20 border-blue-500 text-blue-200'
+                          : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'
+                      }`}
+                    >
+                      <Tag className="h-3 w-3" />
+                      {tag}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {curatedRows.length > 0 && (
@@ -573,19 +684,14 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         </div>
       )}
 
-      {(isFiltersOpen || isTagsOpen) && (
+      {isFiltersOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:hidden">
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-sm font-semibold text-white">
-                {isTagsOpen && !isFiltersOpen ? 'Tags' : 'Filters'}
-              </h3>
+              <h3 className="text-sm font-semibold text-white">Filters</h3>
               <button
                 type="button"
-                onClick={() => {
-                  setIsFiltersOpen(false);
-                  setIsTagsOpen(false);
-                }}
+                onClick={() => setIsFiltersOpen(false)}
                 className="text-gray-400 transition hover:text-white"
                 aria-label="Close filters"
               >
@@ -628,38 +734,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                   </select>
                 </div>
               )}
-              {config.filters.tagChips.enabled && popularTags.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
-                    {config.filters.tagChips.label ?? 'Tags'}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {popularTags.map((tag) => {
-                      const isSelected = selectedTags.includes(tag);
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => {
-                            playSound('click');
-                            setSelectedTags((prev) =>
-                              prev.includes(tag) ? prev.filter((existing) => existing !== tag) : [...prev, tag]
-                            );
-                          }}
-                          className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
-                            isSelected
-                              ? 'bg-blue-600/20 border-blue-500 text-blue-200'
-                              : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'
-                          }`}
-                        >
-                          <Tag className="h-3 w-3" />
-                          {tag}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
             <div className="mt-6 flex items-center justify-between">
               <button
@@ -674,13 +748,78 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setIsFiltersOpen(false);
-                  setIsTagsOpen(false);
-                }}
+                onClick={() => setIsFiltersOpen(false)}
                 className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
               >
                 Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isTagsOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:hidden">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-sm font-semibold text-white">Tags</h3>
+              <button
+                type="button"
+                onClick={() => setIsTagsOpen(false)}
+                className="text-gray-400 transition hover:text-white"
+                aria-label="Close tags"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-4 pt-4">
+              {config.filters.tagChips.enabled && popularTags.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {popularTags.map((tag) => {
+                    const isSelected = selectedTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          playSound('click');
+                          setSelectedTags((prev) =>
+                            prev.includes(tag) ? prev.filter((existing) => existing !== tag) : [...prev, tag]
+                          );
+                        }}
+                        className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+                          isSelected
+                            ? 'bg-blue-600/20 border-blue-500 text-blue-200'
+                            : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'
+                        }`}
+                      >
+                        <Tag className="h-3 w-3" />
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No tags configured.</p>
+              )}
+            </div>
+            <div className="mt-6 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setSelectedTags([]);
+                }}
+                className="text-xs font-semibold uppercase tracking-wide text-gray-400 transition hover:text-white"
+              >
+                Clear tags
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsTagsOpen(false)}
+                className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
+              >
+                Done
               </button>
             </div>
           </div>

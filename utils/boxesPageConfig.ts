@@ -1,5 +1,6 @@
 import { Timestamp, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { sanitizeForFirestore } from './firestoreSanitize';
 
 export type BoxesPageTabId = 'official' | 'community' | 'category';
 
@@ -17,9 +18,9 @@ export type BoxesPageTabsConfig = {
 
 export type BoxesPageFiltersConfig = {
   search: { enabled: boolean; placeholder?: string };
-  category: { enabled: boolean; default?: string; options?: string[] };
-  sort: { enabled: boolean; default?: string; options?: string[] };
-  tagChips: { enabled: boolean; label?: string; popularTags?: string[] };
+  category: { enabled: boolean; default?: string; options: string[] };
+  sort: { enabled: boolean; default?: string; options: string[] };
+  tagChips: { enabled: boolean; label?: string; popularTags: string[] };
   mobile: {
     compactTop: boolean;
     collapseTagChips: boolean;
@@ -53,7 +54,7 @@ export type BoxesPageConfig = {
   curatedRows: BoxesPageCuratedRow[];
 };
 
-export const DEFAULT_BOXES_PAGE_CONFIG: BoxesPageConfig = {
+const DEFAULT_CONFIG: BoxesPageConfig = {
   tabs: {
     enabled: true,
     items: [
@@ -65,9 +66,9 @@ export const DEFAULT_BOXES_PAGE_CONFIG: BoxesPageConfig = {
   },
   filters: {
     search: { enabled: true, placeholder: 'Search boxes' },
-    category: { enabled: true, default: 'All' },
-    sort: { enabled: true, default: 'Popular' },
-    tagChips: { enabled: true, label: 'Popular tags' },
+    category: { enabled: true, default: 'All', options: [] },
+    sort: { enabled: true, default: 'Popular', options: [] },
+    tagChips: { enabled: true, label: 'Popular tags', popularTags: [] },
     mobile: {
       compactTop: true,
       collapseTagChips: true,
@@ -86,52 +87,114 @@ const generateRowId = () => {
   return `row_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 };
 
-const normalizeTabs = (tabs?: Partial<BoxesPageTabsConfig> | null): BoxesPageTabsConfig => {
-  const items = (tabs?.items ?? DEFAULT_BOXES_PAGE_CONFIG.tabs.items).map((item) => ({
-    id: item.id,
-    label: item.label ?? DEFAULT_BOXES_PAGE_CONFIG.tabs.items.find((tab) => tab.id === item.id)?.label ?? item.id,
-    enabled: item.enabled ?? true
-  }));
+const normalizeOptions = (value: unknown) =>
+  Array.isArray(value)
+    ? value
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+    : [];
+
+export const getDefaultBoxesPageConfig = (): BoxesPageConfig => ({
+  ...DEFAULT_CONFIG,
+  tabs: {
+    ...DEFAULT_CONFIG.tabs,
+    items: DEFAULT_CONFIG.tabs.items.map((item) => ({ ...item }))
+  },
+  filters: {
+    ...DEFAULT_CONFIG.filters,
+    category: { ...DEFAULT_CONFIG.filters.category, options: [] },
+    sort: { ...DEFAULT_CONFIG.filters.sort, options: [] },
+    tagChips: { ...DEFAULT_CONFIG.filters.tagChips, popularTags: [] },
+    mobile: { ...DEFAULT_CONFIG.filters.mobile }
+  },
+  curatedRows: []
+});
+
+export const normalizeBoxesPageConfig = (raw: unknown): BoxesPageConfig => {
+  const source = (raw ?? {}) as Partial<BoxesPageConfig>;
+  const defaultConfig = getDefaultBoxesPageConfig();
+
+  const tabsItems = Array.isArray(source.tabs?.items)
+    ? source.tabs!.items
+        .filter((item) => item && typeof item === 'object')
+        .map((item) => {
+          const id = (item as BoxesPageTabItem).id;
+          const defaultLabel = defaultConfig.tabs.items.find((tab) => tab.id === id)?.label ?? 'Tab';
+          return {
+            id,
+            label: String((item as BoxesPageTabItem).label ?? defaultLabel),
+            enabled: Boolean((item as BoxesPageTabItem).enabled ?? true)
+          } as BoxesPageTabItem;
+        })
+    : defaultConfig.tabs.items;
+
+  const curatedRows = Array.isArray(source.curatedRows)
+    ? source.curatedRows
+        .filter((row) => row && typeof row === 'object' && (row as BoxesPageCuratedRow).id)
+        .map((row) => {
+          const item = row as BoxesPageCuratedRow;
+          return {
+            id: String(item.id),
+            title: String(item.title ?? 'Curated Row'),
+            subtitle: item.subtitle ? String(item.subtitle) : undefined,
+            enabled: Boolean(item.enabled ?? true),
+            mode: item.mode === 'byFilter' ? 'byFilter' : 'byIds',
+            layout: item.layout === 'carousel' ? 'carousel' : 'grid',
+            maxDesktop: item.maxDesktop,
+            maxMobile: item.maxMobile,
+            boxIds: Array.isArray(item.boxIds) ? item.boxIds.map(String) : [],
+            filter: {
+              tag: item.filter?.tag ? String(item.filter.tag) : undefined,
+              category: item.filter?.category ? String(item.filter.category) : undefined,
+              minPrice: typeof item.filter?.minPrice === 'number' ? item.filter?.minPrice : undefined,
+              maxPrice: typeof item.filter?.maxPrice === 'number' ? item.filter?.maxPrice : undefined,
+              sort: item.filter?.sort ? String(item.filter.sort) : undefined
+            }
+          } as BoxesPageCuratedRow;
+        })
+    : [];
+
   return {
-    enabled: tabs?.enabled ?? DEFAULT_BOXES_PAGE_CONFIG.tabs.enabled,
-    items,
-    defaultTabId: tabs?.defaultTabId ?? DEFAULT_BOXES_PAGE_CONFIG.tabs.defaultTabId
+    updatedAt: source.updatedAt,
+    tabs: {
+      enabled: source.tabs?.enabled ?? defaultConfig.tabs.enabled,
+      items: tabsItems,
+      defaultTabId: source.tabs?.defaultTabId ?? defaultConfig.tabs.defaultTabId
+    },
+    filters: {
+      search: {
+        enabled: source.filters?.search?.enabled ?? defaultConfig.filters.search.enabled,
+        placeholder: source.filters?.search?.placeholder ?? defaultConfig.filters.search.placeholder
+      },
+      category: {
+        enabled: source.filters?.category?.enabled ?? defaultConfig.filters.category.enabled,
+        default: source.filters?.category?.default ?? defaultConfig.filters.category.default,
+        options: normalizeOptions(source.filters?.category?.options)
+      },
+      sort: {
+        enabled: source.filters?.sort?.enabled ?? defaultConfig.filters.sort.enabled,
+        default: source.filters?.sort?.default ?? defaultConfig.filters.sort.default,
+        options: normalizeOptions(source.filters?.sort?.options)
+      },
+      tagChips: {
+        enabled: source.filters?.tagChips?.enabled ?? defaultConfig.filters.tagChips.enabled,
+        label: source.filters?.tagChips?.label ?? defaultConfig.filters.tagChips.label,
+        popularTags: normalizeOptions(source.filters?.tagChips?.popularTags)
+      },
+      mobile: {
+        compactTop: source.filters?.mobile?.compactTop ?? defaultConfig.filters.mobile.compactTop,
+        collapseTagChips: source.filters?.mobile?.collapseTagChips ?? defaultConfig.filters.mobile.collapseTagChips,
+        minimalTopRow: source.filters?.mobile?.minimalTopRow ?? defaultConfig.filters.mobile.minimalTopRow
+      }
+    },
+    curatedRows
   };
 };
 
-const normalizeFilters = (filters?: Partial<BoxesPageFiltersConfig> | null): BoxesPageFiltersConfig => ({
-  search: {
-    enabled: filters?.search?.enabled ?? DEFAULT_BOXES_PAGE_CONFIG.filters.search.enabled,
-    placeholder: filters?.search?.placeholder ?? DEFAULT_BOXES_PAGE_CONFIG.filters.search.placeholder
-  },
-  category: {
-    enabled: filters?.category?.enabled ?? DEFAULT_BOXES_PAGE_CONFIG.filters.category.enabled,
-    default: filters?.category?.default ?? DEFAULT_BOXES_PAGE_CONFIG.filters.category.default,
-    options: filters?.category?.options ?? DEFAULT_BOXES_PAGE_CONFIG.filters.category.options
-  },
-  sort: {
-    enabled: filters?.sort?.enabled ?? DEFAULT_BOXES_PAGE_CONFIG.filters.sort.enabled,
-    default: filters?.sort?.default ?? DEFAULT_BOXES_PAGE_CONFIG.filters.sort.default,
-    options: filters?.sort?.options ?? DEFAULT_BOXES_PAGE_CONFIG.filters.sort.options
-  },
-  tagChips: {
-    enabled: filters?.tagChips?.enabled ?? DEFAULT_BOXES_PAGE_CONFIG.filters.tagChips.enabled,
-    label: filters?.tagChips?.label ?? DEFAULT_BOXES_PAGE_CONFIG.filters.tagChips.label,
-    popularTags: filters?.tagChips?.popularTags ?? DEFAULT_BOXES_PAGE_CONFIG.filters.tagChips.popularTags
-  },
-  mobile: {
-    compactTop: filters?.mobile?.compactTop ?? DEFAULT_BOXES_PAGE_CONFIG.filters.mobile.compactTop,
-    collapseTagChips: filters?.mobile?.collapseTagChips ?? DEFAULT_BOXES_PAGE_CONFIG.filters.mobile.collapseTagChips,
-    minimalTopRow: filters?.mobile?.minimalTopRow ?? DEFAULT_BOXES_PAGE_CONFIG.filters.mobile.minimalTopRow
-  }
-});
-
-export const buildBoxesPageConfig = (data?: Partial<BoxesPageConfig> | null): BoxesPageConfig => ({
-  updatedAt: data?.updatedAt,
-  tabs: normalizeTabs(data?.tabs),
-  filters: normalizeFilters(data?.filters),
-  curatedRows: Array.isArray(data?.curatedRows) ? data?.curatedRows ?? [] : DEFAULT_BOXES_PAGE_CONFIG.curatedRows
-});
+export const prepareBoxesPageConfigForSave = (config: BoxesPageConfig) => {
+  const normalized = normalizeBoxesPageConfig(config);
+  return sanitizeForFirestore({ ...normalized, updatedAt: Timestamp.now() });
+};
 
 export const subscribeBoxesPageConfig = (
   onData: (config: BoxesPageConfig) => void,
@@ -141,11 +204,11 @@ export const subscribeBoxesPageConfig = (
     BOXES_PAGE_DOC_REF,
     (snapshot) => {
       if (!snapshot.exists()) {
-        onData(DEFAULT_BOXES_PAGE_CONFIG);
+        onData(getDefaultBoxesPageConfig());
         return;
       }
-      const data = snapshot.data() as BoxesPageConfig;
-      onData(buildBoxesPageConfig(data));
+      const data = snapshot.data();
+      onData(normalizeBoxesPageConfig(data));
     },
     (error) => {
       if (onError) onError(error as Error);
@@ -153,7 +216,8 @@ export const subscribeBoxesPageConfig = (
   );
 
 export const saveBoxesPageConfig = async (config: BoxesPageConfig) => {
-  await setDoc(BOXES_PAGE_DOC_REF, { ...config, updatedAt: Timestamp.now() }, { merge: true });
+  const payload = prepareBoxesPageConfigForSave(config);
+  await setDoc(BOXES_PAGE_DOC_REF, payload, { merge: true });
 };
 
 export const addCuratedRow = (rows: BoxesPageCuratedRow[]) => {
