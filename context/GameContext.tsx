@@ -394,7 +394,7 @@ interface GameContextType {
   updateBox: (box: MysteryBox) => void;
   deleteBox: (boxId: string) => Promise<void>;
   claimDaily: () => void;
-  claimRakeback: () => void;
+  claimRakeback: () => Promise<void>;
   updateBonusSettings: (settings: BonusSettings) => void;
   updateStripeSettings: (settings: StripeSettings) => void;
   awardCaseOpenXp: () => void;
@@ -1415,7 +1415,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const today = getDayStart();
       const earnedAt = Number(prev.rakebackEarnedAt ?? 0);
       const earnedToday = earnedAt === today ? Number(prev.rakebackEarnedToday ?? 0) : 0;
-      const capAmount = bonusSettings.rakebackDailyCapCoins / 100;
+      const capAmount = bonusSettings.rakebackDailyCapCoins;
       const remainingCap = capAmount > 0 ? Math.max(0, capAmount - earnedToday) : Number.POSITIVE_INFINITY;
       const rakebackEarned = Math.min(remainingCap, amount * rakebackRate);
       const rakebackBalance = Math.max(0, (prev.rakebackBalance ?? 0) + rakebackEarned);
@@ -2067,23 +2067,33 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     persistUserData({ lastDailyClaim: timestamp });
   };
 
-  const claimRakeback = () => {
+  const claimRakeback = async () => {
     if (!isAuthenticated) {
       setShowLoginModal(true);
       return;
     }
 
-    const available = Number(user.rakebackBalance ?? 0);
-    if (available <= 0) return;
+    try {
+      const data = await authedFetch<{ newCoins?: number; remainingRakeback?: number }>('/api/claim-rakeback', {
+        method: 'POST'
+      });
+      const nextCoins = Number(data?.newCoins);
+      const remainingRakeback = Number(data?.remainingRakeback);
 
-    const capAmount = bonusSettings.rakebackDailyCapCoins / 100;
-    const payout = capAmount > 0 ? Math.min(available, capAmount) : available;
-    if (payout <= 0) return;
+      if (Number.isFinite(nextCoins)) {
+        syncBalance(nextCoins);
+        setUser(prev => ({ ...prev, balance: nextCoins }));
+        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, balance: nextCoins } : u));
+      }
 
-    void updateUserBalance(user.id, balance + payout);
-    const remaining = Math.max(0, available - payout);
-    setUser(prev => ({ ...prev, rakebackBalance: remaining }));
-    persistUserData({ rakebackBalance: remaining });
+      if (Number.isFinite(remainingRakeback)) {
+        setUser(prev => ({ ...prev, rakebackBalance: remainingRakeback }));
+        persistUserData({ rakebackBalance: remainingRakeback });
+      }
+    } catch (error) {
+      console.error('Failed to claim rakeback', error);
+      alert('Unable to claim rakeback right now. Please try again.');
+    }
   };
 
   const awardCaseOpenXp = () => {
