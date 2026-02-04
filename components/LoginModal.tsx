@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
@@ -9,9 +9,9 @@ import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 
 export const LoginModal: React.FC = () => {
-  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal } = useGame();
+  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
   const { playSound } = useSound();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
   
   // Form State
   const [email, setEmail] = useState('');
@@ -134,7 +134,11 @@ export const LoginModal: React.FC = () => {
   };
 
   const toggleMode = () => {
-      setMode(prev => prev === 'login' ? 'register' : 'login');
+      setMode(prev => {
+        const nextMode = prev === 'login' ? 'register' : 'login';
+        setAuthModalMode(nextMode);
+        return nextMode;
+      });
       setError(null);
       setMessage(null);
       setGoogleLinkEmail('');
@@ -143,6 +147,10 @@ export const LoginModal: React.FC = () => {
       setRememberMe(true);
       playSound('click');
   };
+
+  useEffect(() => {
+    setMode(authModalMode);
+  }, [authModalMode]);
 
   const clearGoogleLinkState = () => {
     setGoogleLinkEmail('');
@@ -159,7 +167,7 @@ export const LoginModal: React.FC = () => {
         onClick={() => setShowLoginModal(false)}
       ></div>
       
-      <div className="relative w-full max-w-md bg-[#131720] border border-gray-700 rounded-2xl shadow-2xl p-8 animate-in zoom-in-95">
+      <div className="relative w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto bg-[#131720] border border-gray-700 rounded-2xl shadow-2xl p-6 sm:p-8 animate-in zoom-in-95">
         <button 
             onClick={() => setShowLoginModal(false)} 
             className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"

@@ -33,7 +33,7 @@ interface ProfileProps {
 }
 
 export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
-  const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem, stripeSettings, setShowLoginModal } = useGame();
+  const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem, stripeSettings, openAuthModal } = useGame();
   const { playSound } = useSound();
 
   const [inventoryFilter, setInventoryFilter] = useState<'inventory' | 'processing' | 'shipped'>('inventory');
@@ -383,7 +383,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
     }
 
     if (!auth.currentUser) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
 

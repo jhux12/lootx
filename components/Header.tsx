@@ -29,7 +29,7 @@ export const Header: React.FC = () => {
     balance,
     setView,
     isAuthenticated,
-    setShowLoginModal,
+    openAuthModal,
     setShowTopUpModal,
     logout,
     notifications,
@@ -94,7 +94,7 @@ export const Header: React.FC = () => {
   const handleNav = (view: any) => {
     playSound('click');
     if (view?.type === 'BONUSES' && !isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
     setView(view);
@@ -103,7 +103,7 @@ export const Header: React.FC = () => {
   const handleAuthAction = (action: () => void) => {
     playSound('click');
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
     } else {
       action();
     }
@@ -552,13 +552,13 @@ export const Header: React.FC = () => {
           ) : (
             <div className="flex items-center gap-3">
               <button 
-                onClick={() => { playSound('click'); setShowLoginModal(true); }}
+                onClick={() => { playSound('click'); openAuthModal('login'); }}
                 className="px-5 py-2 text-sm font-bold text-white bg-[#1a2130] hover:bg-[#232b3d] border border-gray-700 rounded-lg transition-colors"
               >
                 Sign In
               </button>
               <button 
-                onClick={() => { playSound('click'); setShowLoginModal(true); }}
+                onClick={() => { playSound('click'); openAuthModal('register'); }}
                 className="px-5 py-2 text-sm font-bold text-black bg-green-500 hover:bg-green-400 rounded-lg transition-colors hidden sm:block shadow-[0_0_15px_rgba(34,197,94,0.4)]"
               >
                 Register
@@ -633,7 +633,7 @@ export const Header: React.FC = () => {
                 </>
               ) : (
                 <button 
-                  onClick={() => { setShowLoginModal(true); setIsMobileMenuOpen(false); }} 
+                  onClick={() => { openAuthModal('login'); setIsMobileMenuOpen(false); }} 
                   className="flex w-full items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg text-white font-medium justify-center"
                 >
                   Sign In

@@ -13,6 +13,8 @@ import { BattleArena } from './components/BattleArena';
 import { Bonuses } from './components/Bonuses';
 import { AdminPanel } from './components/AdminPanel';
 import { LoginModal } from './components/LoginModal';
+import { EmailVerificationModal } from './components/EmailVerificationModal';
+import { EmailVerifiedModal } from './components/EmailVerifiedModal';
 import { CustomCaseCreator } from './components/CustomCaseCreator';
 import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
@@ -55,7 +57,7 @@ type MainContentProps = {
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
-  const { view, showLoginModal, showTopUpModal, isAuthenticated, user, setView, setShowLoginModal, boxes } = useGame();
+  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes } = useGame();
   const { playSound } = useSound();
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
 
@@ -368,6 +370,8 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
       {/* Modals */}
       {showLoginModal && <LoginModal />}
+      {showEmailVerificationModal && <EmailVerificationModal />}
+      {showEmailVerifiedModal && <EmailVerifiedModal />}
       {showTopUpModal && <TopUpModal />}
 
       <SiteFooter />

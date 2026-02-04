@@ -10,6 +10,7 @@ import {
   GoogleAuthProvider,
   browserLocalPersistence,
   browserSessionPersistence,
+  applyActionCode,
   onAuthStateChanged,
   setPersistence,
   signInWithCredential,
@@ -18,6 +19,7 @@ import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   linkWithCredential,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signOut
 } from 'firebase/auth';
@@ -121,6 +123,45 @@ const DEFAULT_LOCKS: UserLocks = {
   withdraws: false,
   marketplace: false,
   shipments: false
+};
+
+const EMAIL_VERIFICATION_PENDING_KEY = 'pendingEmailVerification';
+const EMAIL_VERIFICATION_REDIRECT_KEY = 'pendingEmailRedirect';
+const EMAIL_VERIFICATION_COMPLETED_KEY = 'emailVerificationCompleted';
+
+const hasPendingEmailVerification = () => {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(EMAIL_VERIFICATION_PENDING_KEY) === 'true';
+};
+
+const setPendingEmailVerification = (redirectPath?: string) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(EMAIL_VERIFICATION_PENDING_KEY, 'true');
+  if (redirectPath) {
+    window.localStorage.setItem(EMAIL_VERIFICATION_REDIRECT_KEY, redirectPath);
+  }
+};
+
+const setEmailVerificationCompleted = () => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(EMAIL_VERIFICATION_COMPLETED_KEY, 'true');
+};
+
+const hasEmailVerificationCompleted = () => {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(EMAIL_VERIFICATION_COMPLETED_KEY) === 'true';
+};
+
+const getPendingEmailRedirect = () => {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(EMAIL_VERIFICATION_REDIRECT_KEY);
+};
+
+const clearPendingEmailVerification = () => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(EMAIL_VERIFICATION_PENDING_KEY);
+  window.localStorage.removeItem(EMAIL_VERIFICATION_REDIRECT_KEY);
+  window.localStorage.removeItem(EMAIL_VERIFICATION_COMPLETED_KEY);
 };
 
 interface BonusSettings {
@@ -334,6 +375,10 @@ type GoogleAuthResult =
   | { status: 'link-required'; email: string; credential: AuthCredential }
   | { status: 'error'; message: string };
 
+type AuthModalMode = 'login' | 'register';
+
+type EmailVerificationStatus = 'idle' | 'pending' | 'checking' | 'verified-no-session';
+
 interface GameContextType {
   user: User;
   isAuthenticated: boolean;
@@ -351,6 +396,10 @@ interface GameContextType {
   stripeSettings: StripeSettings;
   showLoginModal: boolean;
   showTopUpModal: boolean;
+  authModalMode: AuthModalMode;
+  showEmailVerificationModal: boolean;
+  showEmailVerifiedModal: boolean;
+  emailVerificationStatus: EmailVerificationStatus;
   
   // Actions
   login: (email: string, pass: string, remember?: boolean) => Promise<void>;
@@ -361,6 +410,12 @@ interface GameContextType {
   logout: () => void;
   setShowLoginModal: (show: boolean) => void;
   setShowTopUpModal: (show: boolean) => void;
+  setAuthModalMode: (mode: AuthModalMode) => void;
+  openAuthModal: (mode?: AuthModalMode) => void;
+  resendEmailVerification: () => Promise<void>;
+  refreshEmailVerification: () => Promise<void>;
+  setShowEmailVerifiedModal: (show: boolean) => void;
+  setShowEmailVerificationModal: (show: boolean) => void;
   setView: (view: ViewState) => void;
   addBalance: (amount: number) => void;
   syncBalance: (amount: number) => void;
@@ -671,6 +726,10 @@ const persistUserData = async (payload: PersistUserData) => {
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
+  const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
+  const [showEmailVerifiedModal, setShowEmailVerifiedModal] = useState(false);
+  const [emailVerificationStatus, setEmailVerificationStatus] = useState<EmailVerificationStatus>('idle');
   const hasInventorySubcollectionRef = useRef(false);
   const pendingSoldIdsRef = useRef<Set<string>>(new Set());
   const pendingBalanceRef = useRef<number | null>(null);
@@ -706,6 +765,105 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (nextPath !== currentPath) {
         window.history.pushState({}, '', nextPath);
       }
+    }
+  };
+
+  const openAuthModal = (mode: AuthModalMode = 'login') => {
+    setAuthModalMode(mode);
+    setShowLoginModal(true);
+  };
+
+  const resolveEmailRedirect = (targetPath?: string | null) => {
+    if (typeof window === 'undefined') return;
+    const resolvedPath = targetPath || '/';
+    const url = new URL(resolvedPath, window.location.origin);
+    const nextPath = `${url.pathname}${url.search}`;
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    if (nextPath !== currentPath) {
+      window.history.replaceState({}, '', nextPath);
+    }
+    setViewState(getViewFromLocation(url.pathname, url.search));
+  };
+
+  const checkEmailVerificationStatus = async (firebaseUser?: FirebaseUser | null) => {
+    if (!hasPendingEmailVerification()) {
+      setEmailVerificationStatus('idle');
+      setShowEmailVerificationModal(false);
+      setShowEmailVerifiedModal(false);
+      return;
+    }
+
+    if (!firebaseUser) {
+      if (hasEmailVerificationCompleted()) {
+        setEmailVerificationStatus('verified-no-session');
+        setShowEmailVerificationModal(false);
+        setShowEmailVerifiedModal(true);
+        return;
+      }
+
+      setEmailVerificationStatus('pending');
+      setShowEmailVerificationModal(false);
+      setShowEmailVerifiedModal(false);
+      return;
+    }
+
+    const isPasswordProvider = firebaseUser.providerData.some((provider) => provider.providerId === 'password');
+    if (!isPasswordProvider) {
+      clearPendingEmailVerification();
+      setEmailVerificationStatus('idle');
+      setShowEmailVerificationModal(false);
+      setShowEmailVerifiedModal(false);
+      return;
+    }
+
+    setEmailVerificationStatus('checking');
+    try {
+      await firebaseUser.reload();
+    } catch (error) {
+      console.error('Failed to reload Firebase user for verification check', error);
+    }
+
+    if (firebaseUser.emailVerified) {
+      clearPendingEmailVerification();
+      setEmailVerificationStatus('idle');
+      setShowEmailVerificationModal(false);
+      setShowEmailVerifiedModal(false);
+      resolveEmailRedirect(getPendingEmailRedirect());
+      return;
+    }
+
+    setEmailVerificationStatus('pending');
+    setShowEmailVerificationModal(true);
+    setShowEmailVerifiedModal(false);
+  };
+
+  const handleEmailVerificationLink = async () => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const mode = url.searchParams.get('mode');
+    const oobCode = url.searchParams.get('oobCode');
+
+    if (mode !== 'verifyEmail' || !oobCode) return;
+
+    try {
+      const cleanedUrl = new URL(window.location.href);
+      ['mode', 'oobCode', 'apiKey', 'lang', 'continueUrl'].forEach((param) => {
+        cleanedUrl.searchParams.delete(param);
+      });
+      if (!hasPendingEmailVerification()) {
+        setPendingEmailVerification(`${cleanedUrl.pathname}${cleanedUrl.search}`);
+      }
+      setEmailVerificationStatus('checking');
+      await applyActionCode(auth, oobCode);
+      setEmailVerificationCompleted();
+    } catch (error) {
+      console.error('Failed to apply email verification code', error);
+    } finally {
+      ['mode', 'oobCode', 'apiKey', 'lang', 'continueUrl'].forEach((param) => {
+        url.searchParams.delete(param);
+      });
+      window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+      await checkEmailVerificationStatus(auth.currentUser);
     }
   };
   
@@ -776,6 +934,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     let inventoryUnsubscribe: (() => void) | null = null;
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      void checkEmailVerificationStatus(firebaseUser);
       if (userUnsubscribe) {
         userUnsubscribe();
         userUnsubscribe = null;
@@ -873,6 +1032,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (userUnsubscribe) userUnsubscribe();
       if (inventoryUnsubscribe) inventoryUnsubscribe();
     };
+  }, []);
+
+  useEffect(() => {
+    void checkEmailVerificationStatus(auth.currentUser);
+  }, []);
+
+  useEffect(() => {
+    void handleEmailVerificationLink();
   }, []);
 
   useEffect(() => {
@@ -1291,6 +1458,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const resendEmailVerification = async () => {
+    if (!auth.currentUser) return;
+    await sendEmailVerification(auth.currentUser, {
+      url: window.location.origin,
+      handleCodeInApp: true
+    });
+  };
+
+  const refreshEmailVerification = async () => {
+    await checkEmailVerificationStatus(auth.currentUser);
+  };
+
   const login = async (email: string, pass: string, remember: boolean = true) => {
       await setAuthPersistence(remember);
       await signInWithEmailAndPassword(auth, email, pass);
@@ -1350,6 +1529,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const register = async (name: string, email: string, pass: string) => {
     const credential = await createUserWithEmailAndPassword(auth, email, pass);
+    const redirectPath = typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}`
+      : '/';
+    setPendingEmailVerification(redirectPath);
+    await sendEmailVerification(credential.user, {
+      url: window.location.origin,
+      handleCodeInApp: true
+    });
     const createdAt = Date.now();
     const newUser: User = {
       id: credential.user.uid,
@@ -1383,6 +1570,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setInventory([]);
     setIsAuthenticated(true);
     setShowLoginModal(false);
+    setEmailVerificationStatus('pending');
+    setShowEmailVerificationModal(true);
   };
 
   const resetPassword = async (email: string) => {
@@ -1533,7 +1722,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const followUser = async (targetUserId: string) => {
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
 
@@ -1570,7 +1759,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const unfollowUser = async (targetUserId: string) => {
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
 
@@ -1607,7 +1796,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const sellItem = async (instanceId: string) => {
     if (!auth.currentUser) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
 
@@ -1648,7 +1837,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const shipItem = async (instanceId: string) => {
     if (!auth.currentUser) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
 
@@ -1758,7 +1947,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const createBattle = async (boxIds: string[], maxPlayers: number) => {
     if (!isAuthenticated) {
-        setShowLoginModal(true);
+        openAuthModal('login');
         return;
     }
 
@@ -1804,7 +1993,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const joinBattle = async (battleId: string) => {
     if (!isAuthenticated) {
-        setShowLoginModal(true);
+        openAuthModal('login');
         return;
     }
     const battle = battles.find(b => b.id === battleId);
@@ -2009,7 +2198,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const createUserBox = async (box: MysteryBox) => {
       if (!auth.currentUser) {
-        setShowLoginModal(true);
+        openAuthModal('login');
         throw new Error('Login required');
       }
 
@@ -2069,7 +2258,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const claimRakeback = async () => {
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
 
@@ -2112,7 +2301,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const generateAffiliateCode = async () => {
     if (!isAuthenticated || !auth.currentUser) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
 
@@ -2210,6 +2399,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       notifications,
       showLoginModal,
       showTopUpModal,
+      authModalMode,
+      showEmailVerificationModal,
+      showEmailVerifiedModal,
+      emailVerificationStatus,
       balance,
       inventory,
       shipments,
@@ -2224,9 +2417,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loginWithGoogle,
       linkGoogleAccount,
       register,
+      resetPassword,
       logout,
       setShowLoginModal,
       setShowTopUpModal,
+      setAuthModalMode,
+      openAuthModal,
+      resendEmailVerification,
+      refreshEmailVerification,
+      setShowEmailVerifiedModal,
+      setShowEmailVerificationModal,
       setView,
       addBalance,
       syncBalance,
@@ -2267,8 +2467,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       registerSpend,
       generateAffiliateCode,
       updateUserProgress,
-      updateShipmentStatus,
-      resetPassword
+      updateShipmentStatus
     }}>
       {children}
     </GameContext.Provider>

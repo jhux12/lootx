@@ -2,11 +2,11 @@ import React from 'react';
 import { useGame } from '../context/GameContext';
 
 export const FinalCTA: React.FC = () => {
-  const { isAuthenticated, setShowLoginModal } = useGame();
+  const { isAuthenticated, openAuthModal } = useGame();
 
   const handleGetStarted = () => {
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
     const target = document.getElementById('popular-boxes');
