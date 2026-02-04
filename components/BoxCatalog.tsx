@@ -662,6 +662,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         )}
       </div>
 
+      {curatedRows.length > 0 && (
+        <div className="space-y-10">
+          {curatedRows.map((row) => renderCuratedRow(row))}
+        </div>
+      )}
+
       {filteredBoxes.length > 0 ? (
         <div className={`grid gap-4 ${gridClassName}`}>
           {filteredBoxes.map((box) => (
