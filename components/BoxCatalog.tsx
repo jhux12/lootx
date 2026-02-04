@@ -178,7 +178,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   }, []);
 
   useEffect(() => {
-    if (isFiltersOpen || isTagsOpen) {
+    if (isTagsOpen) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
@@ -186,7 +186,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       };
     }
     return undefined;
-  }, [isFiltersOpen, isTagsOpen]);
+  }, [isTagsOpen]);
+
+  const formatDropdownLabel = (label: string) => {
+    if (!label) return label;
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
 
   const tagStats = useMemo(() => {
     const counts = new Map<string, number>();
@@ -458,12 +463,71 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           )}
           <button
             type="button"
-            onClick={() => setIsFiltersOpen(true)}
+            onClick={() => setIsFiltersOpen((prev) => !prev)}
             className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0f141f] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-300"
           >
             <SlidersHorizontal className="h-3 w-3" /> Filters
           </button>
         </div>
+
+        {isFiltersOpen && (
+          <div className="mt-3 space-y-4 rounded-2xl border border-white/10 bg-[#0b0f1a]/90 p-4 shadow-[0_0_18px_rgba(15,23,42,0.6)]">
+            {config.filters.category.enabled && (
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">Category</label>
+                <Select
+                  value={selectedCategory}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setSelectedCategory(nextValue);
+                    setHasCategorySelection(nextValue !== 'All');
+                    setActiveTab('category');
+                  }}
+                >
+                  {categoryOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option === 'All' ? 'All Categories' : formatDropdownLabel(option)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+            {config.filters.sort.enabled && (
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">Sort</label>
+                <Select
+                  value={sortOption}
+                  onChange={(event) => setSortOption(event.target.value)}
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {formatDropdownLabel(option)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  clearFilters();
+                }}
+                className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 transition hover:text-white"
+              >
+                Clear filters
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFiltersOpen(false)}
+                className="rounded-full bg-brand-purple px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="hidden md:flex md:flex-col md:gap-6">
@@ -619,7 +683,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                 >
                   {categoryOptions.map((option) => (
                     <option key={option} value={option}>
-                      {option === 'All' ? 'All Categories' : option}
+                      {option === 'All' ? 'All Categories' : formatDropdownLabel(option)}
                     </option>
                   ))}
                 </Select>
@@ -635,21 +699,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                 >
                   {sortOptions.map((option) => (
                     <option key={option} value={option}>
-                      {option}
+                      {formatDropdownLabel(option)}
                     </option>
                   ))}
                 </Select>
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={() => setIsFiltersOpen(true)}
-              className="hidden h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#0f141f] text-gray-400 transition hover:border-white/30 hover:text-white md:inline-flex"
-              aria-label="Open advanced filters"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-            </button>
           </div>
         </div>
 
@@ -710,80 +766,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
               onHover={() => playSound('hover')}
             />
           ))}
-        </div>
-      )}
-
-      {isFiltersOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:hidden">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 pb-10 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-sm font-semibold text-white">Filters</h3>
-              <button
-                type="button"
-                onClick={() => setIsFiltersOpen(false)}
-                className="text-gray-400 transition hover:text-white"
-                aria-label="Close filters"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="space-y-4 pt-4">
-              {config.filters.category.enabled && (
-                <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Category</label>
-                  <Select
-                    value={selectedCategory}
-                    onChange={(event) => {
-                      const nextValue = event.target.value;
-                      setSelectedCategory(nextValue);
-                      setHasCategorySelection(nextValue !== 'All');
-                      setActiveTab('category');
-                    }}
-                  >
-                    {categoryOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option === 'All' ? 'All Categories' : option}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
-              {config.filters.sort.enabled && (
-                <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Sort</label>
-                  <Select
-                    value={sortOption}
-                    onChange={(event) => setSortOption(event.target.value)}
-                  >
-                    {sortOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
-            </div>
-            <div className="mt-6 flex items-center justify-between pb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  clearFilters();
-                }}
-                className="text-xs font-semibold uppercase tracking-wide text-gray-400 transition hover:text-white"
-              >
-                Clear filters
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsFiltersOpen(false)}
-                className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
-              >
-                Apply
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
