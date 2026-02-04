@@ -62,7 +62,7 @@ const deriveRollValue = (hash: string) => {
 
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
-  const { user, addInventoryItemFromServer, syncBalance, sellItem, setView, boxes, isAuthenticated, setShowLoginModal, claimDaily, awardCaseOpenXp, registerSpend } = useGame();
+  const { user, addInventoryItemFromServer, syncBalance, sellItem, setView, boxes, isAuthenticated, openAuthModal, claimDaily, awardCaseOpenXp, registerSpend } = useGame();
   const { playSound } = useSound();
   
   const matchedBox = boxes.find(b => b.id === boxId);
@@ -261,7 +261,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
     if (nextSeed.length < 1 || nextSeed.length > 64) {
@@ -289,11 +289,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     } finally {
       setIsUpdatingClientSeed(false);
     }
-  }, [clientSeedInput, isAuthenticated, setShowLoginModal]);
+  }, [clientSeedInput, isAuthenticated, openAuthModal]);
 
   const rotateServerSeed = useCallback(async () => {
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
 
@@ -316,7 +316,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     } finally {
       setIsRotatingSeed(false);
     }
-  }, [isAuthenticated, setShowLoginModal]);
+  }, [isAuthenticated, openAuthModal]);
 
   const animateSpin = (duration: number, onComplete: () => void) => {
     playSound('spin-start');
@@ -369,13 +369,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     if (!isDemo && !isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
 
     if (!isDemo && isFree) {
       if (!isAuthenticated) {
-        setShowLoginModal(true);
+        openAuthModal('login');
         return;
       }
       if (!canFreeSpin) {

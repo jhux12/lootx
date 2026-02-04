@@ -135,7 +135,7 @@ const getDefaultTab = (tabs: BoxesPageConfig['tabs']) => {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
-  const { boxes, setView, isAuthenticated, setShowLoginModal } = useGame();
+  const { boxes, setView, isAuthenticated, openAuthModal } = useGame();
   const { playSound } = useSound();
   const { previewAsUser } = usePreview();
   const [config, setConfig] = useState<BoxesPageConfig>(getDefaultBoxesPageConfig());
@@ -259,7 +259,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const handleAuthAction = (action: () => void) => {
     playSound('click');
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
     action();

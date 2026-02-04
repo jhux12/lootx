@@ -16,7 +16,7 @@ export const Bonuses: React.FC = () => {
     boxes, 
     setView,
     isAuthenticated,
-    setShowLoginModal,
+    openAuthModal,
     updateUserFlags,
     generateAffiliateCode,
     bonusSettings
@@ -41,7 +41,7 @@ export const Bonuses: React.FC = () => {
 
   const handleClaimDaily = () => {
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
 
@@ -70,7 +70,7 @@ export const Bonuses: React.FC = () => {
 
   const handleApplyAffiliateCode = async () => {
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
 
@@ -113,7 +113,7 @@ export const Bonuses: React.FC = () => {
 
   const handleGenerateCode = async () => {
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
     if (!affiliateUnlocked) {

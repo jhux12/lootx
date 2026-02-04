@@ -4,7 +4,7 @@ import pullzPattern from '../assets/pullz-p.PNG';
 import { useGame } from '../context/GameContext';
 
 export const Hero: React.FC = () => {
-  const { isAuthenticated, setShowLoginModal } = useGame();
+  const { isAuthenticated, openAuthModal } = useGame();
 
   const scrollToSection = (id: string) => {
     const target = document.getElementById(id);
@@ -15,7 +15,7 @@ export const Hero: React.FC = () => {
 
   const handleGetStarted = () => {
     if (!isAuthenticated) {
-      setShowLoginModal(true);
+      openAuthModal('login');
       return;
     }
     scrollToSection('popular-boxes');
