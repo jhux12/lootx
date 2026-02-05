@@ -583,8 +583,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setSellOfferGenerated(false);
   };
 
-  const spinFlightKey = `open:${box?.id ?? boxId}`;
-  const isSpinInFlight = isInFlight(spinFlightKey);
   const sellFlightKey = wonInventoryItem ? `sell:${wonInventoryItem.instanceId}` : '';
   const isSelling = Boolean(sellFlightKey && isInFlight(sellFlightKey));
 
@@ -755,14 +753,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="bg-[#0b0e14] p-4 flex flex-col sm:flex-row items-center justify-center gap-3 border-t border-gray-800 relative z-20">
                  <button 
                     onClick={() => handleSpin()}
-                    disabled={isSpinning || isSyncingFair || isRotatingSeed || isSpinInFlight}
-                    aria-busy={isSpinning || isSyncingFair || isRotatingSeed || isSpinInFlight}
+                    disabled={isSpinning || isSyncingFair || isRotatingSeed}
+                    aria-busy={isSpinning || isSyncingFair || isRotatingSeed}
                     className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20')}`}
                 >
                     <span>
                       {isSyncingFair ? (
                         'Syncing server...'
-                      ) : isSpinning || isSpinInFlight ? (
+                      ) : isSpinning ? (
                         'Spinning...'
                       ) : isFree ? (
                         'Free Spin'
@@ -782,8 +780,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                  {!isFree && (
                    <button
                      onClick={handleTryFree}
-                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isSpinInFlight}
-                     aria-busy={isSpinning || isSyncingFair || isRotatingSeed || isSpinInFlight}
+                     disabled={isSpinning || isSyncingFair || isRotatingSeed}
+                     aria-busy={isSpinning || isSyncingFair || isRotatingSeed}
                      className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Try for Free</span>
@@ -792,8 +790,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                  {isAdmin && (
                    <button
                      onClick={() => handleSpin({ isDemo: true, forceGold: true })}
-                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isSpinInFlight}
-                     aria-busy={isSpinning || isSyncingFair || isRotatingSeed || isSpinInFlight}
+                     disabled={isSpinning || isSyncingFair || isRotatingSeed}
+                     aria-busy={isSpinning || isSyncingFair || isRotatingSeed}
                      className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Test Gold Spin</span>
