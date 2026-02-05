@@ -96,6 +96,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [showWinModal, setShowWinModal] = useState(false);
   const [sellOfferGenerated, setSellOfferGenerated] = useState(false);
   const [isGeneratingSellOffer, setIsGeneratingSellOffer] = useState(false);
+  const [isSellingItem, setIsSellingItem] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
   const [serverSeedHash, setServerSeedHash] = useState('');
   const [clientSeed, setClientSeed] = useState('lootx-player');
@@ -569,6 +570,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       sellOfferTimerRef.current = null;
     }
     setIsGeneratingSellOffer(false);
+    setIsSellingItem(false);
     if (!rewardResolved) {
       setRewardResolved(true);
     }
@@ -583,7 +585,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         alert('This item is not redeemable and cannot be sold back.');
         return;
     }
-    if (isDemoSpin || isGeneratingSellOffer) {
+    if (isDemoSpin || isGeneratingSellOffer || isSellingItem) {
         if (isDemoSpin) {
           setShowWinModal(false);
         }
@@ -599,8 +601,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return;
     }
     if (wonInventoryItem && !rewardResolved) {
-        await sellItem(wonInventoryItem.instanceId);
-        setRewardResolved(true);
+        setIsSellingItem(true);
+        try {
+          await sellItem(wonInventoryItem.instanceId);
+          setRewardResolved(true);
+        } finally {
+          setIsSellingItem(false);
+        }
     }
     if (sellOfferTimerRef.current) {
       window.clearTimeout(sellOfferTimerRef.current);
@@ -610,6 +617,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setWonInventoryItem(null);
     setSellOfferGenerated(false);
     setIsGeneratingSellOffer(false);
+    setIsSellingItem(false);
   };
 
   const handleKeep = () => {
@@ -625,6 +633,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       setWonInventoryItem(null);
       setSellOfferGenerated(false);
       setIsGeneratingSellOffer(false);
+      setIsSellingItem(false);
   };
 
   const handleCopyProof = useCallback(async () => {
@@ -1009,21 +1018,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 {wonItem.redeemable !== false && (
                                   <button
                                     onClick={handleSell}
-                                    disabled={isGeneratingSellOffer}
+                                    disabled={isGeneratingSellOffer || isSellingItem}
                                     className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-80"
                                   >
                                       <span className="flex flex-col items-center justify-center gap-1">
                                         <span className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-wide text-gray-400">
-                                          {isGeneratingSellOffer && (
+                                          {(isGeneratingSellOffer || isSellingItem) && (
                                             <span className="h-3 w-3 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
                                           )}
-                                          {isGeneratingSellOffer
+                                          {isSellingItem
+                                            ? 'Selling item...'
+                                            : isGeneratingSellOffer
                                             ? 'Generating offer...'
                                             : sellOfferGenerated
                                               ? 'Accept buy back offer'
                                               : 'Generate buy back offer'}
                                         </span>
-                                        {sellOfferGenerated && !isGeneratingSellOffer && (
+                                        {sellOfferGenerated && !isGeneratingSellOffer && !isSellingItem && (
                                           <CoinAmount
                                             amount={getSellBackValue(wonItem.price, sellBackRate)}
                                             formatOptions={{ maximumFractionDigits: 0 }}

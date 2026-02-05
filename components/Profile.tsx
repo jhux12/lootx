@@ -42,6 +42,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const [topPullsPublic, setTopPullsPublic] = useState(user.topPullsPublic ?? false);
   const [sellOffers, setSellOffers] = useState<Record<string, boolean>>({});
   const [isGeneratingSellOffers, setIsGeneratingSellOffers] = useState<Record<string, boolean>>({});
+  const [isSellingItems, setIsSellingItems] = useState<Record<string, boolean>>({});
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const [showShippingReview, setShowShippingReview] = useState(false);
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
@@ -905,8 +906,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           )}
                                           {inventoryFilter === 'inventory' && item.redeemable !== false && (
                                               <button
-                                                onClick={() => {
-                                                  if (!canSell || isGeneratingSellOffers[item.instanceId]) return;
+                                                onClick={async () => {
+                                                  if (!canSell || isGeneratingSellOffers[item.instanceId] || isSellingItems[item.instanceId]) return;
                                                   if (!sellOffers[item.instanceId]) {
                                                     setIsGeneratingSellOffers((prev) => ({ ...prev, [item.instanceId]: true }));
                                                     const timerId = window.setTimeout(() => {
@@ -917,7 +918,12 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                     sellOfferTimersRef.current[item.instanceId] = timerId;
                                                     return;
                                                   }
-                                                  sellItem(item.instanceId);
+                                                  setIsSellingItems((prev) => ({ ...prev, [item.instanceId]: true }));
+                                                  try {
+                                                    await sellItem(item.instanceId);
+                                                  } finally {
+                                                    setIsSellingItems((prev) => ({ ...prev, [item.instanceId]: false }));
+                                                  }
                                                   if (sellOfferTimersRef.current[item.instanceId]) {
                                                     window.clearTimeout(sellOfferTimersRef.current[item.instanceId]);
                                                     delete sellOfferTimersRef.current[item.instanceId];
@@ -925,7 +931,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                   setSellOffers((prev) => ({ ...prev, [item.instanceId]: false }));
                                                   setIsGeneratingSellOffers((prev) => ({ ...prev, [item.instanceId]: false }));
                                                 }}
-                                                disabled={!canSell || !!isGeneratingSellOffers[item.instanceId]}
+                                                disabled={!canSell || !!isGeneratingSellOffers[item.instanceId] || !!isSellingItems[item.instanceId]}
                                                 className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-80 ${
                                                   canSell
                                                     ? 'bg-[#0b0e14] text-gray-200 border-gray-700 hover:border-brand-purple/60'
@@ -934,18 +940,20 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               >
                                                 <span className="flex flex-col items-center gap-1 text-center">
                                                   <span className="flex items-center justify-center gap-2 uppercase tracking-wide text-[10px]">
-                                                    {isGeneratingSellOffers[item.instanceId] && (
+                                                    {(isGeneratingSellOffers[item.instanceId] || isSellingItems[item.instanceId]) && (
                                                       <span className="h-3 w-3 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
                                                     )}
-                                                    {isGeneratingSellOffers[item.instanceId]
-                                                      ? 'Generating offer...'
-                                                      : sellOffers[item.instanceId]
-                                                        ? 'Accept buy back offer'
-                                                        : item.redeemable === false
-                                                          ? 'Not redeemable'
-                                                          : 'Generate buy back offer'}
+                                                    {isSellingItems[item.instanceId]
+                                                      ? 'Selling item...'
+                                                      : isGeneratingSellOffers[item.instanceId]
+                                                        ? 'Generating offer...'
+                                                        : sellOffers[item.instanceId]
+                                                          ? 'Accept buy back offer'
+                                                          : item.redeemable === false
+                                                            ? 'Not redeemable'
+                                                            : 'Generate buy back offer'}
                                                   </span>
-                                                  {sellOffers[item.instanceId] && !isGeneratingSellOffers[item.instanceId] && item.redeemable !== false && (
+                                                  {sellOffers[item.instanceId] && !isGeneratingSellOffers[item.instanceId] && !isSellingItems[item.instanceId] && item.redeemable !== false && (
                                                     <CoinAmount
                                                       amount={getSellBackValue(item.price, getSellBackRate(item))}
                                                       formatOptions={{ maximumFractionDigits: 0 }}
