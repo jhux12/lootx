@@ -1,4 +1,5 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
+import { buildIdempotencySuccess, getIdempotencyKey, getIdempotencyRef } from './_lib/idempotency.js';
 import { computeRoll, pickPrizeByWeight, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 
@@ -28,6 +29,7 @@ export default async function handler(req, res) {
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await readJsonBody(req);
     const boxId = body?.boxId;
+    const idempotencyKey = getIdempotencyKey(body);
     if (!boxId || typeof boxId !== 'string') {
       return sendJson(res, 400, { error: 'Missing boxId' });
     }
@@ -38,15 +40,29 @@ export default async function handler(req, res) {
     const provablyRef = firestore.collection('provablyFair').doc(decoded.uid);
     const inventoryRef = userRef.collection('inventory').doc();
     const openRef = firestore.collection('opens').doc();
+    const idempotencyRef = idempotencyKey ? getIdempotencyRef(decoded.uid, idempotencyKey) : null;
+
+    if (idempotencyRef) {
+      const existingSnap = await idempotencyRef.get();
+      if (existingSnap.exists && existingSnap.data()?.status === 'success') {
+        return sendJson(res, 200, existingSnap.data()?.responsePayload ?? { ok: true });
+      }
+    }
 
     let responsePayload;
 
     await firestore.runTransaction(async (transaction) => {
-      const [boxSnap, userSnap, provablySnap] = await Promise.all([
+      const [idempotencySnap, boxSnap, userSnap, provablySnap] = await Promise.all([
+        idempotencyRef ? transaction.get(idempotencyRef) : Promise.resolve(null),
         transaction.get(boxRef),
         transaction.get(userRef),
         transaction.get(provablyRef)
       ]);
+
+      if (idempotencySnap?.exists) {
+        responsePayload = idempotencySnap.data()?.responsePayload ?? { ok: true };
+        return;
+      }
 
       if (!boxSnap.exists) {
         throw { status: 404, error: 'Box not found', boxId };
@@ -178,6 +194,10 @@ export default async function handler(req, res) {
           message
         }
       };
+
+      if (idempotencyRef) {
+        transaction.set(idempotencyRef, buildIdempotencySuccess(responsePayload), { merge: true });
+      }
     });
 
     return sendJson(res, 200, responsePayload);

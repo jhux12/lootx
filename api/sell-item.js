@@ -1,4 +1,5 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
+import { buildIdempotencySuccess, getIdempotencyKey, getIdempotencyRef } from './_lib/idempotency.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 
 const getSellBackValue = (price, rate) => {
@@ -23,6 +24,7 @@ export default async function handler(req, res) {
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await readJsonBody(req);
     const inventoryId = body?.inventoryId;
+    const idempotencyKey = getIdempotencyKey(body);
 
     if (!inventoryId || typeof inventoryId !== 'string') {
       return sendJson(res, 400, { error: 'Missing inventoryId' });
@@ -30,14 +32,28 @@ export default async function handler(req, res) {
 
     const userRef = firestore.collection('users').doc(decoded.uid);
     const inventoryRef = userRef.collection('inventory').doc(inventoryId);
+    const idempotencyRef = idempotencyKey ? getIdempotencyRef(decoded.uid, idempotencyKey) : null;
+
+    if (idempotencyRef) {
+      const existingSnap = await idempotencyRef.get();
+      if (existingSnap.exists && existingSnap.data()?.status === 'success') {
+        return sendJson(res, 200, existingSnap.data()?.responsePayload ?? { ok: true });
+      }
+    }
 
     let responsePayload;
 
     await firestore.runTransaction(async (transaction) => {
-      const [userSnap, inventorySnap] = await Promise.all([
+      const [idempotencySnap, userSnap, inventorySnap] = await Promise.all([
+        idempotencyRef ? transaction.get(idempotencyRef) : Promise.resolve(null),
         transaction.get(userRef),
         transaction.get(inventoryRef)
       ]);
+
+      if (idempotencySnap?.exists) {
+        responsePayload = idempotencySnap.data()?.responsePayload ?? { ok: true };
+        return;
+      }
 
       if (!inventorySnap.exists) {
         throw { status: 404, error: 'Inventory item not found' };
@@ -45,7 +61,21 @@ export default async function handler(req, res) {
 
       const inventoryItem = inventorySnap.data() ?? {};
       const status = inventoryItem.status ?? 'available';
+      const currentCoins = Number(userSnap.data()?.coins ?? 0);
       if (status !== 'available') {
+        if (status === 'sold') {
+          responsePayload = {
+            ok: true,
+            alreadyProcessed: true,
+            inventoryId,
+            soldValue: 0,
+            newCoins: currentCoins
+          };
+          if (idempotencyRef) {
+            transaction.set(idempotencyRef, buildIdempotencySuccess(responsePayload), { merge: true });
+          }
+          return;
+        }
         throw { status: 400, error: 'Item is not available for sale' };
       }
       if (inventoryItem.redeemable === false) {
@@ -56,7 +86,6 @@ export default async function handler(req, res) {
       const itemValue = Number(inventoryItem.value ?? 0);
       const sellBackValue = getSellBackValue(itemValue, sellBackRate);
 
-      const currentCoins = Number(userSnap.data()?.coins ?? 0);
       const newCoins = currentCoins + sellBackValue;
 
       if (!userSnap.exists) {
@@ -68,9 +97,14 @@ export default async function handler(req, res) {
 
       responsePayload = {
         ok: true,
+        inventoryId,
         soldValue: sellBackValue,
         newCoins
       };
+
+      if (idempotencyRef) {
+        transaction.set(idempotencyRef, buildIdempotencySuccess(responsePayload), { merge: true });
+      }
     });
 
     return sendJson(res, 200, responsePayload);
