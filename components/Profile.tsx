@@ -961,7 +961,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                 onClick={() => {
                                                   if (item.trackingNumber) {
                                                     window.open(
-                                                      `https://track.aftership.com/${encodeURIComponent(item.trackingNumber)}`,
+                                                      `https://track.aftership.com/?tracking-number=${encodeURIComponent(item.trackingNumber)}`,
                                                       '_blank',
                                                       'noopener,noreferrer'
                                                     );
