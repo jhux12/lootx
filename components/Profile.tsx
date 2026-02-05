@@ -4,6 +4,8 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
 import { getSellBackValue } from '../utils/sellBack';
+import { createIdempotencyKey } from '../utils/idempotency';
+import { useSingleFlight } from '../hooks/useSingleFlight';
 import { CoinAmount } from './CoinAmount';
 import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight } from 'lucide-react';
 import { auth } from '../firebase';
@@ -35,6 +37,7 @@ interface ProfileProps {
 export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem, stripeSettings, openAuthModal } = useGame();
   const { playSound } = useSound();
+  const { runWithKey: runWithSingleFlight, isInFlight } = useSingleFlight();
 
   const [inventoryFilter, setInventoryFilter] = useState<'inventory' | 'processing' | 'shipped'>('inventory');
   const [activePeopleTab, setActivePeopleTab] = useState<'followers' | 'following'>('followers');
@@ -361,18 +364,20 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       return;
     }
 
-    setIsSubmittingShipment(true);
-    try {
-      await Promise.all(itemsToShip.map((item) => shipItem(item.instanceId)));
-      setSelectedShipments([]);
-      setShowShippingReview(false);
-      playSound('success');
-    } catch (error) {
-      console.error('Failed to request shipments', error);
-      alert('Unable to request shipment right now. Please try again.');
-    } finally {
-      setIsSubmittingShipment(false);
-    }
+    await runWithSingleFlight(`ship:confirm:${itemsToShip.map((item) => item.instanceId).join(',')}`, async () => {
+      setIsSubmittingShipment(true);
+      try {
+        await Promise.all(itemsToShip.map((item) => shipItem(item.instanceId)));
+        setSelectedShipments([]);
+        setShowShippingReview(false);
+        playSound('success');
+      } catch (error) {
+        console.error('Failed to request shipments', error);
+        alert('Unable to request shipment right now. Please try again.');
+      } finally {
+        setIsSubmittingShipment(false);
+      }
+    });
   };
 
   const handleCashShipping = async () => {
@@ -397,39 +402,47 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       return;
     }
 
-    setIsSubmittingCashShipping(true);
-    try {
-      const token = await auth.currentUser.getIdToken();
-      const response = await fetch('/api/create-shipping-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ inventoryIds: itemsToShip.map((item) => item.instanceId) })
-      });
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || 'Unable to start checkout.');
+    await runWithSingleFlight(`ship:cash:${itemsToShip.map((item) => item.instanceId).join(',')}`, async () => {
+      setIsSubmittingCashShipping(true);
+      try {
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/create-shipping-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            inventoryIds: itemsToShip.map((item) => item.instanceId),
+            idempotencyKey: createIdempotencyKey('ship-cash')
+          })
+        });
+        if (!response.ok) {
+          const message = await response.text();
+          throw new Error(message || 'Unable to start checkout.');
+        }
+        const data = await response.json();
+        if (typeof data.shipmentBatchId === 'string') {
+          window.sessionStorage.setItem(SHIPPING_BATCH_STORAGE_KEY, data.shipmentBatchId);
+        }
+        if (data.pending) {
+          return;
+        }
+        const stripe = await stripePromise;
+        if (!stripe) {
+          throw new Error('Stripe failed to initialize.');
+        }
+        const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+        if (result.error) {
+          throw result.error;
+        }
+      } catch (error) {
+        console.error('Failed to start cash shipping checkout', error);
+        alert('Unable to start cash checkout. Please try again.');
+      } finally {
+        setIsSubmittingCashShipping(false);
       }
-      const data = await response.json();
-      if (typeof data.shipmentBatchId === 'string') {
-        window.sessionStorage.setItem(SHIPPING_BATCH_STORAGE_KEY, data.shipmentBatchId);
-      }
-      const stripe = await stripePromise;
-      if (!stripe) {
-        throw new Error('Stripe failed to initialize.');
-      }
-      const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-      if (result.error) {
-        throw result.error;
-      }
-    } catch (error) {
-      console.error('Failed to start cash shipping checkout', error);
-      alert('Unable to start cash checkout. Please try again.');
-    } finally {
-      setIsSubmittingCashShipping(false);
-    }
+    });
   };
 
   const handleUpdatePassword = () => {
@@ -830,6 +843,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                     : 'bg-gray-700/40 text-gray-300 border-gray-600';
 
                               const isSelectable = inventoryFilter === 'inventory' && canShip;
+                              const isSelling = isInFlight(`sell:${item.instanceId}`);
                               return (
                                   <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all flex flex-col">
                                       <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
@@ -905,8 +919,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           )}
                                           {inventoryFilter === 'inventory' && item.redeemable !== false && (
                                               <button
-                                                onClick={() => {
-                                                  if (!canSell || isGeneratingSellOffers[item.instanceId]) return;
+                                                onClick={async () => {
+                                                  if (!canSell || isGeneratingSellOffers[item.instanceId] || isSelling) return;
                                                   if (!sellOffers[item.instanceId]) {
                                                     setIsGeneratingSellOffers((prev) => ({ ...prev, [item.instanceId]: true }));
                                                     const timerId = window.setTimeout(() => {
@@ -917,7 +931,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                     sellOfferTimersRef.current[item.instanceId] = timerId;
                                                     return;
                                                   }
-                                                  sellItem(item.instanceId);
+                                                  await runWithSingleFlight(`sell:${item.instanceId}`, async () => {
+                                                    await sellItem(item.instanceId);
+                                                  });
                                                   if (sellOfferTimersRef.current[item.instanceId]) {
                                                     window.clearTimeout(sellOfferTimersRef.current[item.instanceId]);
                                                     delete sellOfferTimersRef.current[item.instanceId];
@@ -925,7 +941,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                   setSellOffers((prev) => ({ ...prev, [item.instanceId]: false }));
                                                   setIsGeneratingSellOffers((prev) => ({ ...prev, [item.instanceId]: false }));
                                                 }}
-                                                disabled={!canSell || !!isGeneratingSellOffers[item.instanceId]}
+                                                disabled={!canSell || !!isGeneratingSellOffers[item.instanceId] || isSelling}
+                                                aria-busy={isGeneratingSellOffers[item.instanceId] || isSelling}
                                                 className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-80 ${
                                                   canSell
                                                     ? 'bg-[#0b0e14] text-gray-200 border-gray-700 hover:border-brand-purple/60'
@@ -934,16 +951,18 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               >
                                                 <span className="flex flex-col items-center gap-1 text-center">
                                                   <span className="flex items-center justify-center gap-2 uppercase tracking-wide text-[10px]">
-                                                    {isGeneratingSellOffers[item.instanceId] && (
+                                                    {(isGeneratingSellOffers[item.instanceId] || isSelling) && (
                                                       <span className="h-3 w-3 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
                                                     )}
                                                     {isGeneratingSellOffers[item.instanceId]
                                                       ? 'Generating offer...'
-                                                      : sellOffers[item.instanceId]
-                                                        ? 'Accept buy back offer'
-                                                        : item.redeemable === false
-                                                          ? 'Not redeemable'
-                                                          : 'Generate buy back offer'}
+                                                      : isSelling
+                                                        ? 'Processing...'
+                                                        : sellOffers[item.instanceId]
+                                                          ? 'Accept buy back offer'
+                                                          : item.redeemable === false
+                                                            ? 'Not redeemable'
+                                                            : 'Generate buy back offer'}
                                                   </span>
                                                   {sellOffers[item.instanceId] && !isGeneratingSellOffers[item.instanceId] && item.redeemable !== false && (
                                                     <CoinAmount
@@ -1097,13 +1116,19 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                 selectedShipmentItems.length === 0 ||
                                                 !user.shippingAddress
                                               }
+                                              aria-busy={isSubmittingShipment}
                                               className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
                                                 !isSubmittingShipment && selectedShipmentItems.length > 0 && user.shippingAddress
                                                   ? 'border-blue-500/40 bg-blue-600/20 text-blue-200 hover:bg-blue-600/30'
                                                   : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
                                               }`}
                                           >
-                                              {isSubmittingShipment ? 'Submitting...' : 'Ship with coins'}
+                                              <span className="flex items-center justify-center gap-2">
+                                                {isSubmittingShipment && (
+                                                  <span className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" aria-hidden="true" />
+                                                )}
+                                                {isSubmittingShipment ? 'Processing...' : 'Ship with coins'}
+                                              </span>
                                           </button>
                                       )}
                                       {shippingCashEnabled && (
@@ -1114,13 +1139,19 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                 selectedShipmentItems.length === 0 ||
                                                 !user.shippingAddress
                                               }
+                                              aria-busy={isSubmittingCashShipping}
                                               className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
                                                 !isSubmittingCashShipping && selectedShipmentItems.length > 0 && user.shippingAddress
                                                   ? 'border-emerald-500/40 bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30'
                                                   : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
                                               }`}
                                           >
-                                              {isSubmittingCashShipping ? 'Redirecting...' : `Ship – ${formatUsd(shippingCashTotalCents)}`}
+                                              <span className="flex items-center justify-center gap-2">
+                                                {isSubmittingCashShipping && (
+                                                  <span className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" aria-hidden="true" />
+                                                )}
+                                                {isSubmittingCashShipping ? 'Redirecting...' : `Ship – ${formatUsd(shippingCashTotalCents)}`}
+                                              </span>
                                           </button>
                                       )}
                                   </div>

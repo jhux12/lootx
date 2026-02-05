@@ -4,6 +4,8 @@ import { loadStripe } from '@stripe/stripe-js';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { auth } from '../firebase';
+import { createIdempotencyKey } from '../utils/idempotency';
+import { useSingleFlight } from '../hooks/useSingleFlight';
 import { CoinAmount } from './CoinAmount';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -11,6 +13,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 export const TopUpModal: React.FC = () => {
   const { setShowTopUpModal, coinPackages } = useGame();
   const { playSound } = useSound();
+  const { runWithKey: runWithSingleFlight, isInFlight } = useSingleFlight();
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -21,6 +24,7 @@ export const TopUpModal: React.FC = () => {
       .sort((a, b) => a.sortOrder - b.sortOrder);
   }, [coinPackages]);
   const selectedPackage = activePackages.find((pkg) => pkg.id === selectedPackageId) ?? activePackages[0];
+  const isTopupInFlight = isInFlight('topup');
   const formattedDepositAmount = selectedPackage?.displayPrice ?? '$0.00';
   const priceValue = useMemo(() => {
     const raw = formattedDepositAmount.replace(/[^0-9.]/g, '');
@@ -55,46 +59,48 @@ export const TopUpModal: React.FC = () => {
   }, [activePackages, selectedPackageId]);
 
   const handleDeposit = async () => {
-      playSound('click');
-      if (!selectedPackage) {
-        setErrorMessage('Please select a coin package.');
-        return;
-      }
-      if (!auth.currentUser) {
-        setErrorMessage('Please sign in to continue.');
-        return;
-      }
+      await runWithSingleFlight('topup', async () => {
+        playSound('click');
+        if (!selectedPackage) {
+          setErrorMessage('Please select a coin package.');
+          return;
+        }
+        if (!auth.currentUser) {
+          setErrorMessage('Please sign in to continue.');
+          return;
+        }
 
-      setIsLoading(true);
-      setErrorMessage(null);
+        setIsLoading(true);
+        setErrorMessage(null);
 
-      try {
-          const token = await auth.currentUser.getIdToken();
-          const response = await fetch('/api/create-checkout-session', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({ packageId: selectedPackage.id })
-          });
-          if (!response.ok) {
-            const message = await response.text();
-            throw new Error(message || 'Unable to start checkout.');
-          }
-          const data = await response.json();
-          const stripe = await stripePromise;
-          if (!stripe) {
-            throw new Error('Stripe failed to initialize.');
-          }
-          const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-          if (result.error) {
-            throw result.error;
-          }
-      } catch (error: any) {
-          setErrorMessage(error?.message ?? 'Checkout failed. Please try again.');
-          setIsLoading(false);
-      }
+        try {
+            const token = await auth.currentUser.getIdToken();
+            const response = await fetch('/api/create-checkout-session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({ packageId: selectedPackage.id, idempotencyKey: createIdempotencyKey('topup') })
+            });
+            if (!response.ok) {
+              const message = await response.text();
+              throw new Error(message || 'Unable to start checkout.');
+            }
+            const data = await response.json();
+            const stripe = await stripePromise;
+            if (!stripe) {
+              throw new Error('Stripe failed to initialize.');
+            }
+            const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+            if (result.error) {
+              throw result.error;
+            }
+        } catch (error: any) {
+            setErrorMessage(error?.message ?? 'Checkout failed. Please try again.');
+            setIsLoading(false);
+        }
+      });
   };
 
   return (
@@ -193,10 +199,11 @@ export const TopUpModal: React.FC = () => {
                     {/* Submit Button */}
                     <button 
                         onClick={handleDeposit}
-                        disabled={isLoading || !selectedPackage}
+                        disabled={isLoading || isTopupInFlight || !selectedPackage}
+                        aria-busy={isLoading || isTopupInFlight}
                         className="w-full rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        {isLoading ? (
+                        {isLoading || isTopupInFlight ? (
                             <>
                                 <Loader2 className="w-5 h-5 animate-spin" /> Processing...
                             </>

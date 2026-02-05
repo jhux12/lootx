@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
+import { buildIdempotencyPending, buildIdempotencySuccess, getIdempotencyKey, getIdempotencyRef } from './_lib/idempotency.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -19,6 +20,7 @@ export default async function handler(req, res) {
 
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await readJsonBody(req);
+    const idempotencyKey = getIdempotencyKey(body);
     const inventoryIds = Array.isArray(body?.inventoryIds)
       ? body.inventoryIds.filter((id) => typeof id === 'string')
       : typeof body?.inventoryId === 'string'
@@ -27,6 +29,18 @@ export default async function handler(req, res) {
 
     if (inventoryIds.length === 0) {
       return sendJson(res, 400, { error: 'No items selected' });
+    }
+
+    const idempotencyRef = idempotencyKey ? getIdempotencyRef(decoded.uid, idempotencyKey) : null;
+    if (idempotencyRef) {
+      const existingSnap = await idempotencyRef.get();
+      if (existingSnap.exists) {
+        const existingData = existingSnap.data() ?? {};
+        const existingPayload = existingData.responsePayload ?? { ok: true };
+        if (existingData.status === 'success' || existingData.status === 'pending') {
+          return sendJson(res, 200, existingPayload);
+        }
+      }
     }
 
     const settingsSnap = await firestore.collection('settings').doc(STRIPE_SETTINGS_DOC).get();
@@ -62,11 +76,20 @@ export default async function handler(req, res) {
     );
 
     // Firestore requires all reads to complete before any writes in a transaction.
+    let responsePayload;
+    let usedExistingIdempotency = false;
     await firestore.runTransaction(async (transaction) => {
-      const [userSnap, ...inventorySnaps] = await Promise.all([
+      const [idempotencySnap, userSnap, ...inventorySnaps] = await Promise.all([
+        idempotencyRef ? transaction.get(idempotencyRef) : Promise.resolve(null),
         transaction.get(userRef),
         ...inventoryRefs.map((inventoryRef) => transaction.get(inventoryRef))
       ]);
+
+      if (idempotencySnap?.exists) {
+        responsePayload = idempotencySnap.data()?.responsePayload ?? { ok: true };
+        usedExistingIdempotency = true;
+        return;
+      }
 
       if (!userSnap.exists) {
         throw { status: 403, error: 'Unauthorized' };
@@ -120,7 +143,21 @@ export default async function handler(req, res) {
           updatedAt: now
         }, { merge: true });
       });
+
+      responsePayload = {
+        ok: true,
+        pending: true,
+        shipmentBatchId
+      };
+
+      if (idempotencyRef) {
+        transaction.set(idempotencyRef, buildIdempotencyPending(responsePayload), { merge: true });
+      }
     });
+
+    if (usedExistingIdempotency) {
+      return sendJson(res, 200, responsePayload);
+    }
 
     console.info('create-shipping-checkout-session', {
       selectedCount: inventoryIds.length,
@@ -157,7 +194,12 @@ export default async function handler(req, res) {
       }
     });
 
-    return sendJson(res, 200, { sessionId: session.id, shipmentBatchId });
+    const successPayload = { sessionId: session.id, shipmentBatchId };
+    if (idempotencyRef) {
+      await idempotencyRef.set(buildIdempotencySuccess(successPayload), { merge: true });
+    }
+
+    return sendJson(res, 200, successPayload);
   } catch (error) {
     const status = error?.status;
     if (status) {

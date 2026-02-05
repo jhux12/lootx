@@ -3,6 +3,7 @@ import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, Vi
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
+import { useSingleFlight } from '../hooks/useSingleFlight';
 import { 
   User as FirebaseUser,
   AuthCredential,
@@ -740,6 +741,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const hasInventorySubcollectionRef = useRef(false);
   const pendingSoldIdsRef = useRef<Set<string>>(new Set());
   const pendingBalanceRef = useRef<number | null>(null);
+  const { runWithKey: runWithSingleFlight } = useSingleFlight();
   const activeUserIdRef = useRef<string | null>(null);
   const userUnsubscribeRef = useRef<(() => void) | null>(null);
   const inventoryUnsubscribeRef = useRef<(() => void) | null>(null);
@@ -1880,33 +1882,35 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       alert('This item is not redeemable and cannot be sold back.');
       return;
     }
-    try {
-      pendingSoldIdsRef.current.add(instanceId);
-      setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
+    await runWithSingleFlight(`sell:${instanceId}`, async () => {
+      try {
+        pendingSoldIdsRef.current.add(instanceId);
+        setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
 
-      const data = await authedFetch<{ newCoins?: number }>('/api/sell-item', {
-        method: 'POST',
-        body: JSON.stringify({ inventoryId: instanceId })
-      });
-
-      const nextCoins = Number(data.newCoins);
-      if (Number.isFinite(nextCoins)) {
-        pendingBalanceRef.current = nextCoins;
-        syncBalance(nextCoins);
-      }
-    } catch (error) {
-      pendingSoldIdsRef.current.delete(instanceId);
-      if (itemToSell) {
-        setInventory((prev) => {
-          const next = [...prev];
-          const insertAt = Math.min(Math.max(itemIndex, 0), next.length);
-          next.splice(insertAt, 0, itemToSell);
-          return next;
+        const data = await authedFetch<{ newCoins?: number }>('/api/sell-item', {
+          method: 'POST',
+          body: JSON.stringify({ inventoryId: instanceId, idempotencyKey: `sell:${instanceId}` })
         });
+
+        const nextCoins = Number(data.newCoins);
+        if (Number.isFinite(nextCoins)) {
+          pendingBalanceRef.current = nextCoins;
+          syncBalance(nextCoins);
+        }
+      } catch (error) {
+        pendingSoldIdsRef.current.delete(instanceId);
+        if (itemToSell) {
+          setInventory((prev) => {
+            const next = [...prev];
+            const insertAt = Math.min(Math.max(itemIndex, 0), next.length);
+            next.splice(insertAt, 0, itemToSell);
+            return next;
+          });
+        }
+        console.error('Failed to sell item', error);
+        alert('Unable to sell item right now. Please try again.');
       }
-      console.error('Failed to sell item', error);
-      alert('Unable to sell item right now. Please try again.');
-    }
+    });
   };
 
   const shipItem = async (instanceId: string) => {
@@ -1921,36 +1925,39 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    try {
-      const data = await authedFetch<{ newCoins?: number }>('/api/request-shipment', {
-        method: 'POST',
-        body: JSON.stringify({
-          inventoryId: instanceId,
-          shippingInfo: user.shippingAddress
-        })
-      });
+    await runWithSingleFlight(`ship:${instanceId}`, async () => {
+      try {
+        const data = await authedFetch<{ newCoins?: number }>('/api/request-shipment', {
+          method: 'POST',
+          body: JSON.stringify({
+            inventoryId: instanceId,
+            shippingInfo: user.shippingAddress,
+            idempotencyKey: `ship:${instanceId}`
+          })
+        });
 
-      const nextCoins = Number(data?.newCoins);
-      if (Number.isFinite(nextCoins)) {
-        syncBalance(nextCoins);
+        const nextCoins = Number(data?.newCoins);
+        if (Number.isFinite(nextCoins)) {
+          syncBalance(nextCoins);
+        }
+
+        setInventory(prev =>
+          prev.map(item =>
+            item.instanceId === instanceId
+              ? { ...item, status: 'shipping_requested' }
+              : item
+          )
+        );
+
+        addNotification({
+          message: `${itemToShip.name} is now shipping to your saved address.`,
+          type: 'shipping'
+        });
+      } catch (error) {
+        console.error('Failed to request shipment', error);
+        alert('Unable to request shipment right now. Please try again.');
       }
-
-      setInventory(prev =>
-        prev.map(item =>
-          item.instanceId === instanceId
-            ? { ...item, status: 'shipping_requested' }
-            : item
-        )
-      );
-
-      addNotification({
-        message: `${itemToShip.name} is now shipping to your saved address.`,
-        type: 'shipping'
-      });
-    } catch (error) {
-      console.error('Failed to request shipment', error);
-      alert('Unable to request shipment right now. Please try again.');
-    }
+    });
   };
 
   const updateAddress = async (address: ShippingAddress) => {

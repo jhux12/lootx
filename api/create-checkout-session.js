@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { adminAuth, firestore } from './_lib/firebaseAdmin.js';
+import { buildIdempotencySuccess, getIdempotencyKey, getIdempotencyRef } from './_lib/idempotency.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -19,8 +20,17 @@ export default async function handler(req, res) {
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await readJsonBody(req);
     const packageId = body?.packageId;
+    const idempotencyKey = getIdempotencyKey(body);
     if (!packageId || typeof packageId !== 'string') {
       return sendJson(res, 400, { error: 'Missing packageId' });
+    }
+
+    const idempotencyRef = idempotencyKey ? getIdempotencyRef(decoded.uid, idempotencyKey) : null;
+    if (idempotencyRef) {
+      const existingSnap = await idempotencyRef.get();
+      if (existingSnap.exists && existingSnap.data()?.status === 'success') {
+        return sendJson(res, 200, existingSnap.data()?.responsePayload ?? { ok: true });
+      }
     }
 
     const packageRef = firestore.collection('coin_packages').doc(packageId);
@@ -66,7 +76,12 @@ export default async function handler(req, res) {
       }
     });
 
-    return sendJson(res, 200, { sessionId: session.id });
+    const responsePayload = { sessionId: session.id };
+    if (idempotencyRef) {
+      await idempotencyRef.set(buildIdempotencySuccess(responsePayload), { merge: true });
+    }
+
+    return sendJson(res, 200, responsePayload);
   } catch (error) {
     console.error('create-checkout-session error', error);
     return sendJson(res, 500, { error: 'Unable to create checkout session' });

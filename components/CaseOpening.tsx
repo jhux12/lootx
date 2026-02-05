@@ -9,6 +9,8 @@ import { Input } from './ui/Input';
 import { getRiskLabel } from '../utils/caseOdds';
 import { getSellBackValue } from '../utils/sellBack';
 import { authedFetch } from '../utils/authedFetch';
+import { createIdempotencyKey } from '../utils/idempotency';
+import { useSingleFlight } from '../hooks/useSingleFlight';
 import pullzPattern from '../assets/pullz-p.PNG';
 
 interface CaseOpeningProps {
@@ -121,6 +123,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const bodyOverflowRef = useRef<string>('');
   const sellOfferTimerRef = useRef<number | null>(null);
+  const { runWithKey: runWithSingleFlight, isInFlight } = useSingleFlight();
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
 
   const loadProvablyFairState = useCallback(async () => {
@@ -355,152 +358,154 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   };
 
   const handleSpin = async ({ isDemo = false, forceGold = false }: { isDemo?: boolean; forceGold?: boolean } = {}) => {
-    if (isSpinning) return;
-    if (!box || items.length === 0) return;
+    await runWithSingleFlight(`open:${box?.id ?? boxId}`, async () => {
+      if (isSpinning) return;
+      if (!box || items.length === 0) return;
 
-    if (forceGold) {
-      isDemo = true;
-    }
+      if (forceGold) {
+        isDemo = true;
+      }
 
-    if (isDemo) {
-      setIsDemoSpin(true);
-    } else {
-      setIsDemoSpin(false);
-    }
+      if (isDemo) {
+        setIsDemoSpin(true);
+      } else {
+        setIsDemoSpin(false);
+      }
 
-    if (!isDemo && !isAuthenticated) {
-      openAuthModal('login');
-      return;
-    }
-
-    if (!isDemo && isFree) {
-      if (!isAuthenticated) {
+      if (!isDemo && !isAuthenticated) {
         openAuthModal('login');
         return;
       }
-      if (!canFreeSpin) {
-        alert("Free case already claimed. Come back in 24 hours.");
-        return;
-      }
-      claimDaily();
-    }
-    
-    setIsSpinning(true);
-    setShowWinModal(false);
-    setIsGoldMode(false);
-    setWonItem(null);
-    setWonInventoryItem(null);
-    setRewardResolved(false);
-    setSellOfferGenerated(false);
-    playSound('click');
-    
-    let winner: CaseItem;
-    let rollValue = Math.random();
-    let rollHash = '';
-    let rollMessage = '';
-    let rollNonce = nonce;
-    let rollServerHash = serverSeedHash;
-    let rollClientSeed = clientSeed;
 
-    if (isDemo) {
-      winner = getWinningItem(rollValue);
-    } else {
-      try {
-        // Server now authoritatively selects the prize + updates coins/inventory.
-        const data = await authedFetch<{
-          ok: boolean;
-          price: number;
-          prize: CaseItem & { price?: number; size?: string };
-          newCoins: number;
-          inventoryId: string;
-          openId: string;
-          sellBackRate?: number;
-          provablyFair: {
-            serverSeedHash: string;
-            clientSeed: string;
-            nonce: number;
-            roll: number;
-            rollHash: string;
-            message: string;
-          };
-        }>('/api/open-case', {
-          method: 'POST',
-          body: JSON.stringify({ boxId: box.id })
-        });
-
-        const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
-        const fallbackPrice = Number(
-          (data.prize as { value?: number }).value ?? data.prize.price ?? 0
-        );
-        const resolvedRedeemable = data.prize.redeemable ?? matchedPrize?.redeemable ?? true;
-        winner = matchedPrize
-          ? { ...matchedPrize, redeemable: resolvedRedeemable, price: matchedPrize.price ?? fallbackPrice, size: data.prize.size }
-          : {
-              ...data.prize,
-              price: fallbackPrice,
-              chance: 0,
-              color: '#9ca3af',
-              redeemable: resolvedRedeemable,
-              size: data.prize.size
-            };
-
-        const inventoryItem: InventoryItem = {
-          ...(winner as CaseItem),
-          instanceId: data.inventoryId,
-          obtainedAt: Date.now(),
-          status: 'available',
-          size: data.prize.size,
-          provenance: { sourceType: 'case_open', sourceId: box.id },
-          sellBackRate: data.sellBackRate
-        };
-
-        addInventoryItemFromServer(inventoryItem);
-        syncBalance(Number(data.newCoins ?? 0));
-        if (!isFree) {
-          const spentAmount = Number(data.price ?? box?.price ?? 0);
-          registerSpend(spentAmount);
+      if (!isDemo && isFree) {
+        if (!isAuthenticated) {
+          openAuthModal('login');
+          return;
         }
-        setWonInventoryItem(inventoryItem);
-        awardCaseOpenXp();
-
-        rollValue = data.provablyFair.roll;
-        rollHash = data.provablyFair.rollHash;
-        rollMessage = data.provablyFair.message;
-        rollNonce = data.provablyFair.nonce;
-        rollServerHash = data.provablyFair.serverSeedHash;
-        rollClientSeed = data.provablyFair.clientSeed;
-
-        setServerSeedHash(data.provablyFair.serverSeedHash);
-        setClientSeed(data.provablyFair.clientSeed);
-        setClientSeedInput(data.provablyFair.clientSeed);
-        setNonce(data.provablyFair.nonce + 1);
-      } catch (error) {
-        console.error('Failed to open case', error);
-        setIsSpinning(false);
-        alert('Unable to open case. Please try again.');
-        return;
+        if (!canFreeSpin) {
+          alert("Free case already claimed. Come back in 24 hours.");
+          return;
+        }
+        claimDaily();
       }
-    }
+      
+      setIsSpinning(true);
+      setShowWinModal(false);
+      setIsGoldMode(false);
+      setWonItem(null);
+      setWonInventoryItem(null);
+      setRewardResolved(false);
+      setSellOfferGenerated(false);
+      playSound('click');
+      
+      let winner: CaseItem;
+      let rollValue = Math.random();
+      let rollHash = '';
+      let rollMessage = '';
+      let rollNonce = nonce;
+      let rollServerHash = serverSeedHash;
+      let rollClientSeed = clientSeed;
+
+      if (isDemo) {
+        winner = getWinningItem(rollValue);
+      } else {
+        try {
+          const idempotencyKey = createIdempotencyKey(`open:${box.id}`);
+          // Server now authoritatively selects the prize + updates coins/inventory.
+          const data = await authedFetch<{
+            ok: boolean;
+            price: number;
+            prize: CaseItem & { price?: number; size?: string };
+            newCoins: number;
+            inventoryId: string;
+            openId: string;
+            sellBackRate?: number;
+            provablyFair: {
+              serverSeedHash: string;
+              clientSeed: string;
+              nonce: number;
+              roll: number;
+              rollHash: string;
+              message: string;
+            };
+          }>('/api/open-case', {
+            method: 'POST',
+            body: JSON.stringify({ boxId: box.id, idempotencyKey })
+          });
+
+          const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
+          const fallbackPrice = Number(
+            (data.prize as { value?: number }).value ?? data.prize.price ?? 0
+          );
+          const resolvedRedeemable = data.prize.redeemable ?? matchedPrize?.redeemable ?? true;
+          winner = matchedPrize
+            ? { ...matchedPrize, redeemable: resolvedRedeemable, price: matchedPrize.price ?? fallbackPrice, size: data.prize.size }
+            : {
+                ...data.prize,
+                price: fallbackPrice,
+                chance: 0,
+                color: '#9ca3af',
+                redeemable: resolvedRedeemable,
+                size: data.prize.size
+              };
+
+          const inventoryItem: InventoryItem = {
+            ...(winner as CaseItem),
+            instanceId: data.inventoryId,
+            obtainedAt: Date.now(),
+            status: 'available',
+            size: data.prize.size,
+            provenance: { sourceType: 'case_open', sourceId: box.id },
+            sellBackRate: data.sellBackRate
+          };
+
+          addInventoryItemFromServer(inventoryItem);
+          syncBalance(Number(data.newCoins ?? 0));
+          if (!isFree) {
+            const spentAmount = Number(data.price ?? box?.price ?? 0);
+            registerSpend(spentAmount);
+          }
+          setWonInventoryItem(inventoryItem);
+          awardCaseOpenXp();
+
+          rollValue = data.provablyFair.roll;
+          rollHash = data.provablyFair.rollHash;
+          rollMessage = data.provablyFair.message;
+          rollNonce = data.provablyFair.nonce;
+          rollServerHash = data.provablyFair.serverSeedHash;
+          rollClientSeed = data.provablyFair.clientSeed;
+
+          setServerSeedHash(data.provablyFair.serverSeedHash);
+          setClientSeed(data.provablyFair.clientSeed);
+          setClientSeedInput(data.provablyFair.clientSeed);
+          setNonce(data.provablyFair.nonce + 1);
+        } catch (error) {
+          console.error('Failed to open case', error);
+          setIsSpinning(false);
+          alert('Unable to open case. Please try again.');
+          return;
+        }
+      }
 
     const legendaryPool = items.filter((item) => item.rarity === 'legendary');
     if (forceGold && legendaryPool.length > 0) {
       winner = legendaryPool[Math.floor(rollValue * legendaryPool.length)];
     }
 
-    if (!isDemo) {
-      setLastRoll({
-        nonce: rollNonce,
-        rollHash,
-        rollValue,
-        message: rollMessage,
-        boxId: box.id,
-        serverSeedHash: rollServerHash,
-        clientSeed: rollClientSeed,
-        outcome: winner.name
-      });
-    } else {
-      setLastRoll(null);
-    }
+      if (!isDemo) {
+        setLastRoll({
+          nonce: rollNonce,
+          rollHash,
+          rollValue,
+          message: rollMessage,
+          boxId: box.id,
+          serverSeedHash: rollServerHash,
+          clientSeed: rollClientSeed,
+          outcome: winner.name
+        });
+      } else {
+        setLastRoll(null);
+      }
 
     // 2. Gold spin only triggers when the winner is guaranteed legendary
     const isGoldEligible = winner.rarity === 'legendary';
@@ -508,43 +513,44 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const goldRollValue = deriveRollValue(goldRollHash);
     const triggerGold = (forceGold && isGoldEligible) || (isGoldEligible && goldRollValue < 0.5);
 
-    if (triggerGold) {
-        // --- GOLD SPIN FLOW ---
-        
-        // Stage 1: Spin to Golden Ticket
-        // Note: We use global items pool for buffer if box items are too few, or just box items. 
-        // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
-        const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items, true);
-        setReelItems(ticketReel);
-        
-        animateSpin(4500, () => {
-            // Stage 1 Complete: Activate Gold Mode
-            playSound('gold-mode');
-            setIsGoldMode(true);
-            
-            // Wait a moment to see the ticket
-            setTimeout(() => {
-                // Stage 2: Spin to Actual Winner (using only legendary items in reel)
-                const pool = legendaryPool.length > 0 ? legendaryPool : items;
-                const goldReel = generateReel(winner, pool, true);
-                setReelItems(goldReel);
-                
-                animateSpin(4000, () => {
-                    // Stage 2 Complete
-                    finishSpin(winner);
-                });
-            }, 1000);
-        });
+      if (triggerGold) {
+          // --- GOLD SPIN FLOW ---
+          
+          // Stage 1: Spin to Golden Ticket
+          // Note: We use global items pool for buffer if box items are too few, or just box items. 
+          // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
+          const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items, true);
+          setReelItems(ticketReel);
+          
+          animateSpin(4500, () => {
+              // Stage 1 Complete: Activate Gold Mode
+              playSound('gold-mode');
+              setIsGoldMode(true);
+              
+              // Wait a moment to see the ticket
+              setTimeout(() => {
+                  // Stage 2: Spin to Actual Winner (using only legendary items in reel)
+                  const pool = legendaryPool.length > 0 ? legendaryPool : items;
+                  const goldReel = generateReel(winner, pool, true);
+                  setReelItems(goldReel);
+                  
+                  animateSpin(4000, () => {
+                      // Stage 2 Complete
+                      finishSpin(winner);
+                  });
+              }, 1000);
+          });
 
-    } else {
-        // --- NORMAL SPIN FLOW ---
-        const normalReel = generateReel(winner, items, true);
-        setReelItems(normalReel);
-        
-        animateSpin(5000, () => {
-            finishSpin(winner);
-        });
-    }
+      } else {
+          // --- NORMAL SPIN FLOW ---
+          const normalReel = generateReel(winner, items, true);
+          setReelItems(normalReel);
+          
+          animateSpin(5000, () => {
+              finishSpin(winner);
+          });
+      }
+    });
   };
 
   const handleTryFree = () => {
@@ -577,13 +583,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setSellOfferGenerated(false);
   };
 
+  const sellFlightKey = wonInventoryItem ? `sell:${wonInventoryItem.instanceId}` : '';
+  const isSelling = Boolean(sellFlightKey && isInFlight(sellFlightKey));
+
   const handleSell = async () => {
     playSound('click');
     if (wonItem?.redeemable === false) {
         alert('This item is not redeemable and cannot be sold back.');
         return;
     }
-    if (isDemoSpin || isGeneratingSellOffer) {
+    if (isDemoSpin || isGeneratingSellOffer || isSelling) {
         if (isDemoSpin) {
           setShowWinModal(false);
         }
@@ -599,7 +608,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return;
     }
     if (wonInventoryItem && !rewardResolved) {
-        await sellItem(wonInventoryItem.instanceId);
+        await runWithSingleFlight(`sell:${wonInventoryItem.instanceId}`, async () => {
+          await sellItem(wonInventoryItem.instanceId);
+        });
         setRewardResolved(true);
     }
     if (sellOfferTimerRef.current) {
@@ -743,6 +754,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                  <button 
                     onClick={() => handleSpin()}
                     disabled={isSpinning || isSyncingFair || isRotatingSeed}
+                    aria-busy={isSpinning || isSyncingFair || isRotatingSeed}
                     className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20')}`}
                 >
                     <span>
@@ -769,6 +781,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                    <button
                      onClick={handleTryFree}
                      disabled={isSpinning || isSyncingFair || isRotatingSeed}
+                     aria-busy={isSpinning || isSyncingFair || isRotatingSeed}
                      className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Try for Free</span>
@@ -778,6 +791,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                    <button
                      onClick={() => handleSpin({ isDemo: true, forceGold: true })}
                      disabled={isSpinning || isSyncingFair || isRotatingSeed}
+                     aria-busy={isSpinning || isSyncingFair || isRotatingSeed}
                      className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Test Gold Spin</span>
@@ -1009,19 +1023,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 {wonItem.redeemable !== false && (
                                   <button
                                     onClick={handleSell}
-                                    disabled={isGeneratingSellOffer}
+                                    disabled={isGeneratingSellOffer || isSelling}
+                                    aria-busy={isGeneratingSellOffer || isSelling}
                                     className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-80"
                                   >
                                       <span className="flex flex-col items-center justify-center gap-1">
                                         <span className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-wide text-gray-400">
-                                          {isGeneratingSellOffer && (
+                                          {(isGeneratingSellOffer || isSelling) && (
                                             <span className="h-3 w-3 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
                                           )}
                                           {isGeneratingSellOffer
                                             ? 'Generating offer...'
-                                            : sellOfferGenerated
-                                              ? 'Accept buy back offer'
-                                              : 'Generate buy back offer'}
+                                            : isSelling
+                                              ? 'Processing...'
+                                              : sellOfferGenerated
+                                                ? 'Accept buy back offer'
+                                                : 'Generate buy back offer'}
                                         </span>
                                         {sellOfferGenerated && !isGeneratingSellOffer && (
                                           <CoinAmount
