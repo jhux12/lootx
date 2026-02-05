@@ -89,6 +89,7 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
       tags: Array.isArray(typed.tags) ? typed.tags : [],
       sizes: Array.isArray(typed.sizes) ? typed.sizes.filter((size) => typeof size === 'string') : [],
       size: typeof typed.size === 'string' ? typed.size : undefined,
+      trackingNumber: typeof typed.trackingNumber === 'string' ? typed.trackingNumber : undefined,
       redeemable: typed.redeemable ?? true,
       sellBackRate: Number(typed.sellBackRate ?? 0)
     };
@@ -676,6 +677,7 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     obtainedAt,
     status,
     size: typeof data.size === 'string' ? data.size : undefined,
+    trackingNumber: typeof data.trackingNumber === 'string' ? data.trackingNumber : undefined,
     provenance: data.provenance ?? (data.boxId ? { sourceType: 'case_open', sourceId: data.boxId } : undefined),
     redeemable: data.redeemable ?? true,
     sellBackRate: Number(data.sellBackRate ?? 0),

@@ -890,17 +890,19 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       )}
 
                                       <div className="mt-4 flex flex-col gap-2">
-                                          <button
-                                            onClick={() => handleOpenShippingReview([item.instanceId])}
-                                            disabled={!canShip}
-                                            className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${
-                                              canShip
-                                                ? 'bg-blue-600/20 text-blue-200 border-blue-500/40 hover:bg-blue-600/30'
-                                                : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
-                                            }`}
-                                          >
-                                            Ship item
-                                          </button>
+                                          {inventoryFilter !== 'shipped' && (
+                                            <button
+                                              onClick={() => handleOpenShippingReview([item.instanceId])}
+                                              disabled={!canShip}
+                                              className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${
+                                                canShip
+                                                  ? 'bg-blue-600/20 text-blue-200 border-blue-500/40 hover:bg-blue-600/30'
+                                                  : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
+                                              }`}
+                                            >
+                                              Ship item
+                                            </button>
+                                          )}
                                           {inventoryFilter === 'inventory' && item.redeemable !== false && (
                                               <button
                                                 onClick={() => {
