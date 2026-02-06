@@ -310,6 +310,10 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'BONUSES' };
   }
 
+  if (primary === 'contact') {
+    return { type: 'CONTACT' };
+  }
+
   if (primary === 'leaderboard') {
     return { type: 'LEADERBOARD' };
   }
@@ -337,6 +341,8 @@ const getPathFromView = (view: ViewState): string => {
       return '/inventory';
     case 'BONUSES':
       return '/bonuses';
+    case 'CONTACT':
+      return '/contact';
     case 'ADMIN':
       return '/admin';
     case 'LEADERBOARD':
