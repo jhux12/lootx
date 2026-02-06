@@ -20,6 +20,28 @@ Pullz.gg is a mystery box and case battle experience. The site includes:
 - Site coins used for gameplay.
 `.trim();
 
+const MAX_PAGE_CONTEXT_CHARS = 3000;
+
+const getPageContentSummary = () => {
+  if (typeof document === 'undefined') return '';
+  const sections = [
+    document.querySelector('header'),
+    document.querySelector('main'),
+    document.querySelector('footer')
+  ];
+  const text = sections
+    .map((section) => section?.textContent?.trim())
+    .filter(Boolean)
+    .join('\n\n')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!text) return '';
+  return text.length > MAX_PAGE_CONTEXT_CHARS
+    ? `${text.slice(0, MAX_PAGE_CONTEXT_CHARS)}…`
+    : text;
+};
+
 type ChatVariant = 'sidebar' | 'modal';
 
 interface AIChatBotProps {
@@ -56,7 +78,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
         const chat = ai.chats.create({
             model: 'gemini-2.0-flash',
             config: {
-                systemInstruction: `You are the Pullz Assistant for Pullz.gg. Use ONLY the information in SITE_CONTEXT and the chat history. If the answer is not in SITE_CONTEXT, say you don't have that information on Pullz.gg and suggest checking the site or support. Do not guess or use outside knowledge. Keep answers concise and professional, with a gamer-friendly tone.\n\nSITE_CONTEXT:\n${SITE_CONTEXT}`
+                systemInstruction: `You are the Pullz Assistant for Pullz.gg. Use ONLY the information in SITE_CONTEXT, CURRENT_PAGE_CONTENT, and the chat history. If the answer is not in those sources, say you don't have that information on Pullz.gg and suggest checking the site or support. Do not guess or use outside knowledge. Keep answers concise and professional, with a gamer-friendly tone.\n\nSITE_CONTEXT:\n${SITE_CONTEXT}`
             }
         });
         setChatSession(chat);
@@ -74,7 +96,9 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
       setIsLoading(true);
 
       try {
-          const result = await chatSession.sendMessage({ message: userMsg.text });
+          const pageContent = getPageContentSummary();
+          const prompt = `CURRENT_PAGE_CONTENT:\n${pageContent || 'No readable page content found.'}\n\nUSER_QUESTION:\n${userMsg.text}`;
+          const result = await chatSession.sendMessage({ message: prompt });
           const text = result.text; // Access .text property directly
           
           const aiMsg: Message = { 
@@ -132,7 +156,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
             )}
         </div>
         <div className="px-4 py-2 bg-[#0f1219] border-b border-gray-800 text-[10px] sm:text-xs text-gray-400">
-          Answers are limited to information available on Pullz.gg to prevent misinformation.
+          Answers are limited to Pullz.gg info and the current page content to prevent misinformation.
         </div>
 
         {/* Messages */}
