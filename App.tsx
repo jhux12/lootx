@@ -215,9 +215,10 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
                         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#050811] via-[#050811]/90 to-transparent sm:hidden" />
                         <div className="flex gap-4 overflow-x-auto pb-2 pt-1 snap-x snap-mandatory sm:overflow-visible">
                           {row.boxes.map((box) => (
-                            <div key={box.id} className="min-w-[220px] snap-start sm:min-w-0">
+                            <div key={box.id} className="min-w-[170px] snap-start sm:min-w-0">
                               <BoxCard
                                 box={box}
+                                size="compact"
                                 onSelect={(boxId) => {
                                   playSound('click');
                                   setView({ type: 'CASE_OPENING', boxId });

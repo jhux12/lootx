@@ -9,12 +9,14 @@ type BoxCardProps = {
   box: MysteryBox;
   onSelect: (boxId: string) => void;
   onHover?: () => void;
+  size?: 'default' | 'compact';
 };
 
-export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover }) => {
+export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size = 'default' }) => {
   const boxTags = getBoxTags(box);
   const [isDropping, setIsDropping] = useState(false);
   const clickTimeoutRef = useRef<number | null>(null);
+  const isCompact = size === 'compact';
 
   useEffect(() => {
     return () => {
@@ -36,7 +38,7 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover }) => {
     <div 
       onClick={handleSelect}
       onMouseEnter={onHover}
-      className={`group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-b from-white/5 via-[#111826] to-[#0b101a] p-4 text-center shadow-[0_0_0_1px_rgba(255,255,255,0.02)] transition-all duration-300 sm:p-5 ${isDropping ? 'translate-y-2 scale-[0.98] shadow-[0_18px_40px_-28px_rgba(0,0,0,0.9)]' : 'hover:-translate-y-1 hover:border-white/15 hover:shadow-[0_18px_40px_-28px_rgba(0,0,0,0.8)]'}`}
+      className={`group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-b from-white/5 via-[#111826] to-[#0b101a] text-center shadow-[0_0_0_1px_rgba(255,255,255,0.02)] transition-all duration-300 ${isCompact ? 'p-3 sm:p-5' : 'p-4 sm:p-5'} ${isDropping ? 'translate-y-2 scale-[0.98] shadow-[0_18px_40px_-28px_rgba(0,0,0,0.9)]' : 'hover:-translate-y-1 hover:border-white/15 hover:shadow-[0_18px_40px_-28px_rgba(0,0,0,0.8)]'}`}
     >
       <div
         className="pointer-events-none absolute inset-0"
@@ -47,7 +49,7 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover }) => {
         style={{ boxShadow: `inset 0 0 28px ${box.accentColor}33, 0 10px 28px -20px ${box.accentColor}66` }}
       />
       {/* Image Container with Glow */}
-      <div className="relative mb-4 flex w-full flex-1 items-center justify-center pt-2">
+      <div className={`relative flex w-full flex-1 items-center justify-center pt-2 ${isCompact ? 'mb-3' : 'mb-4'}`}>
           <div 
               className="absolute inset-6 rounded-full blur-3xl opacity-30 transition-opacity duration-300 group-hover:opacity-50"
               style={{ backgroundColor: box.accentColor }}
@@ -55,17 +57,17 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover }) => {
           <img 
               src={box.image} 
               alt={box.name} 
-              className="relative z-10 h-32 w-32 object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-110 sm:h-36 sm:w-36" 
+              className={`relative z-10 object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-110 ${isCompact ? 'h-24 w-24 sm:h-32 sm:w-32' : 'h-32 w-32 sm:h-36 sm:w-36'}`} 
           />
       </div>
 
       {/* Info */}
       <div className="w-full pb-1">
-          <h4 className="text-sm font-semibold text-gray-200 transition-colors duration-300 group-hover:text-white sm:text-base">{box.name}</h4>
+          <h4 className={`font-semibold text-gray-200 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-xs sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
           <CoinAmount
             amount={box.price}
             formatOptions={{ maximumFractionDigits: 0 }}
-            className="mt-1 justify-center text-base font-bold text-white sm:text-lg"
+            className={`mt-1 justify-center font-bold text-white sm:text-lg ${isCompact ? 'text-sm' : 'text-base'}`}
             iconClassName="w-4 h-4"
           />
           <BoxTagPills tags={boxTags} className="mt-2" />
