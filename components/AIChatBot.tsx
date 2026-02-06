@@ -11,6 +11,15 @@ interface Message {
 
 const GEMINI_API_KEY = "AIzaSyCB04Pk1auWCF-hU6Gnmm3gRDxhpZOylwU";
 
+const SITE_CONTEXT = `
+Pullz.gg is a mystery box and case battle experience. The site includes:
+- Mystery boxes with real-world items shown in each case.
+- Case Battles where players open the same cases and the highest total wins.
+- Case Lab for creating custom cases.
+- Provably fair outcomes that can be verified.
+- Site coins used for gameplay.
+`.trim();
+
 type ChatVariant = 'sidebar' | 'modal';
 
 interface AIChatBotProps {
@@ -25,7 +34,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
   variant = 'sidebar' 
 }) => {
   const [messages, setMessages] = useState<Message[]>([
-      { id: 'welcome', role: 'model', text: "Hi! I'm the Pullz Assistant from Pullz.gg. How can I help you today?" }
+      { id: 'welcome', role: 'model', text: "Hi! I'm the Pullz Assistant from Pullz.gg. I can only answer using information available on the site. How can I help you today?" }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +56,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
         const chat = ai.chats.create({
             model: 'gemini-2.0-flash',
             config: {
-                systemInstruction: "You are the Pullz Assistant for Pullz.gg, a premier mystery box and case battle platform. Your tone is professional, helpful, and slightly gamer-centric. \n\nKey Knowledge:\n- Pullz.gg allows users to open mystery boxes containing real-world items (simulated).\n- Case Battles: Users compete against each other. The highest total value wins everything.\n- Case Lab: Users can create custom cases with specific odds.\n- Provably Fair: All outcomes are random and verifiable.\n- Currency: Users use site coins (simulated).\n\nDo not answer questions unrelated to Pullz.gg, gaming, or general support. Keep answers concise."
+                systemInstruction: `You are the Pullz Assistant for Pullz.gg. Use ONLY the information in SITE_CONTEXT and the chat history. If the answer is not in SITE_CONTEXT, say you don't have that information on Pullz.gg and suggest checking the site or support. Do not guess or use outside knowledge. Keep answers concise and professional, with a gamer-friendly tone.\n\nSITE_CONTEXT:\n${SITE_CONTEXT}`
             }
         });
         setChatSession(chat);
@@ -121,6 +130,9 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
                 <X className="w-4 h-4" />
               </button>
             )}
+        </div>
+        <div className="px-4 py-2 bg-[#0f1219] border-b border-gray-800 text-[10px] sm:text-xs text-gray-400">
+          Answers are limited to information available on Pullz.gg to prevent misinformation.
         </div>
 
         {/* Messages */}
