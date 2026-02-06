@@ -267,6 +267,7 @@ export type ViewState =
   | { type: 'PROFILE'; userId?: string }
   | { type: 'INVENTORY' }
   | { type: 'BONUSES' }
+  | { type: 'CONTACT' }
   | { type: 'ADMIN' }
   | { type: 'LEADERBOARD' }
   | { type: 'CUSTOM_CREATOR' }

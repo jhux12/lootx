@@ -30,6 +30,7 @@ import { FinalCTA } from './components/FinalCTA';
 import { SiteFooter } from './components/SiteFooter';
 import { HomeBanners } from './components/HomeBanners';
 import { CaseLabPromo } from './components/CaseLabPromo';
+import { ContactSupport } from './components/ContactSupport';
 import { getBoxTags } from './utils/boxTags';
 import { ShowcaseRow, normalizeShowcaseRows, subscribeHomepageConfig } from './utils/homepageShowcase';
 
@@ -301,6 +302,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {view.type === 'CONTACT' && (
+        <div className="w-full">
+          <ContactSupport />
         </div>
       )}
 

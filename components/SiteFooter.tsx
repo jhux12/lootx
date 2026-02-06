@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrandLockup } from './BrandLockup';
 import { Instagram, Twitter, Youtube } from 'lucide-react';
+import { useGame } from '../context/GameContext';
 
 const socialLinks = [
   { label: 'Twitter', icon: Twitter },
@@ -9,6 +10,8 @@ const socialLinks = [
 ];
 
 export const SiteFooter: React.FC = () => {
+  const { setView } = useGame();
+
   return (
     <footer className="mt-20 border-t border-white/5 bg-[#070a12] py-10 text-sm text-gray-500">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6">
@@ -38,8 +41,13 @@ export const SiteFooter: React.FC = () => {
         <div className="flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
           <button className="transition hover:text-white">Terms</button>
           <button className="transition hover:text-white">Privacy</button>
-          <button className="transition hover:text-white">Support</button>
-          <button className="transition hover:text-white">Contact</button>
+          <button
+            className="transition hover:text-white"
+            onClick={() => setView({ type: 'CONTACT' })}
+            type="button"
+          >
+            Contact
+          </button>
         </div>
         <p className="text-xs text-gray-600">&copy; 2024 LootX. All rights reserved.</p>
       </div>
