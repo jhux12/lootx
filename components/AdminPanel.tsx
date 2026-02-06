@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen } from 'lucide-react';
-import { collection, deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle } from 'lucide-react';
+import { Timestamp, arrayUnion, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
@@ -89,6 +89,38 @@ const LOCK_LABELS: Record<keyof UserLocks, string> = {
     shipments: 'Shipments'
 };
 
+type SupportMessage = {
+    sender: 'user' | 'admin';
+    text: string;
+    timestamp?: Timestamp;
+};
+
+type SupportCase = {
+    id: string;
+    uid: string;
+    email: string;
+    subject: string;
+    status: 'Open' | 'Closed' | string;
+    createdAt?: Timestamp;
+    lastUpdatedAt?: Timestamp;
+    messages?: SupportMessage[];
+};
+
+const escapeText = (value: string) =>
+    value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+const toSafeHtml = (value: string) => escapeText(value).replace(/\n/g, '<br />');
+
+const formatSupportTimestamp = (timestamp?: Timestamp) => {
+    if (!timestamp) return 'Just now';
+    return timestamp.toDate().toLocaleString();
+};
+
 export const AdminPanel: React.FC = () => {
   const {
     user: adminUser,
@@ -116,7 +148,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -177,6 +209,15 @@ export const AdminPanel: React.FC = () => {
   const [adminNoticeSent, setAdminNoticeSent] = useState(false);
   const [shipmentFilter, setShipmentFilter] = useState<'all' | 'processing' | 'shipped'>('processing');
   const [shipmentTracking, setShipmentTracking] = useState<Record<string, string>>({});
+  const [supportCases, setSupportCases] = useState<SupportCase[]>([]);
+  const [expandedSupportCases, setExpandedSupportCases] = useState<Set<string>>(new Set());
+  const [supportReplyDrafts, setSupportReplyDrafts] = useState<Record<string, string>>({});
+  const [supportReplyStatus, setSupportReplyStatus] = useState<Record<string, { sending: boolean; error?: string; success?: string }>>(
+      {}
+  );
+  const [supportStatusUpdates, setSupportStatusUpdates] = useState<Record<string, { sending: boolean; error?: string; success?: string }>>(
+      {}
+  );
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userStatuses, setUserStatuses] = useState<Record<string, UserStatus>>({});
   const [userLocks, setUserLocks] = useState<Record<string, UserLocks>>({});
@@ -219,6 +260,25 @@ export const AdminPanel: React.FC = () => {
   const EV_TOLERANCE = 0.01;
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
+
+  useEffect(() => {
+      const supportQuery = query(
+          collection(db, 'supportCases'),
+          orderBy('lastUpdatedAt', 'desc')
+      );
+      const unsubscribe = onSnapshot(supportQuery, (snapshot) => {
+          const nextCases = snapshot.docs.map((docSnapshot) => {
+              const data = docSnapshot.data() as Omit<SupportCase, 'id'>;
+              return {
+                  id: docSnapshot.id,
+                  ...data
+              };
+          });
+          setSupportCases(nextCases);
+      });
+
+      return () => unsubscribe();
+  }, []);
 
   const handleDeleteUser = async (userId: string) => {
       const targetUser = users.find((profile) => profile.id === userId);
@@ -1630,6 +1690,81 @@ export const AdminPanel: React.FC = () => {
       window.setTimeout(() => setStripeSettingsNotice(false), 3000);
   };
 
+  const toggleSupportCase = (caseId: string) => {
+      setExpandedSupportCases((prev) => {
+          const next = new Set(prev);
+          if (next.has(caseId)) {
+              next.delete(caseId);
+          } else {
+              next.add(caseId);
+          }
+          return next;
+      });
+  };
+
+  const handleSupportReplyChange = (caseId: string, value: string) => {
+      setSupportReplyDrafts((prev) => ({ ...prev, [caseId]: value }));
+  };
+
+  const handleSupportReplySubmit = async (caseItem: SupportCase) => {
+      const replyText = supportReplyDrafts[caseItem.id]?.trim();
+      if (!replyText) {
+          setSupportReplyStatus((prev) => ({
+              ...prev,
+              [caseItem.id]: { sending: false, error: 'Reply text cannot be empty.' }
+          }));
+          return;
+      }
+      setSupportReplyStatus((prev) => ({
+          ...prev,
+          [caseItem.id]: { sending: true }
+      }));
+      try {
+          await updateDoc(doc(db, 'supportCases', caseItem.id), {
+              messages: arrayUnion({
+                  sender: 'admin',
+                  text: replyText,
+                  timestamp: serverTimestamp()
+              }),
+              lastUpdatedAt: serverTimestamp()
+          });
+          setSupportReplyDrafts((prev) => ({ ...prev, [caseItem.id]: '' }));
+          setSupportReplyStatus((prev) => ({
+              ...prev,
+              [caseItem.id]: { sending: false, success: 'Reply sent.' }
+          }));
+      } catch (error) {
+          console.error('Failed to send support reply', error);
+          setSupportReplyStatus((prev) => ({
+              ...prev,
+              [caseItem.id]: { sending: false, error: 'Unable to send reply. Please try again.' }
+          }));
+      }
+  };
+
+  const handleSupportStatusChange = async (caseItem: SupportCase, status: 'Open' | 'Closed') => {
+      setSupportStatusUpdates((prev) => ({
+          ...prev,
+          [caseItem.id]: { sending: true }
+      }));
+      try {
+          await updateDoc(doc(db, 'supportCases', caseItem.id), {
+              status,
+              lastUpdatedAt: serverTimestamp()
+          });
+          setSupportStatusUpdates((prev) => ({
+              ...prev,
+              [caseItem.id]: { sending: false, success: `Marked ${status}.` }
+          }));
+      } catch (error) {
+          console.error('Failed to update support status', error);
+          setSupportStatusUpdates((prev) => ({
+              ...prev,
+              [caseItem.id]: { sending: false, error: 'Unable to update status. Please try again.' }
+          }));
+      }
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto p-6 animate-in fade-in duration-300">
       
@@ -1675,6 +1810,12 @@ export const AdminPanel: React.FC = () => {
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipments' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Truck className="w-4 h-4" /> Shipment Manager
+                   </button>
+                   <button 
+                     onClick={() => setActiveTab('support')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'support' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <MessageCircle className="w-4 h-4" /> Support Inbox
                    </button>
                    <button 
                      onClick={() => setActiveTab('bonuses')}
@@ -1729,6 +1870,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'boxes' && 'Box Manager'}
                     {activeTab === 'packages' && 'Coin Packages'}
                     {activeTab === 'shipments' && 'Shipment Manager'}
+                    {activeTab === 'support' && 'Support Inbox'}
                     {activeTab === 'bonuses' && 'Bonuses & XP'}
                     {activeTab === 'fees' && 'Fees & Shipping'}
                     {activeTab === 'homepage' && 'Homepage Showcase'}
@@ -3366,6 +3508,140 @@ export const AdminPanel: React.FC = () => {
                                                 </button>
                                             </div>
                                         </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* TAB: SUPPORT */}
+            {activeTab === 'support' && (
+                <div className="space-y-6">
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Support Threads</h3>
+                                <p className="text-sm text-gray-400">Review user requests, reply, and manage case status.</p>
+                            </div>
+                            <div className="text-xs text-gray-400">{supportCases.length} total cases</div>
+                        </div>
+                    </div>
+
+                    {supportCases.length === 0 ? (
+                        <div className="bg-[#131720] border border-gray-800 rounded-xl p-8 text-center text-gray-500">
+                            No support cases found yet.
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {supportCases.map((caseItem) => {
+                                const isExpanded = expandedSupportCases.has(caseItem.id);
+                                const replyInfo = supportReplyStatus[caseItem.id];
+                                const statusInfo = supportStatusUpdates[caseItem.id];
+                                const replyValue = supportReplyDrafts[caseItem.id] ?? '';
+                                return (
+                                    <div key={caseItem.id} className="bg-[#131720] border border-gray-800 rounded-xl">
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleSupportCase(caseItem.id)}
+                                            className="flex w-full items-start justify-between gap-4 px-4 py-4 text-left sm:px-6"
+                                        >
+                                            <div className="space-y-1">
+                                                <p
+                                                    className="text-sm font-semibold text-white"
+                                                    dangerouslySetInnerHTML={{ __html: escapeText(caseItem.subject ?? '') }}
+                                                />
+                                                <div className="text-xs text-gray-500">
+                                                    {caseItem.email || 'No email'} • Updated {formatSupportTimestamp(caseItem.lastUpdatedAt)}
+                                                </div>
+                                            </div>
+                                            <span
+                                                className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+                                                    caseItem.status === 'Closed'
+                                                        ? 'bg-gray-500/20 text-gray-300'
+                                                        : 'bg-green-500/20 text-green-300'
+                                                }`}
+                                            >
+                                                {caseItem.status || 'Open'}
+                                            </span>
+                                        </button>
+
+                                        {isExpanded && (
+                                            <div className="border-t border-gray-800 px-4 py-4 sm:px-6">
+                                                <div className="flex flex-col gap-3 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
+                                                    <span>Case ID: {caseItem.id}</span>
+                                                    <span>Created {formatSupportTimestamp(caseItem.createdAt)}</span>
+                                                </div>
+                                                <div className="mt-4 space-y-3">
+                                                    {(caseItem.messages ?? []).map((messageItem, index) => (
+                                                        <div
+                                                            key={`${caseItem.id}-${index}`}
+                                                            className={`rounded-lg border border-gray-800 px-3 py-2 text-xs sm:text-sm ${
+                                                                messageItem.sender === 'admin'
+                                                                    ? 'bg-purple-500/10 text-purple-100'
+                                                                    : 'bg-[#0b0e14] text-gray-200'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center justify-between gap-3 text-[11px] text-gray-400">
+                                                                <span className="uppercase">{messageItem.sender === 'admin' ? 'Admin' : 'User'}</span>
+                                                                <span>{formatSupportTimestamp(messageItem.timestamp)}</span>
+                                                            </div>
+                                                            <p
+                                                                className="mt-2"
+                                                                dangerouslySetInnerHTML={{ __html: toSafeHtml(messageItem.text ?? '') }}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                <div className="mt-4 grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] uppercase font-bold text-gray-500">Reply</label>
+                                                        <Textarea
+                                                            value={replyValue}
+                                                            onChange={(event) => handleSupportReplyChange(caseItem.id, event.target.value)}
+                                                            placeholder="Write a response to the user..."
+                                                            className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 min-h-[120px]"
+                                                            disabled={replyInfo?.sending}
+                                                        />
+                                                        {replyInfo?.error && <p className="text-xs text-red-400">{replyInfo.error}</p>}
+                                                        {replyInfo?.success && <p className="text-xs text-green-400">{replyInfo.success}</p>}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleSupportReplySubmit(caseItem)}
+                                                            disabled={replyInfo?.sending}
+                                                            className="w-full sm:w-auto px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                                                        >
+                                                            {replyInfo?.sending ? 'Sending...' : 'Send reply'}
+                                                        </button>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] uppercase font-bold text-gray-500">Status</label>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleSupportStatusChange(caseItem, 'Open')}
+                                                                disabled={statusInfo?.sending}
+                                                                className="px-3 py-2 rounded-lg text-xs font-bold uppercase bg-green-500/20 text-green-300 hover:bg-green-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                            >
+                                                                Mark Open
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleSupportStatusChange(caseItem, 'Closed')}
+                                                                disabled={statusInfo?.sending}
+                                                                className="px-3 py-2 rounded-lg text-xs font-bold uppercase bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                            >
+                                                                Mark Closed
+                                                            </button>
+                                                        </div>
+                                                        {statusInfo?.error && <p className="text-xs text-red-400">{statusInfo.error}</p>}
+                                                        {statusInfo?.success && <p className="text-xs text-green-400">{statusInfo.success}</p>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
