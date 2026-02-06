@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Loader2, Sparkles } from 'lucide-react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import { Input } from './ui/Input';
+import { buildSiteSearchContext } from '../utils/siteSearch';
 
 interface Message {
   id: string;
@@ -78,7 +79,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
         const chat = ai.chats.create({
             model: 'gemini-2.0-flash',
             config: {
-                systemInstruction: `You are the Pullz Assistant for Pullz.gg. Use ONLY the information in SITE_CONTEXT, CURRENT_PAGE_CONTENT, and the chat history. If the answer is not in those sources, say you don't have that information on Pullz.gg and suggest checking the site or support. Do not guess or use outside knowledge. Keep answers concise and professional, with a gamer-friendly tone.\n\nSITE_CONTEXT:\n${SITE_CONTEXT}`
+                systemInstruction: `You are the Pullz Assistant for Pullz.gg. Use ONLY the information in SITE_CONTEXT, CURRENT_PAGE_CONTENT, SITE_SEARCH_RESULTS, and the chat history. If the answer is not in those sources, say you don't have that information on Pullz.gg and suggest checking the site or support. Do not guess or use outside knowledge. Keep answers concise and professional, with a gamer-friendly tone.\n\nSITE_CONTEXT:\n${SITE_CONTEXT}`
             }
         });
         setChatSession(chat);
@@ -97,7 +98,13 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
 
       try {
           const pageContent = getPageContentSummary();
-          const prompt = `CURRENT_PAGE_CONTENT:\n${pageContent || 'No readable page content found.'}\n\nUSER_QUESTION:\n${userMsg.text}`;
+          const siteSearchContext = buildSiteSearchContext(userMsg.text);
+          const promptParts = [
+            `CURRENT_PAGE_CONTENT:\n${pageContent || 'No readable page content found.'}`,
+            siteSearchContext || 'SITE_SEARCH_RESULTS:\nNo site search matches found.',
+            `USER_QUESTION:\n${userMsg.text}`
+          ];
+          const prompt = promptParts.join('\n\n');
           const result = await chatSession.sendMessage({ message: prompt });
           const text = result.text; // Access .text property directly
           
@@ -156,7 +163,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
             )}
         </div>
         <div className="px-4 py-2 bg-[#0f1219] border-b border-gray-800 text-[10px] sm:text-xs text-gray-400">
-          Answers are limited to Pullz.gg info and the current page content to prevent misinformation.
+          Answers use Pullz.gg info, current page content, and site search results to prevent misinformation.
         </div>
 
         {/* Messages */}
