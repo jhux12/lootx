@@ -1642,73 +1642,73 @@ export const AdminPanel: React.FC = () => {
                <nav className="flex flex-col gap-1">
                    <button 
                      onClick={() => setActiveTab('dashboard')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'dashboard' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <LayoutDashboard className="w-4 h-4" /> Dashboard
                    </button>
                    <button 
                      onClick={() => setActiveTab('items')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'items' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'items' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Package className="w-4 h-4" /> Manage Items
                    </button>
                    <button 
                      onClick={() => setActiveTab('boxes')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'boxes' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'boxes' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <BoxIcon className="w-4 h-4" /> Manage Boxes
                    </button>
                    <button 
                      onClick={() => setActiveTab('packages')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'packages' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'packages' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <PackageCheck className="w-4 h-4" /> Coin Packages
                    </button>
                    <button 
                      onClick={() => setActiveTab('users')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'users' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'users' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Users className="w-4 h-4" /> User Management
                    </button>
                    <button 
                      onClick={() => setActiveTab('shipments')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipments' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipments' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Truck className="w-4 h-4" /> Shipment Manager
                    </button>
                    <button 
                      onClick={() => setActiveTab('bonuses')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'bonuses' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'bonuses' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Sparkles className="w-4 h-4" /> Bonuses
                    </button>
                    <button 
                      onClick={() => setActiveTab('fees')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'fees' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'fees' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <BadgeDollarSign className="w-4 h-4" /> Fees &amp; Shipping
                    </button>
                    <button 
                      onClick={() => setActiveTab('homepage')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'homepage' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'homepage' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <HomeIcon className="w-4 h-4" /> Homepage
                    </button>
                    <button 
                      onClick={() => setActiveTab('boxes-page')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'boxes-page' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'boxes-page' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <PackageOpen className="w-4 h-4" /> Boxes Page
                    </button>
                    <button 
                      onClick={() => setActiveTab('case-lab')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'case-lab' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'case-lab' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Beaker className="w-4 h-4" /> Case Lab
                    </button>
                    <button 
                      onClick={() => setActiveTab('settings')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'settings' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'settings' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Settings className="w-4 h-4" /> Site Settings
                    </button>
@@ -2003,7 +2003,7 @@ export const AdminPanel: React.FC = () => {
                             </div>
                             <p className="mt-2 text-[10px] text-gray-500">If provided, winners receive a random size from this list.</p>
                         </div>
-                        <button onClick={handleSaveItem} className={`px-6 py-2 ${editingItemId ? 'bg-orange-600 hover:bg-orange-500' : 'bg-blue-600 hover:bg-blue-500'} text-white font-bold rounded`}>
+                        <button onClick={handleSaveItem} className={`px-6 py-2 ${editingItemId ? 'bg-orange-600 hover:bg-orange-500' : 'btn-logo-gradient'} text-white font-bold rounded`}>
                             {editingItemId ? 'Update Item' : 'Add Item'}
                         </button>
                     </div>
@@ -2402,7 +2402,7 @@ export const AdminPanel: React.FC = () => {
                         <button
                             onClick={handleSaveBox}
                             disabled={!canSaveBox}
-                            className={`w-full py-3 ${editingBoxId ? 'bg-orange-600 hover:bg-orange-500' : 'bg-blue-600 hover:bg-blue-500'} text-white font-bold rounded shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+                            className={`w-full py-3 ${editingBoxId ? 'bg-orange-600 hover:bg-orange-500' : 'btn-logo-gradient'} text-white font-bold rounded shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                             {editingBoxId ? 'Update Box' : 'Create Box'}
                         </button>
@@ -2474,7 +2474,7 @@ export const AdminPanel: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={openNewPackageModal}
-                                className="w-full sm:w-auto px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-500"
+                                className="w-full sm:w-auto px-4 py-2 rounded-lg btn-logo-gradient text-white text-sm font-semibold"
                             >
                                 New Package
                             </button>
@@ -3260,7 +3260,7 @@ export const AdminPanel: React.FC = () => {
                                         onClick={() => setShipmentFilter(filter)}
                                         className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-colors ${
                                             shipmentFilter === filter
-                                                ? 'bg-blue-600 text-white'
+                                                ? 'btn-logo-gradient text-white'
                                                 : 'bg-[#0b0e14] text-gray-400 hover:text-white hover:bg-gray-800'
                                         }`}
                                     >
@@ -4046,7 +4046,7 @@ export const AdminPanel: React.FC = () => {
                           type="button"
                           onClick={handleSavePackage}
                           disabled={isSavingPackage}
-                          className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-blue-900/20 transition-colors disabled:opacity-50"
+                          className="flex-1 py-2.5 btn-logo-gradient text-white text-sm font-bold rounded-lg shadow-lg transition-colors disabled:opacity-50"
                       >
                           {isSavingPackage ? 'Saving...' : (editingPackageId ? 'Save Changes' : 'Create Package')}
                       </button>

@@ -295,7 +295,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               <p className="text-gray-400 mb-6">Bonuses, rakeback, and affiliate rewards are available to registered players only.</p>
               <button
                 onClick={() => setShowLoginModal(true)}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors"
+                className="px-6 py-3 btn-logo-gradient text-white font-bold rounded-lg transition-colors"
               >
                 Sign in
               </button>
@@ -423,7 +423,7 @@ function App() {
             {/* Mobile Chat Icon */}
             <button
               onClick={() => setShowSupportChat(true)}
-              className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl bg-gradient-to-r from-brand-purple to-blue-600 text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
+              className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl btn-logo-gradient text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
               aria-label="Open support chat"
             >
               <MessageCircle className="w-5 h-5" />

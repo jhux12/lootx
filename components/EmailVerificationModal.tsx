@@ -104,7 +104,7 @@ export const EmailVerificationModal: React.FC = () => {
             type="button"
             onClick={handleRefresh}
             disabled={isRefreshing || isChecking}
-            className="w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 shadow-blue-600/20"
+            className="w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 btn-logo-gradient"
           >
             {isRefreshing ? 'Checking...' : 'I verified my email'}
           </button>

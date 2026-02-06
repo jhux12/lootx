@@ -138,7 +138,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-500 disabled:opacity-60"
+              className="rounded-full btn-logo-gradient px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition disabled:opacity-60"
             >
               {isSaving ? 'Saving...' : 'Save'}
             </button>
