@@ -408,7 +408,7 @@ export const Header: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => setShowTopUpModal(true)}
-                  className="bg-blue-600 hover:bg-blue-500 text-white rounded p-1 transition-colors active:scale-95"
+                  className="btn-logo-gradient text-white rounded p-1 transition-colors active:scale-95"
                   title="Add Coins"
                 >
                   <Plus className="w-3 h-3" />
@@ -634,7 +634,7 @@ export const Header: React.FC = () => {
               ) : (
                 <button 
                   onClick={() => { openAuthModal('login'); setIsMobileMenuOpen(false); }} 
-                  className="flex w-full items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg text-white font-medium justify-center"
+                  className="flex w-full items-center gap-3 px-4 py-3 btn-logo-gradient rounded-lg text-white font-medium justify-center"
                 >
                   Sign In
                 </button>

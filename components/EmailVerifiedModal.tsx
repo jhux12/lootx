@@ -49,7 +49,7 @@ export const EmailVerifiedModal: React.FC = () => {
         <button
           type="button"
           onClick={handleSignIn}
-          className="w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 shadow-blue-600/20"
+          className="w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 btn-logo-gradient"
         >
           <LogIn className="w-4 h-4" />
           Sign in

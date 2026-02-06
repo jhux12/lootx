@@ -264,7 +264,7 @@ export const LoginModal: React.FC = () => {
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 shadow-blue-600/20"
+                    className="w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 btn-logo-gradient"
                 >
                     {isLoading ? 'Linking...' : 'Link Google'}
                 </button>
@@ -372,7 +372,7 @@ export const LoginModal: React.FC = () => {
                 <button 
                     type="submit" 
                     disabled={isLoading}
-                    className={`w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${mode === 'login' ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20' : 'bg-green-600 hover:bg-green-500 shadow-green-600/20'}`}
+                    className={`w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${mode === 'login' ? 'btn-logo-gradient' : 'bg-green-600 hover:bg-green-500 shadow-green-600/20'}`}
                 >
                     {isLoading ? 'Processing...' : (mode === 'login' ? 'Sign In' : 'Create Account')}
                 </button>
