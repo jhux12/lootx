@@ -46,13 +46,6 @@ export const SiteFooter: React.FC = () => {
             onClick={() => setView({ type: 'CONTACT' })}
             type="button"
           >
-            Support
-          </button>
-          <button
-            className="transition hover:text-white"
-            onClick={() => setView({ type: 'CONTACT' })}
-            type="button"
-          >
             Contact
           </button>
         </div>
