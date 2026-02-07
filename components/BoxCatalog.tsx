@@ -150,6 +150,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isTagsOpen, setIsTagsOpen] = useState(false);
   const [isPromoOpen, setIsPromoOpen] = useState(false);
+  const [categoryQueryParam, setCategoryQueryParam] = useState<string | null>(null);
   const hasInitializedRef = useRef(false);
   const hasQueryAppliedRef = useRef(false);
 
@@ -254,7 +255,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
 
   useEffect(() => {
     if (hasQueryAppliedRef.current) return;
-    if (!config.filters.category.enabled) return;
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const categoryParam = params.get('category');
@@ -270,8 +270,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     setActiveTab(preferredTab);
     setSelectedCategory(matchedOption);
     setHasCategorySelection(!isAll);
+    setCategoryQueryParam(isAll ? null : matchedOption);
     hasQueryAppliedRef.current = true;
-  }, [categoryOptions, config.filters.category.enabled, config.tabs, enabledTabs]);
+  }, [categoryOptions, config.tabs, enabledTabs]);
 
   useEffect(() => {
     if (!config.tabs.enabled) return;
@@ -306,6 +307,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     setSelectedTags([]);
     setSelectedCategory(config.filters.category.default ?? 'All');
     setHasCategorySelection(false);
+    setCategoryQueryParam(null);
     setSortOption(config.filters.sort.default ?? sortOptions[0] ?? 'Price High');
   };
 
@@ -317,7 +319,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         tabId: activeTab,
         searchTerm: config.filters.search.enabled ? searchTerm : undefined,
         tags: config.filters.tagChips.enabled ? activeTags : [],
-        category: config.filters.category.enabled ? selectedCategory : undefined,
+        category:
+          config.filters.category.enabled || categoryQueryParam ? selectedCategory : undefined,
         sortKey: config.filters.sort.enabled ? mainSortKey : undefined
       }),
     [
@@ -326,6 +329,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       config.filters.category.enabled,
       config.filters.sort.enabled,
       config.filters.tagChips.enabled,
+      categoryQueryParam,
       displayBoxes,
       mainSortKey,
       searchTerm,
