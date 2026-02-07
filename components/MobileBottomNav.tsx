@@ -37,12 +37,16 @@ export const MobileBottomNav: React.FC = () => {
       window.requestAnimationFrame(() => {
         const currentY = window.scrollY;
         const delta = currentY - lastScrollY.current;
-        const threshold = 12;
+        const hideThreshold = 12;
+        const showThreshold = 2;
 
-        if (Math.abs(delta) >= threshold) {
-          setIsVisible(delta < 0);
-          lastScrollY.current = currentY;
+        if (delta > hideThreshold) {
+          setIsVisible(false);
+        } else if (delta < -showThreshold) {
+          setIsVisible(true);
         }
+
+        lastScrollY.current = currentY;
 
         ticking.current = false;
       });
