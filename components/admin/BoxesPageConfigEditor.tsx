@@ -337,8 +337,8 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
                   const errors = categoryErrors[card.id];
                   return (
                     <div key={card.id} className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between">
+                        <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                           <label className="space-y-2 text-[11px] font-semibold uppercase tracking-widest text-gray-400">
                             Label
                             <Input
@@ -386,7 +386,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
                             )}
                           </label>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:shrink-0">
                           <button
                             type="button"
                             onClick={() => handleCategoryMove(card.id, 'up')}
