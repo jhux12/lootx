@@ -270,7 +270,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     setActiveTab(preferredTab);
     setSelectedCategory(matchedOption);
     setHasCategorySelection(!isAll);
-    setCategoryQueryParam(isAll ? null : matchedOption);
+    setCategoryQueryParam(isAll ? null : normalizedParam);
     hasQueryAppliedRef.current = true;
   }, [categoryOptions, config.tabs, enabledTabs]);
 
@@ -320,7 +320,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         searchTerm: config.filters.search.enabled ? searchTerm : undefined,
         tags: config.filters.tagChips.enabled ? activeTags : [],
         category:
-          config.filters.category.enabled || categoryQueryParam ? selectedCategory : undefined,
+          config.filters.category.enabled || categoryQueryParam
+            ? categoryQueryParam ?? selectedCategory
+            : undefined,
         sortKey: config.filters.sort.enabled ? mainSortKey : undefined
       }),
     [
@@ -507,6 +509,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                     const nextValue = event.target.value;
                     setSelectedCategory(nextValue);
                     setHasCategorySelection(nextValue !== 'All');
+                    setCategoryQueryParam(null);
                     setActiveTab('category');
                   }}
                 >
@@ -704,6 +707,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                     const nextValue = event.target.value;
                     setSelectedCategory(nextValue);
                     setHasCategorySelection(nextValue !== 'All');
+                    setCategoryQueryParam(null);
                     setActiveTab('category');
                   }}
                 >
