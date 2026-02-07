@@ -2180,6 +2180,38 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       setItems(prev => prev.map(i => i.id === id ? { ...itemData, id } : i));
+
+      const boxesToUpdate = boxes
+        .filter((box) => box.items.some((item) => item.id === id))
+        .map((box) => ({
+          ...box,
+          items: box.items.map((boxItem) =>
+            boxItem.id === id
+              ? { ...itemData, id, chance: boxItem.chance }
+              : boxItem
+          )
+        }));
+
+      if (boxesToUpdate.length === 0) {
+        return;
+      }
+
+      setBoxes((prev) =>
+        prev.map((box) => boxesToUpdate.find((updated) => updated.id === box.id) ?? box)
+      );
+
+      await Promise.all(
+        boxesToUpdate.map(async (box) => {
+          const { id: boxId, ...boxDataRaw } = box;
+          if (!boxId) return;
+          const boxData = sanitizeDeep(boxDataRaw);
+          try {
+            await setDoc(doc(db, 'boxes', boxId), boxData, { merge: true });
+          } catch (error) {
+            console.error('Failed to update box with refreshed item data', error);
+          }
+        })
+      );
   };
 
   const deleteItem = async (itemId: string) => {
