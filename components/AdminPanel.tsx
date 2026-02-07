@@ -1724,7 +1724,7 @@ export const AdminPanel: React.FC = () => {
               messages: arrayUnion({
                   sender: 'admin',
                   text: replyText,
-                  timestamp: serverTimestamp()
+                  timestamp: Timestamp.now()
               }),
               lastUpdatedAt: serverTimestamp()
           });
