@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Header } from './components/Header';
 import { LiveTicker } from './components/LiveTicker';
 import { ChatSidebar } from './components/ChatSidebar';
@@ -35,6 +35,7 @@ import { ContactSupport } from './components/ContactSupport';
 import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { getBoxTags } from './utils/boxTags';
+import { useSiteChat } from './hooks/useSiteChat';
 import {
   ShowcaseRow,
   ShowcaseRowBoxes,
@@ -438,7 +439,30 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 };
 
 function App() {
+  return (
+    <SoundProvider>
+      <GameProvider>
+        <PreviewProvider>
+          <AppShell />
+        </PreviewProvider>
+      </GameProvider>
+    </SoundProvider>
+  );
+}
+
+export default App;
+
+const AppShell = () => {
   const [showSupportChat, setShowSupportChat] = useState(false);
+  const { messages } = useSiteChat();
+  const latestMessageAt = messages[messages.length - 1]?.createdAt ?? 0;
+  const [lastSeenAt, setLastSeenAt] = useState(0);
+  const hasUnseenChatMessages = latestMessageAt > lastSeenAt;
+
+  const markChatSeen = useCallback(() => {
+    if (!latestMessageAt) return;
+    setLastSeenAt((prev) => Math.max(prev, latestMessageAt));
+  }, [latestMessageAt]);
 
   const AppLayout = () => {
     const { isAuthenticated } = useGame();
@@ -464,6 +488,8 @@ function App() {
           <ChatSidebar
             isCollapsed={isChatCollapsed}
             onToggle={setIsChatCollapsed}
+            hasUnseenMessages={hasUnseenChatMessages}
+            onChatViewed={markChatSeen}
           />
         </div>
       </div>
@@ -471,25 +497,23 @@ function App() {
   };
 
   return (
-    <SoundProvider>
-      <GameProvider>
-        <PreviewProvider>
-          <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
-            <Header onOpenSupportChat={() => setShowSupportChat(true)} />
-            <AppLayout />
-            <MobileBottomNav />
-            
-            {/* Mobile Chat Modal */}
-            <MobileChatModal 
-              isOpen={showSupportChat} 
-              onClose={() => setShowSupportChat(false)} 
-            />
-            <ResetPasswordModal />
-          </div>
-        </PreviewProvider>
-      </GameProvider>
-    </SoundProvider>
-  );
-}
+    <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+      <Header
+        onOpenSupportChat={() => setShowSupportChat(true)}
+        hasUnseenChatMessages={hasUnseenChatMessages}
+        isChatOpen={showSupportChat}
+      />
+      <AppLayout />
+      <MobileBottomNav />
 
-export default App;
+      {/* Mobile Chat Modal */}
+      <MobileChatModal
+        isOpen={showSupportChat}
+        onClose={() => setShowSupportChat(false)}
+        hasUnseenMessages={hasUnseenChatMessages}
+        onChatViewed={markChatSeen}
+      />
+      <ResetPasswordModal />
+    </div>
+  );
+};
