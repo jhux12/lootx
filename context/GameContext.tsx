@@ -412,6 +412,7 @@ interface GameContextType {
   showEmailVerificationModal: boolean;
   showEmailVerifiedModal: boolean;
   emailVerificationStatus: EmailVerificationStatus;
+  authInitialized: boolean;
   
   // Actions
   login: (email: string, pass: string, remember?: boolean) => Promise<void>;
@@ -743,6 +744,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
   const [showEmailVerifiedModal, setShowEmailVerifiedModal] = useState(false);
   const [emailVerificationStatus, setEmailVerificationStatus] = useState<EmailVerificationStatus>('idle');
+  const [authInitialized, setAuthInitialized] = useState(false);
   const hasInventorySubcollectionRef = useRef(false);
   const pendingSoldIdsRef = useRef<Set<string>>(new Set());
   const pendingBalanceRef = useRef<number | null>(null);
@@ -1038,6 +1040,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setAuthInitialized(true);
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
       const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified);
       if (requiresVerification && !hasPendingEmailVerification()) {
@@ -2547,7 +2550,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       registerSpend,
       generateAffiliateCode,
       updateUserProgress,
-      updateShipmentStatus
+      updateShipmentStatus,
+      authInitialized
     }}>
       {children}
     </GameContext.Provider>
