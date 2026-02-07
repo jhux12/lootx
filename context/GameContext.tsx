@@ -26,6 +26,7 @@ import {
 import { 
   addDoc,
   collection,
+  collectionGroup,
   deleteDoc,
   doc,
   getDoc,
@@ -2212,6 +2213,41 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         })
       );
+
+      setInventory((prev) =>
+        prev.map((inventoryItem) =>
+          inventoryItem.id === id
+            ? { ...inventoryItem, ...itemData, id, instanceId: inventoryItem.instanceId }
+            : inventoryItem
+        )
+      );
+
+      setUsers((prev) =>
+        prev.map((existingUser) => {
+          if (!Array.isArray(existingUser.inventory)) return existingUser;
+          const updatedInventory = existingUser.inventory.map((inventoryItem) =>
+            inventoryItem.id === id
+              ? { ...inventoryItem, ...itemData, id, instanceId: inventoryItem.instanceId }
+              : inventoryItem
+          );
+          return { ...existingUser, inventory: updatedInventory };
+        })
+      );
+
+      try {
+        const inventoryQuery = query(
+          collectionGroup(db, 'inventory'),
+          where('id', '==', id)
+        );
+        const inventorySnapshot = await getDocs(inventoryQuery);
+        await Promise.all(
+          inventorySnapshot.docs.map((docSnapshot) =>
+            setDoc(docSnapshot.ref, itemData, { merge: true })
+          )
+        );
+      } catch (error) {
+        console.error('Failed to update inventory items with refreshed item data', error);
+      }
   };
 
   const deleteItem = async (itemId: string) => {
