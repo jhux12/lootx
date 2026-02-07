@@ -1,22 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { MysteryBox } from '../../types';
 import { usePreview } from '../../context/PreviewContext';
+import { getBoxTags } from '../../utils/boxTags';
 import { Checkbox } from '../ui/Checkbox';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import {
+  BoxesPageCategoryCard,
   BoxesPageConfig,
   BoxesPageCuratedRow,
+  addCategoryCard,
   addCuratedRow,
+  deleteCategoryCard,
   deleteCuratedRow,
   getDefaultBoxesPageConfig,
+  moveCategoryCard,
   moveCuratedBox,
   moveCuratedRow,
   normalizeBoxesPageConfig,
   prepareBoxesPageConfigForSave,
   saveBoxesPageConfig,
   subscribeBoxesPageConfig,
+  updateCategoryCard,
   updateCuratedRow
 } from '../../utils/boxesPageConfig';
 
@@ -40,6 +46,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
   const [saveNotice, setSaveNotice] = useState('');
   const [saveError, setSaveError] = useState('');
   const [boxSearch, setBoxSearch] = useState<Record<string, string>>({});
+  const [categoryValidation, setCategoryValidation] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeBoxesPageConfig((config) => {
@@ -65,11 +72,22 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
   };
 
   const handleSave = async () => {
+    const categoryCards = draft.filters.category.cards ?? [];
+    const hasInvalidCategoryCard = categoryCards.some(
+      (card) => !card.categorySlug.trim() || !card.imageUrl.trim()
+    );
+    if (hasInvalidCategoryCard) {
+      setCategoryValidation(true);
+      setSaveError('Please provide a category slug and image URL for every category card.');
+      return;
+    }
+
     setIsSaving(true);
     setSaveError('');
     try {
       await saveBoxesPageConfig(draft);
       setIsDirty(false);
+      setCategoryValidation(false);
       setSaveNotice('Saved boxes page configuration.');
       window.setTimeout(() => setSaveNotice(''), 3000);
     } catch (error) {
@@ -84,9 +102,30 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
   };
 
   const curatedRows = draft.curatedRows ?? [];
+  const categoryCards = draft.filters.category.cards ?? [];
 
   const updateRow = (rowId: string, patch: Partial<BoxesPageCuratedRow>) => {
     handleDraftChange({ curatedRows: updateCuratedRow(curatedRows, rowId, patch) });
+  };
+
+  const updateCategoryCards = (cards: BoxesPageCategoryCard[]) => {
+    updateFilters({ category: { ...draft.filters.category, cards } });
+  };
+
+  const handleCategoryAdd = () => {
+    updateCategoryCards(addCategoryCard(categoryCards));
+  };
+
+  const handleCategoryUpdate = (cardId: string, patch: Partial<BoxesPageCategoryCard>) => {
+    updateCategoryCards(updateCategoryCard(categoryCards, cardId, patch));
+  };
+
+  const handleCategoryRemove = (cardId: string) => {
+    updateCategoryCards(deleteCategoryCard(categoryCards, cardId));
+  };
+
+  const handleCategoryMove = (cardId: string, direction: 'up' | 'down') => {
+    updateCategoryCards(moveCategoryCard(categoryCards, cardId, direction));
   };
 
   const moveRow = (rowId: string, direction: 'up' | 'down') => {
@@ -122,6 +161,30 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
   const tabOptions = draft.tabs.items;
 
   const selectedDefaultTab = tabOptions.find((tab) => tab.id === draft.tabs.defaultTabId)?.id ?? 'official';
+
+  const categoryOptions = useMemo(() => {
+    const options = new Set<string>();
+    boxes.forEach((box) => {
+      getBoxTags(box).forEach((tag) => options.add(tag));
+    });
+    return Array.from(options).sort((a, b) => a.localeCompare(b));
+  }, [boxes]);
+
+  const categoryErrors = useMemo(
+    () =>
+      categoryCards.reduce<Record<string, { categorySlug: string; imageUrl: string }>>(
+        (acc, card) => {
+          const slugError = card.categorySlug.trim() ? '' : 'Category slug is required.';
+          const imageError = card.imageUrl.trim() ? '' : 'Image URL is required.';
+          if (slugError || imageError) {
+            acc[card.id] = { categorySlug: slugError, imageUrl: imageError };
+          }
+          return acc;
+        },
+        {}
+      ),
+    [categoryCards]
+  );
 
   return (
     <div className="space-y-8">
@@ -250,14 +313,110 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
               onChange={(event) => updateFilters({ category: { ...draft.filters.category, default: event.target.value } })}
               placeholder="Default category"
             />
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Options (comma separated)</label>
-            <Input
-              value={listToString(draft.filters.category.options)}
-              onChange={(event) =>
-                updateFilters({ category: { ...draft.filters.category, options: optionListFromString(event.target.value) } })
-              }
-              placeholder="All, Tech, Pokemon"
-            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Category cards</p>
+                <p className="text-[11px] text-gray-500">{categoryCards.length} cards configured</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCategoryAdd}
+                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-gray-200 transition hover:border-white/30 hover:text-white"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add category
+              </button>
+            </div>
+
+            {categoryCards.length === 0 ? (
+              <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3 text-xs text-gray-400">
+                No category cards yet. Add a category to build the list.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {categoryCards.map((card, cardIndex) => {
+                  const errors = categoryErrors[card.id];
+                  return (
+                    <div key={card.id} className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          <label className="space-y-2 text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                            Label
+                            <Input
+                              value={card.label}
+                              onChange={(event) => handleCategoryUpdate(card.id, { label: event.target.value })}
+                            />
+                          </label>
+                          <label className="space-y-2 text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                            Category slug
+                            <div className="relative">
+                              <Input
+                                list={`boxes-category-options-${card.id}`}
+                                value={card.categorySlug}
+                                onChange={(event) => handleCategoryUpdate(card.id, { categorySlug: event.target.value })}
+                                className={
+                                  categoryValidation && errors?.categorySlug
+                                    ? 'border-red-500/60'
+                                    : undefined
+                                }
+                              />
+                              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
+                              <datalist id={`boxes-category-options-${card.id}`}>
+                                {categoryOptions.map((option) => (
+                                  <option key={option} value={option} />
+                                ))}
+                              </datalist>
+                            </div>
+                            {categoryValidation && errors?.categorySlug && (
+                              <p className="text-[11px] text-red-400">{errors.categorySlug}</p>
+                            )}
+                          </label>
+                          <label className="space-y-2 text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                            Image URL
+                            <Input
+                              value={card.imageUrl}
+                              onChange={(event) => handleCategoryUpdate(card.id, { imageUrl: event.target.value })}
+                              className={
+                                categoryValidation && errors?.imageUrl
+                                  ? 'border-red-500/60'
+                                  : undefined
+                              }
+                            />
+                            {categoryValidation && errors?.imageUrl && (
+                              <p className="text-[11px] text-red-400">{errors.imageUrl}</p>
+                            )}
+                          </label>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleCategoryMove(card.id, 'up')}
+                            disabled={cardIndex === 0}
+                            className="inline-flex items-center gap-1 rounded-lg border border-gray-700 px-2.5 py-1 text-xs font-semibold text-gray-200 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" /> Move up
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCategoryMove(card.id, 'down')}
+                            disabled={cardIndex === categoryCards.length - 1}
+                            className="inline-flex items-center gap-1 rounded-lg border border-gray-700 px-2.5 py-1 text-xs font-semibold text-gray-200 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" /> Move down
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCategoryRemove(card.id)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-red-500/40 px-2.5 py-1 text-xs font-semibold text-red-200 transition hover:border-red-400 hover:text-white"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="space-y-3 rounded-xl border border-white/10 bg-[#0b0f1a] p-4">

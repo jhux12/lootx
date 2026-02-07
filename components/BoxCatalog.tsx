@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronUp, Search, SlidersHorizontal, Sparkles, Tag, X } from 'lucide-react';
+import { ChevronLeft, Layers, Search, Tag, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { usePreview } from '../context/PreviewContext';
@@ -137,7 +137,7 @@ const getDefaultTab = (tabs: BoxesPageConfig['tabs']) => {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
-  const { boxes, setView, isAuthenticated, openAuthModal } = useGame();
+  const { boxes, setView } = useGame();
   const { playSound } = useSound();
   const { previewAsUser } = usePreview();
   const [config, setConfig] = useState<BoxesPageConfig>(getDefaultBoxesPageConfig());
@@ -147,9 +147,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const [hasCategorySelection, setHasCategorySelection] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sortOption, setSortOption] = useState('');
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [isTagsOpen, setIsTagsOpen] = useState(false);
-  const [isPromoOpen, setIsPromoOpen] = useState(false);
   const [categoryQueryParam, setCategoryQueryParam] = useState<string | null>(null);
   const hasInitializedRef = useRef(false);
   const hasQueryAppliedRef = useRef(false);
@@ -180,7 +179,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   }, []);
 
   useEffect(() => {
-    if (isTagsOpen) {
+    if (isTagsOpen || isCategoriesOpen) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
@@ -188,7 +187,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       };
     }
     return undefined;
-  }, [isTagsOpen]);
+  }, [isCategoriesOpen, isTagsOpen]);
 
   const formatDropdownLabel = (label: string) => {
     if (!label) return label;
@@ -220,13 +219,30 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       .map(([tag]) => tag);
   }, [config.filters.tagChips.popularTags, tagStats]);
 
+  const categoryCards = useMemo(() => config.filters.category.cards ?? [], [config.filters.category.cards]);
+
   const categoryOptions = useMemo(() => {
+    const cardOptions = categoryCards
+      .filter((card) => card.categorySlug.trim())
+      .map((card) => ({
+        value: card.categorySlug,
+        label: card.label?.trim() || card.categorySlug
+      }));
+    if (cardOptions.length > 0) {
+      return [{ value: 'All', label: 'All Categories' }, ...cardOptions];
+    }
     const configOptions = config.filters.category.options;
     if (configOptions && configOptions.length > 0) {
-      return ['All', ...configOptions];
+      return [
+        { value: 'All', label: 'All Categories' },
+        ...configOptions.map((option) => ({ value: option, label: option }))
+      ];
     }
-    return ['All', ...tagOptions];
-  }, [config.filters.category.options, tagOptions]);
+    return [
+      { value: 'All', label: 'All Categories' },
+      ...tagOptions.map((option) => ({ value: option, label: option }))
+    ];
+  }, [categoryCards, config.filters.category.options, tagOptions]);
 
   const sortOptions = useMemo(() => {
     const configOptions = config.filters.sort.options;
@@ -262,13 +278,18 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     const normalizedParam = normalizeBoxTag(categoryParam);
     if (!normalizedParam) return;
     const matchedOption =
-      categoryOptions.find((option) => normalizeBoxTag(option) === normalizedParam) ?? categoryParam;
-    const isAll = normalizeBoxTag(matchedOption) === 'all' || matchedOption === 'All';
+      categoryOptions.find(
+        (option) =>
+          normalizeBoxTag(option.value) === normalizedParam ||
+          normalizeBoxTag(option.label) === normalizedParam
+      ) ?? null;
+    const selectedValue = matchedOption?.value ?? categoryParam;
+    const isAll = normalizeBoxTag(selectedValue) === 'all' || selectedValue === 'All';
     const preferredTab = enabledTabs.some((tab) => tab.id === 'official')
       ? 'official'
       : getDefaultTab(config.tabs);
     setActiveTab(preferredTab);
-    setSelectedCategory(matchedOption);
+    setSelectedCategory(isAll ? 'All' : selectedValue);
     setHasCategorySelection(!isAll);
     setCategoryQueryParam(isAll ? null : normalizedParam);
     hasQueryAppliedRef.current = true;
@@ -293,22 +314,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     return selectedTags;
   }, [activeTab, selectedTags]);
 
-  const handleAuthAction = (action: () => void) => {
-    playSound('click');
-    if (!isAuthenticated) {
-      openAuthModal('login');
-      return;
-    }
-    action();
-  };
-
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedTags([]);
-    setSelectedCategory(config.filters.category.default ?? 'All');
-    setHasCategorySelection(false);
+  const handleCategorySelection = (nextValue: string) => {
+    setSelectedCategory(nextValue);
+    const isAll = normalizeBoxTag(nextValue) === 'all' || nextValue === 'All';
+    setHasCategorySelection(!isAll);
     setCategoryQueryParam(null);
-    setSortOption(config.filters.sort.default ?? sortOptions[0] ?? 'Price High');
+    setActiveTab('category');
   };
 
   const mainSortKey = sortLabelToKey(sortOption);
@@ -491,72 +502,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           )}
           <button
             type="button"
-            onClick={() => setIsFiltersOpen((prev) => !prev)}
+            onClick={() => setIsCategoriesOpen(true)}
             className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0f141f] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-300"
           >
-            <SlidersHorizontal className="h-3 w-3" /> Filters
+            <Layers className="h-3 w-3" /> Categories
           </button>
         </div>
-
-        {isFiltersOpen && (
-          <div className="mt-3 space-y-4 rounded-2xl border border-white/10 bg-[#0b0f1a]/90 p-4 shadow-[0_0_18px_rgba(15,23,42,0.6)]">
-            {config.filters.category.enabled && (
-              <div>
-                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">Category</label>
-                <Select
-                  value={selectedCategory}
-                  onChange={(event) => {
-                    const nextValue = event.target.value;
-                    setSelectedCategory(nextValue);
-                    setHasCategorySelection(nextValue !== 'All');
-                    setCategoryQueryParam(null);
-                    setActiveTab('category');
-                  }}
-                >
-                  {categoryOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option === 'All' ? 'All Categories' : formatDropdownLabel(option)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
-            {config.filters.sort.enabled && (
-              <div>
-                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">Sort</label>
-                <Select
-                  value={sortOption}
-                  onChange={(event) => setSortOption(event.target.value)}
-                >
-                  {sortOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {formatDropdownLabel(option)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  clearFilters();
-                }}
-                className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 transition hover:text-white"
-              >
-                Clear filters
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsFiltersOpen(false)}
-                className="rounded-full bg-brand-purple px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="hidden md:flex md:flex-col md:gap-6">
@@ -604,84 +555,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         )}
       </div>
 
-      <div className="md:hidden rounded-2xl border border-white/10 bg-[#0b0f1a]/80 p-4 shadow-[0_0_18px_rgba(15,23,42,0.6)]">
-        <button
-          type="button"
-          onClick={() => setIsPromoOpen((prev) => !prev)}
-          className="flex w-full items-center justify-between text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl border border-brand-purple/40 bg-brand-purple/10 p-2 text-brand-purple">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white">Case Lab</p>
-              <p className="text-xs text-gray-400">Create custom cases and earn more.</p>
-            </div>
-          </div>
-          {isPromoOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
-        </button>
-        {isPromoOpen && (
-          <div className="mt-4 space-y-3">
-            <p className="text-sm text-gray-400">
-              Create cases with items and odds of your choice. Earn up to 70% when your community opens them.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' }))}
-                className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
-              >
-                Create Custom Case
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  setActiveTab('community');
-                }}
-                className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
-              >
-                View Your Cases
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="hidden md:flex rounded-2xl border border-white/10 bg-gradient-to-r from-[#111827]/90 via-[#0f172a]/80 to-[#0b1020]/90 p-5 shadow-[0_0_24px_rgba(124,58,237,0.12)] md:items-center md:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="rounded-xl border border-brand-purple/40 bg-brand-purple/10 p-3 text-brand-purple">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-white">Create Your Own Custom Cases</h3>
-            <p className="text-sm text-gray-400">
-              Create cases with items and odds of your choice. Earn up to 70% when your community opens them.
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' }))}
-            className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
-          >
-            Create Custom Case
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              playSound('click');
-              setActiveTab('community');
-            }}
-            className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
-          >
-            View Your Cases
-          </button>
-        </div>
-      </div>
-
       <div className="hidden md:flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#0b0f1a]/80 p-4 shadow-[0_0_18px_rgba(15,23,42,0.6)]">
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           {config.filters.search.enabled && (
@@ -704,16 +577,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                 <Select
                   value={selectedCategory}
                   onChange={(event) => {
-                    const nextValue = event.target.value;
-                    setSelectedCategory(nextValue);
-                    setHasCategorySelection(nextValue !== 'All');
-                    setCategoryQueryParam(null);
-                    setActiveTab('category');
+                    handleCategorySelection(event.target.value);
                   }}
                 >
                   {categoryOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option === 'All' ? 'All Categories' : formatDropdownLabel(option)}
+                    <option key={option.value} value={option.value}>
+                      {option.label === 'All Categories' ? option.label : formatDropdownLabel(option.label)}
                     </option>
                   ))}
                 </Select>
@@ -796,6 +665,92 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
               onHover={() => playSound('hover')}
             />
           ))}
+        </div>
+      )}
+
+      {isCategoriesOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:hidden">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 pb-10 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-sm font-semibold text-white">Categories</h3>
+              <button
+                type="button"
+                onClick={() => setIsCategoriesOpen(false)}
+                className="text-gray-400 transition hover:text-white"
+                aria-label="Close categories"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-4 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  handleCategorySelection('All');
+                  setIsCategoriesOpen(false);
+                }}
+                className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-[#111827] px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/30 hover:text-white"
+              >
+                All Categories
+              </button>
+              {categoryCards.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {categoryCards.map((card) => (
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        handleCategorySelection(card.categorySlug);
+                        setIsCategoriesOpen(false);
+                      }}
+                      className="group relative h-28 overflow-hidden rounded-xl border border-white/10 bg-[#111827] text-left transition hover:border-white/30"
+                    >
+                      <img
+                        src={card.imageUrl}
+                        alt={card.label || card.categorySlug}
+                        loading="lazy"
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#050811] via-[#050811]/40 to-transparent" />
+                      <span className="relative z-10 block p-3 text-xs font-semibold text-white">
+                        {card.label || card.categorySlug}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {categoryOptions
+                    .filter((option) => normalizeBoxTag(option.value) !== 'all')
+                    .map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          playSound('click');
+                          handleCategorySelection(option.value);
+                          setIsCategoriesOpen(false);
+                        }}
+                        className="rounded-full border border-gray-700 bg-[#0b0e14] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-300 transition hover:border-gray-500 hover:text-white"
+                      >
+                        {formatDropdownLabel(option.label)}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+            <div className="mt-6 flex items-center justify-end pb-4">
+              <button
+                type="button"
+                onClick={() => setIsCategoriesOpen(false)}
+                className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
