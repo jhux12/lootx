@@ -168,7 +168,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       const normalized = normalizeBoxesPageConfig(nextConfig);
       setConfig(normalized);
       if (!hasInitializedRef.current) {
-        const defaultTab = getDefaultTab(normalized.tabs);
+        const categoryTabEnabled = normalized.tabs.items.some(
+          (tab) => tab.id === 'category' && tab.enabled
+        );
+        const defaultTab = normalized.tabs.enabled
+          ? (categoryTabEnabled ? 'category' : getDefaultTab(normalized.tabs))
+          : 'category';
         setActiveTab(defaultTab);
         setSelectedCategory(normalized.filters.category.default ?? 'All');
         setSortOption(normalized.filters.sort.default ?? 'Price High');
@@ -298,7 +303,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   useEffect(() => {
     if (!config.tabs.enabled) return;
     if (!enabledTabs.some((tab) => tab.id === activeTab)) {
-      setActiveTab(getDefaultTab(config.tabs));
+      const categoryTabEnabled = enabledTabs.some((tab) => tab.id === 'category');
+      setActiveTab(categoryTabEnabled ? 'category' : getDefaultTab(config.tabs));
     }
   }, [activeTab, config.tabs, enabledTabs]);
 
