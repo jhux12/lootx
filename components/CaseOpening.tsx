@@ -676,7 +676,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
                 <button 
-                    onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
+                    onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
                     className="flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
                 >
                     <ChevronLeft className="w-4 h-4" /> All cases

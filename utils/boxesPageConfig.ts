@@ -18,7 +18,7 @@ export type BoxesPageTabsConfig = {
 
 export type BoxesPageFiltersConfig = {
   search: { enabled: boolean; placeholder?: string };
-  category: { enabled: boolean; default?: string; options: string[] };
+  category: { enabled: boolean; default?: string; options: string[]; cards: BoxesPageCategoryCard[] };
   sort: { enabled: boolean; default?: string; options: string[] };
   tagChips: { enabled: boolean; label?: string; popularTags: string[] };
   mobile: {
@@ -26,6 +26,13 @@ export type BoxesPageFiltersConfig = {
     collapseTagChips: boolean;
     minimalTopRow: boolean;
   };
+};
+
+export type BoxesPageCategoryCard = {
+  id: string;
+  label: string;
+  categorySlug: string;
+  imageUrl: string;
 };
 
 export type BoxesPageCuratedRow = {
@@ -66,7 +73,7 @@ const DEFAULT_CONFIG: BoxesPageConfig = {
   },
   filters: {
     search: { enabled: true, placeholder: 'Search boxes' },
-    category: { enabled: true, default: 'All', options: [] },
+    category: { enabled: true, default: 'All', options: [], cards: [] },
     sort: { enabled: true, default: 'Popular', options: [] },
     tagChips: { enabled: true, label: 'Popular tags', popularTags: [] },
     mobile: {
@@ -94,6 +101,21 @@ const normalizeOptions = (value: unknown) =>
         .filter(Boolean)
     : [];
 
+const normalizeCategoryCards = (value: unknown) =>
+  Array.isArray(value)
+    ? value
+        .filter((item) => item && typeof item === 'object')
+        .map((item) => {
+          const card = item as BoxesPageCategoryCard;
+          return {
+            id: typeof card.id === 'string' && card.id.trim() ? card.id : generateRowId(),
+            label: typeof card.label === 'string' ? card.label : '',
+            categorySlug: typeof card.categorySlug === 'string' ? card.categorySlug : '',
+            imageUrl: typeof card.imageUrl === 'string' ? card.imageUrl : ''
+          };
+        })
+    : [];
+
 export const getDefaultBoxesPageConfig = (): BoxesPageConfig => ({
   ...DEFAULT_CONFIG,
   tabs: {
@@ -102,7 +124,7 @@ export const getDefaultBoxesPageConfig = (): BoxesPageConfig => ({
   },
   filters: {
     ...DEFAULT_CONFIG.filters,
-    category: { ...DEFAULT_CONFIG.filters.category, options: [] },
+    category: { ...DEFAULT_CONFIG.filters.category, options: [], cards: [] },
     sort: { ...DEFAULT_CONFIG.filters.sort, options: [] },
     tagChips: { ...DEFAULT_CONFIG.filters.tagChips, popularTags: [] },
     mobile: { ...DEFAULT_CONFIG.filters.mobile }
@@ -169,7 +191,8 @@ export const normalizeBoxesPageConfig = (raw: unknown): BoxesPageConfig => {
       category: {
         enabled: source.filters?.category?.enabled ?? defaultConfig.filters.category.enabled,
         default: source.filters?.category?.default ?? defaultConfig.filters.category.default,
-        options: normalizeOptions(source.filters?.category?.options)
+        options: normalizeOptions(source.filters?.category?.options),
+        cards: normalizeCategoryCards(source.filters?.category?.cards)
       },
       sort: {
         enabled: source.filters?.sort?.enabled ?? defaultConfig.filters.sort.enabled,
@@ -233,6 +256,41 @@ export const addCuratedRow = (rows: BoxesPageCuratedRow[]) => {
     filter: {}
   };
   return [...rows, newRow];
+};
+
+export const addCategoryCard = (cards: BoxesPageCategoryCard[]) => [
+  ...cards,
+  {
+    id: generateRowId(),
+    label: '',
+    categorySlug: '',
+    imageUrl: ''
+  }
+];
+
+export const updateCategoryCard = (
+  cards: BoxesPageCategoryCard[],
+  cardId: string,
+  patch: Partial<BoxesPageCategoryCard>
+) =>
+  cards.map((card) => (card.id === cardId ? { ...card, ...patch } : card));
+
+export const deleteCategoryCard = (cards: BoxesPageCategoryCard[], cardId: string) =>
+  cards.filter((card) => card.id !== cardId);
+
+export const moveCategoryCard = (
+  cards: BoxesPageCategoryCard[],
+  cardId: string,
+  direction: 'up' | 'down'
+) => {
+  const index = cards.findIndex((card) => card.id === cardId);
+  if (index === -1) return cards;
+  const nextIndex = direction === 'up' ? index - 1 : index + 1;
+  if (nextIndex < 0 || nextIndex >= cards.length) return cards;
+  const next = [...cards];
+  const [item] = next.splice(index, 1);
+  next.splice(nextIndex, 0, item);
+  return next;
 };
 
 export const updateCuratedRow = (
