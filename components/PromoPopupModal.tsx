@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import popupArt from '../assets/popup.png';
+import pullzLogo from '../assets/pullz-p.PNG';
 
 type PromoPopupModalProps = {
   isOpen: boolean;
@@ -51,7 +52,7 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
             <img src={popupArt} alt="Mystery box promotion" className="h-auto w-full drop-shadow-[0_18px_30px_rgba(20,10,60,0.45)]" />
           </div>
 
-          <div className="relative z-20 overflow-hidden rounded-[24px] bg-gradient-to-b from-[#101a34] via-[#0b1020] to-[#050811] px-6 pb-8 pt-32 sm:px-10 sm:pb-10 sm:pt-36">
+          <div className="relative z-20 overflow-hidden rounded-[24px] bg-gradient-to-b from-[#101a34] via-[#0b1020] to-[#050811] px-6 pb-8 pt-24 sm:px-10 sm:pb-10 sm:pt-28">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-transparent via-[#0b1020]/70 to-[#0b1020]" />
 
             <button
@@ -64,6 +65,10 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
             </button>
 
             <div className="relative z-10 text-center">
+              <div className="mb-4 flex items-center justify-center gap-2">
+                <img src={pullzLogo} alt="Pullz.gg logo" className="h-7 w-7 rounded-full border border-white/10 bg-black/30 p-1" />
+                <span className="text-base font-semibold text-white">Pullz.gg</span>
+              </div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-purple-200/70">Mystery Box Website</p>
               <h2 id="promo-popup-title" className="mt-3 text-3xl font-black text-white sm:text-4xl">
                 Get your free box

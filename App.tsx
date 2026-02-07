@@ -65,13 +65,19 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const [showPromoPopup, setShowPromoPopup] = useState(false);
 
   useEffect(() => {
-    if (!authInitialized || isAuthenticated || view.type !== 'HOME') return;
-    if (typeof window === 'undefined') return;
+    if (!authInitialized || isAuthenticated || view.type !== 'HOME') return undefined;
+    if (typeof window === 'undefined') return undefined;
     const hasSeenPromo = window.sessionStorage.getItem('pullz_seen_promo_popup') === '1';
-    if (!hasSeenPromo) {
+    if (hasSeenPromo) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
       setShowPromoPopup(true);
       window.sessionStorage.setItem('pullz_seen_promo_popup', '1');
-    }
+    }, 7000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [authInitialized, isAuthenticated, view.type]);
 
   const closePromoPopup = () => {
