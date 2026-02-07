@@ -10,7 +10,6 @@ import {
   User, 
   LogOut, 
   X, 
-  Swords, 
   Volume2, 
   VolumeX, 
   ShieldCheck, 
@@ -246,13 +245,6 @@ export const Header: React.FC = () => {
             >
               <PackageOpen className="w-4 h-4" /> Boxes
             </button>
-            <button 
-              onClick={() => handleNav({ type: 'BATTLES' })} 
-              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-medium"
-            >
-              <Swords className="w-4 h-4" /> Battles
-            </button>
-            
             {/* Case Lab - Always Visible */}
             <button 
               onClick={() => handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' }))} 
