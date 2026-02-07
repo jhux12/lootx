@@ -175,7 +175,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           ? (categoryTabEnabled ? 'category' : getDefaultTab(normalized.tabs))
           : 'category';
         setActiveTab(defaultTab);
-        setSelectedCategory(normalized.filters.category.default ?? 'All');
+        setSelectedCategory('All');
         setSortOption(normalized.filters.sort.default ?? 'Price High');
         setSearchTerm('');
         setSelectedTags([]);
@@ -269,7 +269,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
 
   useEffect(() => {
     if (!selectedCategory) {
-      setSelectedCategory(config.filters.category.default ?? 'All');
+      setSelectedCategory('All');
     }
   }, [config.filters.category.default, selectedCategory]);
 
