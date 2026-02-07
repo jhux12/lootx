@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Layers, Search, Tag, X } from 'lucide-react';
+import { ChevronLeft, Search, Tag, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { usePreview } from '../context/PreviewContext';
@@ -147,7 +147,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const [hasCategorySelection, setHasCategorySelection] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sortOption, setSortOption] = useState('');
-  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [isTagsOpen, setIsTagsOpen] = useState(false);
   const [categoryQueryParam, setCategoryQueryParam] = useState<string | null>(null);
   const hasInitializedRef = useRef(false);
@@ -180,7 +179,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   }, []);
 
   useEffect(() => {
-    if (isTagsOpen || isCategoriesOpen) {
+    if (isTagsOpen) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
@@ -188,7 +187,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       };
     }
     return undefined;
-  }, [isCategoriesOpen, isTagsOpen]);
+  }, [isTagsOpen]);
 
   const formatDropdownLabel = (label: string) => {
     if (!label) return label;
@@ -522,15 +521,55 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
               <Tag className="h-3 w-3" /> Tags
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setIsCategoriesOpen(true)}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0f141f] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-300"
-          >
-            <Layers className="h-3 w-3" /> Categories
-          </button>
         </div>
       </div>
+
+      {config.filters.category.enabled && categoryCards.length > 0 && (
+        <div className="md:hidden -mx-4 px-4">
+          <div className="rounded-2xl border border-white/10 bg-[#0b0f1a]/80 p-3 shadow-[0_0_12px_rgba(15,23,42,0.45)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">Categories</p>
+            <div className="relative mt-2">
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
+              <div className="flex gap-2 overflow-x-auto pb-1 pt-1">
+                {categoryCards.map((card) => {
+                  const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(card.categorySlug);
+                  return (
+                    <div
+                      key={card.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleCategoryCardClick(card.categorySlug)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleCategoryCardClick(card.categorySlug);
+                        }
+                      }}
+                      className={`group relative min-w-[120px] overflow-hidden rounded-lg border bg-[#0b0e14] text-left transition ${
+                        isSelected
+                          ? 'border-brand-purple/70 shadow-[0_0_10px_rgba(124,58,237,0.35)]'
+                          : 'border-white/10'
+                      }`}
+                    >
+                      <img
+                        src={card.imageUrl}
+                        alt={card.label || card.categorySlug}
+                        loading="lazy"
+                        className="h-12 w-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#050811] via-[#050811]/40 to-transparent" />
+                      <span className="absolute bottom-1.5 left-2 text-[10px] font-semibold text-white drop-shadow">
+                        {card.label || card.categorySlug}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="hidden md:flex md:flex-col md:gap-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -632,21 +671,28 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
 
         {config.filters.category.enabled && categoryCards.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Categories</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">Categories</p>
             <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-              <div className="flex gap-3 overflow-x-auto pb-2 pt-1">
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
+              <div className="flex gap-2 overflow-x-auto pb-2 pt-1">
                 {categoryCards.map((card) => {
                   const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(card.categorySlug);
                   return (
-                    <button
+                    <div
                       key={card.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleCategoryCardClick(card.categorySlug)}
-                      className={`group relative min-w-[180px] overflow-hidden rounded-2xl border bg-[#0b0e14] text-left transition ${
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleCategoryCardClick(card.categorySlug);
+                        }
+                      }}
+                      className={`group relative min-w-[140px] overflow-hidden rounded-xl border bg-[#0b0e14] text-left transition ${
                         isSelected
-                          ? 'border-brand-purple/70 shadow-[0_0_16px_rgba(124,58,237,0.35)]'
+                          ? 'border-brand-purple/70 shadow-[0_0_12px_rgba(124,58,237,0.35)]'
                           : 'border-white/10 hover:border-white/30'
                       }`}
                     >
@@ -654,13 +700,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                         src={card.imageUrl}
                         alt={card.label || card.categorySlug}
                         loading="lazy"
-                        className="h-24 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="h-16 w-full object-cover transition-transform duration-300 group-hover:scale-105 sm:h-20"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#050811] via-[#050811]/40 to-transparent" />
-                      <span className="absolute bottom-3 left-3 text-xs font-semibold text-white drop-shadow">
+                      <span className="absolute bottom-2 left-2 text-[11px] font-semibold text-white drop-shadow">
                         {card.label || card.categorySlug}
                       </span>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -725,91 +771,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
               onHover={() => playSound('hover')}
             />
           ))}
-        </div>
-      )}
-
-      {isCategoriesOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:hidden">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 pb-10 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-sm font-semibold text-white">Categories</h3>
-              <button
-                type="button"
-                onClick={() => setIsCategoriesOpen(false)}
-                className="text-gray-400 transition hover:text-white"
-                aria-label="Close categories"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="space-y-4 pt-4">
-              <button
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  handleCategorySelection('All');
-                  setIsCategoriesOpen(false);
-                }}
-                className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-[#111827] px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/30 hover:text-white"
-              >
-                All Categories
-              </button>
-              {categoryCards.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {categoryCards.map((card) => (
-                    <button
-                      key={card.id}
-                      type="button"
-                      onClick={() => {
-                        handleCategoryCardClick(card.categorySlug);
-                        setIsCategoriesOpen(false);
-                      }}
-                      className="group relative h-28 overflow-hidden rounded-xl border border-white/10 bg-[#111827] text-left transition hover:border-white/30"
-                    >
-                      <img
-                        src={card.imageUrl}
-                        alt={card.label || card.categorySlug}
-                        loading="lazy"
-                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#050811] via-[#050811]/40 to-transparent" />
-                      <span className="relative z-10 block p-3 text-xs font-semibold text-white">
-                        {card.label || card.categorySlug}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {categoryOptions
-                    .filter((option) => normalizeBoxTag(option.value) !== 'all')
-                    .map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => {
-                          playSound('click');
-                          handleCategorySelection(option.value);
-                          setIsCategoriesOpen(false);
-                        }}
-                        className="rounded-full border border-gray-700 bg-[#0b0e14] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-300 transition hover:border-gray-500 hover:text-white"
-                      >
-                        {formatDropdownLabel(option.label)}
-                      </button>
-                    ))}
-                </div>
-              )}
-            </div>
-            <div className="mt-6 flex items-center justify-end pb-4">
-              <button
-                type="button"
-                onClick={() => setIsCategoriesOpen(false)}
-                className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
-              >
-                Done
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
