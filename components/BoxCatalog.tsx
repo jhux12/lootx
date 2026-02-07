@@ -334,8 +334,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
 
   const handleCategoryCardClick = (categorySlug: string) => {
     playSound('click');
-    handleCategorySelection(categorySlug);
     const normalizedSlug = normalizeBoxTag(categorySlug);
+    const normalizedSelected = normalizeBoxTag(selectedCategory);
+    const isToggleOff = normalizedSelected && normalizedSelected === normalizedSlug;
+    handleCategorySelection(isToggleOff ? 'All' : categorySlug);
+    if (isToggleOff) return;
     window.setTimeout(() => {
       const target = curatedRowRefs.current[normalizedSlug];
       if (target) {
