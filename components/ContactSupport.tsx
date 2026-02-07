@@ -72,18 +72,23 @@ export const ContactSupport: React.FC = () => {
 
     const supportQuery = query(
       collection(db, 'supportCases'),
-      where('uid', '==', currentUser.uid),
-      orderBy('lastUpdatedAt', 'desc')
+      where('uid', '==', currentUser.uid)
     );
 
     const unsubscribe = onSnapshot(supportQuery, (snapshot) => {
-      const nextCases = snapshot.docs.map((docSnapshot) => {
-        const data = docSnapshot.data() as Omit<SupportCase, 'id'>;
-        return {
-          id: docSnapshot.id,
-          ...data
-        };
-      });
+      const nextCases = snapshot.docs
+        .map((docSnapshot) => {
+          const data = docSnapshot.data() as Omit<SupportCase, 'id'>;
+          return {
+            id: docSnapshot.id,
+            ...data
+          };
+        })
+        .sort((a, b) => {
+          const aTime = a.lastUpdatedAt?.toMillis() ?? a.createdAt?.toMillis() ?? 0;
+          const bTime = b.lastUpdatedAt?.toMillis() ?? b.createdAt?.toMillis() ?? 0;
+          return bTime - aTime;
+        });
       setSupportCases(nextCases);
     });
 
@@ -132,7 +137,7 @@ export const ContactSupport: React.FC = () => {
           {
             sender: 'user',
             text: trimmedMessage,
-            timestamp: serverTimestamp()
+            timestamp: Timestamp.now()
           }
         ]
       });
@@ -178,7 +183,7 @@ export const ContactSupport: React.FC = () => {
         messages: arrayUnion({
           sender: 'user',
           text: replyText,
-          timestamp: serverTimestamp()
+          timestamp: Timestamp.now()
         }),
         lastUpdatedAt: serverTimestamp()
       });
