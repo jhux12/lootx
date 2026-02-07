@@ -10,15 +10,18 @@ import { Input } from './ui/Input';
 type ChatSidebarProps = {
   isCollapsed: boolean;
   onToggle: (nextValue: boolean) => void;
+  hasUnseenMessages: boolean;
+  onChatViewed: () => void;
 };
 
-export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isCollapsed, onToggle }) => {
+export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isCollapsed, onToggle, hasUnseenMessages, onChatViewed }) => {
   const [activeTab, setActiveTab] = useState<'chat' | 'support' | 'users'>('chat');
   const [messageText, setMessageText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playSound } = useSound();
   const { isAuthenticated, setView } = useGame();
   const { messages, sendMessage, isSending, notice, isChatDisabled, warningsRemaining } = useSiteChat();
+  const isChatVisible = !isCollapsed && activeTab === 'chat';
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -26,6 +29,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isCollapsed, onToggle 
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages.length]);
+
+  useEffect(() => {
+    if (!isChatVisible || messages.length === 0) return;
+    onChatViewed();
+  }, [isChatVisible, messages.length, onChatViewed]);
 
   const handleSend = async () => {
     if (!messageText.trim() || isSending) return;
@@ -39,13 +47,16 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isCollapsed, onToggle 
     setView({ type: 'PROFILE', userId });
   };
 
-  const TabButton: React.FC<{ id: 'chat' | 'support' | 'users'; icon: React.ReactNode; label: string }> = ({ id, icon, label }) => (
+  const TabButton: React.FC<{ id: 'chat' | 'support' | 'users'; icon: React.ReactNode; label: string; showBadge?: boolean }> = ({ id, icon, label, showBadge }) => (
     <button
       onClick={() => { setActiveTab(id); playSound('click'); }}
-      className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors ${activeTab === id ? 'text-white border-brand-purple' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+      className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors ${activeTab === id ? 'text-white border-brand-purple' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
     >
       {icon}
       {label}
+      {showBadge && (
+        <span className="absolute right-3 top-2 h-2 w-2 rounded-full bg-brand-purple shadow-[0_0_8px_rgba(124,58,237,0.9)]" />
+      )}
     </button>
   );
 
@@ -85,10 +96,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isCollapsed, onToggle 
                 playSound('click');
                 onToggle(false);
               }}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:border-white/30 hover:text-white"
+              className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:border-white/30 hover:text-white"
               aria-label="Open chat sidebar"
             >
               <MessageSquare className="h-5 w-5" />
+              {hasUnseenMessages && (
+                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-brand-purple shadow-[0_0_10px_rgba(124,58,237,0.9)]" />
+              )}
             </button>
           </div>
         ) : (
@@ -105,7 +119,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isCollapsed, onToggle 
 
             {/* Tabs */}
             <div className="grid grid-cols-3 border-b border-white/10 bg-[#0c1019]">
-              <TabButton id="chat" icon={<MessageSquare className="w-3 h-3" />} label="Chat" />
+              <TabButton id="chat" icon={<MessageSquare className="w-3 h-3" />} label="Chat" showBadge={hasUnseenMessages && activeTab !== 'chat'} />
               <TabButton id="support" icon={<Bot className="w-3 h-3" />} label="Support" />
               <TabButton id="users" icon={<Users className="w-3 h-3" />} label="Users" />
             </div>

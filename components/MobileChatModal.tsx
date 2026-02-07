@@ -12,9 +12,11 @@ type MobileChatTab = 'chat' | 'support';
 interface MobileChatModalProps {
   isOpen: boolean;
   onClose: () => void;
+  hasUnseenMessages: boolean;
+  onChatViewed: () => void;
 }
 
-export const MobileChatModal: React.FC<MobileChatModalProps> = ({ isOpen, onClose }) => {
+export const MobileChatModal: React.FC<MobileChatModalProps> = ({ isOpen, onClose, hasUnseenMessages, onChatViewed }) => {
   const [activeTab, setActiveTab] = useState<MobileChatTab>('chat');
   const [messageText, setMessageText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -27,6 +29,11 @@ export const MobileChatModal: React.FC<MobileChatModalProps> = ({ isOpen, onClos
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [activeTab, messages.length]);
+
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'chat' || messages.length === 0) return;
+    onChatViewed();
+  }, [isOpen, activeTab, messages.length, onChatViewed]);
 
   const handleSend = async () => {
     if (!messageText.trim() || isSending) return;
@@ -59,9 +66,12 @@ export const MobileChatModal: React.FC<MobileChatModalProps> = ({ isOpen, onClos
         <div className="grid grid-cols-2 border-b border-gray-800">
           <button
             onClick={() => { setActiveTab('chat'); playSound('click'); }}
-            className={`flex items-center justify-center gap-2 py-2 text-sm font-semibold transition-colors ${activeTab === 'chat' ? 'text-white border-b-2 border-brand-purple' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`relative flex items-center justify-center gap-2 py-2 text-sm font-semibold transition-colors ${activeTab === 'chat' ? 'text-white border-b-2 border-brand-purple' : 'text-gray-500 hover:text-gray-300'}`}
           >
             <Users className="w-4 h-4" /> Site Chat
+            {hasUnseenMessages && activeTab !== 'chat' && (
+              <span className="absolute right-4 top-2 h-2 w-2 rounded-full bg-brand-purple shadow-[0_0_8px_rgba(124,58,237,0.9)]" />
+            )}
           </button>
           <button
             onClick={() => { setActiveTab('support'); playSound('click'); }}

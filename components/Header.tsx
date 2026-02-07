@@ -24,9 +24,11 @@ import { BrandLockup } from './BrandLockup';
 
 type HeaderProps = {
   onOpenSupportChat: () => void;
+  hasUnseenChatMessages: boolean;
+  isChatOpen: boolean;
 };
 
-export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChatMessages, isChatOpen }) => {
   const {
     user,
     balance,
@@ -452,7 +454,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat }) => {
                   onClick={onOpenSupportChat}
                   aria-label="Open support chat"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <span className="relative flex">
+                    <MessageCircle className="w-4 h-4" />
+                    {hasUnseenChatMessages && !isChatOpen && (
+                      <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-brand-purple shadow-[0_0_10px_rgba(124,58,237,0.9)]" />
+                    )}
+                  </span>
                 </button>
                 <div className="flex items-center gap-2 md:hidden">
                   <img 
