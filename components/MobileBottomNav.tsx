@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FlaskConical, Gift, Home, PackageOpen, Swords, Trophy } from 'lucide-react';
+import { FlaskConical, Gift, Home, PackageOpen, Trophy } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
 type NavItem = {
-  id: 'HOME' | 'BOXES' | 'BATTLES' | 'CUSTOM_CREATOR' | 'LEADERBOARD' | 'BONUSES';
+  id: 'HOME' | 'BOXES' | 'CUSTOM_CREATOR' | 'LEADERBOARD' | 'BONUSES';
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   requiresAuth?: boolean;
@@ -13,7 +13,6 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { id: 'HOME', label: 'Home', icon: Home },
   { id: 'BOXES', label: 'Boxes', icon: PackageOpen },
-  { id: 'BATTLES', label: 'Battles', icon: Swords },
   { id: 'CUSTOM_CREATOR', label: 'Case Lab', icon: FlaskConical, requiresAuth: true },
   { id: 'LEADERBOARD', label: 'Leaderboard', icon: Trophy },
   { id: 'BONUSES', label: 'Bonuses', icon: Gift, requiresAuth: true }
@@ -85,7 +84,7 @@ export const MobileBottomNav: React.FC = () => {
       style={{ bottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
       aria-label="Primary navigation"
     >
-      <nav className="grid grid-cols-6 gap-1">
+      <nav className="grid grid-cols-5 gap-1">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeId === item.id;
