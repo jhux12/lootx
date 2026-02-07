@@ -284,6 +284,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat }) => {
 
         {/* User Area */}
         <div className="flex items-center gap-3 md:gap-4">
+          <button
+            onClick={toggleMute}
+            className="text-gray-500 hover:text-white transition-colors"
+            aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
+          >
+            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
           {isAuthenticated ? (
             <>
               <div
@@ -313,13 +320,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat }) => {
                   title="Add Coins"
                 >
                   <Plus className="w-3 h-3" />
-                </button>
-                <button
-                  onClick={toggleMute}
-                  className="ml-2 text-gray-500 hover:text-white transition-colors"
-                  aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
-                >
-                  {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </button>
               </div>
 
