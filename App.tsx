@@ -31,6 +31,7 @@ import { SiteFooter } from './components/SiteFooter';
 import { HomeBanners } from './components/HomeBanners';
 import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
+import { PromoPopupModal } from './components/PromoPopupModal';
 import { getBoxTags } from './utils/boxTags';
 import { ShowcaseRow, normalizeShowcaseRows, subscribeHomepageConfig } from './utils/homepageShowcase';
 
@@ -58,9 +59,30 @@ type MainContentProps = {
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
-  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes } = useGame();
+  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal, authInitialized } = useGame();
   const { playSound } = useSound();
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
+  const [showPromoPopup, setShowPromoPopup] = useState(false);
+
+  useEffect(() => {
+    if (!authInitialized || isAuthenticated || view.type !== 'HOME') return undefined;
+    if (typeof window === 'undefined') return undefined;
+    const hasSeenPromo = window.sessionStorage.getItem('pullz_seen_promo_popup') === '1';
+    if (hasSeenPromo) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setShowPromoPopup(true);
+      window.sessionStorage.setItem('pullz_seen_promo_popup', '1');
+    }, 7000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [authInitialized, isAuthenticated, view.type]);
+
+  const closePromoPopup = () => {
+    setShowPromoPopup(false);
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -381,6 +403,20 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {showEmailVerificationModal && <EmailVerificationModal />}
       {showEmailVerifiedModal && <EmailVerifiedModal />}
       {showTopUpModal && <TopUpModal />}
+      <PromoPopupModal
+        isOpen={showPromoPopup}
+        onClose={closePromoPopup}
+        onSignUp={() => {
+          playSound('click');
+          closePromoPopup();
+          openAuthModal('register');
+        }}
+        onSignIn={() => {
+          playSound('click');
+          closePromoPopup();
+          openAuthModal('login');
+        }}
+      />
 
       <SiteFooter />
     </main>
