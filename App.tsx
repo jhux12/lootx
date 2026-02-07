@@ -21,7 +21,7 @@ import { TopUpModal } from './components/TopUpModal';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
-import { ShieldAlert, MessageCircle, Swords } from 'lucide-react';
+import { ShieldAlert, Swords } from 'lucide-react';
 import { MobileChatModal } from './components/MobileChatModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { HowItWorks } from './components/HowItWorks';
@@ -462,20 +462,10 @@ function App() {
       <GameProvider>
         <PreviewProvider>
           <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
-            <Header />
+            <Header onOpenSupportChat={() => setShowSupportChat(true)} />
             <AppLayout />
             <MobileBottomNav />
             
-            {/* Mobile Chat Icon */}
-            <button
-              onClick={() => setShowSupportChat(true)}
-              className="fixed right-5 z-50 p-4 rounded-full shadow-2xl btn-logo-gradient text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
-              style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}
-              aria-label="Open support chat"
-            >
-              <MessageCircle className="w-5 h-5" />
-            </button>
-
             {/* Mobile Chat Modal */}
             <MobileChatModal 
               isOpen={showSupportChat} 

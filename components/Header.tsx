@@ -12,6 +12,7 @@ import {
   X, 
   Volume2, 
   VolumeX, 
+  MessageCircle,
   ShieldCheck, 
   FlaskConical, 
   PackageOpen
@@ -21,7 +22,11 @@ import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
 
-export const Header: React.FC = () => {
+type HeaderProps = {
+  onOpenSupportChat: () => void;
+};
+
+export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat }) => {
   const {
     user,
     balance,
@@ -279,11 +284,13 @@ export const Header: React.FC = () => {
 
         {/* User Area */}
         <div className="flex items-center gap-3 md:gap-4">
-          {/* Sound Toggle */}
-          <button onClick={toggleMute} className="text-gray-500 hover:text-white transition-colors">
-            {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          <button
+            onClick={toggleMute}
+            className="text-gray-500 hover:text-white transition-colors"
+            aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
+          >
+            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
-
           {isAuthenticated ? (
             <>
               <div
@@ -440,6 +447,13 @@ export const Header: React.FC = () => {
                     </>
                   )}
                 </div>
+                <button
+                  className="md:hidden hover:text-white transition-colors p-2 rounded-lg hover:bg-[#11141d]"
+                  onClick={onOpenSupportChat}
+                  aria-label="Open support chat"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                </button>
                 <div className="flex items-center gap-2 md:hidden">
                   <img 
                     src={user.avatar} 
