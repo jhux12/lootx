@@ -6,6 +6,7 @@ import { Hero } from './components/Hero';
 import { BoxGrid } from './components/BoxGrid';
 import { BoxCard } from './components/BoxCard';
 import { BoxRow } from './components/BoxRow';
+import { CategoryRow } from './components/CategoryRow';
 import { BoxCatalog } from './components/BoxCatalog';
 import { CaseOpening } from './components/CaseOpening';
 import { Profile } from './components/Profile';
@@ -34,7 +35,13 @@ import { ContactSupport } from './components/ContactSupport';
 import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { getBoxTags } from './utils/boxTags';
-import { ShowcaseRow, normalizeShowcaseRows, subscribeHomepageConfig } from './utils/homepageShowcase';
+import {
+  ShowcaseRow,
+  ShowcaseRowBoxes,
+  ShowcaseRowCategories,
+  normalizeShowcaseRows,
+  subscribeHomepageConfig
+} from './utils/homepageShowcase';
 
 type HomeRowConfig = {
   id: string;
@@ -135,14 +142,17 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     if (!showcaseRows) return null;
     const boxMap = new Map(baseHomeBoxes.map((box) => [box.id, box]));
     return showcaseRows.map((row) => {
-      const rowBoxes = (row.boxIds ?? [])
+      if (row.type === 'categories') {
+        return row;
+      }
+      const rowBoxes = row.boxIds
         .map((id) => boxMap.get(id))
         .filter((box): box is typeof baseHomeBoxes[number] => Boolean(box));
       return {
         ...row,
         boxes: rowBoxes
       };
-    });
+    }) as Array<ShowcaseRowCategories | (ShowcaseRowBoxes & { boxes: typeof baseHomeBoxes })>;
   }, [baseHomeBoxes, showcaseRows]);
 
   const gridCols = {
@@ -207,6 +217,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           {showcaseRowsWithBoxes && showcaseRowsWithBoxes.length > 0 ? (
             <div className="space-y-12">
               {showcaseRowsWithBoxes.map((row) => {
+                if (row.type === 'categories') {
+                  return <CategoryRow key={row.id} row={row} />;
+                }
                 if (row.boxes.length === 0) return null;
                 const mobileColumns = clampGrid(row.maxMobile, 2);
                 const desktopColumns = clampGrid(row.maxDesktop, 4);
