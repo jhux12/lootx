@@ -177,6 +177,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         setActiveTab(defaultTab);
         setSelectedCategory(normalized.filters.category.default ?? 'All');
         setSortOption(normalized.filters.sort.default ?? 'Price High');
+        setSearchTerm('');
+        setSelectedTags([]);
+        setHasCategorySelection(false);
+        setCategoryQueryParam(null);
         hasInitializedRef.current = true;
       }
     });
