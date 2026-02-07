@@ -9,7 +9,6 @@ import {
   ChevronDown, 
   User, 
   LogOut, 
-  Menu, 
   X, 
   Swords, 
   Volume2, 
@@ -37,7 +36,6 @@ export const Header: React.FC = () => {
     clearNotifications
   } = useGame();
   const { muted, toggleMute, playSound } = useSound();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [lootRevealActive, setLootRevealActive] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [balancePulse, setBalancePulse] = useState<'up' | 'down' | null>(null);
@@ -228,99 +226,10 @@ export const Header: React.FC = () => {
           animation: balance-sparkle 1.2s ease-out;
         }
 
-        .mobile-menu-button {
-          position: relative;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: transparent;
-          transition: background-color 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
-            border-color 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-
-        .mobile-menu-button:hover {
-          background-color: rgba(255, 255, 255, 0.04);
-          border-color: rgba(255, 255, 255, 0.16);
-        }
-
-        .mobile-menu-icon {
-          width: 22px;
-          height: 16px;
-          position: relative;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .mobile-menu-line {
-          position: absolute;
-          left: 0;
-          right: 0;
-          height: 2px;
-          border-radius: 999px;
-          background-color: rgba(248, 250, 252, 0.95);
-          transform-origin: center;
-          transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
-            opacity 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
-            box-shadow 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-
-        .mobile-menu-line-top {
-          transform: translateY(-6px);
-        }
-
-        .mobile-menu-line-middle {
-          transform: translateY(0);
-        }
-
-        .mobile-menu-line-bottom {
-          transform: translateY(6px);
-        }
-
-        .mobile-menu-button-open .mobile-menu-line-top {
-          transform: translateY(0) rotate(45deg);
-          box-shadow: 0 0 8px rgba(34, 211, 238, 0.55);
-        }
-
-        .mobile-menu-button-open .mobile-menu-line-middle {
-          opacity: 0;
-          transform: translateY(0) scaleX(0.6);
-        }
-
-        .mobile-menu-button-open .mobile-menu-line-bottom {
-          transform: translateY(0) rotate(-45deg);
-          box-shadow: 0 0 8px rgba(168, 85, 247, 0.55);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .mobile-menu-line,
-          .mobile-menu-button {
-            transition: none;
-          }
-        }
       `}</style>
 
       <header className="fixed top-0 left-0 right-0 z-50 w-full flex items-center justify-between px-4 md:px-6 py-3 min-h-[72px] md:min-h-[80px] lg:min-h-[88px] bg-[#080b14]/95 border-b border-gray-800/50 backdrop-blur">
         <div className="flex items-center gap-4 lg:gap-10">
-          
-          {/* Mobile Menu Button */}
-          <button
-            className={`mobile-menu-button lg:hidden ${isMobileMenuOpen ? 'mobile-menu-button-open' : ''}`}
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label="Toggle mobile menu"
-            aria-expanded={isMobileMenuOpen}
-          >
-            <span className="mobile-menu-icon" aria-hidden="true">
-              <span className="mobile-menu-line mobile-menu-line-top" />
-              <span className="mobile-menu-line mobile-menu-line-middle" />
-              <span className="mobile-menu-line mobile-menu-line-bottom" />
-            </span>
-          </button>
-
           {/* Logo */}
           <div
             className="cursor-pointer hover:opacity-90 transition-opacity"
@@ -567,81 +476,6 @@ export const Header: React.FC = () => {
           )}
         </div>
 
-        {/* Mobile Menu Overlay */}
-        {isMobileMenuOpen && (
-          <div className="fixed inset-0 top-[72px] md:top-[80px] bg-[#0b0e14] opacity-100 backdrop-blur-none z-40 lg:hidden flex flex-col animate-in slide-in-from-left-full duration-200">
-            <nav className="flex flex-col gap-2 bg-[#0b0e14] w-full flex-1 px-4 pb-4">
-              <button 
-                onClick={() => { handleNav({ type: 'BOXES' }); setIsMobileMenuOpen(false); }} 
-                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-white font-medium"
-              >
-                <PackageOpen className="w-5 h-5 text-blue-500" /> Boxes
-              </button>
-              <button 
-                onClick={() => { handleNav({ type: 'BATTLES' }); setIsMobileMenuOpen(false); }} 
-                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
-              >
-                <Swords className="w-5 h-5 text-purple-500" /> Battles
-              </button>
-              {/* Case Lab Mobile */}
-              <button 
-                onClick={() => { 
-                  handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' })); 
-                  if (isAuthenticated) setIsMobileMenuOpen(false);
-                }} 
-                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-brand-purple font-medium"
-              >
-                <FlaskConical className="w-5 h-5" /> Case Lab
-              </button>
-              <button 
-                onClick={() => { handleNav({ type: 'LEADERBOARD' }); setIsMobileMenuOpen(false); }} 
-                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
-              >
-                <Trophy className="w-5 h-5 text-yellow-500" /> Leaderboard
-              </button>
-              <button 
-                onClick={() => { handleNav({ type: 'BONUSES' }); setIsMobileMenuOpen(false); }} 
-                className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
-              >
-                <Gift className="w-5 h-5 text-green-500" /> Bonuses
-              </button>
-
-              {user.isAdmin && (
-                <button 
-                  onClick={() => { handleNav({ type: 'ADMIN' }); setIsMobileMenuOpen(false); }} 
-                  className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-red-400 font-medium"
-                >
-                  <ShieldCheck className="w-5 h-5 text-red-500" /> Admin Panel
-                </button>
-              )}
-              <hr className="border-gray-800 my-2" />
-              
-              {isAuthenticated ? (
-                <>
-                  <button 
-                    onClick={() => { handleNav({ type: 'PROFILE' }); setIsMobileMenuOpen(false); }} 
-                    className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-gray-300 font-medium"
-                  >
-                    <User className="w-5 h-5 text-gray-400" /> Profile
-                  </button>
-                  <button 
-                    onClick={() => { logout(); setIsMobileMenuOpen(false); }} 
-                    className="flex w-full items-center gap-3 px-4 py-3 bg-[#131720] rounded-lg text-red-400 font-medium"
-                  >
-                    <LogOut className="w-5 h-5" /> Sign out
-                  </button>
-                </>
-              ) : (
-                <button 
-                  onClick={() => { openAuthModal('login'); setIsMobileMenuOpen(false); }} 
-                  className="flex w-full items-center gap-3 px-4 py-3 btn-logo-gradient rounded-lg text-white font-medium justify-center"
-                >
-                  Sign In
-                </button>
-              )}
-            </nav>
-          </div>
-        )}
       </header>
     </>
   );

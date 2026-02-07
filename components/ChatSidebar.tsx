@@ -53,8 +53,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isCollapsed, onToggle 
     <div
       data-chat-sidebar
       data-collapsed={isCollapsed}
-      className={`sticky top-0 z-40 flex h-[calc(100vh-72px)] flex-col border-l border-white/10 bg-[#0f131c]/90 backdrop-blur md:h-[calc(100vh-80px)] lg:h-[calc(100vh-88px)] transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
-        isCollapsed ? 'w-16' : 'w-full'
+      className={`fixed right-0 top-[72px] z-40 flex h-[calc(100dvh-72px)] flex-col border-l border-white/10 bg-[#0f131c]/90 backdrop-blur md:top-[80px] md:h-[calc(100dvh-80px)] lg:top-[88px] lg:h-[calc(100dvh-88px)] transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] pointer-events-auto ${
+        isCollapsed ? 'w-16' : 'w-[var(--chatw)]'
       }`}
     >
       <div className="flex h-full w-full flex-col">

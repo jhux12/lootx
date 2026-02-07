@@ -32,6 +32,7 @@ import { HomeBanners } from './components/HomeBanners';
 import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
 import { PromoPopupModal } from './components/PromoPopupModal';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { getBoxTags } from './utils/boxTags';
 import { ShowcaseRow, normalizeShowcaseRows, subscribeHomepageConfig } from './utils/homepageShowcase';
 
@@ -199,7 +200,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   );
 
   return (
-    <main className="flex-1 min-w-0 pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+    <main className="flex-1 min-w-0 pb-[90px] sm:pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
       {view.type === 'HOME' && (
         <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
           <Hero />
@@ -463,11 +464,13 @@ function App() {
           <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
             <Header />
             <AppLayout />
+            <MobileBottomNav />
             
             {/* Mobile Chat Icon */}
             <button
               onClick={() => setShowSupportChat(true)}
-              className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 p-4 rounded-full shadow-2xl btn-logo-gradient text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
+              className="fixed right-5 z-50 p-4 rounded-full shadow-2xl btn-logo-gradient text-white flex items-center justify-center border border-white/10 sm:hidden hover:scale-105 active:scale-95 transition-transform"
+              style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}
               aria-label="Open support chat"
             >
               <MessageCircle className="w-5 h-5" />
