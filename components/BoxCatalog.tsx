@@ -152,6 +152,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const [categoryQueryParam, setCategoryQueryParam] = useState<string | null>(null);
   const hasInitializedRef = useRef(false);
   const hasQueryAppliedRef = useRef(false);
+  const curatedRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const displayBoxes = useMemo(
     () => boxes.filter((box) => !box.isDaily),
@@ -322,6 +323,18 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     setActiveTab('category');
   };
 
+  const handleCategoryCardClick = (categorySlug: string) => {
+    playSound('click');
+    handleCategorySelection(categorySlug);
+    const normalizedSlug = normalizeBoxTag(categorySlug);
+    window.setTimeout(() => {
+      const target = curatedRowRefs.current[normalizedSlug];
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 120);
+  };
+
   const mainSortKey = sortLabelToKey(sortOption);
 
   const filteredBoxes = useMemo(
@@ -368,6 +381,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     const maxMobile = clampGrid(row.maxMobile, 2);
     const maxDesktop = clampGrid(row.maxDesktop, 4);
     const gridClass = `grid ${gridCols[1]} gap-4 ${smGridCols[maxMobile]} ${lgGridCols[maxDesktop]}`;
+    const rowCategorySlug = row.filter?.category ? normalizeBoxTag(row.filter.category) : null;
 
     const rowBoxes = row.mode === 'byIds'
       ? (row.boxIds ?? [])
@@ -384,7 +398,15 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     if (rowBoxes.length === 0) return null;
 
     return (
-      <section key={row.id} className="space-y-4">
+      <section
+        key={row.id}
+        ref={(element) => {
+          if (!rowCategorySlug) return;
+          curatedRowRefs.current[rowCategorySlug] = element;
+        }}
+        data-category={rowCategorySlug ?? undefined}
+        className="space-y-4"
+      >
         <div>
           <h3 className="text-lg font-semibold text-white">{row.title}</h3>
           {row.subtitle && <p className="text-sm text-gray-400">{row.subtitle}</p>}
@@ -608,6 +630,44 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           </div>
         </div>
 
+        {config.filters.category.enabled && categoryCards.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Categories</p>
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
+              <div className="flex gap-3 overflow-x-auto pb-2 pt-1">
+                {categoryCards.map((card) => {
+                  const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(card.categorySlug);
+                  return (
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => handleCategoryCardClick(card.categorySlug)}
+                      className={`group relative min-w-[180px] overflow-hidden rounded-2xl border bg-[#0b0e14] text-left transition ${
+                        isSelected
+                          ? 'border-brand-purple/70 shadow-[0_0_16px_rgba(124,58,237,0.35)]'
+                          : 'border-white/10 hover:border-white/30'
+                      }`}
+                    >
+                      <img
+                        src={card.imageUrl}
+                        alt={card.label || card.categorySlug}
+                        loading="lazy"
+                        className="h-24 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#050811] via-[#050811]/40 to-transparent" />
+                      <span className="absolute bottom-3 left-3 text-xs font-semibold text-white drop-shadow">
+                        {card.label || card.categorySlug}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {config.filters.tagChips.enabled && showTagChipsInline && popularTags.length > 0 && (
           <div className="space-y-2 hidden md:block">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
@@ -701,8 +761,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                       key={card.id}
                       type="button"
                       onClick={() => {
-                        playSound('click');
-                        handleCategorySelection(card.categorySlug);
+                        handleCategoryCardClick(card.categorySlug);
                         setIsCategoriesOpen(false);
                       }}
                       className="group relative h-28 overflow-hidden rounded-xl border border-white/10 bg-[#111827] text-left transition hover:border-white/30"
