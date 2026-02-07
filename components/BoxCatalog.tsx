@@ -151,6 +151,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const [isTagsOpen, setIsTagsOpen] = useState(false);
   const [isPromoOpen, setIsPromoOpen] = useState(false);
   const hasInitializedRef = useRef(false);
+  const hasQueryAppliedRef = useRef(false);
 
   const displayBoxes = useMemo(
     () => boxes.filter((box) => !box.isDaily),
@@ -250,6 +251,27 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     () => config.tabs.items.filter((tab) => tab.enabled),
     [config.tabs.items]
   );
+
+  useEffect(() => {
+    if (hasQueryAppliedRef.current) return;
+    if (!config.filters.category.enabled) return;
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const categoryParam = params.get('category');
+    if (!categoryParam) return;
+    const normalizedParam = normalizeBoxTag(categoryParam);
+    if (!normalizedParam) return;
+    const matchedOption =
+      categoryOptions.find((option) => normalizeBoxTag(option) === normalizedParam) ?? categoryParam;
+    const isAll = normalizeBoxTag(matchedOption) === 'all' || matchedOption === 'All';
+    const preferredTab = enabledTabs.some((tab) => tab.id === 'official')
+      ? 'official'
+      : getDefaultTab(config.tabs);
+    setActiveTab(preferredTab);
+    setSelectedCategory(matchedOption);
+    setHasCategorySelection(!isAll);
+    hasQueryAppliedRef.current = true;
+  }, [categoryOptions, config.filters.category.enabled, config.tabs, enabledTabs]);
 
   useEffect(() => {
     if (!config.tabs.enabled) return;
