@@ -8,6 +8,7 @@ interface CoinAmountProps {
   textClassName?: string;
   formatOptions?: Intl.NumberFormatOptions;
   showSign?: boolean;
+  multiplier?: number;
 }
 
 export const CoinAmount: React.FC<CoinAmountProps> = ({
@@ -16,10 +17,11 @@ export const CoinAmount: React.FC<CoinAmountProps> = ({
   iconClassName,
   textClassName,
   formatOptions,
-  showSign = false
+  showSign = false,
+  multiplier = 1
 }) => {
   const absoluteAmount = showSign ? Math.abs(amount) : amount;
-  const coins = absoluteAmount;
+  const coins = absoluteAmount * multiplier;
   const formatted = coins.toLocaleString(undefined, formatOptions ?? { maximumFractionDigits: 0 });
   const sign = showSign ? (amount < 0 ? '-' : '+') : '';
 

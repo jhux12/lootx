@@ -766,6 +766,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           Open for
                           <CoinAmount
                             amount={box!.price}
+                            multiplier={100}
                             formatOptions={{ maximumFractionDigits: 0 }}
                             className="text-white"
                             iconClassName="w-4 h-4"
@@ -997,6 +998,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             <h3 className="text-xl sm:text-2xl font-bold text-white">{wonItem.name}</h3>
                             <CoinAmount
                               amount={wonItem.price}
+                              multiplier={100}
                               formatOptions={{ maximumFractionDigits: 0 }}
                               className="mt-2 text-gray-300 font-semibold justify-center"
                               iconClassName="w-4 h-4"
@@ -1037,6 +1039,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                         {sellOfferGenerated && !isGeneratingSellOffer && !isSellingItem && (
                                           <CoinAmount
                                             amount={getSellBackValue(wonItem.price, sellBackRate)}
+                                            multiplier={100}
                                             formatOptions={{ maximumFractionDigits: 0 }}
                                             className="text-gray-200"
                                             iconClassName="w-4 h-4"
@@ -1098,6 +1101,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             <div className="text-gray-400 text-xs font-medium truncate mb-0.5">{item.name}</div>
                             <CoinAmount
                               amount={item.price}
+                              multiplier={100}
                               formatOptions={{ maximumFractionDigits: 0 }}
                               className="text-white font-bold text-sm"
                               iconClassName="w-3.5 h-3.5"
@@ -1175,6 +1179,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
                         <CoinAmount
                           amount={selectedCaseItem.price}
+                          multiplier={100}
                           formatOptions={{ maximumFractionDigits: 0 }}
                           className="text-base font-semibold text-white"
                           iconClassName="w-4 h-4"

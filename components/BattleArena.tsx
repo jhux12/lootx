@@ -370,6 +370,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
              <div className="text-xs text-gray-500">Battle Cost</div>
              <CoinAmount
                amount={battle.cost}
+               multiplier={100}
                formatOptions={{ maximumFractionDigits: 0 }}
                className="font-bold text-white justify-end"
                iconClassName="w-3.5 h-3.5"
@@ -412,6 +413,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                       <div className="font-bold text-white truncate max-w-[120px]">{player.name}</div>
                       <CoinAmount
                         amount={player.totalWin}
+                        multiplier={100}
                         formatOptions={{ maximumFractionDigits: 0 }}
                         className={`text-sm font-bold ${isWinner ? 'text-yellow-500' : 'text-gray-400'}`}
                         iconClassName="w-3.5 h-3.5"
@@ -447,6 +449,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                                     <div className="text-[10px] text-gray-400 truncate w-full">{roundItems[player.id].name}</div>
                                     <CoinAmount
                                       amount={roundItems[player.id].price}
+                                      multiplier={100}
                                       formatOptions={{ maximumFractionDigits: 0 }}
                                       className="text-sm font-bold text-white justify-center"
                                       iconClassName="w-3.5 h-3.5"
@@ -473,6 +476,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                           <div style={{ color: drop.item.color }}>
                             <CoinAmount
                               amount={drop.item.price}
+                              multiplier={100}
                               formatOptions={{ maximumFractionDigits: 0 }}
                               className="text-xs font-bold"
                               iconClassName="w-3 h-3"

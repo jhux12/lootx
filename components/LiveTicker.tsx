@@ -82,6 +82,7 @@ export const LiveTicker: React.FC = () => {
             </div>
             <CoinAmount
               amount={drop.value}
+              multiplier={100}
               formatOptions={{ maximumFractionDigits: 0 }}
               className="ml-auto text-[11px] font-medium text-emerald-300/80 max-w-[72px] justify-end group-hover:text-emerald-200"
               iconClassName="w-3.5 h-3.5 flex-shrink-0"

@@ -138,6 +138,7 @@ export const BattlesList: React.FC = () => {
                      <div className="text-right">
                          <CoinAmount
                            amount={battle.cost}
+                           multiplier={100}
                            formatOptions={{ maximumFractionDigits: 0 }}
                            className="text-green-500 font-bold justify-end"
                            iconClassName="w-3.5 h-3.5"
@@ -221,6 +222,7 @@ export const BattlesList: React.FC = () => {
                                             <div className="text-[10px] text-gray-400 truncate w-full text-center">{box.name}</div>
                                             <CoinAmount
                                               amount={box.price}
+                                              multiplier={100}
                                               formatOptions={{ maximumFractionDigits: 0 }}
                                               className="text-[10px] text-green-500 font-bold justify-center"
                                               iconClassName="w-3 h-3"
@@ -246,6 +248,7 @@ export const BattlesList: React.FC = () => {
                                     <div className="text-xs text-gray-300 font-medium truncate w-full">{box.name}</div>
                                     <CoinAmount
                                       amount={box.price}
+                                      multiplier={100}
                                       formatOptions={{ maximumFractionDigits: 0 }}
                                       className="text-xs text-green-500 font-bold justify-center"
                                       iconClassName="w-3 h-3"
@@ -262,6 +265,7 @@ export const BattlesList: React.FC = () => {
                         <div className="text-xs text-gray-500">Total Cost</div>
                         <CoinAmount
                           amount={calculateTotalCost()}
+                          multiplier={100}
                           formatOptions={{ maximumFractionDigits: 0 }}
                           className="text-xl font-black text-white"
                           iconClassName="w-4 h-4"
