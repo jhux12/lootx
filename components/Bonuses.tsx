@@ -5,6 +5,7 @@ import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { Input } from './ui/Input';
+import { auth } from '../firebase';
 
 export const Bonuses: React.FC = () => {
   const { 
@@ -30,8 +31,9 @@ export const Bonuses: React.FC = () => {
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const [isClaimingDaily, setIsClaimingDaily] = useState(false);
   const [isApplyingAffiliate, setIsApplyingAffiliate] = useState(false);
-  const [isOfferWallActive, setIsOfferWallActive] = useState(false);
+  const [isLoadingOfferWall, setIsLoadingOfferWall] = useState(false);
   const [isClaimingRakeback, setIsClaimingRakeback] = useState(false);
+  const [cpxUrl, setCpxUrl] = useState<string | null>(null);
 
   // Identify daily box from context
   const dailyBox = boxes.find(b => b.isDaily);
@@ -68,12 +70,50 @@ export const Bonuses: React.FC = () => {
     }
   };
 
-  const handleOfferWall = () => {
-     playSound('click');
-     setOfferMessage('Offer wall is coming soon. Check back for new partners and offers.');
-     setTimeout(() => setOfferMessage(''), 4000);
-     setIsOfferWallActive(true);
-     setTimeout(() => setIsOfferWallActive(false), 800);
+  const handleOfferWall = async () => {
+    playSound('click');
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+    if (isLoadingOfferWall) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      setOfferMessage('Please sign in to access the offer wall.');
+      setTimeout(() => setOfferMessage(''), 4000);
+      return;
+    }
+
+    setIsLoadingOfferWall(true);
+    setOfferMessage('');
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch('/api/cpx-frame-url', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Unable to load offer wall.');
+      }
+      const data = await response.json();
+      if (!data?.url) {
+        throw new Error('Offer wall is unavailable.');
+      }
+      setCpxUrl(data.url);
+    } catch (error) {
+      console.error('Failed to load offer wall', error);
+      setOfferMessage('Unable to load offer wall. Please try again.');
+      setTimeout(() => setOfferMessage(''), 4000);
+    } finally {
+      setIsLoadingOfferWall(false);
+    }
+  };
+
+  const handleCloseOfferWall = () => {
+    playSound('click');
+    setCpxUrl(null);
   };
 
   const handleApplyAffiliateCode = async () => {
@@ -303,16 +343,37 @@ export const Bonuses: React.FC = () => {
                       <span className="text-xs font-bold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded">High Payer</span>
                   </div>
                   <p className="text-xs text-gray-500 mb-4">Complete surveys, install apps, and play games to earn free coins.</p>
-                  <button 
-                    onClick={handleOfferWall} 
-                    disabled={isOfferWallActive}
-                    className="w-full py-2 bg-[#0b0e14] hover:bg-gray-800 border border-gray-700 text-gray-300 font-bold rounded-lg transition-colors text-sm flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-80"
-                  >
-                      {isOfferWallActive && (
-                        <span className="h-4 w-4 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
-                      )}
-                      Coming Soon
-                  </button>
+                  {!cpxUrl ? (
+                    <button 
+                      onClick={handleOfferWall}
+                      disabled={isLoadingOfferWall}
+                      className="w-full py-2 bg-[#0b0e14] hover:bg-gray-800 border border-gray-700 text-gray-300 font-bold rounded-lg transition-colors text-sm flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-80"
+                    >
+                        {isLoadingOfferWall && (
+                          <span className="h-4 w-4 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
+                        )}
+                        {isLoadingOfferWall ? 'Loading...' : 'Open Offer Wall'}
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          onClick={handleCloseOfferWall}
+                          className="w-full sm:w-auto px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold rounded-lg text-xs uppercase tracking-wide"
+                        >
+                          Close
+                        </button>
+                      </div>
+                      <div className="rounded-xl border border-gray-700 bg-[#0b0e14] overflow-hidden">
+                        <iframe
+                          title="CPX Offer Wall"
+                          src={cpxUrl}
+                          className="w-full h-[600px] sm:h-[700px] lg:h-[780px]"
+                          allow="clipboard-write"
+                        />
+                      </div>
+                    </div>
+                  )}
                   {offerMessage && (
                     <p className="mt-2 text-xs text-gray-500 text-center">{offerMessage}</p>
                   )}
