@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, Search, Tag, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -57,6 +57,44 @@ const lgGridCols = {
   5: 'lg:grid-cols-5',
   6: 'lg:grid-cols-6'
 } as const;
+
+const MIN_SCROLLBAR_THUMB_WIDTH = 32;
+
+const useScrollIndicator = (itemsCount: number) => {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [thumbStyle, setThumbStyle] = useState({ width: 0, left: 0 });
+
+  const updateThumb = useCallback(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    const trackWidth = element.clientWidth;
+    const scrollWidth = element.scrollWidth;
+    if (trackWidth <= 0) return;
+    const maxScroll = scrollWidth - trackWidth;
+    const thumbWidth =
+      maxScroll > 0
+        ? Math.max((trackWidth / scrollWidth) * trackWidth, MIN_SCROLLBAR_THUMB_WIDTH)
+        : trackWidth;
+    const maxLeft = Math.max(trackWidth - thumbWidth, 0);
+    const left = maxScroll > 0 ? (element.scrollLeft / maxScroll) * maxLeft : 0;
+    setThumbStyle({ width: thumbWidth, left });
+  }, []);
+
+  useEffect(() => {
+    updateThumb();
+    const element = scrollRef.current;
+    if (!element) return undefined;
+    const handleScroll = () => updateThumb();
+    element.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+    return () => {
+      element.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [updateThumb, itemsCount]);
+
+  return { scrollRef, thumbStyle };
+};
 
 type BoxCatalogProps = {
   isChatCollapsed: boolean;
@@ -229,6 +267,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   }, [config.filters.tagChips.popularTags, tagStats]);
 
   const categoryCards = useMemo(() => config.filters.category.cards ?? [], [config.filters.category.cards]);
+  const mobileCategoryScrollbar = useScrollIndicator(categoryCards.length);
+  const desktopCategoryScrollbar = useScrollIndicator(categoryCards.length);
 
   const categoryOptions = useMemo(() => {
     const cardOptions = categoryCards
@@ -544,7 +584,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
             <div className="relative mt-2">
               <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
               <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-              <div className="category-scrollbar flex gap-2 overflow-x-scroll pb-2 pt-1">
+              <div
+                ref={mobileCategoryScrollbar.scrollRef}
+                className="category-scrollbar flex gap-2 overflow-x-scroll pb-2 pt-1"
+              >
                 {categoryCards.map((card) => {
                   const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(card.categorySlug);
                   return (
@@ -578,6 +621,15 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                     </div>
                   );
                 })}
+              </div>
+              <div className="category-scrollbar-indicator" aria-hidden="true">
+                <span
+                  className="category-scrollbar-indicator__thumb"
+                  style={{
+                    width: `${mobileCategoryScrollbar.thumbStyle.width}px`,
+                    transform: `translateX(${mobileCategoryScrollbar.thumbStyle.left}px)`
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -688,7 +740,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
               <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-              <div className="category-scrollbar flex gap-2 overflow-x-scroll pb-2 pt-1">
+              <div
+                ref={desktopCategoryScrollbar.scrollRef}
+                className="category-scrollbar flex gap-2 overflow-x-scroll pb-2 pt-1"
+              >
                 {categoryCards.map((card) => {
                   const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(card.categorySlug);
                   return (
@@ -722,6 +777,15 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                     </div>
                   );
                 })}
+              </div>
+              <div className="category-scrollbar-indicator" aria-hidden="true">
+                <span
+                  className="category-scrollbar-indicator__thumb"
+                  style={{
+                    width: `${desktopCategoryScrollbar.thumbStyle.width}px`,
+                    transform: `translateX(${desktopCategoryScrollbar.thumbStyle.left}px)`
+                  }}
+                />
               </div>
             </div>
           </div>
