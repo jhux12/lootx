@@ -17,11 +17,21 @@ type ChatSidebarProps = {
 export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isCollapsed, onToggle, hasUnseenMessages, onChatViewed }) => {
   const [activeTab, setActiveTab] = useState<'chat' | 'support' | 'users'>('chat');
   const [messageText, setMessageText] = useState('');
+  const [isDesktop, setIsDesktop] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playSound } = useSound();
   const { isAuthenticated, setView } = useGame();
   const { messages, sendMessage, isSending, notice, isChatDisabled, warningsRemaining } = useSiteChat();
   const isChatVisible = !isCollapsed && activeTab === 'chat';
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const mediaQuery = window.matchMedia('(min-width: 1280px)');
+    const updateIsDesktop = () => setIsDesktop(mediaQuery.matches);
+    updateIsDesktop();
+    mediaQuery.addEventListener('change', updateIsDesktop);
+    return () => mediaQuery.removeEventListener('change', updateIsDesktop);
+  }, []);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -31,9 +41,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isCollapsed, onToggle,
   }, [messages.length]);
 
   useEffect(() => {
-    if (!isChatVisible || messages.length === 0) return;
+    if (!isDesktop || !isChatVisible || messages.length === 0) return;
     onChatViewed();
-  }, [isChatVisible, messages.length, onChatViewed]);
+  }, [isDesktop, isChatVisible, messages.length, onChatViewed]);
 
   const handleSend = async () => {
     if (!messageText.trim() || isSending) return;
