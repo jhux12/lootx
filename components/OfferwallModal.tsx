@@ -93,8 +93,9 @@ export const OfferwallModal: React.FC<OfferwallModalProps> = ({ open, onClose })
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose, playSound]);
 
-  const handleBackdropClick = () => {
+  const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!canCloseBackdrop) return;
+    if (event.target !== event.currentTarget) return;
     playSound('click');
     onClose();
   };
@@ -133,11 +134,11 @@ export const OfferwallModal: React.FC<OfferwallModalProps> = ({ open, onClose })
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-5 sm:p-6 animate-in fade-in duration-200"
       aria-hidden={!open}
+      onClick={handleBackdropClick}
     >
       <div
         aria-hidden="true"
-        onClick={handleBackdropClick}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-none z-0"
       />
       <div
         ref={dialogRef}
