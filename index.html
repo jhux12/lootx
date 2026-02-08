@@ -77,6 +77,24 @@
       .category-scrollbar::-webkit-scrollbar-thumb:hover {
         background: linear-gradient(90deg, rgba(139, 92, 246, 0.95), rgba(56, 189, 248, 0.95));
       }
+      .category-scrollbar-indicator {
+        margin-top: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.6);
+        position: relative;
+        overflow: hidden;
+        pointer-events: none;
+      }
+      .category-scrollbar-indicator__thumb {
+        position: absolute;
+        inset: 0 auto 0 0;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, rgba(124, 58, 237, 0.95), rgba(99, 102, 241, 0.95));
+        box-shadow: 0 0 8px rgba(124, 58, 237, 0.45);
+        transition: transform 150ms ease-out;
+      }
       .ticker-animation {
         animation: scroll 35s linear infinite;
       }
