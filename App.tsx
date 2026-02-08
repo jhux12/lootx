@@ -464,38 +464,6 @@ const AppShell = () => {
     setLastSeenAt((prev) => Math.max(prev, latestMessageAt));
   }, [latestMessageAt]);
 
-  const AppLayout = () => {
-    const { isAuthenticated } = useGame();
-    const [isChatCollapsed, setIsChatCollapsed] = useState(!isAuthenticated);
-
-    useEffect(() => {
-      setIsChatCollapsed(!isAuthenticated);
-    }, [isAuthenticated]);
-
-    const chatWidth = isChatCollapsed ? '64px' : '380px';
-
-    return (
-      <div
-        className="flex flex-1 pt-[72px] md:pt-[80px] lg:pt-[88px]"
-        style={{ '--chatw': chatWidth } as React.CSSProperties}
-        data-chat-collapsed={isChatCollapsed}
-      >
-        <MainContent isChatCollapsed={isChatCollapsed} />
-        <div
-          className="relative hidden shrink-0 xl:flex transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
-          style={{ width: 'var(--chatw)' }}
-        >
-          <ChatSidebar
-            isCollapsed={isChatCollapsed}
-            onToggle={setIsChatCollapsed}
-            hasUnseenMessages={hasUnseenChatMessages}
-            onChatViewed={markChatSeen}
-          />
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
       <Header
@@ -503,7 +471,10 @@ const AppShell = () => {
         hasUnseenChatMessages={hasUnseenChatMessages}
         isChatOpen={showSupportChat}
       />
-      <AppLayout />
+      <AppLayout
+        hasUnseenChatMessages={hasUnseenChatMessages}
+        onChatViewed={markChatSeen}
+      />
       <MobileBottomNav />
 
       {/* Mobile Chat Modal */}
@@ -514,6 +485,41 @@ const AppShell = () => {
         onChatViewed={markChatSeen}
       />
       <ResetPasswordModal />
+    </div>
+  );
+};
+
+const AppLayout: React.FC<{
+  hasUnseenChatMessages: boolean;
+  onChatViewed: () => void;
+}> = ({ hasUnseenChatMessages, onChatViewed }) => {
+  const { isAuthenticated } = useGame();
+  const [isChatCollapsed, setIsChatCollapsed] = useState(!isAuthenticated);
+
+  useEffect(() => {
+    setIsChatCollapsed(!isAuthenticated);
+  }, [isAuthenticated]);
+
+  const chatWidth = isChatCollapsed ? '64px' : '380px';
+
+  return (
+    <div
+      className="flex flex-1 pt-[72px] md:pt-[80px] lg:pt-[88px]"
+      style={{ '--chatw': chatWidth } as React.CSSProperties}
+      data-chat-collapsed={isChatCollapsed}
+    >
+      <MainContent isChatCollapsed={isChatCollapsed} />
+      <div
+        className="relative hidden shrink-0 xl:flex transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+        style={{ width: 'var(--chatw)' }}
+      >
+        <ChatSidebar
+          isCollapsed={isChatCollapsed}
+          onToggle={setIsChatCollapsed}
+          hasUnseenMessages={hasUnseenChatMessages}
+          onChatViewed={onChatViewed}
+        />
+      </div>
     </div>
   );
 };
