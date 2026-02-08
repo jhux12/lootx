@@ -13,75 +13,101 @@ export default async function handler(req, res) {
     return sendJson(res, 405, { error: 'Method Not Allowed' });
   }
 
-  console.log('CPX POSTBACK:', req.query);
+  console.log('🔥 CPX POSTBACK HIT 🔥');
+  console.log('QUERY:', JSON.stringify(req.query, null, 2));
 
   const statusRaw = getQueryValue(req.query.status);
   const transId = getQueryValue(req.query.trans_id);
   const userId = getQueryValue(req.query.user_id);
+  const subId = getQueryValue(req.query.subid_1);
+  const uid = subId || userId;
   const amountUsdRaw = getQueryValue(req.query.amount_usd);
   const amountLocalRaw = getQueryValue(req.query.amount_local);
   const hash = getQueryValue(req.query.hash);
 
-  if (!statusRaw || !transId || !userId || !amountUsdRaw || !amountLocalRaw || !hash) {
+  if (!statusRaw || !transId || !uid || !amountUsdRaw || !amountLocalRaw || !hash) {
+    // Early return: missing required params for secure processing.
+    console.warn('CPX postback missing required params', {
+      statusRaw,
+      transId,
+      uid,
+      amountUsdRaw,
+      amountLocalRaw,
+      hashPresent: Boolean(hash)
+    });
     return sendJson(res, 400, { error: 'Missing required CPX params' });
   }
 
-  if (userId.length < 12 || userId.includes('{') || userId.includes('}')) {
-    console.warn('CPX postback user_id looks invalid', { userId });
+  if (uid.length < 12 || uid.includes('{') || uid.includes('}')) {
+    // Early return: malformed uid can cause silent writes or wrong doc updates.
+    console.warn('CPX postback uid looks invalid', { uid });
+    return sendJson(res, 400, { error: 'Invalid uid' });
   }
+
+  console.log('CPX UID RESOLVED:', { uid });
 
   const secureHashSecret = process.env.CPX_SECURE_HASH;
   if (!secureHashSecret) {
+    // Early return: server not configured with secure hash secret.
+    console.warn('CPX postback missing secure hash secret');
     return sendJson(res, 500, { error: 'Offerwall configuration missing' });
   }
 
-  const expectedHash = buildSecureHash(userId, secureHashSecret);
+  const expectedHash = buildSecureHash(uid, secureHashSecret);
   if (hash !== expectedHash) {
-    console.warn('CPX postback hash mismatch', { transId, userId });
+    // Early return: failed signature verification.
+    console.warn('CPX postback hash mismatch', { transId, uid });
     return sendJson(res, 403, { error: 'Invalid secure hash' });
   }
 
   const status = Number(statusRaw);
   const amountUsd = Number(amountUsdRaw);
   const amountLocal = Number(amountLocalRaw);
-  const coinsPerUsdRaw = process.env.CPX_COINS_PER_USD ?? '100';
-  const coinsPerUsd = Number(coinsPerUsdRaw);
-  const computedCoins = Number.isFinite(amountUsd) && Number.isFinite(coinsPerUsd)
+  const coinsPerUsd = Number(process.env.CPX_COINS_PER_USD ?? 100);
+  const coins = Number.isFinite(amountUsd)
     ? Math.floor(amountUsd * coinsPerUsd)
     : 0;
-  const coins = Number.isFinite(computedCoins) ? Math.max(0, computedCoins) : 0;
 
-  console.log('CPX CREDIT:', {
-    uid: userId,
-    trans_id: transId,
-    amount_usd: amountUsd,
-    coins,
-    status
-  });
+  console.log('💰 CREDIT ATTEMPT', { uid, coins, amount_usd: amountUsd, status });
 
   if (status !== 1 && status !== 2) {
+    // Early return: ignore non-credit/non-reversal statuses.
+    console.warn('CPX postback ignored due to unsupported status', { status, transId });
     return sendJson(res, 200, { ignored: true });
   }
 
   if (status === 1 && coins <= 0) {
+    // Early return: no coins to credit.
+    console.warn('CPX postback ignored due to non-positive coins', {
+      uid,
+      transId,
+      amountUsd,
+      coins
+    });
     return sendJson(res, 200, { ok: true, outcome: 'no coins' });
   }
 
   const transactionRef = firestore.collection('offerwall_transactions').doc(transId);
-  const userRef = firestore.collection('users').doc(userId);
+  const userRef = firestore.collection('users').doc(uid);
   const now = admin.firestore.FieldValue.serverTimestamp();
   let outcome = 'processed';
 
   await firestore.runTransaction(async (transaction) => {
     const existing = await transaction.get(transactionRef);
+    console.log('🧾 TX EXISTS:', existing.exists);
+    console.log('🧾 TX DATA:', existing.exists ? existing.data() : null);
     const existingData = existing.exists ? existing.data() : null;
 
     if (existingData) {
       if (status === 1 && existingData.credited) {
+        // Early return: duplicate credit callback for already credited tx.
+        console.warn('CPX postback duplicate credit', { transId, uid });
         outcome = 'duplicate';
         return;
       }
       if (status === 2 && existingData.reversed) {
+        // Early return: duplicate reversal callback.
+        console.warn('CPX postback duplicate reversal', { transId, uid });
         outcome = 'duplicate';
         return;
       }
@@ -99,7 +125,7 @@ export default async function handler(req, res) {
       transaction.set(
         transactionRef,
         {
-          uid: userId,
+          uid,
           coins,
           amount_usd: Number.isFinite(amountUsd) ? amountUsd : 0,
           amount_local: Number.isFinite(amountLocal) ? amountLocal : 0,
@@ -144,11 +170,13 @@ export default async function handler(req, res) {
         return;
       }
 
+      // Early return: reversal with no credited transaction to undo.
+      console.warn('CPX postback reversal ignored (no credited tx)', { transId, uid });
       transaction.set(
         transactionRef,
         {
-          uid: userId,
-          coins,
+          uid,
+          coins: previousCoins,
           amount_usd: Number.isFinite(amountUsd) ? amountUsd : 0,
           amount_local: Number.isFinite(amountLocal) ? amountLocal : 0,
           status,
@@ -163,11 +191,13 @@ export default async function handler(req, res) {
     }
   });
 
+  console.log('✅ TRANSACTION COMPLETE');
   return sendJson(res, 200, { ok: true, outcome });
 }
 
 // Reminder: set Vercel env CPX_COINS_PER_USD=100
 // TESTING:
-// - Trigger CPX test postback status=1 -> users/{uid}.coins increases by amount_usd*100
-// - Trigger reversal status=2 for same trans_id -> coins decrease by the original credited amount
-// - Confirm offerwall_transactions/{trans_id} records credited/reversed flags
+// - Trigger CPX test postback status=1 -> logs QUERY, CREDIT ATTEMPT, TRANSACTION COMPLETE
+// - Trigger CPX test postback status=1 -> users/{uid}.coins and users/{uid}.balance increase by amount_usd*100
+// - Trigger reversal status=2 for same trans_id -> coins decrease by the original credited amount (no recompute)
+// - Confirm offerwall_transactions/{trans_id} records uid, coins, credited/reversed flags
