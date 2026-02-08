@@ -285,17 +285,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
         </div>
 
         {/* User Area */}
-        <div className="flex items-center gap-3 md:gap-4">
-          <button
-            onClick={toggleMute}
-            className="text-gray-500 hover:text-white transition-colors"
-            aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
-          >
-            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-          {isAuthenticated ? (
-            <>
-              <div className="flex items-center gap-3 text-gray-500">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-2 md:gap-3 text-gray-500">
+            <button
+              onClick={toggleMute}
+              className="hover:text-white transition-colors p-2 rounded-lg hover:bg-[#11141d]"
+              aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
+            >
+              {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+            {isAuthenticated && (
+              <>
                 <div className="relative">
                   <button
                     className="hover:text-white transition-colors p-2 rounded-lg hover:bg-[#11141d] relative"
@@ -376,7 +376,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
                   )}
                 </div>
                 <button
-                  className="md:hidden hover:text-white transition-colors p-2 rounded-lg hover:bg-[#11141d]"
+                  className="hover:text-white transition-colors p-2 rounded-lg hover:bg-[#11141d]"
                   onClick={onOpenSupportChat}
                   aria-label="Open support chat"
                 >
@@ -387,15 +387,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
                     )}
                   </span>
                 </button>
-                <div className="flex items-center gap-2 md:hidden">
-                  <img 
-                    src={user.avatar} 
-                    className="w-8 h-8 rounded-lg border border-gray-700" 
-                    alt="Avatar" 
-                    onClick={() => handleNav({ type: 'PROFILE' })} 
-                  />
-                </div>
-              </div>
+              </>
+            )}
+          </div>
+          {isAuthenticated ? (
+            <>
               <div
                 className={`flex items-center bg-[#111621] rounded-lg p-1 pr-3 border border-gray-800 balance-pulse ${
                   balancePulse === 'up'
@@ -424,6 +420,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
                 >
                   <Plus className="w-3 h-3" />
                 </button>
+              </div>
+
+              <div className="flex items-center gap-2 md:hidden">
+                <img 
+                  src={user.avatar} 
+                  className="w-8 h-8 rounded-lg border border-gray-700" 
+                  alt="Avatar" 
+                  onClick={() => handleNav({ type: 'PROFILE' })} 
+                />
               </div>
 
               <div className="group relative hidden md:block">
