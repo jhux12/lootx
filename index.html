@@ -56,7 +56,8 @@
       .category-scrollbar {
         scrollbar-width: auto;
         scrollbar-color: rgba(139, 92, 246, 0.9) rgba(15, 23, 42, 0.65);
-        scrollbar-gutter: stable;
+        scrollbar-gutter: stable both-edges;
+        -webkit-overflow-scrolling: auto;
       }
       .category-scrollbar::-webkit-scrollbar {
         height: 8px;
@@ -69,6 +70,9 @@
         background: linear-gradient(90deg, rgba(124, 58, 237, 0.95), rgba(99, 102, 241, 0.95));
         border-radius: 999px;
         box-shadow: 0 0 8px rgba(124, 58, 237, 0.45);
+      }
+      .category-scrollbar::-webkit-scrollbar-thumb:window-inactive {
+        background: linear-gradient(90deg, rgba(124, 58, 237, 0.95), rgba(99, 102, 241, 0.95));
       }
       .category-scrollbar::-webkit-scrollbar-thumb:hover {
         background: linear-gradient(90deg, rgba(139, 92, 246, 0.95), rgba(56, 189, 248, 0.95));
