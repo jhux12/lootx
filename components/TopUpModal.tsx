@@ -194,8 +194,16 @@ export const TopUpModal: React.FC = () => {
                     <button 
                         onClick={handleDeposit}
                         disabled={isLoading || !selectedPackage}
-                        className="w-full rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="relative w-full overflow-hidden rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
                     >
+                        {!isLoading && selectedPackage && (
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-0"
+                          >
+                            <span className="absolute -left-1/2 top-0 h-full w-1/2 bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-80 animate-[deposit-shimmer_2.6s_ease-in-out_infinite]" />
+                          </span>
+                        )}
                         {isLoading ? (
                             <>
                                 <Loader2 className="w-5 h-5 animate-spin" /> Processing...
@@ -230,6 +238,16 @@ export const TopUpModal: React.FC = () => {
             </>
         )}
       </div>
+      <style>{`
+        @keyframes deposit-shimmer {
+          0% {
+            transform: translateX(-140%);
+          }
+          100% {
+            transform: translateX(220%);
+          }
+        }
+      `}</style>
     </div>
   );
 };
