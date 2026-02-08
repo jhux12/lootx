@@ -4,6 +4,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { usePreview } from '../context/PreviewContext';
 import { BoxCard } from './BoxCard';
+import { RiskLegend } from './RiskLegend';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -575,6 +576,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
             </button>
           )}
         </div>
+        <div className="mt-3 flex w-full justify-center">
+          <RiskLegend />
+        </div>
       </div>
 
       {config.filters.category.enabled && categoryCards.length > 0 && (
@@ -732,6 +736,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
             )}
 
           </div>
+        </div>
+        <div className="flex w-full justify-end">
+          <RiskLegend className="justify-end" />
         </div>
 
         {config.filters.category.enabled && categoryCards.length > 0 && (

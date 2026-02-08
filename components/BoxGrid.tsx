@@ -3,6 +3,7 @@ import { Boxes } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { BoxCard } from './BoxCard';
+import { RiskLegend } from './RiskLegend';
 import { MysteryBox } from '../types';
 
 type BoxGridQuery = {
@@ -41,7 +42,7 @@ export const BoxGrid: React.FC<BoxGridProps> = ({
   const canViewMore = visibleCount < displayBoxes.length;
   return (
     <section id="popular-boxes" className="px-4 md:px-0 scroll-mt-32">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-2 text-left">
           <Boxes className="w-5 h-5 text-sky-400" />
           <h2 className="text-xl font-semibold text-white">{title}</h2>
@@ -63,6 +64,9 @@ export const BoxGrid: React.FC<BoxGridProps> = ({
         >
           {viewAllLabel}
         </button>
+      </div>
+      <div className="mb-5 flex w-full justify-center sm:justify-end">
+        <RiskLegend className="sm:justify-end" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
