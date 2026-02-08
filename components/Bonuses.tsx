@@ -116,6 +116,12 @@ export const Bonuses: React.FC = () => {
     setCpxUrl(null);
   };
 
+  const handleOfferWallFrameError = () => {
+    setOfferMessage('Offer wall failed to load. Please try again.');
+    setTimeout(() => setOfferMessage(''), 4000);
+    setCpxUrl(null);
+  };
+
   const handleApplyAffiliateCode = async () => {
     if (!isAuthenticated) {
       openAuthModal('login');
@@ -370,6 +376,7 @@ export const Bonuses: React.FC = () => {
                           src={cpxUrl}
                           className="w-full h-[600px] sm:h-[700px] lg:h-[780px]"
                           allow="clipboard-write"
+                          onError={handleOfferWallFrameError}
                         />
                       </div>
                     </div>
