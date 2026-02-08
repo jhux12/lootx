@@ -62,7 +62,8 @@ export const ContactSupport: React.FC = () => {
   );
 
   const currentUser = auth.currentUser;
-  const userEmail = currentUser?.email ?? '';
+  const userEmail =
+    currentUser?.email ?? currentUser?.providerData.find((provider) => provider.email)?.email ?? '';
 
   useEffect(() => {
     if (!currentUser) {
@@ -128,7 +129,7 @@ export const ContactSupport: React.FC = () => {
     try {
       await addDoc(collection(db, 'supportCases'), {
         uid: currentUser.uid,
-        email: currentUser.email ?? '',
+        email: userEmail,
         subject: trimmedSubject,
         status: 'Open',
         createdAt: serverTimestamp(),
