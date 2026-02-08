@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { admin, firestore } from './_lib/firebaseAdmin.js';
-import { sendJson } from './_lib/http.js';
+import { readJsonBody, sendJson } from './_lib/http.js';
 
 const buildSecureHash = (uid, secret) =>
   crypto.createHash('md5').update(`${uid}-${secret}`).digest('hex');
@@ -8,21 +8,28 @@ const buildSecureHash = (uid, secret) =>
 const getQueryValue = (value) => (Array.isArray(value) ? value[0] : value);
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
     return sendJson(res, 405, { error: 'Method Not Allowed' });
   }
 
-  console.log('CPX POSTBACK:', req.query);
+  const body = req.method === 'POST' ? await readJsonBody(req) : null;
+  if (req.method === 'POST' && body === null) {
+    return sendJson(res, 400, { error: 'Invalid JSON body' });
+  }
 
-  const statusRaw = getQueryValue(req.query.status);
-  const transId = getQueryValue(req.query.trans_id);
-  const userId = getQueryValue(req.query.user_id);
-  const amountUsdRaw = getQueryValue(req.query.amount_usd);
-  const amountLocalRaw = getQueryValue(req.query.amount_local);
-  const hash = getQueryValue(req.query.hash);
+  const payload = body && typeof body === 'object' ? body : req.query;
 
-  if (!statusRaw || !transId || !userId || !amountUsdRaw || !amountLocalRaw || !hash) {
+  console.log('CPX POSTBACK:', payload);
+
+  const statusRaw = getQueryValue(payload.status);
+  const transId = getQueryValue(payload.trans_id ?? payload.transaction_id);
+  const userId = getQueryValue(payload.user_id ?? payload.ext_user_id);
+  const amountUsdRaw = getQueryValue(payload.amount_usd);
+  const amountLocalRaw = getQueryValue(payload.amount_local);
+  const hash = getQueryValue(payload.hash);
+
+  if (!statusRaw || !transId || !userId || !amountUsdRaw || !hash) {
     return sendJson(res, 400, { error: 'Missing required CPX params' });
   }
 
@@ -43,7 +50,7 @@ export default async function handler(req, res) {
 
   const status = Number(statusRaw);
   const amountUsd = Number(amountUsdRaw);
-  const amountLocal = Number(amountLocalRaw);
+  const amountLocal = Number(amountLocalRaw ?? 0);
   const coinsPerUsdRaw = process.env.CPX_COINS_PER_USD ?? '100';
   const coinsPerUsd = Number(coinsPerUsdRaw);
   const computedCoins = Number.isFinite(amountUsd) && Number.isFinite(coinsPerUsd)
