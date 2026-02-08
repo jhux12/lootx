@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search, Info, X, Tag } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { BoxTag, BOX_TAG_OPTIONS, CaseItem, MysteryBox } from '../types';
@@ -7,9 +7,15 @@ import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue } from '../utils/caseOdds';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { Input } from './ui/Input';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
-export const CustomCaseCreator: React.FC = () => {
-  const { createUserBox, items, boxes, stripeSettings, setView } = useGame();
+type CustomCaseCreatorProps = {
+  draftId?: string;
+};
+
+export const CustomCaseCreator: React.FC<CustomCaseCreatorProps> = ({ draftId }) => {
+  const { createUserBox, items, boxes, stripeSettings, setView, isAuthenticated, openAuthModal, user } = useGame();
   const { playSound } = useSound();
 
   const DEFAULT_TARGET_EV = 0.85;
@@ -23,6 +29,62 @@ export const CustomCaseCreator: React.FC = () => {
   const [showLabInfo, setShowLabInfo] = useState(false);
   const [activeTag, setActiveTag] = useState<'All' | BoxTag>('All');
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [isDraftLoading, setIsDraftLoading] = useState(false);
+
+  useEffect(() => {
+    if (!draftId) return;
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+    if (!items.length) return;
+    let isMounted = true;
+    const loadDraft = async () => {
+      setIsDraftLoading(true);
+      try {
+        const docRef = doc(db, 'userCaseDrafts', draftId);
+        const snapshot = await getDoc(docRef);
+        if (!snapshot.exists()) {
+          if (isMounted) {
+            setIsDraftLoading(false);
+          }
+          return;
+        }
+        const data = snapshot.data();
+        if (data?.ownerUid && data.ownerUid !== user.uid) {
+          alert('This draft does not belong to your account.');
+          setIsDraftLoading(false);
+          return;
+        }
+        if (!isMounted) return;
+        const draftItems: CaseItem[] = Array.isArray(data.selectedItems) ? data.selectedItems : [];
+        const draftItemIds: string[] = Array.isArray(data.selectedItemIds) ? data.selectedItemIds : [];
+        const resolvedItems = draftItems.length
+          ? draftItems
+          : draftItemIds
+              .map((id) => items.find((item) => item.id === id))
+              .filter(Boolean) as CaseItem[];
+
+        setBoxName(data.name ?? '');
+        setSelectedBoxImage(data.coverImage ?? '');
+        setSelectedItems(resolvedItems);
+        if (Number.isFinite(Number(data.priceCoins))) {
+          setBoxPrice(Number(data.priceCoins));
+          setLastCalculated(Number(data.priceCoins) > 0 && resolvedItems.length > 0);
+        }
+      } catch (error) {
+        console.error('Failed to load draft', error);
+      } finally {
+        if (isMounted) {
+          setIsDraftLoading(false);
+        }
+      }
+    };
+    loadDraft();
+    return () => {
+      isMounted = false;
+    };
+  }, [draftId, isAuthenticated, items, openAuthModal, user.uid]);
 
   const toggleItemSelection = (item: CaseItem) => {
       playSound('click');
@@ -90,6 +152,21 @@ export const CustomCaseCreator: React.FC = () => {
       };
 
       try {
+        if (draftId) {
+          try {
+            await updateDoc(doc(db, 'userCaseDrafts', draftId), {
+              updatedAt: Date.now(),
+              name: boxName,
+              coverImage: selectedBoxImage,
+              selectedItemIds: selectedItems.map((item) => item.id),
+              selectedItems,
+              priceCoins: boxPrice,
+              status: 'draft'
+            });
+          } catch (error) {
+            console.warn('Failed to update draft metadata', error);
+          }
+        }
         const publishedBoxId = await createUserBox(newBox);
         // Removed 'success' sound on create
         setView({ type: 'CASE_OPENING', boxId: publishedBoxId });
@@ -118,7 +195,7 @@ export const CustomCaseCreator: React.FC = () => {
     <div className="max-w-5xl mx-auto p-6 animate-in fade-in slide-in-from-bottom-4">
       <div className="flex items-center gap-4 mb-8">
           <button 
-             onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
+             onClick={() => { playSound('click'); setView({ type: 'CASE_LAB' }); }}
              className="flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
            >
              <ChevronLeft className="w-4 h-4" /> Back
@@ -130,6 +207,11 @@ export const CustomCaseCreator: React.FC = () => {
                <div>
                     <h1 className="text-3xl font-black text-white">Case Lab</h1>
                     <p className="text-gray-400 text-sm">Engineer your luck. Tune your risk balance for a custom case.</p>
+                    {draftId && (
+                      <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-purple-500/40 bg-purple-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-purple-200">
+                        Draft mode {isDraftLoading ? '• Loading' : ''}
+                      </div>
+                    )}
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-gray-300">
                       <button
                         type="button"

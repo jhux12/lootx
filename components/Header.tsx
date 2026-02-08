@@ -254,7 +254,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
             </button>
             {/* Case Lab - Always Visible */}
             <button 
-              onClick={() => handleAuthAction(() => setView({ type: 'CUSTOM_CREATOR' }))} 
+              onClick={() => handleNav({ type: 'CASE_LAB' })} 
               className="flex items-center gap-2 text-brand-purple hover:text-purple-400 transition-colors text-sm font-bold"
             >
               <FlaskConical className="w-4 h-4" /> Case Lab

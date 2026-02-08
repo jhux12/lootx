@@ -89,6 +89,46 @@ export interface MysteryBox {
   createdAt?: number;
 }
 
+export type CommunityCasePreviewItem = {
+  id: string;
+  name: string;
+  value: number;
+  image: string;
+};
+
+export interface CommunityCase {
+  id: string;
+  name: string;
+  coverImage: string;
+  creatorUid: string;
+  creatorName: string;
+  createdAt: number;
+  updatedAt?: number;
+  status: 'published';
+  isFeatured?: boolean;
+  tags?: string[];
+  category?: string;
+  priceCoins?: number;
+  ev?: number;
+  itemCount?: number;
+  itemsPreview?: CommunityCasePreviewItem[];
+  sourceBoxId?: string;
+}
+
+export interface UserCaseDraft {
+  id: string;
+  ownerUid: string;
+  sourceCommunityCaseId?: string;
+  createdAt: number;
+  updatedAt: number;
+  name: string;
+  coverImage: string;
+  selectedItemIds?: string[];
+  selectedItems?: CaseItem[];
+  priceCoins?: number;
+  status: 'draft';
+}
+
 export interface CoinPackage {
   id: string;
   name: string;
@@ -270,7 +310,8 @@ export type ViewState =
   | { type: 'CONTACT' }
   | { type: 'ADMIN' }
   | { type: 'LEADERBOARD' }
-  | { type: 'CUSTOM_CREATOR' }
+  | { type: 'CASE_LAB' }
+  | { type: 'CASE_LAB_CREATE'; draftId?: string }
   | { type: 'CASE_OPENING'; boxId: string; isFree?: boolean }
   | { type: 'BATTLE_ARENA'; battleId: string }
   | { type: 'BATTLES' };
