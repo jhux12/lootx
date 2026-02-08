@@ -3,6 +3,7 @@ import { Swords, Plus, X, Trash2, Clock } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
+import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 
 // Sub-component for countdown
 const BattleTimer: React.FC<{ createdAt: number }> = ({ createdAt }) => {
@@ -55,7 +56,7 @@ export const BattlesList: React.FC = () => {
   const calculateTotalCost = () => {
     return selectedBoxIds.reduce((sum, id) => {
         const box = boxes.find(b => b.id === id);
-        return sum + (box ? box.price : 0);
+        return sum + (box ? toCoins(box.price, PRICE_UNIT_MODE) : 0);
     }, 0);
   };
 
@@ -137,7 +138,7 @@ export const BattlesList: React.FC = () => {
                      {battle.status === 'waiting' && <BattleTimer createdAt={battle.createdAt} />}
                      <div className="text-right">
                          <CoinAmount
-                           amount={battle.cost}
+                           amount={toCoins(battle.cost, PRICE_UNIT_MODE)}
                            formatOptions={{ maximumFractionDigits: 0 }}
                            className="text-green-500 font-bold justify-end"
                            iconClassName="w-3.5 h-3.5"
@@ -220,7 +221,7 @@ export const BattlesList: React.FC = () => {
                                             <img src={box.image} className="w-12 h-12 object-contain mb-1" />
                                             <div className="text-[10px] text-gray-400 truncate w-full text-center">{box.name}</div>
                                             <CoinAmount
-                                              amount={box.price}
+                                              amount={toCoins(box.price, PRICE_UNIT_MODE)}
                                               formatOptions={{ maximumFractionDigits: 0 }}
                                               className="text-[10px] text-green-500 font-bold justify-center"
                                               iconClassName="w-3 h-3"
@@ -245,7 +246,7 @@ export const BattlesList: React.FC = () => {
                                     <img src={box.image} className="w-12 h-12 object-contain mb-2" />
                                     <div className="text-xs text-gray-300 font-medium truncate w-full">{box.name}</div>
                                     <CoinAmount
-                                      amount={box.price}
+                                      amount={toCoins(box.price, PRICE_UNIT_MODE)}
                                       formatOptions={{ maximumFractionDigits: 0 }}
                                       className="text-xs text-green-500 font-bold justify-center"
                                       iconClassName="w-3 h-3"

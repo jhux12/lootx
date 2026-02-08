@@ -4,6 +4,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { XP_ICON } from '../constants';
 import { getSellBackValue } from '../utils/sellBack';
+import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight } from 'lucide-react';
 import { auth } from '../firebase';
@@ -290,7 +291,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const topPullsSource = isOwnProfile ? user.topPulls : displayUser.topPulls;
   const topPulls = normalizeItems(topPullsSource ?? [])
     .sort((a, b) => {
-      const priceDiff = b.price - a.price;
+      const priceDiff = toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE);
       if (priceDiff !== 0) return priceDiff;
       return b.obtainedAt - a.obtainedAt;
     })
@@ -691,7 +692,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   <div className="text-[11px] font-bold text-gray-500 uppercase mb-1 tracking-wider">{item.rarity}</div>
                                   <h4 className="text-white font-bold text-sm mb-2 line-clamp-1">{item.name}</h4>
                                   <CoinAmount
-                                    amount={item.price}
+                                    amount={toCoins(item.price, PRICE_UNIT_MODE)}
                                     formatOptions={{ maximumFractionDigits: 0 }}
                                     className="text-green-500 font-black"
                                     iconClassName="w-3.5 h-3.5"
@@ -876,7 +877,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       )}
                                       <h4 className="text-white font-bold text-sm mt-2 mb-2 line-clamp-2 min-h-[2.5rem]">{item.name}</h4>
                                       <CoinAmount
-                                        amount={item.price}
+                                        amount={toCoins(item.price, PRICE_UNIT_MODE)}
                                         formatOptions={{ maximumFractionDigits: 0 }}
                                         className="text-green-500 font-black"
                                         iconClassName="w-3.5 h-3.5"
@@ -955,7 +956,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                   </span>
                                                   {sellOffers[item.instanceId] && !isGeneratingSellOffers[item.instanceId] && !isSellingItems[item.instanceId] && item.redeemable !== false && (
                                                     <CoinAmount
-                                                      amount={getSellBackValue(item.price, getSellBackRate(item))}
+                                                      amount={getSellBackValue(toCoins(item.price, PRICE_UNIT_MODE), getSellBackRate(item))}
                                                       formatOptions={{ maximumFractionDigits: 0 }}
                                                       className="text-gray-100"
                                                       iconClassName="w-3 h-3"

@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext';
 import { LiveDrop, User } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { CoinAmount } from './CoinAmount';
+import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 
 export const LiveTicker: React.FC = () => {
   const { items, users } = useGame();
@@ -31,7 +32,7 @@ export const LiveTicker: React.FC = () => {
           id: item.instanceId ?? item.id,
           itemName: item.name,
           itemImage: item.image,
-          value: item.price,
+          value: toCoins(item.price, PRICE_UNIT_MODE),
           user,
           rarity: item.rarity
         }))
@@ -41,7 +42,7 @@ export const LiveTicker: React.FC = () => {
             id: item.id,
             itemName: item.name,
             itemImage: item.image,
-            value: item.price,
+            value: toCoins(item.price, PRICE_UNIT_MODE),
             user: availableUsers[index % availableUsers.length],
             rarity: item.rarity
           }));

@@ -9,6 +9,7 @@ import { Input } from './ui/Input';
 import { getRiskLabel } from '../utils/caseOdds';
 import { getSellBackValue } from '../utils/sellBack';
 import { authedFetch } from '../utils/authedFetch';
+import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import pullzPattern from '../assets/pullz-p.PNG';
 
 interface CaseOpeningProps {
@@ -87,7 +88,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const isAdmin = Boolean(user?.isAdmin);
 
   // Sort items high to low for display purposes
-  const displayItems = [...items].sort((a, b) => b.price - a.price);
+  const displayItems = [...items].sort(
+    (a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)
+  );
   
   const [isSpinning, setIsSpinning] = useState(false);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
@@ -458,7 +461,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         addInventoryItemFromServer(inventoryItem);
         syncBalance(Number(data.newCoins ?? 0));
         if (!isFree) {
-          const spentAmount = Number(data.price ?? box?.price ?? 0);
+          const spentAmount = toCoins(Number(data.price ?? box?.price ?? 0), PRICE_UNIT_MODE);
           registerSpend(spentAmount);
         }
         setWonInventoryItem(inventoryItem);
@@ -765,7 +768,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <span className="inline-flex items-center gap-2">
                           Open for
                           <CoinAmount
-                            amount={box!.price}
+                            amount={toCoins(box!.price, PRICE_UNIT_MODE)}
                             formatOptions={{ maximumFractionDigits: 0 }}
                             className="text-white"
                             iconClassName="w-4 h-4"
@@ -996,7 +999,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div className={`w-full text-center ${isDemoSpin ? 'mb-6' : 'mb-7'}`}>
                             <h3 className="text-xl sm:text-2xl font-bold text-white">{wonItem.name}</h3>
                             <CoinAmount
-                              amount={wonItem.price}
+                              amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
                               formatOptions={{ maximumFractionDigits: 0 }}
                               className="mt-2 text-gray-300 font-semibold justify-center"
                               iconClassName="w-4 h-4"
@@ -1036,7 +1039,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                         </span>
                                         {sellOfferGenerated && !isGeneratingSellOffer && !isSellingItem && (
                                           <CoinAmount
-                                            amount={getSellBackValue(wonItem.price, sellBackRate)}
+                                            amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
                                             formatOptions={{ maximumFractionDigits: 0 }}
                                             className="text-gray-200"
                                             iconClassName="w-4 h-4"
@@ -1097,7 +1100,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div className="w-full text-left mt-auto">
                             <div className="text-gray-400 text-xs font-medium truncate mb-0.5">{item.name}</div>
                             <CoinAmount
-                              amount={item.price}
+                              amount={toCoins(item.price, PRICE_UNIT_MODE)}
                               formatOptions={{ maximumFractionDigits: 0 }}
                               className="text-white font-bold text-sm"
                               iconClassName="w-3.5 h-3.5"
@@ -1174,7 +1177,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
                         <CoinAmount
-                          amount={selectedCaseItem.price}
+                          amount={toCoins(selectedCaseItem.price, PRICE_UNIT_MODE)}
                           formatOptions={{ maximumFractionDigits: 0 }}
                           className="text-base font-semibold text-white"
                           iconClassName="w-4 h-4"
