@@ -4,7 +4,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
 type NavItem = {
-  id: 'HOME' | 'BOXES' | 'CUSTOM_CREATOR' | 'LEADERBOARD' | 'BONUSES';
+  id: 'HOME' | 'BOXES' | 'CASE_LAB' | 'LEADERBOARD' | 'BONUSES';
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   requiresAuth?: boolean;
@@ -13,7 +13,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { id: 'HOME', label: 'Home', icon: Home },
   { id: 'BOXES', label: 'Boxes', icon: PackageOpen },
-  { id: 'CUSTOM_CREATOR', label: 'Case Lab', icon: FlaskConical, requiresAuth: true },
+  { id: 'CASE_LAB', label: 'Case Lab', icon: FlaskConical },
   { id: 'LEADERBOARD', label: 'Leaderboard', icon: Trophy },
   { id: 'BONUSES', label: 'Bonuses', icon: Gift, requiresAuth: true }
 ];
@@ -71,14 +71,13 @@ export const MobileBottomNav: React.FC = () => {
       openAuthModal('login');
       return;
     }
-    if (nextView === 'CUSTOM_CREATOR' && !isAuthenticated) {
-      openAuthModal('login');
-      return;
-    }
     setView({ type: nextView });
   };
 
-  const activeId = useMemo(() => view.type as NavItem['id'], [view.type]);
+  const activeId = useMemo(() => {
+    if (view.type === 'CASE_LAB_CREATE') return 'CASE_LAB';
+    return view.type as NavItem['id'];
+  }, [view.type]);
 
   return (
     <div

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle } from 'lucide-react';
-import { Timestamp, arrayUnion, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, arrayUnion, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
+import { AdminActionLog, CaseItem, CoinPackage, CommunityCase, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -244,6 +244,8 @@ export const AdminPanel: React.FC = () => {
       caseLabSellBackPercent: stripeSettings.caseLabSellBackPercent
   });
   const [stripeSettingsNotice, setStripeSettingsNotice] = useState(false);
+  const [communityCases, setCommunityCases] = useState<CommunityCase[]>([]);
+  const [communityCasesLoading, setCommunityCasesLoading] = useState(false);
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [balanceDraft, setBalanceDraft] = useState('');
   const [isEditingInventory, setIsEditingInventory] = useState(false);
@@ -279,6 +281,65 @@ export const AdminPanel: React.FC = () => {
 
       return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+      const fetchCommunityCases = async () => {
+          setCommunityCasesLoading(true);
+          try {
+              const communityQuery = query(
+                  collection(db, 'communityCases'),
+                  orderBy('createdAt', 'desc'),
+                  limit(50)
+              );
+              const snapshot = await getDocs(communityQuery);
+              const nextCases = snapshot.docs.map((docSnapshot) => {
+                  const data = docSnapshot.data() as Partial<CommunityCase>;
+                  return {
+                      id: docSnapshot.id,
+                      name: data.name ?? 'Untitled case',
+                      coverImage: data.coverImage ?? '',
+                      creatorUid: data.creatorUid ?? '',
+                      creatorName: data.creatorName ?? 'Unknown creator',
+                      createdAt: Number(data.createdAt ?? 0),
+                      updatedAt: Number(data.updatedAt ?? 0),
+                      status: 'published',
+                      isFeatured: Boolean(data.isFeatured),
+                      tags: Array.isArray(data.tags) ? data.tags : [],
+                      category: data.category,
+                      priceCoins: data.priceCoins,
+                      ev: data.ev,
+                      itemCount: data.itemCount,
+                      itemsPreview: data.itemsPreview,
+                      sourceBoxId: data.sourceBoxId
+                  } as CommunityCase;
+              });
+              setCommunityCases(nextCases);
+          } catch (error) {
+              console.error('Failed to load community cases', error);
+              setCommunityCases([]);
+          } finally {
+              setCommunityCasesLoading(false);
+          }
+      };
+      fetchCommunityCases();
+  }, []);
+
+  const handleToggleCommunityFeatured = async (entry: CommunityCase) => {
+      try {
+          await updateDoc(doc(db, 'communityCases', entry.id), {
+              isFeatured: !entry.isFeatured,
+              updatedAt: Date.now()
+          });
+          setCommunityCases((prev) =>
+              prev.map((item) =>
+                  item.id === entry.id ? { ...item, isFeatured: !item.isFeatured, updatedAt: Date.now() } : item
+              )
+          );
+      } catch (error) {
+          console.error('Failed to update featured status', error);
+          window.alert('Unable to update featured status.');
+      }
+  };
 
   const handleDeleteUser = async (userId: string) => {
       const targetUser = users.find((profile) => profile.id === userId);
@@ -4123,6 +4184,59 @@ export const AdminPanel: React.FC = () => {
                                         </div>
                                     );
                                 })
+                            )}
+                        </div>
+                    </div>
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Featured Community Cases</h3>
+                                <p className="text-sm text-gray-400">
+                                    Toggle marketplace featuring for community cases.
+                                </p>
+                            </div>
+                            <span className="text-xs text-gray-500">
+                                {communityCases.length} total
+                            </span>
+                        </div>
+                        <div className="mt-4 space-y-3">
+                            {communityCasesLoading ? (
+                                <div className="text-sm text-gray-500 border border-dashed border-gray-700 rounded-lg px-4 py-6 text-center">
+                                    Loading community cases...
+                                </div>
+                            ) : communityCases.length === 0 ? (
+                                <div className="text-sm text-gray-500 border border-dashed border-gray-700 rounded-lg px-4 py-6 text-center">
+                                    No community cases found.
+                                </div>
+                            ) : (
+                                communityCases.map((entry) => (
+                                    <div
+                                        key={entry.id}
+                                        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[#0b0e14] border border-gray-800 rounded-xl p-4"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <img
+                                                src={entry.coverImage}
+                                                alt={entry.name}
+                                                className="h-12 w-12 rounded-lg object-cover bg-black/40"
+                                            />
+                                            <div>
+                                                <div className="text-sm font-semibold text-white">{entry.name}</div>
+                                                <div className="text-xs text-gray-500">by {entry.creatorName}</div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleToggleCommunityFeatured(entry)}
+                                            className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors ${
+                                                entry.isFeatured
+                                                    ? 'border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/10'
+                                                    : 'border-gray-600 text-gray-300 hover:bg-gray-800'
+                                            }`}
+                                        >
+                                            {entry.isFeatured ? 'Featured' : 'Not Featured'}
+                                        </button>
+                                    </div>
+                                ))
                             )}
                         </div>
                     </div>

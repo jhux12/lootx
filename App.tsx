@@ -34,6 +34,7 @@ import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
 import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { CaseLab } from './pages/CaseLab';
 import { getBoxTags } from './utils/boxTags';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
@@ -380,9 +381,15 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         )
       )}
 
-      {view.type === 'CUSTOM_CREATOR' && (
+      {view.type === 'CASE_LAB' && (
         <div className="w-full">
-          <CustomCaseCreator />
+          <CaseLab />
+        </div>
+      )}
+
+      {view.type === 'CASE_LAB_CREATE' && (
+        <div className="w-full">
+          <CustomCaseCreator draftId={view.draftId} />
         </div>
       )}
 

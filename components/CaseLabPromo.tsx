@@ -16,7 +16,7 @@ export const CaseLabPromo: React.FC = () => {
               <p className="mt-2 text-sm text-gray-300">Craft your own custom cases</p>
             </div>
             <button
-              onClick={() => setView({ type: 'CUSTOM_CREATOR' })}
+              onClick={() => setView({ type: 'CASE_LAB' })}
               className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_-18px_rgba(124,58,237,0.8)] transition hover:shadow-[0_0_24px_rgba(34,211,238,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
             >
               Start Experimenting

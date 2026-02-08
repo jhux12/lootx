@@ -324,7 +324,10 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
   }
 
   if (primary === 'case-lab' || primary === 'caselab') {
-    return { type: 'CUSTOM_CREATOR' };
+    if (secondary === 'create') {
+      return { type: 'CASE_LAB_CREATE', draftId: params.get('draftId') || undefined };
+    }
+    return { type: 'CASE_LAB' };
   }
 
   return { type: 'HOME' };
@@ -348,8 +351,12 @@ const getPathFromView = (view: ViewState): string => {
       return '/admin';
     case 'LEADERBOARD':
       return '/leaderboard';
-    case 'CUSTOM_CREATOR':
+    case 'CASE_LAB':
       return '/case-lab';
+    case 'CASE_LAB_CREATE': {
+      const search = view.draftId ? `?draftId=${view.draftId}` : '';
+      return `/case-lab/create${search}`;
+    }
     case 'CASE_OPENING': {
       const search = view.isFree ? '?free=true' : '';
       return `/cases/${view.boxId}${search}`;
