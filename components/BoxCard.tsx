@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CoinAmount } from './CoinAmount';
-import { getRiskLabel } from '../utils/caseOdds';
 import { MysteryBox } from '../types';
-import { BoxTagPills } from './BoxTagPills';
-import { getBoxTags } from '../utils/boxTags';
+import { RiskSliderIndicator } from './RiskSliderIndicator';
+import { resolveRiskValue } from '../utils/riskIndicator';
 
 type BoxCardProps = {
   box: MysteryBox;
@@ -13,10 +12,10 @@ type BoxCardProps = {
 };
 
 export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size = 'default' }) => {
-  const boxTags = getBoxTags(box);
   const [isDropping, setIsDropping] = useState(false);
   const clickTimeoutRef = useRef<number | null>(null);
   const isCompact = size === 'compact';
+  const riskValue = resolveRiskValue(box.riskLevel, (box as { riskLabel?: string }).riskLabel);
 
   useEffect(() => {
     return () => {
@@ -35,7 +34,7 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size =
   };
 
   return (
-    <div 
+    <div
       onClick={handleSelect}
       onMouseEnter={onHover}
       className={`group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-b from-white/5 via-[#111826] to-[#0b101a] text-center shadow-[0_0_0_1px_rgba(255,255,255,0.02)] transition-all duration-300 ${isCompact ? 'p-2.5 sm:p-5' : 'p-4 sm:p-5'} ${isDropping ? 'translate-y-2 scale-[0.98] shadow-[0_18px_40px_-28px_rgba(0,0,0,0.9)]' : 'hover:-translate-y-1 hover:border-white/15 hover:shadow-[0_18px_40px_-28px_rgba(0,0,0,0.8)]'}`}
@@ -50,38 +49,29 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size =
       />
       {/* Image Container with Glow */}
       <div className={`relative flex w-full flex-1 items-center justify-center pt-1 ${isCompact ? 'mb-2.5' : 'mb-4'}`}>
-          <div 
-              className="absolute inset-6 rounded-full blur-3xl opacity-30 transition-opacity duration-300 group-hover:opacity-50"
-              style={{ backgroundColor: box.accentColor }}
-          ></div>
-          <img 
-              src={box.image} 
-              alt={box.name} 
-              className={`relative z-10 object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-110 ${isCompact ? 'h-20 w-20 sm:h-32 sm:w-32' : 'h-32 w-32 sm:h-36 sm:w-36'}`} 
-          />
+        <div
+          className="absolute inset-6 rounded-full blur-3xl opacity-30 transition-opacity duration-300 group-hover:opacity-50"
+          style={{ backgroundColor: box.accentColor }}
+        />
+        <img
+          src={box.image}
+          alt={box.name}
+          className={`relative z-10 object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-110 ${isCompact ? 'h-20 w-20 sm:h-32 sm:w-32' : 'h-32 w-32 sm:h-36 sm:w-36'}`}
+        />
       </div>
 
       {/* Info */}
-      <div className="w-full pb-1">
-          <h4 className={`font-semibold text-gray-200 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-[11px] sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
-          <CoinAmount
-            amount={box.price}
-            formatOptions={{ maximumFractionDigits: 0 }}
-            className={`mt-1 justify-center font-bold text-white sm:text-lg ${isCompact ? 'text-xs' : 'text-base'}`}
-            iconClassName="w-4 h-4"
-          />
-          <BoxTagPills tags={boxTags} className="mt-2" />
-          <div className="mt-3 flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">
-            <span
-              className="h-1 w-1 rounded-full"
-              style={{ backgroundColor: box.accentColor }}
-            />
-            {getRiskLabel(box.riskLevel ?? 50)}
-            <span
-              className="h-1 w-1 rounded-full"
-              style={{ backgroundColor: box.accentColor }}
-            />
-          </div>
+      <div className="flex w-full flex-col items-center pb-1">
+        <h4 className={`font-semibold text-gray-200 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-[11px] sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
+        <CoinAmount
+          amount={box.price}
+          formatOptions={{ maximumFractionDigits: 0 }}
+          className={`mt-1 justify-center font-bold text-white sm:text-lg ${isCompact ? 'text-xs' : 'text-base'}`}
+          iconClassName="h-4 w-4"
+        />
+        <div className="mt-3 flex items-center justify-center">
+          <RiskSliderIndicator value={riskValue} size={isCompact ? 'sm' : 'md'} />
+        </div>
       </div>
 
       {/* Bottom Color Bar */}
