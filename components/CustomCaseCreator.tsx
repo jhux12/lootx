@@ -254,6 +254,7 @@ export const CustomCaseCreator: React.FC = () => {
                                         <div className={`text-[10px] text-gray-300 font-medium ${isExpanded ? 'line-clamp-2 text-[11px]' : 'truncate'}`}>{item.name}</div>
                                         <CoinAmount
                                           amount={item.price}
+                                          multiplier={100}
                                           formatOptions={{ maximumFractionDigits: 0 }}
                                           className="text-[10px] text-green-400 font-bold justify-center"
                                           iconClassName="w-3 h-3"
@@ -336,6 +337,7 @@ export const CustomCaseCreator: React.FC = () => {
                                   {lastCalculated && <span className="text-brand-purple font-mono">{item.chance}%</span>}
                                   <CoinAmount
                                     amount={item.price}
+                                    multiplier={100}
                                     formatOptions={{ maximumFractionDigits: 0 }}
                                     className="text-green-500"
                                     iconClassName="w-3 h-3"
@@ -358,6 +360,7 @@ export const CustomCaseCreator: React.FC = () => {
                           <span className="text-sm text-gray-400">Total Price</span>
                           <CoinAmount
                             amount={boxPrice}
+                            multiplier={100}
                             formatOptions={{ maximumFractionDigits: 0 }}
                             className="text-2xl font-black text-green-500"
                             iconClassName="w-4 h-4"

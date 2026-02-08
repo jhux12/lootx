@@ -2199,6 +2199,7 @@ export const AdminPanel: React.FC = () => {
                                         <td className="px-4 py-3">
                                             <CoinAmount
                                               amount={item.price}
+                                              multiplier={100}
                                               formatOptions={{ maximumFractionDigits: 0 }}
                                               className="text-green-500 font-semibold"
                                               iconClassName="w-3.5 h-3.5"
@@ -2316,6 +2317,7 @@ export const AdminPanel: React.FC = () => {
                                             {hasExplicitBoxPrice ? (
                                                 <CoinAmount
                                                     amount={Number(newBox.price)}
+                                                    multiplier={100}
                                                     formatOptions={{ maximumFractionDigits: 0 }}
                                                     className="text-gray-300 font-semibold"
                                                     iconClassName="w-3 h-3"
@@ -2501,6 +2503,7 @@ export const AdminPanel: React.FC = () => {
                                                 <div className="text-[10px] text-gray-300 truncate font-medium">{item.name}</div>
                                                 <CoinAmount
                                                   amount={item.price}
+                                                  multiplier={100}
                                                   formatOptions={{ maximumFractionDigits: 0 }}
                                                   className="text-[10px] text-green-400 font-bold justify-center"
                                                   iconClassName="w-3 h-3"
@@ -2523,6 +2526,7 @@ export const AdminPanel: React.FC = () => {
                                                  <span className="flex-1 text-gray-300 truncate">{item.name}</span>
                                                  <CoinAmount
                                                    amount={item.price}
+                                                   multiplier={100}
                                                    formatOptions={{ maximumFractionDigits: 0 }}
                                                    className="text-gray-500"
                                                    iconClassName="w-3 h-3"
@@ -2577,6 +2581,7 @@ export const AdminPanel: React.FC = () => {
                                         <td className="px-4 py-3">
                                             <CoinAmount
                                               amount={box.price}
+                                              multiplier={100}
                                               formatOptions={{ maximumFractionDigits: 0 }}
                                               className="text-green-500 font-semibold"
                                               iconClassName="w-3.5 h-3.5"

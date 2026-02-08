@@ -692,6 +692,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   <h4 className="text-white font-bold text-sm mb-2 line-clamp-1">{item.name}</h4>
                                   <CoinAmount
                                     amount={item.price}
+                                    multiplier={100}
                                     formatOptions={{ maximumFractionDigits: 0 }}
                                     className="text-green-500 font-black"
                                     iconClassName="w-3.5 h-3.5"
@@ -877,6 +878,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       <h4 className="text-white font-bold text-sm mt-2 mb-2 line-clamp-2 min-h-[2.5rem]">{item.name}</h4>
                                       <CoinAmount
                                         amount={item.price}
+                                        multiplier={100}
                                         formatOptions={{ maximumFractionDigits: 0 }}
                                         className="text-green-500 font-black"
                                         iconClassName="w-3.5 h-3.5"
@@ -956,6 +958,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                   {sellOffers[item.instanceId] && !isGeneratingSellOffers[item.instanceId] && !isSellingItems[item.instanceId] && item.redeemable !== false && (
                                                     <CoinAmount
                                                       amount={getSellBackValue(item.price, getSellBackRate(item))}
+                                                      multiplier={100}
                                                       formatOptions={{ maximumFractionDigits: 0 }}
                                                       className="text-gray-100"
                                                       iconClassName="w-3 h-3"

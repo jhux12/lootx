@@ -165,6 +165,7 @@ export const TopUpModal: React.FC = () => {
                                     <span className="text-[11px] font-semibold text-gray-400">{pack.displayPrice}</span>
                                     <CoinAmount
                                       amount={pack.coins / 100}
+                                      multiplier={100}
                                       formatOptions={{ maximumFractionDigits: 0 }}
                                       className="text-white"
                                       iconClassName="w-3.5 h-3.5"
@@ -206,6 +207,7 @@ export const TopUpModal: React.FC = () => {
                               <span className="inline-flex items-center gap-1 text-xs font-semibold text-white/80 sm:text-sm">
                                 <CoinAmount
                                   amount={(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))) / 100}
+                                  multiplier={100}
                                   formatOptions={{ maximumFractionDigits: 0 }}
                                   className="text-white"
                                   iconClassName="w-4 h-4"

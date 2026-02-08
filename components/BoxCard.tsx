@@ -66,6 +66,7 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size =
           <h4 className={`font-semibold text-gray-200 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-[11px] sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
           <CoinAmount
             amount={box.price}
+            multiplier={100}
             formatOptions={{ maximumFractionDigits: 0 }}
             className={`mt-1 justify-center font-bold text-white sm:text-lg ${isCompact ? 'text-xs' : 'text-base'}`}
             iconClassName="w-4 h-4"
