@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     return sendJson(res, 405, { error: 'Method Not Allowed' });
   }
 
-  console.log('CPX postback received', req.query);
+  console.log('CPX POSTBACK:', req.query);
 
   const statusRaw = getQueryValue(req.query.status);
   const transId = getQueryValue(req.query.trans_id);
@@ -44,17 +44,27 @@ export default async function handler(req, res) {
   const status = Number(statusRaw);
   const amountUsd = Number(amountUsdRaw);
   const amountLocal = Number(amountLocalRaw);
-  const coins = Number.isFinite(amountLocal) ? Math.max(0, amountLocal) : 0;
+  const coinsPerUsdRaw = process.env.CPX_COINS_PER_USD ?? '100';
+  const coinsPerUsd = Number(coinsPerUsdRaw);
+  const computedCoins = Number.isFinite(amountUsd) && Number.isFinite(coinsPerUsd)
+    ? Math.floor(amountUsd * coinsPerUsd)
+    : 0;
+  const coins = Number.isFinite(computedCoins) ? Math.max(0, computedCoins) : 0;
 
-  console.log('CPX postback resolved', {
+  console.log('CPX CREDIT:', {
     uid: userId,
+    trans_id: transId,
+    amount_usd: amountUsd,
     coins,
-    status,
-    transId
+    status
   });
 
   if (status !== 1 && status !== 2) {
     return sendJson(res, 200, { ignored: true });
+  }
+
+  if (status === 1 && coins <= 0) {
+    return sendJson(res, 200, { ok: true, outcome: 'no coins' });
   }
 
   const transactionRef = firestore.collection('offerwall_transactions').doc(transId);
@@ -80,7 +90,10 @@ export default async function handler(req, res) {
     if (status === 1) {
       transaction.set(
         userRef,
-        { coins: admin.firestore.FieldValue.increment(coins) },
+        {
+          coins: admin.firestore.FieldValue.increment(coins),
+          balance: admin.firestore.FieldValue.increment(coins)
+        },
         { merge: true }
       );
       transaction.set(
@@ -104,10 +117,14 @@ export default async function handler(req, res) {
     }
 
     if (status === 2) {
+      const previousCoins = Number.isFinite(existingData?.coins) ? existingData.coins : 0;
       if (existingData?.credited && !existingData?.reversed) {
         transaction.set(
           userRef,
-          { coins: admin.firestore.FieldValue.increment(-coins) },
+          {
+            coins: admin.firestore.FieldValue.increment(-previousCoins),
+            balance: admin.firestore.FieldValue.increment(-previousCoins)
+          },
           { merge: true }
         );
         transaction.set(
@@ -119,7 +136,7 @@ export default async function handler(req, res) {
             reversedAt: now,
             amount_usd: Number.isFinite(amountUsd) ? amountUsd : existingData.amount_usd ?? 0,
             amount_local: Number.isFinite(amountLocal) ? amountLocal : existingData.amount_local ?? 0,
-            coins
+            coins: previousCoins
           },
           { merge: true }
         );
@@ -148,3 +165,9 @@ export default async function handler(req, res) {
 
   return sendJson(res, 200, { ok: true, outcome });
 }
+
+// Reminder: set Vercel env CPX_COINS_PER_USD=100
+// TESTING:
+// - Trigger CPX test postback status=1 -> users/{uid}.coins increases by amount_usd*100
+// - Trigger reversal status=2 for same trans_id -> coins decrease by the original credited amount
+// - Confirm offerwall_transactions/{trans_id} records credited/reversed flags
