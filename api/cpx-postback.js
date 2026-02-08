@@ -61,19 +61,14 @@ export default async function handler(req, res) {
 
   const amountLocal = Number(amountLocalRaw ?? 0);
 
-  // Economy: 1¢ = 1 coin
-  const coinsPerUsd = Number(process.env.CPX_COINS_PER_USD ?? '100');
-
-  const coins =
-    Number.isFinite(balanceUsd) && Number.isFinite(coinsPerUsd)
-      ? Math.max(0, Math.floor(balanceUsd * coinsPerUsd))
-      : 0;
+  const coins = Number.isFinite(balanceUsd)
+    ? Math.max(0, Math.floor(balanceUsd))
+    : 0;
 
   console.log('CPX CREDIT:', {
     uid: userId,
     trans_id: transId,
     amount_usd: balanceUsd,
-    coinsPerUsd,
     coins,
     status
   });
@@ -183,5 +178,4 @@ export default async function handler(req, res) {
 /**
  * ENV REQUIRED:
  * CPX_SECURE_HASH=your_cpx_secure_hash
- * CPX_COINS_PER_USD=100   // 1¢ = 1 coin
  */
