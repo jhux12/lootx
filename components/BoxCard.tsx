@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CoinAmount } from './CoinAmount';
-import { getRiskLabel } from '../utils/caseOdds';
 import { MysteryBox } from '../types';
-import { BoxTagPills } from './BoxTagPills';
-import { getBoxTags } from '../utils/boxTags';
+import { RiskSliderIndicator } from './RiskSliderIndicator';
+import { getRiskIndicatorValue } from '../utils/riskIndicator';
 
 type BoxCardProps = {
   box: MysteryBox;
@@ -13,7 +12,6 @@ type BoxCardProps = {
 };
 
 export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size = 'default' }) => {
-  const boxTags = getBoxTags(box);
   const [isDropping, setIsDropping] = useState(false);
   const clickTimeoutRef = useRef<number | null>(null);
   const isCompact = size === 'compact';
@@ -62,33 +60,18 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size =
       </div>
 
       {/* Info */}
-      <div className="w-full pb-1">
-          <h4 className={`font-semibold text-gray-200 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-[11px] sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
-          <CoinAmount
-            amount={box.price}
-            formatOptions={{ maximumFractionDigits: 0 }}
-            className={`mt-1 justify-center font-bold text-white sm:text-lg ${isCompact ? 'text-xs' : 'text-base'}`}
-            iconClassName="w-4 h-4"
-          />
-          <BoxTagPills tags={boxTags} className="mt-2" />
-          <div className="mt-3 flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">
-            <span
-              className="h-1 w-1 rounded-full"
-              style={{ backgroundColor: box.accentColor }}
-            />
-            {getRiskLabel(box.riskLevel ?? 50)}
-            <span
-              className="h-1 w-1 rounded-full"
-              style={{ backgroundColor: box.accentColor }}
-            />
-          </div>
+      <div className="mt-auto w-full pb-2">
+        <h4 className={`font-semibold text-gray-200 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-[11px] sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
+        <CoinAmount
+          amount={box.price}
+          formatOptions={{ maximumFractionDigits: 0 }}
+          className={`mt-1 justify-center font-bold text-white sm:text-lg ${isCompact ? 'text-xs' : 'text-base'}`}
+          iconClassName="w-4 h-4"
+        />
+        <div className={`mx-auto mt-3 ${isCompact ? 'w-20 sm:w-24' : 'w-24 sm:w-28'}`}>
+          <RiskSliderIndicator value={getRiskIndicatorValue(box.riskLevel ?? 50)} />
+        </div>
       </div>
-
-      {/* Bottom Color Bar */}
-      <div 
-          className="absolute bottom-0 left-6 right-6 h-0.5 rounded-t-full opacity-60 transition-opacity duration-300 group-hover:opacity-100"
-          style={{ backgroundColor: box.accentColor, boxShadow: `0 0 12px ${box.accentColor}` }}
-      />
     </div>
   );
 };
