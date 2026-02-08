@@ -6,11 +6,12 @@ import { useSound } from '../context/SoundContext';
 type OfferwallModalProps = {
   open: boolean;
   onClose: () => void;
+  onRequireAuth?: () => void;
 };
 
 let cachedCpxUrl: string | null = null;
 
-export const OfferwallModal: React.FC<OfferwallModalProps> = ({ open, onClose }) => {
+export const OfferwallModal: React.FC<OfferwallModalProps> = ({ open, onClose, onRequireAuth }) => {
   const { playSound } = useSound();
   const [cpxUrl, setCpxUrl] = useState<string | null>(cachedCpxUrl);
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,8 @@ export const OfferwallModal: React.FC<OfferwallModalProps> = ({ open, onClose })
       try {
         const currentUser = auth.currentUser;
         if (!currentUser) {
+          onRequireAuth?.();
+          onClose();
           throw new Error('Please sign in to access the offer wall.');
         }
         const token = await currentUser.getIdToken();
@@ -90,7 +93,7 @@ export const OfferwallModal: React.FC<OfferwallModalProps> = ({ open, onClose })
     };
 
     loadOfferwall();
-  }, [open, reloadToken]);
+  }, [open, reloadToken, onClose, onRequireAuth]);
 
   useEffect(() => {
     if (!open) return;

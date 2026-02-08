@@ -404,7 +404,11 @@ export const Bonuses: React.FC = () => {
       </div>
 
     </div>
-    <OfferwallModal open={isOfferwallOpen} onClose={handleCloseOfferWall} />
+    <OfferwallModal
+      open={isOfferwallOpen}
+      onClose={handleCloseOfferWall}
+      onRequireAuth={() => openAuthModal('login')}
+    />
     </>
   );
 };
