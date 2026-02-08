@@ -7,6 +7,7 @@ import { BoxCard } from './BoxCard';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { RiskLegend } from './RiskLegend';
 import {
   BoxesPageConfig,
   BoxesPageCuratedRow,
@@ -575,6 +576,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
             </button>
           )}
         </div>
+        <div className="mt-2 flex w-full justify-center">
+          <RiskLegend className="w-full justify-center" />
+        </div>
       </div>
 
       {config.filters.category.enabled && categoryCards.length > 0 && (
@@ -732,6 +736,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
             )}
 
           </div>
+        </div>
+        <div className="flex w-full justify-end">
+          <RiskLegend className="justify-end" />
         </div>
 
         {config.filters.category.enabled && categoryCards.length > 0 && (
