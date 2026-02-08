@@ -16,7 +16,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { LoginModal } from './components/LoginModal';
 import { EmailVerificationModal } from './components/EmailVerificationModal';
 import { EmailVerifiedModal } from './components/EmailVerifiedModal';
-import { CustomCaseCreator } from './components/CustomCaseCreator';
+import { CaseLabBuilder } from './components/caselab/CaseLabBuilder';
 import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
 import { GameProvider, useGame } from './context/GameContext';
@@ -382,7 +382,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
       {view.type === 'CUSTOM_CREATOR' && (
         <div className="w-full">
-          <CustomCaseCreator />
+          <CaseLabBuilder />
         </div>
       )}
 
