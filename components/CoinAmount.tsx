@@ -18,9 +18,12 @@ export const CoinAmount: React.FC<CoinAmountProps> = ({
   formatOptions,
   showSign = false
 }) => {
+  if (process.env.NODE_ENV !== 'production' && !Number.isInteger(amount)) {
+    console.warn('[CoinAmount] Non-integer coin amount provided:', amount);
+  }
+
   const absoluteAmount = showSign ? Math.abs(amount) : amount;
-  const coins = absoluteAmount * 100;
-  const formatted = coins.toLocaleString(undefined, formatOptions ?? { maximumFractionDigits: 0 });
+  const formatted = absoluteAmount.toLocaleString(undefined, formatOptions ?? { maximumFractionDigits: 0 });
   const sign = showSign ? (amount < 0 ? '-' : '+') : '';
 
   return (

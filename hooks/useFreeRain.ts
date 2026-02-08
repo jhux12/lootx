@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
 
 const RAIN_DURATION_MS = 60 * 60 * 1000;
-const RAIN_JOIN_BONUS = 0.1;
+const RAIN_JOIN_BONUS = 10;
 const MIN_ACCOUNT_AGE_MS = 10 * 60 * 1000;
 const RECENT_CHAT_MS = 5 * 60 * 1000;
 
@@ -73,7 +73,7 @@ const shuffle = <T,>(items: T[]) => {
 
 const distributeRandomly = (pot: number, participants: string[]) => {
   if (pot <= 0 || participants.length === 0) return new Map<string, number>();
-  const totalCoins = Math.max(0, Math.round(pot * 100));
+  const totalCoins = Math.max(0, Math.round(pot));
   const payoutsInCoins = new Map<string, number>();
 
   participants.forEach((userId) => payoutsInCoins.set(userId, 0));
@@ -87,7 +87,7 @@ const distributeRandomly = (pot: number, participants: string[]) => {
   const payouts = new Map<string, number>();
   payoutsInCoins.forEach((amountCoins, userId) => {
     if (amountCoins > 0) {
-      payouts.set(userId, amountCoins / 100);
+      payouts.set(userId, amountCoins);
     }
   });
 
@@ -180,7 +180,7 @@ export const useFreeRain = () => {
         if (mine && mine.amount > 0) {
           addNotification({
             type: 'success',
-            message: `Free rain paid out ${(mine.amount * 100).toLocaleString()} coins.`
+            message: `Free rain paid out ${mine.amount.toLocaleString()} coins.`
           });
         }
       }
@@ -280,7 +280,7 @@ export const useFreeRain = () => {
 
       addNotification({
         type: 'success',
-        message: `Joined free rain. Pot is now ${(result.potCoins * 100).toLocaleString()} coins.`
+        message: `Joined free rain. Pot is now ${result.potCoins.toLocaleString()} coins.`
       });
     } finally {
       setIsJoining(false);

@@ -348,8 +348,7 @@ export const AdminPanel: React.FC = () => {
   };
   const formatCoinText = (amount: number, { showSign = true }: { showSign?: boolean } = {}) => {
       const absoluteAmount = showSign ? Math.abs(amount) : amount;
-      const coins = absoluteAmount * 100;
-      const formatted = coins.toLocaleString(undefined, { maximumFractionDigits: 0 });
+      const formatted = absoluteAmount.toLocaleString(undefined, { maximumFractionDigits: 0 });
       const sign = showSign ? (amount < 0 ? '-' : '+') : '';
       return `${sign}${formatted} coins`;
   };
@@ -2647,7 +2646,7 @@ export const AdminPanel: React.FC = () => {
                                                 <td className="px-4 py-3 text-white font-semibold">{pkg.name}</td>
                                                 <td className="px-4 py-3">
                                                     <CoinAmount
-                                                        amount={pkg.coins / 100}
+                                                        amount={pkg.coins}
                                                         formatOptions={{ maximumFractionDigits: 0 }}
                                                         className="text-green-400 font-semibold"
                                                         iconClassName="w-3.5 h-3.5"
@@ -2658,7 +2657,7 @@ export const AdminPanel: React.FC = () => {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <CoinAmount
-                                                        amount={((pkg.totalCoins ?? (pkg.coins + (pkg.bonusCoins ?? 0))) / 100)}
+                                                        amount={pkg.totalCoins ?? (pkg.coins + (pkg.bonusCoins ?? 0))}
                                                         formatOptions={{ maximumFractionDigits: 0 }}
                                                         className="text-white font-semibold"
                                                         iconClassName="w-3.5 h-3.5"
