@@ -92,6 +92,10 @@ export default async function handler(req, res) {
   await firestore.runTransaction(async (transaction) => {
     const existing = await transaction.get(transactionRef);
     const existingData = existing.exists ? existing.data() : null;
+    const userSnapshot = await transaction.get(userRef);
+    const userData = userSnapshot.exists ? userSnapshot.data() : null;
+    const currentCoins = Number.isFinite(userData?.coins) ? userData.coins : 0;
+    const currentBalance = Number.isFinite(userData?.balance) ? userData.balance : 0;
 
     if (existingData) {
       if (status === 1 && existingData.credited) {
@@ -105,11 +109,13 @@ export default async function handler(req, res) {
     }
 
     if (status === 1) {
+      const nextCoins = Math.max(0, currentCoins + coins);
+      const nextBalance = Math.max(0, currentBalance + balanceUsd);
       transaction.set(
         userRef,
         {
-          coins: admin.firestore.FieldValue.increment(coins),
-          balance: admin.firestore.FieldValue.increment(balanceUsd)
+          coins: nextCoins,
+          balance: nextBalance
         },
         { merge: true }
       );
@@ -142,11 +148,13 @@ export default async function handler(req, res) {
         ? amountUsd
         : existingData?.amount_usd ?? 0;
       if (existingData?.credited && !existingData?.reversed) {
+        const nextCoins = Math.max(0, currentCoins - previousCoins);
+        const nextBalance = Math.max(0, currentBalance - previousAmountUsd);
         transaction.set(
           userRef,
           {
-            coins: admin.firestore.FieldValue.increment(-previousCoins),
-            balance: admin.firestore.FieldValue.increment(-previousAmountUsd)
+            coins: nextCoins,
+            balance: nextBalance
           },
           { merge: true }
         );
