@@ -29,6 +29,7 @@ export const TopUpModal: React.FC = () => {
   }, [formattedDepositAmount]);
   const totalCoins = (selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0)));
   const effectiveRate = priceValue > 0 ? Math.round(totalCoins / priceValue) : null;
+  const showShimmer = !isLoading && !!selectedPackage;
   const getBadgeClasses = (badge?: string) => {
     if (badge === 'best') {
       return 'border-amber-400/80 bg-amber-500/10 text-amber-100';
@@ -194,8 +195,13 @@ export const TopUpModal: React.FC = () => {
                     <button 
                         onClick={handleDeposit}
                         disabled={isLoading || !selectedPackage}
-                        className="w-full rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="relative w-full overflow-hidden rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
                     >
+                        {showShimmer && (
+                          <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+                            <span className="deposit-shimmer absolute -left-1/2 top-0 h-full w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                          </span>
+                        )}
                         {isLoading ? (
                             <>
                                 <Loader2 className="w-5 h-5 animate-spin" /> Processing...
@@ -229,6 +235,28 @@ export const TopUpModal: React.FC = () => {
                 </div>
             </>
         )}
+        <style>{`
+          @keyframes deposit-shimmer {
+            0% {
+              transform: translateX(-150%) skewX(-12deg);
+              opacity: 0;
+            }
+            20% {
+              opacity: 0.45;
+            }
+            50% {
+              opacity: 0.85;
+            }
+            100% {
+              transform: translateX(250%) skewX(-12deg);
+              opacity: 0;
+            }
+          }
+
+          .deposit-shimmer {
+            animation: deposit-shimmer 2.8s ease-in-out infinite;
+          }
+        `}</style>
       </div>
     </div>
   );
