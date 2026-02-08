@@ -544,7 +544,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
             <div className="relative mt-2">
               <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
               <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-              <div className="flex gap-2 overflow-x-auto pb-1 pt-1">
+              <div className="categories-scrollbar flex gap-2 overflow-x-auto pb-1 pt-1">
                 {categoryCards.map((card) => {
                   const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(card.categorySlug);
                   return (
@@ -688,7 +688,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
               <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-              <div className="flex gap-2 overflow-x-auto pb-2 pt-1">
+              <div className="categories-scrollbar flex gap-2 overflow-x-auto pb-2 pt-1">
                 {categoryCards.map((card) => {
                   const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(card.categorySlug);
                   return (
