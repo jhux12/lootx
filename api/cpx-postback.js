@@ -62,6 +62,7 @@ export default async function handler(req, res) {
     ? Math.floor(amountUsd * coinsPerUsd)
     : 0;
   const coins = Number.isFinite(computedCoins) ? Math.max(0, computedCoins) : 0;
+  const balanceUsd = Number.isFinite(amountUsd) ? amountUsd : 0;
 
   console.log('CPX CREDIT:', {
     uid: userId,
@@ -75,8 +76,8 @@ export default async function handler(req, res) {
     return sendJson(res, 200, { ignored: true });
   }
 
-  if (status === 1 && coins <= 0) {
-    return sendJson(res, 200, { ok: true, outcome: 'no coins' });
+  if (status === 1 && coins <= 0 && balanceUsd <= 0) {
+    return sendJson(res, 200, { ok: true, outcome: 'no credit' });
   }
 
   const transactionRef = firestore.collection('offerwall_transactions').doc(transId);
@@ -104,7 +105,7 @@ export default async function handler(req, res) {
         userRef,
         {
           coins: admin.firestore.FieldValue.increment(coins),
-          balance: admin.firestore.FieldValue.increment(coins)
+          balance: admin.firestore.FieldValue.increment(balanceUsd)
         },
         { merge: true }
       );
@@ -113,7 +114,7 @@ export default async function handler(req, res) {
         {
           uid: userId,
           coins,
-          amount_usd: Number.isFinite(amountUsd) ? amountUsd : 0,
+          amount_usd: balanceUsd,
           amount_local: Number.isFinite(amountLocal) ? amountLocal : 0,
           status,
           credited: true,
@@ -130,12 +131,18 @@ export default async function handler(req, res) {
 
     if (status === 2) {
       const previousCoins = Number.isFinite(existingData?.coins) ? existingData.coins : 0;
+      const previousAmountUsd = Number.isFinite(existingData?.amount_usd)
+        ? existingData.amount_usd
+        : 0;
+      const reversalAmountUsd = Number.isFinite(amountUsd)
+        ? amountUsd
+        : existingData?.amount_usd ?? 0;
       if (existingData?.credited && !existingData?.reversed) {
         transaction.set(
           userRef,
           {
             coins: admin.firestore.FieldValue.increment(-previousCoins),
-            balance: admin.firestore.FieldValue.increment(-previousCoins)
+            balance: admin.firestore.FieldValue.increment(-previousAmountUsd)
           },
           { merge: true }
         );
@@ -146,7 +153,7 @@ export default async function handler(req, res) {
             reversed: true,
             updatedAt: now,
             reversedAt: now,
-            amount_usd: Number.isFinite(amountUsd) ? amountUsd : existingData.amount_usd ?? 0,
+            amount_usd: reversalAmountUsd,
             amount_local: Number.isFinite(amountLocal) ? amountLocal : existingData.amount_local ?? 0,
             coins: previousCoins
           },
@@ -161,7 +168,7 @@ export default async function handler(req, res) {
         {
           uid: userId,
           coins,
-          amount_usd: Number.isFinite(amountUsd) ? amountUsd : 0,
+          amount_usd: balanceUsd,
           amount_local: Number.isFinite(amountLocal) ? amountLocal : 0,
           status,
           credited: existingData?.credited ?? false,
