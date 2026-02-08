@@ -3,7 +3,7 @@ import { admin, firestore } from './_lib/firebaseAdmin.js';
 import { readJsonBody, sendJson } from './_lib/http.js';
 
 const buildSecureHash = (transId, secret) =>
-  crypto.createHash('md5').update(`${transId}${secret}`).digest('hex');
+  crypto.createHash('md5').update(`${transId}-${secret}`).digest('hex');
 
 const getQueryValue = (value) => (Array.isArray(value) ? value[0] : value);
 
