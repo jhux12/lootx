@@ -55,8 +55,35 @@
       }
       /* Noticeable horizontal scrollbar for category rows */
       .categories-scrollbar {
+        position: relative;
+        padding-bottom: 12px;
+        scrollbar-gutter: stable;
         scrollbar-color: #8b5cf6 #0f141f;
         scrollbar-width: thin;
+      }
+      .categories-scrollbar::after {
+        content: '';
+        position: absolute;
+        left: 6px;
+        right: 6px;
+        bottom: 2px;
+        height: 6px;
+        border-radius: 999px;
+        background: #0f141f;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        pointer-events: none;
+      }
+      .categories-scrollbar::before {
+        content: '';
+        position: absolute;
+        left: 12px;
+        bottom: 2px;
+        height: 6px;
+        width: 40%;
+        border-radius: 999px;
+        background: linear-gradient(120deg, #7c3aed 0%, #6366f1 60%, #38bdf8 100%);
+        box-shadow: 0 0 10px rgba(124, 58, 237, 0.45);
+        pointer-events: none;
       }
       .categories-scrollbar::-webkit-scrollbar {
         height: 8px;
