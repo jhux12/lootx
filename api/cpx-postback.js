@@ -2,8 +2,8 @@ import crypto from 'crypto';
 import { admin, firestore } from './_lib/firebaseAdmin.js';
 import { readJsonBody, sendJson } from './_lib/http.js';
 
-const buildSecureHash = (uid, secret) =>
-  crypto.createHash('md5').update(`${uid}-${secret}`).digest('hex');
+const buildSecureHash = (transId, secret) =>
+  crypto.createHash('md5').update(`${transId}${secret}`).digest('hex');
 
 const getQueryValue = (value) => (Array.isArray(value) ? value[0] : value);
 
@@ -27,9 +27,9 @@ export default async function handler(req, res) {
   const userId = getQueryValue(payload.user_id ?? payload.ext_user_id);
   const amountUsdRaw = getQueryValue(payload.amount_usd);
   const amountLocalRaw = getQueryValue(payload.amount_local);
-  const hash = getQueryValue(payload.hash);
+  const receivedHash = getQueryValue(payload.hash ?? payload.secure_hash);
 
-  if (!statusRaw || !transId || !userId || !amountUsdRaw || !hash) {
+  if (!statusRaw || !transId || !userId || !amountUsdRaw || !receivedHash) {
     return sendJson(res, 400, { error: 'Missing required CPX params' });
   }
 
@@ -42,9 +42,14 @@ export default async function handler(req, res) {
     return sendJson(res, 500, { error: 'Offerwall configuration missing' });
   }
 
-  const expectedHash = buildSecureHash(userId, secureHashSecret);
-  if (hash !== expectedHash) {
-    console.warn('CPX postback hash mismatch', { transId, userId });
+  const expectedHash = buildSecureHash(transId, secureHashSecret);
+  if (receivedHash !== expectedHash) {
+    console.warn('CPX postback hash mismatch', {
+      transId,
+      userId,
+      expectedHash,
+      receivedHash
+    });
     return sendJson(res, 403, { error: 'Invalid secure hash' });
   }
 
