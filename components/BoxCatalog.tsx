@@ -579,6 +579,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                   );
                 })}
               </div>
+              <span className="categories-scroll-hint" aria-hidden="true" />
             </div>
           </div>
         </div>
@@ -723,6 +724,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                   );
                 })}
               </div>
+              <span className="categories-scroll-hint" aria-hidden="true" />
             </div>
           </div>
         )}
