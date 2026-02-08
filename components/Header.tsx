@@ -295,80 +295,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
           </button>
           {isAuthenticated ? (
             <>
-              <div
-                className={`flex items-center bg-[#111621] rounded-lg p-1 pr-3 border border-gray-800 balance-pulse ${
-                  balancePulse === 'up'
-                    ? 'balance-pulse-up'
-                    : balancePulse === 'down'
-                      ? 'balance-pulse-down'
-                      : ''
-                }`}
-              >
-                <span
-                  aria-hidden="true"
-                  className={`balance-sparkle ${balancePulse ? 'balance-sparkle-active' : ''}`}
-                />
-                <div className="bg-[#1a2130] px-2 md:px-3 py-1 rounded text-xs md:text-sm mr-2 md:mr-3 relative z-10">
-                  <CoinAmount
-                    amount={balance}
-                    formatOptions={{ maximumFractionDigits: 0 }}
-                    className="text-cyan-400 font-bold"
-                    iconClassName="w-3.5 h-3.5"
-                  />
-                </div>
-                <button 
-                  onClick={() => setShowTopUpModal(true)}
-                  className="btn-logo-gradient text-white rounded p-1 transition-colors active:scale-95"
-                  title="Add Coins"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
-              </div>
-
-              <div className="group relative hidden md:block">
-                <div className="flex items-center gap-2 text-gray-400 hover:text-white cursor-pointer border-r border-gray-800 pr-4">
-                  <img 
-                    src={user.avatar} 
-                    className="w-8 h-8 rounded-lg border border-gray-700" 
-                    alt="Avatar" 
-                  />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium leading-none max-w-[120px] truncate flex items-center gap-1">
-                      {user.name}
-                      {user.isAdmin && (
-                        <span className="text-[9px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/30">
-                          Admin
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-[10px] text-gray-500">Lvl {user.level}</span>
-                  </div>
-                  <ChevronDown className="w-3 h-3" />
-                </div>
-
-                {/* Desktop Dropdown */}
-                <div className="absolute right-4 top-full mt-2 w-48 bg-[#151a23] border border-gray-800 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 transform translate-y-2 group-hover:translate-y-0">
-                  <div className="p-2">
-                    <button 
-                      onClick={() => handleNav({ type: 'PROFILE' })}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors text-left"
-                    >
-                      <User className="w-4 h-4" /> Profile
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors text-left">
-                      <Settings className="w-4 h-4" /> Settings
-                    </button>
-                    <div className="h-px bg-gray-800 my-1"></div>
-                    <button 
-                      onClick={logout}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition-colors text-left"
-                    >
-                      <LogOut className="w-4 h-4" /> Sign out
-                    </button>
-                  </div>
-                </div>
-              </div>
-
               <div className="flex items-center gap-3 text-gray-500">
                 <div className="relative">
                   <button
@@ -468,6 +394,79 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
                     alt="Avatar" 
                     onClick={() => handleNav({ type: 'PROFILE' })} 
                   />
+                </div>
+              </div>
+              <div
+                className={`flex items-center bg-[#111621] rounded-lg p-1 pr-3 border border-gray-800 balance-pulse ${
+                  balancePulse === 'up'
+                    ? 'balance-pulse-up'
+                    : balancePulse === 'down'
+                      ? 'balance-pulse-down'
+                      : ''
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`balance-sparkle ${balancePulse ? 'balance-sparkle-active' : ''}`}
+                />
+                <div className="bg-[#1a2130] px-2 md:px-3 py-1 rounded text-xs md:text-sm mr-2 md:mr-3 relative z-10">
+                  <CoinAmount
+                    amount={balance}
+                    formatOptions={{ maximumFractionDigits: 0 }}
+                    className="text-cyan-400 font-bold"
+                    iconClassName="w-3.5 h-3.5"
+                  />
+                </div>
+                <button 
+                  onClick={() => setShowTopUpModal(true)}
+                  className="btn-logo-gradient text-white rounded p-1 transition-colors active:scale-95"
+                  title="Add Coins"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+
+              <div className="group relative hidden md:block">
+                <div className="flex items-center gap-2 text-gray-400 hover:text-white cursor-pointer border-r border-gray-800 pr-4">
+                  <img 
+                    src={user.avatar} 
+                    className="w-8 h-8 rounded-lg border border-gray-700" 
+                    alt="Avatar" 
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium leading-none max-w-[120px] truncate flex items-center gap-1">
+                      {user.name}
+                      {user.isAdmin && (
+                        <span className="text-[9px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/30">
+                          Admin
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-gray-500">Lvl {user.level}</span>
+                  </div>
+                  <ChevronDown className="w-3 h-3" />
+                </div>
+
+                {/* Desktop Dropdown */}
+                <div className="absolute right-4 top-full mt-2 w-48 bg-[#151a23] border border-gray-800 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 transform translate-y-2 group-hover:translate-y-0">
+                  <div className="p-2">
+                    <button 
+                      onClick={() => handleNav({ type: 'PROFILE' })}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors text-left"
+                    >
+                      <User className="w-4 h-4" /> Profile
+                    </button>
+                    <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors text-left">
+                      <Settings className="w-4 h-4" /> Settings
+                    </button>
+                    <div className="h-px bg-gray-800 my-1"></div>
+                    <button 
+                      onClick={logout}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition-colors text-left"
+                    >
+                      <LogOut className="w-4 h-4" /> Sign out
+                    </button>
+                  </div>
                 </div>
               </div>
             </>
