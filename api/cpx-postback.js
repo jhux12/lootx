@@ -55,16 +55,14 @@ export default async function handler(req, res) {
 
   const status = Number(statusRaw);
   const amountUsdString = typeof amountUsdRaw === 'string' ? amountUsdRaw : String(amountUsdRaw);
-  const amountUsdValue = Number(amountUsdRaw);
-  const amountUsd = Number.isFinite(amountUsdValue)
-    ? amountUsdValue / (amountUsdString.includes('.') ? 1 : 100)
-    : amountUsdValue;
+  const amountUsd = Number(amountUsdRaw);
+const balanceUsd = Number.isFinite(amountUsd) ? amountUsd : 0;
   const amountLocal = Number(amountLocalRaw ?? 0);
   const coinsPerUsdRaw = process.env.CPX_COINS_PER_USD ?? '100';
   const coinsPerUsd = Number(coinsPerUsdRaw);
-  const computedCoins = Number.isFinite(amountUsd) && Number.isFinite(coinsPerUsd)
-    ? Math.floor(amountUsd * coinsPerUsd)
-    : 0;
+  const computedCoins = Number.isFinite(balanceUsd) && Number.isFinite(coinsPerUsd)
+  ? Math.floor(balanceUsd * coinsPerUsd)
+  : 0;
   const coins = Number.isFinite(computedCoins) ? Math.max(0, computedCoins) : 0;
   const balanceUsd = Number.isFinite(amountUsd) ? amountUsd : 0;
 
