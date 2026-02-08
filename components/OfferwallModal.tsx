@@ -146,7 +146,7 @@ export const OfferwallModal: React.FC<OfferwallModalProps> = ({ open, onClose })
         aria-modal="true"
         aria-labelledby="offerwall-title"
         aria-describedby="offerwall-description"
-        className="relative z-10 flex w-full h-full flex-col overflow-hidden rounded-none border border-white/10 bg-[#0f141f]/90 shadow-2xl backdrop-blur-xl sm:h-auto sm:max-h-[80vh] sm:max-w-5xl sm:rounded-2xl animate-in zoom-in-95 duration-200"
+        className="relative z-10 flex w-full h-full flex-col overflow-hidden rounded-none border border-white/10 bg-[#0f141f]/90 shadow-2xl backdrop-blur-xl sm:h-[80vh] sm:min-h-[60vh] sm:max-h-[80vh] sm:max-w-5xl sm:rounded-2xl animate-in zoom-in-95 duration-200"
         onKeyDown={handleKeyDown}
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-6">
