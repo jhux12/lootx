@@ -53,6 +53,25 @@
       .scrollbar-thin::-webkit-scrollbar-thumb:hover {
         background: #475569;
       }
+      .scrollbar-x {
+        scrollbar-color: #64748b #0b0f1a;
+        scrollbar-width: thin;
+        scrollbar-gutter: stable both-edges;
+      }
+      .scrollbar-x::-webkit-scrollbar {
+        height: 8px;
+      }
+      .scrollbar-x::-webkit-scrollbar-track {
+        background: #0b0f1a;
+        border-radius: 999px;
+      }
+      .scrollbar-x::-webkit-scrollbar-thumb {
+        background: linear-gradient(90deg, rgba(124,58,237,0.9), rgba(99,102,241,0.9));
+        border-radius: 999px;
+      }
+      .scrollbar-x::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(90deg, rgba(139,92,246,0.95), rgba(56,189,248,0.95));
+      }
       .ticker-animation {
         animation: scroll 35s linear infinite;
       }
