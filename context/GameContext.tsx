@@ -3,6 +3,7 @@ import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, Vi
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
+import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { 
   User as FirebaseUser,
   AuthCredential,
@@ -2037,13 +2038,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const selectedCases = boxIds.map(id => boxes.find(b => b.id === id)).filter(b => b !== undefined) as MysteryBox[];
     const cost = selectedCases.reduce((sum, b) => sum + b.price, 0);
+    const costCoins = toCoins(cost, PRICE_UNIT_MODE);
 
     if (selectedCases.length === 0) {
         alert("Please select at least one box");
         return;
     }
 
-    if (!deductBalance(cost)) {
+    if (!deductBalance(costCoins)) {
       alert("Insufficient funds to create battle!");
       return;
     }
@@ -2090,7 +2092,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       alert("Battle is full!");
       return;
     }
-    if (!deductBalance(battle.cost, { trackRewards: false })) {
+    if (!deductBalance(toCoins(battle.cost, PRICE_UNIT_MODE), { trackRewards: false })) {
       alert("Insufficient funds to join battle!");
       return;
     }
@@ -2123,13 +2125,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     } catch (error: any) {
       console.error('Failed to join battle', error);
-      addBalance(battle.cost);
+      addBalance(toCoins(battle.cost, PRICE_UNIT_MODE));
       if (error?.message === 'full') {
         alert("Battle is full!");
       }
       return;
     }
-    registerSpend(battle.cost);
+    registerSpend(toCoins(battle.cost, PRICE_UNIT_MODE));
     setView({ type: 'BATTLE_ARENA', battleId });
   };
 

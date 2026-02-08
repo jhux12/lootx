@@ -4,6 +4,7 @@ import { GOLDEN_TICKET_ITEM } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { ChevronLeft, Swords, Trophy, User, Zap, ToggleLeft, ToggleRight } from 'lucide-react';
 import { CaseItem, BattleRound } from '../types';
+import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 
 interface BattleArenaProps {
   battleId: string;
@@ -369,7 +370,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
            <div className="text-right">
              <div className="text-xs text-gray-500">Battle Cost</div>
              <CoinAmount
-               amount={battle.cost}
+               amount={toCoins(battle.cost, PRICE_UNIT_MODE)}
                formatOptions={{ maximumFractionDigits: 0 }}
                className="font-bold text-white justify-end"
                iconClassName="w-3.5 h-3.5"
@@ -411,7 +412,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                     <div className="text-center mt-3 z-10">
                       <div className="font-bold text-white truncate max-w-[120px]">{player.name}</div>
                       <CoinAmount
-                        amount={player.totalWin}
+                        amount={toCoins(player.totalWin, PRICE_UNIT_MODE)}
                         formatOptions={{ maximumFractionDigits: 0 }}
                         className={`text-sm font-bold ${isWinner ? 'text-yellow-500' : 'text-gray-400'}`}
                         iconClassName="w-3.5 h-3.5"
@@ -446,7 +447,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                                 <div className="text-center relative z-10">
                                     <div className="text-[10px] text-gray-400 truncate w-full">{roundItems[player.id].name}</div>
                                     <CoinAmount
-                                      amount={roundItems[player.id].price}
+                                      amount={toCoins(roundItems[player.id].price, PRICE_UNIT_MODE)}
                                       formatOptions={{ maximumFractionDigits: 0 }}
                                       className="text-sm font-bold text-white justify-center"
                                       iconClassName="w-3.5 h-3.5"
@@ -472,7 +473,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                           <div className="text-[10px] text-gray-400 truncate">{drop.item.name}</div>
                           <div style={{ color: drop.item.color }}>
                             <CoinAmount
-                              amount={drop.item.price}
+                              amount={toCoins(drop.item.price, PRICE_UNIT_MODE)}
                               formatOptions={{ maximumFractionDigits: 0 }}
                               className="text-xs font-bold"
                               iconClassName="w-3 h-3"

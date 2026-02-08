@@ -8,6 +8,7 @@ import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { RiskLegend } from './RiskLegend';
+import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import {
   BoxesPageConfig,
   BoxesPageCuratedRow,
@@ -138,10 +139,10 @@ const applyBoxFilters = (boxes: ReturnType<typeof useGame>['boxes'], options: Bo
   }
 
   if (typeof options.minPrice === 'number') {
-    filtered = filtered.filter((box) => box.price >= options.minPrice!);
+    filtered = filtered.filter((box) => toCoins(box.price, PRICE_UNIT_MODE) >= options.minPrice!);
   }
   if (typeof options.maxPrice === 'number') {
-    filtered = filtered.filter((box) => box.price <= options.maxPrice!);
+    filtered = filtered.filter((box) => toCoins(box.price, PRICE_UNIT_MODE) <= options.maxPrice!);
   }
 
   if (hasSearch) {
@@ -154,9 +155,13 @@ const applyBoxFilters = (boxes: ReturnType<typeof useGame>['boxes'], options: Bo
 
   const sortKey = options.sortKey ?? 'price-high';
   if (sortKey === 'price-low') {
-    filtered = [...filtered].sort((a, b) => a.price - b.price);
+    filtered = [...filtered].sort(
+      (a, b) => toCoins(a.price, PRICE_UNIT_MODE) - toCoins(b.price, PRICE_UNIT_MODE)
+    );
   } else if (sortKey === 'price-high') {
-    filtered = [...filtered].sort((a, b) => b.price - a.price);
+    filtered = [...filtered].sort(
+      (a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)
+    );
   } else if (sortKey === 'newest') {
     filtered = [...filtered].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }

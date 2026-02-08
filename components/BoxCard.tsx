@@ -3,6 +3,7 @@ import { CoinAmount } from './CoinAmount';
 import { MysteryBox } from '../types';
 import { RiskSliderIndicator } from './RiskSliderIndicator';
 import { resolveRiskValue } from '../utils/riskIndicator';
+import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 
 type BoxCardProps = {
   box: MysteryBox;
@@ -65,7 +66,7 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size =
       <div className="flex w-full flex-col items-center pb-1">
           <h4 className={`font-semibold text-gray-200 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-[11px] sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
           <CoinAmount
-            amount={box.price}
+            amount={toCoins(box.price, PRICE_UNIT_MODE)}
             formatOptions={{ maximumFractionDigits: 0 }}
             className={`mt-1 justify-center font-bold text-white sm:text-lg ${isCompact ? 'text-xs' : 'text-base'}`}
             iconClassName="w-4 h-4"

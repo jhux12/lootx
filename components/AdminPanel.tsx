@@ -6,6 +6,7 @@ import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, Inventory
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
+import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { db } from '../firebase';
 import { HomepageShowcaseEditor } from './admin/HomepageShowcaseEditor';
 import { BoxesPageConfigEditor } from './admin/BoxesPageConfigEditor';
@@ -348,8 +349,7 @@ export const AdminPanel: React.FC = () => {
   };
   const formatCoinText = (amount: number, { showSign = true }: { showSign?: boolean } = {}) => {
       const absoluteAmount = showSign ? Math.abs(amount) : amount;
-      const coins = absoluteAmount * 100;
-      const formatted = coins.toLocaleString(undefined, { maximumFractionDigits: 0 });
+      const formatted = absoluteAmount.toLocaleString(undefined, { maximumFractionDigits: 0 });
       const sign = showSign ? (amount < 0 ? '-' : '+') : '';
       return `${sign}${formatted} coins`;
   };
@@ -1401,7 +1401,10 @@ export const AdminPanel: React.FC = () => {
       if (!selectedUserId || !voidSourceId.trim()) return;
       const items = inventoryState[selectedUserId] ?? [];
       const impactedItems = items.filter((item) => item.provenance?.sourceId === voidSourceId.trim());
-      const totalValue = impactedItems.reduce((sum, item) => sum + item.price, 0);
+      const totalValue = impactedItems.reduce(
+          (sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE),
+          0
+      );
       const entry: LedgerEntry = {
           id: makeId('ledger'),
           userId: selectedUserId,
@@ -2198,7 +2201,7 @@ export const AdminPanel: React.FC = () => {
                                         <td className="px-4 py-3 capitalize text-gray-400">{item.rarity}</td>
                                         <td className="px-4 py-3">
                                             <CoinAmount
-                                              amount={item.price}
+                                              amount={toCoins(item.price, PRICE_UNIT_MODE)}
                                               formatOptions={{ maximumFractionDigits: 0 }}
                                               className="text-green-500 font-semibold"
                                               iconClassName="w-3.5 h-3.5"
@@ -2315,7 +2318,7 @@ export const AdminPanel: React.FC = () => {
                                             <span>Calculated:</span>
                                             {hasExplicitBoxPrice ? (
                                                 <CoinAmount
-                                                    amount={Number(newBox.price)}
+                                                    amount={toCoins(Number(newBox.price), PRICE_UNIT_MODE)}
                                                     formatOptions={{ maximumFractionDigits: 0 }}
                                                     className="text-gray-300 font-semibold"
                                                     iconClassName="w-3 h-3"
@@ -2500,7 +2503,7 @@ export const AdminPanel: React.FC = () => {
                                             <div className="w-full">
                                                 <div className="text-[10px] text-gray-300 truncate font-medium">{item.name}</div>
                                                 <CoinAmount
-                                                  amount={item.price}
+                                                  amount={toCoins(item.price, PRICE_UNIT_MODE)}
                                                   formatOptions={{ maximumFractionDigits: 0 }}
                                                   className="text-[10px] text-green-400 font-bold justify-center"
                                                   iconClassName="w-3 h-3"
@@ -2522,7 +2525,7 @@ export const AdminPanel: React.FC = () => {
                                                  <img src={item.image} className="w-5 h-5 object-contain" />
                                                  <span className="flex-1 text-gray-300 truncate">{item.name}</span>
                                                  <CoinAmount
-                                                   amount={item.price}
+                                                   amount={toCoins(item.price, PRICE_UNIT_MODE)}
                                                    formatOptions={{ maximumFractionDigits: 0 }}
                                                    className="text-gray-500"
                                                    iconClassName="w-3 h-3"
@@ -2576,7 +2579,7 @@ export const AdminPanel: React.FC = () => {
                                         <td className="px-4 py-3 text-gray-400">{box.items?.length || 0} items</td>
                                         <td className="px-4 py-3">
                                             <CoinAmount
-                                              amount={box.price}
+                                              amount={toCoins(box.price, PRICE_UNIT_MODE)}
                                               formatOptions={{ maximumFractionDigits: 0 }}
                                               className="text-green-500 font-semibold"
                                               iconClassName="w-3.5 h-3.5"
@@ -2647,7 +2650,7 @@ export const AdminPanel: React.FC = () => {
                                                 <td className="px-4 py-3 text-white font-semibold">{pkg.name}</td>
                                                 <td className="px-4 py-3">
                                                     <CoinAmount
-                                                        amount={pkg.coins / 100}
+                                                        amount={pkg.coins}
                                                         formatOptions={{ maximumFractionDigits: 0 }}
                                                         className="text-green-400 font-semibold"
                                                         iconClassName="w-3.5 h-3.5"
@@ -2658,7 +2661,7 @@ export const AdminPanel: React.FC = () => {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <CoinAmount
-                                                        amount={((pkg.totalCoins ?? (pkg.coins + (pkg.bonusCoins ?? 0))) / 100)}
+                                                        amount={pkg.totalCoins ?? (pkg.coins + (pkg.bonusCoins ?? 0))}
                                                         formatOptions={{ maximumFractionDigits: 0 }}
                                                         className="text-white font-semibold"
                                                         iconClassName="w-3.5 h-3.5"
@@ -3435,7 +3438,7 @@ export const AdminPanel: React.FC = () => {
                                                 <div>
                                                     <div className="text-white font-bold">{shipmentItem.name}</div>
                                                     <CoinAmount
-                                                      amount={shipmentItem.value}
+                                                      amount={toCoins(shipmentItem.value, PRICE_UNIT_MODE)}
                                                       formatOptions={{ maximumFractionDigits: 0 }}
                                                       className="text-xs text-green-400 font-semibold"
                                                       iconClassName="w-3 h-3"
@@ -4111,7 +4114,7 @@ export const AdminPanel: React.FC = () => {
                                             </div>
                                             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                                                 <div className="text-xs text-gray-400">
-                                                    Price: <span className="text-white font-semibold">{box.price}</span>
+                                                    Price: <span className="text-white font-semibold">{toCoins(box.price, PRICE_UNIT_MODE)}</span>
                                                 </div>
                                                 <button
                                                     onClick={() => initiateDeleteBox(box.id)}
