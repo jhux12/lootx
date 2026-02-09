@@ -777,6 +777,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return getViewFromLocation(window.location.pathname, window.location.search);
   });
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const nextBalance = Number(user.balance ?? 0);
+    if (Number.isFinite(nextBalance) && nextBalance !== balance) {
+      setBalance(nextBalance);
+    }
+  }, [balance, isAuthenticated, user.balance]);
+
   const setView = (nextView: ViewState) => {
     setViewState(nextView);
     if (typeof window !== 'undefined') {
