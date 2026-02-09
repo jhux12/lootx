@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Gift, Calendar, Lock, Copy, TrendingUp, ShieldCheck, ClipboardList } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -32,6 +32,7 @@ export const Bonuses: React.FC = () => {
   const [isApplyingAffiliate, setIsApplyingAffiliate] = useState(false);
   const [isClaimingRakeback, setIsClaimingRakeback] = useState(false);
   const [isOfferwallOpen, setIsOfferwallOpen] = useState(false);
+  const [nextClaimCountdown, setNextClaimCountdown] = useState('');
 
   // Identify daily box from context
   const dailyBox = boxes.find(b => b.isDaily);
@@ -42,6 +43,29 @@ export const Bonuses: React.FC = () => {
   const affiliateUnlocked = user.level >= 3;
   const availableRakeback = Number(user.rakebackBalance ?? 0);
   const hasReferral = Boolean(user.referredBy);
+
+  useEffect(() => {
+    if (canClaim) {
+      setNextClaimCountdown('');
+      return;
+    }
+
+    const updateCountdown = () => {
+      const lastClaim = user.lastDailyClaim ?? 0;
+      const nextClaimAt = lastClaim + 24 * 60 * 60 * 1000;
+      const remainingMs = Math.max(0, nextClaimAt - Date.now());
+      const totalSeconds = Math.floor(remainingMs / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      const formatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      setNextClaimCountdown(formatted);
+    };
+
+    updateCountdown();
+    const interval = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(interval);
+  }, [canClaim, user.lastDailyClaim]);
 
   const handleClaimDaily = () => {
     if (!isAuthenticated) {
@@ -242,7 +266,11 @@ export const Bonuses: React.FC = () => {
                     {isClaimingDaily && (
                       <span className="h-4 w-4 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
                     )}
-                    {!canClaim ? 'Come back later' : isClaimingDaily ? 'Claiming...' : 'Claim Free Spin'}
+                    {!canClaim
+                      ? `Next free box in ${nextClaimCountdown || '00:00:00'}`
+                      : isClaimingDaily
+                        ? 'Claiming...'
+                        : 'Claim Free Spin'}
                   </span>
               </button>
           </div>
