@@ -111,10 +111,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   };
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [view]);
-
-  useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
       (config) => {
         const rows = normalizeShowcaseRows(config?.showcaseRows);
