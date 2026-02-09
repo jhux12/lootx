@@ -35,6 +35,7 @@ import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
 import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { CookieConsentBanner } from './components/CookieConsentBanner';
 import { getBoxTags } from './utils/boxTags';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
@@ -477,6 +478,9 @@ const AppShell = () => {
   const latestMessageAt = messages[messages.length - 1]?.createdAt ?? 0;
   const [lastSeenAt, setLastSeenAt] = useState(0);
   const hasUnseenChatMessages = latestMessageAt > lastSeenAt;
+  const loadAnalyticsScripts = useCallback(() => {
+    // Analytics integrations will be enabled after consent.
+  }, []);
 
   const markChatSeen = useCallback(() => {
     if (!latestMessageAt) return;
@@ -504,6 +508,7 @@ const AppShell = () => {
         onChatViewed={markChatSeen}
       />
       <ResetPasswordModal />
+      <CookieConsentBanner onAnalyticsConsent={loadAnalyticsScripts} />
     </div>
   );
 };

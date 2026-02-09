@@ -55,6 +55,16 @@ export const SiteFooter: React.FC = () => {
           </button>
           <button
             className="transition hover:text-white"
+            onClick={() => {
+              if (typeof window === 'undefined') return;
+              window.dispatchEvent(new Event('pullz:open-cookie-settings'));
+            }}
+            type="button"
+          >
+            Cookie Settings
+          </button>
+          <button
+            className="transition hover:text-white"
             onClick={() => setView({ type: 'CONTACT' })}
             type="button"
           >
