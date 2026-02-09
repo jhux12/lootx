@@ -21,6 +21,7 @@ export const CookieConsentToast: React.FC<CookieConsentToastProps> = ({
   isPromoVisible
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const autoHideTimer = useRef<number | null>(null);
   const promoTimer = useRef<number | null>(null);
 
@@ -74,6 +75,7 @@ export const CookieConsentToast: React.FC<CookieConsentToastProps> = ({
   useEffect(() => {
     const reopen = () => {
       setIsOpen(true);
+      setIsExpanded(false);
     };
     window.addEventListener('pullz:open-cookie-settings', reopen);
     return () => window.removeEventListener('pullz:open-cookie-settings', reopen);
@@ -88,42 +90,54 @@ export const CookieConsentToast: React.FC<CookieConsentToastProps> = ({
       loadMarketingScripts();
     }
     setIsOpen(false);
+    setIsExpanded(false);
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-2 pb-2 pointer-events-none">
-      <div className="w-full rounded-full border border-white/10 bg-[#0a0f1d]/70 px-3 py-2 shadow-[0_0_18px_rgba(96,40,170,0.25)] backdrop-blur pointer-events-none">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-purple-400/80" />
-            <span className="h-1.5 w-1.5 rounded-full bg-cyan-300/80" />
-            <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
-            <span className="text-[11px] text-gray-200/90 sm:text-xs truncate max-w-[70vw]">
-              Cookies keep your progress saved and gameplay smooth.
-            </span>
+      <div className="w-full rounded-2xl border border-white/10 bg-[#0a0f1d]/80 px-3 py-2 shadow-[0_0_18px_rgba(96,40,170,0.25)] backdrop-blur pointer-events-none">
+        <div className="flex flex-col gap-2 pointer-events-auto">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-purple-400/80" />
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-300/80" />
+              <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
+              <span className="text-[11px] text-gray-200/90 sm:text-xs">
+                Cookies keep your progress saved and gameplay smooth.
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsExpanded((prev) => !prev)}
+                className="text-[11px] font-semibold text-gray-300 transition hover:text-white"
+              >
+                Learn more
+              </button>
+              <button
+                type="button"
+                onClick={() => handleConsent('essential')}
+                className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-gray-200 transition hover:border-white/40 hover:text-white"
+              >
+                Essential only
+              </button>
+              <button
+                type="button"
+                onClick={() => handleConsent('all')}
+                className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 via-fuchsia-500 to-cyan-400 px-4 py-1 text-[11px] font-semibold text-white shadow-[0_0_12px_rgba(139,92,246,0.6)] transition hover:brightness-110"
+              >
+                Accept all
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 pointer-events-auto">
-            <button
-              type="button"
-              title="Essential only"
-              aria-label="Essential only"
-              onClick={() => handleConsent('essential')}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs text-gray-200 transition hover:border-white/40 hover:text-white"
-            >
-              ⚙️
-            </button>
-            <button
-              type="button"
-              title="Accept & Continue"
-              aria-label="Accept & Continue"
-              onClick={() => handleConsent('all')}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 via-fuchsia-500 to-cyan-400 text-xs text-white shadow-[0_0_10px_rgba(139,92,246,0.45)] transition hover:opacity-90"
-            >
-              ✓
-            </button>
-          </div>
+          {isExpanded && (
+            <div className="rounded-xl border border-white/10 bg-[#0d1222] px-3 py-2 text-[11px] text-gray-300">
+              Essentials keep your account secure and preferences saved. Accept all enables
+              analytics to improve gameplay performance.
+            </div>
+          )}
         </div>
       </div>
     </div>
