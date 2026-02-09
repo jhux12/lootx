@@ -1329,6 +1329,18 @@ export const AdminPanel: React.FC = () => {
       });
   };
 
+  const handleManualEmailVerificationToggle = (targetUserId: string, currentValue: boolean) => {
+      const nextValue = !currentValue;
+      void updateUserAdminData(targetUserId, { emailManuallyVerified: nextValue });
+      logAdminAction(
+          targetUserId,
+          'email_manual_verification',
+          { emailManuallyVerified: currentValue },
+          { emailManuallyVerified: nextValue },
+          nextValue ? 'Manual email verification enabled' : 'Manual email verification disabled'
+      );
+  };
+
   const handleInventoryLockToggle = (targetUserId: string, instanceId: string) => {
       updateInventoryRecords(targetUserId, (items) => {
           const nextItems = items.map((item) => {
@@ -1449,6 +1461,7 @@ export const AdminPanel: React.FC = () => {
   const selectedLedgerEntries = selectedUserId ? ledgerEntries[selectedUserId] ?? [] : [];
   const selectedInventory = selectedUserId ? inventoryState[selectedUserId] ?? [] : [];
   const selectedAdminLogs = selectedUserId ? adminLogs[selectedUserId] ?? [] : [];
+  const manualEmailVerified = selectedUser?.emailManuallyVerified ?? false;
   const ledgerNetChange = selectedLedgerEntries.reduce((sum, entry) => sum + entry.amount, 0);
   const ledgerSearchValue = ledgerSearch.trim().toLowerCase();
 
@@ -3031,6 +3044,25 @@ export const AdminPanel: React.FC = () => {
                                                     <option value="suspended">Suspended</option>
                                                     <option value="banned">Banned</option>
                                                 </Select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Email Verification</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleManualEmailVerificationToggle(selectedUser.id, manualEmailVerified)}
+                                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-sm ${
+                                                        manualEmailVerified
+                                                            ? 'bg-green-500/10 border-green-500/40 text-green-300'
+                                                            : 'bg-[#0b0e14] border-gray-700 text-gray-300'
+                                                    }`}
+                                                    aria-pressed={manualEmailVerified}
+                                                >
+                                                    <span>Manual verification</span>
+                                                    <span className="text-xs font-semibold">{manualEmailVerified ? 'Enabled' : 'Disabled'}</span>
+                                                </button>
+                                                <p className="mt-2 text-[11px] text-gray-500">
+                                                    Allows password accounts to sign in without confirming their email.
+                                                </p>
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Risk Locks</label>

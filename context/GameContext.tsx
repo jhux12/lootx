@@ -510,6 +510,7 @@ const GUEST_USER: User = {
   isAdmin: false,
   chatWarnings: 0,
   chatDisabled: false,
+  emailManuallyVerified: false,
   termsFlagged: false
 };
 
@@ -617,6 +618,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
     chatDisabledAt: data.chatDisabledAt,
+    emailManuallyVerified: data.emailManuallyVerified ?? false,
     termsFlagged: data.termsFlagged ?? false,
     status: data.status ?? 'active',
     locks: data.locks ?? DEFAULT_LOCKS,
@@ -669,6 +671,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
     chatDisabledAt: data.chatDisabledAt,
+    emailManuallyVerified: data.emailManuallyVerified ?? false,
     termsFlagged: data.termsFlagged ?? false,
     status: data.status ?? 'active',
     locks: data.locks ?? DEFAULT_LOCKS,
@@ -923,7 +926,25 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  const checkEmailVerificationStatus = async (firebaseUser?: FirebaseUser | null) => {
+  const getManualEmailVerificationStatus = async (userId?: string | null) => {
+    if (!userId) return false;
+    try {
+      const userSnapshot = await getDoc(getUserRef(userId));
+      return Boolean(userSnapshot.data()?.emailManuallyVerified);
+    } catch (error) {
+      console.error('Failed to load manual email verification status', error);
+      return false;
+    }
+  };
+
+  const checkEmailVerificationStatus = async (firebaseUser?: FirebaseUser | null, manualOverride = false) => {
+    if (manualOverride) {
+      clearPendingEmailVerification();
+      setEmailVerificationStatus('idle');
+      setShowEmailVerificationModal(false);
+      setShowEmailVerifiedModal(false);
+      return;
+    }
     if (!hasPendingEmailVerification()) {
       setEmailVerificationStatus('idle');
       setShowEmailVerificationModal(false);
@@ -1004,7 +1025,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         url.searchParams.delete(param);
       });
       window.history.replaceState({}, '', `${url.pathname}${url.search}`);
-      await checkEmailVerificationStatus(auth.currentUser);
+      const manualOverride = await getManualEmailVerificationStatus(auth.currentUser?.uid);
+      await checkEmailVerificationStatus(auth.currentUser, manualOverride);
     }
   };
   
@@ -1072,15 +1094,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const handleAuthChange = async (firebaseUser: FirebaseUser | null) => {
       setAuthInitialized(true);
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
-      const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified);
+      const manualOverride =
+        firebaseUser && isPasswordProvider && !firebaseUser.emailVerified
+          ? await getManualEmailVerificationStatus(firebaseUser.uid)
+          : false;
+      const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified && !manualOverride);
       if (requiresVerification && !hasPendingEmailVerification()) {
         setPendingEmailVerification(getCurrentPath());
       }
 
-      void checkEmailVerificationStatus(firebaseUser);
+      await checkEmailVerificationStatus(firebaseUser, manualOverride);
       clearUserSubscriptions();
 
       if (!firebaseUser) {
@@ -1106,6 +1132,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       startAuthenticatedSession(firebaseUser);
+    };
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      void handleAuthChange(firebaseUser);
     });
 
     return () => {
@@ -1116,7 +1146,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    void checkEmailVerificationStatus(auth.currentUser);
+    const runCheck = async () => {
+      const manualOverride = await getManualEmailVerificationStatus(auth.currentUser?.uid);
+      await checkEmailVerificationStatus(auth.currentUser, manualOverride);
+    };
+    void runCheck();
   }, []);
 
   useEffect(() => {
@@ -1518,6 +1552,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAdmin: email.toLowerCase() === ADMIN_EMAIL,
         chatWarnings: 0,
         chatDisabled: false,
+        emailManuallyVerified: false,
         termsFlagged: false
       };
 
@@ -1550,13 +1585,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const refreshEmailVerification = async () => {
-    await checkEmailVerificationStatus(auth.currentUser);
+    const manualOverride = await getManualEmailVerificationStatus(auth.currentUser?.uid);
+    await checkEmailVerificationStatus(auth.currentUser, manualOverride);
   };
 
   const login = async (email: string, pass: string, remember: boolean = true) => {
       await setAuthPersistence(remember);
       const credential = await signInWithEmailAndPassword(auth, email, pass);
       if (!credential.user.emailVerified) {
+        const manualOverride = await getManualEmailVerificationStatus(credential.user.uid);
+        if (manualOverride) {
+          clearPendingEmailVerification();
+          setEmailVerificationStatus('idle');
+          setShowEmailVerificationModal(false);
+          setShowLoginModal(false);
+          return;
+        }
         const redirectPath = getCurrentPath();
         setPendingEmailVerification(redirectPath);
         await sendEmailVerification(credential.user, {
@@ -1654,6 +1698,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAdmin: email.toLowerCase() === ADMIN_EMAIL,
         chatWarnings: 0,
         chatDisabled: false,
+        emailManuallyVerified: false,
         termsFlagged: false
       };
 
