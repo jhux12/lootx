@@ -37,8 +37,12 @@ export const Bonuses: React.FC = () => {
   // Identify daily box from context
   const dailyBox = boxes.find(b => b.isDaily);
   
+  const lastDailyClaim = Number.isFinite(user.lastDailyClaim ?? NaN) ? Number(user.lastDailyClaim) : 0;
+  const dailyCooldownMs = 24 * 60 * 60 * 1000;
+  const nextDailyClaimAt = lastDailyClaim + dailyCooldownMs;
+  const remainingDailyMs = Math.max(0, nextDailyClaimAt - Date.now());
   // Calculate if claimed
-  const canClaim = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
+  const canClaim = !lastDailyClaim || remainingDailyMs <= 0;
   const rakebackUnlocked = user.level >= bonusSettings.rakebackUnlockLevel;
   const affiliateUnlocked = user.level >= 3;
   const availableRakeback = Number(user.rakebackBalance ?? 0);
@@ -51,9 +55,7 @@ export const Bonuses: React.FC = () => {
     }
 
     const updateCountdown = () => {
-      const lastClaim = user.lastDailyClaim ?? 0;
-      const nextClaimAt = lastClaim + 24 * 60 * 60 * 1000;
-      const remainingMs = Math.max(0, nextClaimAt - Date.now());
+      const remainingMs = Math.max(0, nextDailyClaimAt - Date.now());
       const totalSeconds = Math.floor(remainingMs / 1000);
       const hours = Math.floor(totalSeconds / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -65,7 +67,7 @@ export const Bonuses: React.FC = () => {
     updateCountdown();
     const interval = window.setInterval(updateCountdown, 1000);
     return () => window.clearInterval(interval);
-  }, [canClaim, user.lastDailyClaim]);
+  }, [canClaim, nextDailyClaimAt]);
 
   const handleClaimDaily = () => {
     if (!isAuthenticated) {
