@@ -1080,7 +1080,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         onClick={() => setSelectedCaseItem(item)}
                         className="group relative flex flex-col items-center rounded-xl border border-gray-800 bg-[#0f1219] p-3 text-left transition-all hover:border-gray-700 hover:bg-[#151a23]"
                     >
-                        <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#1a2130] rounded border border-gray-700 text-[10px] font-bold text-yellow-500">
+                        <div
+                          className="absolute top-2 left-2 rounded border px-1.5 py-0.5 text-[10px] font-bold"
+                          style={{
+                            color: item.color,
+                            borderColor: `${item.color}66`,
+                            backgroundColor: `${item.color}1a`,
+                          }}
+                        >
                             {item.chance}%
                         </div>
 
