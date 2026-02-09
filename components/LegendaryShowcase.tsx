@@ -74,7 +74,7 @@ export const LegendaryShowcase: React.FC = () => {
                 playSound('click');
                 setView({ type: 'CASE_OPENING', boxId: box.id });
               }}
-              className="group flex min-w-[180px] flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-4 text-left transition-shadow hover:shadow-[0_0_18px_rgba(94,234,212,0.18)] sm:min-w-0"
+              className="group flex min-w-[180px] flex-col gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-white/7 via-white/4 to-white/2 px-3 py-4 text-left transition-shadow hover:shadow-[0_0_18px_rgba(94,234,212,0.18)] sm:min-w-0"
             >
               <div className="flex items-center justify-center rounded-xl border border-white/5 bg-white/5 p-3">
                 <img
@@ -84,20 +84,15 @@ export const LegendaryShowcase: React.FC = () => {
                   loading="lazy"
                 />
               </div>
-              <div className="space-y-2">
-                <span className="inline-flex w-fit items-center rounded-full border border-purple-300/30 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-purple-200/70">
-                  Legendary
-                </span>
-                <div className="space-y-1">
-                  <p className="text-sm font-normal text-gray-300">{item.name}</p>
-                  <CoinAmount
-                    amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                    className="text-xs text-gray-300"
-                    iconClassName="h-3 w-3"
-                    textClassName="text-gray-300"
-                  />
-                  <p className="text-xs text-gray-500">From: {box.name}</p>
-                </div>
+              <div className="space-y-1">
+                <p className="text-sm font-normal text-gray-300">{item.name}</p>
+                <CoinAmount
+                  amount={toCoins(item.price, PRICE_UNIT_MODE)}
+                  className="text-xs text-cyan-100/80"
+                  iconClassName="h-3 w-3"
+                  textClassName="text-cyan-100/80"
+                />
+                <p className="text-xs text-gray-500">From: {box.name}</p>
               </div>
             </button>
           ))}
