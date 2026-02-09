@@ -212,19 +212,24 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       const normalized = normalizeBoxesPageConfig(nextConfig);
       setConfig(normalized);
       if (!hasInitializedRef.current) {
+        const categoryParam =
+          typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('category');
+        const hasCategoryParam = Boolean(categoryParam?.trim());
         const categoryTabEnabled = normalized.tabs.items.some(
           (tab) => tab.id === 'category' && tab.enabled
         );
         const defaultTab = normalized.tabs.enabled
           ? (categoryTabEnabled ? 'category' : getDefaultTab(normalized.tabs))
           : 'category';
-        setActiveTab(defaultTab);
-        setSelectedCategory('All');
+        if (!hasCategoryParam) {
+          setActiveTab(defaultTab);
+          setSelectedCategory('All');
+          setCategoryQueryParam(null);
+        }
         setSortOption(normalized.filters.sort.default ?? 'Price High');
         setSearchTerm('');
         setSelectedTags([]);
         setHasCategorySelection(false);
-        setCategoryQueryParam(null);
         hasInitializedRef.current = true;
       }
     });
