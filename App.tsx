@@ -89,6 +89,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     };
   }, [authInitialized, isAuthenticated, view.type]);
 
+  useEffect(() => {
+    if (isAuthenticated && showPromoPopup) {
+      setShowPromoPopup(false);
+    }
+  }, [isAuthenticated, showPromoPopup]);
+
   const closePromoPopup = () => {
     setShowPromoPopup(false);
   };
