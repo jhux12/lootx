@@ -431,9 +431,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     [config.curatedRows]
   );
   const hasActiveSearch = Boolean(searchTerm.trim());
+  const hasActiveCategoryFilter = hasCategorySelection || Boolean(categoryQueryParam);
   const showCuratedRows = activeTab === 'official'
     && !hasActiveSearch
-    && !hasCategorySelection
+    && !hasActiveCategoryFilter
     && curatedRows.length > 0;
 
   const gridClassName = isChatCollapsed
