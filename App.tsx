@@ -35,6 +35,7 @@ import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
 import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { CookieConsentToast } from './components/CookieConsentToast';
 import { getBoxTags } from './utils/boxTags';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
@@ -95,6 +96,15 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       setShowPromoPopup(false);
     }
   }, [isAuthenticated, showPromoPopup]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+      new CustomEvent('pullz:promo-visibility', {
+        detail: { isOpen: showPromoPopup }
+      })
+    );
+  }, [showPromoPopup]);
 
   const closePromoPopup = () => {
     setShowPromoPopup(false);
@@ -477,6 +487,20 @@ const AppShell = () => {
   const latestMessageAt = messages[messages.length - 1]?.createdAt ?? 0;
   const [lastSeenAt, setLastSeenAt] = useState(0);
   const hasUnseenChatMessages = latestMessageAt > lastSeenAt;
+  const [isPromoVisible, setIsPromoVisible] = useState(false);
+  const loadAnalyticsScripts = useCallback(() => {
+    // Analytics integrations will be enabled after consent.
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePromoVisibility = (event: Event) => {
+      const detail = (event as CustomEvent<{ isOpen: boolean }>).detail;
+      setIsPromoVisible(Boolean(detail?.isOpen));
+    };
+    window.addEventListener('pullz:promo-visibility', handlePromoVisibility);
+    return () => window.removeEventListener('pullz:promo-visibility', handlePromoVisibility);
+  }, []);
 
   const markChatSeen = useCallback(() => {
     if (!latestMessageAt) return;
@@ -504,6 +528,7 @@ const AppShell = () => {
         onChatViewed={markChatSeen}
       />
       <ResetPasswordModal />
+      <CookieConsentToast onAnalyticsConsent={loadAnalyticsScripts} isPromoVisible={isPromoVisible} />
     </div>
   );
 };
