@@ -96,7 +96,7 @@ export const CookieConsentToast: React.FC<CookieConsentToastProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-2 pb-2 pointer-events-none">
+    <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+84px)] z-50 flex justify-center px-2 pb-2 pointer-events-none lg:bottom-3">
       <div className="w-full rounded-2xl border border-white/10 bg-[#0a0f1d]/80 px-3 py-2 shadow-[0_0_18px_rgba(96,40,170,0.25)] backdrop-blur pointer-events-none">
         <div className="flex flex-col gap-2 pointer-events-auto">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
