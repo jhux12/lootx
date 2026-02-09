@@ -582,6 +582,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
   const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
   const xp = Number(data.xp ?? 0);
   const progress = calculateLevelProgress(xp);
+  const lastDailyClaim = data.lastDailyClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyClaim, 0);
   const followerIds = Array.isArray(data.followers)
     ? data.followers
     : Array.isArray(data.friends)
@@ -603,7 +604,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     balance,
     level: data.level ?? progress.level,
     xp,
-    lastDailyClaim: data.lastDailyClaim,
+    lastDailyClaim,
     totalSpent: Number(data.totalSpent ?? 0),
     rakebackBalance: Number(data.rakebackBalance ?? 0),
     rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
@@ -632,6 +633,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
   const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
   const xp = Number(data.xp ?? 0);
   const progress = calculateLevelProgress(xp);
+  const lastDailyClaim = data.lastDailyClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyClaim, 0);
   const followerIds = Array.isArray(data.followers)
     ? data.followers
     : Array.isArray(data.friends)
@@ -654,7 +656,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     balance,
     level: data.level ?? progress.level,
     xp,
-    lastDailyClaim: data.lastDailyClaim,
+    lastDailyClaim,
     totalSpent: Number(data.totalSpent ?? 0),
     rakebackBalance: Number(data.rakebackBalance ?? 0),
     rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
