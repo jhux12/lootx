@@ -227,7 +227,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     <main className="flex-1 min-w-0 pb-[90px] sm:pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
       {view.type === 'HOME' && (
         <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
-          <Hero />
+          {!isAuthenticated && <Hero />}
           {showcaseRowsWithBoxes && showcaseRowsWithBoxes.length > 0 ? (
             <div className="space-y-12">
               {showcaseRowsWithBoxes.map((row) => {
@@ -306,9 +306,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               ))}
             </>
           )}
+          <HomeBanners />
           <TrustSection />
           <HowItWorksSection />
-          <HomeBanners />
           <CaseLabPromo />
           <section className="space-y-3">
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
