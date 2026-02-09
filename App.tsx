@@ -36,6 +36,7 @@ import { ContactSupport } from './components/ContactSupport';
 import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CookieConsentToast } from './components/CookieConsentToast';
+import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { getBoxTags } from './utils/boxTags';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
@@ -307,6 +308,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
             </>
           )}
           <HomeBanners />
+          <LegendaryShowcase />
           <TrustSection />
           <HowItWorksSection />
           <CaseLabPromo />
