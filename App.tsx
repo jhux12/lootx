@@ -25,8 +25,8 @@ import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert, Swords } from 'lucide-react';
 import { MobileChatModal } from './components/MobileChatModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
-import { HowItWorks } from './components/HowItWorks';
-import { TrustCards } from './components/TrustCards';
+import { HowItWorksSection } from './components/HowItWorksSection';
+import { TrustSection } from './components/TrustSection';
 import { FinalCTA } from './components/FinalCTA';
 import { SiteFooter } from './components/SiteFooter';
 import { HomeBanners } from './components/HomeBanners';
@@ -299,8 +299,8 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               ))}
             </>
           )}
-          <TrustCards />
-          <HowItWorks />
+          <TrustSection />
+          <HowItWorksSection />
           <HomeBanners />
           <CaseLabPromo />
           <section className="space-y-3">
