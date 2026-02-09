@@ -52,12 +52,12 @@ export const TrustSection: React.FC = () => {
   });
 
   return (
-    <section className="py-10">
-      <div className="mb-4 flex items-center justify-between">
+    <section className="py-6 sm:py-8">
+      <div className="mb-5 flex items-center justify-between sm:mb-6">
         <h2 className="text-2xl font-semibold text-white">Trusted and transparent</h2>
       </div>
       <MobileFeatureStrip items={mobileItems} />
-      <div className="hidden gap-4 md:grid md:grid-cols-3">
+      <div className="hidden gap-4 md:grid md:grid-cols-3 md:gap-6">
         {trustItems.map((item) => {
           const Icon = item.icon;
           return (

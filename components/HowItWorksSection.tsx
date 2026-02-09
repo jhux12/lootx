@@ -48,12 +48,12 @@ export const HowItWorksSection: React.FC = () => {
   });
 
   return (
-    <section id="how-it-works" className="scroll-mt-28 py-10">
-      <div className="mb-4 flex items-center justify-between gap-4">
+    <section id="how-it-works" className="scroll-mt-28 py-6 sm:py-8">
+      <div className="mb-5 flex items-center justify-between gap-4 sm:mb-6">
         <h2 className="text-2xl font-semibold text-white">How it works</h2>
       </div>
       <MobileFeatureStrip items={mobileItems} showStepIndex />
-      <div className="hidden gap-4 md:grid md:grid-cols-3">
+      <div className="hidden gap-4 md:grid md:grid-cols-3 md:gap-6">
         {steps.map((step, index) => {
           const Icon = step.icon;
           return (

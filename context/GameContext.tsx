@@ -789,6 +789,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return getViewFromLocation(window.location.pathname, window.location.search);
   });
 
+  const scrollToTop = () => {
+    if (typeof window === 'undefined') return;
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, left: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+  };
+
   useEffect(() => {
     if (!isAuthenticated) return;
     const nextBalance = Number(user.balance ?? 0);
@@ -800,6 +806,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const setView = (nextView: ViewState) => {
     setViewState(nextView);
     if (typeof window !== 'undefined') {
+      scrollToTop();
       const nextPath = getPathFromView(nextView);
       const currentPath = `${window.location.pathname}${window.location.search}`;
       if (nextPath !== currentPath) {
@@ -822,6 +829,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (nextPath !== currentPath) {
       window.history.replaceState({}, '', nextPath);
     }
+    scrollToTop();
     setViewState(getViewFromLocation(url.pathname, url.search));
   };
 
@@ -1055,6 +1063,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (typeof window === 'undefined') return;
     const handlePopState = () => {
       setViewState(getViewFromLocation(window.location.pathname, window.location.search));
+      scrollToTop();
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
