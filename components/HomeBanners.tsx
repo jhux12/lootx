@@ -1,4 +1,5 @@
 import React from 'react';
+import { useGame } from '../context/GameContext';
 import banner1 from '../assets/banner.png';
 import banner2 from '../assets/banner2.png';
 const HOME_BANNERS = [
@@ -9,11 +10,14 @@ const HOME_BANNERS = [
   },
   {
     src: banner2,
-    alt: 'Limited drop banner'
+    alt: 'Free box banner',
+    action: 'bonuses'
   }
 ];
 
 export const HomeBanners: React.FC = () => {
+  const { isAuthenticated, openAuthModal, setView } = useGame();
+
   if (HOME_BANNERS.length === 0) {
     return null;
   }
@@ -37,6 +41,25 @@ export const HomeBanners: React.FC = () => {
               <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/10" />
             </div>
           );
+
+          if (banner.action === 'bonuses') {
+            return (
+              <button
+                key={banner.src}
+                type="button"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openAuthModal('register');
+                    return;
+                  }
+                  setView({ type: 'BONUSES' });
+                }}
+                className="block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 rounded-2xl"
+              >
+                {content}
+              </button>
+            );
+          }
 
           if (banner.href) {
             return (
