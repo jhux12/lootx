@@ -316,6 +316,14 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'CONTACT' };
   }
 
+  if (primary === 'terms') {
+    return { type: 'TERMS' };
+  }
+
+  if (primary === 'privacy') {
+    return { type: 'PRIVACY' };
+  }
+
   if (primary === 'leaderboard') {
     return { type: 'LEADERBOARD' };
   }
@@ -345,6 +353,10 @@ const getPathFromView = (view: ViewState): string => {
       return '/bonuses';
     case 'CONTACT':
       return '/contact';
+    case 'TERMS':
+      return '/terms';
+    case 'PRIVACY':
+      return '/privacy';
     case 'ADMIN':
       return '/admin';
     case 'LEADERBOARD':

@@ -19,6 +19,7 @@ import { EmailVerifiedModal } from './components/EmailVerifiedModal';
 import { CustomCaseCreator } from './components/CustomCaseCreator';
 import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
+import { LegalPage } from './components/LegalPage';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
@@ -352,6 +353,18 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {view.type === 'CONTACT' && (
         <div className="w-full">
           <ContactSupport />
+        </div>
+      )}
+
+      {view.type === 'TERMS' && (
+        <div className="w-full">
+          <LegalPage variant="terms" />
+        </div>
+      )}
+
+      {view.type === 'PRIVACY' && (
+        <div className="w-full">
+          <LegalPage variant="privacy" />
         </div>
       )}
 

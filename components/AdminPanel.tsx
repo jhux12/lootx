@@ -10,6 +10,7 @@ import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { db } from '../firebase';
 import { HomepageShowcaseEditor } from './admin/HomepageShowcaseEditor';
 import { BoxesPageConfigEditor } from './admin/BoxesPageConfigEditor';
+import { LegalEditor } from './admin/LegalEditor';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -149,7 +150,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -1851,6 +1852,12 @@ export const AdminPanel: React.FC = () => {
                        <Beaker className="w-4 h-4" /> Case Lab
                    </button>
                    <button 
+                     onClick={() => setActiveTab('legal')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'legal' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <ScrollText className="w-4 h-4" /> Legal
+                   </button>
+                   <button 
                      onClick={() => setActiveTab('settings')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'settings' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -1879,6 +1886,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'homepage' && 'Homepage Showcase'}
                     {activeTab === 'boxes-page' && 'Boxes Page'}
                     {activeTab === 'case-lab' && 'Case Lab'}
+                    {activeTab === 'legal' && 'Legal Content'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
             </div>
@@ -4130,6 +4138,11 @@ export const AdminPanel: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* TAB: LEGAL */}
+            {activeTab === 'legal' && (
+                <LegalEditor />
             )}
 
             {/* TAB: SETTINGS */}
