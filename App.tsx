@@ -35,7 +35,7 @@ import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
 import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { CookieConsentBanner } from './components/CookieConsentBanner';
+import { CookieConsentToast } from './components/CookieConsentToast';
 import { getBoxTags } from './utils/boxTags';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
@@ -508,7 +508,7 @@ const AppShell = () => {
         onChatViewed={markChatSeen}
       />
       <ResetPasswordModal />
-      <CookieConsentBanner onAnalyticsConsent={loadAnalyticsScripts} />
+      <CookieConsentToast onAnalyticsConsent={loadAnalyticsScripts} isPromoVisible={showPromoPopup} />
     </div>
   );
 };
