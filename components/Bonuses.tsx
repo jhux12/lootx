@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Gift, Calendar, Lock, Copy, TrendingUp, ShieldCheck, ClipboardList } from 'lucide-react';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -32,6 +32,7 @@ export const Bonuses: React.FC = () => {
   const [isApplyingAffiliate, setIsApplyingAffiliate] = useState(false);
   const [isClaimingRakeback, setIsClaimingRakeback] = useState(false);
   const [isOfferwallOpen, setIsOfferwallOpen] = useState(false);
+  const [nextFreeBoxCountdown, setNextFreeBoxCountdown] = useState('');
 
   // Identify daily box from context
   const dailyBox = boxes.find(b => b.isDaily);
@@ -42,6 +43,33 @@ export const Bonuses: React.FC = () => {
   const affiliateUnlocked = user.level >= 3;
   const availableRakeback = Number(user.rakebackBalance ?? 0);
   const hasReferral = Boolean(user.referredBy);
+
+  useEffect(() => {
+    const formatCountdown = (milliseconds: number) => {
+      if (milliseconds <= 0) {
+        return '';
+      }
+      const totalSeconds = Math.floor(milliseconds / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    };
+
+    const updateCountdown = () => {
+      if (!user.lastDailyClaim) {
+        setNextFreeBoxCountdown('');
+        return;
+      }
+      const nextClaimAt = user.lastDailyClaim + 24 * 60 * 60 * 1000;
+      const remaining = nextClaimAt - Date.now();
+      setNextFreeBoxCountdown(formatCountdown(remaining));
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [user.lastDailyClaim]);
 
   const handleClaimDaily = () => {
     if (!isAuthenticated) {
@@ -245,6 +273,14 @@ export const Bonuses: React.FC = () => {
                     {!canClaim ? 'Come back later' : isClaimingDaily ? 'Claiming...' : 'Claim Free Spin'}
                   </span>
               </button>
+              {!canClaim && nextFreeBoxCountdown && (
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-center text-xs font-semibold text-gray-400">
+                  <span className="rounded-full bg-gray-800/80 px-2 py-1 text-[10px] uppercase tracking-wide text-gray-500">
+                    Next free box in
+                  </span>
+                  <span className="font-mono text-sm text-white">{nextFreeBoxCountdown}</span>
+                </div>
+              )}
           </div>
 
           {/* Affiliate Code Entry */}
