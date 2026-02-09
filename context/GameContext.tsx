@@ -791,7 +791,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const scrollToTop = () => {
     if (typeof window === 'undefined') return;
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, left: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
   };
 
   useEffect(() => {
