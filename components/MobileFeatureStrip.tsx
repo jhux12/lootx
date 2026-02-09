@@ -28,6 +28,7 @@ export const MobileFeatureStrip: React.FC<MobileFeatureStripProps> = ({
   const defaultSelected = items[0]?.id ?? '';
   const [activeId, setActiveId] = useState(selectedId ?? defaultSelected);
   const pillRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const hasInteractedRef = useRef(false);
 
   useEffect(() => {
     if (selectedId && selectedId !== activeId) {
@@ -42,7 +43,7 @@ export const MobileFeatureStrip: React.FC<MobileFeatureStripProps> = ({
   }, [items, activeId, defaultSelected]);
 
   useEffect(() => {
-    if (!activeId) return;
+    if (!activeId || !hasInteractedRef.current) return;
     pillRefs.current[activeId]?.scrollIntoView({
       behavior: 'smooth',
       inline: 'center',
@@ -60,6 +61,7 @@ export const MobileFeatureStrip: React.FC<MobileFeatureStripProps> = ({
   );
 
   const handleSelect = (id: string) => {
+    hasInteractedRef.current = true;
     setActiveId(id);
     onChangeSelected?.(id);
   };
