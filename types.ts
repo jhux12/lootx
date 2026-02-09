@@ -268,6 +268,8 @@ export type ViewState =
   | { type: 'INVENTORY' }
   | { type: 'BONUSES' }
   | { type: 'CONTACT' }
+  | { type: 'TERMS' }
+  | { type: 'PRIVACY' }
   | { type: 'ADMIN' }
   | { type: 'LEADERBOARD' }
   | { type: 'CUSTOM_CREATOR' }

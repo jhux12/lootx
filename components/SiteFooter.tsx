@@ -39,8 +39,20 @@ export const SiteFooter: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
-          <button className="transition hover:text-white">Terms</button>
-          <button className="transition hover:text-white">Privacy</button>
+          <button
+            className="transition hover:text-white"
+            onClick={() => setView({ type: 'TERMS' })}
+            type="button"
+          >
+            Terms
+          </button>
+          <button
+            className="transition hover:text-white"
+            onClick={() => setView({ type: 'PRIVACY' })}
+            type="button"
+          >
+            Privacy
+          </button>
           <button
             className="transition hover:text-white"
             onClick={() => setView({ type: 'CONTACT' })}
