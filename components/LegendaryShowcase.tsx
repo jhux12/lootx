@@ -75,31 +75,34 @@ export const LegendaryShowcase: React.FC = () => {
                 playSound('click');
                 setView({ type: 'CASE_OPENING', boxId: box.id });
               }}
-              className="group flex min-w-[180px] flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-4 text-left transition-shadow hover:shadow-[0_0_18px_rgba(94,234,212,0.18)] sm:min-w-0"
+              className="group relative flex min-w-[180px] flex-col gap-3 overflow-hidden rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-500/10 via-purple-500/10 to-cyan-500/10 px-3 py-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-[0_0_24px_rgba(250,204,21,0.25)] sm:min-w-0"
             >
-              <div className="flex items-center justify-center rounded-xl border border-white/5 bg-white/5 p-3">
+              <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-yellow-400/20 blur-2xl" />
+              <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-purple-500/20 blur-2xl" />
+              <div className="relative flex items-center justify-center rounded-xl border border-yellow-500/30 bg-black/20 p-3">
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-yellow-400/20 via-transparent to-purple-400/20" />
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="h-16 w-16 object-contain"
+                  className="relative z-10 h-16 w-16 object-contain"
                   loading="lazy"
                 />
               </div>
               <div className="space-y-2">
-                <span className="inline-flex w-fit items-center rounded-full border border-purple-300/30 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-purple-200/70">
-                  Legendary
-                </span>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-yellow-200/80">
+                  Legendary Drop
+                </p>
                 <div className="space-y-1">
-                  <p className="min-h-[2.5rem] text-sm font-normal text-gray-300 line-clamp-2">
+                  <p className="min-h-[2.5rem] text-sm font-normal text-white/90 line-clamp-2">
                     {item.name}
                   </p>
                   <CoinAmount
                     amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                    className="text-xs text-gray-300"
+                    className="text-xs text-yellow-100/80"
                     iconClassName="h-3 w-3"
-                    textClassName="text-gray-300"
+                    textClassName="text-yellow-100/80"
                   />
-                  <p className="text-xs text-gray-500">From: {box.name}</p>
+                  <p className="text-xs text-purple-100/70">From: {box.name}</p>
                 </div>
               </div>
             </button>
