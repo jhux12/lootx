@@ -61,6 +61,14 @@ export const SiteFooter: React.FC = () => {
             Contact
           </button>
         </div>
+        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-300 md:text-sm">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-red-500 text-[0.65rem] font-semibold text-white md:h-9 md:w-9 md:text-xs">
+            18+
+          </span>
+          <p className="max-w-2xl text-gray-300">
+            By accessing this site, you confirm that you are over 18 years old.
+          </p>
+        </div>
         <p className="text-xs text-gray-600">&copy; 2024 LootX. All rights reserved.</p>
       </div>
     </footer>
