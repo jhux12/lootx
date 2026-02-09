@@ -170,6 +170,10 @@ export const AdminPanel: React.FC = () => {
   const [itemTagInput, setItemTagInput] = useState('');
   const [itemSizeInput, setItemSizeInput] = useState('');
   const [boxTagInput, setBoxTagInput] = useState('');
+  const [itemSearchQuery, setItemSearchQuery] = useState('');
+  const [itemVisibleCount, setItemVisibleCount] = useState(20);
+  const itemListContainerRef = useRef<HTMLDivElement | null>(null);
+  const itemListSentinelRef = useRef<HTMLDivElement | null>(null);
 
   // --- BOX FORM STATE ---
   const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
@@ -220,6 +224,63 @@ export const AdminPanel: React.FC = () => {
   const [supportStatusUpdates, setSupportStatusUpdates] = useState<Record<string, { sending: boolean; error?: string; success?: string }>>(
       {}
   );
+
+  const filteredAdminItems = useMemo(() => {
+      const query = itemSearchQuery.trim().toLowerCase();
+      if (!query) {
+          return items;
+      }
+
+      return items.filter((item) => {
+          const haystack = [
+              item.name,
+              item.brand,
+              item.category,
+              item.rarity,
+              ...(item.tags ?? []),
+              ...(item.sizes ?? [])
+          ]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase();
+
+          return haystack.includes(query);
+      });
+  }, [itemSearchQuery, items]);
+
+  const visibleAdminItems = useMemo(
+      () => filteredAdminItems.slice(0, itemVisibleCount),
+      [filteredAdminItems, itemVisibleCount]
+  );
+
+  useEffect(() => {
+      setItemVisibleCount(20);
+  }, [itemSearchQuery, items]);
+
+  useEffect(() => {
+      const sentinel = itemListSentinelRef.current;
+      if (!sentinel) return;
+
+      const observer = new IntersectionObserver(
+          (entries) => {
+              const entry = entries[0];
+              if (entry.isIntersecting) {
+                  setItemVisibleCount((prev) => Math.min(prev + 20, filteredAdminItems.length));
+              }
+          },
+          {
+              root: itemListContainerRef.current,
+              rootMargin: '100px',
+              threshold: 0.1
+          }
+      );
+
+      observer.observe(sentinel);
+
+      return () => {
+          observer.disconnect();
+      };
+  }, [filteredAdminItems.length]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userStatuses, setUserStatuses] = useState<Record<string, UserStatus>>({});
   const [userLocks, setUserLocks] = useState<Record<string, UserLocks>>({});
@@ -2163,68 +2224,94 @@ export const AdminPanel: React.FC = () => {
 
                     {/* Item List */}
                     <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-[#0b0e14] text-gray-400 font-medium">
-                                <tr>
-                                    <th className="px-4 py-3">Item</th>
-                                    <th className="px-4 py-3">Rarity</th>
-                                    <th className="px-4 py-3">Price</th>
-                                    <th className="px-4 py-3 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-800">
-                                {items.map((item, i) => (
-                                    <tr key={i}>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <img src={item.image} className="w-8 h-8 object-contain" />
-                                                <div>
-                                                    <div className="text-white">{item.name}</div>
-                                                    {(item.brand || item.category) && (
-                                                        <div className="mt-0.5 text-[10px] uppercase tracking-wide text-gray-500">
-                                                            {[item.brand, item.category].filter(Boolean).join(' • ')}
-                                                        </div>
-                                                    )}
-                                                    {item.tags?.length ? (
-                                                        <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-gray-500">
-                                                            {item.tags.map(tag => (
-                                                                <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 uppercase tracking-wide text-gray-300">
-                                                                    {tag}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    ) : null}
-                                                    {item.sizes?.length ? (
-                                                        <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-gray-500">
-                                                            {item.sizes.map((size) => (
-                                                                <span key={size} className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 uppercase tracking-wide text-blue-200">
-                                                                    {size}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 capitalize text-gray-400">{item.rarity}</td>
-                                        <td className="px-4 py-3">
-                                            <CoinAmount
-                                              amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                                              formatOptions={{ maximumFractionDigits: 0 }}
-                                              className="text-green-500 font-semibold"
-                                              iconClassName="w-3.5 h-3.5"
-                                            />
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleEditItem(item)} className="p-1.5 hover:bg-blue-500/10 text-blue-400 rounded transition-colors"><Edit2 className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDeleteItem(item.id)} className="p-1.5 hover:bg-red-500/10 text-red-400 rounded transition-colors"><Trash2 className="w-4 h-4" /></button>
-                                            </div>
-                                        </td>
+                        <div className="flex flex-col gap-3 border-b border-gray-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Item Inventory</h3>
+                                <p className="text-xs text-gray-400">
+                                    Showing {Math.min(itemVisibleCount, filteredAdminItems.length)} of {filteredAdminItems.length} items. Scroll to load more.
+                                </p>
+                            </div>
+                            <div className="w-full sm:w-64">
+                                <Input
+                                    value={itemSearchQuery}
+                                    onChange={(event) => setItemSearchQuery(event.target.value)}
+                                    placeholder="Search items, tags, sizes..."
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-sm text-white"
+                                />
+                            </div>
+                        </div>
+                        <div ref={itemListContainerRef} className="max-h-[520px] overflow-y-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-[#0b0e14] text-gray-400 font-medium">
+                                    <tr>
+                                        <th className="px-4 py-3">Item</th>
+                                        <th className="px-4 py-3">Rarity</th>
+                                        <th className="px-4 py-3">Price</th>
+                                        <th className="px-4 py-3 text-right">Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-gray-800">
+                                    {visibleAdminItems.map((item, i) => (
+                                        <tr key={i}>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-2">
+                                                    <img src={item.image} className="w-8 h-8 object-contain" />
+                                                    <div>
+                                                        <div className="text-white">{item.name}</div>
+                                                        {(item.brand || item.category) && (
+                                                            <div className="mt-0.5 text-[10px] uppercase tracking-wide text-gray-500">
+                                                                {[item.brand, item.category].filter(Boolean).join(' • ')}
+                                                            </div>
+                                                        )}
+                                                        {item.tags?.length ? (
+                                                            <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-gray-500">
+                                                                {item.tags.map(tag => (
+                                                                    <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 uppercase tracking-wide text-gray-300">
+                                                                        {tag}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        ) : null}
+                                                        {item.sizes?.length ? (
+                                                            <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-gray-500">
+                                                                {item.sizes.map((size) => (
+                                                                    <span key={size} className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 uppercase tracking-wide text-blue-200">
+                                                                        {size}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 capitalize text-gray-400">{item.rarity}</td>
+                                            <td className="px-4 py-3">
+                                                <CoinAmount
+                                                  amount={toCoins(item.price, PRICE_UNIT_MODE)}
+                                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                                  className="text-green-500 font-semibold"
+                                                  iconClassName="w-3.5 h-3.5"
+                                                />
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <button onClick={() => handleEditItem(item)} className="p-1.5 hover:bg-blue-500/10 text-blue-400 rounded transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleDeleteItem(item.id)} className="p-1.5 hover:bg-red-500/10 text-red-400 rounded transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {filteredAdminItems.length === 0 && (
+                                        <tr>
+                                            <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-400">
+                                                No items found. Try another search.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                            <div ref={itemListSentinelRef} className="h-6" />
+                        </div>
                     </div>
                 </div>
             )}
