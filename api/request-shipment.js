@@ -3,6 +3,12 @@ import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
 
+const isXpShopInventoryItem = (inventoryItem = {}) => (
+  inventoryItem.source === 'xpShop'
+  || Boolean(inventoryItem.sourceItemId)
+  || Boolean(inventoryItem.sourceRedemptionId)
+);
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -54,7 +60,10 @@ export default async function handler(req, res) {
         throw { status: 400, error: 'Item is not available for shipping' };
       }
 
-      const hasFreeShipping = inventoryItem.freeShipping === true || Number(inventoryItem.shippingCostOverrideCoins ?? NaN) === 0;
+      const hasFreeShipping =
+        inventoryItem.freeShipping === true
+        || Number(inventoryItem.shippingCostOverrideCoins ?? NaN) === 0
+        || isXpShopInventoryItem(inventoryItem);
       const effectiveShippingCost = hasFreeShipping ? 0 : shippingCoinCostCoins;
 
       if (!hasFreeShipping && !shippingCoinEnabled) {
@@ -87,7 +96,7 @@ export default async function handler(req, res) {
           size: inventoryItem.size ?? null
         },
         shippingInfo,
-        shippingCost: inventoryItem.freeShipping === true || Number(inventoryItem.shippingCostOverrideCoins ?? NaN) === 0 ? 0 : shippingCoinCostCoins,
+        shippingCost: effectiveShippingCost,
         shippingPaid: true,
         shippingPaymentMethod: 'coins',
         status: 'shipping_requested',

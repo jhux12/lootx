@@ -5,6 +5,12 @@ import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
 
+const isXpShopInventoryItem = (inventoryItem = {}) => (
+  inventoryItem.source === 'xpShop'
+  || Boolean(inventoryItem.sourceItemId)
+  || Boolean(inventoryItem.sourceRedemptionId)
+);
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -62,6 +68,8 @@ export default async function handler(req, res) {
     );
 
     // Firestore requires all reads to complete before any writes in a transaction.
+    let payableItemCount = 0;
+
     await firestore.runTransaction(async (transaction) => {
       const [userSnap, ...inventorySnaps] = await Promise.all([
         transaction.get(userRef),
@@ -92,6 +100,15 @@ export default async function handler(req, res) {
 
       const now = admin.firestore.FieldValue.serverTimestamp();
       shipmentItems.forEach(({ inventoryItem, inventoryId, inventoryRef }, index) => {
+        const hasFreeShipping =
+          inventoryItem.freeShipping === true
+          || Number(inventoryItem.shippingCostOverrideCents ?? NaN) === 0
+          || Number(inventoryItem.shippingCostOverrideCoins ?? NaN) === 0
+          || isXpShopInventoryItem(inventoryItem);
+        const shippingCostCents = hasFreeShipping ? 0 : shippingFlatRateCents;
+        const hasOutstandingPayment = shippingCostCents > 0;
+        if (hasOutstandingPayment) payableItemCount += 1;
+
         const shipmentRef = shipmentRefs[index];
         transaction.set(shipmentRef, {
           uid: decoded.uid,
@@ -107,9 +124,10 @@ export default async function handler(req, res) {
             size: inventoryItem.size ?? null
           },
           shippingInfo,
-          shippingPaid: false,
+          shippingCost: shippingCostCents,
+          shippingPaid: !hasOutstandingPayment,
           shippingBatchId: shipmentBatchId,
-          status: 'pending_payment',
+          status: hasOutstandingPayment ? 'pending_payment' : 'shipping_requested',
           createdAt: now
         });
 
@@ -124,13 +142,18 @@ export default async function handler(req, res) {
 
     console.info('create-shipping-checkout-session', {
       selectedCount: inventoryIds.length,
+      payableItemCount,
       shipmentBatchId,
       shippingFlatRateCents,
-      shippingTotalCents: shippingFlatRateCents * inventoryIds.length
+      shippingTotalCents: shippingFlatRateCents * payableItemCount
     });
 
+    if (payableItemCount <= 0) {
+      return sendJson(res, 200, { ok: true, shipmentBatchId, sessionId: null, fullyCoveredByFreeShipping: true });
+    }
+
     const lineItems = usesPriceId
-      ? [{ price: stripeShippingProductId, quantity: inventoryIds.length }]
+      ? [{ price: stripeShippingProductId, quantity: payableItemCount }]
       : [
           {
             price_data: {
@@ -140,7 +163,7 @@ export default async function handler(req, res) {
                 : { product_data: { name: 'Shipping & Handling' } }),
               unit_amount: shippingFlatRateCents
             },
-            quantity: inventoryIds.length
+            quantity: payableItemCount
           }
         ];
 
@@ -153,7 +176,7 @@ export default async function handler(req, res) {
         userId: decoded.uid,
         shipmentId: shipmentBatchId,
         paymentType: 'shipping',
-        shipmentCount: String(inventoryIds.length)
+        shipmentCount: String(payableItemCount)
       }
     });
 

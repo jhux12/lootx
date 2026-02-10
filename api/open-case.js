@@ -64,9 +64,14 @@ export default async function handler(req, res) {
         }
       }
       const price = Number(boxData.price ?? 0);
-      const inferredXpLegacy = Number.isFinite(Number(boxData.priceXP)) && Number(boxData.priceXP) > 0;
+      const explicitPriceXp = Number(boxData.priceXP);
+      const inferredXpLegacy = Number.isFinite(explicitPriceXp) && explicitPriceXp > 0;
       const currencyType = boxData.currencyType === 'XP' || inferredXpLegacy ? 'XP' : 'COIN';
-      const priceXP = Math.max(0, Math.floor(Number(boxData.priceXP ?? 0)));
+      const fallbackPriceXp = currencyType === 'XP' ? Number(boxData.price ?? 0) : 0;
+      const resolvedPriceXp = Number.isFinite(explicitPriceXp) && explicitPriceXp > 0
+        ? explicitPriceXp
+        : fallbackPriceXp;
+      const priceXP = Math.max(0, Math.floor(resolvedPriceXp));
       const rawSellBackRate = Number(
         boxData.sellBackRate ?? (boxData.isUserCreated ? 0.75 : 0.82)
       );

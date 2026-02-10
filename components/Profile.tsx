@@ -246,7 +246,20 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const selectedShipmentItems = normalizedInventory.filter((item) =>
     selectedShipments.includes(item.instanceId)
   );
-  const shippingCashTotalCents = shippingFlatRateCents * selectedShipmentItems.length;
+  const isFreeShippingItem = (item: typeof normalizedInventory[number]) => (
+    item.freeShipping === true
+    || Number(item.shippingCostOverrideCoins ?? NaN) === 0
+    || Number(item.shippingCostOverrideCents ?? NaN) === 0
+    || item.source === 'xpShop'
+    || Boolean(item.sourceItemId)
+    || Boolean(item.sourceRedemptionId)
+  );
+  const getCoinShippingCostForItem = (item: typeof normalizedInventory[number]) =>
+    isFreeShippingItem(item) ? 0 : shippingCoinCostCoins;
+  const getCashShippingCostForItemCents = (item: typeof normalizedInventory[number]) =>
+    isFreeShippingItem(item) ? 0 : shippingFlatRateCents;
+  const shippingCoinTotal = selectedShipmentItems.reduce((sum, item) => sum + getCoinShippingCostForItem(item), 0);
+  const shippingCashTotalCents = selectedShipmentItems.reduce((sum, item) => sum + getCashShippingCostForItemCents(item), 0);
   const formatUsd = (cents: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 
@@ -417,6 +430,12 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       const data = await response.json();
       if (typeof data.shipmentBatchId === 'string') {
         window.sessionStorage.setItem(SHIPPING_BATCH_STORAGE_KEY, data.shipmentBatchId);
+      }
+      if (!data.sessionId) {
+        setSelectedShipments([]);
+        setShowShippingReview(false);
+        playSound('success');
+        return;
       }
       const stripe = await stripePromise;
       if (!stripe) {
@@ -1026,7 +1045,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           </div>
                                           {shippingCoinEnabled && (
                                             <CoinAmount
-                                              amount={shippingCoinCostCoins}
+                                              amount={getCoinShippingCostForItem(item)}
                                               formatOptions={{ maximumFractionDigits: 0 }}
                                               className="text-blue-200 font-semibold text-xs"
                                               iconClassName="w-3 h-3"
@@ -1051,7 +1070,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       <div className="flex items-center justify-between text-gray-400">
                                           <span>Shipping cost per item</span>
                                           <CoinAmount
-                                            amount={shippingCoinCostCoins}
+                                            amount={selectedShipmentItems.length > 0 ? Math.round(shippingCoinTotal / selectedShipmentItems.length) : 0}
                                             formatOptions={{ maximumFractionDigits: 0 }}
                                             className="text-gray-200"
                                             iconClassName="w-3 h-3"
@@ -1060,7 +1079,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       <div className="flex items-center justify-between text-white font-bold">
                                           <span>Total shipping cost</span>
                                           <CoinAmount
-                                            amount={shippingCoinCostCoins * selectedShipmentItems.length}
+                                            amount={shippingCoinTotal}
                                             formatOptions={{ maximumFractionDigits: 0 }}
                                             className="text-blue-200"
                                             iconClassName="w-4 h-4"
