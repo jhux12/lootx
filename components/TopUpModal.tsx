@@ -27,7 +27,7 @@ export const TopUpModal: React.FC = () => {
   const normalizedPackages = useMemo(() => {
     return activePackages.map((pkg) => ({
       ...pkg,
-      totalCoinsNormalized: Number(pkg.totalCoins ?? (pkg.coins ?? 0) + (pkg.bonusCoins ?? 0))
+      baseCoinsNormalized: Number(pkg.coins ?? 0)
     }));
   }, [activePackages]);
 
@@ -40,7 +40,13 @@ export const TopUpModal: React.FC = () => {
   }, [formattedDepositAmount]);
   const totalCoins = (selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0)));
   const effectiveRate = priceValue > 0 ? Math.round(totalCoins / priceValue) : null;
-  const missingCoins = Math.max(0, Number(topUpModalIntent?.missingCoins ?? 0));
+  const missingCoins = useMemo(() => {
+    const requiredCoins = Number(topUpModalIntent?.requiredCoins ?? 0);
+    const currentBalance = Number(topUpModalIntent?.currentBalance ?? 0);
+    const explicitMissing = Number(topUpModalIntent?.missingCoins ?? (requiredCoins - currentBalance));
+    const computedMissing = Number.isFinite(explicitMissing) ? explicitMissing : requiredCoins - currentBalance;
+    return Math.max(0, computedMissing);
+  }, [topUpModalIntent?.currentBalance, topUpModalIntent?.missingCoins, topUpModalIntent?.requiredCoins]);
   const isInsufficientBalanceFlow = topUpModalIntent?.reason === 'insufficient_balance' && missingCoins > 0;
   const getBadgeClasses = (badge?: string) => {
     if (badge === 'best') {
@@ -74,8 +80,8 @@ export const TopUpModal: React.FC = () => {
       return;
     }
 
-    const sortedByCoins = [...normalizedPackages].sort((a, b) => a.totalCoinsNormalized - b.totalCoinsNormalized);
-    const smallestCovering = sortedByCoins.find((pkg) => pkg.totalCoinsNormalized >= missingCoins);
+    const sortedByCoins = [...normalizedPackages].sort((a, b) => a.baseCoinsNormalized - b.baseCoinsNormalized);
+    const smallestCovering = sortedByCoins.find((pkg) => pkg.baseCoinsNormalized >= missingCoins);
     const recommended = smallestCovering ?? sortedByCoins[sortedByCoins.length - 1];
 
     setRecommendedPackageId(recommended?.id ?? null);
