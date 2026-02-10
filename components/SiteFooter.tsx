@@ -65,6 +65,13 @@ export const SiteFooter: React.FC = () => {
           </button>
           <button
             className="transition hover:text-white"
+            onClick={() => setView({ type: 'PROVABLY_FAIR' })}
+            type="button"
+          >
+            Provably Fair
+          </button>
+          <button
+            className="transition hover:text-white"
             onClick={() => setView({ type: 'CONTACT' })}
             type="button"
           >

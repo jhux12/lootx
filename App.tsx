@@ -30,6 +30,7 @@ import { HowItWorksSection } from './components/HowItWorksSection';
 import { TrustSection } from './components/TrustSection';
 import { FinalCTA } from './components/FinalCTA';
 import { SiteFooter } from './components/SiteFooter';
+import { ProvablyFairPage } from './components/ProvablyFairPage';
 import { HomeBanners } from './components/HomeBanners';
 import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
@@ -405,6 +406,13 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
              </div>
           </div>
         )
+      )}
+
+
+      {view.type === 'PROVABLY_FAIR' && (
+        <div className="w-full">
+          <ProvablyFairPage />
+        </div>
       )}
 
       {view.type === 'CUSTOM_CREATOR' && (

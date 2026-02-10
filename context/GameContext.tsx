@@ -328,6 +328,10 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'LEADERBOARD' };
   }
 
+  if (primary === 'provably-fair') {
+    return { type: 'PROVABLY_FAIR' };
+  }
+
   if (primary === 'admin') {
     return { type: 'ADMIN' };
   }
@@ -363,6 +367,8 @@ const getPathFromView = (view: ViewState): string => {
       return '/leaderboard';
     case 'CUSTOM_CREATOR':
       return '/case-lab';
+    case 'PROVABLY_FAIR':
+      return '/provably-fair';
     case 'CASE_OPENING': {
       const search = view.isFree ? '?free=true' : '';
       return `/cases/${view.boxId}${search}`;
