@@ -51,7 +51,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({
   const { playSound } = useSound();
   const { isAuthenticated, user } = useGame();
   const { messages, sendMessage, isSending, notice, isChatDisabled, warningsRemaining } = useSiteChat();
-  const { notifications, unreadCount, isMarkingAllRead, markAllRead, markRead, markVisibleAsSeen } = useNotifications(
+  const { notifications, unreadCount, isMarkingAllRead, markAllRead, markRead, markVisibleAsSeen, dismissNotification } = useNotifications(
     isAuthenticated ? user.id : null
   );
 
@@ -80,9 +80,9 @@ export const InboxModal: React.FC<InboxModalProps> = ({
   }, [activeTab, isOpen, markVisibleAsSeen]);
 
   useEffect(() => {
-    if (!isOpen || activeTab !== 'messages' || messages.length === 0) return;
+    if (!isOpen || activeTab !== 'messages' || !hasUnseenMessages) return;
     onChatViewed();
-  }, [isOpen, activeTab, messages.length, onChatViewed]);
+  }, [activeTab, hasUnseenMessages, isOpen, onChatViewed]);
 
   const handleSend = async () => {
     if (!messageText.trim() || isSending) return;
@@ -298,7 +298,20 @@ export const InboxModal: React.FC<InboxModalProps> = ({
                             </div>
                             <p className="mt-1 text-xs text-gray-400 line-clamp-2">{notification.body}</p>
                           </div>
-                          {isUnread && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-cyan-400" />}
+                          <div className="mt-0.5 flex shrink-0 items-center gap-2">
+                            {isUnread && <span className="h-2 w-2 rounded-full bg-cyan-400" />}
+                            <button
+                              type="button"
+                              aria-label="Dismiss notification"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void dismissNotification(notification.id);
+                              }}
+                              className="rounded-md p-1 text-gray-500 transition-colors hover:bg-[#1a2030] hover:text-gray-200"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </button>
                     );

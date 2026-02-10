@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Timestamp,
   collection,
+  deleteDoc,
   doc,
   getDocs,
   limit,
@@ -137,6 +138,15 @@ export const useNotifications = (uid?: string | null) => {
     }
   }, [isMarkingAllRead, uid]);
 
+  const dismissNotification = useCallback(
+    async (notificationId: string) => {
+      if (!uid) return;
+      const notificationRef = doc(db, 'users', uid, 'notifications', notificationId);
+      await deleteDoc(notificationRef);
+    },
+    [uid]
+  );
+
   return useMemo(
     () => ({
       notifications,
@@ -144,8 +154,9 @@ export const useNotifications = (uid?: string | null) => {
       isMarkingAllRead,
       markRead,
       markAllRead,
-      markVisibleAsSeen
+      markVisibleAsSeen,
+      dismissNotification
     }),
-    [isMarkingAllRead, markAllRead, markRead, markVisibleAsSeen, notifications, unreadCount]
+    [dismissNotification, isMarkingAllRead, markAllRead, markRead, markVisibleAsSeen, notifications, unreadCount]
   );
 };

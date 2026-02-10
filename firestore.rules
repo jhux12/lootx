@@ -32,8 +32,7 @@ service cloud.firestore {
 
     match /users/{uid}/notifications/{notificationId} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create, update: if isSignedIn() && request.auth.uid == uid;
-      allow delete: if isAdmin();
+      allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
     }
 
     match /users/{uid}/inventory/{inventoryId} {
