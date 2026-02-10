@@ -3,13 +3,11 @@ import {
   Gamepad2, 
   Trophy, 
   Gift, 
-  Bell, 
   Settings, 
   Plus, 
   ChevronDown, 
   User, 
   LogOut, 
-  X, 
   Volume2, 
   VolumeX, 
   Inbox,
@@ -332,10 +330,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) 
                   </button>
                 </div>
 
-                <div className="hidden sm:flex items-center rounded-lg border border-gray-800 bg-[#111621] px-2.5 py-1 text-xs font-semibold text-gray-200">
-                  <img src={XP_ICON} alt="XP" className="mr-1 h-4 w-4 object-contain" />
-                  <span>{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
-                </div>
               </div>
 
               <button
@@ -374,27 +368,71 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) 
                 </button>
 
                 {isMobileProfileOpen && (
-                  <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-gray-800 bg-[#151a23] p-2 shadow-xl">
-                    <div className="mb-2 rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-wide text-gray-500">XP Balance</div>
-                      <div className="mt-1 flex items-center gap-2 text-sm font-bold text-white">
-                        <img src={XP_ICON} alt="XP" className="h-7 w-7 object-contain" />
-                        <span>{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close profile menu"
+                      className="fixed inset-0 z-40 bg-transparent"
+                      onClick={() => setIsMobileProfileOpen(false)}
+                    />
+                    <div className="absolute right-0 top-11 z-50 w-[236px] overflow-hidden rounded-2xl border border-cyan-400/20 bg-[#111621]/95 shadow-[0_20px_50px_rgba(2,6,23,0.8)] backdrop-blur-xl">
+                      <div className="border-b border-gray-800/80 bg-gradient-to-r from-[#161b2a] to-[#121827] px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={user.avatar}
+                            className="h-9 w-9 rounded-xl border border-gray-700"
+                            alt="Avatar"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+                            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-gray-400">
+                              {user.isAdmin && (
+                                <span className="rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-300">
+                                  Admin
+                                </span>
+                              )}
+                              <span>Level {user.level ?? 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 rounded-xl border border-gray-800 bg-[#0b0f1a] p-2.5">
+                          <div className="text-[10px] uppercase tracking-wide text-gray-500">XP Balance</div>
+                          <div className="mt-1.5 flex items-center gap-2 text-sm font-bold text-white">
+                            <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" />
+                            <span>{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 p-2">
+                        <button
+                          onClick={() => handleNav({ type: 'PROFILE' })}
+                          className="flex w-full items-center gap-2.5 rounded-xl border border-transparent px-3 py-2.5 text-left text-sm font-medium text-gray-200 transition-colors hover:border-cyan-400/20 hover:bg-[#1a2234]"
+                        >
+                          <User className="h-4 w-4 text-cyan-300" />
+                          <span>Profile</span>
+                        </button>
+                        <button
+                          onClick={() => handleNav({ type: 'INVENTORY' })}
+                          className="flex w-full items-center gap-2.5 rounded-xl border border-transparent px-3 py-2.5 text-left text-sm font-medium text-gray-200 transition-colors hover:border-cyan-400/20 hover:bg-[#1a2234]"
+                        >
+                          <PackageOpen className="h-4 w-4 text-cyan-300" />
+                          <span>Inventory</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            playSound('click');
+                            setIsMobileProfileOpen(false);
+                            logout();
+                          }}
+                          className="flex w-full items-center gap-2.5 rounded-xl border border-red-500/15 px-3 py-2.5 text-left text-sm font-medium text-red-300 transition-colors hover:bg-red-500/10"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign out</span>
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleNav({ type: 'PROFILE' })}
-                      className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-800"
-                    >
-                      Profile
-                    </button>
-                    <button
-                      onClick={() => handleNav({ type: 'INVENTORY' })}
-                      className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-800"
-                    >
-                      Inventory
-                    </button>
-                  </div>
+                  </>
                 )}
               </div>
 
