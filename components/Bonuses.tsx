@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, ClipboardList, Copy, Gift, Search, ShieldCheck, TrendingUp, X } from 'lucide-react';
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { db } from '../firebase';
@@ -34,7 +35,8 @@ export const Bonuses: React.FC = () => {
     isAuthenticated,
     openAuthModal,
     updateUserFlags,
-    generateAffiliateCode
+    generateAffiliateCode,
+    bonusSettings
   } = useGame();
   const { playSound } = useSound();
 
@@ -94,26 +96,34 @@ export const Bonuses: React.FC = () => {
       setNextClaimCountdown('');
       return;
     }
-    const interval = window.setInterval(() => {
+
+    const update = () => {
       const remainingMs = Math.max(0, nextDailyClaimAt - Date.now());
       const totalSeconds = Math.floor(remainingMs / 1000);
       const hours = Math.floor(totalSeconds / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
       const seconds = totalSeconds % 60;
       setNextClaimCountdown(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
-    }, 1000);
+    };
 
+    update();
+    const interval = window.setInterval(update, 1000);
     return () => window.clearInterval(interval);
   }, [canClaim, nextDailyClaimAt]);
 
   const categories = useMemo(() => ['All', ...new Set(shopItems.map((item) => item.category || 'General'))], [shopItems]);
-  const filteredShopItems = useMemo(() => {
-    return shopItems.filter((item) => {
-      const byCategory = category === 'All' || item.category === category;
-      const bySearch = !search.trim() || item.title.toLowerCase().includes(search.toLowerCase()) || item.description?.toLowerCase().includes(search.toLowerCase());
-      return byCategory && bySearch;
-    });
-  }, [category, search, shopItems]);
+  const filteredShopItems = useMemo(
+    () =>
+      shopItems.filter((item) => {
+        const byCategory = category === 'All' || item.category === category;
+        const bySearch =
+          !search.trim() ||
+          item.title.toLowerCase().includes(search.toLowerCase()) ||
+          item.description?.toLowerCase().includes(search.toLowerCase());
+        return byCategory && bySearch;
+      }),
+    [category, search, shopItems]
+  );
 
   const redeem = async () => {
     if (!selectedItem || isRedeeming) return;
@@ -124,7 +134,7 @@ export const Bonuses: React.FC = () => {
 
     setIsRedeeming(true);
     try {
-      const token = await (await import('firebase/auth')).getAuth().currentUser?.getIdToken();
+      const token = await getAuth().currentUser?.getIdToken();
       const response = await fetch('/api/xp/redeem', {
         method: 'POST',
         headers: {
@@ -146,11 +156,18 @@ export const Bonuses: React.FC = () => {
   };
 
   const handleClaimDaily = () => {
-    if (!isAuthenticated) return openAuthModal('login');
-    if (!canClaim) return playSound('error');
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
 
-    setIsClaimingDaily(true);
+    if (!canClaim) {
+      playSound('error');
+      return;
+    }
+
     playSound('success');
+    setIsClaimingDaily(true);
     if (dailyBox) {
       setView({ type: 'CASE_OPENING', boxId: dailyBox.id, isFree: true });
     } else {
@@ -161,15 +178,31 @@ export const Bonuses: React.FC = () => {
   };
 
   const handleApplyAffiliateCode = async () => {
-    if (!isAuthenticated) return openAuthModal('login');
-    if (hasReferral) return setAffiliateMessage('You are already linked to an affiliate.');
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+    if (hasReferral) {
+      setAffiliateMessage('You are already linked to an affiliate.');
+      return;
+    }
 
     const formattedCode = affiliateInput.trim().toUpperCase();
-    if (!formattedCode) return setAffiliateMessage('Please enter a valid affiliate code.');
-    if (user.affiliateCode && formattedCode === user.affiliateCode.toUpperCase()) return setAffiliateMessage('You cannot use your own affiliate code.');
+    if (!formattedCode) {
+      setAffiliateMessage('Please enter a valid affiliate code.');
+      return;
+    }
+
+    if (user.affiliateCode && formattedCode === user.affiliateCode.toUpperCase()) {
+      setAffiliateMessage('You cannot use your own affiliate code.');
+      return;
+    }
 
     const affiliateOwner = users.find((u) => u.affiliateCode?.toUpperCase() === formattedCode);
-    if (!affiliateOwner) return setAffiliateMessage('Affiliate code not found.');
+    if (!affiliateOwner) {
+      setAffiliateMessage('Affiliate code not found.');
+      return;
+    }
 
     setIsApplyingAffiliate(true);
     try {
@@ -178,6 +211,55 @@ export const Bonuses: React.FC = () => {
       setAffiliateInput('');
     } finally {
       setIsApplyingAffiliate(false);
+    }
+  };
+
+  const handleGenerateCode = async () => {
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+
+    if (user.affiliateCode) {
+      await navigator.clipboard?.writeText(user.affiliateCode);
+      setAffiliateMessage('Your code is ready to share!');
+      window.setTimeout(() => setAffiliateMessage(''), 2500);
+      return;
+    }
+
+    setIsGeneratingCode(true);
+    try {
+      const code = await generateAffiliateCode();
+      if (code) {
+        setAffiliateMessage('Affiliate code generated!');
+        playSound('success');
+        window.setTimeout(() => setAffiliateMessage(''), 2500);
+      }
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
+
+  const handleOfferWall = () => {
+    playSound('click');
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+    setIsOfferwallOpen(true);
+  };
+
+  const handleClaimRakeback = async () => {
+    if (availableRakeback <= 0 || isClaimingRakeback) {
+      playSound('error');
+      return;
+    }
+    setIsClaimingRakeback(true);
+    playSound('coins');
+    try {
+      await claimRakeback();
+    } finally {
+      setIsClaimingRakeback(false);
     }
   };
 
@@ -198,8 +280,18 @@ export const Bonuses: React.FC = () => {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
-            <button onClick={() => setActiveTab('bonuses')} className={`px-4 py-2 rounded-lg text-sm font-bold ${activeTab === 'bonuses' ? 'bg-blue-500 text-black' : 'bg-[#0b0e14] border border-gray-700 text-gray-300'}`}>Bonuses</button>
-            <button onClick={() => setActiveTab('xp-shop')} className={`px-4 py-2 rounded-lg text-sm font-bold ${activeTab === 'xp-shop' ? 'bg-blue-500 text-black' : 'bg-[#0b0e14] border border-gray-700 text-gray-300'}`}>XP Shop</button>
+            <button
+              onClick={() => setActiveTab('bonuses')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold ${activeTab === 'bonuses' ? 'bg-blue-500 text-black' : 'bg-[#0b0e14] border border-gray-700 text-gray-300'}`}
+            >
+              Bonuses
+            </button>
+            <button
+              onClick={() => setActiveTab('xp-shop')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold ${activeTab === 'xp-shop' ? 'bg-blue-500 text-black' : 'bg-[#0b0e14] border border-gray-700 text-gray-300'}`}
+            >
+              XP Shop
+            </button>
           </div>
         </div>
 
@@ -212,7 +304,13 @@ export const Bonuses: React.FC = () => {
               </div>
               <div className="flex flex-wrap gap-2">
                 {categories.map((chip) => (
-                  <button key={chip} onClick={() => setCategory(chip)} className={`px-3 py-1.5 rounded-full text-xs font-bold border ${chip === category ? 'bg-blue-500/20 border-blue-500 text-blue-300' : 'bg-[#0b0e14] border-gray-700 text-gray-400'}`}>{chip}</button>
+                  <button
+                    key={chip}
+                    onClick={() => setCategory(chip)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border ${chip === category ? 'bg-blue-500/20 border-blue-500 text-blue-300' : 'bg-[#0b0e14] border-gray-700 text-gray-400'}`}
+                  >
+                    {chip}
+                  </button>
                 ))}
               </div>
             </div>
@@ -227,14 +325,22 @@ export const Bonuses: React.FC = () => {
                   const needMore = Math.max(0, item.xpCost - xpBalance);
                   return (
                     <div key={item.id} className="bg-[#131720] border border-gray-800 rounded-xl p-4 flex flex-col">
-                      {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="w-full h-32 rounded-lg object-cover mb-3" /> : <div className="w-full h-32 rounded-lg bg-[#0b0e14] border border-gray-800 mb-3" />}
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.title} className="w-full h-32 rounded-lg object-cover mb-3" />
+                      ) : (
+                        <div className="w-full h-32 rounded-lg bg-[#0b0e14] border border-gray-800 mb-3" />
+                      )}
                       <h3 className="text-white font-bold">{item.title}</h3>
                       <p className="text-sm text-gray-400 mt-1 line-clamp-2 min-h-[40px]">{item.description || 'Exclusive XP reward.'}</p>
                       <div className="mt-3 flex items-center justify-between">
                         <span className="text-xs font-bold bg-blue-500/20 text-blue-300 px-2 py-1 rounded">{item.xpCost.toLocaleString()} XP</span>
                         {item.stock != null ? <span className="text-xs text-gray-500">{Math.max(0, item.stock)} left</span> : <span className="text-xs text-gray-500">Unlimited</span>}
                       </div>
-                      <button disabled={!hasStock || !canAfford} onClick={() => setSelectedItem(item)} className={`mt-4 w-full py-2 rounded-lg font-bold text-sm ${hasStock && canAfford ? 'bg-green-500 text-black hover:bg-green-400' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}>
+                      <button
+                        disabled={!hasStock || !canAfford}
+                        onClick={() => setSelectedItem(item)}
+                        className={`mt-4 w-full py-2 rounded-lg font-bold text-sm ${hasStock && canAfford ? 'bg-green-500 text-black hover:bg-green-400' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
+                      >
                         {hasStock ? (canAfford ? 'Redeem' : `Need ${needMore} more XP`) : 'Out of stock'}
                       </button>
                     </div>
@@ -244,22 +350,98 @@ export const Bonuses: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
-              <h3 className="font-bold text-white mb-2 flex items-center gap-2"><Calendar className="w-4 h-4 text-yellow-500" /> Daily Free Case</h3>
-              <button onClick={handleClaimDaily} disabled={!canClaim || isClaimingDaily} className={`w-full py-2 rounded-lg font-bold ${canClaim ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-500'}`}>{canClaim ? 'Claim Free Spin' : `Next in ${nextClaimCountdown || '00:00:00'}`}</button>
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+                <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-yellow-500" /> Daily Free Case
+                </h3>
+                <div className="w-full rounded-lg bg-[#0b0e14] border border-gray-800 p-3 flex items-center justify-center mb-3 h-36">
+                  <img
+                    src={dailyBox?.image || 'https://picsum.photos/id/175/260/180'}
+                    alt={dailyBox?.name || 'Daily Free Case'}
+                    className="h-full w-auto max-w-full object-contain"
+                  />
+                </div>
+                <button
+                  onClick={handleClaimDaily}
+                  disabled={!canClaim || isClaimingDaily}
+                  className={`w-full py-2 rounded-lg font-bold ${canClaim ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-500'}`}
+                >
+                  {canClaim ? (isClaimingDaily ? 'Claiming...' : 'Claim Free Spin') : `Next in ${nextClaimCountdown || '00:00:00'}`}
+                </button>
+              </div>
+
+              <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+                <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-brand-purple" /> Affiliate Code
+                </h3>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input value={affiliateInput} onChange={(e) => setAffiliateInput(e.target.value)} placeholder="Enter code" disabled={hasReferral} className="flex-1" />
+                  <button onClick={handleApplyAffiliateCode} disabled={hasReferral || isApplyingAffiliate} className="px-3 py-2 rounded-lg bg-brand-purple text-white font-bold whitespace-nowrap">
+                    {isApplyingAffiliate ? 'Applying...' : hasReferral ? 'Linked' : 'Apply'}
+                  </button>
+                </div>
+                {!!affiliateMessage && <p className="text-xs mt-2 text-gray-400">{affiliateMessage}</p>}
+
+                <div className="mt-4 pt-4 border-t border-gray-800">
+                  <button
+                    onClick={handleGenerateCode}
+                    disabled={isGeneratingCode}
+                    className="w-full py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold"
+                  >
+                    {user.affiliateCode ? 'Copy My Affiliate Code' : isGeneratingCode ? 'Generating...' : 'Generate Affiliate Code'}
+                  </button>
+                  {user.affiliateCode && (
+                    <div className="mt-2 flex items-center justify-between rounded-lg bg-[#0b0e14] border border-gray-700 px-3 py-2">
+                      <span className="text-sm text-emerald-300 font-bold">{user.affiliateCode}</span>
+                      <button
+                        onClick={() => navigator.clipboard?.writeText(user.affiliateCode || '')}
+                        className="text-gray-400 hover:text-white"
+                        aria-label="Copy affiliate code"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+                <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-400" /> Rakeback
+                </h3>
+                <p className="text-sm text-gray-400">Current rakeback rate: <span className="text-white font-semibold">{Number(bonusSettings.rakebackBasePercent ?? 0).toFixed(2)}%</span></p>
+                <p className="text-sm text-gray-400 mb-3">Available: {availableRakeback.toLocaleString()} coins</p>
+                <button
+                  onClick={handleClaimRakeback}
+                  disabled={availableRakeback <= 0 || isClaimingRakeback}
+                  className="w-full py-2 rounded-lg bg-green-500 text-black font-bold disabled:bg-gray-800 disabled:text-gray-500"
+                >
+                  {isClaimingRakeback ? 'Collecting...' : 'Collect Rakeback'}
+                </button>
+              </div>
             </div>
-            <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
-              <h3 className="font-bold text-white mb-2 flex items-center gap-2"><Gift className="w-4 h-4 text-brand-purple" /> Affiliate Code</h3>
-              <div className="flex gap-2"><Input value={affiliateInput} onChange={(e) => setAffiliateInput(e.target.value)} placeholder="Enter code" /><button onClick={handleApplyAffiliateCode} disabled={hasReferral || isApplyingAffiliate} className="px-3 py-2 rounded-lg bg-brand-purple text-white font-bold">Apply</button></div>
-              {!!affiliateMessage && <p className="text-xs mt-2 text-gray-400">{affiliateMessage}</p>}
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+                <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4 text-orange-500" /> Offer Wall
+                </h3>
+                <p className="text-sm text-gray-400 mb-3">Complete surveys, install apps, and play games to earn free coins.</p>
+                <button onClick={handleOfferWall} className="w-full py-2 rounded-lg bg-[#0b0e14] border border-gray-700 text-gray-200 font-bold hover:border-gray-500">
+                  Open Offer Wall
+                </button>
+              </div>
+
+              <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+                <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-green-400" /> Affiliate Program
+                </h3>
+                <p className="text-sm text-gray-400">Invite followers and earn a share from their activity. No limits on growth.</p>
+              </div>
             </div>
-            <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
-              <h3 className="font-bold text-white mb-2 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-green-400" /> Rakeback</h3>
-              <p className="text-sm text-gray-400 mb-2">Available: {availableRakeback.toLocaleString()} coins</p>
-              <button onClick={async () => { setIsClaimingRakeback(true); try { await claimRakeback(); } finally { setIsClaimingRakeback(false);} }} disabled={availableRakeback <= 0 || isClaimingRakeback} className="w-full py-2 rounded-lg bg-green-500 text-black font-bold disabled:bg-gray-800 disabled:text-gray-500">Collect Rakeback</button>
-            </div>
-          </div>
+          </>
         )}
       </div>
 
@@ -271,7 +453,9 @@ export const Bonuses: React.FC = () => {
                 <h3 className="text-lg font-bold text-white">Confirm Redemption</h3>
                 <p className="text-sm text-gray-400">{selectedItem.title}</p>
               </div>
-              <button onClick={() => setSelectedItem(null)} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => setSelectedItem(null)} className="text-gray-500 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <div className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-gray-500">Cost</span><span className="text-white font-bold">{selectedItem.xpCost.toLocaleString()} XP</span></div>
