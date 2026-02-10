@@ -260,6 +260,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
     isFreeShippingItem(item) ? 0 : shippingFlatRateCents;
   const shippingCoinTotal = selectedShipmentItems.reduce((sum, item) => sum + getCoinShippingCostForItem(item), 0);
   const shippingCashTotalCents = selectedShipmentItems.reduce((sum, item) => sum + getCashShippingCostForItemCents(item), 0);
+  const freeShippingItemCount = selectedShipmentItems.filter((item) => isFreeShippingItem(item)).length;
+  const paidShippingItemCount = Math.max(0, selectedShipmentItems.length - freeShippingItemCount);
   const formatUsd = (cents: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 
@@ -1032,7 +1034,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   </button>
                               </div>
                               <p className="mt-2 text-sm text-gray-500">
-                                  Review the shipping cost breakdown before confirming.
+                                  XP Shop rewards include free shipping. Review what is due before confirming.
                               </p>
 
                               <div className="mt-4 space-y-3 max-h-48 overflow-y-auto pr-1">
@@ -1044,12 +1046,18 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               <div className="text-xs text-gray-500">{item.rarity}</div>
                                           </div>
                                           {shippingCoinEnabled && (
-                                            <CoinAmount
-                                              amount={getCoinShippingCostForItem(item)}
-                                              formatOptions={{ maximumFractionDigits: 0 }}
-                                              className="text-blue-200 font-semibold text-xs"
-                                              iconClassName="w-3 h-3"
-                                            />
+                                            getCoinShippingCostForItem(item) > 0 ? (
+                                              <CoinAmount
+                                                amount={getCoinShippingCostForItem(item)}
+                                                formatOptions={{ maximumFractionDigits: 0 }}
+                                                className="text-blue-200 font-semibold text-xs"
+                                                iconClassName="w-3 h-3"
+                                              />
+                                            ) : (
+                                              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                                                Free shipping
+                                              </span>
+                                            )
                                           )}
                                       </div>
                                   ))}
@@ -1065,19 +1073,18 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       <span>Items selected</span>
                                       <span>{selectedShipmentItems.length}</span>
                                   </div>
+                                  <div className="flex items-center justify-between text-gray-400">
+                                      <span>Free shipping items</span>
+                                      <span>{freeShippingItemCount}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-gray-400">
+                                      <span>Paid shipping items</span>
+                                      <span>{paidShippingItemCount}</span>
+                                  </div>
                                   {shippingCoinEnabled && (
                                     <>
-                                      <div className="flex items-center justify-between text-gray-400">
-                                          <span>Shipping cost per item</span>
-                                          <CoinAmount
-                                            amount={selectedShipmentItems.length > 0 ? Math.round(shippingCoinTotal / selectedShipmentItems.length) : 0}
-                                            formatOptions={{ maximumFractionDigits: 0 }}
-                                            className="text-gray-200"
-                                            iconClassName="w-3 h-3"
-                                          />
-                                      </div>
                                       <div className="flex items-center justify-between text-white font-bold">
-                                          <span>Total shipping cost</span>
+                                          <span>Coins due now</span>
                                           <CoinAmount
                                             amount={shippingCoinTotal}
                                             formatOptions={{ maximumFractionDigits: 0 }}
@@ -1089,7 +1096,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   )}
                               {shippingCashEnabled && (
                                   <div className="flex items-center justify-between text-gray-400">
-                                      <span>Cash shipping total</span>
+                                      <span>Cash due now</span>
                                       <span className="text-emerald-300 font-semibold">
                                           {formatUsd(shippingCashTotalCents)}
                                       </span>
@@ -1148,7 +1155,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                   : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
                                               }`}
                                           >
-                                              {isSubmittingCashShipping ? 'Redirecting...' : `Ship – ${formatUsd(shippingCashTotalCents)}`}
+                                              {isSubmittingCashShipping
+                                                ? 'Redirecting...'
+                                                : shippingCashTotalCents > 0
+                                                  ? `Ship – ${formatUsd(shippingCashTotalCents)}`
+                                                  : 'Ship now (no payment)'}
                                           </button>
                                       )}
                                   </div>
