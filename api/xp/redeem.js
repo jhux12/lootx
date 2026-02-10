@@ -118,7 +118,8 @@ export default async function handler(req, res) {
             throw { status: 404, error: 'Referenced XP box not found' };
           }
           const caseData = caseSnap.data() ?? {};
-          if ((caseData.currencyType ?? 'COIN') !== 'XP') {
+          const inferredXpLegacy = Number.isFinite(Number(caseData.priceXP)) && Number(caseData.priceXP) > 0 && Number(caseData.price ?? 0) <= 0;
+          if ((caseData.currencyType === 'XP' || inferredXpLegacy ? 'XP' : 'COIN') !== 'XP') {
             throw { status: 400, error: 'Referenced case is not configured as XP box' };
           }
           transaction.set(caseRef, { priceXP: metadataSnapshot.xpPriceOverride }, { merge: true });

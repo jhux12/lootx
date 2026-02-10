@@ -240,8 +240,18 @@ const BONUS_SETTINGS_DOC = 'bonus-settings';
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
 const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const SIGNUP_CREDIT_COINS = 0.05;
+const getBoxCurrencyType = (box: Partial<MysteryBox> & { price?: number; priceXP?: number; currencyType?: string }) => {
+  if (box.currencyType === 'XP') return 'XP' as const;
+  const xpPrice = Number(box.priceXP ?? 0);
+  const coinPrice = Number(box.price ?? 0);
+  if (Number.isFinite(xpPrice) && xpPrice > 0 && (!Number.isFinite(coinPrice) || coinPrice <= 0)) {
+    return 'XP' as const;
+  }
+  return 'COIN' as const;
+};
+
 const getBoxSortPrice = (box: Pick<MysteryBox, 'currencyType' | 'priceXP' | 'price'>) =>
-  box.currencyType === 'XP' ? Number(box.priceXP ?? 0) : Number(box.price ?? 0);
+  getBoxCurrencyType(box) === 'XP' ? Number(box.priceXP ?? 0) : Number(box.price ?? 0);
 
 export const calculateLevelProgress = (totalXp: number, overrides?: Partial<BonusSettings>) => {
   const settings = { ...DEFAULT_BONUS_SETTINGS, ...(overrides ?? {}) };
@@ -1296,7 +1306,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             name: data.name ?? 'Mystery Box',
             price: Number(data.price ?? 0),
             priceXP: data.priceXP != null ? Number(data.priceXP) : undefined,
-            currencyType: data.currencyType === 'XP' ? 'XP' : 'COIN',
+            currencyType: getBoxCurrencyType({
+              currencyType: data.currencyType,
+              priceXP: data.priceXP,
+              price: data.price
+            }),
             image: data.image ?? 'https://picsum.photos/300',
             accentColor: data.accentColor ?? '#3b82f6',
             tag: data.tag as MysteryBox['tag'],

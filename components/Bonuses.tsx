@@ -18,7 +18,7 @@ type XpShopItem = {
   stock?: number | null;
   limitPerUser?: number | null;
   category?: string;
-  fulfillmentType: 'DIGITAL' | 'COUPON' | 'PHYSICAL_SHIP' | 'XP_BOX';
+  fulfillmentType: 'DIGITAL' | 'COUPON' | 'PHYSICAL_SHIP' | 'XP_BOX' | 'XP_CASE_ENTRY';
   metadata?: {
     caseId?: string;
     xpPriceOverride?: number;
@@ -149,7 +149,7 @@ export const Bonuses: React.FC = () => {
     () =>
       filteredShopItems
         .map((item) => {
-          if (item.fulfillmentType !== 'XP_BOX') return item;
+          if (item.fulfillmentType !== 'XP_BOX' && item.fulfillmentType !== 'XP_CASE_ENTRY') return item;
           const linkedBox = item.metadata?.caseId ? xpBoxById.get(item.metadata.caseId) : null;
           if (!linkedBox) return null;
           const resolvedBoxOpenXp = item.metadata?.xpPriceOverride ?? linkedBox.priceXP ?? null;
@@ -371,7 +371,7 @@ export const Bonuses: React.FC = () => {
                       )}
                       <h3 className="text-white font-bold">{item.title}</h3>
                       <p className="text-sm text-gray-400 mt-1 line-clamp-2 min-h-[40px]">{item.description || 'Exclusive XP reward.'}</p>
-                      {item.fulfillmentType === 'XP_BOX' && (
+                      {(item.fulfillmentType === 'XP_BOX' || item.fulfillmentType === 'XP_CASE_ENTRY') && (
                         <p className="mt-1 text-xs text-blue-300">
                           {item.resolvedCaseName} • Open price: {(item.resolvedBoxOpenXp ?? 0).toLocaleString()} XP
                         </p>
@@ -385,7 +385,7 @@ export const Bonuses: React.FC = () => {
                         onClick={() => setSelectedItem(item)}
                         className={`mt-4 w-full py-2 rounded-lg font-bold text-sm ${hasStock && canAfford ? 'bg-green-500 text-black hover:bg-green-400' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
                       >
-                        {hasStock ? (canAfford ? (item.fulfillmentType === 'XP_BOX' ? 'View Box' : 'Redeem') : `Need ${needMore} more XP`) : 'Out of stock'}
+                        {hasStock ? (canAfford ? ((item.fulfillmentType === 'XP_BOX' || item.fulfillmentType === 'XP_CASE_ENTRY') ? 'View Box' : 'Redeem') : `Need ${needMore} more XP`) : 'Out of stock'}
                       </button>
                     </div>
                   );
