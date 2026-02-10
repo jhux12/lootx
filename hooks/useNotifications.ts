@@ -36,7 +36,12 @@ const toNotification = (id: string, data: DocumentData): UserNotification => ({
   type: typeof data.type === 'string' ? data.type : 'general',
   title: typeof data.title === 'string' ? data.title : 'Notification',
   body: typeof data.body === 'string' ? data.body : '',
-  createdAt: data.createdAt instanceof Timestamp ? data.createdAt : null,
+  createdAt:
+    data.createdAt instanceof Timestamp
+      ? data.createdAt
+      : typeof data.createdAt === 'number'
+        ? Timestamp.fromMillis(data.createdAt)
+        : null,
   link: typeof data.link === 'string' ? data.link : undefined,
   readAt: data.readAt instanceof Timestamp ? data.readAt : null,
   seenAt: data.seenAt instanceof Timestamp ? data.seenAt : null
@@ -55,11 +60,14 @@ export const useNotifications = (uid?: string | null) => {
     }
 
     const notificationsRef = collection(db, 'users', uid, 'notifications');
-    const listQuery = query(notificationsRef, orderBy('createdAt', 'desc'), limit(NOTIFICATION_LIST_LIMIT));
+    const listQuery = query(notificationsRef);
     const unreadQuery = query(notificationsRef, where('readAt', '==', null), limit(UNREAD_COUNT_LIMIT));
 
     const unsubList = onSnapshot(listQuery, (snapshot) => {
-      const next = snapshot.docs.map((docSnap) => toNotification(docSnap.id, docSnap.data()));
+      const next = snapshot.docs
+        .map((docSnap) => toNotification(docSnap.id, docSnap.data()))
+        .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0))
+        .slice(0, NOTIFICATION_LIST_LIMIT);
       setNotifications(next);
     });
 

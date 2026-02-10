@@ -75,6 +75,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+
+    match /adminNotifications/{notificationId} {
+      allow read, write: if isAdmin();
+    }
+
     match /coin_packages/{packageId} {
       allow read: if true;
       allow write: if isAdmin();
