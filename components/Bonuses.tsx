@@ -165,6 +165,14 @@ export const Bonuses: React.FC = () => {
     return map;
   }, [boxes]);
 
+  const xpMysteryBoxes = useMemo(
+    () =>
+      boxes
+        .filter((box) => !box.isDaily && (box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
+        .sort((a, b) => Number(a.priceXP ?? 0) - Number(b.priceXP ?? 0)),
+    [boxes]
+  );
+
   const categories = useMemo(() => ['All', ...new Set(shopItems.map((item) => item.category || 'General'))], [shopItems]);
   const filteredShopItems = useMemo(
     () =>
@@ -426,6 +434,37 @@ export const Bonuses: React.FC = () => {
                 })}
               </div>
             )}
+
+            <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm sm:text-base font-bold text-white">XP Mystery Boxes</h3>
+                <span className="text-xs text-gray-400">{xpMysteryBoxes.length} available</span>
+              </div>
+              {xpMysteryBoxes.length === 0 ? (
+                <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-4 text-center text-sm text-gray-400">
+                  No XP mystery boxes available yet.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {xpMysteryBoxes.map((box) => (
+                    <div key={box.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3 flex flex-col">
+                      <div className="h-28 w-full rounded-lg border border-gray-800 bg-[#101522] mb-3 overflow-hidden flex items-center justify-center">
+                        <img src={box.image} alt={box.name} className="h-full w-full object-contain" />
+                      </div>
+                      <div className="text-sm font-bold text-white">{box.name}</div>
+                      <div className="mt-1 text-xs text-blue-300">Open price: {Math.max(0, Math.floor(Number(box.priceXP ?? 0))).toLocaleString()} XP</div>
+                      <button
+                        type="button"
+                        onClick={() => setView({ type: 'CASE_OPENING', boxId: box.id })}
+                        className="mt-3 w-full rounded-lg bg-blue-500/20 border border-blue-500/30 py-2 text-xs font-bold text-blue-200 hover:bg-blue-500/30"
+                      >
+                        View Box
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <>
