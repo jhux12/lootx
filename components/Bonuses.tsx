@@ -273,7 +273,7 @@ export const Bonuses: React.FC = () => {
               <p className="text-blue-200">XP Points are redeemable currency.</p>
             </div>
             <div className="bg-[#0b0e14]/80 border border-blue-700 rounded-xl px-4 py-3 flex items-center gap-2">
-              <img src={XP_ICON} alt="XP" className="w-8 h-8 object-contain" />
+              <img src={XP_ICON} alt="XP" className="w-12 h-12 object-contain" />
               <span className="text-xs text-blue-300 uppercase">XP Balance</span>
               <span className="text-xl font-black text-white">{xpBalance.toLocaleString()}</span>
             </div>

@@ -64,7 +64,7 @@ export const Leaderboard: React.FC = () => {
                             
                             <h2 className="text-xl font-bold text-white mt-6 mb-1">{user.name}</h2>
                             <div className="text-brand-purple font-black text-lg flex items-center gap-2">
-                                <img src={XP_ICON} alt="XP" className="w-5 h-5 object-contain" />
+                                <img src={XP_ICON} alt="XP" className="w-7 h-7 object-contain" />
                                 <span>{user.weeklyXp.toLocaleString()} XP</span>
                             </div>
                             <div className="text-xs text-gray-500 uppercase font-bold mt-1">Weekly Earned</div>
@@ -112,7 +112,7 @@ export const Leaderboard: React.FC = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="text-brand-purple font-bold flex items-center justify-end gap-2">
-                                                <img src={XP_ICON} alt="XP" className="w-5 h-5 object-contain" />
+                                                <img src={XP_ICON} alt="XP" className="w-7 h-7 object-contain" />
                                                 <span>{user.weeklyXp.toLocaleString()} XP</span>
                                             </div>
                                         </td>

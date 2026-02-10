@@ -448,7 +448,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
                     <div className="mb-2 rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2">
                       <div className="text-[10px] uppercase tracking-wide text-gray-500">XP Balance</div>
                       <div className="mt-1 flex items-center gap-2 text-sm font-bold text-white">
-                        <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" />
+                        <img src={XP_ICON} alt="XP" className="h-7 w-7 object-contain" />
                         <span>{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
                       </div>
                     </div>
