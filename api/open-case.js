@@ -64,6 +64,8 @@ export default async function handler(req, res) {
         }
       }
       const price = Number(boxData.price ?? 0);
+      const currencyType = boxData.currencyType === 'XP' ? 'XP' : 'COIN';
+      const priceXP = Math.max(0, Math.floor(Number(boxData.priceXP ?? 0)));
       const rawSellBackRate = Number(
         boxData.sellBackRate ?? (boxData.isUserCreated ? 0.75 : 0.82)
       );
@@ -88,6 +90,7 @@ export default async function handler(req, res) {
       const rawCoins = userSnap.exists ? (userData.coins ?? userData.balance) : undefined;
       const hasCoins = Number.isFinite(Number(rawCoins));
       const currentCoins = hasCoins ? Number(rawCoins) : (userSnap.exists ? 0 : STARTER_COINS);
+      const currentXp = Math.max(0, Math.floor(Number(userData.xpBalance ?? userData.xp ?? 0)));
 
       if (!userSnap.exists) {
         transaction.set(userRef, {
@@ -96,7 +99,14 @@ export default async function handler(req, res) {
         }, { merge: true });
       }
 
-      if (currentCoins < price) {
+      if (currencyType === 'XP') {
+        if (!Number.isInteger(priceXP) || priceXP <= 0) {
+          throw { status: 400, error: 'XP case is missing a valid XP price' };
+        }
+        if (currentXp < priceXP) {
+          throw { status: 400, error: 'Insufficient XP balance', xpBalance: currentXp, priceXP };
+        }
+      } else if (currentCoins < price) {
         throw { status: 400, error: 'Insufficient coins', coins: currentCoins, price };
       }
 
@@ -105,9 +115,12 @@ export default async function handler(req, res) {
       const sizeOptions = normalizeSizes(prize.sizes ?? []);
       const selectedSize = sizeOptions.length ? pickRandomSize(sizeOptions) : null;
       const prizeValue = Number(prize.value ?? prize.price ?? 0);
-      const newCoins = currentCoins - price;
+      const newCoins = currencyType === 'COIN' ? currentCoins - price : currentCoins;
+      const newXpBalance = currencyType === 'XP' ? currentXp - priceXP : currentXp;
 
-      transaction.set(userRef, { coins: newCoins }, { merge: true });
+      transaction.set(userRef, currencyType === 'XP'
+        ? { xpBalance: newXpBalance, xp: newXpBalance }
+        : { coins: newCoins }, { merge: true });
       transaction.set(provablyRef, {
         serverSeed,
         serverSeedHash,
@@ -137,6 +150,8 @@ export default async function handler(req, res) {
         uid: decoded.uid,
         boxId,
         price,
+        priceXP: currencyType === 'XP' ? priceXP : null,
+        currencyType,
         prize: {
           id: prize.id ?? null,
           name: prize.name ?? 'Mystery Item',
@@ -164,7 +179,7 @@ export default async function handler(req, res) {
         const xpRule = isFree ? settings.earnRules?.dailyFree : settings.earnRules?.openCase;
         const xpAmount = computeXpAward({
           rule: xpRule,
-          amountCoins: isFree ? 0 : price,
+          amountCoins: isFree ? 0 : (currencyType === 'COIN' ? price : 0),
           bonusRules: settings.bonusRules
         });
         await applyXpAwardInTransaction({
@@ -178,6 +193,8 @@ export default async function handler(req, res) {
       responsePayload = {
         ok: true,
         price,
+        priceXP: currencyType === 'XP' ? priceXP : null,
+        currencyType,
         prize: {
           ...prize,
           price: prizeValue,
@@ -187,6 +204,7 @@ export default async function handler(req, res) {
         },
         sellBackRate,
         newCoins,
+        newXpBalance,
         inventoryId: inventoryRef.id,
         openId: openRef.id,
         provablyFair: {

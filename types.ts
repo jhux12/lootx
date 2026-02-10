@@ -79,6 +79,8 @@ export interface MysteryBox {
   id: string;
   name: string;
   price: number;
+  priceXP?: number;
+  currencyType?: 'COIN' | 'XP';
   image: string;
   tag?: BoxTag;
   tags?: string[];

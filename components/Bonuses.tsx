@@ -18,7 +18,13 @@ type XpShopItem = {
   stock?: number | null;
   limitPerUser?: number | null;
   category?: string;
-  fulfillmentType: 'DIGITAL' | 'COUPON' | 'PHYSICAL_SHIP' | 'XP_CASE_ENTRY';
+  fulfillmentType: 'DIGITAL' | 'COUPON' | 'PHYSICAL_SHIP' | 'XP_BOX';
+  metadata?: {
+    caseId?: string;
+    xpPriceOverride?: number;
+  };
+  resolvedCaseName?: string;
+  resolvedBoxOpenXp?: number | null;
   enabled: boolean;
   sortOrder?: number;
 };
@@ -46,6 +52,7 @@ export const Bonuses: React.FC = () => {
   const [shopItems, setShopItems] = useState<XpShopItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<XpShopItem | null>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
+  const [lastRedeemedCaseId, setLastRedeemedCaseId] = useState<string | null>(null);
 
   const [affiliateInput, setAffiliateInput] = useState('');
   const [affiliateMessage, setAffiliateMessage] = useState('');
@@ -81,6 +88,10 @@ export const Bonuses: React.FC = () => {
           limitPerUser: data.limitPerUser == null ? null : Number(data.limitPerUser),
           category: typeof data.category === 'string' ? data.category : 'General',
           fulfillmentType: (data.fulfillmentType as XpShopItem['fulfillmentType']) ?? 'DIGITAL',
+          metadata: {
+            caseId: typeof data?.metadata?.caseId === 'string' ? data.metadata.caseId : undefined,
+            xpPriceOverride: data?.metadata?.xpPriceOverride == null ? undefined : Math.max(0, Math.floor(Number(data.metadata.xpPriceOverride)))
+          },
           enabled: data.enabled !== false,
           sortOrder: Number(data.sortOrder ?? 0)
         } satisfies XpShopItem;
@@ -111,6 +122,14 @@ export const Bonuses: React.FC = () => {
     return () => window.clearInterval(interval);
   }, [canClaim, nextDailyClaimAt]);
 
+  const boxNameById = useMemo(() => {
+    const map = new Map<string, { name: string; priceXP: number }>();
+    boxes.forEach((box) => {
+      map.set(box.id, { name: box.name, priceXP: Math.max(0, Math.floor(Number(box.priceXP ?? 0))) });
+    });
+    return map;
+  }, [boxes]);
+
   const categories = useMemo(() => ['All', ...new Set(shopItems.map((item) => item.category || 'General'))], [shopItems]);
   const filteredShopItems = useMemo(
     () =>
@@ -123,6 +142,20 @@ export const Bonuses: React.FC = () => {
         return byCategory && bySearch;
       }),
     [category, search, shopItems]
+  );
+
+  const displayShopItems = useMemo(
+    () => filteredShopItems.map((item) => {
+      if (item.fulfillmentType !== 'XP_BOX') return item;
+      const linkedBox = item.metadata?.caseId ? boxNameById.get(item.metadata.caseId) : null;
+      const resolvedBoxOpenXp = item.metadata?.xpPriceOverride ?? linkedBox?.priceXP ?? null;
+      return {
+        ...item,
+        resolvedCaseName: linkedBox?.name ?? item.metadata?.caseId ?? 'Unknown XP Box',
+        resolvedBoxOpenXp
+      };
+    }),
+    [boxNameById, filteredShopItems]
   );
 
   const redeem = async () => {
@@ -146,6 +179,7 @@ export const Bonuses: React.FC = () => {
 
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || 'Unable to redeem reward');
+      if (data?.caseId) setLastRedeemedCaseId(String(data.caseId));
       alert(data?.message || 'Reward redeemed successfully.');
       setSelectedItem(null);
     } catch (error) {
@@ -319,7 +353,7 @@ export const Bonuses: React.FC = () => {
               <div className="bg-[#131720] border border-gray-800 rounded-xl p-8 text-center text-gray-400">No rewards available right now.</div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredShopItems.map((item) => {
+                {displayShopItems.map((item) => {
                   const hasStock = item.stock == null || item.stock > 0;
                   const canAfford = xpBalance >= item.xpCost;
                   const needMore = Math.max(0, item.xpCost - xpBalance);
@@ -332,6 +366,11 @@ export const Bonuses: React.FC = () => {
                       )}
                       <h3 className="text-white font-bold">{item.title}</h3>
                       <p className="text-sm text-gray-400 mt-1 line-clamp-2 min-h-[40px]">{item.description || 'Exclusive XP reward.'}</p>
+                      {item.fulfillmentType === 'XP_BOX' && (
+                        <p className="mt-1 text-xs text-blue-300">
+                          {item.resolvedCaseName} • Open price: {(item.resolvedBoxOpenXp ?? 0).toLocaleString()} XP
+                        </p>
+                      )}
                       <div className="mt-3 flex items-center justify-between">
                         <span className="text-xs font-bold bg-blue-500/20 text-blue-300 px-2 py-1 rounded">{item.xpCost.toLocaleString()} XP</span>
                         {item.stock != null ? <span className="text-xs text-gray-500">{Math.max(0, item.stock)} left</span> : <span className="text-xs text-gray-500">Unlimited</span>}
@@ -341,7 +380,7 @@ export const Bonuses: React.FC = () => {
                         onClick={() => setSelectedItem(item)}
                         className={`mt-4 w-full py-2 rounded-lg font-bold text-sm ${hasStock && canAfford ? 'bg-green-500 text-black hover:bg-green-400' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
                       >
-                        {hasStock ? (canAfford ? 'Redeem' : `Need ${needMore} more XP`) : 'Out of stock'}
+                        {hasStock ? (canAfford ? (item.fulfillmentType === 'XP_BOX' ? 'View Box' : 'Redeem') : `Need ${needMore} more XP`) : 'Out of stock'}
                       </button>
                     </div>
                   );

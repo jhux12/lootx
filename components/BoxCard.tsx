@@ -4,6 +4,7 @@ import { MysteryBox } from '../types';
 import { RiskSliderIndicator } from './RiskSliderIndicator';
 import { resolveRiskValue } from '../utils/riskIndicator';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { XP_ICON } from '../constants';
 
 type BoxCardProps = {
   box: MysteryBox;
@@ -61,12 +62,19 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size =
       {/* Info */}
       <div className="flex w-full flex-col items-center gap-2 pb-1">
         <h4 className={`font-semibold text-gray-100 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-xs sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
-        <CoinAmount
-          amount={toCoins(box.price, PRICE_UNIT_MODE)}
-          formatOptions={{ maximumFractionDigits: 0 }}
-          className={`justify-center font-semibold text-white sm:text-lg ${isCompact ? 'text-sm' : 'text-base'}`}
-          iconClassName="w-4 h-4"
-        />
+        {box.currencyType === 'XP' ? (
+          <div className={`flex items-center justify-center gap-1 font-semibold text-white sm:text-lg ${isCompact ? 'text-sm' : 'text-base'}`}>
+            <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+            <span>{Math.max(0, Math.floor(Number(box.priceXP ?? 0))).toLocaleString()}</span>
+          </div>
+        ) : (
+          <CoinAmount
+            amount={toCoins(box.price, PRICE_UNIT_MODE)}
+            formatOptions={{ maximumFractionDigits: 0 }}
+            className={`justify-center font-semibold text-white sm:text-lg ${isCompact ? 'text-sm' : 'text-base'}`}
+            iconClassName="w-4 h-4"
+          />
+        )}
         <div className={`w-full ${isCompact ? 'px-2' : 'px-3'}`}>
           <RiskSliderIndicator value={riskValue} size={isCompact ? 'sm' : 'md'} />
         </div>
