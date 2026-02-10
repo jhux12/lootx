@@ -67,6 +67,7 @@ export default async function handler(req, res) {
         || Number(inventoryItem.shippingCostOverrideCoins ?? NaN) === 0
         || isXpShopInventoryItem(inventoryItem);
       const effectiveShippingCost = hasFreeShipping ? 0 : shippingCoinCostCoins;
+      const shippingPaymentMethod = effectiveShippingCost > 0 ? 'coins' : 'FREE_XP';
 
       if (!hasFreeShipping && !shippingCoinEnabled) {
         throw { status: 400, error: 'Coin shipping is disabled' };
@@ -100,7 +101,8 @@ export default async function handler(req, res) {
         shippingInfo,
         shippingCost: effectiveShippingCost,
         shippingPaid: true,
-        shippingPaymentMethod: 'coins',
+        shippingPaymentMethod,
+        paidAt: new Date(),
         status: 'shipping_requested',
         createdAt: new Date()
       });

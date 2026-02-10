@@ -254,9 +254,12 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   );
 
   const isXpPurchasedItem = (item: typeof normalizedInventory[number]) =>
-    item.acquisitionCurrencyType === 'XP'
+    item.source === 'xpShop'
+    || Boolean(item.sourceItemId)
+    || Boolean(item.sourceRedemptionId)
+    || item.acquisitionCurrencyType === 'XP'
     || item.openCurrencyType === 'XP'
-    || (typeof item.boxId === 'string' && xpBoxIds.has(item.boxId));
+    || (item.provenance?.sourceType === 'case_open' && typeof item.provenance.sourceId === 'string' && xpBoxIds.has(item.provenance.sourceId));
 
   const selectedShipmentItems = normalizedInventory.filter((item) =>
     selectedShipments.includes(item.instanceId)
@@ -278,6 +281,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const shippingCashTotalCents = selectedShipmentItems.reduce((sum, item) => sum + getCashShippingCostForItemCents(item), 0);
   const freeShippingItemCount = selectedShipmentItems.filter((item) => isFreeShippingItem(item)).length;
   const paidShippingItemCount = Math.max(0, selectedShipmentItems.length - freeShippingItemCount);
+  const isFreeOnlySelection = selectedShipmentItems.length > 0 && paidShippingItemCount === 0;
   const formatUsd = (cents: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 
@@ -468,6 +472,32 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       alert('Unable to start cash checkout. Please try again.');
     } finally {
       setIsSubmittingCashShipping(false);
+    }
+  };
+
+  const handleConfirmFreeShipping = async () => {
+    if (!user.shippingAddress) {
+      alert('Please add a shipping address before requesting shipment.');
+      return;
+    }
+
+    const itemsToShip = selectedShipmentItems.filter((item) => canSelectShipment(item));
+    if (itemsToShip.length === 0) {
+      setShowShippingReview(false);
+      return;
+    }
+
+    setIsSubmittingShipment(true);
+    try {
+      await Promise.all(itemsToShip.map((item) => shipItem(item.instanceId)));
+      setSelectedShipments([]);
+      setShowShippingReview(false);
+      playSound('success');
+    } catch (error) {
+      console.error('Failed to request free shipping shipments', error);
+      alert('Unable to request shipment right now. Please try again.');
+    } finally {
+      setIsSubmittingShipment(false);
     }
   };
 
@@ -1057,7 +1087,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   </button>
                               </div>
                               <p className="mt-2 text-sm text-gray-500">
-                                  XP Shop rewards include free shipping. Review what is due before confirming.
+                                  XP Shop items ship free.
                               </p>
 
                               <div className="mt-4 space-y-3 max-h-48 overflow-y-auto pr-1">
@@ -1068,7 +1098,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               <div className="text-sm font-semibold text-white">{item.name}</div>
                                               <div className="text-xs text-gray-500">{item.rarity}</div>
                                           </div>
-                                          {shippingCoinEnabled && (
+                                          {(shippingCoinEnabled || shippingCashEnabled || isFreeOnlySelection) && (
                                             getCoinShippingCostForItem(item) > 0 ? (
                                               <CoinAmount
                                                 amount={getCoinShippingCostForItem(item)}
@@ -1147,7 +1177,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       Cancel
                                   </button>
                                   <div className="flex flex-col gap-3 sm:flex-row">
-                                      {shippingCoinEnabled && (
+                                      {!isFreeOnlySelection && shippingCoinEnabled && (
                                           <button
                                               onClick={handleConfirmShipping}
                                               disabled={
@@ -1164,7 +1194,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               {isSubmittingShipment ? 'Submitting...' : 'Ship with coins'}
                                           </button>
                                       )}
-                                      {shippingCashEnabled && (
+                                      {!isFreeOnlySelection && shippingCashEnabled && (
                                           <button
                                               onClick={handleCashShipping}
                                               disabled={
@@ -1183,6 +1213,23 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                 : shippingCashTotalCents > 0
                                                   ? `Ship – ${formatUsd(shippingCashTotalCents)}`
                                                   : 'Ship now (no payment)'}
+                                          </button>
+                                      )}
+                                      {isFreeOnlySelection && (
+                                          <button
+                                              onClick={handleConfirmFreeShipping}
+                                              disabled={
+                                                isSubmittingShipment ||
+                                                selectedShipmentItems.length === 0 ||
+                                                !user.shippingAddress
+                                              }
+                                              className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+                                                !isSubmittingShipment && selectedShipmentItems.length > 0 && user.shippingAddress
+                                                  ? 'border-emerald-500/40 bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30'
+                                                  : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
+                                              }`}
+                                          >
+                                              {isSubmittingShipment ? 'Submitting...' : 'Confirm free shipping'}
                                           </button>
                                       )}
                                   </div>

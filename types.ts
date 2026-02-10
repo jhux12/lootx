@@ -160,7 +160,7 @@ export interface Shipment {
   shippingInfo?: ShippingAddress;
   shippingCost?: number;
   shippingPaid?: boolean;
-  shippingPaymentMethod?: 'coins' | 'cash';
+  shippingPaymentMethod?: 'coins' | 'cash' | 'FREE_XP';
   shippingCashAmountCents?: number;
   status: ShipmentStatus;
   trackingNumber?: string;

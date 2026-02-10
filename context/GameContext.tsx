@@ -94,7 +94,15 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
       size: typeof typed.size === 'string' ? typed.size : undefined,
       trackingNumber: typeof typed.trackingNumber === 'string' ? typed.trackingNumber : undefined,
       redeemable: typed.redeemable ?? true,
-      sellBackRate: Number(typed.sellBackRate ?? 0)
+      sellBackRate: Number(typed.sellBackRate ?? 0),
+      source: typeof typed.source === 'string' ? typed.source : undefined,
+      sourceItemId: typeof typed.sourceItemId === 'string' ? typed.sourceItemId : undefined,
+      sourceRedemptionId: typeof typed.sourceRedemptionId === 'string' ? typed.sourceRedemptionId : undefined,
+      acquisitionCurrencyType: typed.acquisitionCurrencyType === 'XP' ? 'XP' : typed.acquisitionCurrencyType === 'COIN' ? 'COIN' : undefined,
+      openCurrencyType: typed.openCurrencyType === 'XP' ? 'XP' : typed.openCurrencyType === 'COIN' ? 'COIN' : undefined,
+      freeShipping: typed.freeShipping === true,
+      shippingCostOverrideCoins: typed.shippingCostOverrideCoins == null ? undefined : Number(typed.shippingCostOverrideCoins),
+      shippingCostOverrideCents: typed.shippingCostOverrideCents == null ? undefined : Number(typed.shippingCostOverrideCents)
     };
   });
 };
@@ -737,7 +745,15 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     redeemable: data.redeemable ?? true,
     sellBackRate: Number(data.sellBackRate ?? 0),
     locked: data.locked ?? false,
-    history
+    history,
+    source: typeof data.source === 'string' ? data.source : undefined,
+    sourceItemId: typeof data.sourceItemId === 'string' ? data.sourceItemId : undefined,
+    sourceRedemptionId: typeof data.sourceRedemptionId === 'string' ? data.sourceRedemptionId : undefined,
+    acquisitionCurrencyType: data.acquisitionCurrencyType === 'XP' ? 'XP' : data.acquisitionCurrencyType === 'COIN' ? 'COIN' : undefined,
+    openCurrencyType: data.openCurrencyType === 'XP' ? 'XP' : data.openCurrencyType === 'COIN' ? 'COIN' : undefined,
+    freeShipping: data.freeShipping === true,
+    shippingCostOverrideCoins: data.shippingCostOverrideCoins == null ? undefined : Number(data.shippingCostOverrideCoins),
+    shippingCostOverrideCents: data.shippingCostOverrideCents == null ? undefined : Number(data.shippingCostOverrideCents)
   } as InventoryItem;
 };
 

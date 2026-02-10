@@ -9,6 +9,14 @@ const getSellBackValue = (price, rate) => {
   return Math.min(price, Math.max(1, roundedValue));
 };
 
+const isXpPurchasedInventoryItem = (inventoryItem = {}) => (
+  inventoryItem.source === 'xpShop'
+  || Boolean(inventoryItem.sourceItemId)
+  || Boolean(inventoryItem.sourceRedemptionId)
+  || inventoryItem.acquisitionCurrencyType === 'XP'
+  || inventoryItem.openCurrencyType === 'XP'
+);
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -51,6 +59,9 @@ export default async function handler(req, res) {
       }
       if (inventoryItem.redeemable === false) {
         throw { status: 400, error: 'Item is not redeemable' };
+      }
+      if (isXpPurchasedInventoryItem(inventoryItem)) {
+        throw { status: 400, error: 'XP reward items cannot be sold' };
       }
 
       const sellBackRate = Number(inventoryItem.sellBackRate ?? 0.8);

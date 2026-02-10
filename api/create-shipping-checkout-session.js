@@ -128,6 +128,8 @@ export default async function handler(req, res) {
           shippingInfo,
           shippingCost: shippingCostCents,
           shippingPaid: !hasOutstandingPayment,
+          shippingPaymentMethod: hasOutstandingPayment ? 'cash' : 'FREE_XP',
+          paidAt: hasOutstandingPayment ? null : now,
           shippingBatchId: shipmentBatchId,
           status: hasOutstandingPayment ? 'pending_payment' : 'shipping_requested',
           createdAt: now
