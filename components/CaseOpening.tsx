@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronLeft, Zap, Volume2, Info, X, ShieldCheck } from 'lucide-react';
-import { GOLDEN_TICKET_ITEM } from '../constants';
+import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
 import { useGame } from '../context/GameContext';
@@ -149,7 +149,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
+  const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
+  const currentCaseXpPrice = Math.max(0, Math.floor(Number(box?.priceXP ?? 0)));
+  const currentXpBalance = Math.max(0, Math.floor(Number(user.xpBalance ?? user.xp ?? 0)));
   const isBalanceLoading = isAuthenticated && !authInitialized;
 
   const loadProvablyFairState = useCallback(async () => {
@@ -412,32 +415,39 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return;
       }
 
-      if (!Number.isFinite(currentCasePrice) || currentCasePrice <= 0) {
-        return;
-      }
-
-      const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
-      if (!Number.isFinite(availableCoins)) {
-        return;
-      }
-
-      if (availableCoins < currentCasePrice) {
-        setSpinFeedbackMessage('Not enough coins — top up to open this box.');
-
-        if (!showTopUpModal && !topUpTriggerLockRef.current) {
-          topUpTriggerLockRef.current = true;
-          setTopUpModalIntent({
-            reason: 'insufficient_balance',
-            requiredCoins: currentCasePrice,
-            currentBalance: availableCoins,
-            missingCoins: currentCasePrice - availableCoins
-          });
-          setShowTopUpModal(true);
-          window.setTimeout(() => {
-            topUpTriggerLockRef.current = false;
-          }, 350);
+      if (caseCurrencyType === 'XP') {
+        if (currentCaseXpPrice <= 0 || currentXpBalance < currentCaseXpPrice) {
+          setSpinFeedbackMessage('Not enough XP to open this box.');
+          return;
         }
-        return;
+      } else {
+        if (!Number.isFinite(currentCasePrice) || currentCasePrice <= 0) {
+          return;
+        }
+
+        const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
+        if (!Number.isFinite(availableCoins)) {
+          return;
+        }
+
+        if (availableCoins < currentCasePrice) {
+          setSpinFeedbackMessage('Not enough coins — top up to open this box.');
+
+          if (!showTopUpModal && !topUpTriggerLockRef.current) {
+            topUpTriggerLockRef.current = true;
+            setTopUpModalIntent({
+              reason: 'insufficient_balance',
+              requiredCoins: currentCasePrice,
+              currentBalance: availableCoins,
+              missingCoins: currentCasePrice - availableCoins
+            });
+            setShowTopUpModal(true);
+            window.setTimeout(() => {
+              topUpTriggerLockRef.current = false;
+            }, 350);
+          }
+          return;
+        }
       }
     }
 
@@ -486,7 +496,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           ok: boolean;
           price: number;
           prize: CaseItem & { price?: number; size?: string };
-          newCoins: number;
+          newCoins?: number;
+          newXpBalance?: number;
+          currencyType?: 'COIN' | 'XP';
           inventoryId: string;
           openId: string;
           sellBackRate?: number;
@@ -530,10 +542,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         };
 
         addInventoryItemFromServer(inventoryItem);
-        syncBalance(Number(data.newCoins ?? 0));
-        if (!isFree) {
-          const spentAmount = toCoins(Number(data.price ?? box?.price ?? 0), PRICE_UNIT_MODE);
-          registerSpend(spentAmount);
+        if ((data.currencyType ?? 'COIN') === 'COIN') {
+          syncBalance(Number(data.newCoins ?? 0));
+          if (!isFree) {
+            const spentAmount = toCoins(Number(data.price ?? box?.price ?? 0), PRICE_UNIT_MODE);
+            registerSpend(spentAmount);
+          }
         }
         setWonInventoryItem(inventoryItem);
         rollValue = data.provablyFair.roll;
@@ -875,12 +889,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       ) : (
                         <span className="inline-flex items-center gap-2">
                           Open for
-                          <CoinAmount
-                            amount={toCoins(box!.price, PRICE_UNIT_MODE)}
-                            formatOptions={{ maximumFractionDigits: 0 }}
-                            className="text-white"
-                            iconClassName="w-4 h-4"
-                          />
+                          {caseCurrencyType === 'XP' ? (
+                            <span className="inline-flex items-center gap-1 text-white">
+                              <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+                              <span>{currentCaseXpPrice.toLocaleString()}</span>
+                            </span>
+                          ) : (
+                            <CoinAmount
+                              amount={toCoins(box!.price, PRICE_UNIT_MODE)}
+                              formatOptions={{ maximumFractionDigits: 0 }}
+                              className="text-white"
+                              iconClassName="w-4 h-4"
+                            />
+                          )}
                         </span>
                       )}
                     </span>

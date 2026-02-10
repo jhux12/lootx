@@ -33,10 +33,6 @@ export default async function handler(req, res) {
     const shippingCoinEnabled = settings.shippingCoinEnabled === true;
     const shippingCoinCostCoins = Math.max(0, Math.round(Number(settings.shippingCoinCostCoins) || 0));
 
-    if (!shippingCoinEnabled) {
-      return sendJson(res, 400, { error: 'Coin shipping is disabled' });
-    }
-
     const userRef = firestore.collection('users').doc(decoded.uid);
     const inventoryRef = userRef.collection('inventory').doc(inventoryId);
     const shipmentRef = firestore.collection('shipments').doc();
@@ -46,10 +42,6 @@ export default async function handler(req, res) {
       const userSnap = await transaction.get(userRef);
       const userData = userSnap.data() ?? {};
       const currentCoins = Number(userData.coins ?? userData.balance ?? 0);
-
-      if (shippingCoinCostCoins > 0 && currentCoins < shippingCoinCostCoins) {
-        throw { status: 400, error: 'Insufficient coins for shipping' };
-      }
 
       const inventorySnap = await transaction.get(inventoryRef);
       if (!inventorySnap.exists) {
@@ -62,8 +54,19 @@ export default async function handler(req, res) {
         throw { status: 400, error: 'Item is not available for shipping' };
       }
 
-      if (shippingCoinCostCoins > 0) {
-        updatedCoins = currentCoins - shippingCoinCostCoins;
+      const hasFreeShipping = inventoryItem.freeShipping === true || Number(inventoryItem.shippingCostOverrideCoins ?? NaN) === 0;
+      const effectiveShippingCost = hasFreeShipping ? 0 : shippingCoinCostCoins;
+
+      if (!hasFreeShipping && !shippingCoinEnabled) {
+        throw { status: 400, error: 'Coin shipping is disabled' };
+      }
+
+      if (effectiveShippingCost > 0 && currentCoins < effectiveShippingCost) {
+        throw { status: 400, error: 'Insufficient coins for shipping' };
+      }
+
+      if (effectiveShippingCost > 0) {
+        updatedCoins = currentCoins - effectiveShippingCost;
         transaction.set(userRef, { coins: updatedCoins }, { merge: true });
       } else {
         updatedCoins = currentCoins;
@@ -84,7 +87,7 @@ export default async function handler(req, res) {
           size: inventoryItem.size ?? null
         },
         shippingInfo,
-        shippingCost: shippingCoinCostCoins,
+        shippingCost: inventoryItem.freeShipping === true || Number(inventoryItem.shippingCostOverrideCoins ?? NaN) === 0 ? 0 : shippingCoinCostCoins,
         shippingPaid: true,
         shippingPaymentMethod: 'coins',
         status: 'shipping_requested',

@@ -1,6 +1,23 @@
 import { admin, adminAuth, firestore } from '../_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from '../_lib/http.js';
 
+const toInt = (value, fallback = 0) => {
+  const num = Math.floor(Number(value));
+  return Number.isFinite(num) ? num : fallback;
+};
+
+const stripUndefinedDeep = (value) => {
+  if (Array.isArray(value)) return value.map(stripUndefinedDeep);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, entryValue]) => entryValue !== undefined)
+        .map(([key, entryValue]) => [key, stripUndefinedDeep(entryValue)])
+    );
+  }
+  return value;
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -25,6 +42,7 @@ export default async function handler(req, res) {
     const itemRef = firestore.collection('xpShopItems').doc(itemId);
     const requestRef = firestore.collection('xpRedemptionRequests').doc(redemptionRequestId);
     const redemptionRef = firestore.collection('xpRedemptions').doc();
+    const inventoryRef = userRef.collection('inventory').doc();
 
     let responsePayload;
 
@@ -49,9 +67,9 @@ export default async function handler(req, res) {
         throw { status: 400, error: 'This reward is currently disabled' };
       }
 
-      const xpCost = Math.max(0, Math.floor(Number(itemData.xpCost ?? 0)));
+      const xpCost = Math.max(0, toInt(itemData.xpCost, 0));
       const userData = userSnap.exists ? userSnap.data() ?? {} : {};
-      const currentXp = Math.max(0, Math.floor(Number(userData.xpBalance ?? userData.xp ?? 0)));
+      const currentXp = Math.max(0, toInt(userData.xpBalance ?? userData.xp, 0));
 
       if (currentXp < xpCost) {
         throw { status: 400, error: 'Insufficient XP balance', needed: xpCost - currentXp };
@@ -68,13 +86,36 @@ export default async function handler(req, res) {
         const priorRedemptionsQuery = firestore
           .collection('xpRedemptions')
           .where('userId', '==', decoded.uid)
-          .where('itemId', '==', itemId)
-          .where('status', 'in', ['pending', 'fulfilled']);
+          .where('itemId', '==', itemId);
         const priorRedemptions = await transaction.get(priorRedemptionsQuery);
-        if (priorRedemptions.size >= Number(perUserLimit)) {
+        const relevantRedemptionCount = priorRedemptions.docs.filter((docSnap) => {
+          const redemptionStatus = String(docSnap.data()?.status ?? '');
+          return redemptionStatus === 'pending' || redemptionStatus === 'fulfilled';
+        }).length;
+        if (relevantRedemptionCount >= Number(perUserLimit)) {
           throw { status: 400, error: 'Redemption limit reached for this item' };
         }
       }
+
+      const fulfillmentType = itemData.fulfillmentType ?? 'DIGITAL';
+      const metadataRaw = itemData.metadata ?? {};
+      const metadataSnapshot = stripUndefinedDeep({
+        title: itemData.title ?? 'XP Reward',
+        description: itemData.description ?? '',
+        category: itemData.category ?? 'General',
+        imageUrl: itemData.imageUrl ?? '',
+        caseId:
+          typeof metadataRaw.caseId === 'string'
+            ? metadataRaw.caseId
+            : typeof metadataRaw.boxId === 'string'
+              ? metadataRaw.boxId
+              : typeof itemData.caseId === 'string'
+                ? itemData.caseId
+                : typeof itemData.boxId === 'string'
+                  ? itemData.boxId
+                  : undefined,
+        xpPriceOverride: metadataRaw.xpPriceOverride == null ? undefined : Math.max(0, toInt(metadataRaw.xpPriceOverride, 0))
+      });
 
       const nextXp = currentXp - xpCost;
       const nextStock = hasLimitedStock ? Number(stockValue) - 1 : null;
@@ -82,7 +123,7 @@ export default async function handler(req, res) {
       transaction.set(userRef, {
         xpBalance: nextXp,
         xp: nextXp,
-        xpSpentLifetime: Math.max(0, Math.floor(Number(userData.xpSpentLifetime ?? 0))) + xpCost,
+        xpSpentLifetime: Math.max(0, toInt(userData.xpSpentLifetime, 0)) + xpCost,
         lastXpRedemptionAt: admin.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
 
@@ -90,23 +131,55 @@ export default async function handler(req, res) {
         transaction.set(itemRef, { stock: nextStock }, { merge: true });
       }
 
-      const metadata = {
-        title: itemData.title ?? 'XP Reward',
-        description: itemData.description ?? '',
-        fulfillmentType: itemData.fulfillmentType ?? 'DIGITAL',
-        category: itemData.category ?? 'General',
-        imageUrl: itemData.imageUrl ?? ''
-      };
+      if (fulfillmentType === 'XP_BOX') {
+        if (!metadataSnapshot.caseId) {
+          throw { status: 400, error: 'XP box reward is missing caseId' };
+        }
 
-      const redemptionPayload = {
+        if (metadataSnapshot.xpPriceOverride != null) {
+          const caseRef = firestore.collection('boxes').doc(metadataSnapshot.caseId);
+          const caseSnap = await transaction.get(caseRef);
+          if (!caseSnap.exists) {
+            throw { status: 404, error: 'Referenced XP box not found' };
+          }
+          const caseData = caseSnap.data() ?? {};
+          const inferredXpLegacy = Number.isFinite(Number(caseData.priceXP)) && Number(caseData.priceXP) > 0;
+          if ((caseData.currencyType === 'XP' || inferredXpLegacy ? 'XP' : 'COIN') !== 'XP') {
+            throw { status: 400, error: 'Referenced case is not configured as XP box' };
+          }
+          transaction.set(caseRef, { priceXP: metadataSnapshot.xpPriceOverride }, { merge: true });
+        }
+      }
+
+      const shouldCreateInventoryReward = fulfillmentType === 'DIGITAL' || fulfillmentType === 'PHYSICAL_SHIP';
+      if (shouldCreateInventoryReward) {
+        transaction.set(inventoryRef, stripUndefinedDeep({
+          source: 'xpShop',
+          sourceItemId: itemId,
+          sourceRedemptionId: redemptionRef.id,
+          name: String(metadataSnapshot.title ?? itemData.title ?? 'XP Reward'),
+          value: 0,
+          image: String(itemData.imageUrl ?? ''),
+          rarity: 'rare',
+          status: 'available',
+          obtainedAt: admin.firestore.FieldValue.serverTimestamp(),
+          redeemable: true,
+          sellBackRate: 0,
+          freeShipping: true,
+          shippingCostOverrideCoins: 0
+        }));
+      }
+
+      const status = fulfillmentType === 'PHYSICAL_SHIP' ? 'pending' : 'fulfilled';
+      const redemptionPayload = stripUndefinedDeep({
         userId: decoded.uid,
         itemId,
         xpCost,
-        status: 'pending',
+        status,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        metadata,
-        fulfillmentType: metadata.fulfillmentType
-      };
+        fulfillmentType,
+        metadataSnapshot
+      });
 
       transaction.set(redemptionRef, redemptionPayload);
       transaction.set(requestRef, {
@@ -114,9 +187,11 @@ export default async function handler(req, res) {
         redemptionId: redemptionRef.id,
         itemId,
         xpCost,
-        status: 'pending',
-        metadata,
+        status,
+        fulfillmentType,
         xpBalance: nextXp,
+        caseId: metadataSnapshot.caseId ?? null,
+        inventoryId: shouldCreateInventoryReward ? inventoryRef.id : null,
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
@@ -125,17 +200,19 @@ export default async function handler(req, res) {
         redemptionId: redemptionRef.id,
         itemId,
         xpCost,
-        status: 'pending',
-        xpBalance: nextXp,
-        metadata,
+        status,
+        fulfillmentType,
+        newXpBalance: nextXp,
+        caseId: metadataSnapshot.caseId,
+        inventoryId: shouldCreateInventoryReward ? inventoryRef.id : null,
         message:
-          metadata.fulfillmentType === 'DIGITAL'
+          fulfillmentType === 'DIGITAL'
             ? 'Added to your inventory'
-            : metadata.fulfillmentType === 'COUPON'
+            : fulfillmentType === 'COUPON'
               ? 'Coupon added to your account'
-              : metadata.fulfillmentType === 'PHYSICAL_SHIP'
+              : fulfillmentType === 'PHYSICAL_SHIP'
                 ? 'Added to shipments / pending fulfillment'
-                : 'Entry granted'
+                : 'XP Box added'
       };
     });
 

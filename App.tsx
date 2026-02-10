@@ -126,7 +126,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   }, []);
 
   const baseHomeBoxes = useMemo(
-    () => boxes.filter(box => !box.isUserCreated && !box.isDaily),
+    () => boxes.filter(box => !box.isUserCreated && !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
     [boxes]
   );
 

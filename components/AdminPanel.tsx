@@ -118,7 +118,11 @@ type AdminXpShopItem = {
     stock: number | null;
     limitPerUser: number | null;
     category: string;
-    fulfillmentType: 'DIGITAL' | 'COUPON' | 'PHYSICAL_SHIP' | 'XP_CASE_ENTRY';
+    fulfillmentType: 'DIGITAL' | 'COUPON' | 'PHYSICAL_SHIP' | 'XP_BOX';
+    metadata?: {
+        caseId?: string;
+        xpPriceOverride?: number;
+    };
     enabled: boolean;
     sortOrder: number;
 };
@@ -191,6 +195,8 @@ export const AdminPanel: React.FC = () => {
   const [newItem, setNewItem] = useState<Partial<CaseItem>>({
       name: '',
       price: 0,
+      priceXP: 0,
+      currencyType: 'COIN',
       image: 'https://picsum.photos/200',
       rarity: 'common',
       chance: 10,
@@ -367,6 +373,7 @@ export const AdminPanel: React.FC = () => {
       limitPerUser: null,
       category: 'Exclusive',
       fulfillmentType: 'DIGITAL',
+      metadata: {},
       enabled: true,
       sortOrder: 0
   });
@@ -432,7 +439,11 @@ export const AdminPanel: React.FC = () => {
                   category: String(data.category ?? 'Exclusive'),
                   fulfillmentType: (data.fulfillmentType ?? 'DIGITAL') as AdminXpShopItem['fulfillmentType'],
                   enabled: data.enabled !== false,
-                  sortOrder: Math.floor(Number(data.sortOrder ?? 0))
+                  sortOrder: Math.floor(Number(data.sortOrder ?? 0)),
+                  metadata: {
+                      caseId: typeof data?.metadata?.caseId === 'string' ? data.metadata.caseId : undefined,
+                      xpPriceOverride: data?.metadata?.xpPriceOverride == null ? undefined : Math.max(0, Math.floor(Number(data.metadata.xpPriceOverride)))
+                  }
               } as AdminXpShopItem;
           });
           setXpShopItems(nextItems);
@@ -515,9 +526,23 @@ export const AdminPanel: React.FC = () => {
           .filter((box) => box.isUserCreated)
           .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }, [boxes]);
-  
+  const xpBoxes = useMemo(
+      () => boxes.filter((box) => (box.currencyType ?? 'COIN') === 'XP'),
+      [boxes]
+  );
+
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
+  const [pendingXpBoxIds, setPendingXpBoxIds] = useState<string[] | null>(null);
+
+  useEffect(() => {
+      if (!pendingXpBoxIds) return;
+      const createdBox = xpBoxes.find((box) => !pendingXpBoxIds.includes(box.id));
+      if (!createdBox) return;
+      setXpShopItemDraft((prev) => ({ ...prev, metadata: { ...(prev.metadata ?? {}), caseId: createdBox.id } }));
+      setPendingXpBoxIds(null);
+      setActiveTab('bonuses');
+  }, [pendingXpBoxIds, xpBoxes]);
 
   const makeId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
   const formatTimestamp = (ts: number) => new Date(ts).toLocaleString();
@@ -914,6 +939,8 @@ export const AdminPanel: React.FC = () => {
       setNewItem({
           name: '',
           price: 0,
+        priceXP: 0,
+        currencyType: 'COIN',
           image: 'https://picsum.photos/200',
           rarity: 'common',
           chance: 10,
@@ -1287,7 +1314,11 @@ export const AdminPanel: React.FC = () => {
       }
   };
 
-  const hasExplicitBoxPrice = typeof newBox.price === 'number' && Number.isFinite(newBox.price) && newBox.price >= 0;
+  const isXpBox = (newBox.currencyType ?? 'COIN') === 'XP';
+  const effectiveBoxPrice = isXpBox
+      ? Number(newBox.priceXP ?? 0)
+      : Number(newBox.price ?? 0);
+  const hasExplicitBoxPrice = Number.isFinite(effectiveBoxPrice) && effectiveBoxPrice >= 0;
 
   const calculateBoxConfig = () => {
       if (selectedItems.length === 0) return;
@@ -1295,13 +1326,16 @@ export const AdminPanel: React.FC = () => {
       const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
       const baseEv = calculateExpectedValue(baseItems);
       const calculatedPrice = hasExplicitBoxPrice
-        ? newBox.price
+        ? effectiveBoxPrice
         : baseEv / clampedTargetEV;
       const updatedItems = buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice);
 
       // Apply updates
       setSelectedItems(updatedItems);
-      setNewBox(prev => ({ ...prev, price: parseFloat(calculatedPrice.toFixed(2)) }));
+      setNewBox(prev => ({
+          ...prev,
+          [isXpBox ? 'priceXP' : 'price']: parseFloat(calculatedPrice.toFixed(2))
+      }));
   };
 
   useEffect(() => {
@@ -1312,17 +1346,20 @@ export const AdminPanel: React.FC = () => {
           const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
           const baseEv = calculateExpectedValue(baseItems);
           const calculatedPrice = hasExplicitBoxPrice
-            ? newBox.price
+            ? effectiveBoxPrice
             : baseEv / clampedTargetEV;
           const updatedItems = buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice);
 
           if (!hasExplicitBoxPrice) {
-              setNewBox((current) => ({ ...current, price: parseFloat(calculatedPrice.toFixed(2)) }));
+              setNewBox((current) => ({
+                  ...current,
+                  [isXpBox ? 'priceXP' : 'price']: parseFloat(calculatedPrice.toFixed(2))
+              }));
           }
 
           return updatedItems;
       });
-  }, [clampedTargetEV, newBox.price, riskBalance]);
+  }, [clampedTargetEV, effectiveBoxPrice, hasExplicitBoxPrice, isXpBox, riskBalance]);
 
   const updateAdminLogs = (targetUserId: string, updater: (entries: AdminActionLog[]) => AdminActionLog[]) => {
       setAdminLogs((prev) => {
@@ -1703,19 +1740,42 @@ export const AdminPanel: React.FC = () => {
   const oddsTotal = useMemo(() => calculateOddsTotal(selectedItems), [selectedItems]);
   const expectedValue = useMemo(() => calculateExpectedValue(selectedItems), [selectedItems]);
   const evRatio = useMemo(() => {
-      if (!hasExplicitBoxPrice || newBox.price <= 0) return 0;
-      return expectedValue / Number(newBox.price);
-  }, [expectedValue, hasExplicitBoxPrice, newBox.price]);
-  const marginPercent = hasExplicitBoxPrice && newBox.price > 0 ? (1 - evRatio) * 100 : NaN;
-  const evOutOfBounds = hasExplicitBoxPrice && newBox.price > 0
+      if (!hasExplicitBoxPrice || effectiveBoxPrice <= 0) return 0;
+      return expectedValue / Number(effectiveBoxPrice);
+  }, [effectiveBoxPrice, expectedValue, hasExplicitBoxPrice]);
+  const marginPercent = hasExplicitBoxPrice && effectiveBoxPrice > 0 ? (1 - evRatio) * 100 : NaN;
+  const evOutOfBounds = hasExplicitBoxPrice && effectiveBoxPrice > 0
     ? Math.abs(evRatio - clampedTargetEV) > EV_TOLERANCE
     : false;
   const oddsOutOfBounds = Math.abs(oddsTotal - 100) > 0.001;
   const canSaveBox = !!newBox.name && hasExplicitBoxPrice && selectedItems.length > 0 && !evOutOfBounds && !oddsOutOfBounds;
 
+  const handleCreateXpBoxFromRewardEditor = () => {
+      setPendingXpBoxIds(xpBoxes.map((box) => box.id));
+      setActiveTab('boxes');
+      setEditingBoxId(null);
+      setSelectedItems([]);
+      setNewBox({
+          name: '',
+          price: 0,
+          priceXP: 0,
+          currencyType: 'XP',
+          image: 'https://picsum.photos/300',
+          accentColor: '#3b82f6',
+          isDaily: false,
+          tags: [],
+          sellBackRate: 0.82
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSaveBox = () => {
       if(!newBox.name || !hasExplicitBoxPrice) {
           alert("Please fill in box details");
+          return;
+      }
+      if (effectiveBoxPrice <= 0) {
+          alert(isXpBox ? 'XP boxes require a positive XP price.' : 'Boxes require a positive coin price.');
           return;
       }
       
@@ -1728,13 +1788,13 @@ export const AdminPanel: React.FC = () => {
           baseSelection,
           riskBalance,
           clampedTargetEV,
-          Number(newBox.price)
+          Number(effectiveBoxPrice)
       );
       const refreshedOddsTotal = calculateOddsTotal(refreshedItems);
       const refreshedEv = calculateExpectedValue(refreshedItems);
-      const refreshedEvRatio = newBox.price > 0 ? refreshedEv / Number(newBox.price) : 0;
+      const refreshedEvRatio = effectiveBoxPrice > 0 ? refreshedEv / Number(effectiveBoxPrice) : 0;
       const refreshedOddsOutOfBounds = Math.abs(refreshedOddsTotal - 100) > 0.001;
-      const refreshedEvOutOfBounds = newBox.price > 0
+      const refreshedEvOutOfBounds = effectiveBoxPrice > 0
         ? Math.abs(refreshedEvRatio - clampedTargetEV) > EV_TOLERANCE
         : false;
 
@@ -1764,7 +1824,9 @@ export const AdminPanel: React.FC = () => {
       const box: MysteryBox = {
           id: editingBoxId || '', // Empty ID tells createBox to addDoc
           name: newBox.name!,
-          price: Number(newBox.price),
+          price: isXpBox ? 0 : Number(newBox.price),
+          priceXP: isXpBox ? Math.max(0, Math.floor(Number(newBox.priceXP ?? 0))) : undefined,
+          currencyType: isXpBox ? 'XP' : 'COIN',
           image: newBox.image || 'https://picsum.photos/300',
           accentColor: newBox.accentColor || '#3b82f6',
           tag: newBox.tag,
@@ -1792,6 +1854,8 @@ export const AdminPanel: React.FC = () => {
       setNewBox({
           name: box.name,
           price: box.price,
+          priceXP: box.priceXP ?? 0,
+          currencyType: box.currencyType ?? 'COIN',
           image: box.image,
           accentColor: box.accentColor,
           tag: box.tag,
@@ -1827,6 +1891,8 @@ export const AdminPanel: React.FC = () => {
       setNewBox({
         name: '',
         price: 0,
+        priceXP: 0,
+        currencyType: 'COIN',
         image: 'https://picsum.photos/300',
         accentColor: '#3b82f6',
         isDaily: false,
@@ -1884,6 +1950,7 @@ export const AdminPanel: React.FC = () => {
           limitPerUser: null,
           category: 'Exclusive',
           fulfillmentType: 'DIGITAL',
+          metadata: {},
           enabled: true,
           sortOrder: 0
       });
@@ -1900,6 +1967,10 @@ export const AdminPanel: React.FC = () => {
           limitPerUser: item.limitPerUser,
           category: item.category,
           fulfillmentType: item.fulfillmentType,
+          metadata: {
+              caseId: item.metadata?.caseId,
+              xpPriceOverride: item.metadata?.xpPriceOverride
+          },
           enabled: item.enabled,
           sortOrder: item.sortOrder
       });
@@ -1913,7 +1984,20 @@ export const AdminPanel: React.FC = () => {
       }
 
       setIsSavingXpShopItem(true);
-      const payload = {
+      const metadata = {
+          caseId: xpShopItemDraft.fulfillmentType === 'XP_BOX' ? (xpShopItemDraft.metadata?.caseId ?? '').trim() : undefined,
+          xpPriceOverride: xpShopItemDraft.fulfillmentType === 'XP_BOX' && xpShopItemDraft.metadata?.xpPriceOverride != null
+              ? Math.max(0, Math.floor(Number(xpShopItemDraft.metadata.xpPriceOverride) || 0))
+              : undefined
+      };
+
+      if (xpShopItemDraft.fulfillmentType === 'XP_BOX' && !metadata.caseId) {
+          window.alert('Please select an XP box for XP_BOX rewards.');
+          setIsSavingXpShopItem(false);
+          return;
+      }
+
+      const payload = Object.fromEntries(Object.entries({
           title: trimmedTitle,
           description: xpShopItemDraft.description.trim(),
           imageUrl: xpShopItemDraft.imageUrl?.trim() ?? '',
@@ -1922,10 +2006,11 @@ export const AdminPanel: React.FC = () => {
           limitPerUser: xpShopItemDraft.limitPerUser == null ? null : Math.max(0, Math.floor(Number(xpShopItemDraft.limitPerUser) || 0)),
           category: xpShopItemDraft.category.trim() || 'Exclusive',
           fulfillmentType: xpShopItemDraft.fulfillmentType,
+          metadata: Object.fromEntries(Object.entries(metadata).filter(([, value]) => value !== undefined)),
           enabled: xpShopItemDraft.enabled,
           sortOrder: Math.floor(Number(xpShopItemDraft.sortOrder) || 0),
           updatedAt: serverTimestamp()
-      };
+      }).filter(([, value]) => value !== undefined));
 
       try {
           if (editingXpShopItemId) {
@@ -2623,26 +2708,44 @@ export const AdminPanel: React.FC = () => {
                             <div className="flex flex-col gap-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                     <div>
-                                        <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Price (coins)</label>
+                                        <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Currency Type</label>
+                                        <Select
+                                            value={newBox.currencyType ?? 'COIN'}
+                                            onChange={(event) => setNewBox((prev) => ({ ...prev, currencyType: event.target.value as 'COIN' | 'XP' }))}
+                                        >
+                                            <option value="COIN">COIN</option>
+                                            <option value="XP">XP</option>
+                                        </Select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">{isXpBox ? 'Price (XP)' : 'Price (coins)'}</label>
                                         <Input
                                           type="number"
-                                          placeholder="Box Price (coins)"
+                                          placeholder={isXpBox ? 'Box Price (XP)' : 'Box Price (coins)'}
                                           className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold text-green-400"
-                                          value={newBox.price ?? ''}
+                                          value={isXpBox ? (newBox.priceXP ?? '') : (newBox.price ?? '')}
                                           onChange={(e) => {
                                               const nextValue = e.target.value === '' ? undefined : Math.max(0, Number(e.target.value));
-                                              setNewBox({ ...newBox, price: Number.isFinite(nextValue) ? nextValue : undefined });
+                                              if (isXpBox) {
+                                                setNewBox({ ...newBox, priceXP: Number.isFinite(nextValue) ? Math.floor(nextValue) : undefined });
+                                              } else {
+                                                setNewBox({ ...newBox, price: Number.isFinite(nextValue) ? nextValue : undefined });
+                                              }
                                           }}
                                         />
                                         <div className="text-[10px] text-gray-500 mt-1 flex items-center gap-1">
                                             <span>Calculated:</span>
                                             {hasExplicitBoxPrice ? (
-                                                <CoinAmount
-                                                    amount={toCoins(Number(newBox.price), PRICE_UNIT_MODE)}
-                                                    formatOptions={{ maximumFractionDigits: 0 }}
-                                                    className="text-gray-300 font-semibold"
-                                                    iconClassName="w-3 h-3"
-                                                />
+                                                isXpBox ? (
+                                                    <span className="text-gray-300 font-semibold">{Math.floor(Number(newBox.priceXP ?? 0)).toLocaleString()} XP</span>
+                                                ) : (
+                                                    <CoinAmount
+                                                        amount={toCoins(Number(newBox.price), PRICE_UNIT_MODE)}
+                                                        formatOptions={{ maximumFractionDigits: 0 }}
+                                                        className="text-gray-300 font-semibold"
+                                                        iconClassName="w-3 h-3"
+                                                    />
+                                                )
                                             ) : (
                                                 <span className="text-gray-600">--</span>
                                             )}
@@ -4194,10 +4297,52 @@ export const AdminPanel: React.FC = () => {
                                             <option value="DIGITAL">DIGITAL</option>
                                             <option value="COUPON">COUPON</option>
                                             <option value="PHYSICAL_SHIP">PHYSICAL_SHIP</option>
-                                            <option value="XP_CASE_ENTRY">XP_CASE_ENTRY</option>
+                                            <option value="XP_BOX">XP_BOX</option>
                                         </Select>
                                     </div>
                                 </div>
+
+                                {xpShopItemDraft.fulfillmentType === 'XP_BOX' && (
+                                    <div className="space-y-3 rounded-lg border border-gray-800 bg-[#0b0e14] p-3">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP Box</label>
+                                            <Select
+                                                value={xpShopItemDraft.metadata?.caseId ?? ''}
+                                                onChange={(event) => setXpShopItemDraft((prev) => ({
+                                                    ...prev,
+                                                    metadata: { ...(prev.metadata ?? {}), caseId: event.target.value }
+                                                }))}
+                                            >
+                                                <option value="">Select XP Box</option>
+                                                {xpBoxes.map((box) => (
+                                                    <option key={box.id} value={box.id}>{box.name}</option>
+                                                ))}
+                                            </Select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP Price Override (optional)</label>
+                                            <Input
+                                                type="number"
+                                                min={0}
+                                                value={xpShopItemDraft.metadata?.xpPriceOverride ?? ''}
+                                                onChange={(event) => setXpShopItemDraft((prev) => ({
+                                                    ...prev,
+                                                    metadata: {
+                                                        ...(prev.metadata ?? {}),
+                                                        xpPriceOverride: event.target.value === '' ? undefined : Math.max(0, Math.floor(Number(event.target.value) || 0))
+                                                    }
+                                                }))}
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleCreateXpBoxFromRewardEditor}
+                                            className="w-full sm:w-auto px-3 py-2 rounded-lg border border-brand-purple/40 text-brand-purple hover:bg-brand-purple hover:text-white text-sm font-semibold"
+                                        >
+                                            Create XP Box
+                                        </button>
+                                    </div>
+                                )}
 
                                 <label className="flex items-center gap-2 text-sm text-gray-300">
                                     <Input type="checkbox" checked={xpShopItemDraft.enabled} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, enabled: event.target.checked }))} className="h-4 w-4" />
@@ -4232,7 +4377,7 @@ export const AdminPanel: React.FC = () => {
                                             <div className="flex items-start justify-between gap-3">
                                                 <div>
                                                     <div className="text-sm font-bold text-white">{item.title}</div>
-                                                    <div className="text-xs text-gray-500 mt-1">{item.category} • {item.fulfillmentType}</div>
+                                                    <div className="text-xs text-gray-500 mt-1">{item.category} • {item.fulfillmentType}{item.fulfillmentType === 'XP_BOX' && item.metadata?.caseId ? ` • Case: ${item.metadata.caseId}` : ''}</div>
                                                     <div className="text-xs text-gray-400 mt-1">{item.xpCost.toLocaleString()} XP</div>
                                                 </div>
                                                 <div className="flex gap-2">

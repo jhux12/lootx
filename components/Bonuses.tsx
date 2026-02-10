@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, ClipboardList, Copy, Gift, Search, ShieldCheck, TrendingUp, X } from 'lucide-react';
-import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -18,7 +18,13 @@ type XpShopItem = {
   stock?: number | null;
   limitPerUser?: number | null;
   category?: string;
-  fulfillmentType: 'DIGITAL' | 'COUPON' | 'PHYSICAL_SHIP' | 'XP_CASE_ENTRY';
+  fulfillmentType: 'DIGITAL' | 'COUPON' | 'PHYSICAL_SHIP' | 'XP_BOX' | 'XP_CASE_ENTRY';
+  metadata?: {
+    caseId?: string;
+    xpPriceOverride?: number;
+  };
+  resolvedCaseName?: string;
+  resolvedBoxOpenXp?: number | null;
   enabled: boolean;
   sortOrder?: number;
 };
@@ -46,6 +52,7 @@ export const Bonuses: React.FC = () => {
   const [shopItems, setShopItems] = useState<XpShopItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<XpShopItem | null>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
+  const [lastRedeemedCaseId, setLastRedeemedCaseId] = useState<string | null>(null);
 
   const [affiliateInput, setAffiliateInput] = useState('');
   const [affiliateMessage, setAffiliateMessage] = useState('');
@@ -67,28 +74,66 @@ export const Bonuses: React.FC = () => {
   const canClaim = !lastDailyClaim || nextDailyClaimAt <= Date.now();
 
   useEffect(() => {
-    const itemsQuery = query(collection(db, 'xpShopItems'), where('enabled', '==', true), orderBy('sortOrder', 'asc'));
-    const unsub = onSnapshot(itemsQuery, (snapshot) => {
-      const items = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as Record<string, unknown>;
-        return {
-          id: docSnap.id,
-          title: String(data.title ?? 'XP Reward'),
-          description: String(data.description ?? ''),
-          imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
-          xpCost: Math.max(0, Number(data.xpCost ?? 0)),
-          stock: data.stock == null ? null : Number(data.stock),
-          limitPerUser: data.limitPerUser == null ? null : Number(data.limitPerUser),
-          category: typeof data.category === 'string' ? data.category : 'General',
-          fulfillmentType: (data.fulfillmentType as XpShopItem['fulfillmentType']) ?? 'DIGITAL',
-          enabled: data.enabled !== false,
-          sortOrder: Number(data.sortOrder ?? 0)
-        } satisfies XpShopItem;
-      });
-      setShopItems(items);
-    });
+    const parseItem = (docSnap: { id: string; data: () => Record<string, unknown> }): XpShopItem => {
+      const data = docSnap.data() as Record<string, unknown>;
+      return {
+        id: docSnap.id,
+        title: String(data.title ?? 'XP Reward'),
+        description: String(data.description ?? ''),
+        imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
+        xpCost: Math.max(0, Number(data.xpCost ?? 0)),
+        stock: data.stock == null ? null : Number(data.stock),
+        limitPerUser: data.limitPerUser == null ? null : Number(data.limitPerUser),
+        category: typeof data.category === 'string' ? data.category : 'General',
+        fulfillmentType: ((typeof data.fulfillmentType === 'string' ? data.fulfillmentType : 'DIGITAL') as XpShopItem['fulfillmentType']),
+        metadata: {
+          caseId:
+            typeof data?.metadata?.caseId === 'string'
+              ? data.metadata.caseId
+              : typeof data?.metadata?.boxId === 'string'
+                ? data.metadata.boxId
+                : typeof data.caseId === 'string'
+                  ? data.caseId
+                  : typeof data.boxId === 'string'
+                    ? data.boxId
+                    : undefined,
+          xpPriceOverride:
+            data?.metadata?.xpPriceOverride != null
+              ? Math.max(0, Math.floor(Number(data.metadata.xpPriceOverride)))
+              : data?.xpPriceOverride != null
+                ? Math.max(0, Math.floor(Number(data.xpPriceOverride)))
+                : undefined
+        },
+        enabled: data.enabled !== false,
+        sortOrder: Number(data.sortOrder ?? 0)
+      } satisfies XpShopItem;
+    };
 
-    return () => unsub();
+    const applySnapshot = (snapshot: { docs: Array<{ id: string; data: () => Record<string, unknown> }> }) => {
+      const items = snapshot.docs
+        .map(parseItem)
+        .filter((item) => item.enabled)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      setShopItems(items);
+    };
+
+    const indexedQuery = query(collection(db, 'xpShopItems'), orderBy('sortOrder', 'asc'));
+    let fallbackUnsub: (() => void) | null = null;
+
+    const unsub = onSnapshot(
+      indexedQuery,
+      (snapshot) => applySnapshot(snapshot),
+      (error) => {
+        console.warn('Primary XP shop query failed, falling back to unsorted listener.', error);
+        fallbackUnsub?.();
+        fallbackUnsub = onSnapshot(collection(db, 'xpShopItems'), (snapshot) => applySnapshot(snapshot));
+      }
+    );
+
+    return () => {
+      unsub();
+      fallbackUnsub?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -111,6 +156,23 @@ export const Bonuses: React.FC = () => {
     return () => window.clearInterval(interval);
   }, [canClaim, nextDailyClaimAt]);
 
+  const xpBoxById = useMemo(() => {
+    const map = new Map<string, { name: string; priceXP: number }>();
+    boxes.forEach((box) => {
+      if (!(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)) return;
+      map.set(box.id, { name: box.name, priceXP: Math.max(0, Math.floor(Number(box.priceXP ?? 0))) });
+    });
+    return map;
+  }, [boxes]);
+
+  const xpMysteryBoxes = useMemo(
+    () =>
+      boxes
+        .filter((box) => !box.isDaily && (box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
+        .sort((a, b) => Number(a.priceXP ?? 0) - Number(b.priceXP ?? 0)),
+    [boxes]
+  );
+
   const categories = useMemo(() => ['All', ...new Set(shopItems.map((item) => item.category || 'General'))], [shopItems]);
   const filteredShopItems = useMemo(
     () =>
@@ -123,6 +185,24 @@ export const Bonuses: React.FC = () => {
         return byCategory && bySearch;
       }),
     [category, search, shopItems]
+  );
+
+  const displayShopItems = useMemo(
+    () =>
+      filteredShopItems
+        .map((item) => {
+          if (item.fulfillmentType !== 'XP_BOX' && item.fulfillmentType !== 'XP_CASE_ENTRY') return item;
+          const linkedBox = item.metadata?.caseId ? xpBoxById.get(item.metadata.caseId) : null;
+          if (!linkedBox) return null;
+          const resolvedBoxOpenXp = item.metadata?.xpPriceOverride ?? linkedBox.priceXP ?? null;
+          return {
+            ...item,
+            resolvedCaseName: linkedBox.name,
+            resolvedBoxOpenXp
+          };
+        })
+        .filter((item): item is XpShopItem => Boolean(item)),
+    [filteredShopItems, xpBoxById]
   );
 
   const redeem = async () => {
@@ -146,6 +226,7 @@ export const Bonuses: React.FC = () => {
 
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || 'Unable to redeem reward');
+      if (data?.caseId) setLastRedeemedCaseId(String(data.caseId));
       alert(data?.message || 'Reward redeemed successfully.');
       setSelectedItem(null);
     } catch (error) {
@@ -315,11 +396,8 @@ export const Bonuses: React.FC = () => {
               </div>
             </div>
 
-            {filteredShopItems.length === 0 ? (
-              <div className="bg-[#131720] border border-gray-800 rounded-xl p-8 text-center text-gray-400">No rewards available right now.</div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredShopItems.map((item) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {displayShopItems.map((item) => {
                   const hasStock = item.stock == null || item.stock > 0;
                   const canAfford = xpBalance >= item.xpCost;
                   const needMore = Math.max(0, item.xpCost - xpBalance);
@@ -332,6 +410,11 @@ export const Bonuses: React.FC = () => {
                       )}
                       <h3 className="text-white font-bold">{item.title}</h3>
                       <p className="text-sm text-gray-400 mt-1 line-clamp-2 min-h-[40px]">{item.description || 'Exclusive XP reward.'}</p>
+                      {(item.fulfillmentType === 'XP_BOX' || item.fulfillmentType === 'XP_CASE_ENTRY') && (
+                        <p className="mt-1 text-xs text-blue-300">
+                          {item.resolvedCaseName} • Open price: {(item.resolvedBoxOpenXp ?? 0).toLocaleString()} XP
+                        </p>
+                      )}
                       <div className="mt-3 flex items-center justify-between">
                         <span className="text-xs font-bold bg-blue-500/20 text-blue-300 px-2 py-1 rounded">{item.xpCost.toLocaleString()} XP</span>
                         {item.stock != null ? <span className="text-xs text-gray-500">{Math.max(0, item.stock)} left</span> : <span className="text-xs text-gray-500">Unlimited</span>}
@@ -341,13 +424,43 @@ export const Bonuses: React.FC = () => {
                         onClick={() => setSelectedItem(item)}
                         className={`mt-4 w-full py-2 rounded-lg font-bold text-sm ${hasStock && canAfford ? 'bg-green-500 text-black hover:bg-green-400' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
                       >
-                        {hasStock ? (canAfford ? 'Redeem' : `Need ${needMore} more XP`) : 'Out of stock'}
+                        {hasStock ? (canAfford ? ((item.fulfillmentType === 'XP_BOX' || item.fulfillmentType === 'XP_CASE_ENTRY') ? 'View Box' : 'Redeem') : `Need ${needMore} more XP`) : 'Out of stock'}
                       </button>
                     </div>
                   );
                 })}
               </div>
-            )}
+
+            <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm sm:text-base font-bold text-white">XP Mystery Boxes</h3>
+                <span className="text-xs text-gray-400">{xpMysteryBoxes.length} available</span>
+              </div>
+              {xpMysteryBoxes.length === 0 ? (
+                <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-4 text-center text-sm text-gray-400">
+                  No XP mystery boxes available yet.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {xpMysteryBoxes.map((box) => (
+                    <div key={box.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3 flex flex-col">
+                      <div className="h-28 w-full rounded-lg border border-gray-800 bg-[#101522] mb-3 overflow-hidden flex items-center justify-center">
+                        <img src={box.image} alt={box.name} className="h-full w-full object-contain" />
+                      </div>
+                      <div className="text-sm font-bold text-white">{box.name}</div>
+                      <div className="mt-1 text-xs text-blue-300">Open price: {Math.max(0, Math.floor(Number(box.priceXP ?? 0))).toLocaleString()} XP</div>
+                      <button
+                        type="button"
+                        onClick={() => setView({ type: 'CASE_OPENING', boxId: box.id })}
+                        className="mt-3 w-full rounded-lg bg-blue-500/20 border border-blue-500/30 py-2 text-xs font-bold text-blue-200 hover:bg-blue-500/30"
+                      >
+                        View Box
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <>
