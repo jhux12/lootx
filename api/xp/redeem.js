@@ -6,6 +6,18 @@ const toInt = (value, fallback = 0) => {
   return Number.isFinite(num) ? num : fallback;
 };
 
+const stripUndefinedDeep = (value) => {
+  if (Array.isArray(value)) return value.map(stripUndefinedDeep);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, entryValue]) => entryValue !== undefined)
+        .map(([key, entryValue]) => [key, stripUndefinedDeep(entryValue)])
+    );
+  }
+  return value;
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -73,24 +85,36 @@ export default async function handler(req, res) {
         const priorRedemptionsQuery = firestore
           .collection('xpRedemptions')
           .where('userId', '==', decoded.uid)
-          .where('itemId', '==', itemId)
-          .where('status', 'in', ['pending', 'fulfilled']);
+          .where('itemId', '==', itemId);
         const priorRedemptions = await transaction.get(priorRedemptionsQuery);
-        if (priorRedemptions.size >= Number(perUserLimit)) {
+        const relevantRedemptionCount = priorRedemptions.docs.filter((docSnap) => {
+          const redemptionStatus = String(docSnap.data()?.status ?? '');
+          return redemptionStatus === 'pending' || redemptionStatus === 'fulfilled';
+        }).length;
+        if (relevantRedemptionCount >= Number(perUserLimit)) {
           throw { status: 400, error: 'Redemption limit reached for this item' };
         }
       }
 
       const fulfillmentType = itemData.fulfillmentType ?? 'DIGITAL';
       const metadataRaw = itemData.metadata ?? {};
-      const metadataSnapshot = {
+      const metadataSnapshot = stripUndefinedDeep({
         title: itemData.title ?? 'XP Reward',
         description: itemData.description ?? '',
         category: itemData.category ?? 'General',
         imageUrl: itemData.imageUrl ?? '',
-        caseId: typeof metadataRaw.caseId === 'string' ? metadataRaw.caseId : undefined,
+        caseId:
+          typeof metadataRaw.caseId === 'string'
+            ? metadataRaw.caseId
+            : typeof metadataRaw.boxId === 'string'
+              ? metadataRaw.boxId
+              : typeof itemData.caseId === 'string'
+                ? itemData.caseId
+                : typeof itemData.boxId === 'string'
+                  ? itemData.boxId
+                  : undefined,
         xpPriceOverride: metadataRaw.xpPriceOverride == null ? undefined : Math.max(0, toInt(metadataRaw.xpPriceOverride, 0))
-      };
+      });
 
       const nextXp = currentXp - xpCost;
       const nextStock = hasLimitedStock ? Number(stockValue) - 1 : null;
@@ -127,7 +151,7 @@ export default async function handler(req, res) {
       }
 
       const status = fulfillmentType === 'PHYSICAL_SHIP' ? 'pending' : 'fulfilled';
-      const redemptionPayload = {
+      const redemptionPayload = stripUndefinedDeep({
         userId: decoded.uid,
         itemId,
         xpCost,
@@ -135,7 +159,7 @@ export default async function handler(req, res) {
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         fulfillmentType,
         metadataSnapshot
-      };
+      });
 
       transaction.set(redemptionRef, redemptionPayload);
       transaction.set(requestRef, {
