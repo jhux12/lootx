@@ -1082,7 +1082,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               role="dialog"
               aria-modal="true"
               aria-labelledby="item-details-title"
-              className="relative w-full max-w-[640px] max-h-[85vh] overflow-hidden rounded-[26px] border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111824] to-[#0b0f18] text-gray-200 shadow-[0_25px_80px_-40px_rgba(15,23,42,0.9)] shadow-purple-500/10 animate-item-modal-in"
+              className="relative w-full max-w-[760px] max-h-[88vh] overflow-hidden rounded-[26px] border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111824] to-[#0b0f18] text-gray-200 shadow-[0_25px_80px_-40px_rgba(15,23,42,0.9)] shadow-purple-500/10 animate-item-modal-in"
               style={{
                 borderColor: 'rgba(255,255,255,0.08)',
                 boxShadow:
@@ -1093,7 +1093,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.05]"
                 style={{ backgroundImage: `url(${pullzPattern})` }}
               />
-              <div className="relative flex max-h-[85vh] flex-col gap-6 overflow-hidden p-6 sm:p-8">
+              <div className="relative flex max-h-[88vh] flex-col gap-6 overflow-hidden p-5 sm:p-8">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
                     Item Details
@@ -1108,16 +1108,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-1 md:flex-row">
-                  <div className="flex w-full items-center justify-center md:w-5/12">
+                <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-1 md:flex-row md:items-center">
+                  <div className="flex w-full items-center justify-center md:w-1/2">
                     <div
-                      className="relative flex h-48 w-full max-w-[220px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_20px_45px_-35px_rgba(34,211,238,0.45)] sm:h-56 sm:max-w-[240px]"
+                      className="relative flex aspect-square w-full max-w-[280px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_20px_45px_-35px_rgba(34,211,238,0.45)] sm:max-w-[360px] md:max-w-[400px]"
                       style={{ boxShadow: `0 30px 55px -45px ${selectedCaseItem.color}` }}
                     >
                       <img
                         src={selectedCaseItem.image}
                         alt={selectedCaseItem.name}
-                        className="h-32 w-32 object-contain sm:h-40 sm:w-40"
+                        className="h-[78%] w-[78%] object-contain"
                       />
                     </div>
                   </div>
