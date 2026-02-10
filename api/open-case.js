@@ -164,6 +164,8 @@ export default async function handler(req, res) {
       const obtainedAt = admin.firestore.FieldValue.serverTimestamp();
       const inventoryPayload = {
         boxId,
+        acquisitionCurrencyType: currencyType,
+        openCurrencyType: currencyType,
         prizeId: prize.id ?? null,
         name: prize.name ?? 'Mystery Item',
         value: prizeValue,

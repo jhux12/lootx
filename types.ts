@@ -132,6 +132,8 @@ export interface InventoryItem extends CaseItem {
   source?: string;
   sourceItemId?: string;
   sourceRedemptionId?: string;
+  acquisitionCurrencyType?: 'COIN' | 'XP';
+  openCurrencyType?: 'COIN' | 'XP';
   freeShipping?: boolean;
   shippingCostOverrideCoins?: number;
   shippingCostOverrideCents?: number;

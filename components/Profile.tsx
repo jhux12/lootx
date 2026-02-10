@@ -243,6 +243,21 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const shippingCoinCostCoins = Math.max(0, stripeSettings.shippingCoinCostCoins);
   const shippingCashEnabled = stripeSettings.shippingCashEnabled && stripeSettings.shippingFlatRateCents > 0;
   const shippingFlatRateCents = Math.max(0, stripeSettings.shippingFlatRateCents);
+  const xpBoxIds = useMemo(
+    () =>
+      new Set(
+        boxes
+          .filter((box) => box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)
+          .map((box) => box.id)
+      ),
+    [boxes]
+  );
+
+  const isXpPurchasedItem = (item: typeof normalizedInventory[number]) =>
+    item.acquisitionCurrencyType === 'XP'
+    || item.openCurrencyType === 'XP'
+    || (typeof item.boxId === 'string' && xpBoxIds.has(item.boxId));
+
   const selectedShipmentItems = normalizedInventory.filter((item) =>
     selectedShipments.includes(item.instanceId)
   );
@@ -250,6 +265,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
     item.freeShipping === true
     || Number(item.shippingCostOverrideCoins ?? NaN) === 0
     || Number(item.shippingCostOverrideCents ?? NaN) === 0
+    || isXpPurchasedItem(item)
     || item.source === 'xpShop'
     || Boolean(item.sourceItemId)
     || Boolean(item.sourceRedemptionId)
@@ -835,8 +851,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           {filteredInventory.map((item) => {
                               const isAvailable = item.status === 'available';
                               const isLocked = !!item.locked;
+                              const isXpItem = isXpPurchasedItem(item);
                               const canShip = isAvailable && !isLocked && !!user.shippingAddress;
-                              const canSell = isAvailable && !isLocked && item.redeemable !== false;
+                              const canSell = isAvailable && !isLocked && item.redeemable !== false && !isXpItem;
                               const statusLabel = item.status === 'shipping' || item.status === 'shipping_requested'
                                 ? 'Shipping'
                                 : item.status === 'shipped'
@@ -897,12 +914,18 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                         </div>
                                       )}
                                       <h4 className="text-white font-bold text-sm mt-2 mb-2 line-clamp-2 min-h-[2.5rem]">{item.name}</h4>
-                                      <CoinAmount
-                                        amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                                        formatOptions={{ maximumFractionDigits: 0 }}
-                                        className="text-green-500 font-black"
-                                        iconClassName="w-3.5 h-3.5"
-                                      />
+                                      {isXpItem ? (
+                                        <div className="inline-flex items-center rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-300">
+                                          XP reward
+                                        </div>
+                                      ) : (
+                                        <CoinAmount
+                                          amount={toCoins(item.price, PRICE_UNIT_MODE)}
+                                          formatOptions={{ maximumFractionDigits: 0 }}
+                                          className="text-green-500 font-black"
+                                          iconClassName="w-3.5 h-3.5"
+                                        />
+                                      )}
                                       <div className="text-[11px] text-gray-500 mt-2">
                                         Obtained {new Date(item.obtainedAt).toLocaleDateString()}
                                       </div>
@@ -926,7 +949,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               Ship item
                                             </button>
                                           )}
-                                          {inventoryFilter === 'inventory' && item.redeemable !== false && (
+                                          {inventoryFilter === 'inventory' && item.redeemable !== false && !isXpItem && (
                                               <button
                                                 onClick={async () => {
                                                   if (!canSell || isGeneratingSellOffers[item.instanceId] || isSellingItems[item.instanceId]) return;

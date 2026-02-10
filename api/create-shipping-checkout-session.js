@@ -9,6 +9,8 @@ const isXpShopInventoryItem = (inventoryItem = {}) => (
   inventoryItem.source === 'xpShop'
   || Boolean(inventoryItem.sourceItemId)
   || Boolean(inventoryItem.sourceRedemptionId)
+  || inventoryItem.acquisitionCurrencyType === 'XP'
+  || inventoryItem.openCurrencyType === 'XP'
 );
 
 export default async function handler(req, res) {
