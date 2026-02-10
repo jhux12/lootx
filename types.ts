@@ -273,6 +273,7 @@ export type ViewState =
   | { type: 'ADMIN' }
   | { type: 'LEADERBOARD' }
   | { type: 'CUSTOM_CREATOR' }
+  | { type: 'PROVABLY_FAIR' }
   | { type: 'CASE_OPENING'; boxId: string; isFree?: boolean }
   | { type: 'BATTLE_ARENA'; battleId: string }
   | { type: 'BATTLES' };
