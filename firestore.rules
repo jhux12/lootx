@@ -28,6 +28,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+
+
+    match /users/{uid}/notifications/{notificationId} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update: if isSignedIn() && request.auth.uid == uid;
+      allow delete: if isAdmin();
+    }
+
     match /users/{uid}/inventory/{inventoryId} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow write: if isAdmin();

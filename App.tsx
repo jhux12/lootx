@@ -24,7 +24,7 @@ import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert, Swords } from 'lucide-react';
-import { MobileChatModal } from './components/MobileChatModal';
+import { InboxModal } from './components/InboxModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { HowItWorksSection } from './components/HowItWorksSection';
 import { TrustSection } from './components/TrustSection';
@@ -488,7 +488,7 @@ function App() {
 export default App;
 
 const AppShell = () => {
-  const [showSupportChat, setShowSupportChat] = useState(false);
+  const [showInbox, setShowInbox] = useState(false);
   const { messages } = useSiteChat();
   const latestMessageAt = messages[messages.length - 1]?.createdAt ?? 0;
   const [lastSeenAt, setLastSeenAt] = useState(0);
@@ -516,9 +516,8 @@ const AppShell = () => {
   return (
     <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
       <Header
-        onOpenSupportChat={() => setShowSupportChat(true)}
-        hasUnseenChatMessages={hasUnseenChatMessages}
-        isChatOpen={showSupportChat}
+        onOpenInbox={() => setShowInbox(true)}
+        unreadChatCount={hasUnseenChatMessages ? 1 : 0}
       />
       <AppLayout
         hasUnseenChatMessages={hasUnseenChatMessages}
@@ -526,11 +525,11 @@ const AppShell = () => {
       />
       <MobileBottomNav />
 
-      {/* Mobile Chat Modal */}
-      <MobileChatModal
-        isOpen={showSupportChat}
-        onClose={() => setShowSupportChat(false)}
+      <InboxModal
+        isOpen={showInbox}
+        onClose={() => setShowInbox(false)}
         hasUnseenMessages={hasUnseenChatMessages}
+        unreadChatCount={hasUnseenChatMessages ? 1 : 0}
         onChatViewed={markChatSeen}
       />
       <ResetPasswordModal />
