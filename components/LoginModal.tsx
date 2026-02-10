@@ -7,6 +7,7 @@ import { BrandLockup } from './BrandLockup';
 import googleLogo from '../assets/google-logo.svg';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
+import { getAuthErrorMessage } from '../utils/authErrors';
 
 export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
@@ -24,22 +25,23 @@ export const LoginModal: React.FC = () => {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [userError, setUserError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const errorBannerRef = React.useRef<HTMLDivElement | null>(null);
 
   const isLinkingGoogle = Boolean(googleLinkCredential);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
+    setUserError(null);
     setMessage(null);
     playSound('click');
     
     try {
         if (mode === 'register') {
             if (!confirmAdult || !acceptTerms) {
-                setError('Please confirm you are 18+ and accept the terms to continue.');
+                setUserError('Please confirm you are 18+ and accept the terms to continue.');
                 setIsLoading(false);
                 return;
             }
@@ -50,7 +52,7 @@ export const LoginModal: React.FC = () => {
         // Success - modal closes inside context functions
     } catch (err: any) {
         console.error(err);
-        setError(err.message || 'Authentication failed');
+        setUserError(getAuthErrorMessage(err));
         playSound('error');
     } finally {
         setIsLoading(false);
@@ -59,7 +61,7 @@ export const LoginModal: React.FC = () => {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    setError(null);
+    setUserError(null);
     setMessage(null);
     playSound('click');
 
@@ -74,12 +76,12 @@ export const LoginModal: React.FC = () => {
       }
 
       if (result.status === 'error') {
-        setError(result.message || 'Google sign-in failed.');
+        setUserError(getAuthErrorMessage(result.message));
         playSound('error');
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Google sign-in failed');
+      setUserError(getAuthErrorMessage(err));
       playSound('error');
     } finally {
       setIsLoading(false);
@@ -91,19 +93,19 @@ export const LoginModal: React.FC = () => {
     if (!googleLinkCredential) return;
 
     setIsLoading(true);
-    setError(null);
+    setUserError(null);
     setMessage(null);
     playSound('click');
 
     try {
       const result = await linkGoogleAccount(googleLinkEmail, googleLinkPassword, googleLinkCredential);
       if (result.status === 'error') {
-        setError(result.message || 'Unable to link Google account.');
+        setUserError(getAuthErrorMessage(result.message));
         playSound('error');
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Unable to link Google account.');
+      setUserError(getAuthErrorMessage(err));
       playSound('error');
     } finally {
       setIsLoading(false);
@@ -112,12 +114,12 @@ export const LoginModal: React.FC = () => {
 
   const handleForgotPassword = async () => {
       if (!email.trim()) {
-          setError('Enter your email to receive a password reset link.');
+          setUserError('Enter your email to receive a password reset link.');
           return;
       }
 
       setIsLoading(true);
-      setError(null);
+      setUserError(null);
       setMessage(null);
       playSound('click');
 
@@ -126,7 +128,7 @@ export const LoginModal: React.FC = () => {
           setMessage('Password reset link sent. Check your inbox.');
       } catch (err: any) {
           console.error(err);
-          setError(err.message || 'Unable to send reset email.');
+          setUserError(getAuthErrorMessage(err));
           playSound('error');
       } finally {
           setIsLoading(false);
@@ -139,7 +141,7 @@ export const LoginModal: React.FC = () => {
         setAuthModalMode(nextMode);
         return nextMode;
       });
-      setError(null);
+      setUserError(null);
       setMessage(null);
       setGoogleLinkEmail('');
       setGoogleLinkPassword('');
@@ -156,9 +158,15 @@ export const LoginModal: React.FC = () => {
     setGoogleLinkEmail('');
     setGoogleLinkPassword('');
     setGoogleLinkCredential(null);
-    setError(null);
+    setUserError(null);
     setMessage(null);
   };
+
+  useEffect(() => {
+    if (userError) {
+      errorBannerRef.current?.focus();
+    }
+  }, [userError]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -196,9 +204,26 @@ export const LoginModal: React.FC = () => {
             </p>
         </div>
 
-        {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2 text-red-400 text-sm">
-                <AlertCircle className="w-4 h-4" /> {error}
+        {userError && (
+            <div
+                ref={errorBannerRef}
+                role="alert"
+                aria-live="polite"
+                tabIndex={-1}
+                className="mb-4 p-3 bg-red-500/10 border border-red-500/40 rounded-lg flex items-start justify-between gap-3 text-red-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-400/50"
+            >
+                <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>{userError}</span>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => setUserError(null)}
+                    className="text-red-200/80 hover:text-red-100 transition-colors"
+                    aria-label="Dismiss error"
+                >
+                    <X className="w-4 h-4" />
+                </button>
             </div>
         )}
         {message && (
