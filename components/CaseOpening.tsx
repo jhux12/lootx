@@ -139,6 +139,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
+  const [isBoxPreviewVisible, setIsBoxPreviewVisible] = useState(true);
+  const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemModalRef = useRef<HTMLDivElement>(null);
@@ -451,6 +453,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       claimDaily();
     }
+
+    if (isBoxPreviewVisible) {
+      setIsBoxPreviewFading(true);
+      await new Promise((resolve) => window.setTimeout(resolve, 450));
+      setIsBoxPreviewVisible(false);
+      setIsBoxPreviewFading(false);
+    }
     
     setIsSpinning(true);
     setShowWinModal(false);
@@ -544,6 +553,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       } catch (error) {
         console.error('Failed to open case', error);
         setIsSpinning(false);
+        setIsBoxPreviewVisible(true);
+        setIsBoxPreviewFading(false);
         alert('Unable to open case. Please try again.');
         return;
       }
@@ -629,8 +640,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
   }, [showTopUpModal, spinFeedbackMessage]);
 
+  useEffect(() => {
+    setIsBoxPreviewVisible(true);
+    setIsBoxPreviewFading(false);
+  }, [boxId]);
+
   const finishSpin = (item: CaseItem) => {
     setIsSpinning(false);
+    setIsBoxPreviewVisible(true);
+    setIsBoxPreviewFading(false);
     setShowWinModal(true);
     setWonItem(item);
     setRewardResolved(false);
@@ -776,14 +794,31 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
             {/* Spinner Window */}
             <div className="relative h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
-                {/* Center Markers */}
-                <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-30 drop-shadow-[0_0_10px_rgba(0,0,0,0.5)] transition-colors duration-300`}>
-                    <div className={`w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[14px] ${isGoldMode ? 'border-t-yellow-400' : 'border-t-cyan-400'}`}></div>
-                </div>
-                <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-30 drop-shadow-[0_0_10px_rgba(0,0,0,0.5)] transition-colors duration-300`}>
-                    <div className={`w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[14px] ${isGoldMode ? 'border-b-yellow-400' : 'border-b-cyan-400'}`}></div>
-                </div>
-                <div className={`absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 z-10 ${isGoldMode ? 'bg-yellow-400/50' : 'bg-cyan-400/30'}`}></div>
+                {isBoxPreviewVisible && (
+                  <div
+                    className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
+                    aria-live="polite"
+                  >
+                    <div className={`lootx-box-preview relative w-full max-w-[280px] sm:max-w-[320px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
+                      <div className="lootx-box-preview__shimmer" aria-hidden="true"></div>
+                      <img
+                        src={box!.image}
+                        alt={`${box!.name} box`}
+                        className="relative z-10 mx-auto h-28 w-auto max-w-full object-contain sm:h-32"
+                      />
+                      <p className="relative z-10 mt-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-200 sm:text-sm">
+                        Ready to open
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {isSpinning && (
+                  <div
+                    className={`absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 z-[26] pointer-events-none ${isGoldMode ? 'bg-yellow-400/50' : 'bg-cyan-400/35'}`}
+                    aria-hidden="true"
+                  ></div>
+                )}
                 
                 {/* Fade Gradients */}
                 <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
@@ -792,7 +827,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 {/* The Moving Reel */}
                 <div 
                     ref={scrollContainerRef}
-                    className="flex px-[50%] will-change-transform ml-[-80px]" 
+                    className={`flex px-[50%] will-change-transform ml-[-80px] transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`} 
                     style={{ gap: `${GAP_WIDTH}px` }}
                 >
                     {reelItems.map((item, idx) => (
@@ -1217,6 +1252,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           }
           .animate-item-modal-in {
             animation: item-modal-in 200ms ease-out;
+          }
+          @keyframes box-shimmer {
+            0% { transform: translateX(-150%); }
+            100% { transform: translateX(150%); }
+          }
+          @keyframes box-glow {
+            0%, 100% { box-shadow: 0 0 0 rgba(34, 211, 238, 0.2), 0 0 18px rgba(34, 211, 238, 0.2); }
+            50% { box-shadow: 0 0 0 rgba(34, 211, 238, 0.35), 0 0 30px rgba(34, 211, 238, 0.35); }
+          }
+          .lootx-box-preview {
+            overflow: hidden;
+            animation: box-glow 2.1s ease-in-out infinite;
+          }
+          .lootx-box-preview__shimmer {
+            position: absolute;
+            inset: -20%;
+            background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+            animation: box-shimmer 2s ease-in-out infinite;
           }
         `}</style>
         </>
