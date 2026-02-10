@@ -122,13 +122,21 @@ export interface StripeSettings {
 export interface InventoryItem extends CaseItem {
   instanceId: string;
   obtainedAt: number;
-  status: 'available' | 'sold' | 'shipping' | 'shipping_requested' | 'shipped';
+  status: 'available' | 'sold' | 'shipping' | 'shipping_requested' | 'pending_shipment' | 'shipped';
   locked?: boolean;
   trackingNumber?: string;
   size?: string;
   provenance?: InventoryProvenance;
   history?: InventoryHistoryEntry[];
   sellBackRate?: number;
+  source?: string;
+  sourceItemId?: string;
+  sourceRedemptionId?: string;
+  acquisitionCurrencyType?: 'COIN' | 'XP';
+  openCurrencyType?: 'COIN' | 'XP';
+  freeShipping?: boolean;
+  shippingCostOverrideCoins?: number;
+  shippingCostOverrideCents?: number;
 }
 
 export type ShipmentStatus = 'shipping_requested' | 'shipping' | 'shipped';
@@ -152,7 +160,7 @@ export interface Shipment {
   shippingInfo?: ShippingAddress;
   shippingCost?: number;
   shippingPaid?: boolean;
-  shippingPaymentMethod?: 'coins' | 'cash';
+  shippingPaymentMethod?: 'coins' | 'cash' | 'FREE_XP';
   shippingCashAmountCents?: number;
   status: ShipmentStatus;
   trackingNumber?: string;

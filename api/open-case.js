@@ -1,7 +1,7 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { computeRoll, pickPrizeByWeight, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
-import { applyXpAwardInTransaction, computeXpAward, getXpSettings } from './_lib/xp.js';
+import { computeXpAward, getXpSettings } from './_lib/xp.js';
 
 const DEFAULT_CLIENT_SEED = 'lootx-player';
 const STARTER_COINS = 1000;
@@ -64,9 +64,14 @@ export default async function handler(req, res) {
         }
       }
       const price = Number(boxData.price ?? 0);
-      const inferredXpLegacy = Number.isFinite(Number(boxData.priceXP)) && Number(boxData.priceXP) > 0;
+      const explicitPriceXp = Number(boxData.priceXP);
+      const inferredXpLegacy = Number.isFinite(explicitPriceXp) && explicitPriceXp > 0;
       const currencyType = boxData.currencyType === 'XP' || inferredXpLegacy ? 'XP' : 'COIN';
-      const priceXP = Math.max(0, Math.floor(Number(boxData.priceXP ?? 0)));
+      const fallbackPriceXp = currencyType === 'XP' ? Number(boxData.price ?? 0) : 0;
+      const resolvedPriceXp = Number.isFinite(explicitPriceXp) && explicitPriceXp > 0
+        ? explicitPriceXp
+        : fallbackPriceXp;
+      const priceXP = Math.max(0, Math.floor(resolvedPriceXp));
       const rawSellBackRate = Number(
         boxData.sellBackRate ?? (boxData.isUserCreated ? 0.75 : 0.82)
       );
@@ -92,6 +97,18 @@ export default async function handler(req, res) {
       const hasCoins = Number.isFinite(Number(rawCoins));
       const currentCoins = hasCoins ? Number(rawCoins) : (userSnap.exists ? 0 : STARTER_COINS);
       const currentXp = Math.max(0, Math.floor(Number(userData.xpBalance ?? userData.xp ?? 0)));
+      const settings = await getXpSettings(transaction);
+      const shouldAwardForFree = settings.exclusions?.dailyFreeEarnsXp === true;
+      const shouldAward = !isFree || shouldAwardForFree;
+      const shouldAwardForUser = shouldAward && (userData.isAdmin !== true || settings.exclusions?.adminOrTestSpinsEarnXp === true);
+      const xpRule = isFree ? settings.earnRules?.dailyFree : settings.earnRules?.openCase;
+      const xpAward = shouldAwardForUser
+        ? computeXpAward({
+            rule: xpRule,
+            amountCoins: isFree ? 0 : (currencyType === 'COIN' ? price : 0),
+            bonusRules: settings.bonusRules
+          })
+        : 0;
 
       if (!userSnap.exists) {
         transaction.set(userRef, {
@@ -117,11 +134,26 @@ export default async function handler(req, res) {
       const selectedSize = sizeOptions.length ? pickRandomSize(sizeOptions) : null;
       const prizeValue = Number(prize.value ?? prize.price ?? 0);
       const newCoins = currencyType === 'COIN' ? currentCoins - price : currentCoins;
-      const newXpBalance = currencyType === 'XP' ? currentXp - priceXP : currentXp;
+      const spentXpBalance = currencyType === 'XP' ? currentXp - priceXP : currentXp;
+      const newXpBalance = Math.max(0, Math.floor(spentXpBalance + xpAward));
 
-      transaction.set(userRef, currencyType === 'XP'
+      const nextUserPatch = currencyType === 'XP'
         ? { xpBalance: newXpBalance, xp: newXpBalance }
-        : { coins: newCoins }, { merge: true });
+        : { coins: newCoins };
+
+      if (xpAward > 0) {
+        const dateKey = new Date().toISOString().slice(0, 10);
+        const dailyCounters = { ...(userData.xpDailyEarned ?? {}) };
+        dailyCounters[dateKey] = Math.max(0, Math.floor(Number(dailyCounters[dateKey] ?? 0))) + xpAward;
+        nextUserPatch.xpBalance = newXpBalance;
+        nextUserPatch.xp = newXpBalance;
+        nextUserPatch.xpEarnedLifetime = Math.max(0, Math.floor(Number(userData.xpEarnedLifetime ?? 0))) + xpAward;
+        nextUserPatch.xpDailyEarned = dailyCounters;
+        nextUserPatch.lastXpAwardAction = isFree ? 'dailyFree' : 'openCase';
+        nextUserPatch.lastXpAwardAt = admin.firestore.FieldValue.serverTimestamp();
+      }
+
+      transaction.set(userRef, nextUserPatch, { merge: true });
       transaction.set(provablyRef, {
         serverSeed,
         serverSeedHash,
@@ -132,6 +164,8 @@ export default async function handler(req, res) {
       const obtainedAt = admin.firestore.FieldValue.serverTimestamp();
       const inventoryPayload = {
         boxId,
+        acquisitionCurrencyType: currencyType,
+        openCurrencyType: currencyType,
         prizeId: prize.id ?? null,
         name: prize.name ?? 'Mystery Item',
         value: prizeValue,
@@ -172,24 +206,6 @@ export default async function handler(req, res) {
         }
       };
       transaction.set(openRef, openPayload);
-
-      const settings = await getXpSettings(transaction);
-      const shouldAwardForFree = settings.exclusions?.dailyFreeEarnsXp === true;
-      const shouldAward = !isFree || shouldAwardForFree;
-      if (shouldAward && (userData.isAdmin !== true || settings.exclusions?.adminOrTestSpinsEarnXp === true)) {
-        const xpRule = isFree ? settings.earnRules?.dailyFree : settings.earnRules?.openCase;
-        const xpAmount = computeXpAward({
-          rule: xpRule,
-          amountCoins: isFree ? 0 : (currencyType === 'COIN' ? price : 0),
-          bonusRules: settings.bonusRules
-        });
-        await applyXpAwardInTransaction({
-          transaction,
-          userRef,
-          xpAmount,
-          actionKey: isFree ? 'dailyFree' : 'openCase'
-        });
-      }
 
       responsePayload = {
         ok: true,
