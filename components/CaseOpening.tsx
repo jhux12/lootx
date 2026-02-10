@@ -69,6 +69,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     authInitialized,
     showTopUpModal,
     setShowTopUpModal,
+    setTopUpModalIntent,
     addInventoryItemFromServer,
     syncBalance,
     sellItem,
@@ -418,6 +419,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         if (!showTopUpModal && !topUpTriggerLockRef.current) {
           topUpTriggerLockRef.current = true;
+          setTopUpModalIntent({
+            reason: 'insufficient_balance',
+            requiredCoins: currentCasePrice,
+            currentBalance: availableCoins,
+            missingCoins: currentCasePrice - availableCoins
+          });
           setShowTopUpModal(true);
           window.setTimeout(() => {
             topUpTriggerLockRef.current = false;

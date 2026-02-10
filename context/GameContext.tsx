@@ -405,6 +405,13 @@ type AuthModalMode = 'login' | 'register';
 
 type EmailVerificationStatus = 'idle' | 'pending' | 'checking' | 'verified-no-session';
 
+export type TopUpModalIntent = {
+  reason: 'insufficient_balance';
+  requiredCoins: number;
+  currentBalance: number;
+  missingCoins: number;
+};
+
 interface GameContextType {
   user: User;
   isAuthenticated: boolean;
@@ -422,6 +429,7 @@ interface GameContextType {
   stripeSettings: StripeSettings;
   showLoginModal: boolean;
   showTopUpModal: boolean;
+  topUpModalIntent: TopUpModalIntent | null;
   authModalMode: AuthModalMode;
   showEmailVerificationModal: boolean;
   showEmailVerifiedModal: boolean;
@@ -437,6 +445,7 @@ interface GameContextType {
   logout: () => void;
   setShowLoginModal: (show: boolean) => void;
   setShowTopUpModal: (show: boolean) => void;
+  setTopUpModalIntent: (intent: TopUpModalIntent | null) => void;
   setAuthModalMode: (mode: AuthModalMode) => void;
   openAuthModal: (mode?: AuthModalMode) => void;
   resendEmailVerification: () => Promise<void>;
@@ -756,6 +765,7 @@ const persistUserData = async (payload: PersistUserData) => {
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [topUpModalIntent, setTopUpModalIntent] = useState<TopUpModalIntent | null>(null);
   const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
   const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
   const [showEmailVerifiedModal, setShowEmailVerifiedModal] = useState(false);
@@ -821,6 +831,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAuthModalMode(mode);
     setShowLoginModal(true);
   };
+
+  useEffect(() => {
+    if (!showTopUpModal) {
+      setTopUpModalIntent(null);
+    }
+  }, [showTopUpModal]);
 
   const resolveEmailRedirect = (targetPath?: string | null) => {
     if (typeof window === 'undefined') return;
@@ -2583,6 +2599,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       notifications,
       showLoginModal,
       showTopUpModal,
+      topUpModalIntent,
       authModalMode,
       showEmailVerificationModal,
       showEmailVerifiedModal,
@@ -2605,6 +2622,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logout,
       setShowLoginModal,
       setShowTopUpModal,
+      setTopUpModalIntent,
       setAuthModalMode,
       openAuthModal,
       resendEmailVerification,

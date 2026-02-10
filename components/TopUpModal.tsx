@@ -9,17 +9,28 @@ import { CoinAmount } from './CoinAmount';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 export const TopUpModal: React.FC = () => {
-  const { setShowTopUpModal, coinPackages } = useGame();
+  const { setShowTopUpModal, setTopUpModalIntent, topUpModalIntent, coinPackages } = useGame();
   const { playSound } = useSound();
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [hasUserSelectedPackage, setHasUserSelectedPackage] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [recommendedPackageId, setRecommendedPackageId] = useState<string | null>(null);
+  const autoSelectAppliedRef = React.useRef(false);
   const activePackages = useMemo(() => {
     return coinPackages
       .filter((pkg) => pkg.active)
       .sort((a, b) => a.sortOrder - b.sortOrder);
   }, [coinPackages]);
+
+  const normalizedPackages = useMemo(() => {
+    return activePackages.map((pkg) => ({
+      ...pkg,
+      totalCoinsNormalized: Number(pkg.totalCoins ?? (pkg.coins ?? 0) + (pkg.bonusCoins ?? 0))
+    }));
+  }, [activePackages]);
+
   const selectedPackage = activePackages.find((pkg) => pkg.id === selectedPackageId) ?? activePackages[0];
   const formattedDepositAmount = selectedPackage?.displayPrice ?? '$0.00';
   const priceValue = useMemo(() => {
@@ -29,6 +40,8 @@ export const TopUpModal: React.FC = () => {
   }, [formattedDepositAmount]);
   const totalCoins = (selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0)));
   const effectiveRate = priceValue > 0 ? Math.round(totalCoins / priceValue) : null;
+  const missingCoins = Math.max(0, Number(topUpModalIntent?.missingCoins ?? 0));
+  const isInsufficientBalanceFlow = topUpModalIntent?.reason === 'insufficient_balance' && missingCoins > 0;
   const getBadgeClasses = (badge?: string) => {
     if (badge === 'best') {
       return 'border-amber-400/80 bg-amber-500/10 text-amber-100';
@@ -53,6 +66,32 @@ export const TopUpModal: React.FC = () => {
       setSelectedPackageId(activePackages[0].id);
     }
   }, [activePackages, selectedPackageId]);
+
+  React.useEffect(() => {
+    if (!isInsufficientBalanceFlow || normalizedPackages.length === 0) {
+      autoSelectAppliedRef.current = false;
+      setRecommendedPackageId(null);
+      return;
+    }
+
+    const sortedByCoins = [...normalizedPackages].sort((a, b) => a.totalCoinsNormalized - b.totalCoinsNormalized);
+    const smallestCovering = sortedByCoins.find((pkg) => pkg.totalCoinsNormalized >= missingCoins);
+    const recommended = smallestCovering ?? sortedByCoins[sortedByCoins.length - 1];
+
+    setRecommendedPackageId(recommended?.id ?? null);
+
+    if (!recommended || hasUserSelectedPackage || autoSelectAppliedRef.current) {
+      return;
+    }
+
+    autoSelectAppliedRef.current = true;
+    setSelectedPackageId(recommended.id);
+  }, [isInsufficientBalanceFlow, normalizedPackages, missingCoins, hasUserSelectedPackage]);
+
+  const handleClose = () => {
+    setTopUpModalIntent(null);
+    setShowTopUpModal(false);
+  };
 
   const handleDeposit = async () => {
       playSound('click');
@@ -101,7 +140,7 @@ export const TopUpModal: React.FC = () => {
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4 py-6 sm:items-center">
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in" 
-        onClick={() => setShowTopUpModal(false)}
+        onClick={handleClose}
       ></div>
       
       <div className="relative w-full max-w-md max-h-[calc(100dvh-3rem)] min-h-0 overflow-hidden rounded-2xl border border-white/10 bg-[#0f131c] shadow-2xl animate-in zoom-in-95 flex flex-col sm:max-h-[calc(100dvh-2rem)]">
@@ -125,7 +164,7 @@ export const TopUpModal: React.FC = () => {
                       </div>
                     </div>
                     <button 
-                        onClick={() => setShowTopUpModal(false)} 
+                        onClick={handleClose} 
                         className="text-gray-500 hover:text-white transition-colors"
                     >
                         <X className="w-5 h-5" />
@@ -133,6 +172,18 @@ export const TopUpModal: React.FC = () => {
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+                    {isInsufficientBalanceFlow && (
+                      <div className="mb-4 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-3 sm:px-4">
+                        <p className="text-xs sm:text-sm font-semibold text-amber-100">
+                          You&apos;re short by <CoinAmount amount={missingCoins} formatOptions={{ maximumFractionDigits: 0 }} className="text-amber-100" iconClassName="w-3.5 h-3.5" /> coins to open this box.
+                        </p>
+                        {recommendedPackageId && (
+                          <p className="mt-1 text-[11px] sm:text-xs text-amber-200/90">
+                            Recommended: {activePackages.find((pkg) => pkg.id === recommendedPackageId)?.name ?? 'Best matching pack'}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {/* Amount Selector */}
                     <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Select a pack</label>
                     <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-3">
@@ -143,16 +194,26 @@ export const TopUpModal: React.FC = () => {
                         ) : (
                           activePackages.map((pack) => {
                             const isSelected = selectedPackage?.id === pack.id;
+                            const isRecommended = isInsufficientBalanceFlow && recommendedPackageId === pack.id;
                             const bonusCoins = pack.bonusCoins ?? 0;
                             return (
                               <button
                                   key={pack.id}
-                                  onClick={() => { setSelectedPackageId(pack.id); playSound('click'); }}
+                                  onClick={() => {
+                                    setSelectedPackageId(pack.id);
+                                    setHasUserSelectedPackage(true);
+                                    playSound('click');
+                                  }}
                                   className={`relative rounded-xl border px-3 py-3 text-left transition-all ${isSelected ? getSelectedClasses(pack.badge) : `${getBadgeClasses(pack.badge)} hover:border-white/30`}`}
                               >
+                                  {isRecommended && (
+                                    <span className="absolute left-2 top-2 rounded-full border border-emerald-300/50 bg-emerald-400/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-100">
+                                      Recommended
+                                    </span>
+                                  )}
                                   {pack.badge && (
                                     <span
-                                      className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+                                      className={`absolute ${isRecommended ? 'top-8' : 'top-2'} right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
                                         pack.badge === 'best'
                                           ? 'bg-amber-500 text-black'
                                           : 'bg-sky-500 text-black'
