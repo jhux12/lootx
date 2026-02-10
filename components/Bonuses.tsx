@@ -122,9 +122,10 @@ export const Bonuses: React.FC = () => {
     return () => window.clearInterval(interval);
   }, [canClaim, nextDailyClaimAt]);
 
-  const boxNameById = useMemo(() => {
+  const xpBoxById = useMemo(() => {
     const map = new Map<string, { name: string; priceXP: number }>();
     boxes.forEach((box) => {
+      if ((box.currencyType ?? 'COIN') !== 'XP') return;
       map.set(box.id, { name: box.name, priceXP: Math.max(0, Math.floor(Number(box.priceXP ?? 0))) });
     });
     return map;
@@ -145,17 +146,21 @@ export const Bonuses: React.FC = () => {
   );
 
   const displayShopItems = useMemo(
-    () => filteredShopItems.map((item) => {
-      if (item.fulfillmentType !== 'XP_BOX') return item;
-      const linkedBox = item.metadata?.caseId ? boxNameById.get(item.metadata.caseId) : null;
-      const resolvedBoxOpenXp = item.metadata?.xpPriceOverride ?? linkedBox?.priceXP ?? null;
-      return {
-        ...item,
-        resolvedCaseName: linkedBox?.name ?? item.metadata?.caseId ?? 'Unknown XP Box',
-        resolvedBoxOpenXp
-      };
-    }),
-    [boxNameById, filteredShopItems]
+    () =>
+      filteredShopItems
+        .map((item) => {
+          if (item.fulfillmentType !== 'XP_BOX') return item;
+          const linkedBox = item.metadata?.caseId ? xpBoxById.get(item.metadata.caseId) : null;
+          if (!linkedBox) return null;
+          const resolvedBoxOpenXp = item.metadata?.xpPriceOverride ?? linkedBox.priceXP ?? null;
+          return {
+            ...item,
+            resolvedCaseName: linkedBox.name,
+            resolvedBoxOpenXp
+          };
+        })
+        .filter((item): item is XpShopItem => Boolean(item)),
+    [filteredShopItems, xpBoxById]
   );
 
   const redeem = async () => {
@@ -349,7 +354,7 @@ export const Bonuses: React.FC = () => {
               </div>
             </div>
 
-            {filteredShopItems.length === 0 ? (
+            {displayShopItems.length === 0 ? (
               <div className="bg-[#131720] border border-gray-800 rounded-xl p-8 text-center text-gray-400">No rewards available right now.</div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
