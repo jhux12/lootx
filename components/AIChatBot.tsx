@@ -49,16 +49,20 @@ interface AIChatBotProps {
   isOpen: boolean;
   onClose?: () => void;
   variant?: ChatVariant;
+  storageKey?: string;
 }
+
+const DEFAULT_MESSAGES: Message[] = [
+  { id: 'welcome', role: 'model', text: "Hi! I'm the Pullz Assistant from Pullz.gg. I can only answer using information available on the site. How can I help you today?" }
+];
 
 export const AIChatBot: React.FC<AIChatBotProps> = ({ 
   isOpen, 
   onClose, 
-  variant = 'sidebar' 
+  variant = 'sidebar',
+  storageKey = 'pullz-ai-support-session'
 }) => {
-  const [messages, setMessages] = useState<Message[]>([
-      { id: 'welcome', role: 'model', text: "Hi! I'm the Pullz Assistant from Pullz.gg. I can only answer using information available on the site. How can I help you today?" }
-  ]);
+  const [messages, setMessages] = useState<Message[]>(DEFAULT_MESSAGES);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [chatSession, setChatSession] = useState<Chat | null>(null);
@@ -71,6 +75,36 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages, isOpen]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.sessionStorage.getItem(storageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Message[];
+      if (!Array.isArray(parsed) || parsed.length === 0) return;
+      const sanitized = parsed.filter((entry) => (
+        entry &&
+        typeof entry.id === 'string' &&
+        (entry.role === 'user' || entry.role === 'model') &&
+        typeof entry.text === 'string'
+      ));
+      if (sanitized.length > 0) {
+        setMessages(sanitized);
+      }
+    } catch (error) {
+      console.warn('Unable to restore AI support session', error);
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.sessionStorage.setItem(storageKey, JSON.stringify(messages));
+    } catch (error) {
+      console.warn('Unable to persist AI support session', error);
+    }
+  }, [messages, storageKey]);
 
   useEffect(() => {
       // Initialize Gemini Chat

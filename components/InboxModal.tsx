@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, MessageSquare, Send, Shield, ShieldCheck, Truck, X } from 'lucide-react';
+import { Bell, Bot, MessageSquare, Send, Shield, ShieldCheck, Truck, X } from 'lucide-react';
 import { useSound } from '../context/SoundContext';
 import { useSiteChat } from '../hooks/useSiteChat';
 import { useGame } from '../context/GameContext';
 import { FreeRainBanner } from './FreeRainBanner';
 import { Input } from './ui/Input';
+import { AIChatBot } from './AIChatBot';
 import { useNotifications, type UserNotification } from '../hooks/useNotifications';
 
-export type InboxTab = 'messages' | 'notifications';
+export type InboxTab = 'messages' | 'notifications' | 'support';
 
 interface InboxModalProps {
   isOpen: boolean;
@@ -120,7 +121,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 border-b border-gray-800">
+        <div className="grid grid-cols-3 border-b border-gray-800">
           <button
             onClick={() => {
               setActiveTab('messages');
@@ -149,7 +150,21 @@ export const InboxModal: React.FC<InboxModalProps> = ({
             }`}
           >
             <Bell className="w-4 h-4" /> Notifications
-            {unreadCount > 0 && <span className="absolute right-4 top-2 h-2 w-2 rounded-full bg-cyan-400" />}
+            {unreadCount > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-cyan-400" />}
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('support');
+              setLastOpenedTab('support');
+              playSound('click');
+            }}
+            className={`flex items-center justify-center gap-1.5 py-2 text-sm font-semibold transition-colors ${
+              activeTab === 'support'
+                ? 'text-white border-b-2 border-brand-purple'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <Bot className="w-4 h-4" /> AI
           </button>
         </div>
 
@@ -238,7 +253,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({
                 )}
               </div>
             </>
-          ) : (
+          ) : activeTab === 'notifications' ? (
             <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-white">Notifications</h3>
@@ -290,6 +305,10 @@ export const InboxModal: React.FC<InboxModalProps> = ({
                   })}
                 </div>
               )}
+            </div>
+          ) : (
+            <div className="flex-1 min-h-0">
+              <AIChatBot isOpen={activeTab === 'support'} variant="sidebar" storageKey="pullz-inbox-ai-support" />
             </div>
           )}
         </div>
