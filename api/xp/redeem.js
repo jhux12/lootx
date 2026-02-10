@@ -42,6 +42,7 @@ export default async function handler(req, res) {
     const itemRef = firestore.collection('xpShopItems').doc(itemId);
     const requestRef = firestore.collection('xpRedemptionRequests').doc(redemptionRequestId);
     const redemptionRef = firestore.collection('xpRedemptions').doc();
+    const inventoryRef = userRef.collection('inventory').doc();
 
     let responsePayload;
 
@@ -150,6 +151,25 @@ export default async function handler(req, res) {
         }
       }
 
+      const shouldCreateInventoryReward = fulfillmentType === 'DIGITAL' || fulfillmentType === 'PHYSICAL_SHIP';
+      if (shouldCreateInventoryReward) {
+        transaction.set(inventoryRef, stripUndefinedDeep({
+          source: 'xpShop',
+          sourceItemId: itemId,
+          sourceRedemptionId: redemptionRef.id,
+          name: String(metadataSnapshot.title ?? itemData.title ?? 'XP Reward'),
+          value: 0,
+          image: String(itemData.imageUrl ?? ''),
+          rarity: 'rare',
+          status: 'available',
+          obtainedAt: admin.firestore.FieldValue.serverTimestamp(),
+          redeemable: true,
+          sellBackRate: 0,
+          freeShipping: true,
+          shippingCostOverrideCoins: 0
+        }));
+      }
+
       const status = fulfillmentType === 'PHYSICAL_SHIP' ? 'pending' : 'fulfilled';
       const redemptionPayload = stripUndefinedDeep({
         userId: decoded.uid,
@@ -171,6 +191,7 @@ export default async function handler(req, res) {
         fulfillmentType,
         xpBalance: nextXp,
         caseId: metadataSnapshot.caseId ?? null,
+        inventoryId: shouldCreateInventoryReward ? inventoryRef.id : null,
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
@@ -183,6 +204,7 @@ export default async function handler(req, res) {
         fulfillmentType,
         newXpBalance: nextXp,
         caseId: metadataSnapshot.caseId,
+        inventoryId: shouldCreateInventoryReward ? inventoryRef.id : null,
         message:
           fulfillmentType === 'DIGITAL'
             ? 'Added to your inventory'

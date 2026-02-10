@@ -396,10 +396,7 @@ export const Bonuses: React.FC = () => {
               </div>
             </div>
 
-            {displayShopItems.length === 0 ? (
-              <div className="bg-[#131720] border border-gray-800 rounded-xl p-8 text-center text-gray-400">No rewards available right now.</div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {displayShopItems.map((item) => {
                   const hasStock = item.stock == null || item.stock > 0;
                   const canAfford = xpBalance >= item.xpCost;
@@ -433,7 +430,6 @@ export const Bonuses: React.FC = () => {
                   );
                 })}
               </div>
-            )}
 
             <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-5">
               <div className="mb-3 flex items-center justify-between">
