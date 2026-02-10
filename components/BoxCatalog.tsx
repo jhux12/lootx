@@ -198,7 +198,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const curatedRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const displayBoxes = useMemo(
-    () => boxes.filter((box) => !box.isDaily && (box.currencyType ?? 'COIN') !== 'XP'),
+    () => boxes.filter((box) => !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
     [boxes]
   );
 

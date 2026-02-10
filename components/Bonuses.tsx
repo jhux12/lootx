@@ -87,10 +87,24 @@ export const Bonuses: React.FC = () => {
           stock: data.stock == null ? null : Number(data.stock),
           limitPerUser: data.limitPerUser == null ? null : Number(data.limitPerUser),
           category: typeof data.category === 'string' ? data.category : 'General',
-          fulfillmentType: (data.fulfillmentType as XpShopItem['fulfillmentType']) ?? 'DIGITAL',
+          fulfillmentType: ((typeof data.fulfillmentType === 'string' ? data.fulfillmentType : 'DIGITAL') as XpShopItem['fulfillmentType']),
           metadata: {
-            caseId: typeof data?.metadata?.caseId === 'string' ? data.metadata.caseId : undefined,
-            xpPriceOverride: data?.metadata?.xpPriceOverride == null ? undefined : Math.max(0, Math.floor(Number(data.metadata.xpPriceOverride)))
+            caseId:
+              typeof data?.metadata?.caseId === 'string'
+                ? data.metadata.caseId
+                : typeof data?.metadata?.boxId === 'string'
+                  ? data.metadata.boxId
+                  : typeof data.caseId === 'string'
+                    ? data.caseId
+                    : typeof data.boxId === 'string'
+                      ? data.boxId
+                      : undefined,
+            xpPriceOverride:
+              data?.metadata?.xpPriceOverride != null
+                ? Math.max(0, Math.floor(Number(data.metadata.xpPriceOverride)))
+                : data?.xpPriceOverride != null
+                  ? Math.max(0, Math.floor(Number(data.xpPriceOverride)))
+                  : undefined
           },
           enabled: data.enabled !== false,
           sortOrder: Number(data.sortOrder ?? 0)
@@ -125,7 +139,7 @@ export const Bonuses: React.FC = () => {
   const xpBoxById = useMemo(() => {
     const map = new Map<string, { name: string; priceXP: number }>();
     boxes.forEach((box) => {
-      if ((box.currencyType ?? 'COIN') !== 'XP') return;
+      if (!(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)) return;
       map.set(box.id, { name: box.name, priceXP: Math.max(0, Math.floor(Number(box.priceXP ?? 0))) });
     });
     return map;

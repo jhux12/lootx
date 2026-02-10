@@ -64,7 +64,7 @@ export default async function handler(req, res) {
         }
       }
       const price = Number(boxData.price ?? 0);
-      const inferredXpLegacy = Number.isFinite(Number(boxData.priceXP)) && Number(boxData.priceXP) > 0 && Number(boxData.price ?? 0) <= 0;
+      const inferredXpLegacy = Number.isFinite(Number(boxData.priceXP)) && Number(boxData.priceXP) > 0;
       const currencyType = boxData.currencyType === 'XP' || inferredXpLegacy ? 'XP' : 'COIN';
       const priceXP = Math.max(0, Math.floor(Number(boxData.priceXP ?? 0)));
       const rawSellBackRate = Number(
