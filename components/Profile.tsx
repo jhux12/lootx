@@ -503,7 +503,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                 <div className="relative group self-center sm:self-auto">
                   <img src={displayUser.avatar} alt={displayUser.name} className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-[#131720] shadow-2xl object-cover bg-[#0b0e14]" />
                   <div className="absolute -bottom-3 -right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full border-4 border-[#131720]">
-                      Lvl {displayUser.level}
+                      XP {(displayUser.xpBalance ?? displayUser.xp ?? 0).toLocaleString()}
                   </div>
                 </div>
 
@@ -576,10 +576,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                 <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
                   <div className="flex items-center justify-between gap-3 mb-2">
                     <div className="text-gray-500 text-xs font-bold uppercase tracking-wider">XP Points</div>
-                    <img src={XP_ICON} alt="XP" className="w-5 h-5 object-contain drop-shadow" />
+                    <img src={XP_ICON} alt="XP" className="w-7 h-7 object-contain drop-shadow" />
                   </div>
                   <div className="text-xl font-black text-blue-500 flex items-center gap-2">
-                    <img src={XP_ICON} alt="XP" className="w-6 h-6 object-contain" />
+                    <img src={XP_ICON} alt="XP" className="w-8 h-8 object-contain" />
                     <span>{displayUser.xp.toLocaleString()}</span>
                   </div>
                 </div>
@@ -1177,7 +1177,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
                                               <div>
                                                   <div className="text-white font-bold">{p.name}</div>
-                                                  <div className="text-xs text-gray-500">Level {p.level}</div>
+                                                  <div className="text-xs text-gray-500">XP {(p.xpBalance ?? p.xp ?? 0).toLocaleString()}</div>
                                               </div>
                                           </div>
                                           <button 
@@ -1225,7 +1225,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
                                           <div>
                                               <div className="text-white font-bold">{p.name}</div>
-                                              <div className="text-xs text-gray-500">Level {p.level}</div>
+                                              <div className="text-xs text-gray-500">XP {(p.xpBalance ?? p.xp ?? 0).toLocaleString()}</div>
                                           </div>
                                       </div>
                                       <button 

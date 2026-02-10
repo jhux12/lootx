@@ -595,8 +595,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
   const fallbackCreatedAt = Number.isFinite(metadataCreatedAt) ? metadataCreatedAt : now;
   const createdAt = normalizeTimestamp(data.createdAt, fallbackCreatedAt);
   const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
-  const xp = Number(data.xp ?? 0);
-  const progress = calculateLevelProgress(xp);
+  const xp = Number(data.xpBalance ?? data.xp ?? 0);
   const lastDailyClaim = data.lastDailyClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyClaim, 0);
   const followerIds = Array.isArray(data.followers)
     ? data.followers
@@ -617,8 +616,11 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     photoURL: data.photoURL ?? firebaseUser.photoURL ?? undefined,
     provider: data.provider,
     balance,
-    level: data.level ?? progress.level,
+    level: Number(data.level ?? 1),
     xp,
+    xpBalance: xp,
+    xpEarnedLifetime: Number(data.xpEarnedLifetime ?? 0),
+    xpSpentLifetime: Number(data.xpSpentLifetime ?? 0),
     lastDailyClaim,
     totalSpent: Number(data.totalSpent ?? 0),
     rakebackBalance: Number(data.rakebackBalance ?? 0),
@@ -646,8 +648,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
   const now = Date.now();
   const createdAt = normalizeTimestamp(data.createdAt, now);
   const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
-  const xp = Number(data.xp ?? 0);
-  const progress = calculateLevelProgress(xp);
+  const xp = Number(data.xpBalance ?? data.xp ?? 0);
   const lastDailyClaim = data.lastDailyClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyClaim, 0);
   const followerIds = Array.isArray(data.followers)
     ? data.followers
@@ -669,8 +670,11 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     photoURL: data.photoURL,
     provider: data.provider,
     balance,
-    level: data.level ?? progress.level,
+    level: Number(data.level ?? 1),
     xp,
+    xpBalance: xp,
+    xpEarnedLifetime: Number(data.xpEarnedLifetime ?? 0),
+    xpSpentLifetime: Number(data.xpSpentLifetime ?? 0),
     lastDailyClaim,
     totalSpent: Number(data.totalSpent ?? 0),
     rakebackBalance: Number(data.rakebackBalance ?? 0),
@@ -1734,9 +1738,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!isAuthenticated || amount <= 0) return;
 
     setUser(prev => {
-      const xpGain = Math.max(0, Math.floor((amount / 100) * bonusSettings.xpPer100Coins));
-      const nextXp = Math.max(0, prev.xp + xpGain);
-      const progress = calculateLevelProgress(nextXp, bonusSettings);
       const totalSpent = Math.max(0, (prev.totalSpent ?? 0) + amount);
       const rakebackRate = Math.max(0, bonusSettings.rakebackBasePercent) / 100;
       const today = getDayStart();
@@ -1749,8 +1750,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const nextEarnedToday = earnedToday + rakebackEarned;
 
       persistUserData({
-        xp: nextXp,
-        level: progress.level,
         totalSpent,
         rakebackBalance,
         rakebackEarnedToday: nextEarnedToday,
@@ -1759,8 +1758,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       return {
         ...prev,
-        xp: nextXp,
-        level: progress.level,
         totalSpent,
         rakebackBalance,
         rakebackEarnedToday: nextEarnedToday,
@@ -2492,17 +2489,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const awardCaseOpenXp = () => {
-    if (!isAuthenticated) return;
-
-    const xpGain = Math.max(0, Math.floor(bonusSettings.xpPerCaseOpen));
-    if (!xpGain) return;
-
-    setUser(prev => {
-      const nextXp = Math.max(0, prev.xp + xpGain);
-      const progress = calculateLevelProgress(nextXp, bonusSettings);
-      persistUserData({ xp: nextXp, level: progress.level });
-      return { ...prev, xp: nextXp, level: progress.level };
-    });
+    // Legacy no-op: XP awards are now server-authoritative in API routes.
+    return;
   };
 
   const generateAffiliateCode = async () => {
@@ -2531,15 +2519,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateUserProgress = async (userId: string, xp: number) => {
     const numericXp = Number.isFinite(xp) ? xp : 0;
     const sanitizedXp = Math.max(0, Math.floor(numericXp));
-    const progress = calculateLevelProgress(sanitizedXp, bonusSettings);
     try {
-      await setDoc(getUserRef(userId), { xp: sanitizedXp, level: progress.level }, { merge: true });
+      await setDoc(getUserRef(userId), { xp: sanitizedXp, xpBalance: sanitizedXp }, { merge: true });
     } catch (error) {
       console.error('Failed to update user progress in Firebase', error);
     }
 
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, xp: sanitizedXp, level: progress.level } : u));
-    setUser(prev => prev.id === userId ? { ...prev, xp: sanitizedXp, level: progress.level } : prev);
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, xp: sanitizedXp, xpBalance: sanitizedXp } : u));
+    setUser(prev => prev.id === userId ? { ...prev, xp: sanitizedXp, xpBalance: sanitizedXp } : prev);
   };
 
   const updateShipmentStatus = async (

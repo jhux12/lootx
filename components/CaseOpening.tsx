@@ -82,7 +82,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     isAuthenticated,
     openAuthModal,
     claimDaily,
-    awardCaseOpenXp,
     registerSpend
   } = useGame();
   const { playSound } = useSound();
@@ -501,7 +500,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           };
         }>('/api/open-case', {
           method: 'POST',
-          body: JSON.stringify({ boxId: box.id })
+          body: JSON.stringify({ boxId: box.id, isFree })
         });
 
         const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
@@ -537,8 +536,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           registerSpend(spentAmount);
         }
         setWonInventoryItem(inventoryItem);
-        awardCaseOpenXp();
-
         rollValue = data.provablyFair.roll;
         rollHash = data.provablyFair.rollHash;
         rollMessage = data.provablyFair.message;

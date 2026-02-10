@@ -19,6 +19,9 @@ export interface User {
   provider?: string;
   level: number;
   xp: number;
+  xpBalance?: number;
+  xpEarnedLifetime?: number;
+  xpSpentLifetime?: number;
   balance?: number;
   followers?: string[];
   lastDailyClaim?: number;

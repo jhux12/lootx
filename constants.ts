@@ -1,7 +1,7 @@
 import pullzTicketImage from './assets/pullz-p.PNG';
 import { Battle, ChatMessage, LiveDrop, MysteryBox, CaseItem, User } from "./types";
 
-export const XP_ICON = 'https://cdn-icons-png.flaticon.com/512/3284/3284473.png';
+export const XP_ICON = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/WebIcons%2Fsd%20(27).png?alt=media&token=475e5bf6-136e-45ad-9c7f-7fcb88b9fa02';
 export const COIN_ICON = 'https://cdn-icons-png.flaticon.com/128/3305/3305481.png';
 
 export const MOCK_USERS: User[] = [

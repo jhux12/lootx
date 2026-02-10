@@ -1,6 +1,7 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { computeRoll, pickPrizeByWeight, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
+import { applyXpAwardInTransaction, computeXpAward, getXpSettings } from './_lib/xp.js';
 
 const DEFAULT_CLIENT_SEED = 'lootx-player';
 const STARTER_COINS = 1000;
@@ -28,6 +29,7 @@ export default async function handler(req, res) {
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await readJsonBody(req);
     const boxId = body?.boxId;
+    const isFree = body?.isFree === true;
     if (!boxId || typeof boxId !== 'string') {
       return sendJson(res, 400, { error: 'Missing boxId' });
     }
@@ -154,6 +156,24 @@ export default async function handler(req, res) {
         }
       };
       transaction.set(openRef, openPayload);
+
+      const settings = await getXpSettings(transaction);
+      const shouldAwardForFree = settings.exclusions?.dailyFreeEarnsXp === true;
+      const shouldAward = !isFree || shouldAwardForFree;
+      if (shouldAward && (userData.isAdmin !== true || settings.exclusions?.adminOrTestSpinsEarnXp === true)) {
+        const xpRule = isFree ? settings.earnRules?.dailyFree : settings.earnRules?.openCase;
+        const xpAmount = computeXpAward({
+          rule: xpRule,
+          amountCoins: isFree ? 0 : price,
+          bonusRules: settings.bonusRules
+        });
+        await applyXpAwardInTransaction({
+          transaction,
+          userRef,
+          xpAmount,
+          actionKey: isFree ? 'dailyFree' : 'openCase'
+        });
+      }
 
       responsePayload = {
         ok: true,

@@ -45,6 +45,26 @@ service cloud.firestore {
     match /site/{docId} {
       allow read: if true;
       allow write: if isAdmin();
+
+      match /settings/{settingId} {
+        allow read: if true;
+        allow write: if isAdmin();
+
+        match /xp/{xpDocId} {
+          allow read: if true;
+          allow write: if isAdmin();
+        }
+      }
+    }
+
+    match /xpShopItems/{itemId} {
+      allow read: if resource.data.enabled == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /xpRedemptions/{redemptionId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow write: if isAdmin();
     }
 
     match /coin_packages/{packageId} {

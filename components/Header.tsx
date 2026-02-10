@@ -21,6 +21,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
+import { XP_ICON } from '../constants';
 
 type HeaderProps = {
   onOpenSupportChat: () => void;
@@ -44,6 +45,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
   const { muted, toggleMute, playSound } = useSound();
   const [lootRevealActive, setLootRevealActive] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false);
   const [balancePulse, setBalancePulse] = useState<'up' | 'down' | null>(null);
   const balanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousBalanceRef = useRef<number | null>(null);
@@ -97,6 +99,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
 
   const handleNav = (view: any) => {
     playSound('click');
+    setIsMobileProfileOpen(false);
     if (view?.type === 'BONUSES' && !isAuthenticated) {
       openAuthModal('login');
       return;
@@ -422,13 +425,47 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 md:hidden">
-                <img 
-                  src={user.avatar} 
-                  className="w-8 h-8 rounded-lg border border-gray-700" 
-                  alt="Avatar" 
-                  onClick={() => handleNav({ type: 'PROFILE' })} 
-                />
+              <div className="relative flex items-center gap-2 md:hidden">
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click');
+                    setIsMobileProfileOpen((prev) => !prev);
+                  }}
+                  className="rounded-lg border border-gray-700"
+                  aria-label="Open profile menu"
+                  aria-expanded={isMobileProfileOpen}
+                >
+                  <img
+                    src={user.avatar}
+                    className="w-8 h-8 rounded-lg"
+                    alt="Avatar"
+                  />
+                </button>
+
+                {isMobileProfileOpen && (
+                  <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-gray-800 bg-[#151a23] p-2 shadow-xl">
+                    <div className="mb-2 rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-gray-500">XP Balance</div>
+                      <div className="mt-1 flex items-center gap-2 text-sm font-bold text-white">
+                        <img src={XP_ICON} alt="XP" className="h-7 w-7 object-contain" />
+                        <span>{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleNav({ type: 'PROFILE' })}
+                      className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-800"
+                    >
+                      Profile
+                    </button>
+                    <button
+                      onClick={() => handleNav({ type: 'INVENTORY' })}
+                      className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-800"
+                    >
+                      Inventory
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="group relative hidden md:block">
@@ -447,7 +484,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
                         </span>
                       )}
                     </span>
-                    <span className="text-[10px] text-gray-500">Lvl {user.level}</span>
+                    <span className="text-[10px] text-gray-500">XP {Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
                   </div>
                   <ChevronDown className="w-3 h-3" />
                 </div>
