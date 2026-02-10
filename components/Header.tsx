@@ -447,7 +447,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
                         </span>
                       )}
                     </span>
-                    <span className="text-[10px] text-gray-500">Lvl {user.level}</span>
+                    <span className="text-[10px] text-gray-500">XP {Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
                   </div>
                   <ChevronDown className="w-3 h-3" />
                 </div>

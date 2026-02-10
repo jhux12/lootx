@@ -503,7 +503,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                 <div className="relative group self-center sm:self-auto">
                   <img src={displayUser.avatar} alt={displayUser.name} className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-[#131720] shadow-2xl object-cover bg-[#0b0e14]" />
                   <div className="absolute -bottom-3 -right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full border-4 border-[#131720]">
-                      Lvl {displayUser.level}
+                      XP {(displayUser.xpBalance ?? displayUser.xp ?? 0).toLocaleString()}
                   </div>
                 </div>
 
@@ -1177,7 +1177,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
                                               <div>
                                                   <div className="text-white font-bold">{p.name}</div>
-                                                  <div className="text-xs text-gray-500">Level {p.level}</div>
+                                                  <div className="text-xs text-gray-500">XP {(p.xpBalance ?? p.xp ?? 0).toLocaleString()}</div>
                                               </div>
                                           </div>
                                           <button 
@@ -1225,7 +1225,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
                                           <div>
                                               <div className="text-white font-bold">{p.name}</div>
-                                              <div className="text-xs text-gray-500">Level {p.level}</div>
+                                              <div className="text-xs text-gray-500">XP {(p.xpBalance ?? p.xp ?? 0).toLocaleString()}</div>
                                           </div>
                                       </div>
                                       <button 

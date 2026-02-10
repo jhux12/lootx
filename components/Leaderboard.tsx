@@ -58,7 +58,7 @@ export const Leaderboard: React.FC = () => {
                             <div className="relative mt-4">
                                 <img src={user.avatar} className={`w-24 h-24 rounded-full border-4 ${isFirst ? 'border-yellow-500' : 'border-gray-700'}`} />
                                 <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#0b0e14] px-3 py-1 rounded-full text-xs font-bold border border-gray-700 text-white whitespace-nowrap">
-                                    Lvl {user.level}
+                                    XP {(user.xpBalance ?? user.xp ?? 0).toLocaleString()}
                                 </div>
                             </div>
                             

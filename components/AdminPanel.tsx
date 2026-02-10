@@ -2857,7 +2857,7 @@ export const AdminPanel: React.FC = () => {
                                                         <img src={profile.avatar} className="w-8 h-8 rounded-full" />
                                                         <span className="font-bold text-white">{profile.name}</span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-gray-400">Lvl {progress.level}</td>
+                                                    <td className="px-6 py-4 text-gray-400">XP {(profile.xpBalance ?? profile.xp ?? 0).toLocaleString()}</td>
                                                     <td className="px-6 py-4 text-gray-400">
                                                         {isEditing ? (
                                                             <div className="space-y-1">
@@ -2867,7 +2867,7 @@ export const AdminPanel: React.FC = () => {
                                                                     onChange={(e) => setUserXpInput(Number(e.target.value))}
                                                                     className="w-32 bg-[#0b0e14] border border-gray-700 rounded px-3 py-1.5 text-white text-sm"
                                                                 />
-                                                                <div className="text-[11px] text-gray-500">Lvl after save: {progress.level}</div>
+                                                                <div className="text-[11px] text-gray-500">XP after save: {Math.max(0, Math.floor(userXpInput)).toLocaleString()}</div>
                                                             </div>
                                                         ) : (
                                                             <span className="text-gray-300">{profile.xp ?? 0}</span>
@@ -2950,7 +2950,7 @@ export const AdminPanel: React.FC = () => {
                                                 <img src={profile.avatar} className="w-10 h-10 rounded-full" />
                                                 <div className="flex-1">
                                                     <div className="text-white font-bold">{profile.name}</div>
-                                                    <div className="text-xs text-gray-400">Lvl {calculateLevelProgress(profile.xp || 0).level}</div>
+                                                    <div className="text-xs text-gray-400">XP {(profile.xpBalance ?? profile.xp ?? 0).toLocaleString()}</div>
                                                 </div>
                                                 <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
                                                     status === 'active'
@@ -3754,13 +3754,13 @@ export const AdminPanel: React.FC = () => {
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
-                                <h3 className="text-lg font-bold text-white">XP Distribution & Leveling</h3>
+                                <h3 className="text-lg font-bold text-white">XP Earn & Bonuses</h3>
                                 <p className="text-sm text-gray-400">
-                                    Tune how players earn XP and how quickly they level up. All coin values are shown in coins.
+                                    Tune how players earn XP points and configure reward modifiers. All values are admin-controlled.
                                 </p>
                             </div>
                             <div className="text-xs text-gray-500 bg-[#0b0e14] border border-gray-800 rounded-lg px-3 py-2">
-                                Active XP Curve: Base {bonusDraft.levelBaseXp} XP • Multiplier {bonusDraft.levelXpMultiplier.toFixed(2)}x
+                                XP reward rules
                             </div>
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
@@ -3796,7 +3796,7 @@ export const AdminPanel: React.FC = () => {
                             </div>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Base XP to reach level 2</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Base XP bonus</label>
                                     <Input
                                         type="number"
                                         min={0}
@@ -3807,7 +3807,7 @@ export const AdminPanel: React.FC = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Leveling multiplier</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP multiplier</label>
                                     <Input
                                         type="number"
                                         min={1}
@@ -3839,7 +3839,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Level to unlock rakeback</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP required to unlock rakeback</label>
                                     <Input
                                         type="number"
                                         min={1}
@@ -3860,7 +3860,7 @@ export const AdminPanel: React.FC = () => {
                                         className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                                     />
                                     <p className="text-xs text-gray-500 mt-2">
-                                        Applies to net wagers once the unlock level is reached.
+                                        Applies to net wagers once XP requirement is reached.
                                     </p>
                                 </div>
                             </div>

@@ -1,5 +1,6 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
+import { applyXpAwardInTransaction, computeXpAward, getXpSettings } from './_lib/xp.js';
 
 const getSellBackValue = (price, rate) => {
   const rawValue = price * rate;
@@ -65,6 +66,16 @@ export default async function handler(req, res) {
 
       transaction.set(userRef, { coins: newCoins }, { merge: true });
       transaction.set(inventoryRef, { status: 'sold' }, { merge: true });
+
+      const settings = await getXpSettings(transaction);
+      if (userSnap.data()?.isAdmin !== true || settings.exclusions?.adminOrTestSpinsEarnXp === true) {
+        const xpAmount = computeXpAward({
+          rule: settings.earnRules?.sellItem,
+          amountCoins: sellBackValue,
+          bonusRules: settings.bonusRules
+        });
+        await applyXpAwardInTransaction({ transaction, userRef, xpAmount, actionKey: 'sellItem' });
+      }
 
       responsePayload = {
         ok: true,
