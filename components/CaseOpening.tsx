@@ -63,7 +63,24 @@ const deriveRollValue = (hash: string) => {
 
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
-  const { user, addInventoryItemFromServer, syncBalance, sellItem, setView, boxes, isAuthenticated, openAuthModal, claimDaily, awardCaseOpenXp, registerSpend } = useGame();
+  const {
+    user,
+    balance,
+    authInitialized,
+    showTopUpModal,
+    setShowTopUpModal,
+    setTopUpModalIntent,
+    addInventoryItemFromServer,
+    syncBalance,
+    sellItem,
+    setView,
+    boxes,
+    isAuthenticated,
+    openAuthModal,
+    claimDaily,
+    awardCaseOpenXp,
+    registerSpend
+  } = useGame();
   const { playSound } = useSound();
   
   const matchedBox = boxes.find(b => b.id === boxId);
@@ -115,6 +132,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [showFairTooltip, setShowFairTooltip] = useState(false);
   const [rewardResolved, setRewardResolved] = useState(false);
   const [selectedCaseItem, setSelectedCaseItem] = useState<CaseItem | null>(null);
+  const [spinFeedbackMessage, setSpinFeedbackMessage] = useState<string | null>(null);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -125,7 +143,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const bodyOverflowRef = useRef<string>('');
   const sellOfferTimerRef = useRef<number | null>(null);
+  const topUpTriggerLockRef = useRef(false);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
+  const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
+  const isBalanceLoading = isAuthenticated && !authInitialized;
 
   const loadProvablyFairState = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -362,6 +383,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (isSpinning) return;
     if (!box || items.length === 0) return;
 
+    setSpinFeedbackMessage(null);
+
     if (forceGold) {
       isDemo = true;
     }
@@ -375,6 +398,40 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (!isDemo && !isAuthenticated) {
       openAuthModal('login');
       return;
+    }
+
+    if (!isDemo && !isFree) {
+      if (isBalanceLoading) {
+        return;
+      }
+
+      if (!Number.isFinite(currentCasePrice) || currentCasePrice <= 0) {
+        return;
+      }
+
+      const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
+      if (!Number.isFinite(availableCoins)) {
+        return;
+      }
+
+      if (availableCoins < currentCasePrice) {
+        setSpinFeedbackMessage('Not enough coins — top up to open this box.');
+
+        if (!showTopUpModal && !topUpTriggerLockRef.current) {
+          topUpTriggerLockRef.current = true;
+          setTopUpModalIntent({
+            reason: 'insufficient_balance',
+            requiredCoins: currentCasePrice,
+            currentBalance: availableCoins,
+            missingCoins: currentCasePrice - availableCoins
+          });
+          setShowTopUpModal(true);
+          window.setTimeout(() => {
+            topUpTriggerLockRef.current = false;
+          }, 350);
+        }
+        return;
+      }
     }
 
     if (!isDemo && isFree) {
@@ -552,8 +609,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   };
 
   const handleTryFree = () => {
+    setSpinFeedbackMessage(null);
     handleSpin({ isDemo: true });
   };
+
+  useEffect(() => {
+    if (spinFeedbackMessage && showTopUpModal) {
+      topUpTriggerLockRef.current = false;
+    }
+  }, [showTopUpModal, spinFeedbackMessage]);
 
   const finishSpin = (item: CaseItem) => {
     setIsSpinning(false);
@@ -754,7 +818,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="bg-[#0b0e14] p-4 flex flex-col sm:flex-row items-center justify-center gap-3 border-t border-gray-800 relative z-20">
                  <button 
                     onClick={() => handleSpin()}
-                    disabled={isSpinning || isSyncingFair || isRotatingSeed}
+                    disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
                     className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
                 >
                     <span>
@@ -762,6 +826,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         'Syncing server...'
                       ) : isSpinning ? (
                         'Spinning...'
+                      ) : isBalanceLoading ? (
+                        'Loading balance...'
                       ) : isFree ? (
                         'Free Spin'
                       ) : (
@@ -796,6 +862,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                    </button>
                  )}
             </div>
+            {spinFeedbackMessage && (
+              <div className="px-2 pb-4">
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="mx-auto w-full max-w-xl rounded-lg border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs sm:text-sm text-amber-200"
+                >
+                  {spinFeedbackMessage}
+                </div>
+              </div>
+            )}
         </div>
 
         <div className="flex items-center justify-center mb-10">
