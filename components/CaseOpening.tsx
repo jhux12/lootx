@@ -812,6 +812,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </div>
                   </div>
                 )}
+
+                {isSpinning && (
+                  <div
+                    className={`absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 z-[26] pointer-events-none ${isGoldMode ? 'bg-yellow-400/50' : 'bg-cyan-400/35'}`}
+                    aria-hidden="true"
+                  ></div>
+                )}
                 
                 {/* Fade Gradients */}
                 <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
