@@ -178,18 +178,6 @@ export const TopUpModal: React.FC = () => {
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
-                    {isInsufficientBalanceFlow && (
-                      <div className="mb-4 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-3 sm:px-4">
-                        <p className="text-xs sm:text-sm font-semibold text-amber-100">
-                          You&apos;re short by <CoinAmount amount={missingCoins} formatOptions={{ maximumFractionDigits: 0 }} className="text-amber-100" iconClassName="w-3.5 h-3.5" /> coins to open this box.
-                        </p>
-                        {recommendedPackageId && (
-                          <p className="mt-1 text-[11px] sm:text-xs text-amber-200/90">
-                            Recommended: {activePackages.find((pkg) => pkg.id === recommendedPackageId)?.name ?? 'Best matching pack'}
-                          </p>
-                        )}
-                      </div>
-                    )}
                     {/* Amount Selector */}
                     <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Select a pack</label>
                     <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-3">
@@ -200,7 +188,6 @@ export const TopUpModal: React.FC = () => {
                         ) : (
                           activePackages.map((pack) => {
                             const isSelected = selectedPackage?.id === pack.id;
-                            const isRecommended = isInsufficientBalanceFlow && recommendedPackageId === pack.id;
                             const bonusCoins = pack.bonusCoins ?? 0;
                             return (
                               <button
@@ -212,14 +199,9 @@ export const TopUpModal: React.FC = () => {
                                   }}
                                   className={`relative rounded-xl border px-3 py-3 text-left transition-all ${isSelected ? getSelectedClasses(pack.badge) : `${getBadgeClasses(pack.badge)} hover:border-white/30`}`}
                               >
-                                  {isRecommended && (
-                                    <span className="absolute left-2 top-2 rounded-full border border-emerald-300/50 bg-emerald-400/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-100">
-                                      Recommended
-                                    </span>
-                                  )}
                                   {pack.badge && (
                                     <span
-                                      className={`absolute ${isRecommended ? 'top-8' : 'top-2'} right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+                                      className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
                                         pack.badge === 'best'
                                           ? 'bg-amber-500 text-black'
                                           : 'bg-sky-500 text-black'
