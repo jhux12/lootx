@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle } from 'lucide-react';
-import { Timestamp, arrayUnion, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
@@ -106,6 +106,31 @@ type SupportCase = {
     createdAt?: Timestamp;
     lastUpdatedAt?: Timestamp;
     messages?: SupportMessage[];
+};
+
+
+type AdminXpShopItem = {
+    id: string;
+    title: string;
+    description: string;
+    imageUrl?: string;
+    xpCost: number;
+    stock: number | null;
+    limitPerUser: number | null;
+    category: string;
+    fulfillmentType: 'DIGITAL' | 'COUPON' | 'PHYSICAL_SHIP' | 'XP_CASE_ENTRY';
+    enabled: boolean;
+    sortOrder: number;
+};
+
+type AdminXpRedemption = {
+    id: string;
+    userId: string;
+    itemId: string;
+    xpCost: number;
+    status: 'pending' | 'fulfilled' | 'cancelled' | string;
+    createdAt?: Timestamp;
+    metadata?: Record<string, unknown>;
 };
 
 const escapeText = (value: string) =>
@@ -297,6 +322,22 @@ export const AdminPanel: React.FC = () => {
   const [timelineSearch, setTimelineSearch] = useState('');
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
   const [bonusSaveNotice, setBonusSaveNotice] = useState(false);
+  const [xpShopItems, setXpShopItems] = useState<AdminXpShopItem[]>([]);
+  const [xpRedemptions, setXpRedemptions] = useState<AdminXpRedemption[]>([]);
+  const [editingXpShopItemId, setEditingXpShopItemId] = useState<string | null>(null);
+  const [isSavingXpShopItem, setIsSavingXpShopItem] = useState(false);
+  const [xpShopItemDraft, setXpShopItemDraft] = useState<Omit<AdminXpShopItem, 'id'>>({
+      title: '',
+      description: '',
+      imageUrl: '',
+      xpCost: 100,
+      stock: null,
+      limitPerUser: null,
+      category: 'Exclusive',
+      fulfillmentType: 'DIGITAL',
+      enabled: true,
+      sortOrder: 0
+  });
   const [stripeSettingsDraft, setStripeSettingsDraft] = useState({
       shippingCashEnabled: stripeSettings.shippingCashEnabled,
       shippingFlatRateInput: (stripeSettings.shippingFlatRateCents / 100).toFixed(2),
@@ -338,6 +379,52 @@ export const AdminPanel: React.FC = () => {
               };
           });
           setSupportCases(nextCases);
+      });
+
+      return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+      const itemsQuery = query(collection(db, 'xpShopItems'), orderBy('sortOrder', 'asc'));
+      const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
+          const nextItems = snapshot.docs.map((docSnapshot) => {
+              const data = docSnapshot.data() as Record<string, any>;
+              return {
+                  id: docSnapshot.id,
+                  title: String(data.title ?? ''),
+                  description: String(data.description ?? ''),
+                  imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
+                  xpCost: Math.max(0, Math.floor(Number(data.xpCost ?? 0))),
+                  stock: data.stock == null ? null : Math.max(0, Math.floor(Number(data.stock ?? 0))),
+                  limitPerUser: data.limitPerUser == null ? null : Math.max(0, Math.floor(Number(data.limitPerUser ?? 0))),
+                  category: String(data.category ?? 'Exclusive'),
+                  fulfillmentType: (data.fulfillmentType ?? 'DIGITAL') as AdminXpShopItem['fulfillmentType'],
+                  enabled: data.enabled !== false,
+                  sortOrder: Math.floor(Number(data.sortOrder ?? 0))
+              } as AdminXpShopItem;
+          });
+          setXpShopItems(nextItems);
+      });
+
+      return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+      const redemptionsQuery = query(collection(db, 'xpRedemptions'), orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(redemptionsQuery, (snapshot) => {
+          const nextRedemptions = snapshot.docs.map((docSnapshot) => {
+              const data = docSnapshot.data() as Record<string, any>;
+              return {
+                  id: docSnapshot.id,
+                  userId: String(data.userId ?? ''),
+                  itemId: String(data.itemId ?? ''),
+                  xpCost: Math.max(0, Math.floor(Number(data.xpCost ?? 0))),
+                  status: String(data.status ?? 'pending'),
+                  createdAt: data.createdAt as Timestamp | undefined,
+                  metadata: (data.metadata ?? {}) as Record<string, unknown>
+              } as AdminXpRedemption;
+          });
+          setXpRedemptions(nextRedemptions);
       });
 
       return () => unsubscribe();
@@ -1737,6 +1824,97 @@ export const AdminPanel: React.FC = () => {
       updateBonusSettings(bonusDraft);
       setBonusSaveNotice(true);
       window.setTimeout(() => setBonusSaveNotice(false), 3000);
+  };
+
+  const resetXpShopItemDraft = () => {
+      setEditingXpShopItemId(null);
+      setXpShopItemDraft({
+          title: '',
+          description: '',
+          imageUrl: '',
+          xpCost: 100,
+          stock: null,
+          limitPerUser: null,
+          category: 'Exclusive',
+          fulfillmentType: 'DIGITAL',
+          enabled: true,
+          sortOrder: 0
+      });
+  };
+
+  const handleEditXpShopItem = (item: AdminXpShopItem) => {
+      setEditingXpShopItemId(item.id);
+      setXpShopItemDraft({
+          title: item.title,
+          description: item.description,
+          imageUrl: item.imageUrl ?? '',
+          xpCost: item.xpCost,
+          stock: item.stock,
+          limitPerUser: item.limitPerUser,
+          category: item.category,
+          fulfillmentType: item.fulfillmentType,
+          enabled: item.enabled,
+          sortOrder: item.sortOrder
+      });
+  };
+
+  const handleSaveXpShopItem = async () => {
+      const trimmedTitle = xpShopItemDraft.title.trim();
+      if (!trimmedTitle) {
+          window.alert('Title is required');
+          return;
+      }
+
+      setIsSavingXpShopItem(true);
+      const payload = {
+          title: trimmedTitle,
+          description: xpShopItemDraft.description.trim(),
+          imageUrl: xpShopItemDraft.imageUrl?.trim() ?? '',
+          xpCost: Math.max(0, Math.floor(Number(xpShopItemDraft.xpCost) || 0)),
+          stock: xpShopItemDraft.stock == null ? null : Math.max(0, Math.floor(Number(xpShopItemDraft.stock) || 0)),
+          limitPerUser: xpShopItemDraft.limitPerUser == null ? null : Math.max(0, Math.floor(Number(xpShopItemDraft.limitPerUser) || 0)),
+          category: xpShopItemDraft.category.trim() || 'Exclusive',
+          fulfillmentType: xpShopItemDraft.fulfillmentType,
+          enabled: xpShopItemDraft.enabled,
+          sortOrder: Math.floor(Number(xpShopItemDraft.sortOrder) || 0),
+          updatedAt: serverTimestamp()
+      };
+
+      try {
+          if (editingXpShopItemId) {
+              await setDoc(doc(db, 'xpShopItems', editingXpShopItemId), payload, { merge: true });
+          } else {
+              await addDoc(collection(db, 'xpShopItems'), { ...payload, createdAt: serverTimestamp() });
+          }
+          resetXpShopItemDraft();
+      } catch (error) {
+          console.error('Failed to save XP shop item', error);
+          window.alert('Unable to save XP shop item right now.');
+      } finally {
+          setIsSavingXpShopItem(false);
+      }
+  };
+
+  const handleDeleteXpShopItem = async (itemId: string) => {
+      if (!window.confirm('Delete this XP shop item?')) return;
+      try {
+          await deleteDoc(doc(db, 'xpShopItems', itemId));
+          if (editingXpShopItemId === itemId) {
+              resetXpShopItemDraft();
+          }
+      } catch (error) {
+          console.error('Failed to delete XP shop item', error);
+          window.alert('Unable to delete XP shop item right now.');
+      }
+  };
+
+  const handleUpdateXpRedemptionStatus = async (redemptionId: string, status: 'pending' | 'fulfilled' | 'cancelled') => {
+      try {
+          await setDoc(doc(db, 'xpRedemptions', redemptionId), { status, updatedAt: serverTimestamp() }, { merge: true });
+      } catch (error) {
+          console.error('Failed to update redemption status', error);
+          window.alert('Unable to update redemption status right now.');
+      }
   };
 
   const handleSaveStripeSettings = () => {
@@ -3911,6 +4089,163 @@ export const AdminPanel: React.FC = () => {
                                     Bonus settings saved.
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">XP Shop Management</h3>
+                                <p className="text-sm text-gray-400">Create, edit, and sort redeemable XP rewards.</p>
+                            </div>
+                            <button
+                                onClick={resetXpShopItemDraft}
+                                className="w-full sm:w-auto px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 text-sm font-semibold"
+                            >
+                                New Item
+                            </button>
+                        </div>
+
+                        <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                                <label className="block text-xs font-bold text-gray-500 uppercase">Title</label>
+                                <Input value={xpShopItemDraft.title} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, title: event.target.value }))} placeholder="Reward title" />
+
+                                <label className="block text-xs font-bold text-gray-500 uppercase">Description</label>
+                                <Textarea value={xpShopItemDraft.description} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, description: event.target.value }))} placeholder="Short reward description" rows={3} />
+
+                                <label className="block text-xs font-bold text-gray-500 uppercase">Image URL (optional)</label>
+                                <Input value={xpShopItemDraft.imageUrl ?? ''} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, imageUrl: event.target.value }))} placeholder="https://..." />
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP Cost</label>
+                                        <Input type="number" min={0} value={xpShopItemDraft.xpCost} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, xpCost: Number(event.target.value) }))} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sort Order</label>
+                                        <Input type="number" value={xpShopItemDraft.sortOrder} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, sortOrder: Number(event.target.value) }))} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Stock (blank = unlimited)</label>
+                                        <Input type="number" min={0} value={xpShopItemDraft.stock ?? ''} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, stock: event.target.value === '' ? null : Number(event.target.value) }))} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Per User Limit (blank = none)</label>
+                                        <Input type="number" min={0} value={xpShopItemDraft.limitPerUser ?? ''} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, limitPerUser: event.target.value === '' ? null : Number(event.target.value) }))} />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Category</label>
+                                        <Input value={xpShopItemDraft.category} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, category: event.target.value }))} placeholder="Exclusive" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Fulfillment Type</label>
+                                        <Select value={xpShopItemDraft.fulfillmentType} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, fulfillmentType: event.target.value as AdminXpShopItem['fulfillmentType'] }))}>
+                                            <option value="DIGITAL">DIGITAL</option>
+                                            <option value="COUPON">COUPON</option>
+                                            <option value="PHYSICAL_SHIP">PHYSICAL_SHIP</option>
+                                            <option value="XP_CASE_ENTRY">XP_CASE_ENTRY</option>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <label className="flex items-center gap-2 text-sm text-gray-300">
+                                    <Input type="checkbox" checked={xpShopItemDraft.enabled} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, enabled: event.target.checked }))} className="h-4 w-4" />
+                                    Enabled
+                                </label>
+
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <button
+                                        onClick={handleSaveXpShopItem}
+                                        disabled={isSavingXpShopItem}
+                                        className="w-full sm:w-auto px-4 py-2 rounded-lg bg-brand-purple/20 text-brand-purple border border-brand-purple/40 hover:bg-brand-purple hover:text-white font-bold text-sm"
+                                    >
+                                        {isSavingXpShopItem ? 'Saving...' : editingXpShopItemId ? 'Update Item' : 'Create Item'}
+                                    </button>
+                                    {editingXpShopItemId && (
+                                        <button
+                                            onClick={resetXpShopItemDraft}
+                                            className="w-full sm:w-auto px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:text-white text-sm font-semibold"
+                                        >
+                                            Cancel Edit
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
+                                {xpShopItems.length === 0 ? (
+                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-4 text-sm text-gray-400">No XP shop items yet.</div>
+                                ) : (
+                                    xpShopItems.map((item) => (
+                                        <div key={item.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-4">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <div className="text-sm font-bold text-white">{item.title}</div>
+                                                    <div className="text-xs text-gray-500 mt-1">{item.category} • {item.fulfillmentType}</div>
+                                                    <div className="text-xs text-gray-400 mt-1">{item.xpCost.toLocaleString()} XP</div>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => handleEditXpShopItem(item)} className="px-2 py-1 text-xs rounded border border-gray-700 text-gray-300 hover:text-white">Edit</button>
+                                                    <button onClick={() => handleDeleteXpShopItem(item.id)} className="px-2 py-1 text-xs rounded border border-red-700 text-red-300 hover:text-red-200">Delete</button>
+                                                </div>
+                                            </div>
+                                            <div className="mt-2 text-xs text-gray-500">
+                                                Stock: {item.stock == null ? 'Unlimited' : item.stock} • Per user: {item.limitPerUser == null ? 'No limit' : item.limitPerUser} • {item.enabled ? 'Enabled' : 'Disabled'}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <h3 className="text-lg font-bold text-white">XP Redemptions</h3>
+                        <p className="text-sm text-gray-400 mb-4">Track pending/fulfilled/cancelled XP redemptions.</p>
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[700px] text-sm">
+                                <thead>
+                                    <tr className="text-left text-xs uppercase text-gray-500 border-b border-gray-800">
+                                        <th className="py-2 pr-3">User</th>
+                                        <th className="py-2 pr-3">Item</th>
+                                        <th className="py-2 pr-3">Cost</th>
+                                        <th className="py-2 pr-3">Date</th>
+                                        <th className="py-2 pr-3">Status</th>
+                                        <th className="py-2">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {xpRedemptions.slice(0, 100).map((redemption) => {
+                                        const itemTitle = String((redemption.metadata?.title as string) ?? redemption.itemId);
+                                        const userName = users.find((profile) => profile.id === redemption.userId)?.name ?? redemption.userId;
+                                        return (
+                                            <tr key={redemption.id} className="border-b border-gray-800/60">
+                                                <td className="py-3 pr-3 text-gray-300">{userName}</td>
+                                                <td className="py-3 pr-3 text-gray-300">{itemTitle}</td>
+                                                <td className="py-3 pr-3 text-gray-300">{redemption.xpCost.toLocaleString()} XP</td>
+                                                <td className="py-3 pr-3 text-gray-500">{redemption.createdAt?.toDate?.().toLocaleString?.() ?? '—'}</td>
+                                                <td className="py-3 pr-3 text-gray-300">{redemption.status}</td>
+                                                <td className="py-3">
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <button onClick={() => handleUpdateXpRedemptionStatus(redemption.id, 'pending')} className="px-2 py-1 rounded border border-gray-700 text-xs text-gray-300">Pending</button>
+                                                        <button onClick={() => handleUpdateXpRedemptionStatus(redemption.id, 'fulfilled')} className="px-2 py-1 rounded border border-emerald-700 text-xs text-emerald-300">Fulfilled</button>
+                                                        <button onClick={() => handleUpdateXpRedemptionStatus(redemption.id, 'cancelled')} className="px-2 py-1 rounded border border-red-700 text-xs text-red-300">Cancel</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {xpRedemptions.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="py-6 text-center text-gray-500">No redemptions yet.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
