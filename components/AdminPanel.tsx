@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle } from 'lucide-react';
-import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
@@ -133,6 +133,15 @@ type AdminXpRedemption = {
     metadata?: Record<string, unknown>;
 };
 
+type AdminSentNotification = {
+    id: string;
+    title: string;
+    body: string;
+    recipientCount: number;
+    createdBy: string;
+    createdAt?: Timestamp;
+};
+
 const escapeText = (value: string) =>
     value
         .replace(/&/g, '&amp;')
@@ -238,6 +247,9 @@ export const AdminPanel: React.FC = () => {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [adminNotification, setAdminNotification] = useState('');
   const [adminNoticeSent, setAdminNoticeSent] = useState(false);
+  const [isSendingAdminNotice, setIsSendingAdminNotice] = useState(false);
+  const [adminSentNotifications, setAdminSentNotifications] = useState<AdminSentNotification[]>([]);
+  const [deletingAdminNoticeId, setDeletingAdminNoticeId] = useState<string | null>(null);
   const [shipmentFilter, setShipmentFilter] = useState<'all' | 'processing' | 'shipped'>('processing');
   const [shipmentTracking, setShipmentTracking] = useState<Record<string, string>>({});
   const [supportCases, setSupportCases] = useState<SupportCase[]>([]);
@@ -249,6 +261,26 @@ export const AdminPanel: React.FC = () => {
   const [supportStatusUpdates, setSupportStatusUpdates] = useState<Record<string, { sending: boolean; error?: string; success?: string }>>(
       {}
   );
+
+  useEffect(() => {
+      const noticesQuery = query(collection(db, 'adminNotifications'), orderBy('createdAt', 'desc'), limit(30));
+      const unsubscribe = onSnapshot(noticesQuery, (snapshot) => {
+          const next = snapshot.docs.map((docSnap) => {
+              const data = docSnap.data() as Record<string, any>;
+              return {
+                  id: docSnap.id,
+                  title: typeof data.title === 'string' ? data.title : 'Admin update',
+                  body: typeof data.body === 'string' ? data.body : '',
+                  recipientCount: Number(data.recipientCount ?? 0),
+                  createdBy: typeof data.createdBy === 'string' ? data.createdBy : 'unknown',
+                  createdAt: data.createdAt instanceof Timestamp ? data.createdAt : undefined
+              } as AdminSentNotification;
+          });
+          setAdminSentNotifications(next);
+      });
+
+      return () => unsubscribe();
+  }, []);
 
   const filteredAdminItems = useMemo(() => {
       const query = itemSearchQuery.trim().toLowerCase();
@@ -1231,13 +1263,28 @@ export const AdminPanel: React.FC = () => {
       alert('User progress updated!');
   };
 
-  const handleSendAdminNotification = () => {
+  const handleSendAdminNotification = async () => {
       const message = adminNotification.trim();
       if (!message) return;
-      sendAdminNotification(message);
-      setAdminNotification('');
-      setAdminNoticeSent(true);
-      setTimeout(() => setAdminNoticeSent(false), 3000);
+      setIsSendingAdminNotice(true);
+      try {
+          await sendAdminNotification(message);
+          setAdminNotification('');
+          setAdminNoticeSent(true);
+          setTimeout(() => setAdminNoticeSent(false), 3000);
+      } finally {
+          setIsSendingAdminNotice(false);
+      }
+  };
+
+  const handleDeleteSentNotification = async (notificationId: string) => {
+      if (!notificationId || deletingAdminNoticeId) return;
+      setDeletingAdminNoticeId(notificationId);
+      try {
+          await deleteDoc(doc(db, 'adminNotifications', notificationId));
+      } finally {
+          setDeletingAdminNoticeId(null);
+      }
   };
 
   const hasExplicitBoxPrice = typeof newBox.price === 'number' && Number.isFinite(newBox.price) && newBox.price >= 0;
@@ -4609,16 +4656,52 @@ export const AdminPanel: React.FC = () => {
                                     Keep it short and actionable for mobile users.
                                 </span>
                                 <button
-                                    onClick={handleSendAdminNotification}
-                                    disabled={!adminNotification.trim()}
+                                    onClick={() => { void handleSendAdminNotification(); }}
+                                    disabled={!adminNotification.trim() || isSendingAdminNotice}
                                     className="px-5 py-2 bg-brand-purple/20 text-brand-purple border border-brand-purple/40 rounded-lg text-sm font-bold hover:bg-brand-purple hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Send notification
+                                    {isSendingAdminNotice ? 'Sending...' : 'Send notification'}
                                 </button>
                             </div>
                             {adminNoticeSent && (
                                 <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
                                     Notification sent.
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-6 rounded-xl border border-gray-800 bg-[#0b0e14] p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <h4 className="text-sm font-bold text-white">Recent Sent Notifications</h4>
+                                <span className="text-[11px] text-gray-500">Manage sent messages</span>
+                            </div>
+                            {adminSentNotifications.length === 0 ? (
+                                <div className="mt-3 rounded-lg border border-dashed border-gray-700 px-3 py-4 text-center text-xs text-gray-500">
+                                    No sent notifications yet.
+                                </div>
+                            ) : (
+                                <div className="mt-3 space-y-2">
+                                    {adminSentNotifications.map((notice) => (
+                                        <div
+                                            key={notice.id}
+                                            className="flex flex-col gap-2 rounded-lg border border-gray-800 bg-[#111621] p-3 sm:flex-row sm:items-start sm:justify-between"
+                                        >
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-gray-100">{notice.title}</p>
+                                                <p className="mt-1 text-xs text-gray-400">{notice.body}</p>
+                                                <p className="mt-2 text-[11px] text-gray-500">
+                                                    {notice.createdAt ? formatTimestamp(notice.createdAt.toMillis()) : 'Just now'} • Recipients: {notice.recipientCount}
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => { void handleDeleteSentNotification(notice.id); }}
+                                                disabled={deletingAdminNoticeId === notice.id}
+                                                className="self-end rounded-lg border border-red-500/25 px-3 py-1.5 text-xs font-semibold text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50 sm:self-start"
+                                            >
+                                                {deletingAdminNoticeId === notice.id ? 'Removing...' : 'Delete'}
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>

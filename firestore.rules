@@ -28,6 +28,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+
+
+    match /users/{uid}/notifications/{notificationId} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
     match /users/{uid}/inventory/{inventoryId} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow write: if isAdmin();
@@ -65,6 +72,11 @@ service cloud.firestore {
     match /xpRedemptions/{redemptionId} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow write: if isAdmin();
+    }
+
+
+    match /adminNotifications/{notificationId} {
+      allow read, write: if isAdmin();
     }
 
     match /coin_packages/{packageId} {

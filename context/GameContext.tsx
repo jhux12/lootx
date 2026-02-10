@@ -41,7 +41,8 @@ import {
   serverTimestamp,
   setDoc,
   Timestamp,
-  where
+  where,
+  writeBatch
 } from 'firebase/firestore';
 
 const sanitizeData = <T extends Record<string, any>>(data: T): T => {
@@ -473,7 +474,7 @@ interface GameContextType {
   addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>) => void;
   dismissNotification: (id: string) => void;
   clearNotifications: () => void;
-  sendAdminNotification: (message: string) => void;
+  sendAdminNotification: (message: string) => Promise<void>;
   createBattle: (boxIds: string[], maxPlayers: number) => Promise<void>;
   joinBattle: (battleId: string) => Promise<void>;
   updateBattle: (updatedBattle: Battle) => void;
@@ -1850,9 +1851,48 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setNotifications([]);
   };
 
-  const sendAdminNotification = (message: string) => {
-    if (!message.trim()) return;
-    addNotification({ message: message.trim(), type: 'admin' });
+  const sendAdminNotification = async (message: string) => {
+    const trimmed = message.trim();
+    if (!trimmed) return;
+
+    addNotification({ message: trimmed, type: 'admin' });
+
+    if (!isAuthenticated || !user.isAdmin) return;
+
+    const broadcastRef = collection(db, 'adminNotifications');
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+    const userIds = usersSnapshot.docs.map((docSnap) => docSnap.id);
+
+    const title = 'Admin update';
+    const body = trimmed.length > 180 ? `${trimmed.slice(0, 177)}...` : trimmed;
+
+    const created = await addDoc(broadcastRef, {
+      title,
+      body,
+      message: trimmed,
+      type: 'admin',
+      recipientCount: userIds.length,
+      createdBy: user.id,
+      createdAt: serverTimestamp()
+    });
+
+    for (let i = 0; i < userIds.length; i += 400) {
+      const batch = writeBatch(db);
+      const chunk = userIds.slice(i, i + 400);
+      chunk.forEach((uid) => {
+        const notificationRef = doc(collection(db, 'users', uid, 'notifications'));
+        batch.set(notificationRef, {
+          type: 'admin',
+          title,
+          body,
+          createdAt: serverTimestamp(),
+          readAt: null,
+          seenAt: null,
+          broadcastId: created.id
+        });
+      });
+      await batch.commit();
+    }
   };
 
   const followUser = async (targetUserId: string) => {

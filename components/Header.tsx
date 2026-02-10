@@ -3,16 +3,14 @@ import {
   Gamepad2, 
   Trophy, 
   Gift, 
-  Bell, 
   Settings, 
   Plus, 
   ChevronDown, 
   User, 
   LogOut, 
-  X, 
   Volume2, 
   VolumeX, 
-  MessageCircle,
+  Inbox,
   ShieldCheck, 
   FlaskConical, 
   PackageOpen
@@ -22,14 +20,14 @@ import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
 import { XP_ICON } from '../constants';
+import { useNotifications } from '../hooks/useNotifications';
 
 type HeaderProps = {
-  onOpenSupportChat: () => void;
-  hasUnseenChatMessages: boolean;
-  isChatOpen: boolean;
+  onOpenInbox: () => void;
+  unreadChatCount?: number;
 };
 
-export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChatMessages, isChatOpen }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) => {
   const {
     user,
     balance,
@@ -38,13 +36,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
     openAuthModal,
     setShowTopUpModal,
     logout,
-    notifications,
-    dismissNotification,
-    clearNotifications
+    notifications
   } = useGame();
   const { muted, toggleMute, playSound } = useSound();
   const [lootRevealActive, setLootRevealActive] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false);
   const [balancePulse, setBalancePulse] = useState<'up' | 'down' | null>(null);
   const balanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,7 +111,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
     }
   };
 
-  const notificationCount = notifications.length;
+  const { unreadCount: persistentUnreadCount } = useNotifications(isAuthenticated ? user.id : null);
+  const notificationCount = persistentUnreadCount || notifications.length;
+  const chatCount = typeof unreadChatCount === 'number' ? unreadChatCount : 0;
+  const inboxCount = notificationCount + chatCount;
+  const inboxCountLabel = inboxCount > 99 ? '99+' : inboxCount;
 
   return (
     <>
@@ -237,8 +236,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
 
       `}</style>
 
-      <header className="fixed top-0 left-0 right-0 z-50 w-full flex items-center justify-between px-4 md:px-6 py-3 min-h-[72px] md:min-h-[80px] lg:min-h-[88px] bg-[#080b14]/95 border-b border-gray-800/50 backdrop-blur">
-        <div className="flex items-center gap-4 lg:gap-10">
+      <header className="fixed top-0 left-0 right-0 z-50 w-full flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 min-h-[72px] md:min-h-[80px] lg:min-h-[88px] bg-[#080b14]/95 border-b border-gray-800/50 backdrop-blur">
+        <div className="flex min-w-0 items-center gap-3 lg:gap-10">
           {/* Logo */}
           <div
             className="cursor-pointer hover:opacity-90 transition-opacity"
@@ -288,8 +287,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
         </div>
 
         {/* User Area */}
-        <div className="flex items-center gap-2 md:gap-3">
-          <div className="flex items-center gap-2 md:gap-3 text-gray-500">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 md:gap-3">
+          <div className="hidden md:flex items-center gap-2 md:gap-3 text-gray-500">
             <button
               onClick={toggleMute}
               className="hover:text-white transition-colors p-2 rounded-lg hover:bg-[#11141d]"
@@ -297,133 +296,58 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
             >
               {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
-            {isAuthenticated && (
-              <>
-                <div className="relative">
-                  <button
-                    className="hover:text-white transition-colors p-2 rounded-lg hover:bg-[#11141d] relative"
-                    onClick={() => setIsNotificationsOpen((prev) => !prev)}
-                    aria-label="Notifications"
-                  >
-                    <Bell className="w-4 h-4" />
-                    {notificationCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
-                        {notificationCount > 9 ? '9+' : notificationCount}
-                      </span>
-                    )}
-                  </button>
-                  {isNotificationsOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setIsNotificationsOpen(false)}
-                      ></div>
-                      <div
-                        className="fixed top-[76px] left-2 right-2 w-auto max-w-none mt-0 bg-[#151a23] border border-gray-800 rounded-2xl shadow-2xl z-50 overflow-hidden md:absolute md:top-full md:right-0 md:left-auto md:mt-3 md:w-96 md:max-w-sm"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-                          <span className="text-sm font-bold text-white">Notifications</span>
-                          <button
-                            onClick={() => clearNotifications()}
-                            className="text-xs text-gray-400 hover:text-white disabled:opacity-50"
-                            disabled={notificationCount === 0}
-                          >
-                            Clear all
-                          </button>
-                        </div>
-                        <div className="max-h-72 overflow-y-auto">
-                          {notificationCount === 0 ? (
-                            <div className="px-4 py-6 text-center text-sm text-gray-500">
-                              You are all caught up.
-                            </div>
-                          ) : (
-                            notifications.map((notification) => {
-                              const Icon = notification.type === 'shipping' ? PackageOpen : ShieldCheck;
-                              const accent =
-                                notification.type === 'shipping' ? 'text-green-400' : 'text-purple-400';
-                              const badge =
-                                notification.type === 'shipping'
-                                  ? 'bg-green-500/10 border-green-500/20'
-                                  : 'bg-purple-500/10 border-purple-500/20';
-                              return (
-                                <div
-                                  key={notification.id}
-                                  className="flex items-start gap-3 px-4 py-3 border-b border-gray-800 last:border-b-0"
-                                >
-                                  <div className={`p-2 rounded-lg border ${badge}`}>
-                                    <Icon className={`w-4 h-4 ${accent}`} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-gray-200 leading-snug">
-                                      {notification.message}
-                                    </p>
-                                    <p className="text-[11px] text-gray-500 mt-1">
-                                      {new Date(notification.createdAt).toLocaleTimeString()}
-                                    </p>
-                                  </div>
-                                  <button
-                                    onClick={() => dismissNotification(notification.id)}
-                                    className="text-gray-500 hover:text-white"
-                                    aria-label="Dismiss notification"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <button
-                  className="hover:text-white transition-colors p-2 rounded-lg hover:bg-[#11141d]"
-                  onClick={onOpenSupportChat}
-                  aria-label="Open support chat"
-                >
-                  <span className="relative flex">
-                    <MessageCircle className="w-4 h-4" />
-                    {hasUnseenChatMessages && !isChatOpen && (
-                      <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-brand-purple shadow-[0_0_10px_rgba(124,58,237,0.9)]" />
-                    )}
-                  </span>
-                </button>
-              </>
-            )}
           </div>
           {isAuthenticated ? (
             <>
-              <div
-                className={`flex items-center bg-[#111621] rounded-lg p-1 pr-3 border border-gray-800 balance-pulse ${
-                  balancePulse === 'up'
-                    ? 'balance-pulse-up'
-                    : balancePulse === 'down'
-                      ? 'balance-pulse-down'
-                      : ''
-                }`}
-              >
-                <span
-                  aria-hidden="true"
-                  className={`balance-sparkle ${balancePulse ? 'balance-sparkle-active' : ''}`}
-                />
-                <div className="bg-[#1a2130] px-2 md:px-3 py-1 rounded text-xs md:text-sm mr-2 md:mr-3 relative z-10">
-                  <CoinAmount
-                    amount={balance}
-                    formatOptions={{ maximumFractionDigits: 0 }}
-                    className="text-cyan-400 font-bold"
-                    iconClassName="w-3.5 h-3.5"
-                  />
-                </div>
-                <button 
-                  onClick={() => setShowTopUpModal(true)}
-                  className="btn-logo-gradient text-white rounded p-1 transition-colors active:scale-95"
-                  title="Add Coins"
+              <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                <div
+                  className={`flex items-center bg-[#111621] rounded-lg p-1 pr-2 sm:pr-3 border border-gray-800 balance-pulse shrink min-w-0 ${
+                    balancePulse === 'up'
+                      ? 'balance-pulse-up'
+                      : balancePulse === 'down'
+                        ? 'balance-pulse-down'
+                        : ''
+                  }`}
                 >
-                  <Plus className="w-3 h-3" />
-                </button>
+                  <span
+                    aria-hidden="true"
+                    className={`balance-sparkle ${balancePulse ? 'balance-sparkle-active' : ''}`}
+                  />
+                  <div className="bg-[#1a2130] px-2 sm:px-3 py-1 rounded text-xs sm:text-sm mr-1.5 sm:mr-2 relative z-10">
+                    <CoinAmount
+                      amount={balance}
+                      formatOptions={{ maximumFractionDigits: 0 }}
+                      className="text-cyan-400 font-bold"
+                      iconClassName="w-3.5 h-3.5"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setShowTopUpModal(true)}
+                    className="btn-logo-gradient text-white rounded p-1 transition-colors active:scale-95"
+                    title="Add Coins"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+
               </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  onOpenInbox();
+                }}
+                className="relative rounded-lg border border-gray-700 bg-[#111621] p-2 text-gray-300 hover:text-white"
+                aria-label="Open inbox"
+              >
+                <Inbox className="h-4 w-4" />
+                {inboxCount > 0 && (
+                  <span className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-cyan-400 px-1 text-center text-[10px] font-bold text-[#0b0e14] shadow-[0_0_10px_rgba(34,211,238,0.8)]">
+                    {inboxCountLabel}
+                  </span>
+                )}
+              </button>
 
               <div className="relative flex items-center gap-2 md:hidden">
                 <button
@@ -444,36 +368,80 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
                 </button>
 
                 {isMobileProfileOpen && (
-                  <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-gray-800 bg-[#151a23] p-2 shadow-xl">
-                    <div className="mb-2 rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-wide text-gray-500">XP Balance</div>
-                      <div className="mt-1 flex items-center gap-2 text-sm font-bold text-white">
-                        <img src={XP_ICON} alt="XP" className="h-7 w-7 object-contain" />
-                        <span>{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close profile menu"
+                      className="fixed inset-0 z-40 bg-transparent"
+                      onClick={() => setIsMobileProfileOpen(false)}
+                    />
+                    <div className="absolute right-0 top-11 z-50 w-[236px] overflow-hidden rounded-2xl border border-cyan-400/20 bg-[#111621]/95 shadow-[0_20px_50px_rgba(2,6,23,0.8)] backdrop-blur-xl">
+                      <div className="border-b border-gray-800/80 bg-gradient-to-r from-[#161b2a] to-[#121827] px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={user.avatar}
+                            className="h-9 w-9 rounded-xl border border-gray-700"
+                            alt="Avatar"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+                            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-gray-400">
+                              {user.isAdmin && (
+                                <span className="rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-300">
+                                  Admin
+                                </span>
+                              )}
+                              <span>Level {user.level ?? 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 rounded-xl border border-gray-800 bg-[#0b0f1a] p-2.5">
+                          <div className="text-[10px] uppercase tracking-wide text-gray-500">XP Balance</div>
+                          <div className="mt-1.5 flex items-center gap-2 text-sm font-bold text-white">
+                            <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" />
+                            <span>{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 p-2">
+                        <button
+                          onClick={() => handleNav({ type: 'PROFILE' })}
+                          className="flex w-full items-center gap-2.5 rounded-xl border border-transparent px-3 py-2.5 text-left text-sm font-medium text-gray-200 transition-colors hover:border-cyan-400/20 hover:bg-[#1a2234]"
+                        >
+                          <User className="h-4 w-4 text-cyan-300" />
+                          <span>Profile</span>
+                        </button>
+                        <button
+                          onClick={() => handleNav({ type: 'INVENTORY' })}
+                          className="flex w-full items-center gap-2.5 rounded-xl border border-transparent px-3 py-2.5 text-left text-sm font-medium text-gray-200 transition-colors hover:border-cyan-400/20 hover:bg-[#1a2234]"
+                        >
+                          <PackageOpen className="h-4 w-4 text-cyan-300" />
+                          <span>Inventory</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            playSound('click');
+                            setIsMobileProfileOpen(false);
+                            logout();
+                          }}
+                          className="flex w-full items-center gap-2.5 rounded-xl border border-red-500/15 px-3 py-2.5 text-left text-sm font-medium text-red-300 transition-colors hover:bg-red-500/10"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign out</span>
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleNav({ type: 'PROFILE' })}
-                      className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-800"
-                    >
-                      Profile
-                    </button>
-                    <button
-                      onClick={() => handleNav({ type: 'INVENTORY' })}
-                      className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-800"
-                    >
-                      Inventory
-                    </button>
-                  </div>
+                  </>
                 )}
               </div>
 
               <div className="group relative hidden md:block">
                 <div className="flex items-center gap-2 text-gray-400 hover:text-white cursor-pointer border-r border-gray-800 pr-4">
-                  <img 
-                    src={user.avatar} 
-                    className="w-8 h-8 rounded-lg border border-gray-700" 
-                    alt="Avatar" 
+                  <img
+                    src={user.avatar}
+                    className="w-8 h-8 rounded-lg border border-gray-700"
+                    alt="Avatar"
                   />
                   <div className="flex flex-col">
                     <span className="text-sm font-medium leading-none max-w-[120px] truncate flex items-center gap-1">
@@ -489,10 +457,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
                   <ChevronDown className="w-3 h-3" />
                 </div>
 
-                {/* Desktop Dropdown */}
                 <div className="absolute right-4 top-full mt-2 w-48 bg-[#151a23] border border-gray-800 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 transform translate-y-2 group-hover:translate-y-0">
                   <div className="p-2">
-                    <button 
+                    <button
                       onClick={() => handleNav({ type: 'PROFILE' })}
                       className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors text-left"
                     >
@@ -502,7 +469,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSupportChat, hasUnseenChat
                       <Settings className="w-4 h-4" /> Settings
                     </button>
                     <div className="h-px bg-gray-800 my-1"></div>
-                    <button 
+                    <button
                       onClick={logout}
                       className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition-colors text-left"
                     >
