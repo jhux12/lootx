@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, ClipboardList, Copy, Gift, Search, ShieldCheck, TrendingUp, X } from 'lucide-react';
-import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -74,46 +74,66 @@ export const Bonuses: React.FC = () => {
   const canClaim = !lastDailyClaim || nextDailyClaimAt <= Date.now();
 
   useEffect(() => {
-    const itemsQuery = query(collection(db, 'xpShopItems'), where('enabled', '==', true), orderBy('sortOrder', 'asc'));
-    const unsub = onSnapshot(itemsQuery, (snapshot) => {
-      const items = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as Record<string, unknown>;
-        return {
-          id: docSnap.id,
-          title: String(data.title ?? 'XP Reward'),
-          description: String(data.description ?? ''),
-          imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
-          xpCost: Math.max(0, Number(data.xpCost ?? 0)),
-          stock: data.stock == null ? null : Number(data.stock),
-          limitPerUser: data.limitPerUser == null ? null : Number(data.limitPerUser),
-          category: typeof data.category === 'string' ? data.category : 'General',
-          fulfillmentType: ((typeof data.fulfillmentType === 'string' ? data.fulfillmentType : 'DIGITAL') as XpShopItem['fulfillmentType']),
-          metadata: {
-            caseId:
-              typeof data?.metadata?.caseId === 'string'
-                ? data.metadata.caseId
-                : typeof data?.metadata?.boxId === 'string'
-                  ? data.metadata.boxId
-                  : typeof data.caseId === 'string'
-                    ? data.caseId
-                    : typeof data.boxId === 'string'
-                      ? data.boxId
-                      : undefined,
-            xpPriceOverride:
-              data?.metadata?.xpPriceOverride != null
-                ? Math.max(0, Math.floor(Number(data.metadata.xpPriceOverride)))
-                : data?.xpPriceOverride != null
-                  ? Math.max(0, Math.floor(Number(data.xpPriceOverride)))
-                  : undefined
-          },
-          enabled: data.enabled !== false,
-          sortOrder: Number(data.sortOrder ?? 0)
-        } satisfies XpShopItem;
-      });
-      setShopItems(items);
-    });
+    const parseItem = (docSnap: { id: string; data: () => Record<string, unknown> }): XpShopItem => {
+      const data = docSnap.data() as Record<string, unknown>;
+      return {
+        id: docSnap.id,
+        title: String(data.title ?? 'XP Reward'),
+        description: String(data.description ?? ''),
+        imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
+        xpCost: Math.max(0, Number(data.xpCost ?? 0)),
+        stock: data.stock == null ? null : Number(data.stock),
+        limitPerUser: data.limitPerUser == null ? null : Number(data.limitPerUser),
+        category: typeof data.category === 'string' ? data.category : 'General',
+        fulfillmentType: ((typeof data.fulfillmentType === 'string' ? data.fulfillmentType : 'DIGITAL') as XpShopItem['fulfillmentType']),
+        metadata: {
+          caseId:
+            typeof data?.metadata?.caseId === 'string'
+              ? data.metadata.caseId
+              : typeof data?.metadata?.boxId === 'string'
+                ? data.metadata.boxId
+                : typeof data.caseId === 'string'
+                  ? data.caseId
+                  : typeof data.boxId === 'string'
+                    ? data.boxId
+                    : undefined,
+          xpPriceOverride:
+            data?.metadata?.xpPriceOverride != null
+              ? Math.max(0, Math.floor(Number(data.metadata.xpPriceOverride)))
+              : data?.xpPriceOverride != null
+                ? Math.max(0, Math.floor(Number(data.xpPriceOverride)))
+                : undefined
+        },
+        enabled: data.enabled !== false,
+        sortOrder: Number(data.sortOrder ?? 0)
+      } satisfies XpShopItem;
+    };
 
-    return () => unsub();
+    const applySnapshot = (snapshot: { docs: Array<{ id: string; data: () => Record<string, unknown> }> }) => {
+      const items = snapshot.docs
+        .map(parseItem)
+        .filter((item) => item.enabled)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      setShopItems(items);
+    };
+
+    const indexedQuery = query(collection(db, 'xpShopItems'), orderBy('sortOrder', 'asc'));
+    let fallbackUnsub: (() => void) | null = null;
+
+    const unsub = onSnapshot(
+      indexedQuery,
+      (snapshot) => applySnapshot(snapshot),
+      (error) => {
+        console.warn('Primary XP shop query failed, falling back to unsorted listener.', error);
+        fallbackUnsub?.();
+        fallbackUnsub = onSnapshot(collection(db, 'xpShopItems'), (snapshot) => applySnapshot(snapshot));
+      }
+    );
+
+    return () => {
+      unsub();
+      fallbackUnsub?.();
+    };
   }, []);
 
   useEffect(() => {
