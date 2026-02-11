@@ -1787,7 +1787,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setView({ type: 'HOME' });
   };
 
-  const isRakebackUnlocked = (profile: User) => profile.rakebackUnlocked === true || Number(profile.level ?? 0) >= Number(bonusSettings.rakebackUnlockLevel ?? 0);
+  const isRakebackUnlocked = (profile: User) => profile.rakebackUnlocked === true;
 
   const getRakebackRatePercent = (profile: User) => {
     if (!isRakebackUnlocked(profile)) return 0;

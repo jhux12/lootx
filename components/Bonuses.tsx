@@ -70,7 +70,7 @@ export const Bonuses: React.FC = () => {
   const xpBalance = Math.floor(user.xpBalance ?? user.xp ?? 0);
   const availableRakeback = Number(user.rakebackBalance ?? 0);
   const hasReferral = Boolean(user.referredBy);
-  const rakebackUnlocked = user.rakebackUnlocked === true || Number(user.level ?? 0) >= Number(bonusSettings.rakebackUnlockLevel ?? 0);
+  const rakebackUnlocked = user.rakebackUnlocked === true;
   const activeRakebackPercent = user.rakebackPercent != null ? Number(user.rakebackPercent) : Number(bonusSettings.rakebackBasePercent ?? 0);
 
   const lastDailyClaim = Number.isFinite(user.lastDailyClaim ?? NaN) ? Number(user.lastDailyClaim) : 0;
@@ -543,7 +543,7 @@ export const Bonuses: React.FC = () => {
                   <TrendingUp className="w-4 h-4 text-green-400" /> Rakeback
                 </h3>
                 <p className="text-sm text-gray-400">Current rakeback rate: <span className="text-white font-semibold">{Math.max(0, activeRakebackPercent).toFixed(2)}%</span></p>
-                {!rakebackUnlocked && <p className="text-xs text-yellow-300 mt-1">Unlocks at level {bonusSettings.rakebackUnlockLevel} or via eligible XP Shop reward.</p>}
+                {!rakebackUnlocked && <p className="text-xs text-yellow-300 mt-1">Rakeback is locked until you unlock it in the XP Shop.</p>}
                 <p className="text-sm text-gray-400 mb-3">Available: {availableRakeback.toLocaleString()} coins</p>
                 <button
                   onClick={handleClaimRakeback}
