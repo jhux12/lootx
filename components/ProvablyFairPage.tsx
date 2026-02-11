@@ -20,7 +20,7 @@ const readStoredJson = <T,>(key: string): T | null => {
 export const ProvablyFairPage: React.FC = () => {
   const { playSound } = useSound();
   const [serverSeedHash, setServerSeedHash] = useState('');
-  const [clientSeedInput, setClientSeedInput] = useState('lootx-player');
+  const [clientSeedInput, setClientSeedInput] = useState('pullzplayer');
   const [nonce, setNonce] = useState(0);
   const [lastRoll, setLastRoll] = useState<ProvablyFairRollData | null>(() => readStoredJson<ProvablyFairRollData>(LAST_ROLL_STORAGE_KEY));
   const [lastReveal, setLastReveal] = useState<ProvablyFairRevealData | null>(() => readStoredJson<ProvablyFairRevealData>(LAST_REVEAL_STORAGE_KEY));
