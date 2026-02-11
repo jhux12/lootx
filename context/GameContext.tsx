@@ -2053,12 +2053,30 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       pendingSoldIdsRef.current.add(instanceId);
       setInventory(prev => prev.filter(item => item.instanceId !== instanceId));
 
-      const data = await authedFetch<{ newCoins?: number }>('/api/sell-item', {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/sell-item', {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ inventoryId: instanceId })
       });
 
-      const nextCoins = Number(data.newCoins);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const errorCode = typeof data?.error === 'string' ? data.error : 'SELL_FAILED';
+        const message = typeof data?.message === 'string' ? data.message : 'Unable to sell item';
+        console.error('Failed to sell item', {
+          status: response.status,
+          error: errorCode,
+          message,
+          inventoryId: instanceId
+        });
+        throw new Error(`${errorCode}: ${message}`);
+      }
+
+      const nextCoins = Number(data?.newCoins);
       if (Number.isFinite(nextCoins)) {
         pendingBalanceRef.current = nextCoins;
         syncBalance(nextCoins);
@@ -2073,16 +2091,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return next;
         });
       }
-      console.error('Failed to sell item', error);
+
       const fallbackMessage = 'Unable to sell item right now. Please try again.';
-      const errorMessage = error instanceof Error ? error.message : '';
-      try {
-        const parsed = errorMessage ? JSON.parse(errorMessage) : null;
-        const serverMessage = typeof parsed?.error === 'string' ? parsed.error : '';
-        alert(serverMessage || fallbackMessage);
-      } catch {
-        alert(fallbackMessage);
-      }
+      const rawMessage = error instanceof Error ? error.message : '';
+      const userMessage = rawMessage.includes(':') ? rawMessage.split(':').slice(1).join(':').trim() : rawMessage;
+      console.error('Failed to sell item', {
+        message: rawMessage || fallbackMessage,
+        inventoryId: instanceId
+      });
+      alert(userMessage || fallbackMessage);
     }
   };
 
