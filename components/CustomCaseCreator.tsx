@@ -149,18 +149,6 @@ export const CustomCaseCreator: React.FC = () => {
     return sourceBoxItems.filter((item) => item.name.toLowerCase().includes(normalizedQuery));
   }, [sourceBoxItems, searchQuery]);
 
-  useEffect(() => {
-    if (selectedItems.length === 0) return;
-
-    const availableItemIds = new Set(sourceBoxItems.map((item) => item.id));
-    const nextItems = selectedItems.filter((item) => availableItemIds.has(item.id));
-
-    if (nextItems.length === selectedItems.length) return;
-
-    setSelectedItems(nextItems);
-    setLastCalculated(false);
-  }, [selectedItems, sourceBoxItems]);
-
   const handleToggleSourceBox = (boxId: string) => {
     playSound('click');
     setSelectedSourceBoxIds((prev) => {
