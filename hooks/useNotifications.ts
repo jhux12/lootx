@@ -28,24 +28,45 @@ export interface UserNotification {
   seenAt?: Timestamp | null;
 }
 
-const NOTIFICATION_LIST_LIMIT = 25;
 const UNREAD_COUNT_LIMIT = 100;
 const MARK_ALL_LIMIT = 50;
+
+const toTimestamp = (value: unknown): Timestamp | null => {
+  if (value instanceof Timestamp) return value;
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Timestamp.fromMillis(value);
+  }
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) {
+      return Timestamp.fromMillis(parsed);
+    }
+  }
+  if (typeof value === 'object' && value !== null) {
+    const timestampLike = value as { seconds?: unknown; nanoseconds?: unknown };
+    if (typeof timestampLike.seconds === 'number') {
+      const seconds = timestampLike.seconds;
+      const nanoseconds = typeof timestampLike.nanoseconds === 'number' ? timestampLike.nanoseconds : 0;
+      return new Timestamp(seconds, nanoseconds);
+    }
+  }
+  return null;
+};
 
 const toNotification = (id: string, data: DocumentData): UserNotification => ({
   id,
   type: typeof data.type === 'string' ? data.type : 'general',
-  title: typeof data.title === 'string' ? data.title : 'Notification',
-  body: typeof data.body === 'string' ? data.body : '',
-  createdAt:
-    data.createdAt instanceof Timestamp
-      ? data.createdAt
-      : typeof data.createdAt === 'number'
-        ? Timestamp.fromMillis(data.createdAt)
-        : null,
+  title:
+    typeof data.title === 'string'
+      ? data.title
+      : typeof data.message === 'string'
+        ? 'Shipping update'
+        : 'Notification',
+  body: typeof data.body === 'string' ? data.body : typeof data.message === 'string' ? data.message : '',
+  createdAt: toTimestamp(data.createdAt) ?? toTimestamp(data.updatedAt),
   link: typeof data.link === 'string' ? data.link : undefined,
-  readAt: data.readAt instanceof Timestamp ? data.readAt : null,
-  seenAt: data.seenAt instanceof Timestamp ? data.seenAt : null
+  readAt: toTimestamp(data.readAt),
+  seenAt: toTimestamp(data.seenAt)
 });
 
 export const useNotifications = (uid?: string | null) => {
@@ -67,8 +88,12 @@ export const useNotifications = (uid?: string | null) => {
     const unsubList = onSnapshot(listQuery, (snapshot) => {
       const next = snapshot.docs
         .map((docSnap) => toNotification(docSnap.id, docSnap.data()))
-        .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0))
-        .slice(0, NOTIFICATION_LIST_LIMIT);
+        .sort((a, b) => {
+          const aCreated = a.createdAt?.toMillis() ?? 0;
+          const bCreated = b.createdAt?.toMillis() ?? 0;
+          if (aCreated !== bCreated) return bCreated - aCreated;
+          return b.id.localeCompare(a.id);
+        });
       setNotifications(next);
     });
 
