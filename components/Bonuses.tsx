@@ -422,9 +422,9 @@ export const Bonuses: React.FC = () => {
                   return (
                     <div key={item.id} className="bg-[#131720] border border-gray-800 rounded-xl p-4 flex flex-col">
                       {item.imageUrl ? (
-                        <img src={item.imageUrl} alt={item.title} className="w-full h-32 rounded-lg object-cover mb-3" />
+                        <img src={item.imageUrl} alt={item.title} className="w-full aspect-[3/2] rounded-lg object-cover mb-3" />
                       ) : (
-                        <div className="w-full h-32 rounded-lg bg-[#0b0e14] border border-gray-800 mb-3" />
+                        <div className="w-full aspect-[3/2] rounded-lg bg-[#0b0e14] border border-gray-800 mb-3" />
                       )}
                       <h3 className="text-white font-bold">{item.title}</h3>
                       <p className="text-sm text-gray-400 mt-1 line-clamp-2 min-h-[40px]">{item.description || 'Exclusive XP reward.'}</p>
@@ -538,8 +538,8 @@ export const Bonuses: React.FC = () => {
                 </div>
               </div>
 
-              {rakebackUnlocked && (
-                <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+              <div className="relative">
+                <div className={`bg-[#131720] border border-gray-800 rounded-xl p-4 transition ${rakebackUnlocked ? '' : 'blur-[2px] opacity-80 select-none'}`}>
                   <h3 className="font-bold text-white mb-2 flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-green-400" /> Rakeback
                   </h3>
@@ -547,13 +547,18 @@ export const Bonuses: React.FC = () => {
                   <p className="text-sm text-gray-400 mb-3">Available: {availableRakeback.toLocaleString()} coins</p>
                   <button
                     onClick={handleClaimRakeback}
-                    disabled={availableRakeback <= 0 || isClaimingRakeback}
+                    disabled={!rakebackUnlocked || availableRakeback <= 0 || isClaimingRakeback}
                     className="w-full py-2 rounded-lg bg-green-500 text-black font-bold disabled:bg-gray-800 disabled:text-gray-500"
                   >
                     {isClaimingRakeback ? 'Collecting...' : 'Collect Rakeback'}
                   </button>
                 </div>
-              )}
+                {!rakebackUnlocked && (
+                  <div className="absolute inset-0 rounded-xl border border-dashed border-gray-600/70 bg-black/30 backdrop-blur-[1px] flex items-center justify-center px-4 text-center">
+                    <p className="text-sm font-semibold text-gray-200">Unlock Rakeback in the XP Shop</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
