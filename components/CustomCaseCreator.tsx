@@ -22,7 +22,7 @@ export const CustomCaseCreator: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showLabInfo, setShowLabInfo] = useState(false);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
-  const [selectedSourceBoxId, setSelectedSourceBoxId] = useState<string>('');
+  const [selectedSourceBoxIds, setSelectedSourceBoxIds] = useState<string[]>([]);
 
   const toggleItemSelection = (item: CaseItem) => {
       playSound('click');
@@ -109,22 +109,38 @@ export const CustomCaseCreator: React.FC = () => {
   }, [boxes, stripeSettings.caseLabVisibleBoxIds]);
 
   useEffect(() => {
-    const hasSelectedBox = sourceBoxOptions.some((box) => box.id === selectedSourceBoxId);
-    if (hasSelectedBox) return;
+    if (sourceBoxOptions.length === 0) {
+      setSelectedSourceBoxIds([]);
+      return;
+    }
 
-    const defaultBox = sourceBoxOptions[0];
-    setSelectedSourceBoxId(defaultBox?.id ?? '');
-  }, [selectedSourceBoxId, sourceBoxOptions]);
+    const selectableIds = new Set(sourceBoxOptions.map((box) => box.id));
+    const validSelection = selectedSourceBoxIds.filter((id) => selectableIds.has(id));
 
-  const selectedSourceBox = useMemo(
-    () => sourceBoxOptions.find((box) => box.id === selectedSourceBoxId) ?? null,
-    [sourceBoxOptions, selectedSourceBoxId]
+    if (validSelection.length > 0 && validSelection.length === selectedSourceBoxIds.length) return;
+
+    setSelectedSourceBoxIds(validSelection.length > 0 ? validSelection : [sourceBoxOptions[0].id]);
+  }, [selectedSourceBoxIds, sourceBoxOptions]);
+
+  const selectedSourceBoxes = useMemo(
+    () => sourceBoxOptions.filter((box) => selectedSourceBoxIds.includes(box.id)),
+    [selectedSourceBoxIds, sourceBoxOptions]
   );
 
   const sourceBoxItems = useMemo(() => {
-    if (!selectedSourceBox) return [];
-    return selectedSourceBox.items;
-  }, [selectedSourceBox]);
+    if (selectedSourceBoxes.length === 0) return [];
+
+    const mergedItems = new Map<string, CaseItem>();
+    selectedSourceBoxes.forEach((box) => {
+      box.items.forEach((item) => {
+        if (!mergedItems.has(item.id)) {
+          mergedItems.set(item.id, item);
+        }
+      });
+    });
+
+    return Array.from(mergedItems.values());
+  }, [selectedSourceBoxes]);
 
   const imageOptions = useMemo(() => sourceBoxOptions.slice(0, 12), [sourceBoxOptions]);
 
@@ -133,13 +149,14 @@ export const CustomCaseCreator: React.FC = () => {
     return sourceBoxItems.filter((item) => item.name.toLowerCase().includes(normalizedQuery));
   }, [sourceBoxItems, searchQuery]);
 
-  const handleSelectSourceBox = (boxId: string) => {
-    if (boxId === selectedSourceBoxId) return;
+  const handleToggleSourceBox = (boxId: string) => {
     playSound('click');
-    setSelectedSourceBoxId(boxId);
-    setSelectedItems([]);
-    setLastCalculated(false);
-    setExpandedItemId(null);
+    setSelectedSourceBoxIds((prev) => {
+      const isSelected = prev.includes(boxId);
+      const nextSelection = isSelected ? prev.filter((id) => id !== boxId) : [...prev, boxId];
+
+      return nextSelection.length > 0 ? nextSelection : prev;
+    });
   };
 
   return (
@@ -198,7 +215,7 @@ export const CustomCaseCreator: React.FC = () => {
             <ol className="mt-4 space-y-3 text-sm text-gray-300">
               <li className="flex gap-3">
                 <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">1</span>
-                <p>Pick a source box, then choose which items from that box should be included in your case and give it a memorable name.</p>
+                <p>Pick one or more source boxes, then choose which items from those boxes should be included in your case and give it a memorable name.</p>
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">2</span>
@@ -239,14 +256,15 @@ export const CustomCaseCreator: React.FC = () => {
                   <div className="mb-4">
                       <div className="flex gap-2 overflow-x-auto pb-2">
                         {sourceBoxOptions.map((box) => {
-                          const isSelected = selectedSourceBoxId === box.id;
+                          const isSelected = selectedSourceBoxIds.includes(box.id);
                           return (
                             <button
                               key={box.id}
                               type="button"
-                              onClick={() => handleSelectSourceBox(box.id)}
+                              onClick={() => handleToggleSourceBox(box.id)}
                               className={`min-w-[120px] rounded-lg border p-2 text-left transition sm:min-w-[140px] ${isSelected ? 'border-brand-purple/70 bg-brand-purple/20' : 'border-gray-700 bg-[#0b0e14] hover:border-gray-500'}`}
-                              aria-label={`Use ${box.name} as item source`}
+                              aria-label={`Toggle ${box.name} as item source`}
+                              aria-pressed={isSelected}
                             >
                               <img src={box.image} alt={box.name} className="mb-2 h-12 w-full object-contain" />
                               <p className="truncate text-xs font-semibold text-white">{box.name}</p>
@@ -255,9 +273,9 @@ export const CustomCaseCreator: React.FC = () => {
                           );
                         })}
                       </div>
-                      {selectedSourceBox && (
+                      {selectedSourceBoxes.length > 0 && (
                         <p className="mt-2 text-xs text-gray-500">
-                          You're selecting from <span className="font-semibold text-gray-300">{selectedSourceBox.name}</span>.
+                          Adding items from <span className="font-semibold text-gray-300">{selectedSourceBoxes.length}</span> source {selectedSourceBoxes.length === 1 ? 'box' : 'boxes'}.
                         </p>
                       )}
                       {sourceBoxOptions.length === 0 && (
@@ -269,7 +287,7 @@ export const CustomCaseCreator: React.FC = () => {
 
                   <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-bold text-gray-400 uppercase flex items-center gap-2">
-                          <Package className="w-4 h-4" /> Pick Items From Box
+                          <Package className="w-4 h-4" /> Pick Items From Source Boxes
                       </h4>
                   </div>
 
@@ -278,7 +296,7 @@ export const CustomCaseCreator: React.FC = () => {
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                       <Input 
                           type="text" 
-                          placeholder="Search items in selected box..." 
+                          placeholder="Search items in selected boxes..." 
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="pl-9 pr-4 py-2 text-sm"
@@ -328,9 +346,9 @@ export const CustomCaseCreator: React.FC = () => {
                             );
                         })}
                   </div>
-                  {selectedSourceBox && filteredItems.length === 0 && (
+                  {selectedSourceBoxes.length > 0 && filteredItems.length === 0 && (
                     <p className="mt-3 rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2 text-xs text-gray-400">
-                      No items found in this box for your current search.
+                      No items found in the selected source boxes for your current search.
                     </p>
                   )}
               </div>
