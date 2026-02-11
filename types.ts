@@ -40,6 +40,7 @@ export interface User {
   chatWarnings?: number;
   chatDisabled?: boolean;
   chatDisabledAt?: number;
+  emailManuallyVerified?: boolean;
   termsFlagged?: boolean;
   status?: UserStatus;
   locks?: UserLocks;
