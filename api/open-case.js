@@ -160,7 +160,6 @@ export default async function handler(req, res) {
       );
       const baseXpBonus = toSafeNonNegativeNumber(bonusSettings.baseXpBonus, 0);
       const xpMultiplier = toSafeMultiplier(bonusSettings.xpMultiplier, 1);
-      const xpSystemEnabled = bonusSettings.enabled === false ? false : true;
       const allowXpCaseAward = bonusSettings.awardXpForXpCases === true
         || openCaseRule.allowXpCurrency === true;
       const coinsSpent = !isFree && currencyType === 'COIN' ? price : 0;
@@ -171,7 +170,7 @@ export default async function handler(req, res) {
       const shouldAwardForOpenType = currencyType === 'COIN' || allowXpCaseAward;
       const xpFromOpen = !isFree && shouldAwardForOpenType ? xpPerCaseOpened : 0;
       const shouldAwardForUser = userData.isAdmin !== true;
-      const totalXpAward = shouldAwardForUser && xpSystemEnabled && shouldAwardForOpenType
+      const totalXpAward = shouldAwardForUser && shouldAwardForOpenType
         ? Math.max(0, Math.floor((xpFromSpend + xpFromOpen + baseXpBonus) * xpMultiplier))
         : 0;
 
@@ -214,7 +213,7 @@ export default async function handler(req, res) {
       const updatedXpBalance = Math.max(0, Math.floor(currentXp + totalXpAward));
 
       const nextUserPatch = currencyType === 'XP'
-        ? { xpBalance: newXpBalance, xp: newXpBalance }
+        ? { xpBalance: newXpBalance }
         : { coins: newCoins };
 
       transaction.set(userRef, nextUserPatch, { merge: true });
@@ -223,7 +222,6 @@ export default async function handler(req, res) {
         const dateKey = new Date().toISOString().slice(0, 10);
         transaction.update(userRef, {
           xpBalance: admin.firestore.FieldValue.increment(totalXpAward),
-          xp: admin.firestore.FieldValue.increment(totalXpAward),
           xpEarnedLifetime: admin.firestore.FieldValue.increment(totalXpAward),
           [`xpDailyEarned.${dateKey}`]: admin.firestore.FieldValue.increment(totalXpAward),
           lastXpAwardAction: 'openCase',
@@ -317,7 +315,6 @@ export default async function handler(req, res) {
           xpPerOpen: xpPerCaseOpened,
           baseXpBonus,
           xpMultiplier,
-          enabled: xpSystemEnabled,
           allowXpCaseAward
         },
         inventoryId: inventoryRef.id,
@@ -359,7 +356,6 @@ export default async function handler(req, res) {
         xpPerCaseOpened,
         baseXpBonus,
         xpMultiplier,
-        xpSystemEnabled,
         allowXpCaseAward,
         xpAwarded: totalXpAward
       });
