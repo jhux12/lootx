@@ -76,9 +76,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setTopUpModalIntent,
     addInventoryItemFromServer,
     syncBalance,
+    syncXpBalance,
     sellItem,
     setView,
     boxes,
+    bonusSettings,
     isAuthenticated,
     openAuthModal,
     claimDaily,
@@ -152,6 +154,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
   const currentCaseXpPrice = Math.max(0, Math.floor(Number(box?.priceXP ?? 0)));
+  const xpPer100Coins = Math.max(0, Number(bonusSettings?.xpPer100Coins ?? bonusSettings?.xpPer100CoinsWagered ?? 0));
+  const xpPerCaseOpened = Math.max(0, Number(bonusSettings?.xpPerCaseOpened ?? bonusSettings?.xpPerCaseOpen ?? 0));
+  const xpPreviewCoinsSpent = caseCurrencyType === 'COIN' ? Math.max(0, Number(box?.price ?? 0)) : 0;
+  const previewXpFromSpend = Math.floor((xpPreviewCoinsSpent / 100) * xpPer100Coins);
+  const previewXpFromOpen = isFree ? 0 : xpPerCaseOpened;
+  const previewTotalXp = Math.max(0, previewXpFromSpend + previewXpFromOpen);
   const currentXpBalance = Math.max(0, Math.floor(Number(user.xpBalance ?? user.xp ?? 0)));
   const isBalanceLoading = isAuthenticated && !authInitialized;
 
@@ -492,6 +500,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     } else {
       try {
         // Server now authoritatively selects the prize + updates coins/inventory.
+        const operationId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
         const data = await authedFetch<{
           ok: boolean;
           price: number;
@@ -512,7 +524,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           };
         }>('/api/open-case', {
           method: 'POST',
-          body: JSON.stringify({ boxId: box.id, isFree })
+          body: JSON.stringify({ boxId: box.id, isFree, operationId })
         });
 
         const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
@@ -549,6 +561,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             registerSpend(spentAmount);
           }
         }
+        if (Number.isFinite(Number(data.newXpBalance))) {
+          syncXpBalance(Number(data.newXpBalance));
+        }
         setWonInventoryItem(inventoryItem);
         rollValue = data.provablyFair.roll;
         rollHash = data.provablyFair.rollHash;
@@ -562,11 +577,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         setClientSeedInput(data.provablyFair.clientSeed);
         setNonce(data.provablyFair.nonce + 1);
       } catch (error) {
-        console.error('Failed to open case', error);
+        const status = typeof (error as { status?: unknown })?.status === 'number'
+          ? (error as { status: number }).status
+          : 'unknown';
+        const rawMessage = error instanceof Error ? error.message : 'OPEN_FAILED: Unable to open case.';
+        const readableMessage = rawMessage.includes(':') ? rawMessage.split(':').slice(1).join(':').trim() : rawMessage;
+        const errorCode = rawMessage.includes(':') ? rawMessage.split(':')[0] : 'OPEN_FAILED';
+
+        console.error('Failed to open case', {
+          status,
+          code: errorCode,
+          message: readableMessage,
+          boxId: box.id
+        });
         setIsSpinning(false);
         setIsBoxPreviewVisible(true);
         setIsBoxPreviewFading(false);
-        alert('Unable to open case. Please try again.');
+        setSpinFeedbackMessage(readableMessage || 'Unable to open case.');
+        alert(readableMessage || 'Unable to open case.');
         return;
       }
     }
@@ -887,20 +915,27 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       ) : isFree ? (
                         'Free Spin'
                       ) : (
-                        <span className="inline-flex items-center gap-2">
-                          Open for
-                          {caseCurrencyType === 'XP' ? (
-                            <span className="inline-flex items-center gap-1 text-white">
-                              <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                              <span>{currentCaseXpPrice.toLocaleString()}</span>
+                        <span className="inline-flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                          <span className="inline-flex items-center gap-2">
+                            Open for
+                            {caseCurrencyType === 'XP' ? (
+                              <span className="inline-flex items-center gap-1 text-white">
+                                <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+                                <span>{currentCaseXpPrice.toLocaleString()}</span>
+                              </span>
+                            ) : (
+                              <CoinAmount
+                                amount={toCoins(box!.price, PRICE_UNIT_MODE)}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="text-white"
+                                iconClassName="w-4 h-4"
+                              />
+                            )}
+                          </span>
+                          {previewTotalXp > 0 && (
+                            <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-200">
+                              +{previewTotalXp.toLocaleString()} XP
                             </span>
-                          ) : (
-                            <CoinAmount
-                              amount={toCoins(box!.price, PRICE_UNIT_MODE)}
-                              formatOptions={{ maximumFractionDigits: 0 }}
-                              className="text-white"
-                              iconClassName="w-4 h-4"
-                            />
                           )}
                         </span>
                       )}

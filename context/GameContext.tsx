@@ -184,6 +184,10 @@ const clearPendingEmailVerification = () => {
 interface BonusSettings {
   xpPer100Coins: number;
   xpPerCaseOpen: number;
+  xpPer100CoinsWagered: number;
+  xpPerCaseOpened: number;
+  baseXpBonus: number;
+  xpMultiplier: number;
   levelBaseXp: number;
   levelXpMultiplier: number;
   rakebackUnlockLevel: number;
@@ -195,6 +199,10 @@ interface BonusSettings {
 const DEFAULT_BONUS_SETTINGS: BonusSettings = {
   xpPer100Coins: 25,
   xpPerCaseOpen: 15,
+  xpPer100CoinsWagered: 25,
+  xpPerCaseOpened: 15,
+  baseXpBonus: 0,
+  xpMultiplier: 1,
   levelBaseXp: 200,
   levelXpMultiplier: 1.12,
   rakebackUnlockLevel: 6,
@@ -238,8 +246,12 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
 };
 
 const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings => ({
-  xpPer100Coins: Math.max(0, Number(settings.xpPer100Coins) || 0),
-  xpPerCaseOpen: Math.max(0, Number(settings.xpPerCaseOpen) || 0),
+  xpPer100Coins: Math.max(0, Number(settings.xpPer100Coins) || Number(settings.xpPer100CoinsWagered) || 0),
+  xpPerCaseOpen: Math.max(0, Number(settings.xpPerCaseOpen) || Number(settings.xpPerCaseOpened) || 0),
+  xpPer100CoinsWagered: Math.max(0, Number(settings.xpPer100CoinsWagered) || Number(settings.xpPer100Coins) || 0),
+  xpPerCaseOpened: Math.max(0, Number(settings.xpPerCaseOpened) || Number(settings.xpPerCaseOpen) || 0),
+  baseXpBonus: Math.max(0, Number(settings.baseXpBonus) || 0),
+  xpMultiplier: Math.max(0, Number(settings.xpMultiplier) || 1),
   levelBaseXp: Math.max(1, Number(settings.levelBaseXp) || DEFAULT_BONUS_SETTINGS.levelBaseXp),
   levelXpMultiplier: Math.max(1, Number(settings.levelXpMultiplier) || DEFAULT_BONUS_SETTINGS.levelXpMultiplier),
   rakebackUnlockLevel: Math.max(1, Number(settings.rakebackUnlockLevel) || DEFAULT_BONUS_SETTINGS.rakebackUnlockLevel),
@@ -489,6 +501,7 @@ interface GameContextType {
   setView: (view: ViewState) => void;
   addBalance: (amount: number) => void;
   syncBalance: (amount: number) => void;
+  syncXpBalance: (amount: number) => void;
   deductBalance: (amount: number, options?: { trackRewards?: boolean }) => boolean;
   addToInventory: (item: CaseItem, provenance?: InventoryProvenance) => InventoryItem;
   addInventoryItemFromServer: (item: InventoryItem) => void;
@@ -1543,10 +1556,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateBonusSettings = (settings: BonusSettings) => {
     const normalized = normalizeBonusSettings(settings);
+    const payload = {
+      ...normalized,
+      xpPer100Coins: normalized.xpPer100CoinsWagered,
+      xpPerCaseOpen: normalized.xpPerCaseOpened
+    };
 
-    setBonusSettings(normalized);
+    setBonusSettings(payload);
     const bonusSettingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC);
-    void setDoc(bonusSettingsRef, normalized, { merge: true }).catch((error) => {
+    void setDoc(bonusSettingsRef, payload, { merge: true }).catch((error) => {
       console.error('Failed to save bonus settings to Firebase', error);
     });
   };
@@ -1851,6 +1869,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const syncBalance = (amount: number) => {
     setBalance(amount);
     setUser(prev => ({ ...prev, balance: amount }));
+  };
+
+  const syncXpBalance = (amount: number) => {
+    const normalized = Math.max(0, Math.floor(Number(amount) || 0));
+    setUser(prev => ({ ...prev, xpBalance: normalized, xp: normalized }));
+    setUsers(prev => prev.map(u => u.id === user.id ? { ...u, xpBalance: normalized, xp: normalized } : u));
   };
 
   const deductBalance = (amount: number, options?: { trackRewards?: boolean }): boolean => {
@@ -2762,6 +2786,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setView,
       addBalance,
       syncBalance,
+      syncXpBalance,
       deductBalance,
       addToInventory,
       addInventoryItemFromServer,

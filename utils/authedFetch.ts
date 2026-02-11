@@ -14,8 +14,19 @@ export const authedFetch = async <T,>(url: string, options: RequestInit = {}): P
 
   const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || 'Request failed');
+    let payload: { error?: string; message?: string } | null = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+
+    const errorCode = payload?.error || 'REQUEST_FAILED';
+    const message = payload?.message || `Request failed with status ${response.status}`;
+    const error = new Error(`${errorCode}: ${message}`) as Error & { status?: number; code?: string };
+    error.status = response.status;
+    error.code = errorCode;
+    throw error;
   }
 
   return response.json() as Promise<T>;
