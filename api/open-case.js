@@ -18,6 +18,18 @@ const toFiniteNumber = (value, fallback = 0) => {
   return Number.isFinite(numeric) ? numeric : fallback;
 };
 
+const toSafeNonNegativeNumber = (value, fallback = 0) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(0, numeric);
+};
+
+const toSafeMultiplier = (value, fallback = 1) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(0, numeric);
+};
+
 const fail = (status, error, message, details = {}) => {
   throw { status, error, message, ...details };
 };
@@ -133,19 +145,33 @@ export default async function handler(req, res) {
       const currentCoins = hasCoins ? toFiniteNumber(rawCoins, 0) : (userSnap.exists ? 0 : STARTER_COINS);
       const currentXp = Math.max(0, Math.floor(toFiniteNumber(userData.xpBalance ?? userData.xp, 0)));
       const bonusSettings = bonusSettingsSnap.exists ? bonusSettingsSnap.data() ?? {} : {};
-      const xpPer100CoinsWagered = Math.max(0, toFiniteNumber(bonusSettings.xpPer100CoinsWagered ?? bonusSettings.xpPer100Coins, 0));
-      const xpPerCaseOpened = Math.max(0, toFiniteNumber(bonusSettings.xpPerCaseOpened ?? bonusSettings.xpPerCaseOpen, 0));
-      const baseXpBonus = Math.max(0, toFiniteNumber(bonusSettings.baseXpBonus, 0));
-      const xpMultiplier = Math.max(0, toFiniteNumber(bonusSettings.xpMultiplier, 1));
+      const openCaseRule = bonusSettings?.earnRules?.openCase ?? {};
+      const xpPer100CoinsWagered = toSafeNonNegativeNumber(
+        bonusSettings.xpPer100CoinsWagered
+          ?? bonusSettings.xpPer100Coins
+          ?? openCaseRule.percentPer100Coins,
+        0
+      );
+      const xpPerCaseOpened = toSafeNonNegativeNumber(
+        bonusSettings.xpPerCaseOpened
+          ?? bonusSettings.xpPerCaseOpen
+          ?? openCaseRule.fixedXp,
+        0
+      );
+      const baseXpBonus = toSafeNonNegativeNumber(bonusSettings.baseXpBonus, 0);
+      const xpMultiplier = toSafeMultiplier(bonusSettings.xpMultiplier, 1);
+      const allowXpCaseAward = bonusSettings.awardXpForXpCases === true
+        || openCaseRule.allowXpCurrency === true;
       const coinsSpent = !isFree && currencyType === 'COIN' ? price : 0;
       if (!Number.isFinite(coinsSpent)) {
         fail(400, 'INVALID_REQUEST', 'Invalid case price for XP calculation.', { caseId: boxId });
       }
       const xpFromSpend = Math.floor((Math.max(0, coinsSpent) / 100) * xpPer100CoinsWagered);
-      const xpFromOpen = !isFree ? xpPerCaseOpened : 0;
+      const shouldAwardForOpenType = currencyType === 'COIN' || allowXpCaseAward;
+      const xpFromOpen = !isFree && shouldAwardForOpenType ? xpPerCaseOpened : 0;
       const shouldAwardForUser = userData.isAdmin !== true;
-      const totalXpAward = shouldAwardForUser
-        ? Math.max(0, Math.floor((xpFromSpend + xpFromOpen + baseXpBonus) * Math.max(0, xpMultiplier)))
+      const totalXpAward = shouldAwardForUser && shouldAwardForOpenType
+        ? Math.max(0, Math.floor((xpFromSpend + xpFromOpen + baseXpBonus) * xpMultiplier))
         : 0;
 
       if (!userSnap.exists) {
@@ -184,24 +210,25 @@ export default async function handler(req, res) {
       const newCoins = currencyType === 'COIN' ? currentCoins - price : currentCoins;
       const spentXpBalance = currencyType === 'XP' ? currentXp - priceXP : currentXp;
       const newXpBalance = Math.max(0, Math.floor(spentXpBalance + totalXpAward));
+      const updatedXpBalance = Math.max(0, Math.floor(currentXp + totalXpAward));
 
       const nextUserPatch = currencyType === 'XP'
-        ? { xpBalance: newXpBalance, xp: newXpBalance }
+        ? { xpBalance: newXpBalance }
         : { coins: newCoins };
+
+      transaction.set(userRef, nextUserPatch, { merge: true });
 
       if (totalXpAward > 0) {
         const dateKey = new Date().toISOString().slice(0, 10);
-        const dailyCounters = { ...(userData.xpDailyEarned ?? {}) };
-        dailyCounters[dateKey] = Math.max(0, Math.floor(Number(dailyCounters[dateKey] ?? 0))) + totalXpAward;
-        nextUserPatch.xpBalance = newXpBalance;
-        nextUserPatch.xp = newXpBalance;
-        nextUserPatch.xpEarnedLifetime = Math.max(0, Math.floor(Number(userData.xpEarnedLifetime ?? 0))) + totalXpAward;
-        nextUserPatch.xpDailyEarned = dailyCounters;
-        nextUserPatch.lastXpAwardAction = 'openCase';
-        nextUserPatch.lastXpAwardAt = admin.firestore.FieldValue.serverTimestamp();
+        transaction.update(userRef, {
+          xpBalance: admin.firestore.FieldValue.increment(totalXpAward),
+          xpEarnedLifetime: admin.firestore.FieldValue.increment(totalXpAward),
+          [`xpDailyEarned.${dateKey}`]: admin.firestore.FieldValue.increment(totalXpAward),
+          lastXpAwardAction: 'openCase',
+          lastXpAwardAt: admin.firestore.FieldValue.serverTimestamp()
+        });
       }
 
-      transaction.set(userRef, nextUserPatch, { merge: true });
       transaction.set(provablyRef, {
         serverSeed,
         serverSeedHash,
@@ -257,11 +284,10 @@ export default async function handler(req, res) {
 
       if (totalXpAward > 0) {
         transaction.set(xpLedgerRef, {
-          type: 'EARN',
-          source: 'CASE_OPEN',
+          type: 'CASE_OPEN',
           operationId,
           coinsSpent,
-          xpAwarded: totalXpAward,
+          xpAward: totalXpAward,
           caseId: boxId,
           createdAt: obtainedAt
         }, { merge: true });
@@ -280,9 +306,17 @@ export default async function handler(req, res) {
           size: selectedSize || undefined
         },
         sellBackRate,
+        newCoinBalance: newCoins,
         newCoins,
-        newXpBalance,
+        newXpBalance: currencyType === 'XP' ? newXpBalance : updatedXpBalance,
         xpAwarded: totalXpAward,
+        xpSettingsUsed: {
+          xpPer100: xpPer100CoinsWagered,
+          xpPerOpen: xpPerCaseOpened,
+          baseXpBonus,
+          xpMultiplier,
+          allowXpCaseAward
+        },
         inventoryId: inventoryRef.id,
         openId: openRef.id,
         operationId,
@@ -316,11 +350,13 @@ export default async function handler(req, res) {
         uid: decoded.uid,
         operationId,
         boxId,
+        currencyType,
         coinsSpent,
         xpPer100CoinsWagered,
         xpPerCaseOpened,
         baseXpBonus,
         xpMultiplier,
+        allowXpCaseAward,
         xpAwarded: totalXpAward
       });
     });
