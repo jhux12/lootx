@@ -387,7 +387,8 @@ export const AdminPanel: React.FC = () => {
       shippingCoinEnabled: stripeSettings.shippingCoinEnabled,
       shippingCoinCostCoins: stripeSettings.shippingCoinCostCoins,
       caseLabPublishFeeCoins: stripeSettings.caseLabPublishFeeCoins,
-      caseLabSellBackPercent: stripeSettings.caseLabSellBackPercent
+      caseLabSellBackPercent: stripeSettings.caseLabSellBackPercent,
+      caseLabVisibleBoxIds: stripeSettings.caseLabVisibleBoxIds
   });
   const [stripeSettingsNotice, setStripeSettingsNotice] = useState(false);
   const [isEditingBalance, setIsEditingBalance] = useState(false);
@@ -532,6 +533,10 @@ export const AdminPanel: React.FC = () => {
           .filter((box) => box.isUserCreated)
           .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }, [boxes]);
+  const selectableCaseLabBoxes = useMemo(
+      () => boxes.filter((box) => !box.isUserCreated && box.items.length > 0),
+      [boxes]
+  );
   const xpBoxes = useMemo(
       () => boxes.filter((box) => (box.currencyType ?? 'COIN') === 'XP'),
       [boxes]
@@ -756,7 +761,8 @@ export const AdminPanel: React.FC = () => {
           shippingCoinEnabled: stripeSettings.shippingCoinEnabled,
           shippingCoinCostCoins: stripeSettings.shippingCoinCostCoins,
           caseLabPublishFeeCoins: stripeSettings.caseLabPublishFeeCoins,
-          caseLabSellBackPercent: stripeSettings.caseLabSellBackPercent
+          caseLabSellBackPercent: stripeSettings.caseLabSellBackPercent,
+          caseLabVisibleBoxIds: stripeSettings.caseLabVisibleBoxIds
       });
   }, [stripeSettings]);
 
@@ -2077,7 +2083,8 @@ export const AdminPanel: React.FC = () => {
           shippingCoinEnabled: stripeSettingsDraft.shippingCoinEnabled,
           shippingCoinCostCoins: Math.max(0, Math.round(Number(stripeSettingsDraft.shippingCoinCostCoins) || 0)),
           caseLabPublishFeeCoins: Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabPublishFeeCoins) || 0)),
-          caseLabSellBackPercent: Math.min(100, Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabSellBackPercent) || 0)))
+          caseLabSellBackPercent: Math.min(100, Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabSellBackPercent) || 0))),
+          caseLabVisibleBoxIds: Array.from(new Set(stripeSettingsDraft.caseLabVisibleBoxIds))
       });
       setStripeSettingsNotice(true);
       window.setTimeout(() => setStripeSettingsNotice(false), 3000);
@@ -4755,6 +4762,52 @@ export const AdminPanel: React.FC = () => {
                                     Percent of item value paid on Case Lab sell backs.
                                 </p>
                             </div>
+                        </div>
+                        <div className="mt-4">
+                            <div className="flex flex-col gap-1">
+                                <label className="block text-xs font-bold text-gray-500 uppercase">Available source boxes</label>
+                                <p className="text-xs text-gray-500">
+                                    Choose exactly which boxes can be used in Case Lab (for item picking and cover images).
+                                </p>
+                            </div>
+                            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                {selectableCaseLabBoxes.map((box) => {
+                                    const checked = stripeSettingsDraft.caseLabVisibleBoxIds.includes(box.id);
+                                    return (
+                                        <label
+                                            key={box.id}
+                                            className="flex items-center gap-3 rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200"
+                                        >
+                                            <Input
+                                                type="checkbox"
+                                                checked={checked}
+                                                onChange={(event) =>
+                                                    setStripeSettingsDraft((prev) => ({
+                                                        ...prev,
+                                                        caseLabVisibleBoxIds: event.target.checked
+                                                            ? [...prev.caseLabVisibleBoxIds, box.id]
+                                                            : prev.caseLabVisibleBoxIds.filter((id) => id !== box.id)
+                                                    }))
+                                                }
+                                                className="h-4 w-4 rounded border-gray-700 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
+                                            />
+                                            <img src={box.image} alt={box.name} className="h-8 w-8 rounded object-cover bg-black/30" />
+                                            <div className="min-w-0">
+                                                <p className="truncate font-semibold text-white">{box.name}</p>
+                                                <p className="text-[11px] text-gray-400">{box.items.length} items</p>
+                                            </div>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                            {selectableCaseLabBoxes.length === 0 && (
+                                <div className="mt-3 rounded-lg border border-dashed border-gray-700 px-4 py-3 text-xs text-gray-500">
+                                    No eligible admin boxes are available yet.
+                                </div>
+                            )}
+                            <p className="mt-2 text-xs text-gray-500">
+                                If nothing is selected, Case Lab will continue showing all eligible boxes.
+                            </p>
                         </div>
                         <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <span className="text-xs text-gray-500">

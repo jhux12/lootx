@@ -120,6 +120,7 @@ export interface StripeSettings {
   stripeShippingProductId: string;
   caseLabPublishFeeCoins: number;
   caseLabSellBackPercent: number;
+  caseLabVisibleBoxIds: string[];
 }
 
 export interface InventoryItem extends CaseItem {
