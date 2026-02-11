@@ -1,13 +1,6 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
-import { applyXpAwardInTransaction, computeXpAward, getXpSettings } from './_lib/xp.js';
-
-const getSellBackValue = (price, rate) => {
-  const rawValue = price * rate;
-  if (rawValue <= 0) return 0;
-  const roundedValue = Math.round(rawValue);
-  return Math.min(price, Math.max(1, roundedValue));
-};
+import { computeXpAward, getXpSettings } from './_lib/xp.js';
 
 const isXpPurchasedInventoryItem = (inventoryItem = {}) => (
   inventoryItem.source === 'xpShop'
@@ -20,6 +13,43 @@ const toFiniteNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const SELL_BACK_RATE = 0.8;
+
+const buildError = (status, error, message, details = {}) => ({
+  status,
+  error,
+  message,
+  details
+});
+
+const isItemSellableStatus = (status) => {
+  const normalized = String(status ?? 'available').toLowerCase();
+  return normalized === 'available';
+};
+
+const isXpItem = (inventoryItem = {}) => (
+  inventoryItem.xpPurchased === true
+  || inventoryItem.source === 'XP_SHOP'
+  || inventoryItem.source === 'xpShop'
+  || isXpPurchasedInventoryItem(inventoryItem)
+);
+
+const logSellError = ({ userId, itemId, reasonCode, item = {}, statusCode }) => {
+  console.error('sell-item rejected', {
+    statusCode,
+    reasonCode,
+    userId,
+    itemId,
+    itemStatus: item.status,
+    redeemable: item.redeemable,
+    redeemableForCoins: item.redeemableForCoins,
+    coinValue: item.coinValue,
+    value: item.value,
+    xpPurchased: item.xpPurchased,
+    source: item.source
+  });
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -29,10 +59,15 @@ export default async function handler(req, res) {
   try {
     const token = getBearerToken(req);
     if (!token) {
-      return sendJson(res, 401, { error: 'Missing bearer token' });
+      return sendJson(res, 401, { error: 'UNAUTHENTICATED', message: 'Missing bearer token.' });
     }
 
-    const decoded = await adminAuth.verifyIdToken(token);
+    let decoded;
+    try {
+      decoded = await adminAuth.verifyIdToken(token);
+    } catch (verifyError) {
+      return sendJson(res, 401, { error: 'UNAUTHENTICATED', message: 'Invalid authentication token.' });
+    }
     const body = await readJsonBody(req);
     const inventoryId = body?.inventoryId;
 
@@ -46,61 +81,120 @@ export default async function handler(req, res) {
     let responsePayload;
 
     await firestore.runTransaction(async (transaction) => {
-      const [userSnap, inventorySnap] = await Promise.all([
-        transaction.get(userRef),
-        transaction.get(inventoryRef)
-      ]);
+      const userSnap = await transaction.get(userRef);
+      const inventorySnap = await transaction.get(inventoryRef);
 
       if (!inventorySnap.exists) {
-        throw { status: 404, error: 'Inventory item not found' };
+        throw buildError(404, 'ITEM_NOT_FOUND', 'Inventory item not found.', {
+          reasonCode: 'ITEM_NOT_FOUND',
+          userId: decoded.uid,
+          itemId: inventoryId
+        });
       }
 
       const inventoryItem = inventorySnap.data() ?? {};
-      const status = inventoryItem.status ?? 'available';
-      if (status !== 'available') {
-        throw { status: 400, error: 'Item is not available for sale' };
-      }
-      if (inventoryItem.redeemable === false) {
-        throw { status: 400, error: 'Item is not redeemable' };
-      }
-      if (isXpPurchasedInventoryItem(inventoryItem)) {
-        throw { status: 400, error: 'XP reward items cannot be sold' };
+      if (inventoryItem.userId && inventoryItem.userId !== decoded.uid) {
+        throw buildError(403, 'FORBIDDEN', 'Item does not belong to this user.', {
+          reasonCode: 'ITEM_OWNERSHIP_MISMATCH',
+          userId: decoded.uid,
+          itemId: inventoryId,
+          item: inventoryItem
+        });
       }
 
-      const rawSellBackRate = toFiniteNumber(inventoryItem.sellBackRate, 0.8);
-      const sellBackRate = Math.min(1, Math.max(0, rawSellBackRate));
-      const itemValue = toFiniteNumber(inventoryItem.value ?? inventoryItem.price ?? 0, 0);
-      if (itemValue <= 0) {
-        throw { status: 400, error: 'Item has invalid sell-back value' };
+      if (!isItemSellableStatus(inventoryItem.status)) {
+        throw buildError(409, 'NOT_SELLABLE', 'Item cannot be sold in its current status.', {
+          reasonCode: 'INVALID_STATUS',
+          userId: decoded.uid,
+          itemId: inventoryId,
+          item: inventoryItem
+        });
       }
-      const sellBackValue = getSellBackValue(itemValue, sellBackRate);
-      if (!Number.isFinite(sellBackValue)) {
-        throw { status: 500, error: 'Unable to calculate sell-back value' };
+
+      const isRedeemable = inventoryItem.redeemableForCoins ?? inventoryItem.redeemable;
+      if (isRedeemable === false) {
+        throw buildError(409, 'NOT_SELLABLE', 'Item is not redeemable for coins.', {
+          reasonCode: 'NOT_REDEEMABLE',
+          userId: decoded.uid,
+          itemId: inventoryId,
+          item: inventoryItem
+        });
       }
+
+      if (isXpItem(inventoryItem)) {
+        throw buildError(409, 'NOT_SELLABLE', 'XP items cannot be sold back for coins.', {
+          reasonCode: 'XP_ITEM',
+          userId: decoded.uid,
+          itemId: inventoryId,
+          item: inventoryItem
+        });
+      }
+
+      const coinValue = toFiniteNumber(inventoryItem.coinValue ?? inventoryItem.value ?? inventoryItem.price, NaN);
+      if (!Number.isFinite(coinValue) || coinValue <= 0) {
+        throw buildError(422, 'INVALID_VALUE', 'Item coin value is missing or invalid.', {
+          reasonCode: 'INVALID_COIN_VALUE',
+          userId: decoded.uid,
+          itemId: inventoryId,
+          item: inventoryItem
+        });
+      }
+      const creditCoins = Math.floor(coinValue * SELL_BACK_RATE);
 
       const currentCoins = toFiniteNumber(userSnap.data()?.coins ?? userSnap.data()?.balance ?? 0, 0);
-      const newCoins = currentCoins + sellBackValue;
-
-      if (!userSnap.exists) {
-        transaction.set(userRef, { coins: 0, createdAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
-      }
-
-      transaction.set(userRef, { coins: newCoins }, { merge: true });
-      transaction.set(inventoryRef, { status: 'sold' }, { merge: true });
+      const newCoins = currentCoins + creditCoins;
 
       const settings = await getXpSettings(transaction);
-      if (userSnap.data()?.isAdmin !== true || settings.exclusions?.adminOrTestSpinsEarnXp === true) {
-        const xpAmount = computeXpAward({
-          rule: settings.earnRules?.sellItem,
-          amountCoins: sellBackValue,
-          bonusRules: settings.bonusRules
-        });
-        await applyXpAwardInTransaction({ transaction, userRef, xpAmount, actionKey: 'sellItem' });
+      const userData = userSnap.exists ? userSnap.data() ?? {} : {};
+      const xpAmount =
+        (userData.isAdmin !== true || settings.exclusions?.adminOrTestSpinsEarnXp === true)
+          ? computeXpAward({
+            rule: settings.earnRules?.sellItem,
+            amountCoins: creditCoins,
+            bonusRules: settings.bonusRules
+          })
+          : 0;
+
+      if (!userSnap.exists) {
+        transaction.set(userRef, {
+          coins: 0,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
       }
+
+      const userPatch = { coins: newCoins };
+      if (xpAmount > 0) {
+        const currentXp = Math.max(0, Math.floor(toFiniteNumber(userData.xpBalance ?? userData.xp, 0)));
+        const nextXp = currentXp + xpAmount;
+        const dateKey = new Date().toISOString().slice(0, 10);
+        const dailyCounters = { ...(userData.xpDailyEarned ?? {}) };
+        dailyCounters[dateKey] = Math.max(0, Math.floor(toFiniteNumber(dailyCounters[dateKey], 0))) + xpAmount;
+
+        userPatch.xpBalance = nextXp;
+        userPatch.xp = nextXp;
+        userPatch.xpEarnedLifetime = Math.max(0, Math.floor(toFiniteNumber(userData.xpEarnedLifetime, 0))) + xpAmount;
+        userPatch.xpDailyEarned = dailyCounters;
+        userPatch.lastXpAwardAction = 'sellItem';
+        userPatch.lastXpAwardAt = admin.firestore.FieldValue.serverTimestamp();
+      }
+
+      const transactionRef = userRef.collection('transactions').doc();
+      transaction.set(userRef, userPatch, { merge: true });
+      transaction.set(inventoryRef, {
+        status: 'sold',
+        soldAt: admin.firestore.FieldValue.serverTimestamp(),
+        soldForCoins: creditCoins
+      }, { merge: true });
+      transaction.set(transactionRef, {
+        type: 'SELL_BACK',
+        itemId: inventoryRef.id,
+        creditCoins,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
 
       responsePayload = {
         ok: true,
-        soldValue: sellBackValue,
+        creditCoins,
         newCoins
       };
     });
@@ -109,9 +203,23 @@ export default async function handler(req, res) {
   } catch (error) {
     const status = error?.status;
     if (status) {
-      return sendJson(res, status, { error: error.error || 'Unable to sell item' });
+      logSellError({
+        userId: error?.details?.userId,
+        itemId: error?.details?.itemId,
+        reasonCode: error?.details?.reasonCode || error?.error || 'SELL_REJECTED',
+        item: error?.details?.item,
+        statusCode: status
+      });
+      return sendJson(res, status, {
+        error: error.error || 'SELL_FAILED',
+        message: error.message || 'Unable to sell item',
+        reasonCode: error?.details?.reasonCode
+      });
     }
     console.error('sell-item error', error);
-    return sendJson(res, 500, { error: 'Unable to sell item' });
+    return sendJson(res, 500, {
+      error: 'SELL_FAILED',
+      message: 'Unexpected error while selling item.'
+    });
   }
 }
