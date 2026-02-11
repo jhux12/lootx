@@ -86,7 +86,7 @@ export const SiteFooter: React.FC = () => {
             By accessing this site, you confirm that you are over 18 years old.
           </p>
         </div>
-        <p className="text-xs text-gray-600">&copy; 2024 LootX. All rights reserved.</p>
+        <p className="text-xs text-gray-600">&copy; 2026 Pullz.gg. All rights reserved.</p>
       </div>
     </footer>
   );
