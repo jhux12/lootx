@@ -121,6 +121,7 @@ export default async function handler(req, res) {
       const sellBackRate = Number.isFinite(rawSellBackRate)
         ? Math.min(1, Math.max(0, rawSellBackRate))
         : 0.8;
+      const appliedSellBackRate = isFree ? 1 : sellBackRate;
       const prizes = Array.isArray(boxData.items) ? boxData.items : (Array.isArray(boxData.prizes) ? boxData.prizes : []);
       if (!prizes.length) {
         fail(400, 'INVALID_REQUEST', 'This case has no configured prizes.', { caseId: boxId });
@@ -250,7 +251,7 @@ export default async function handler(req, res) {
         rarity: prize.rarity ?? 'common',
         status: 'available',
         obtainedAt,
-        sellBackRate,
+        sellBackRate: appliedSellBackRate,
         redeemable: prize.redeemable ?? true
       };
       if (selectedSize) {
@@ -307,7 +308,7 @@ export default async function handler(req, res) {
           redeemable: prize.redeemable ?? true,
           size: selectedSize || undefined
         },
-        sellBackRate,
+        sellBackRate: appliedSellBackRate,
         newCoinBalance: newCoins,
         newCoins,
         newXpBalance: currencyType === 'XP' ? newXpBalance : updatedXpBalance,
