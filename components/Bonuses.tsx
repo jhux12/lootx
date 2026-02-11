@@ -419,6 +419,9 @@ export const Bonuses: React.FC = () => {
                   const hasStock = item.stock == null || item.stock > 0;
                   const canAfford = xpBalance >= item.xpCost;
                   const needMore = Math.max(0, item.xpCost - xpBalance);
+                  const isRakebackUnlockItem = item.metadata?.unlockRakeback === true;
+                  const alreadyPurchased = isRakebackUnlockItem && rakebackUnlocked;
+                  const canRedeem = hasStock && canAfford && !alreadyPurchased;
                   return (
                     <div key={item.id} className="bg-[#131720] border border-gray-800 rounded-xl p-4 flex flex-col">
                       {item.imageUrl ? (
@@ -438,11 +441,19 @@ export const Bonuses: React.FC = () => {
                         {item.stock != null ? <span className="text-xs text-gray-500">{Math.max(0, item.stock)} left</span> : <span className="text-xs text-gray-500">Unlimited</span>}
                       </div>
                       <button
-                        disabled={!hasStock || !canAfford}
+                        disabled={!canRedeem}
                         onClick={() => setSelectedItem(item)}
-                        className={`mt-4 w-full py-2 rounded-lg font-bold text-sm ${hasStock && canAfford ? 'bg-green-500 text-black hover:bg-green-400' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
+                        className={`mt-4 w-full py-2 rounded-lg font-bold text-sm ${canRedeem ? 'bg-green-500 text-black hover:bg-green-400' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
                       >
-                        {hasStock ? (canAfford ? ((item.fulfillmentType === 'XP_BOX' || item.fulfillmentType === 'XP_CASE_ENTRY') ? 'View Box' : 'Redeem') : `Need ${needMore} more XP`) : 'Out of stock'}
+                        {alreadyPurchased
+                          ? 'already purchased'
+                          : hasStock
+                            ? canAfford
+                              ? (item.fulfillmentType === 'XP_BOX' || item.fulfillmentType === 'XP_CASE_ENTRY')
+                                ? 'View Box'
+                                : 'Redeem'
+                              : `Need ${needMore} more XP`
+                            : 'Out of stock'}
                       </button>
                     </div>
                   );
