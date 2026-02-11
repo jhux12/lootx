@@ -45,6 +45,8 @@ interface SpinResolvedItem {
   status: 'pending_decision';
 }
 
+type ItemDecision = 'kept' | 'sold';
+
 const CARD_WIDTH = 160;
 const GAP_WIDTH = 16;
 const ITEM_WIDTH = CARD_WIDTH + GAP_WIDTH;
@@ -132,7 +134,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [showWinModal, setShowWinModal] = useState(false);
   const [spinCount, setSpinCount] = useState<1 | 2 | 3 | 4>(1);
   const [resolvedItems, setResolvedItems] = useState<SpinResolvedItem[]>([]);
+  const [laneReels, setLaneReels] = useState<CaseItem[][]>([]);
   const [itemActionLoading, setItemActionLoading] = useState(false);
+  const [itemDecisions, setItemDecisions] = useState<Record<string, ItemDecision>>({});
+  const [itemPending, setItemPending] = useState<Record<string, boolean>>({});
   const [sellOfferGenerated, setSellOfferGenerated] = useState(false);
   const [isGeneratingSellOffer, setIsGeneratingSellOffer] = useState(false);
   const [isSellingItem, setIsSellingItem] = useState(false);
@@ -164,6 +169,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const bodyOverflowRef = useRef<string>('');
   const sellOfferTimerRef = useRef<number | null>(null);
+  const reviewAutoCloseTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
@@ -201,6 +207,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   useEffect(() => () => {
     if (sellOfferTimerRef.current) {
       window.clearTimeout(sellOfferTimerRef.current);
+    }
+    if (reviewAutoCloseTimerRef.current) {
+      window.clearTimeout(reviewAutoCloseTimerRef.current);
     }
   }, []);
   
@@ -450,6 +459,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setWonItem(null);
     setWonInventoryItem(null);
     setResolvedItems([]);
+    setItemDecisions({});
+    setItemPending({});
+    if (reviewAutoCloseTimerRef.current) {
+      window.clearTimeout(reviewAutoCloseTimerRef.current);
+      reviewAutoCloseTimerRef.current = null;
+    }
 
     try {
       const clientRequestId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -479,7 +494,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return generateReel(winner, items, true);
       });
 
-      setResolvedItems(data.results);
+      const safeResults = Array.isArray(data.results) ? data.results : [];
+      setResolvedItems(safeResults);
+      setLaneReels(lanes);
       setReelItems(lanes[0] ?? reelItems);
       syncBalance(Number(data.newBalance ?? 0));
 
@@ -557,23 +574,40 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   };
 
   const closeWinModal = () => {
+    if (reviewAutoCloseTimerRef.current) {
+      window.clearTimeout(reviewAutoCloseTimerRef.current);
+      reviewAutoCloseTimerRef.current = null;
+    }
     setShowWinModal(false);
     setWonInventoryItem(null);
     setSellOfferGenerated(false);
     setIsGeneratingSellOffer(false);
     setIsSellingItem(false);
     setItemActionLoading(false);
+    setItemPending({});
+    setItemDecisions({});
   };
 
   const resolveItems = async (mode: 'keep_all' | 'sell_all' | 'single', targetId?: string, action?: 'keep' | 'sell') => {
     if (itemActionLoading || resolvedItems.length === 0) return;
+
+    const unresolvedItems = resolvedItems.filter((item) => !itemDecisions[item.itemId]);
+    const actions = mode === 'single'
+      ? (targetId && action && !itemDecisions[targetId] ? [{ itemId: targetId, action }] : [])
+      : unresolvedItems.map((item) => ({ itemId: item.itemId, action: mode === 'sell_all' ? 'sell' : 'keep' as 'keep' | 'sell' }));
+
+    if (actions.length === 0) return;
+
     setItemActionLoading(true);
+    setItemPending((prev) => {
+      const next = { ...prev };
+      actions.forEach((entry) => {
+        next[entry.itemId] = true;
+      });
+      return next;
+    });
 
     try {
-      const actions = mode === 'single'
-        ? [{ itemId: targetId as string, action: action as 'keep' | 'sell' }]
-        : resolvedItems.map((item) => ({ itemId: item.itemId, action: mode === 'sell_all' ? 'sell' : 'keep' as 'keep' | 'sell' }));
-
       const clientRequestId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -584,15 +618,30 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       });
 
       syncBalance(Number(response.updatedBalance ?? balance));
-      const resolvedIds = new Set(actions.map((entry) => entry.itemId));
-      setResolvedItems((prev) => prev.filter((item) => !resolvedIds.has(item.itemId)));
-      if (resolvedItems.length === actions.length) {
-        closeWinModal();
+
+      const decisionPatch: Record<string, ItemDecision> = {};
+      actions.forEach((entry) => {
+        decisionPatch[entry.itemId] = entry.action === 'sell' ? 'sold' : 'kept';
+      });
+      setItemDecisions((prev) => ({ ...prev, ...decisionPatch }));
+
+      const decisionCount = Object.keys({ ...itemDecisions, ...decisionPatch }).length;
+      if (decisionCount >= resolvedItems.length) {
+        reviewAutoCloseTimerRef.current = window.setTimeout(() => {
+          closeWinModal();
+        }, 800);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to resolve items.';
       alert(message.includes(':') ? message.split(':').slice(1).join(':').trim() : message);
     } finally {
+      setItemPending((prev) => {
+        const next = { ...prev };
+        actions.forEach((entry) => {
+          delete next[entry.itemId];
+        });
+        return next;
+      });
       setItemActionLoading(false);
     }
   };
@@ -671,7 +720,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
             {/* Spinner Window */}
-            <div className="relative h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+            <div
+              className="relative flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"
+              style={{ minHeight: spinCount === 4 ? '240px' : '256px', maxHeight: spinCount === 4 ? '44vh' : '56vh' }}
+            >
                 {isBoxPreviewVisible && (
                   <div
                     className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
@@ -703,27 +755,49 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
 
                 {/* The Moving Reel */}
-                <div className="w-full px-2 sm:px-4 space-y-2">
-                  {Array.from({ length: isSpinning ? Math.max(1, resolvedItems.length || spinCount) : 1 }).map((_, laneIndex) => (
+                {(() => {
+                  const laneCount = isSpinning
+                    ? Math.max(1, resolvedItems.length || spinCount)
+                    : (resolvedItems.length > 0 ? resolvedItems.length : 1);
+                  const useFourLaneGrid = laneCount === 4;
+
+                  return (
                     <div
-                      key={`lane-${laneIndex}`}
-                      ref={(el) => { laneRefs.current[laneIndex] = el; if (laneIndex === 0) scrollContainerRef.current = el; }}
-                      className={`flex px-[50%] will-change-transform ml-[-80px] transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`}
-                      style={{ gap: `${GAP_WIDTH}px`, transform: 'translate3d(0,0,0)' }}
+                      className={`w-full px-2 sm:px-4 ${useFourLaneGrid ? 'grid grid-cols-2 sm:grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3' : 'space-y-2 sm:space-y-3'}`}
+                      style={useFourLaneGrid ? { maxHeight: '44vh' } : undefined}
                     >
-                      {reelItems.map((item, idx) => (
-                        <div
-                          key={`${item.id}-${idx}-${laneIndex}`}
-                          className="relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3 flex flex-col items-center justify-center"
-                          style={{ width: `${CARD_WIDTH}px`, height: `${CARD_WIDTH}px` }}
-                        >
-                          <img src={item.image} alt={item.name} className="relative z-10 w-24 h-24 object-contain mb-2" />
-                          <div className="absolute bottom-0 left-0 right-0 h-1 opacity-50 rounded-b-xl" style={{ backgroundColor: item.color }}></div>
-                        </div>
-                      ))}
+                      {Array.from({ length: laneCount }).map((_, laneIndex) => {
+                        const laneItems = laneReels[laneIndex] ?? reelItems;
+
+                        return (
+                          <div
+                            key={`lane-shell-${laneIndex}`}
+                            className="relative overflow-hidden rounded-xl border border-gray-800/80 bg-[#0f131d]"
+                            style={{ minHeight: useFourLaneGrid ? '96px' : '124px', maxHeight: useFourLaneGrid ? '20vh' : '28vh' }}
+                          >
+                            <span className="absolute left-2 top-2 z-20 rounded-md border border-white/10 bg-black/40 px-1.5 py-0.5 text-[10px] font-semibold text-gray-200">#{laneIndex + 1}</span>
+                            <div className="pointer-events-none absolute inset-y-0 left-1/2 z-20 w-[2px] -translate-x-1/2 bg-cyan-400/70"></div>
+                            <div
+                              ref={(el) => { laneRefs.current[laneIndex] = el; if (laneIndex === 0) scrollContainerRef.current = el; }}
+                              className={`flex px-[50%] will-change-transform ml-[-80px] transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`}
+                              style={{ gap: `${GAP_WIDTH}px`, transform: 'translate3d(0,0,0)' }}
+                            >
+                              {laneItems.map((item, idx) => (
+                                <div
+                                  key={`${item.id}-${idx}-${laneIndex}`}
+                                  className="relative flex-shrink-0 border border-gray-800 rounded-lg bg-[#151a23] p-2 flex items-center justify-center"
+                                  style={{ width: `${CARD_WIDTH}px`, height: useFourLaneGrid ? '90px' : '118px' }}
+                                >
+                                  <img src={item.image} alt={item.name} className="relative z-10 h-12 w-12 sm:h-16 sm:w-16 object-contain" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
             </div>
 
             {/* Action Bar */}
@@ -850,29 +924,75 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         {/* Win Modal Overlay */}
         {showWinModal && resolvedItems.length > 0 && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-3 sm:p-6">
-            <div className="w-full max-w-3xl rounded-2xl border border-gray-700 bg-[#0f1420] p-4 sm:p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg sm:text-xl font-bold text-white">Win Review</h3>
-                <button type="button" className="text-gray-300" onClick={closeWinModal}>Close</button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {resolvedItems.map((item) => (
-                  <div key={item.itemId} className="rounded-xl border border-gray-700 bg-[#131825] p-3">
-                    <img src={item.image} alt={item.name} className="mx-auto h-20 w-20 object-contain" />
-                    <div className="mt-2 text-sm font-semibold text-white truncate">{item.name}</div>
-                    <div className="text-xs text-gray-400 uppercase">{item.rarity}</div>
-                    <div className="text-sm text-emerald-300 mt-1">Sell: {item.sellValueCoins.toLocaleString()} coins</div>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <button disabled={itemActionLoading} onClick={() => void resolveItems('single', item.itemId, 'keep')} className="rounded-md bg-gray-700 px-2 py-2 text-xs text-white disabled:opacity-50">Keep</button>
-                      <button disabled={itemActionLoading} onClick={() => void resolveItems('single', item.itemId, 'sell')} className="rounded-md bg-emerald-500 px-2 py-2 text-xs font-semibold text-black disabled:opacity-50">Sell</button>
-                    </div>
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-2 sm:p-6">
+            <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-b from-[#121a2a] to-[#0b111c] shadow-[0_20px_60px_-30px_rgba(14,165,233,0.45)]">
+              <div className="border-b border-white/10 px-4 py-3 sm:px-5 sm:py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">Win Review</h3>
+                    <p className="text-[11px] sm:text-xs text-gray-400">Choose Keep or Sell for each item.</p>
                   </div>
-                ))}
+                  <button type="button" className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-gray-300" onClick={closeWinModal}>Close</button>
+                </div>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button disabled={itemActionLoading} onClick={() => void resolveItems('keep_all')} className="rounded-lg border border-gray-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{itemActionLoading ? 'Working...' : 'Keep All'}</button>
-                <button disabled={itemActionLoading} onClick={() => void resolveItems('sell_all')} className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-black disabled:opacity-50">{itemActionLoading ? 'Working...' : 'Sell All'}</button>
+
+              <div className="max-h-[58vh] overflow-y-auto px-3 py-3 sm:px-5 sm:py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+                  {resolvedItems.map((item) => {
+                    const decision = itemDecisions[item.itemId];
+                    const pending = itemPending[item.itemId] || itemActionLoading;
+                    return (
+                      <article key={item.itemId} className={`rounded-xl border p-2.5 sm:p-3 transition ${decision ? 'border-emerald-400/40 bg-emerald-500/10' : 'border-gray-700 bg-[#131825]'}`}>
+                        <div className="relative mx-auto flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-lg bg-[#0d1320]">
+                          <img src={item.image} alt={item.name} className="h-14 w-14 sm:h-16 sm:w-16 object-contain" />
+                          {decision && (
+                            <span className={`absolute -top-2 right-[-10px] rounded-full px-2 py-0.5 text-[10px] font-semibold ${decision === 'sold' ? 'bg-emerald-500 text-black' : 'bg-cyan-500 text-black'}`}>
+                              {decision === 'sold' ? 'Sold' : 'Saved'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-2 text-xs font-semibold text-white truncate">{item.name}</div>
+                        <div className="text-[10px] uppercase tracking-wide text-gray-400">{item.rarity}</div>
+                        <div className="mt-1 text-[11px] text-emerald-300">Sell: {item.sellValueCoins.toLocaleString()} coins</div>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <button
+                            disabled={pending || Boolean(decision)}
+                            onClick={() => void resolveItems('single', item.itemId, 'keep')}
+                            className="rounded-md border border-gray-600 bg-[#1d2433] px-2 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
+                          >
+                            Keep
+                          </button>
+                          <button
+                            disabled={pending || Boolean(decision)}
+                            onClick={() => void resolveItems('single', item.itemId, 'sell')}
+                            className="rounded-md bg-emerald-500 px-2 py-2 text-[11px] font-semibold text-black disabled:opacity-40"
+                          >
+                            {pending ? '...' : 'Sell'}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="sticky bottom-0 border-t border-white/10 bg-[#0c1322]/95 px-3 py-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-sm sm:px-5 sm:py-4">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    disabled={itemActionLoading}
+                    onClick={() => void resolveItems('keep_all')}
+                    className="rounded-lg border border-gray-500/70 bg-[#1b2233] px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {itemActionLoading ? 'Working...' : 'Keep All'}
+                  </button>
+                  <button
+                    disabled={itemActionLoading}
+                    onClick={() => void resolveItems('sell_all')}
+                    className="rounded-lg bg-emerald-500 px-3 py-2.5 text-sm font-semibold text-black disabled:opacity-50"
+                  >
+                    {itemActionLoading ? 'Working...' : 'Sell All'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
