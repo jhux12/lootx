@@ -177,9 +177,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const currentCaseXpPrice = Math.max(0, Math.floor(Number(box?.priceXP ?? 0)));
   const xpPer100Coins = Math.max(0, Number(bonusSettings?.xpPer100Coins ?? bonusSettings?.xpPer100CoinsWagered ?? 0));
   const xpPerCaseOpened = Math.max(0, Number(bonusSettings?.xpPerCaseOpened ?? bonusSettings?.xpPerCaseOpen ?? 0));
-  const xpPreviewCoinsSpent = caseCurrencyType === 'COIN' ? Math.max(0, Number(box?.price ?? 0)) : 0;
+  const effectiveSpinCount = (isFree || box?.isDaily === true || (box as any)?.isDailyFree === true) ? 1 : spinCount;
+  const xpPreviewCoinsSpent = caseCurrencyType === 'COIN' ? Math.max(0, Number(box?.price ?? 0)) * effectiveSpinCount : 0;
   const previewXpFromSpend = Math.floor((xpPreviewCoinsSpent / 100) * xpPer100Coins);
-  const previewXpFromOpen = isFree ? 0 : xpPerCaseOpened;
+  const previewXpFromOpen = isFree ? 0 : xpPerCaseOpened * effectiveSpinCount;
   const previewTotalXp = Math.max(0, previewXpFromSpend + previewXpFromOpen);
   const currentXpBalance = Math.max(0, Math.floor(Number(user.xpBalance ?? user.xp ?? 0)));
   const isBalanceLoading = isAuthenticated && !authInitialized;
@@ -421,11 +422,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setTimeout(onComplete, duration + 200);
   };
 
-  const handleSpin = async () => {
+  const handleSpin = async ({ isDemo = false }: { isDemo?: boolean } = {}) => {
     if (isSpinning || !box || items.length === 0) return;
     setSpinFeedbackMessage(null);
 
-    if (!isAuthenticated) {
+    if (!isDemo && !isAuthenticated) {
       openAuthModal('login');
       return;
     }
@@ -433,12 +434,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const isDailyFreeBox = isFree || box?.isDaily === true || (box as any)?.isDailyFree === true;
     const requestedCount = isDailyFreeBox ? 1 : spinCount;
 
-    if (isDailyFreeBox && !canFreeSpin) {
+    if (!isDemo && isDailyFreeBox && !canFreeSpin) {
       setSpinFeedbackMessage('Daily free already claimed. Come back tomorrow.');
       return;
     }
 
-    if (!isDailyFreeBox && caseCurrencyType === 'COIN') {
+    if (!isDemo && !isDailyFreeBox && caseCurrencyType === 'COIN') {
       const totalCost = toCoins(box.price, PRICE_UNIT_MODE) * requestedCount;
       const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
       if (!Number.isFinite(availableCoins) || availableCoins < totalCost) {
@@ -461,12 +462,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setResolvedItems([]);
     setItemDecisions({});
     setItemPending({});
+    setIsDemoSpin(isDemo);
     if (reviewAutoCloseTimerRef.current) {
       window.clearTimeout(reviewAutoCloseTimerRef.current);
       reviewAutoCloseTimerRef.current = null;
     }
 
     try {
+      if (isDemo) {
+        const demoWinner = getWinningItem(Math.random());
+        const demoReel = generateReel(demoWinner, items, true);
+        setLaneReels([demoReel]);
+        setReelItems(demoReel);
+
+        const duration = 3600;
+        window.setTimeout(() => {
+          const laneEl = laneRefs.current[0];
+          if (!laneEl) return;
+          const jitter = Math.floor(Math.random() * 80) - 40;
+          laneEl.style.transition = `transform ${duration / 1000}s cubic-bezier(0.15,0.85,0.35,1)`;
+          laneEl.style.transform = `translate3d(${-(BUFFER_COUNT * ITEM_WIDTH) + jitter}px,0,0)`;
+        }, 40);
+
+        window.setTimeout(() => {
+          setIsSpinning(false);
+          setIsBoxPreviewVisible(true);
+          setWonItem(demoWinner);
+          setShowWinModal(true);
+        }, duration + 280);
+        return;
+      }
+
       const clientRequestId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -545,7 +571,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleTryFree = () => {
     setSpinFeedbackMessage(null);
-    void handleSpin();
+    void handleSpin({ isDemo: true });
   };
 
   useEffect(() => {
@@ -756,9 +782,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
                 {/* The Moving Reel */}
                 {(() => {
-                  const laneCount = isSpinning
-                    ? Math.max(1, resolvedItems.length || spinCount)
-                    : (resolvedItems.length > 0 ? resolvedItems.length : 1);
+                  const laneCount = isDemoSpin
+                    ? 1
+                    : (isSpinning
+                      ? Math.max(1, resolvedItems.length || spinCount)
+                      : (resolvedItems.length > 0 ? resolvedItems.length : 1));
                   const useFourLaneGrid = laneCount === 4;
 
                   return (
@@ -820,7 +848,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 })}
               </div>
                  <button 
-                    onClick={() => void handleSpin()}
+                    onClick={() => void handleSpin({ isDemo: false })}
                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
                     className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
                 >
