@@ -1,7 +1,6 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { computeRoll, pickPrizeByWeight, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
-import { computeXpAward, getXpSettings } from './_lib/xp.js';
 
 const DEFAULT_CLIENT_SEED = 'lootx-player';
 const STARTER_COINS = 1000;
@@ -38,17 +37,36 @@ export default async function handler(req, res) {
     const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;
     const userRef = firestore.collection('users').doc(decoded.uid);
     const provablyRef = firestore.collection('provablyFair').doc(decoded.uid);
+    const bonusSettingsRef = firestore.collection('settings').doc('bonus-settings');
     const inventoryRef = userRef.collection('inventory').doc();
     const openRef = firestore.collection('opens').doc();
+    const operationId = typeof body?.operationId === 'string' && body.operationId.trim().length
+      ? body.operationId.trim()
+      : openRef.id;
+    const processedOpRef = userRef.collection('processedCaseOps').doc(operationId);
+    const xpLedgerRef = userRef.collection('xpLedger').doc(operationId);
 
     let responsePayload;
 
     await firestore.runTransaction(async (transaction) => {
-      const [boxSnap, userSnap, provablySnap] = await Promise.all([
+      const [boxSnap, userSnap, provablySnap, bonusSettingsSnap, processedOpSnap] = await Promise.all([
         transaction.get(boxRef),
         transaction.get(userRef),
-        transaction.get(provablyRef)
+        transaction.get(provablyRef),
+        transaction.get(bonusSettingsRef),
+        transaction.get(processedOpRef)
       ]);
+
+      if (processedOpSnap.exists) {
+        const cachedPayload = processedOpSnap.data()?.responsePayload;
+        responsePayload = {
+          ok: true,
+          operationId,
+          idempotent: true,
+          ...(cachedPayload && typeof cachedPayload === 'object' ? cachedPayload : {})
+        };
+        return;
+      }
 
       if (!boxSnap.exists) {
         throw { status: 404, error: 'Box not found', boxId };
@@ -97,17 +115,20 @@ export default async function handler(req, res) {
       const hasCoins = Number.isFinite(Number(rawCoins));
       const currentCoins = hasCoins ? Number(rawCoins) : (userSnap.exists ? 0 : STARTER_COINS);
       const currentXp = Math.max(0, Math.floor(Number(userData.xpBalance ?? userData.xp ?? 0)));
-      const settings = await getXpSettings(transaction);
-      const shouldAwardForFree = settings.exclusions?.dailyFreeEarnsXp === true;
-      const shouldAward = !isFree || shouldAwardForFree;
-      const shouldAwardForUser = shouldAward && (userData.isAdmin !== true || settings.exclusions?.adminOrTestSpinsEarnXp === true);
-      const xpRule = isFree ? settings.earnRules?.dailyFree : settings.earnRules?.openCase;
-      const xpAward = shouldAwardForUser
-        ? computeXpAward({
-            rule: xpRule,
-            amountCoins: isFree ? 0 : (currencyType === 'COIN' ? price : 0),
-            bonusRules: settings.bonusRules
-          })
+      const bonusSettings = bonusSettingsSnap.exists ? bonusSettingsSnap.data() ?? {} : {};
+      const xpPer100CoinsWagered = Math.max(0, Number(bonusSettings.xpPer100CoinsWagered ?? bonusSettings.xpPer100Coins) || 0);
+      const xpPerCaseOpened = Math.max(0, Number(bonusSettings.xpPerCaseOpened ?? bonusSettings.xpPerCaseOpen) || 0);
+      const baseXpBonus = Number.isFinite(Number(bonusSettings.baseXpBonus)) ? Number(bonusSettings.baseXpBonus) : 0;
+      const xpMultiplier = Number.isFinite(Number(bonusSettings.xpMultiplier)) ? Number(bonusSettings.xpMultiplier) : 1;
+      const coinsSpent = !isFree && currencyType === 'COIN' ? price : 0;
+      if (!Number.isFinite(coinsSpent)) {
+        throw { status: 400, error: 'Invalid coins spent value' };
+      }
+      const xpFromSpend = Math.floor((Math.max(0, coinsSpent) / 100) * xpPer100CoinsWagered);
+      const xpFromOpen = !isFree ? xpPerCaseOpened : 0;
+      const shouldAwardForUser = userData.isAdmin !== true;
+      const totalXpAward = shouldAwardForUser
+        ? Math.max(0, Math.floor((xpFromSpend + xpFromOpen + baseXpBonus) * Math.max(0, xpMultiplier)))
         : 0;
 
       if (!userSnap.exists) {
@@ -135,21 +156,21 @@ export default async function handler(req, res) {
       const prizeValue = Number(prize.value ?? prize.price ?? 0);
       const newCoins = currencyType === 'COIN' ? currentCoins - price : currentCoins;
       const spentXpBalance = currencyType === 'XP' ? currentXp - priceXP : currentXp;
-      const newXpBalance = Math.max(0, Math.floor(spentXpBalance + xpAward));
+      const newXpBalance = Math.max(0, Math.floor(spentXpBalance + totalXpAward));
 
       const nextUserPatch = currencyType === 'XP'
         ? { xpBalance: newXpBalance, xp: newXpBalance }
         : { coins: newCoins };
 
-      if (xpAward > 0) {
+      if (totalXpAward > 0) {
         const dateKey = new Date().toISOString().slice(0, 10);
         const dailyCounters = { ...(userData.xpDailyEarned ?? {}) };
-        dailyCounters[dateKey] = Math.max(0, Math.floor(Number(dailyCounters[dateKey] ?? 0))) + xpAward;
+        dailyCounters[dateKey] = Math.max(0, Math.floor(Number(dailyCounters[dateKey] ?? 0))) + totalXpAward;
         nextUserPatch.xpBalance = newXpBalance;
         nextUserPatch.xp = newXpBalance;
-        nextUserPatch.xpEarnedLifetime = Math.max(0, Math.floor(Number(userData.xpEarnedLifetime ?? 0))) + xpAward;
+        nextUserPatch.xpEarnedLifetime = Math.max(0, Math.floor(Number(userData.xpEarnedLifetime ?? 0))) + totalXpAward;
         nextUserPatch.xpDailyEarned = dailyCounters;
-        nextUserPatch.lastXpAwardAction = isFree ? 'dailyFree' : 'openCase';
+        nextUserPatch.lastXpAwardAction = 'openCase';
         nextUserPatch.lastXpAwardAt = admin.firestore.FieldValue.serverTimestamp();
       }
 
@@ -207,6 +228,18 @@ export default async function handler(req, res) {
       };
       transaction.set(openRef, openPayload);
 
+      if (totalXpAward > 0) {
+        transaction.set(xpLedgerRef, {
+          type: 'EARN',
+          source: 'CASE_OPEN',
+          operationId,
+          coinsSpent,
+          xpAwarded: totalXpAward,
+          caseId: boxId,
+          createdAt: obtainedAt
+        }, { merge: true });
+      }
+
       responsePayload = {
         ok: true,
         price,
@@ -222,8 +255,10 @@ export default async function handler(req, res) {
         sellBackRate,
         newCoins,
         newXpBalance,
+        xpAwarded: totalXpAward,
         inventoryId: inventoryRef.id,
         openId: openRef.id,
+        operationId,
         provablyFair: {
           serverSeedHash,
           clientSeed,
@@ -233,6 +268,28 @@ export default async function handler(req, res) {
           message
         }
       };
+
+      transaction.set(processedOpRef, {
+        operationId,
+        uid: decoded.uid,
+        boxId,
+        openId: openRef.id,
+        xpAwarded: totalXpAward,
+        createdAt: obtainedAt,
+        responsePayload
+      });
+
+      console.info('open-case xp-award', {
+        uid: decoded.uid,
+        operationId,
+        boxId,
+        coinsSpent,
+        xpPer100CoinsWagered,
+        xpPerCaseOpened,
+        baseXpBonus,
+        xpMultiplier,
+        xpAwarded: totalXpAward
+      });
     });
 
     return sendJson(res, 200, responsePayload);

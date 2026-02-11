@@ -76,6 +76,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setTopUpModalIntent,
     addInventoryItemFromServer,
     syncBalance,
+    syncXpBalance,
     sellItem,
     setView,
     boxes,
@@ -492,6 +493,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     } else {
       try {
         // Server now authoritatively selects the prize + updates coins/inventory.
+        const operationId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
         const data = await authedFetch<{
           ok: boolean;
           price: number;
@@ -512,7 +517,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           };
         }>('/api/open-case', {
           method: 'POST',
-          body: JSON.stringify({ boxId: box.id, isFree })
+          body: JSON.stringify({ boxId: box.id, isFree, operationId })
         });
 
         const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
@@ -548,6 +553,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             const spentAmount = toCoins(Number(data.price ?? box?.price ?? 0), PRICE_UNIT_MODE);
             registerSpend(spentAmount);
           }
+        }
+        if (Number.isFinite(Number(data.newXpBalance))) {
+          syncXpBalance(Number(data.newXpBalance));
         }
         setWonInventoryItem(inventoryItem);
         rollValue = data.provablyFair.roll;

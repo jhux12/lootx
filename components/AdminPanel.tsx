@@ -4124,12 +4124,12 @@ export const AdminPanel: React.FC = () => {
                                         type="number"
                                         min={0}
                                         step={1}
-                                        value={bonusDraft.xpPer100Coins}
-                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, xpPer100Coins: Number(event.target.value) }))}
+                                        value={bonusDraft.xpPer100CoinsWagered}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, xpPer100CoinsWagered: Number(event.target.value), xpPer100Coins: Number(event.target.value) }))}
                                         className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                                     />
                                     <p className="text-xs text-gray-500 mt-2">
-                                        Current distribution: {bonusDraft.xpPer100Coins} XP for every 100 coins wagered.
+                                        Current distribution: {bonusDraft.xpPer100CoinsWagered} XP for every 100 coins wagered.
                                     </p>
                                 </div>
                                 <div>
@@ -4138,8 +4138,8 @@ export const AdminPanel: React.FC = () => {
                                         type="number"
                                         min={0}
                                         step={1}
-                                        value={bonusDraft.xpPerCaseOpen}
-                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, xpPerCaseOpen: Number(event.target.value) }))}
+                                        value={bonusDraft.xpPerCaseOpened}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, xpPerCaseOpened: Number(event.target.value), xpPerCaseOpen: Number(event.target.value) }))}
                                         className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                                     />
                                     <p className="text-xs text-gray-500 mt-2">
@@ -4154,8 +4154,8 @@ export const AdminPanel: React.FC = () => {
                                         type="number"
                                         min={0}
                                         step={10}
-                                        value={bonusDraft.levelBaseXp}
-                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, levelBaseXp: Number(event.target.value) }))}
+                                        value={bonusDraft.baseXpBonus}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, baseXpBonus: Number(event.target.value) }))}
                                         className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                                     />
                                 </div>
@@ -4163,14 +4163,14 @@ export const AdminPanel: React.FC = () => {
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP multiplier</label>
                                     <Input
                                         type="number"
-                                        min={1}
+                                        min={0}
                                         step={0.01}
-                                        value={bonusDraft.levelXpMultiplier}
-                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, levelXpMultiplier: Number(event.target.value) }))}
+                                        value={bonusDraft.xpMultiplier}
+                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, xpMultiplier: Number(event.target.value) }))}
                                         className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                                     />
                                     <p className="text-xs text-gray-500 mt-2">
-                                        Higher values mean each level needs more XP than the last.
+                                        Multiplies case-open XP rewards after wager/open/base values are combined.
                                     </p>
                                 </div>
                             </div>
