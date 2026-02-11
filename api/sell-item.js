@@ -13,7 +13,7 @@ const toFiniteNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const SELL_BACK_RATE = 0.8;
+const DEFAULT_SELL_BACK_RATE = 0.8;
 
 const buildError = (status, error, message, details = {}) => ({
   status,
@@ -21,6 +21,12 @@ const buildError = (status, error, message, details = {}) => ({
   message,
   details
 });
+
+const toSellBackRate = (value, fallback = DEFAULT_SELL_BACK_RATE) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(1, Math.max(0, parsed));
+};
 
 const isItemSellableStatus = (status) => {
   const normalized = String(status ?? 'available').toLowerCase();
@@ -139,7 +145,8 @@ export default async function handler(req, res) {
           item: inventoryItem
         });
       }
-      const creditCoins = Math.floor(coinValue * SELL_BACK_RATE);
+      const sellBackRate = toSellBackRate(inventoryItem.sellBackRate);
+      const creditCoins = Math.floor(coinValue * sellBackRate);
 
       const currentCoins = toFiniteNumber(userSnap.data()?.coins ?? userSnap.data()?.balance ?? 0, 0);
       const newCoins = currentCoins + creditCoins;
