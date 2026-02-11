@@ -414,6 +414,9 @@ type PersistUserData = Partial<{
   rakebackBalance: number;
   rakebackEarnedToday: number;
   rakebackEarnedAt: number;
+  rakebackUnlocked: boolean;
+  rakebackPercent: number;
+  rakebackTier: string | null;
   affiliateCode?: string;
   referredBy?: string;
   shippingAddress: ShippingAddress;
@@ -542,6 +545,9 @@ const GUEST_USER: User = {
   rakebackBalance: 0,
   rakebackEarnedToday: 0,
   rakebackEarnedAt: getDayStart(),
+  rakebackUnlocked: false,
+  rakebackPercent: undefined,
+  rakebackTier: null,
   followers: [],
   isAdmin: false,
   chatWarnings: 0,
@@ -647,6 +653,9 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     rakebackBalance: Number(data.rakebackBalance ?? 0),
     rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
     rakebackEarnedAt: Number(data.rakebackEarnedAt ?? 0),
+    rakebackUnlocked: data.rakebackUnlocked === true,
+    rakebackPercent: data.rakebackPercent == null ? undefined : Math.max(0, Number(data.rakebackPercent)),
+    rakebackTier: data.rakebackTier == null ? null : String(data.rakebackTier),
     affiliateCode: data.affiliateCode,
     referredBy: data.referredBy,
     followers: followerIds,
@@ -701,6 +710,9 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     rakebackBalance: Number(data.rakebackBalance ?? 0),
     rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
     rakebackEarnedAt: Number(data.rakebackEarnedAt ?? 0),
+    rakebackUnlocked: data.rakebackUnlocked === true,
+    rakebackPercent: data.rakebackPercent == null ? undefined : Math.max(0, Number(data.rakebackPercent)),
+    rakebackTier: data.rakebackTier == null ? null : String(data.rakebackTier),
     affiliateCode: data.affiliateCode,
     referredBy: data.referredBy,
     followers: followerIds,
@@ -1574,6 +1586,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         rakebackBalance: 0,
         rakebackEarnedToday: 0,
         rakebackEarnedAt: getDayStart(),
+        rakebackUnlocked: false,
+        rakebackPercent: undefined,
+        rakebackTier: null,
         followers: [],
         shippingAddress: undefined,
         isAdmin: email.toLowerCase() === ADMIN_EMAIL,
@@ -1710,6 +1725,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         rakebackBalance: 0,
         rakebackEarnedToday: 0,
         rakebackEarnedAt: getDayStart(),
+        rakebackUnlocked: false,
+        rakebackPercent: undefined,
+        rakebackTier: null,
         followers: [],
         shippingAddress: undefined,
         isAdmin: email.toLowerCase() === ADMIN_EMAIL,
@@ -1769,12 +1787,28 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setView({ type: 'HOME' });
   };
 
+  const isRakebackUnlocked = (profile: User) => profile.rakebackUnlocked === true;
+
+  const getRakebackRatePercent = (profile: User) => {
+    if (!isRakebackUnlocked(profile)) return 0;
+    if (profile.rakebackPercent != null && Number.isFinite(Number(profile.rakebackPercent))) {
+      return Math.max(0, Number(profile.rakebackPercent));
+    }
+    return Math.max(0, Number(bonusSettings.rakebackBasePercent ?? 0));
+  };
+
   const registerSpend = (amount: number) => {
     if (!isAuthenticated || amount <= 0) return;
 
     setUser(prev => {
       const totalSpent = Math.max(0, (prev.totalSpent ?? 0) + amount);
-      const rakebackRate = Math.max(0, bonusSettings.rakebackBasePercent) / 100;
+      const rakebackRate = getRakebackRatePercent(prev) / 100;
+      if (rakebackRate <= 0) {
+        return {
+          ...prev,
+          totalSpent
+        };
+      }
       const today = getDayStart();
       const earnedAt = Number(prev.rakebackEarnedAt ?? 0);
       const earnedToday = earnedAt === today ? Number(prev.rakebackEarnedToday ?? 0) : 0;

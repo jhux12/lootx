@@ -29,6 +29,9 @@ export interface User {
   rakebackBalance?: number;
   rakebackEarnedToday?: number;
   rakebackEarnedAt?: number;
+  rakebackUnlocked?: boolean;
+  rakebackPercent?: number;
+  rakebackTier?: string | null;
   affiliateCode?: string;
   referredBy?: string;
   shippingAddress?: ShippingAddress;
