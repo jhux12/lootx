@@ -13,24 +13,38 @@ const normalizeSizes = (sizes = []) =>
 
 const pickRandomSize = (sizes = []) => sizes[Math.floor(Math.random() * sizes.length)];
 
+const toFiniteNumber = (value, fallback = 0) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+const fail = (status, error, message, details = {}) => {
+  throw { status, error, message, ...details };
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return sendJson(res, 405, { error: 'Method Not Allowed' });
+    return sendJson(res, 405, { error: 'INVALID_REQUEST', message: 'Only POST is allowed for this endpoint.' });
   }
+
+  let uid = null;
+  let requestBoxId = null;
 
   try {
     const token = getBearerToken(req);
     if (!token) {
-      return sendJson(res, 401, { error: 'Missing bearer token' });
+      return sendJson(res, 401, { error: 'AUTH_REQUIRED', message: 'Please log in to open a case.' });
     }
 
     const decoded = await adminAuth.verifyIdToken(token);
+    uid = decoded.uid;
     const body = await readJsonBody(req);
-    const boxId = body?.boxId;
+    const boxId = typeof body?.boxId === 'string' ? body.boxId : (typeof body?.caseId === 'string' ? body.caseId : null);
+    requestBoxId = boxId;
     const isFree = body?.isFree === true;
     if (!boxId || typeof boxId !== 'string') {
-      return sendJson(res, 400, { error: 'Missing boxId' });
+      return sendJson(res, 400, { error: 'INVALID_REQUEST', message: 'Missing case identifier (boxId).' });
     }
 
     const boxRef = firestore.collection('boxes').doc(boxId);
@@ -58,18 +72,11 @@ export default async function handler(req, res) {
       ]);
 
       if (processedOpSnap.exists) {
-        const cachedPayload = processedOpSnap.data()?.responsePayload;
-        responsePayload = {
-          ok: true,
-          operationId,
-          idempotent: true,
-          ...(cachedPayload && typeof cachedPayload === 'object' ? cachedPayload : {})
-        };
-        return;
+        fail(409, 'ALREADY_PROCESSED', 'This case open operation was already processed.', { operationId });
       }
 
       if (!boxSnap.exists) {
-        throw { status: 404, error: 'Box not found', boxId };
+        fail(404, 'CASE_NOT_FOUND', 'Case not found.', { caseId: boxId });
       }
 
       const boxData = boxSnap.data() ?? {};
@@ -78,14 +85,14 @@ export default async function handler(req, res) {
           ? boxData.createdAt.toMillis()
           : Number(boxData.createdAt);
         if (Number.isFinite(createdAt) && Date.now() - createdAt >= USER_BOX_EXPIRY_MS) {
-          throw { status: 404, error: 'Box not found', boxId };
+          fail(404, 'CASE_NOT_FOUND', 'Case not found.', { caseId: boxId });
         }
       }
-      const price = Number(boxData.price ?? 0);
-      const explicitPriceXp = Number(boxData.priceXP);
+      const price = toFiniteNumber(boxData.price, 0);
+      const explicitPriceXp = toFiniteNumber(boxData.priceXP, 0);
       const inferredXpLegacy = Number.isFinite(explicitPriceXp) && explicitPriceXp > 0;
       const currencyType = boxData.currencyType === 'XP' || inferredXpLegacy ? 'XP' : 'COIN';
-      const fallbackPriceXp = currencyType === 'XP' ? Number(boxData.price ?? 0) : 0;
+      const fallbackPriceXp = currencyType === 'XP' ? toFiniteNumber(boxData.price, 0) : 0;
       const resolvedPriceXp = Number.isFinite(explicitPriceXp) && explicitPriceXp > 0
         ? explicitPriceXp
         : fallbackPriceXp;
@@ -98,7 +105,11 @@ export default async function handler(req, res) {
         : 0.8;
       const prizes = Array.isArray(boxData.items) ? boxData.items : (Array.isArray(boxData.prizes) ? boxData.prizes : []);
       if (!prizes.length) {
-        throw { status: 400, error: 'Box has no prizes', boxId };
+        fail(400, 'INVALID_REQUEST', 'This case has no configured prizes.', { caseId: boxId });
+      }
+
+      if (currencyType === 'COIN' && (!Number.isFinite(price) || price <= 0)) {
+        fail(400, 'INVALID_REQUEST', 'This case does not have a valid coin price.', { caseId: boxId });
       }
 
       const provablyData = provablySnap.data() ?? {};
@@ -112,17 +123,17 @@ export default async function handler(req, res) {
 
       const userData = userSnap.exists ? userSnap.data() ?? {} : {};
       const rawCoins = userSnap.exists ? (userData.coins ?? userData.balance) : undefined;
-      const hasCoins = Number.isFinite(Number(rawCoins));
-      const currentCoins = hasCoins ? Number(rawCoins) : (userSnap.exists ? 0 : STARTER_COINS);
-      const currentXp = Math.max(0, Math.floor(Number(userData.xpBalance ?? userData.xp ?? 0)));
+      const hasCoins = Number.isFinite(toFiniteNumber(rawCoins, Number.NaN));
+      const currentCoins = hasCoins ? toFiniteNumber(rawCoins, 0) : (userSnap.exists ? 0 : STARTER_COINS);
+      const currentXp = Math.max(0, Math.floor(toFiniteNumber(userData.xpBalance ?? userData.xp, 0)));
       const bonusSettings = bonusSettingsSnap.exists ? bonusSettingsSnap.data() ?? {} : {};
-      const xpPer100CoinsWagered = Math.max(0, Number(bonusSettings.xpPer100CoinsWagered ?? bonusSettings.xpPer100Coins) || 0);
-      const xpPerCaseOpened = Math.max(0, Number(bonusSettings.xpPerCaseOpened ?? bonusSettings.xpPerCaseOpen) || 0);
-      const baseXpBonus = Number.isFinite(Number(bonusSettings.baseXpBonus)) ? Number(bonusSettings.baseXpBonus) : 0;
-      const xpMultiplier = Number.isFinite(Number(bonusSettings.xpMultiplier)) ? Number(bonusSettings.xpMultiplier) : 1;
+      const xpPer100CoinsWagered = Math.max(0, toFiniteNumber(bonusSettings.xpPer100CoinsWagered ?? bonusSettings.xpPer100Coins, 0));
+      const xpPerCaseOpened = Math.max(0, toFiniteNumber(bonusSettings.xpPerCaseOpened ?? bonusSettings.xpPerCaseOpen, 0));
+      const baseXpBonus = Math.max(0, toFiniteNumber(bonusSettings.baseXpBonus, 0));
+      const xpMultiplier = Math.max(0, toFiniteNumber(bonusSettings.xpMultiplier, 1));
       const coinsSpent = !isFree && currencyType === 'COIN' ? price : 0;
       if (!Number.isFinite(coinsSpent)) {
-        throw { status: 400, error: 'Invalid coins spent value' };
+        fail(400, 'INVALID_REQUEST', 'Invalid case price for XP calculation.', { caseId: boxId });
       }
       const xpFromSpend = Math.floor((Math.max(0, coinsSpent) / 100) * xpPer100CoinsWagered);
       const xpFromOpen = !isFree ? xpPerCaseOpened : 0;
@@ -140,13 +151,23 @@ export default async function handler(req, res) {
 
       if (currencyType === 'XP') {
         if (!Number.isInteger(priceXP) || priceXP <= 0) {
-          throw { status: 400, error: 'XP case is missing a valid XP price' };
+          fail(400, 'INVALID_REQUEST', 'This XP case is missing a valid XP price.', { caseId: boxId });
         }
         if (currentXp < priceXP) {
-          throw { status: 400, error: 'Insufficient XP balance', xpBalance: currentXp, priceXP };
+          fail(402, 'INSUFFICIENT_FUNDS', 'Not enough XP to open this case.', {
+            currencyType,
+            caseId: boxId,
+            xpBalance: currentXp,
+            priceXP
+          });
         }
       } else if (currentCoins < price) {
-        throw { status: 400, error: 'Insufficient coins', coins: currentCoins, price };
+        fail(402, 'INSUFFICIENT_FUNDS', 'Not enough coins to open this case.', {
+          currencyType,
+          caseId: boxId,
+          coins: currentCoins,
+          price
+        });
       }
 
       const { roll, rollHash, message } = computeRoll(serverSeed, clientSeed, nonce, boxId);
@@ -294,11 +315,27 @@ export default async function handler(req, res) {
 
     return sendJson(res, 200, responsePayload);
   } catch (error) {
-    const status = error?.status;
-    if (status) {
-      return sendJson(res, status, { error: error.error || 'Unable to open case', ...error });
-    }
-    console.error('open-case error', error);
-    return sendJson(res, 500, { error: 'Unable to open case' });
+    const status = Number(error?.status) || 500;
+    const errorCode = typeof error?.error === 'string'
+      ? error.error
+      : (status === 401 ? 'AUTH_REQUIRED' : (status === 404 ? 'CASE_NOT_FOUND' : 'INTERNAL_ERROR'));
+    const message = typeof error?.message === 'string'
+      ? error.message
+      : 'An unexpected error occurred while opening this case.';
+
+    console.error('open-case failed', {
+      uid,
+      caseId: requestBoxId,
+      where: errorCode,
+      status,
+      currencyType: error?.currencyType,
+      price: error?.price ?? error?.priceXP,
+      details: error?.details ?? null
+    });
+
+    return sendJson(res, status, {
+      error: errorCode,
+      message
+    });
   }
 }

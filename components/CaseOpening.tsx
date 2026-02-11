@@ -570,11 +570,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         setClientSeedInput(data.provablyFair.clientSeed);
         setNonce(data.provablyFair.nonce + 1);
       } catch (error) {
-        console.error('Failed to open case', error);
+        const status = typeof (error as { status?: unknown })?.status === 'number'
+          ? (error as { status: number }).status
+          : 'unknown';
+        const rawMessage = error instanceof Error ? error.message : 'OPEN_FAILED: Unable to open case.';
+        const readableMessage = rawMessage.includes(':') ? rawMessage.split(':').slice(1).join(':').trim() : rawMessage;
+        const errorCode = rawMessage.includes(':') ? rawMessage.split(':')[0] : 'OPEN_FAILED';
+
+        console.error('Failed to open case', {
+          status,
+          code: errorCode,
+          message: readableMessage,
+          boxId: box.id
+        });
         setIsSpinning(false);
         setIsBoxPreviewVisible(true);
         setIsBoxPreviewFading(false);
-        alert('Unable to open case. Please try again.');
+        setSpinFeedbackMessage(readableMessage || 'Unable to open case.');
+        alert(readableMessage || 'Unable to open case.');
         return;
       }
     }
