@@ -1603,6 +1603,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         provider: 'google',
         level: 1,
         xp: 0,
+        xpBalance: 0,
         lastDailyClaim: undefined,
         totalSpent: 0,
         rakebackBalance: 0,
@@ -1631,6 +1632,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!data.photoURL && photoURL) updates.photoURL = photoURL;
     if (!data.avatar && photoURL) updates.avatar = photoURL;
     if (!data.provider) updates.provider = 'google';
+    if (!Number.isFinite(Number(data.xpBalance))) {
+      updates.xpBalance = Math.max(0, Number(data.xp ?? 0) || 0);
+    }
 
     if (Object.keys(updates).length > 0) {
       await setDoc(userRef, updates, { merge: true });
@@ -1741,6 +1745,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         provider: 'password',
         level: 1,
         xp: 0,
+        xpBalance: 0,
         balance: SIGNUP_CREDIT_COINS,
         lastDailyClaim: undefined,
         totalSpent: 0,

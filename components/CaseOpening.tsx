@@ -76,7 +76,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setTopUpModalIntent,
     addInventoryItemFromServer,
     syncBalance,
-    syncXpBalance,
     sellItem,
     setView,
     boxes,
@@ -509,6 +508,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           price: number;
           prize: CaseItem & { price?: number; size?: string };
           xpAwarded?: number;
+          xpSettingsUsed?: {
+            xpPer100?: number;
+            xpPerOpen?: number;
+            baseXpBonus?: number;
+            xpMultiplier?: number;
+            enabled?: boolean;
+          };
           newCoinBalance?: number;
           newCoins?: number;
           newXpBalance?: number;
@@ -563,16 +569,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             registerSpend(spentAmount);
           }
         }
-        if (Number.isFinite(Number(data.newXpBalance))) {
-          syncXpBalance(Number(data.newXpBalance));
-        }
-        if (Number(data.xpAwarded ?? 0) > 0) {
-          console.info('Case-open XP awarded', {
-            caseId: box.id,
-            xpAwarded: Number(data.xpAwarded),
-            currencyType: data.currencyType ?? 'COIN'
-          });
-        }
+        console.info('Case-open XP debug', {
+          caseId: box.id,
+          xpAwarded: Number(data.xpAwarded ?? 0),
+          newXpBalance: Number(data.newXpBalance ?? 0),
+          currencyType: data.currencyType ?? 'COIN',
+          xpSettingsUsed: data.xpSettingsUsed ?? null
+        });
         setWonInventoryItem(inventoryItem);
         rollValue = data.provablyFair.roll;
         rollHash = data.provablyFair.rollHash;

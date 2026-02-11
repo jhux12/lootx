@@ -160,9 +160,7 @@ export default async function handler(req, res) {
       );
       const baseXpBonus = toSafeNonNegativeNumber(bonusSettings.baseXpBonus, 0);
       const xpMultiplier = toSafeMultiplier(bonusSettings.xpMultiplier, 1);
-      const xpSystemEnabled = bonusSettings.enabled === false || openCaseRule.enabled === false
-        ? false
-        : true;
+      const xpSystemEnabled = bonusSettings.enabled === false ? false : true;
       const allowXpCaseAward = bonusSettings.awardXpForXpCases === true
         || openCaseRule.allowXpCurrency === true;
       const coinsSpent = !isFree && currencyType === 'COIN' ? price : 0;
@@ -314,6 +312,14 @@ export default async function handler(req, res) {
         newCoins,
         newXpBalance: currencyType === 'XP' ? newXpBalance : updatedXpBalance,
         xpAwarded: totalXpAward,
+        xpSettingsUsed: {
+          xpPer100: xpPer100CoinsWagered,
+          xpPerOpen: xpPerCaseOpened,
+          baseXpBonus,
+          xpMultiplier,
+          enabled: xpSystemEnabled,
+          allowXpCaseAward
+        },
         inventoryId: inventoryRef.id,
         openId: openRef.id,
         operationId,
@@ -347,11 +353,14 @@ export default async function handler(req, res) {
         uid: decoded.uid,
         operationId,
         boxId,
+        currencyType,
         coinsSpent,
         xpPer100CoinsWagered,
         xpPerCaseOpened,
         baseXpBonus,
         xpMultiplier,
+        xpSystemEnabled,
+        allowXpCaseAward,
         xpAwarded: totalXpAward
       });
     });
