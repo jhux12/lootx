@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search, Info, X, Tag } from 'lucide-react';
+import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search, Info, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
-import { BoxTag, BOX_TAG_OPTIONS, CaseItem, MysteryBox } from '../types';
+import { CaseItem, MysteryBox } from '../types';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue } from '../utils/caseOdds';
@@ -21,7 +21,6 @@ export const CustomCaseCreator: React.FC = () => {
   const [selectedBoxImage, setSelectedBoxImage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showLabInfo, setShowLabInfo] = useState(false);
-  const [activeTag, setActiveTag] = useState<'All' | BoxTag>('All');
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [selectedSourceBoxId, setSelectedSourceBoxId] = useState<string>('');
 
@@ -100,18 +99,21 @@ export const CustomCaseCreator: React.FC = () => {
       }
   };
 
-  const tagOptions = useMemo(() => ['All', ...BOX_TAG_OPTIONS], []);
-  const sourceBoxOptions = useMemo(
-    () => boxes.filter((box) => !box.isUserCreated && box.items.length > 0),
-    [boxes]
-  );
+  const sourceBoxOptions = useMemo(() => {
+    const eligibleBoxes = boxes.filter((box) => !box.isUserCreated && box.items.length > 0);
+    const selectedIds = stripeSettings.caseLabVisibleBoxIds ?? [];
+    if (selectedIds.length === 0) return eligibleBoxes;
+
+    const selectedSet = new Set(selectedIds);
+    return eligibleBoxes.filter((box) => selectedSet.has(box.id));
+  }, [boxes, stripeSettings.caseLabVisibleBoxIds]);
 
   useEffect(() => {
-    if (selectedSourceBoxId) return;
+    const hasSelectedBox = sourceBoxOptions.some((box) => box.id === selectedSourceBoxId);
+    if (hasSelectedBox) return;
+
     const defaultBox = sourceBoxOptions[0];
-    if (defaultBox) {
-      setSelectedSourceBoxId(defaultBox.id);
-    }
+    setSelectedSourceBoxId(defaultBox?.id ?? '');
   }, [selectedSourceBoxId, sourceBoxOptions]);
 
   const selectedSourceBox = useMemo(
@@ -124,19 +126,12 @@ export const CustomCaseCreator: React.FC = () => {
     return selectedSourceBox.items;
   }, [selectedSourceBox]);
 
-  const imageOptions = useMemo(
-    () => boxes.filter((box) => !box.isUserCreated).slice(0, 12),
-    [boxes]
-  );
+  const imageOptions = useMemo(() => sourceBoxOptions.slice(0, 12), [sourceBoxOptions]);
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    return sourceBoxItems.filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(normalizedQuery);
-      const matchesTag = activeTag === 'All' ? true : item.tags?.includes(activeTag);
-      return matchesSearch && matchesTag;
-    });
-  }, [sourceBoxItems, searchQuery, activeTag]);
+    return sourceBoxItems.filter((item) => item.name.toLowerCase().includes(normalizedQuery));
+  }, [sourceBoxItems, searchQuery]);
 
   const handleSelectSourceBox = (boxId: string) => {
     if (boxId === selectedSourceBoxId) return;
@@ -265,6 +260,11 @@ export const CustomCaseCreator: React.FC = () => {
                           You're selecting from <span className="font-semibold text-gray-300">{selectedSourceBox.name}</span>.
                         </p>
                       )}
+                      {sourceBoxOptions.length === 0 && (
+                        <p className="mt-2 rounded-lg border border-dashed border-gray-700 px-3 py-2 text-xs text-amber-300">
+                          No source boxes are enabled right now. Ask an admin to select boxes in Case Lab settings.
+                        </p>
+                      )}
                   </div>
 
                   <div className="flex items-center justify-between mb-4">
@@ -283,26 +283,6 @@ export const CustomCaseCreator: React.FC = () => {
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="pl-9 pr-4 py-2 text-sm"
                       />
-                  </div>
-
-                  <div className="mb-4">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 mb-2">Filter by tag</div>
-                      <div className="flex gap-2 overflow-x-auto pb-2 sm:flex-wrap">
-                          {tagOptions.map(tag => {
-                              const isSelected = activeTag === tag;
-                              return (
-                                  <button
-                                      key={tag}
-                                      type="button"
-                                      onClick={() => setActiveTag(tag)}
-                                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition ${isSelected ? 'border-brand-purple/70 bg-brand-purple/20 text-purple-200' : 'border-gray-700 bg-[#0b0e14] text-gray-400 hover:border-gray-500'}`}
-                                  >
-                                      <Tag className="h-3 w-3" />
-                                      {tag}
-                                  </button>
-                              );
-                          })}
-                      </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar sm:grid-cols-3 md:max-h-[500px] md:grid-cols-4 lg:grid-cols-5">
@@ -350,7 +330,7 @@ export const CustomCaseCreator: React.FC = () => {
                   </div>
                   {selectedSourceBox && filteredItems.length === 0 && (
                     <p className="mt-3 rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2 text-xs text-gray-400">
-                      No items found in this box for your current search and tag filters.
+                      No items found in this box for your current search.
                     </p>
                   )}
               </div>
