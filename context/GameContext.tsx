@@ -2074,7 +2074,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
       }
       console.error('Failed to sell item', error);
-      alert('Unable to sell item right now. Please try again.');
+      const fallbackMessage = 'Unable to sell item right now. Please try again.';
+      const errorMessage = error instanceof Error ? error.message : '';
+      try {
+        const parsed = errorMessage ? JSON.parse(errorMessage) : null;
+        const serverMessage = typeof parsed?.error === 'string' ? parsed.error : '';
+        alert(serverMessage || fallbackMessage);
+      } catch {
+        alert(fallbackMessage);
+      }
     }
   };
 

@@ -11,11 +11,14 @@ const getSellBackValue = (price, rate) => {
 
 const isXpPurchasedInventoryItem = (inventoryItem = {}) => (
   inventoryItem.source === 'xpShop'
-  || Boolean(inventoryItem.sourceItemId)
-  || Boolean(inventoryItem.sourceRedemptionId)
   || inventoryItem.acquisitionCurrencyType === 'XP'
   || inventoryItem.openCurrencyType === 'XP'
 );
+
+const toFiniteNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -64,11 +67,18 @@ export default async function handler(req, res) {
         throw { status: 400, error: 'XP reward items cannot be sold' };
       }
 
-      const sellBackRate = Number(inventoryItem.sellBackRate ?? 0.8);
-      const itemValue = Number(inventoryItem.value ?? 0);
+      const rawSellBackRate = toFiniteNumber(inventoryItem.sellBackRate, 0.8);
+      const sellBackRate = Math.min(1, Math.max(0, rawSellBackRate));
+      const itemValue = toFiniteNumber(inventoryItem.value ?? inventoryItem.price ?? 0, 0);
+      if (itemValue <= 0) {
+        throw { status: 400, error: 'Item has invalid sell-back value' };
+      }
       const sellBackValue = getSellBackValue(itemValue, sellBackRate);
+      if (!Number.isFinite(sellBackValue)) {
+        throw { status: 500, error: 'Unable to calculate sell-back value' };
+      }
 
-      const currentCoins = Number(userSnap.data()?.coins ?? 0);
+      const currentCoins = toFiniteNumber(userSnap.data()?.coins ?? userSnap.data()?.balance ?? 0, 0);
       const newCoins = currentCoins + sellBackValue;
 
       if (!userSnap.exists) {

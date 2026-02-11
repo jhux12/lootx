@@ -5,8 +5,6 @@ const STRIPE_SETTINGS_DOC = 'stripe-settings';
 
 const isXpShopInventoryItem = (inventoryItem = {}) => (
   inventoryItem.source === 'xpShop'
-  || Boolean(inventoryItem.sourceItemId)
-  || Boolean(inventoryItem.sourceRedemptionId)
   || inventoryItem.acquisitionCurrencyType === 'XP'
   || inventoryItem.openCurrencyType === 'XP'
 );
