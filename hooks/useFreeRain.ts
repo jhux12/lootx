@@ -221,7 +221,7 @@ export const useFreeRain = () => {
     }
 
     if (!user.lastChatAt || now - user.lastChatAt > RECENT_CHAT_MS) {
-      return { eligible: false, reason: 'Chat within the last 5 minutes to join.' };
+      return { eligible: false, reason: 'Send a chat join!.' };
     }
 
     return { eligible: true };
