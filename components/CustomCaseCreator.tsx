@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Package, Calculator, Check, ArrowRight, ChevronLeft, FlaskConical, Beaker, Search, Info, X, Tag } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { BoxTag, BOX_TAG_OPTIONS, CaseItem, MysteryBox } from '../types';
@@ -9,7 +9,7 @@ import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { Input } from './ui/Input';
 
 export const CustomCaseCreator: React.FC = () => {
-  const { createUserBox, items, boxes, stripeSettings, setView } = useGame();
+  const { createUserBox, boxes, stripeSettings, setView } = useGame();
   const { playSound } = useSound();
 
   const DEFAULT_TARGET_EV = 0.85;
@@ -23,6 +23,7 @@ export const CustomCaseCreator: React.FC = () => {
   const [showLabInfo, setShowLabInfo] = useState(false);
   const [activeTag, setActiveTag] = useState<'All' | BoxTag>('All');
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [selectedSourceBoxId, setSelectedSourceBoxId] = useState<string>('');
 
   const toggleItemSelection = (item: CaseItem) => {
       playSound('click');
@@ -100,6 +101,29 @@ export const CustomCaseCreator: React.FC = () => {
   };
 
   const tagOptions = useMemo(() => ['All', ...BOX_TAG_OPTIONS], []);
+  const sourceBoxOptions = useMemo(
+    () => boxes.filter((box) => !box.isUserCreated && box.items.length > 0),
+    [boxes]
+  );
+
+  useEffect(() => {
+    if (selectedSourceBoxId) return;
+    const defaultBox = sourceBoxOptions[0];
+    if (defaultBox) {
+      setSelectedSourceBoxId(defaultBox.id);
+    }
+  }, [selectedSourceBoxId, sourceBoxOptions]);
+
+  const selectedSourceBox = useMemo(
+    () => sourceBoxOptions.find((box) => box.id === selectedSourceBoxId) ?? null,
+    [sourceBoxOptions, selectedSourceBoxId]
+  );
+
+  const sourceBoxItems = useMemo(() => {
+    if (!selectedSourceBox) return [];
+    return selectedSourceBox.items;
+  }, [selectedSourceBox]);
+
   const imageOptions = useMemo(
     () => boxes.filter((box) => !box.isUserCreated).slice(0, 12),
     [boxes]
@@ -107,15 +131,24 @@ export const CustomCaseCreator: React.FC = () => {
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    return items.filter(item => {
+    return sourceBoxItems.filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(normalizedQuery);
       const matchesTag = activeTag === 'All' ? true : item.tags?.includes(activeTag);
       return matchesSearch && matchesTag;
     });
-  }, [items, searchQuery, activeTag]);
+  }, [sourceBoxItems, searchQuery, activeTag]);
+
+  const handleSelectSourceBox = (boxId: string) => {
+    if (boxId === selectedSourceBoxId) return;
+    playSound('click');
+    setSelectedSourceBoxId(boxId);
+    setSelectedItems([]);
+    setLastCalculated(false);
+    setExpandedItemId(null);
+  };
 
   return (
-    <div className="max-w-5xl mx-auto p-6 animate-in fade-in slide-in-from-bottom-4">
+    <div className="mx-auto max-w-5xl animate-in fade-in slide-in-from-bottom-4 p-4 sm:p-6">
       <div className="flex items-center gap-4 mb-8">
           <button 
              onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
@@ -170,7 +203,7 @@ export const CustomCaseCreator: React.FC = () => {
             <ol className="mt-4 space-y-3 text-sm text-gray-300">
               <li className="flex gap-3">
                 <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">1</span>
-                <p>Select the items you want included in your case and give it a memorable name.</p>
+                <p>Pick a source box, then choose which items from that box should be included in your case and give it a memorable name.</p>
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">2</span>
@@ -204,8 +237,40 @@ export const CustomCaseCreator: React.FC = () => {
               <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-4">
                       <h3 className="text-sm font-bold text-gray-400 uppercase flex items-center gap-2">
-                          <Package className="w-4 h-4" /> Select Components
+                          <Package className="w-4 h-4" /> Select Source Box
                       </h3>
+                  </div>
+
+                  <div className="mb-4">
+                      <div className="flex gap-2 overflow-x-auto pb-2">
+                        {sourceBoxOptions.map((box) => {
+                          const isSelected = selectedSourceBoxId === box.id;
+                          return (
+                            <button
+                              key={box.id}
+                              type="button"
+                              onClick={() => handleSelectSourceBox(box.id)}
+                              className={`min-w-[120px] rounded-lg border p-2 text-left transition sm:min-w-[140px] ${isSelected ? 'border-brand-purple/70 bg-brand-purple/20' : 'border-gray-700 bg-[#0b0e14] hover:border-gray-500'}`}
+                              aria-label={`Use ${box.name} as item source`}
+                            >
+                              <img src={box.image} alt={box.name} className="mb-2 h-12 w-full object-contain" />
+                              <p className="truncate text-xs font-semibold text-white">{box.name}</p>
+                              <p className="text-[10px] text-gray-400">{box.items.length} available items</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedSourceBox && (
+                        <p className="mt-2 text-xs text-gray-500">
+                          You're selecting from <span className="font-semibold text-gray-300">{selectedSourceBox.name}</span>.
+                        </p>
+                      )}
+                  </div>
+
+                  <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-bold text-gray-400 uppercase flex items-center gap-2">
+                          <Package className="w-4 h-4" /> Pick Items From Box
+                      </h4>
                   </div>
 
                   {/* Search Bar */}
@@ -213,7 +278,7 @@ export const CustomCaseCreator: React.FC = () => {
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                       <Input 
                           type="text" 
-                          placeholder="Search items..." 
+                          placeholder="Search items in selected box..." 
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="pl-9 pr-4 py-2 text-sm"
@@ -240,7 +305,7 @@ export const CustomCaseCreator: React.FC = () => {
                       </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-[300px] md:max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar sm:grid-cols-3 md:max-h-[500px] md:grid-cols-4 lg:grid-cols-5">
                        {filteredItems.map(item => {
                             const isSelected = selectedItems.some(i => i.id === item.id);
                             const isExpanded = expandedItemId === item.id;
@@ -283,6 +348,11 @@ export const CustomCaseCreator: React.FC = () => {
                             );
                         })}
                   </div>
+                  {selectedSourceBox && filteredItems.length === 0 && (
+                    <p className="mt-3 rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2 text-xs text-gray-400">
+                      No items found in this box for your current search and tag filters.
+                    </p>
+                  )}
               </div>
           </div>
 

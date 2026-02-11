@@ -11,8 +11,6 @@ const getSellBackValue = (price, rate) => {
 
 const isXpPurchasedInventoryItem = (inventoryItem = {}) => (
   inventoryItem.source === 'xpShop'
-  || Boolean(inventoryItem.sourceItemId)
-  || Boolean(inventoryItem.sourceRedemptionId)
   || inventoryItem.acquisitionCurrencyType === 'XP'
   || inventoryItem.openCurrencyType === 'XP'
 );
