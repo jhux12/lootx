@@ -22,6 +22,12 @@ const fail = (status, error, message, details = {}) => {
   throw { status, error, message, ...details };
 };
 
+function sanitizeForFirestore(obj) {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, value]) => value !== undefined)
+  );
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -290,6 +296,12 @@ export default async function handler(req, res) {
         }
       };
 
+      const cleanPrize = sanitizeForFirestore(responsePayload.prize ?? {});
+      const cleanResponsePayload = sanitizeForFirestore({
+        ...responsePayload,
+        prize: cleanPrize
+      });
+
       transaction.set(processedOpRef, {
         operationId,
         uid: decoded.uid,
@@ -297,7 +309,7 @@ export default async function handler(req, res) {
         openId: openRef.id,
         xpAwarded: totalXpAward,
         createdAt: obtainedAt,
-        responsePayload
+        responsePayload: cleanResponsePayload
       });
 
       console.info('open-case xp-award', {

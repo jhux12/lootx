@@ -80,6 +80,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     sellItem,
     setView,
     boxes,
+    bonusSettings,
     isAuthenticated,
     openAuthModal,
     claimDaily,
@@ -153,6 +154,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
   const currentCaseXpPrice = Math.max(0, Math.floor(Number(box?.priceXP ?? 0)));
+  const xpPer100Coins = Math.max(0, Number(bonusSettings?.xpPer100Coins ?? bonusSettings?.xpPer100CoinsWagered ?? 0));
+  const xpPerCaseOpened = Math.max(0, Number(bonusSettings?.xpPerCaseOpened ?? bonusSettings?.xpPerCaseOpen ?? 0));
+  const xpPreviewCoinsSpent = caseCurrencyType === 'COIN' ? Math.max(0, Number(box?.price ?? 0)) : 0;
+  const previewXpFromSpend = Math.floor((xpPreviewCoinsSpent / 100) * xpPer100Coins);
+  const previewXpFromOpen = isFree ? 0 : xpPerCaseOpened;
+  const previewTotalXp = Math.max(0, previewXpFromSpend + previewXpFromOpen);
   const currentXpBalance = Math.max(0, Math.floor(Number(user.xpBalance ?? user.xp ?? 0)));
   const isBalanceLoading = isAuthenticated && !authInitialized;
 
@@ -908,20 +915,27 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       ) : isFree ? (
                         'Free Spin'
                       ) : (
-                        <span className="inline-flex items-center gap-2">
-                          Open for
-                          {caseCurrencyType === 'XP' ? (
-                            <span className="inline-flex items-center gap-1 text-white">
-                              <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                              <span>{currentCaseXpPrice.toLocaleString()}</span>
+                        <span className="inline-flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                          <span className="inline-flex items-center gap-2">
+                            Open for
+                            {caseCurrencyType === 'XP' ? (
+                              <span className="inline-flex items-center gap-1 text-white">
+                                <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+                                <span>{currentCaseXpPrice.toLocaleString()}</span>
+                              </span>
+                            ) : (
+                              <CoinAmount
+                                amount={toCoins(box!.price, PRICE_UNIT_MODE)}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="text-white"
+                                iconClassName="w-4 h-4"
+                              />
+                            )}
+                          </span>
+                          {previewTotalXp > 0 && (
+                            <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-200">
+                              +{previewTotalXp.toLocaleString()} XP
                             </span>
-                          ) : (
-                            <CoinAmount
-                              amount={toCoins(box!.price, PRICE_UNIT_MODE)}
-                              formatOptions={{ maximumFractionDigits: 0 }}
-                              className="text-white"
-                              iconClassName="w-4 h-4"
-                            />
                           )}
                         </span>
                       )}
