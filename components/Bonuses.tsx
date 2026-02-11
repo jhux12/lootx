@@ -538,21 +538,22 @@ export const Bonuses: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
-                <h3 className="font-bold text-white mb-2 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-green-400" /> Rakeback
-                </h3>
-                <p className="text-sm text-gray-400">Current rakeback rate: <span className="text-white font-semibold">{Math.max(0, activeRakebackPercent).toFixed(2)}%</span></p>
-                {!rakebackUnlocked && <p className="text-xs text-yellow-300 mt-1">Rakeback is locked until you unlock it in the XP Shop.</p>}
-                <p className="text-sm text-gray-400 mb-3">Available: {availableRakeback.toLocaleString()} coins</p>
-                <button
-                  onClick={handleClaimRakeback}
-                  disabled={availableRakeback <= 0 || isClaimingRakeback}
-                  className="w-full py-2 rounded-lg bg-green-500 text-black font-bold disabled:bg-gray-800 disabled:text-gray-500"
-                >
-                  {isClaimingRakeback ? 'Collecting...' : 'Collect Rakeback'}
-                </button>
-              </div>
+              {rakebackUnlocked && (
+                <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+                  <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-green-400" /> Rakeback
+                  </h3>
+                  <p className="text-sm text-gray-400">Current rakeback rate: <span className="text-white font-semibold">{Math.max(0, activeRakebackPercent).toFixed(2)}%</span></p>
+                  <p className="text-sm text-gray-400 mb-3">Available: {availableRakeback.toLocaleString()} coins</p>
+                  <button
+                    onClick={handleClaimRakeback}
+                    disabled={availableRakeback <= 0 || isClaimingRakeback}
+                    className="w-full py-2 rounded-lg bg-green-500 text-black font-bold disabled:bg-gray-800 disabled:text-gray-500"
+                  >
+                    {isClaimingRakeback ? 'Collecting...' : 'Collect Rakeback'}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
