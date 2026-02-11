@@ -22,6 +22,9 @@ type XpShopItem = {
   metadata?: {
     caseId?: string;
     xpPriceOverride?: number;
+    unlockRakeback?: boolean;
+    rakebackPercent?: number;
+    rakebackTier?: string | null;
   };
   resolvedCaseName?: string;
   resolvedBoxOpenXp?: number | null;
@@ -67,6 +70,8 @@ export const Bonuses: React.FC = () => {
   const xpBalance = Math.floor(user.xpBalance ?? user.xp ?? 0);
   const availableRakeback = Number(user.rakebackBalance ?? 0);
   const hasReferral = Boolean(user.referredBy);
+  const rakebackUnlocked = user.rakebackUnlocked === true || Number(user.level ?? 0) >= Number(bonusSettings.rakebackUnlockLevel ?? 0);
+  const activeRakebackPercent = user.rakebackPercent != null ? Number(user.rakebackPercent) : Number(bonusSettings.rakebackBasePercent ?? 0);
 
   const lastDailyClaim = Number.isFinite(user.lastDailyClaim ?? NaN) ? Number(user.lastDailyClaim) : 0;
   const dailyCooldownMs = 24 * 60 * 60 * 1000;
@@ -102,7 +107,13 @@ export const Bonuses: React.FC = () => {
               ? Math.max(0, Math.floor(Number(data.metadata.xpPriceOverride)))
               : data?.xpPriceOverride != null
                 ? Math.max(0, Math.floor(Number(data.xpPriceOverride)))
-                : undefined
+                : undefined,
+          unlockRakeback: data?.metadata?.unlockRakeback === true,
+          rakebackPercent:
+            data?.metadata?.rakebackPercent != null
+              ? Math.max(0, Number(data.metadata.rakebackPercent))
+              : undefined,
+          rakebackTier: data?.metadata?.rakebackTier == null ? null : String(data.metadata.rakebackTier)
         },
         enabled: data.enabled !== false,
         sortOrder: Number(data.sortOrder ?? 0)
@@ -227,6 +238,13 @@ export const Bonuses: React.FC = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || 'Unable to redeem reward');
       if (data?.caseId) setLastRedeemedCaseId(String(data.caseId));
+      if (data?.rakebackUnlocked === true || data?.rakebackPercent != null || data?.rakebackTier != null) {
+        await updateUserFlags({
+          rakebackUnlocked: data?.rakebackUnlocked === true,
+          rakebackPercent: data?.rakebackPercent == null ? undefined : Number(data.rakebackPercent),
+          rakebackTier: data?.rakebackTier == null ? null : String(data.rakebackTier)
+        });
+      }
       alert(data?.message || 'Reward redeemed successfully.');
       setSelectedItem(null);
     } catch (error) {
@@ -524,7 +542,8 @@ export const Bonuses: React.FC = () => {
                 <h3 className="font-bold text-white mb-2 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-green-400" /> Rakeback
                 </h3>
-                <p className="text-sm text-gray-400">Current rakeback rate: <span className="text-white font-semibold">{Number(bonusSettings.rakebackBasePercent ?? 0).toFixed(2)}%</span></p>
+                <p className="text-sm text-gray-400">Current rakeback rate: <span className="text-white font-semibold">{Math.max(0, activeRakebackPercent).toFixed(2)}%</span></p>
+                {!rakebackUnlocked && <p className="text-xs text-yellow-300 mt-1">Unlocks at level {bonusSettings.rakebackUnlockLevel} or via eligible XP Shop reward.</p>}
                 <p className="text-sm text-gray-400 mb-3">Available: {availableRakeback.toLocaleString()} coins</p>
                 <button
                   onClick={handleClaimRakeback}

@@ -114,8 +114,16 @@ export default async function handler(req, res) {
                 : typeof itemData.boxId === 'string'
                   ? itemData.boxId
                   : undefined,
-        xpPriceOverride: metadataRaw.xpPriceOverride == null ? undefined : Math.max(0, toInt(metadataRaw.xpPriceOverride, 0))
+        xpPriceOverride: metadataRaw.xpPriceOverride == null ? undefined : Math.max(0, toInt(metadataRaw.xpPriceOverride, 0)),
+        unlockRakeback: metadataRaw.unlockRakeback === true || itemData.category === 'Rakeback',
+        rakebackPercent: metadataRaw.rakebackPercent == null ? undefined : Math.max(0, Number(metadataRaw.rakebackPercent)),
+        rakebackTier: metadataRaw.rakebackTier == null ? null : String(metadataRaw.rakebackTier)
       });
+
+      const isDigitalRakebackUnlock = fulfillmentType === 'DIGITAL' && metadataSnapshot.unlockRakeback === true;
+      if (isDigitalRakebackUnlock && userData.rakebackUnlocked === true) {
+        throw { status: 400, error: 'Rakeback is already unlocked for this account' };
+      }
 
       const nextXp = currentXp - xpCost;
       const nextStock = hasLimitedStock ? Number(stockValue) - 1 : null;
@@ -129,6 +137,14 @@ export default async function handler(req, res) {
 
       if (hasLimitedStock) {
         transaction.set(itemRef, { stock: nextStock }, { merge: true });
+      }
+
+      if (isDigitalRakebackUnlock) {
+        transaction.set(userRef, stripUndefinedDeep({
+          rakebackUnlocked: true,
+          rakebackPercent: metadataSnapshot.rakebackPercent,
+          rakebackTier: metadataSnapshot.rakebackTier
+        }), { merge: true });
       }
 
       if (fulfillmentType === 'XP_BOX') {
@@ -151,7 +167,7 @@ export default async function handler(req, res) {
         }
       }
 
-      const shouldCreateInventoryReward = fulfillmentType === 'DIGITAL' || fulfillmentType === 'PHYSICAL_SHIP';
+      const shouldCreateInventoryReward = (fulfillmentType === 'DIGITAL' && !isDigitalRakebackUnlock) || fulfillmentType === 'PHYSICAL_SHIP';
       if (shouldCreateInventoryReward) {
         transaction.set(inventoryRef, stripUndefinedDeep({
           source: 'xpShop',
@@ -192,6 +208,9 @@ export default async function handler(req, res) {
         xpBalance: nextXp,
         caseId: metadataSnapshot.caseId ?? null,
         inventoryId: shouldCreateInventoryReward ? inventoryRef.id : null,
+        rakebackUnlocked: isDigitalRakebackUnlock ? true : Boolean(userData.rakebackUnlocked),
+        rakebackPercent: isDigitalRakebackUnlock ? (metadataSnapshot.rakebackPercent ?? null) : (userData.rakebackPercent ?? null),
+        rakebackTier: isDigitalRakebackUnlock ? (metadataSnapshot.rakebackTier ?? null) : (userData.rakebackTier ?? null),
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
@@ -205,8 +224,13 @@ export default async function handler(req, res) {
         newXpBalance: nextXp,
         caseId: metadataSnapshot.caseId,
         inventoryId: shouldCreateInventoryReward ? inventoryRef.id : null,
+        rakebackUnlocked: isDigitalRakebackUnlock ? true : Boolean(userData.rakebackUnlocked),
+        rakebackPercent: isDigitalRakebackUnlock ? metadataSnapshot.rakebackPercent : userData.rakebackPercent,
+        rakebackTier: isDigitalRakebackUnlock ? metadataSnapshot.rakebackTier : userData.rakebackTier,
         message:
-          fulfillmentType === 'DIGITAL'
+          isDigitalRakebackUnlock
+            ? 'Rakeback unlocked successfully'
+            : fulfillmentType === 'DIGITAL'
             ? 'Added to your inventory'
             : fulfillmentType === 'COUPON'
               ? 'Coupon added to your account'

@@ -122,6 +122,9 @@ type AdminXpShopItem = {
     metadata?: {
         caseId?: string;
         xpPriceOverride?: number;
+        unlockRakeback?: boolean;
+        rakebackPercent?: number;
+        rakebackTier?: string | null;
     };
     enabled: boolean;
     sortOrder: number;
@@ -442,7 +445,10 @@ export const AdminPanel: React.FC = () => {
                   sortOrder: Math.floor(Number(data.sortOrder ?? 0)),
                   metadata: {
                       caseId: typeof data?.metadata?.caseId === 'string' ? data.metadata.caseId : undefined,
-                      xpPriceOverride: data?.metadata?.xpPriceOverride == null ? undefined : Math.max(0, Math.floor(Number(data.metadata.xpPriceOverride)))
+                      xpPriceOverride: data?.metadata?.xpPriceOverride == null ? undefined : Math.max(0, Math.floor(Number(data.metadata.xpPriceOverride))),
+                      unlockRakeback: data?.metadata?.unlockRakeback === true,
+                      rakebackPercent: data?.metadata?.rakebackPercent == null ? undefined : Math.max(0, Number(data.metadata.rakebackPercent)),
+                      rakebackTier: data?.metadata?.rakebackTier == null ? null : String(data.metadata.rakebackTier)
                   }
               } as AdminXpShopItem;
           });
@@ -1969,7 +1975,10 @@ export const AdminPanel: React.FC = () => {
           fulfillmentType: item.fulfillmentType,
           metadata: {
               caseId: item.metadata?.caseId,
-              xpPriceOverride: item.metadata?.xpPriceOverride
+              xpPriceOverride: item.metadata?.xpPriceOverride,
+              unlockRakeback: item.metadata?.unlockRakeback === true,
+              rakebackPercent: item.metadata?.rakebackPercent,
+              rakebackTier: item.metadata?.rakebackTier ?? null
           },
           enabled: item.enabled,
           sortOrder: item.sortOrder
@@ -1988,7 +1997,16 @@ export const AdminPanel: React.FC = () => {
           caseId: xpShopItemDraft.fulfillmentType === 'XP_BOX' ? (xpShopItemDraft.metadata?.caseId ?? '').trim() : undefined,
           xpPriceOverride: xpShopItemDraft.fulfillmentType === 'XP_BOX' && xpShopItemDraft.metadata?.xpPriceOverride != null
               ? Math.max(0, Math.floor(Number(xpShopItemDraft.metadata.xpPriceOverride) || 0))
-              : undefined
+              : undefined,
+          unlockRakeback: xpShopItemDraft.fulfillmentType === 'DIGITAL' ? xpShopItemDraft.metadata?.unlockRakeback === true : undefined,
+          rakebackPercent:
+              xpShopItemDraft.fulfillmentType === 'DIGITAL' && xpShopItemDraft.metadata?.unlockRakeback === true && xpShopItemDraft.metadata?.rakebackPercent != null
+                  ? Math.max(0, Number(xpShopItemDraft.metadata.rakebackPercent))
+                  : undefined,
+          rakebackTier:
+              xpShopItemDraft.fulfillmentType === 'DIGITAL' && xpShopItemDraft.metadata?.unlockRakeback === true
+                  ? (xpShopItemDraft.metadata?.rakebackTier ?? null)
+                  : undefined
       };
 
       if (xpShopItemDraft.fulfillmentType === 'XP_BOX' && !metadata.caseId) {
@@ -2002,8 +2020,8 @@ export const AdminPanel: React.FC = () => {
           description: xpShopItemDraft.description.trim(),
           imageUrl: xpShopItemDraft.imageUrl?.trim() ?? '',
           xpCost: Math.max(0, Math.floor(Number(xpShopItemDraft.xpCost) || 0)),
-          stock: xpShopItemDraft.stock == null ? null : Math.max(0, Math.floor(Number(xpShopItemDraft.stock) || 0)),
-          limitPerUser: xpShopItemDraft.limitPerUser == null ? null : Math.max(0, Math.floor(Number(xpShopItemDraft.limitPerUser) || 0)),
+          stock: xpShopItemDraft.fulfillmentType === 'DIGITAL' && metadata.unlockRakeback === true ? null : (xpShopItemDraft.stock == null ? null : Math.max(0, Math.floor(Number(xpShopItemDraft.stock) || 0))),
+          limitPerUser: xpShopItemDraft.fulfillmentType === 'DIGITAL' && metadata.unlockRakeback === true ? 1 : (xpShopItemDraft.limitPerUser == null ? null : Math.max(0, Math.floor(Number(xpShopItemDraft.limitPerUser) || 0))),
           category: xpShopItemDraft.category.trim() || 'Exclusive',
           fulfillmentType: xpShopItemDraft.fulfillmentType,
           metadata: Object.fromEntries(Object.entries(metadata).filter(([, value]) => value !== undefined)),
@@ -4278,11 +4296,11 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Stock (blank = unlimited)</label>
-                                        <Input type="number" min={0} value={xpShopItemDraft.stock ?? ''} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, stock: event.target.value === '' ? null : Number(event.target.value) }))} />
+                                        <Input type="number" min={0} disabled={xpShopItemDraft.fulfillmentType === 'DIGITAL' && xpShopItemDraft.metadata?.unlockRakeback === true} value={xpShopItemDraft.stock ?? ''} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, stock: event.target.value === '' ? null : Number(event.target.value) }))} />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Per User Limit (blank = none)</label>
-                                        <Input type="number" min={0} value={xpShopItemDraft.limitPerUser ?? ''} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, limitPerUser: event.target.value === '' ? null : Number(event.target.value) }))} />
+                                        <Input type="number" min={0} disabled={xpShopItemDraft.fulfillmentType === 'DIGITAL' && xpShopItemDraft.metadata?.unlockRakeback === true} value={xpShopItemDraft.limitPerUser ?? ''} onChange={(event) => setXpShopItemDraft((prev) => ({ ...prev, limitPerUser: event.target.value === '' ? null : Number(event.target.value) }))} />
                                     </div>
                                 </div>
 
@@ -4301,6 +4319,69 @@ export const AdminPanel: React.FC = () => {
                                         </Select>
                                     </div>
                                 </div>
+
+
+                                {xpShopItemDraft.fulfillmentType === 'DIGITAL' && (
+                                    <div className="space-y-3 rounded-lg border border-gray-800 bg-[#0b0e14] p-3">
+                                        <label className="flex items-center gap-2 text-sm text-gray-300">
+                                            <Input
+                                                type="checkbox"
+                                                checked={xpShopItemDraft.metadata?.unlockRakeback === true}
+                                                onChange={(event) => setXpShopItemDraft((prev) => ({
+                                                    ...prev,
+                                                    stock: event.target.checked ? null : prev.stock,
+                                                    limitPerUser: event.target.checked ? 1 : prev.limitPerUser,
+                                                    metadata: {
+                                                        ...(prev.metadata ?? {}),
+                                                        unlockRakeback: event.target.checked,
+                                                        rakebackTier: event.target.checked ? (prev.metadata?.rakebackTier ?? null) : null
+                                                    }
+                                                }))}
+                                                className="h-4 w-4"
+                                            />
+                                            Unlock Rakeback
+                                        </label>
+
+                                        {xpShopItemDraft.metadata?.unlockRakeback === true && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rakeback % (optional override)</label>
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        step={0.01}
+                                                        value={xpShopItemDraft.metadata?.rakebackPercent ?? ''}
+                                                        onChange={(event) => setXpShopItemDraft((prev) => ({
+                                                            ...prev,
+                                                            metadata: {
+                                                                ...(prev.metadata ?? {}),
+                                                                rakebackPercent: event.target.value === '' ? undefined : Math.max(0, Number(event.target.value))
+                                                            }
+                                                        }))}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rakeback Tier (optional)</label>
+                                                    <Input
+                                                        value={xpShopItemDraft.metadata?.rakebackTier ?? ''}
+                                                        onChange={(event) => setXpShopItemDraft((prev) => ({
+                                                            ...prev,
+                                                            metadata: {
+                                                                ...(prev.metadata ?? {}),
+                                                                rakebackTier: event.target.value.trim() ? event.target.value : null
+                                                            }
+                                                        }))}
+                                                        placeholder="VIP-1"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {xpShopItemDraft.metadata?.unlockRakeback === true && (
+                                            <p className="text-xs text-gray-400">This reward is single-use and does not create inventory, shipping, or buyback records.</p>
+                                        )}
+                                    </div>
+                                )}
 
                                 {xpShopItemDraft.fulfillmentType === 'XP_BOX' && (
                                     <div className="space-y-3 rounded-lg border border-gray-800 bg-[#0b0e14] p-3">
@@ -4377,7 +4458,7 @@ export const AdminPanel: React.FC = () => {
                                             <div className="flex items-start justify-between gap-3">
                                                 <div>
                                                     <div className="text-sm font-bold text-white">{item.title}</div>
-                                                    <div className="text-xs text-gray-500 mt-1">{item.category} • {item.fulfillmentType}{item.fulfillmentType === 'XP_BOX' && item.metadata?.caseId ? ` • Case: ${item.metadata.caseId}` : ''}</div>
+                                                    <div className="text-xs text-gray-500 mt-1">{item.category} • {item.fulfillmentType}{item.fulfillmentType === 'XP_BOX' && item.metadata?.caseId ? ` • Case: ${item.metadata.caseId}` : ''}{item.metadata?.unlockRakeback ? ' • Unlocks Rakeback' : ''}</div>
                                                     <div className="text-xs text-gray-400 mt-1">{item.xpCost.toLocaleString()} XP</div>
                                                 </div>
                                                 <div className="flex gap-2">
