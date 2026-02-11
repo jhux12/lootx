@@ -126,7 +126,7 @@ export default async function handler(req, res) {
         fail(400, 'INVALID_REQUEST', 'This case has no configured prizes.', { caseId: boxId });
       }
 
-      if (currencyType === 'COIN' && (!Number.isFinite(price) || price <= 0)) {
+      if (currencyType === 'COIN' && !isFree && (!Number.isFinite(price) || price <= 0)) {
         fail(400, 'INVALID_REQUEST', 'This case does not have a valid coin price.', { caseId: boxId });
       }
 
@@ -193,7 +193,7 @@ export default async function handler(req, res) {
             priceXP
           });
         }
-      } else if (currentCoins < price) {
+      } else if (!isFree && currentCoins < price) {
         fail(402, 'INSUFFICIENT_FUNDS', 'Not enough coins to open this case.', {
           currencyType,
           caseId: boxId,
@@ -207,7 +207,8 @@ export default async function handler(req, res) {
       const sizeOptions = normalizeSizes(prize.sizes ?? []);
       const selectedSize = sizeOptions.length ? pickRandomSize(sizeOptions) : null;
       const prizeValue = Number(prize.value ?? prize.price ?? 0);
-      const newCoins = currencyType === 'COIN' ? currentCoins - price : currentCoins;
+      const coinCost = currencyType === 'COIN' && !isFree ? price : 0;
+      const newCoins = currencyType === 'COIN' ? currentCoins - coinCost : currentCoins;
       const spentXpBalance = currencyType === 'XP' ? currentXp - priceXP : currentXp;
       const newXpBalance = Math.max(0, Math.floor(spentXpBalance + totalXpAward));
       const updatedXpBalance = Math.max(0, Math.floor(currentXp + totalXpAward));
