@@ -35,6 +35,16 @@ interface RevealData {
   rotatedAt: number;
 }
 
+interface SpinResolvedItem {
+  itemId: string;
+  prizeId?: string | null;
+  name: string;
+  image: string;
+  rarity: InventoryItem['rarity'];
+  sellValueCoins: number;
+  status: 'pending_decision';
+}
+
 const CARD_WIDTH = 160;
 const GAP_WIDTH = 16;
 const ITEM_WIDTH = CARD_WIDTH + GAP_WIDTH;
@@ -120,6 +130,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
+  const [spinCount, setSpinCount] = useState<1 | 2 | 3 | 4>(1);
+  const [resolvedItems, setResolvedItems] = useState<SpinResolvedItem[]>([]);
+  const [itemActionLoading, setItemActionLoading] = useState(false);
   const [sellOfferGenerated, setSellOfferGenerated] = useState(false);
   const [isGeneratingSellOffer, setIsGeneratingSellOffer] = useState(false);
   const [isSellingItem, setIsSellingItem] = useState(false);
@@ -145,6 +158,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const laneRefs = useRef<Array<HTMLDivElement | null>>([]);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
@@ -398,293 +412,123 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setTimeout(onComplete, duration + 200);
   };
 
-  const handleSpin = async ({ isDemo = false, forceGold = false }: { isDemo?: boolean; forceGold?: boolean } = {}) => {
-    if (isSpinning) return;
-    if (!box || items.length === 0) return;
-
+  const handleSpin = async () => {
+    if (isSpinning || !box || items.length === 0) return;
     setSpinFeedbackMessage(null);
 
-    if (forceGold) {
-      isDemo = true;
-    }
-
-    if (isDemo) {
-      setIsDemoSpin(true);
-    } else {
-      setIsDemoSpin(false);
-    }
-
-    if (!isDemo && !isAuthenticated) {
+    if (!isAuthenticated) {
       openAuthModal('login');
       return;
     }
 
-    if (!isDemo && !isFree) {
-      if (isBalanceLoading) {
-        return;
-      }
+    const isDailyFreeBox = isFree || box?.isDaily === true || (box as any)?.isDailyFree === true;
+    const requestedCount = isDailyFreeBox ? 1 : spinCount;
 
-      if (caseCurrencyType === 'XP') {
-        if (currentCaseXpPrice <= 0 || currentXpBalance < currentCaseXpPrice) {
-          setSpinFeedbackMessage('Not enough XP to open this box.');
-          return;
-        }
-      } else {
-        if (!Number.isFinite(currentCasePrice) || currentCasePrice <= 0) {
-          return;
-        }
-
-        const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
-        if (!Number.isFinite(availableCoins)) {
-          return;
-        }
-
-        if (availableCoins < currentCasePrice) {
-          setSpinFeedbackMessage('Not enough coins — top up to open this box.');
-
-          if (!showTopUpModal && !topUpTriggerLockRef.current) {
-            topUpTriggerLockRef.current = true;
-            setTopUpModalIntent({
-              reason: 'insufficient_balance',
-              requiredCoins: currentCasePrice,
-              currentBalance: availableCoins,
-              missingCoins: currentCasePrice - availableCoins
-            });
-            setShowTopUpModal(true);
-            window.setTimeout(() => {
-              topUpTriggerLockRef.current = false;
-            }, 350);
-          }
-          return;
-        }
-      }
+    if (isDailyFreeBox && !canFreeSpin) {
+      setSpinFeedbackMessage('Daily free already claimed. Come back tomorrow.');
+      return;
     }
 
-    if (!isDemo && isFree) {
-      if (!isAuthenticated) {
-        openAuthModal('login');
+    if (!isDailyFreeBox && caseCurrencyType === 'COIN') {
+      const totalCost = toCoins(box.price, PRICE_UNIT_MODE) * requestedCount;
+      const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
+      if (!Number.isFinite(availableCoins) || availableCoins < totalCost) {
+        setSpinFeedbackMessage('Not enough coins — top up to open this box.');
         return;
       }
-      if (!canFreeSpin) {
-        alert("Free case already claimed. Come back in 24 hours.");
-        return;
-      }
-      claimDaily();
     }
 
     if (isBoxPreviewVisible) {
       setIsBoxPreviewFading(true);
-      await new Promise((resolve) => window.setTimeout(resolve, 450));
+      await new Promise((resolve) => window.setTimeout(resolve, 250));
       setIsBoxPreviewVisible(false);
       setIsBoxPreviewFading(false);
     }
-    
+
     setIsSpinning(true);
     setShowWinModal(false);
-    setIsGoldMode(false);
     setWonItem(null);
     setWonInventoryItem(null);
-    setRewardResolved(false);
-    setSellOfferGenerated(false);
-    playSound('click');
-    
-    let winner: CaseItem;
-    let rollValue = Math.random();
-    let rollHash = '';
-    let rollMessage = '';
-    let rollNonce = nonce;
-    let rollServerHash = serverSeedHash;
-    let rollClientSeed = clientSeed;
+    setResolvedItems([]);
 
-    if (isDemo) {
-      winner = getWinningItem(rollValue);
-    } else {
-      try {
-        // Server now authoritatively selects the prize + updates coins/inventory.
-        const operationId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    try {
+      const clientRequestId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-        const data = await authedFetch<{
-          ok: boolean;
-          price: number;
-          prize: CaseItem & { price?: number; size?: string };
-          xpAwarded?: number;
-          xpSettingsUsed?: {
-            xpPer100?: number;
-            xpPerOpen?: number;
-            baseXpBonus?: number;
-            xpMultiplier?: number;
-            enabled?: boolean;
-          };
-          newCoinBalance?: number;
-          newCoins?: number;
-          newXpBalance?: number;
-          currencyType?: 'COIN' | 'XP';
-          inventoryId: string;
-          openId: string;
-          sellBackRate?: number;
-          provablyFair: {
-            serverSeedHash: string;
-            clientSeed: string;
-            nonce: number;
-            roll: number;
-            rollHash: string;
-            message: string;
-          };
-        }>('/api/open-case', {
-          method: 'POST',
-          body: JSON.stringify({ boxId: box.id, isFree, operationId })
+      const data = await authedFetch<{
+        charged: number;
+        results: SpinResolvedItem[];
+        newBalance: number;
+      }>('/api/spins/resolve', {
+        method: 'POST',
+        body: JSON.stringify({ boxId: box.id, count: requestedCount, clientRequestId })
+      });
+
+      const lanes = data.results.map((result) => {
+        const winner = items.find((item) => item.id === result.prizeId || item.name === result.name)
+          ?? {
+            id: result.prizeId ?? result.itemId,
+            name: result.name,
+            image: result.image,
+            rarity: result.rarity,
+            price: result.sellValueCoins,
+            chance: 0,
+            color: '#9ca3af'
+          } as CaseItem;
+        return generateReel(winner, items, true);
+      });
+
+      setResolvedItems(data.results);
+      setReelItems(lanes[0] ?? reelItems);
+      syncBalance(Number(data.newBalance ?? 0));
+
+      const duration = 4200;
+      window.setTimeout(() => {
+        laneRefs.current.forEach((laneEl, idx) => {
+          if (!laneEl || idx >= lanes.length) return;
+          const jitter = Math.floor(Math.random() * 80) - 40;
+          laneEl.style.transition = `transform ${duration / 1000}s cubic-bezier(0.15,0.85,0.35,1)`;
+          laneEl.style.transform = `translate3d(${-(BUFFER_COUNT * ITEM_WIDTH) + jitter}px,0,0)`;
         });
+      }, 40);
 
-        const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
-        const fallbackPrice = Number(
-          (data.prize as { value?: number }).value ?? data.prize.price ?? 0
-        );
-        const resolvedRedeemable = data.prize.redeemable ?? matchedPrize?.redeemable ?? true;
-        winner = matchedPrize
-          ? { ...matchedPrize, redeemable: resolvedRedeemable, price: matchedPrize.price ?? fallbackPrice, size: data.prize.size }
-          : {
-              ...data.prize,
-              price: fallbackPrice,
-              chance: 0,
-              color: '#9ca3af',
-              redeemable: resolvedRedeemable,
-              size: data.prize.size
-            };
-
-        const inventoryItem: InventoryItem = {
-          ...(winner as CaseItem),
-          instanceId: data.inventoryId,
-          obtainedAt: Date.now(),
-          status: 'available',
-          size: data.prize.size,
-          provenance: { sourceType: 'case_open', sourceId: box.id },
-          sellBackRate: data.sellBackRate
-        };
-
-        addInventoryItemFromServer(inventoryItem);
-        if ((data.currencyType ?? 'COIN') === 'COIN') {
-          syncBalance(Number(data.newCoinBalance ?? data.newCoins ?? 0));
-          if (!isFree) {
-            const spentAmount = toCoins(Number(data.price ?? box?.price ?? 0), PRICE_UNIT_MODE);
-            registerSpend(spentAmount);
-          }
-        }
-        console.info('Case-open XP debug', {
-          caseId: box.id,
-          xpAwarded: Number(data.xpAwarded ?? 0),
-          newXpBalance: Number(data.newXpBalance ?? 0),
-          currencyType: data.currencyType ?? 'COIN',
-          xpSettingsUsed: data.xpSettingsUsed ?? null
-        });
-        setWonInventoryItem(inventoryItem);
-        rollValue = data.provablyFair.roll;
-        rollHash = data.provablyFair.rollHash;
-        rollMessage = data.provablyFair.message;
-        rollNonce = data.provablyFair.nonce;
-        rollServerHash = data.provablyFair.serverSeedHash;
-        rollClientSeed = data.provablyFair.clientSeed;
-
-        setServerSeedHash(data.provablyFair.serverSeedHash);
-        setClientSeed(data.provablyFair.clientSeed);
-        setClientSeedInput(data.provablyFair.clientSeed);
-        setNonce(data.provablyFair.nonce + 1);
-      } catch (error) {
-        const status = typeof (error as { status?: unknown })?.status === 'number'
-          ? (error as { status: number }).status
-          : 'unknown';
-        const rawMessage = error instanceof Error ? error.message : 'OPEN_FAILED: Unable to open case.';
-        const readableMessage = rawMessage.includes(':') ? rawMessage.split(':').slice(1).join(':').trim() : rawMessage;
-        const errorCode = rawMessage.includes(':') ? rawMessage.split(':')[0] : 'OPEN_FAILED';
-
-        console.error('Failed to open case', {
-          status,
-          code: errorCode,
-          message: readableMessage,
-          boxId: box.id
-        });
+      window.setTimeout(() => {
         setIsSpinning(false);
         setIsBoxPreviewVisible(true);
-        setIsBoxPreviewFading(false);
-        setSpinFeedbackMessage(readableMessage || 'Unable to open case.');
-        alert(readableMessage || 'Unable to open case.');
-        return;
-      }
-    }
+        setShowWinModal(true);
+      }, duration + 280);
 
-    const legendaryPool = items.filter((item) => item.rarity === 'legendary');
-    if (forceGold && legendaryPool.length > 0) {
-      winner = legendaryPool[Math.floor(rollValue * legendaryPool.length)];
-    }
-
-    if (!isDemo) {
-      const latestRoll = {
-        nonce: rollNonce,
-        rollHash,
-        rollValue,
-        message: rollMessage,
-        boxId: box.id,
-        serverSeedHash: rollServerHash,
-        clientSeed: rollClientSeed,
-        outcome: winner.name
-      };
-      setLastRoll(latestRoll);
-      if (typeof window !== 'undefined') {
-        window.sessionStorage.setItem(LAST_ROLL_STORAGE_KEY, JSON.stringify(latestRoll));
-      }
-    } else {
-      setLastRoll(null);
-    }
-
-    // 2. Gold spin only triggers when the winner is guaranteed legendary
-    const isGoldEligible = winner.rarity === 'legendary';
-    const goldRollHash = rollHash ? await hashString(`${rollHash}:gold`) : await hashString(`${rollValue}:gold`);
-    const goldRollValue = deriveRollValue(goldRollHash);
-    const triggerGold = (forceGold && isGoldEligible) || (isGoldEligible && goldRollValue < 0.5);
-
-    if (triggerGold) {
-        // --- GOLD SPIN FLOW ---
-        
-        // Stage 1: Spin to Golden Ticket
-        // Note: We use global items pool for buffer if box items are too few, or just box items. 
-        // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
-        const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items, true);
-        setReelItems(ticketReel);
-        
-        animateSpin(4500, () => {
-            // Stage 1 Complete: Activate Gold Mode
-            playSound('gold-mode');
-            setIsGoldMode(true);
-            
-            // Wait a moment to see the ticket
-            setTimeout(() => {
-                // Stage 2: Spin to Actual Winner (using only legendary items in reel)
-                const pool = legendaryPool.length > 0 ? legendaryPool : items;
-                const goldReel = generateReel(winner, pool, true);
-                setReelItems(goldReel);
-                
-                animateSpin(4000, () => {
-                    // Stage 2 Complete
-                    finishSpin(winner);
-                });
-            }, 1000);
-        });
-
-    } else {
-        // --- NORMAL SPIN FLOW ---
-        const normalReel = generateReel(winner, items, true);
-        setReelItems(normalReel);
-        
-        animateSpin(5000, () => {
-            finishSpin(winner);
-        });
+      data.results.forEach((result) => {
+        const matched = items.find((item) => item.id === result.prizeId || item.name === result.name);
+        const inventoryItem: InventoryItem = {
+          id: result.prizeId ?? result.itemId,
+          instanceId: result.itemId,
+          name: result.name,
+          image: result.image,
+          rarity: result.rarity,
+          chance: 0,
+          color: matched?.color ?? '#9ca3af',
+          price: result.sellValueCoins,
+          obtainedAt: Date.now(),
+          status: 'pending_decision',
+          redeemable: true,
+          sellBackRate: sellBackRate
+        };
+        addInventoryItemFromServer(inventoryItem);
+      });
+    } catch (error) {
+      const rawMessage = error instanceof Error ? error.message : 'Unable to open box.';
+      const readableMessage = rawMessage.includes(':') ? rawMessage.split(':').slice(1).join(':').trim() : rawMessage;
+      setIsSpinning(false);
+      setIsBoxPreviewVisible(true);
+      setSpinFeedbackMessage(readableMessage || 'Unable to open box.');
     }
   };
 
   const handleTryFree = () => {
     setSpinFeedbackMessage(null);
-    handleSpin({ isDemo: true });
+    void handleSpin();
   };
 
   useEffect(() => {
@@ -713,75 +557,56 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   };
 
   const closeWinModal = () => {
-    if (sellOfferTimerRef.current) {
-      window.clearTimeout(sellOfferTimerRef.current);
-      sellOfferTimerRef.current = null;
-    }
-    setIsGeneratingSellOffer(false);
-    setIsSellingItem(false);
-    if (!rewardResolved) {
-      setRewardResolved(true);
-    }
     setShowWinModal(false);
     setWonInventoryItem(null);
     setSellOfferGenerated(false);
+    setIsGeneratingSellOffer(false);
+    setIsSellingItem(false);
+    setItemActionLoading(false);
   };
 
-  const handleSell = async () => {
-    playSound('click');
-    if (wonItem?.redeemable === false) {
-        alert('This item is not redeemable and cannot be sold back.');
-        return;
+  const resolveItems = async (mode: 'keep_all' | 'sell_all' | 'single', targetId?: string, action?: 'keep' | 'sell') => {
+    if (itemActionLoading || resolvedItems.length === 0) return;
+    setItemActionLoading(true);
+
+    try {
+      const actions = mode === 'single'
+        ? [{ itemId: targetId as string, action: action as 'keep' | 'sell' }]
+        : resolvedItems.map((item) => ({ itemId: item.itemId, action: mode === 'sell_all' ? 'sell' : 'keep' as 'keep' | 'sell' }));
+
+      const clientRequestId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+      const response = await authedFetch<{ credited: number; updatedBalance: number }>('/api/inventory/resolve', {
+        method: 'POST',
+        body: JSON.stringify({ actions, clientRequestId })
+      });
+
+      syncBalance(Number(response.updatedBalance ?? balance));
+      const resolvedIds = new Set(actions.map((entry) => entry.itemId));
+      setResolvedItems((prev) => prev.filter((item) => !resolvedIds.has(item.itemId)));
+      if (resolvedItems.length === actions.length) {
+        closeWinModal();
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to resolve items.';
+      alert(message.includes(':') ? message.split(':').slice(1).join(':').trim() : message);
+    } finally {
+      setItemActionLoading(false);
     }
-    if (isDemoSpin || isGeneratingSellOffer || isSellingItem) {
-        if (isDemoSpin) {
-          setShowWinModal(false);
-        }
-        return;
+  };
+
+  const handleSell = () => {
+    if (resolvedItems.length > 0) {
+      void resolveItems('sell_all');
     }
-    if (!sellOfferGenerated) {
-        setIsGeneratingSellOffer(true);
-        sellOfferTimerRef.current = window.setTimeout(() => {
-          setSellOfferGenerated(true);
-          setIsGeneratingSellOffer(false);
-          sellOfferTimerRef.current = null;
-        }, 900);
-        return;
-    }
-    if (wonInventoryItem && !rewardResolved) {
-        setIsSellingItem(true);
-        try {
-          await sellItem(wonInventoryItem.instanceId);
-          setRewardResolved(true);
-        } finally {
-          setIsSellingItem(false);
-        }
-    }
-    if (sellOfferTimerRef.current) {
-      window.clearTimeout(sellOfferTimerRef.current);
-      sellOfferTimerRef.current = null;
-    }
-    setShowWinModal(false);
-    setWonInventoryItem(null);
-    setSellOfferGenerated(false);
-    setIsGeneratingSellOffer(false);
-    setIsSellingItem(false);
   };
 
   const handleKeep = () => {
-      playSound('click');
-      if (sellOfferTimerRef.current) {
-        window.clearTimeout(sellOfferTimerRef.current);
-        sellOfferTimerRef.current = null;
-      }
-      if (wonItem && !rewardResolved) {
-        setRewardResolved(true);
-      }
-      setShowWinModal(false);
-      setWonInventoryItem(null);
-      setSellOfferGenerated(false);
-      setIsGeneratingSellOffer(false);
-      setIsSellingItem(false);
+    if (resolvedItems.length > 0) {
+      void resolveItems('keep_all');
+    }
   };
 
   const handleCopyProof = useCallback(async () => {
@@ -878,44 +703,50 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
 
                 {/* The Moving Reel */}
-                <div 
-                    ref={scrollContainerRef}
-                    className={`flex px-[50%] will-change-transform ml-[-80px] transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`} 
-                    style={{ gap: `${GAP_WIDTH}px` }}
-                >
-                    {reelItems.map((item, idx) => (
-                        <div 
-                            key={`${item.id}-${idx}`}
-                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}`}
-                            style={{ 
-                                width: `${CARD_WIDTH}px`, 
-                                height: `${CARD_WIDTH}px`,
-                                boxShadow: item.id === 'golden-ticket' ? undefined : `0 4px 0 0 ${item.color}20` 
-                            }}
-                            onMouseEnter={() => !isSpinning && playSound('hover')}
+                <div className="w-full px-2 sm:px-4 space-y-2">
+                  {Array.from({ length: isSpinning ? Math.max(1, resolvedItems.length || spinCount) : 1 }).map((_, laneIndex) => (
+                    <div
+                      key={`lane-${laneIndex}`}
+                      ref={(el) => { laneRefs.current[laneIndex] = el; if (laneIndex === 0) scrollContainerRef.current = el; }}
+                      className={`flex px-[50%] will-change-transform ml-[-80px] transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`}
+                      style={{ gap: `${GAP_WIDTH}px`, transform: 'translate3d(0,0,0)' }}
+                    >
+                      {reelItems.map((item, idx) => (
+                        <div
+                          key={`${item.id}-${idx}-${laneIndex}`}
+                          className="relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3 flex flex-col items-center justify-center"
+                          style={{ width: `${CARD_WIDTH}px`, height: `${CARD_WIDTH}px` }}
                         >
-                            <div 
-                                className="absolute inset-4 rounded-full opacity-20 blur-xl"
-                                style={{ backgroundColor: item.color }}
-                            ></div>
-                            <img 
-                                src={item.image} 
-                                alt={item.name} 
-                                className={`relative z-10 w-24 h-24 object-contain mb-2 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
-                            />
-                            <div 
-                                className="absolute bottom-0 left-0 right-0 h-1 opacity-50 rounded-b-xl"
-                                style={{ backgroundColor: item.color }}
-                            ></div>
+                          <img src={item.image} alt={item.name} className="relative z-10 w-24 h-24 object-contain mb-2" />
+                          <div className="absolute bottom-0 left-0 right-0 h-1 opacity-50 rounded-b-xl" style={{ backgroundColor: item.color }}></div>
                         </div>
-                    ))}
+                      ))}
+                    </div>
+                  ))}
                 </div>
             </div>
 
             {/* Action Bar */}
             <div className="bg-[#0b0e14] p-4 flex flex-col sm:flex-row items-center justify-center gap-3 border-t border-gray-800 relative z-20">
+              <div className="inline-flex w-full sm:w-auto rounded-lg border border-gray-700 bg-[#131825] p-1">
+                {[1,2,3,4].map((value) => {
+                  const option = value as 1 | 2 | 3 | 4;
+                  const dailyLocked = (isFree || box?.isDaily === true || (box as any)?.isDailyFree === true) && option > 1;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      disabled={dailyLocked || isSpinning}
+                      onClick={() => setSpinCount(option)}
+                      className={`min-w-[52px] px-3 py-2 text-xs sm:text-sm font-semibold rounded-md transition ${spinCount === option ? 'bg-cyan-500 text-black' : 'text-gray-300'} disabled:opacity-50`}
+                    >
+                      x{option}
+                    </button>
+                  );
+                })}
+              </div>
                  <button 
-                    onClick={() => handleSpin()}
+                    onClick={() => void handleSpin()}
                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
                     className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
                 >
@@ -931,15 +762,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       ) : (
                         <span className="inline-flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
                           <span className="inline-flex items-center gap-2">
-                            Open for
+                            Spin x{(isFree || box?.isDaily === true || (box as any)?.isDailyFree === true) ? 1 : spinCount} for
                             {caseCurrencyType === 'XP' ? (
                               <span className="inline-flex items-center gap-1 text-white">
                                 <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                                <span>{currentCaseXpPrice.toLocaleString()}</span>
+                                <span>{(currentCaseXpPrice * ((isFree || box?.isDaily === true || (box as any)?.isDailyFree === true) ? 1 : spinCount)).toLocaleString()}</span>
                               </span>
                             ) : (
                               <CoinAmount
-                                amount={toCoins(box!.price, PRICE_UNIT_MODE)}
+                                amount={toCoins(box!.price, PRICE_UNIT_MODE) * ((isFree || box?.isDaily === true || (box as any)?.isDailyFree === true) ? 1 : spinCount)}
                                 formatOptions={{ maximumFractionDigits: 0 }}
                                 className="text-white"
                                 iconClassName="w-4 h-4"
@@ -966,7 +797,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                  )}
                  {isAdmin && (
                    <button
-                     onClick={() => handleSpin({ isDemo: true, forceGold: true })}
+                     onClick={handleTryFree}
                      disabled={isSpinning || isSyncingFair || isRotatingSeed}
                      className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
                    >
@@ -1018,6 +849,34 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         />
 
         {/* Win Modal Overlay */}
+        {showWinModal && resolvedItems.length > 0 && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-3 sm:p-6">
+            <div className="w-full max-w-3xl rounded-2xl border border-gray-700 bg-[#0f1420] p-4 sm:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg sm:text-xl font-bold text-white">Win Review</h3>
+                <button type="button" className="text-gray-300" onClick={closeWinModal}>Close</button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {resolvedItems.map((item) => (
+                  <div key={item.itemId} className="rounded-xl border border-gray-700 bg-[#131825] p-3">
+                    <img src={item.image} alt={item.name} className="mx-auto h-20 w-20 object-contain" />
+                    <div className="mt-2 text-sm font-semibold text-white truncate">{item.name}</div>
+                    <div className="text-xs text-gray-400 uppercase">{item.rarity}</div>
+                    <div className="text-sm text-emerald-300 mt-1">Sell: {item.sellValueCoins.toLocaleString()} coins</div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button disabled={itemActionLoading} onClick={() => void resolveItems('single', item.itemId, 'keep')} className="rounded-md bg-gray-700 px-2 py-2 text-xs text-white disabled:opacity-50">Keep</button>
+                      <button disabled={itemActionLoading} onClick={() => void resolveItems('single', item.itemId, 'sell')} className="rounded-md bg-emerald-500 px-2 py-2 text-xs font-semibold text-black disabled:opacity-50">Sell</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button disabled={itemActionLoading} onClick={() => void resolveItems('keep_all')} className="rounded-lg border border-gray-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{itemActionLoading ? 'Working...' : 'Keep All'}</button>
+                <button disabled={itemActionLoading} onClick={() => void resolveItems('sell_all')} className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-black disabled:opacity-50">{itemActionLoading ? 'Working...' : 'Sell All'}</button>
+              </div>
+            </div>
+          </div>
+        )}
         {showWinModal && wonItem && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" onClick={closeWinModal}></div>
