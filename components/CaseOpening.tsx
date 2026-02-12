@@ -825,7 +825,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="flex items-center gap-4">
                 <button 
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
+                    className="min-h-11 flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
                 >
                     <ChevronLeft className="w-4 h-4" /> All cases
                 </button>
@@ -894,11 +894,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
-                            <div 
-                                className="absolute inset-4 rounded-full opacity-20 blur-xl"
-                                style={{ backgroundColor: item.color }}
+                            <div
+                                className="absolute inset-4 rounded-full opacity-90"
+                                style={{
+                                  background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
+                                }}
                             ></div>
-                            <img 
+                            <img loading="lazy" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
                                 className={`relative z-10 w-24 h-24 object-contain mb-2 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
@@ -934,7 +936,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             Open for
                             {caseCurrencyType === 'XP' ? (
                               <span className="inline-flex items-center gap-1 text-white">
-                                <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+                                <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
                                 <span>{currentCaseXpPrice.toLocaleString()}</span>
                               </span>
                             ) : (
@@ -1051,9 +1053,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
                         <div className={`relative mt-6 flex h-52 w-52 items-center justify-center sm:h-60 sm:w-60 ${isDemoSpin ? 'mb-4' : 'mb-6'}`}>
                             <div className="absolute inset-0 rounded-full border border-white/10 bg-white/5"></div>
-                            <div className="absolute inset-6 rounded-full blur-3xl opacity-50" style={{ backgroundColor: wonItem.color }}></div>
+                            <div
+                              className="absolute inset-6 rounded-full opacity-95"
+                              style={{
+                                background: `radial-gradient(circle, ${wonItem.color}90 0%, ${wonItem.color}3d 48%, ${wonItem.color}00 80%)`,
+                                boxShadow: `0 0 28px ${wonItem.color}55`
+                              }}
+                            ></div>
                             <div className="absolute inset-4 rounded-full bg-gradient-to-br from-white/10 to-transparent"></div>
-                            <img src={wonItem.image} alt={wonItem.name} className="relative z-10 h-36 w-36 object-contain drop-shadow-2xl sm:h-44 sm:w-44" />
+                            <img loading="lazy" decoding="async" src={wonItem.image} alt={wonItem.name} className="relative z-10 h-36 w-36 object-contain drop-shadow-2xl sm:h-44 sm:w-44" />
                         </div>
 
                         <div className={`w-full text-center ${isDemoSpin ? 'mb-6' : 'mb-7'}`}>
@@ -1152,16 +1160,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         </div>
 
                         <div className="relative mb-3 flex w-full aspect-square items-center justify-center">
-                            <div 
-                                className="absolute inset-4 opacity-0 group-hover:opacity-20 transition-opacity blur-xl rounded-full"
-                                style={{ backgroundColor: item.color }}
+                            <div
+                                className="absolute inset-4 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+                                style={{
+                                  background: `radial-gradient(circle, ${item.color}80 0%, ${item.color}30 46%, ${item.color}00 78%)`
+                                }}
                             ></div>
                             {item.redeemable === false && (
                               <div className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/50 p-1 text-amber-200">
                                 <Info className="h-3.5 w-3.5" />
                               </div>
                             )}
-                            <img src={item.image} alt={item.name} className="relative z-10 w-3/4 h-3/4 object-contain group-hover:scale-110 transition-transform duration-300" />
+                            <img loading="lazy" decoding="async" src={item.image} alt={item.name} className="relative z-10 w-3/4 h-3/4 object-contain group-hover:scale-110 transition-transform duration-300" />
                         </div>
 
                         <div className="w-full text-left mt-auto">
@@ -1195,7 +1205,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               role="dialog"
               aria-modal="true"
               aria-labelledby="item-details-title"
-              className="relative w-full max-w-[760px] max-h-[88vh] overflow-hidden rounded-[26px] border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111824] to-[#0b0f18] text-gray-200 shadow-[0_25px_80px_-40px_rgba(15,23,42,0.9)] shadow-purple-500/10 animate-item-modal-in"
+              className="relative w-full max-w-[760px] max-h-[85vh] overflow-hidden rounded-[26px] border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111824] to-[#0b0f18] text-gray-200 shadow-[0_25px_80px_-40px_rgba(15,23,42,0.9)] shadow-purple-500/10 animate-item-modal-in"
               style={{
                 borderColor: 'rgba(255,255,255,0.08)',
                 boxShadow:
@@ -1206,7 +1216,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.05]"
                 style={{ backgroundImage: `url(${pullzPattern})` }}
               />
-              <div className="relative flex max-h-[88vh] flex-col gap-6 overflow-hidden p-5 sm:p-8">
+              <div className="relative flex max-h-[85vh] flex-col gap-6 overflow-hidden p-5 sm:p-8">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
                     Item Details

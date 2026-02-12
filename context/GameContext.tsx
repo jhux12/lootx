@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useMemo } from 'react';
 import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage, StripeSettings, Shipment, ShipmentStatus } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
@@ -551,6 +551,11 @@ const getDayStart = (timestamp: number = Date.now()) => {
 };
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
+const AuthContext = createContext<Pick<GameContextType, 'user' | 'isAuthenticated' | 'authInitialized' | 'openAuthModal' | 'login' | 'loginWithGoogle' | 'linkGoogleAccount' | 'register' | 'resetPassword' | 'logout' | 'authModalMode' | 'setAuthModalMode' | 'showLoginModal' | 'setShowLoginModal' | 'showEmailVerificationModal' | 'setShowEmailVerificationModal' | 'showEmailVerifiedModal' | 'setShowEmailVerifiedModal' | 'emailVerificationStatus' | 'resendEmailVerification' | 'refreshEmailVerification'> | undefined>(undefined);
+const WalletContext = createContext<Pick<GameContextType, 'balance' | 'user' | 'syncBalance' | 'syncXpBalance' | 'addBalance' | 'deductBalance' | 'registerSpend' | 'awardCaseOpenXp'> | undefined>(undefined);
+const BoxesContext = createContext<Pick<GameContextType, 'boxes' | 'items' | 'createBox' | 'createUserBox' | 'updateBox' | 'deleteBox' | 'view' | 'setView'> | undefined>(undefined);
+const InventoryContext = createContext<Pick<GameContextType, 'inventory' | 'shipments' | 'addToInventory' | 'addInventoryItemFromServer' | 'sellItem' | 'shipItem'> | undefined>(undefined);
+const UIContext = createContext<Pick<GameContextType, 'view' | 'setView' | 'notifications' | 'addNotification' | 'dismissNotification' | 'clearNotifications' | 'showTopUpModal' | 'setShowTopUpModal' | 'topUpModalIntent' | 'setTopUpModalIntent'> | undefined>(undefined);
 
 // Guest / Loading User
 const GUEST_USER: User = {
@@ -2752,8 +2757,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
   };
 
-  return (
-    <GameContext.Provider value={{
+  const gameContextValue = useMemo(() => ({
       user,
       isAuthenticated,
       users,
@@ -2833,8 +2837,44 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updateUserProgress,
       updateShipmentStatus,
       authInitialized
-    }}>
-      {children}
+    }), [
+      user, isAuthenticated, users, notifications, showLoginModal, showTopUpModal, topUpModalIntent, authModalMode,
+      showEmailVerificationModal, showEmailVerifiedModal, emailVerificationStatus, balance, inventory, shipments,
+      view, battles, boxes, items, coinPackages, bonusSettings, stripeSettings, login, loginWithGoogle,
+      linkGoogleAccount, register, resetPassword, logout, setShowLoginModal, setShowTopUpModal, setTopUpModalIntent,
+      setAuthModalMode, openAuthModal, resendEmailVerification, refreshEmailVerification, setShowEmailVerifiedModal,
+      setShowEmailVerificationModal, setView, addBalance, syncBalance, syncXpBalance, deductBalance, addToInventory,
+      addInventoryItemFromServer, followUser, unfollowUser, sellItem, shipItem, updateAddress, updateUserInfo,
+      addNotification, dismissNotification, clearNotifications, sendAdminNotification, updateUserFlags,
+      updateUserAdminData, updateUserBalance, createBattle, joinBattle, updateBattle, createItem, updateItem,
+      deleteItem, createCoinPackage, updateCoinPackage, deleteCoinPackage, createBox, createUserBox, updateBox,
+      deleteBox, claimDaily, claimRakeback, updateBonusSettings, updateStripeSettings, awardCaseOpenXp,
+      registerSpend, generateAffiliateCode, updateUserProgress, updateShipmentStatus, authInitialized
+    ]);
+
+  const authContextValue = useMemo(() => ({
+    user, isAuthenticated, authInitialized, openAuthModal, login, loginWithGoogle, linkGoogleAccount, register,
+    resetPassword, logout, authModalMode, setAuthModalMode, showLoginModal, setShowLoginModal,
+    showEmailVerificationModal, setShowEmailVerificationModal, showEmailVerifiedModal, setShowEmailVerifiedModal,
+    emailVerificationStatus, resendEmailVerification, refreshEmailVerification
+  }), [user, isAuthenticated, authInitialized, openAuthModal, login, loginWithGoogle, linkGoogleAccount, register, resetPassword, logout, authModalMode, showLoginModal, showEmailVerificationModal, showEmailVerifiedModal, emailVerificationStatus, resendEmailVerification, refreshEmailVerification]);
+
+  const walletContextValue = useMemo(() => ({ user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp }), [user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp]);
+  const boxesContextValue = useMemo(() => ({ boxes, items, createBox, createUserBox, updateBox, deleteBox, view, setView }), [boxes, items, createBox, createUserBox, updateBox, deleteBox, view, setView]);
+  const inventoryContextValue = useMemo(() => ({ inventory, shipments, addToInventory, addInventoryItemFromServer, sellItem, shipItem }), [inventory, shipments, addToInventory, addInventoryItemFromServer, sellItem, shipItem]);
+  const uiContextValue = useMemo(() => ({ view, setView, notifications, addNotification, dismissNotification, clearNotifications, showTopUpModal, setShowTopUpModal, topUpModalIntent, setTopUpModalIntent }), [view, setView, notifications, addNotification, dismissNotification, clearNotifications, showTopUpModal, topUpModalIntent]);
+
+  return (
+    <GameContext.Provider value={gameContextValue}>
+      <AuthContext.Provider value={authContextValue}>
+        <WalletContext.Provider value={walletContextValue}>
+          <BoxesContext.Provider value={boxesContextValue}>
+            <InventoryContext.Provider value={inventoryContextValue}>
+              <UIContext.Provider value={uiContextValue}>{children}</UIContext.Provider>
+            </InventoryContext.Provider>
+          </BoxesContext.Provider>
+        </WalletContext.Provider>
+      </AuthContext.Provider>
     </GameContext.Provider>
   );
 };
@@ -2844,5 +2884,35 @@ export const useGame = () => {
   if (!context) {
     throw new Error('useGame must be used within a GameProvider');
   }
+  return context;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within a GameProvider');
+  return context;
+};
+
+export const useWallet = () => {
+  const context = useContext(WalletContext);
+  if (!context) throw new Error('useWallet must be used within a GameProvider');
+  return context;
+};
+
+export const useBoxes = () => {
+  const context = useContext(BoxesContext);
+  if (!context) throw new Error('useBoxes must be used within a GameProvider');
+  return context;
+};
+
+export const useInventory = () => {
+  const context = useContext(InventoryContext);
+  if (!context) throw new Error('useInventory must be used within a GameProvider');
+  return context;
+};
+
+export const useUI = () => {
+  const context = useContext(UIContext);
+  if (!context) throw new Error('useUI must be used within a GameProvider');
   return context;
 };

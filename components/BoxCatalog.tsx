@@ -187,6 +187,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const [config, setConfig] = useState<BoxesPageConfig>(getDefaultBoxesPageConfig());
   const [activeTab, setActiveTab] = useState<BoxesPageTabId>(getDefaultBoxesPageConfig().tabs.defaultTabId);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [hasCategorySelection, setHasCategorySelection] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -247,6 +248,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     return undefined;
   }, [isTagsOpen]);
 
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearchTerm(searchTerm), 200);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
   const formatDropdownLabel = (label: string) => {
     if (!label) return label;
     return label.charAt(0).toUpperCase() + label.slice(1);
@@ -404,7 +410,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     () =>
       applyBoxFilters(displayBoxes, {
         tabId: activeTab,
-        searchTerm: config.filters.search.enabled ? searchTerm : undefined,
+        searchTerm: config.filters.search.enabled ? debouncedSearchTerm : undefined,
         tags: config.filters.tagChips.enabled ? activeTags : [],
         category:
           config.filters.category.enabled || categoryQueryParam
@@ -421,7 +427,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       categoryQueryParam,
       displayBoxes,
       mainSortKey,
-      searchTerm,
+      debouncedSearchTerm,
       selectedCategory
     ]
   );
@@ -430,7 +436,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     () => (config.curatedRows ?? []).filter((row) => row.enabled),
     [config.curatedRows]
   );
-  const hasActiveSearch = Boolean(searchTerm.trim());
+  const hasActiveSearch = Boolean(debouncedSearchTerm.trim());
   const hasActiveCategoryFilter = hasCategorySelection || Boolean(categoryQueryParam);
   const showCuratedRows = activeTab === 'official'
     && !hasActiveSearch

@@ -568,7 +568,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
             <div className="flex flex-col lg:flex-row lg:items-end gap-6">
               <div className="flex flex-col sm:flex-row sm:items-end gap-4 w-full">
                 <div className="relative group self-center sm:self-auto">
-                  <img src={displayUser.avatar} alt={displayUser.name} className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-[#131720] shadow-2xl object-cover bg-[#0b0e14]" />
+                  <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUser.name} className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-[#131720] shadow-2xl object-cover bg-[#0b0e14]" />
                   <div className="absolute -bottom-3 -right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full border-4 border-[#131720]">
                       XP {(displayUser.xpBalance ?? displayUser.xp ?? 0).toLocaleString()}
                   </div>
@@ -643,10 +643,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                 <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
                   <div className="flex items-center justify-between gap-3 mb-2">
                     <div className="text-gray-500 text-xs font-bold uppercase tracking-wider">XP Points</div>
-                    <img src={XP_ICON} alt="XP" className="w-7 h-7 object-contain drop-shadow" />
+                    <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="w-7 h-7 object-contain drop-shadow" />
                   </div>
                   <div className="text-xl font-black text-blue-500 flex items-center gap-2">
-                    <img src={XP_ICON} alt="XP" className="w-8 h-8 object-contain" />
+                    <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="w-8 h-8 object-contain" />
                     <span>{displayUser.xp.toLocaleString()}</span>
                   </div>
                 </div>
@@ -747,7 +747,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       <div className="absolute left-2 top-2 z-10 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide bg-black/70 text-white border border-white/10">
                                         #{index + 1}
                                       </div>
-                                      <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                                      <img loading="lazy" decoding="async" src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
                                       <div className={`absolute inset-0 opacity-15 bg-gradient-to-br ${
                                           item.rarity === 'legendary' ? 'from-yellow-500' :
                                           item.rarity === 'epic' ? 'from-purple-500' :
@@ -926,7 +926,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               isSelectable ? 'cursor-pointer' : 'cursor-default'
                                             }`}
                                           >
-                                            <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                                            <img loading="lazy" decoding="async" src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
                                             <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
                                                 item.rarity === 'legendary' ? 'from-yellow-500' :
                                                 item.rarity === 'epic' ? 'from-purple-500' :
@@ -1093,7 +1093,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               <div className="mt-4 space-y-3 max-h-48 overflow-y-auto pr-1">
                                   {selectedShipmentItems.map((item) => (
                                       <div key={item.instanceId} className="flex items-center gap-3 rounded-xl border border-gray-800 bg-[#131720] p-3">
-                                          <img src={item.image} alt={item.name} className="h-10 w-10 rounded-lg object-contain bg-[#0b0e14]" />
+                                          <img loading="lazy" decoding="async" src={item.image} alt={item.name} className="h-10 w-10 rounded-lg object-contain bg-[#0b0e14]" />
                                           <div className="flex-1">
                                               <div className="text-sm font-semibold text-white">{item.name}</div>
                                               <div className="text-xs text-gray-500">{item.rarity}</div>
@@ -1274,7 +1274,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                             className="flex items-center gap-4 cursor-pointer"
                                             onClick={() => setView({ type: 'PROFILE', userId: p.id })}
                                           >
-                                              <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
+                                              <img loading="lazy" decoding="async" src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
                                               <div>
                                                   <div className="text-white font-bold">{p.name}</div>
                                                   <div className="text-xs text-gray-500">XP {(p.xpBalance ?? p.xp ?? 0).toLocaleString()}</div>
@@ -1322,7 +1322,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                         className="flex items-center gap-4 cursor-pointer"
                                         onClick={() => setView({ type: 'PROFILE', userId: p.id })}
                                       >
-                                          <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
+                                          <img loading="lazy" decoding="async" src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
                                           <div>
                                               <div className="text-white font-bold">{p.name}</div>
                                               <div className="text-xs text-gray-500">XP {(p.xpBalance ?? p.xp ?? 0).toLocaleString()}</div>
@@ -1371,7 +1371,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               onClick={() => setProfileForm({...profileForm, avatar: url})}
                                               className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${profileForm.avatar === url ? 'border-brand-purple scale-95' : 'border-transparent hover:border-gray-700'}`}
                                           >
-                                              <img src={url} alt="preset" className="w-full h-full object-cover" />
+                                              <img loading="lazy" decoding="async" src={url} alt="preset" className="w-full h-full object-cover" />
                                               {profileForm.avatar === url && (
                                                   <div className="absolute inset-0 bg-brand-purple/20 flex items-center justify-center">
                                                       <Check className="w-6 h-6 text-white" />

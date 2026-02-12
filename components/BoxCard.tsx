@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import { CoinAmount } from './CoinAmount';
 import { MysteryBox } from '../types';
 import { RiskSliderIndicator } from './RiskSliderIndicator';
@@ -13,7 +13,7 @@ type BoxCardProps = {
   size?: 'default' | 'compact';
 };
 
-export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size = 'default' }) => {
+const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size = 'default' }) => {
   const [isDropping, setIsDropping] = useState(false);
   const clickTimeoutRef = useRef<number | null>(null);
   const isCompact = size === 'compact';
@@ -46,25 +46,27 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size =
         className="pointer-events-none absolute inset-0 opacity-60"
         style={{ background: `linear-gradient(180deg, ${box.accentColor}1a, transparent 60%)` }}
       />
-      {/* Image Container with Glow */}
       <div className={`relative flex w-full flex-1 items-center justify-center ${isCompact ? 'mb-3' : 'mb-4'}`}>
         <div
-          className="absolute inset-4 rounded-full blur-3xl opacity-25"
-          style={{ backgroundColor: box.accentColor }}
+          className="absolute inset-4 rounded-full opacity-25"
+          style={{
+            background: `radial-gradient(circle, ${box.accentColor}66 0%, ${box.accentColor}00 68%)`
+          }}
         />
         <img
           src={box.image}
           alt={box.name}
+          loading="lazy"
+          decoding="async"
           className={`relative z-10 object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105 ${isCompact ? 'h-28 w-28 sm:h-36 sm:w-36' : 'h-40 w-40 sm:h-44 sm:w-44'}`}
         />
       </div>
 
-      {/* Info */}
       <div className="flex w-full flex-col items-center gap-2 pb-1">
         <h4 className={`font-semibold text-gray-100 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-xs sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
         {box.currencyType === 'XP' ? (
           <div className={`flex items-center justify-center gap-1 font-semibold text-white sm:text-lg ${isCompact ? 'text-sm' : 'text-base'}`}>
-            <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+            <img src={XP_ICON} alt="XP" loading="lazy" decoding="async" className="h-4 w-4 object-contain" />
             <span>{Math.max(0, Math.floor(Number(box.priceXP ?? 0))).toLocaleString()}</span>
           </div>
         ) : (
@@ -82,3 +84,5 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size =
     </div>
   );
 };
+
+export const BoxCard = memo(BoxCardComponent);
