@@ -72,7 +72,7 @@ type MainContentProps = {
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
-  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal, authInitialized } = useGame();
+  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal, authInitialized, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
   const [showPromoPopup, setShowPromoPopup] = useState(false);
@@ -200,6 +200,62 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     return Math.min(6, Math.max(1, Math.round(value)));
   };
 
+
+  const isComingSoonMode = stripeSettings.comingSoonModeEnabled === true;
+  const canBypassComingSoon = user.isAdmin || view.type === 'ADMIN';
+
+  const ComingSoonSplash = () => (
+    <div className="mx-auto mt-4 w-full max-w-3xl px-2 pb-12 sm:px-4">
+      <div className="overflow-hidden rounded-3xl border border-amber-400/30 bg-gradient-to-br from-[#131722] via-[#101521] to-[#0b0f18] shadow-[0_30px_70px_-40px_rgba(251,191,36,0.7)]">
+        <div className="px-5 py-8 sm:px-8 sm:py-10">
+          <div className="inline-flex items-center rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200">
+            Coming soon mode
+          </div>
+          <h1 className="mt-4 text-3xl font-black leading-tight text-white sm:text-4xl">
+            We're tuning the loot machine.
+          </h1>
+          <p className="mt-4 text-sm text-gray-300 sm:text-base">
+            Our hamsters are currently sprinting on the servers, and we're almost ready for prime time.
+            Please check back soon for a shinier, faster, and slightly more dramatic launch.
+          </p>
+          <p className="mt-3 text-xs text-gray-400 sm:text-sm">
+            Yes, this page is intentional. No, the big red button was not pressed (probably).
+          </p>
+
+          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                openAuthModal('login');
+                setView({ type: 'ADMIN' });
+                if (typeof window !== 'undefined') {
+                  window.history.replaceState({}, '', '/admin');
+                }
+              }}
+              className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              Admin login
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                setView({ type: 'CONTACT' });
+                if (typeof window !== 'undefined') {
+                  window.history.replaceState({}, '', '/contact');
+                }
+              }}
+              className="w-full rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-300/20"
+            >
+              Contact support team
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const BattlesComingSoon = () => (
     <div className="mt-6 rounded-2xl border border-gray-800 bg-[#0b0e14] p-6 sm:p-8">
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -227,6 +283,10 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
   return (
     <main className="flex-1 min-w-0 pb-[90px] sm:pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+      {isComingSoonMode && !canBypassComingSoon ? (
+        <ComingSoonSplash />
+      ) : (
+      <>
       {view.type === 'HOME' && (
         <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
           {!isAuthenticated && <Hero />}
@@ -446,6 +506,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         <div className="w-full pt-6">
           <Profile initialTab="inventory" />
         </div>
+      )}
+
+      </>
       )}
 
       {/* Modals */}

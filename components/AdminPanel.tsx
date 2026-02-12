@@ -381,6 +381,7 @@ export const AdminPanel: React.FC = () => {
       sortOrder: 0
   });
   const [stripeSettingsDraft, setStripeSettingsDraft] = useState({
+      comingSoonModeEnabled: stripeSettings.comingSoonModeEnabled,
       shippingCashEnabled: stripeSettings.shippingCashEnabled,
       shippingFlatRateInput: (stripeSettings.shippingFlatRateCents / 100).toFixed(2),
       stripeShippingProductId: stripeSettings.stripeShippingProductId,
@@ -755,6 +756,7 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       setStripeSettingsDraft({
+          comingSoonModeEnabled: stripeSettings.comingSoonModeEnabled,
           shippingCashEnabled: stripeSettings.shippingCashEnabled,
           shippingFlatRateInput: (stripeSettings.shippingFlatRateCents / 100).toFixed(2),
           stripeShippingProductId: stripeSettings.stripeShippingProductId,
@@ -2077,6 +2079,7 @@ export const AdminPanel: React.FC = () => {
       const rawRate = Number(stripeSettingsDraft.shippingFlatRateInput);
       const shippingFlatRateCents = Number.isFinite(rawRate) ? Math.max(0, Math.round(rawRate * 100)) : 0;
       updateStripeSettings({
+          comingSoonModeEnabled: stripeSettingsDraft.comingSoonModeEnabled,
           shippingCashEnabled: stripeSettingsDraft.shippingCashEnabled,
           shippingFlatRateCents,
           stripeShippingProductId: stripeSettingsDraft.stripeShippingProductId,
@@ -4903,13 +4906,36 @@ export const AdminPanel: React.FC = () => {
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Site Name</label>
                                 <Input type="text" value="LootX" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white" readOnly />
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Maintenance Mode</label>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-6 bg-gray-700 rounded-full relative cursor-pointer">
-                                        <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full"></div>
-                                    </div>
-                                    <span className="text-sm text-gray-400">Disabled</span>
+                            <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Coming Soon Mode</label>
+                                <p className="text-xs text-gray-500 mb-3">
+                                    Replaces the public site with a launch page while keeping <span className="text-gray-300">/admin</span> reachable.
+                                </p>
+                                <label className="flex items-center justify-between gap-3 rounded-lg border border-gray-700 px-3 py-2">
+                                    <span className="text-sm text-gray-300">Enable coming soon mode</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={stripeSettingsDraft.comingSoonModeEnabled}
+                                        onChange={(event) => {
+                                            setStripeSettingsDraft((prev) => ({
+                                                ...prev,
+                                                comingSoonModeEnabled: event.target.checked
+                                            }));
+                                            setStripeSettingsNotice(false);
+                                        }}
+                                        className="h-5 w-5 rounded border-gray-600 bg-[#111827] text-brand-purple focus:ring-brand-purple"
+                                    />
+                                </label>
+                                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                                    <span className={`text-xs font-semibold px-3 py-1 rounded-full ${stripeSettingsDraft.comingSoonModeEnabled ? 'bg-amber-500/10 text-amber-300' : 'bg-emerald-500/10 text-emerald-300'}`}>
+                                        {stripeSettingsDraft.comingSoonModeEnabled ? 'Coming soon mode is live' : 'Public site is live'}
+                                    </span>
+                                    <button
+                                        onClick={handleSaveStripeSettings}
+                                        className="px-4 py-2 text-xs font-semibold rounded-lg border border-brand-purple/40 bg-brand-purple/15 text-brand-purple transition-colors hover:bg-brand-purple hover:text-white"
+                                    >
+                                        Save website settings
+                                    </button>
                                 </div>
                             </div>
                         </div>

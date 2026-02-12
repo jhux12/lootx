@@ -113,6 +113,7 @@ export interface CoinPackage {
 }
 
 export interface StripeSettings {
+  comingSoonModeEnabled: boolean;
   shippingCashEnabled: boolean;
   shippingFlatRateCents: number;
   shippingCoinEnabled: boolean;
