@@ -127,7 +127,7 @@ export interface StripeSettings {
 export interface InventoryItem extends CaseItem {
   instanceId: string;
   obtainedAt: number;
-  status: 'available' | 'sold' | 'shipping' | 'shipping_requested' | 'pending_shipment' | 'shipped';
+  status: 'available' | 'pending_decision' | 'kept' | 'sold' | 'shipping' | 'shipping_requested' | 'pending_shipment' | 'shipped';
   locked?: boolean;
   trackingNumber?: string;
   size?: string;

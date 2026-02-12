@@ -236,7 +236,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const filteredInventory = normalizedInventory.filter((item) => {
     if (inventoryFilter === 'processing') return item.status === 'shipping' || item.status === 'shipping_requested';
     if (inventoryFilter === 'shipped') return item.status === 'shipped';
-    return item.status === 'available';
+    return item.status === 'available' || item.status === 'kept' || item.status === 'pending_decision';
   });
 
   const shippingCoinEnabled = stripeSettings.shippingCoinEnabled;
@@ -879,7 +879,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                           {filteredInventory.map((item) => {
-                              const isAvailable = item.status === 'available';
+                              const isAvailable = item.status === 'available' || item.status === 'kept';
                               const isLocked = !!item.locked;
                               const isXpItem = isXpPurchasedItem(item);
                               const canShip = isAvailable && !isLocked && !!user.shippingAddress;
