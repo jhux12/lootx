@@ -894,9 +894,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
-                            <div 
-                                className="absolute inset-4 rounded-full opacity-20"
-                                style={{ backgroundColor: item.color }}
+                            <div
+                                className="absolute inset-4 rounded-full opacity-90"
+                                style={{
+                                  background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
+                                }}
                             ></div>
                             <img loading="lazy" decoding="async" 
                                 src={item.image} 
@@ -1051,7 +1053,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
                         <div className={`relative mt-6 flex h-52 w-52 items-center justify-center sm:h-60 sm:w-60 ${isDemoSpin ? 'mb-4' : 'mb-6'}`}>
                             <div className="absolute inset-0 rounded-full border border-white/10 bg-white/5"></div>
-                            <div className="absolute inset-6 rounded-full opacity-50" style={{ backgroundColor: wonItem.color }}></div>
+                            <div
+                              className="absolute inset-6 rounded-full opacity-95"
+                              style={{
+                                background: `radial-gradient(circle, ${wonItem.color}90 0%, ${wonItem.color}3d 48%, ${wonItem.color}00 80%)`,
+                                boxShadow: `0 0 28px ${wonItem.color}55`
+                              }}
+                            ></div>
                             <div className="absolute inset-4 rounded-full bg-gradient-to-br from-white/10 to-transparent"></div>
                             <img loading="lazy" decoding="async" src={wonItem.image} alt={wonItem.name} className="relative z-10 h-36 w-36 object-contain drop-shadow-2xl sm:h-44 sm:w-44" />
                         </div>
@@ -1152,9 +1160,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         </div>
 
                         <div className="relative mb-3 flex w-full aspect-square items-center justify-center">
-                            <div 
-                                className="absolute inset-4 opacity-0 group-hover:opacity-20 transition-opacity rounded-full"
-                                style={{ backgroundColor: item.color }}
+                            <div
+                                className="absolute inset-4 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+                                style={{
+                                  background: `radial-gradient(circle, ${item.color}80 0%, ${item.color}30 46%, ${item.color}00 78%)`
+                                }}
                             ></div>
                             {item.redeemable === false && (
                               <div className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/50 p-1 text-amber-200">
