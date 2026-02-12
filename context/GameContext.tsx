@@ -214,6 +214,7 @@ const DEFAULT_BONUS_SETTINGS: BonusSettings = {
 const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
 
 const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
+  comingSoonModeEnabled: false,
   shippingCashEnabled: false,
   shippingFlatRateCents: 0,
   shippingCoinEnabled: false,
@@ -231,6 +232,7 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
       : '';
 
   return {
+    comingSoonModeEnabled: settings.comingSoonModeEnabled === true,
     shippingCashEnabled: settings.shippingCashEnabled === true,
     shippingFlatRateCents: Math.max(0, Math.round(Number(settings.shippingFlatRateCents) || 0)),
     shippingCoinEnabled: settings.shippingCoinEnabled === true,
