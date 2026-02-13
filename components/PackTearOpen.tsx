@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 interface PackTearOpenProps {
   imageSrc: string;
@@ -9,7 +9,7 @@ interface PackTearOpenProps {
 
 const HINT_STORAGE_KEY = 'pullz:pack-tear-hint-seen';
 const SNAP_THRESHOLD = 0.35;
-const MAX_POINTS = 24;
+const JAG_POINT_COUNT = 24;
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
@@ -20,19 +20,21 @@ export const PackTearOpen: React.FC<PackTearOpenProps> = ({
   accentColor = '#22d3ee'
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef(0);
   const rafRef = useRef<number | null>(null);
+  const progressRef = useRef(0);
   const isDraggingRef = useRef(false);
   const hasCompletedRef = useRef(false);
+  const jitterRef = useRef<number[]>([]);
 
   const [progress, setProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [isPointerSupported, setIsPointerSupported] = useState(true);
+  const [size, setSize] = useState({ width: 0, height: 0 });
 
-  const seamY = 24;
-  const peelLift = progress * 24;
-  const peelRotate = progress * -9;
+  const clipPrefix = useId().replace(/:/g, '-');
+  const wrapperClipId = `${clipPrefix}-wrapper-clip`;
+  const insideClipId = `${clipPrefix}-inside-clip`;
 
   const stopAnimation = useCallback(() => {
     if (rafRef.current) {
@@ -43,12 +45,12 @@ export const PackTearOpen: React.FC<PackTearOpenProps> = ({
 
   const animateTo = useCallback((target: number, duration = 240, done?: () => void) => {
     stopAnimation();
-    const start = performance.now();
     const startValue = progressRef.current;
     const delta = target - startValue;
+    const startTime = performance.now();
 
     const tick = (now: number) => {
-      const t = clamp((now - start) / duration);
+      const t = clamp((now - startTime) / duration);
       const eased = 1 - Math.pow(1 - t, 3);
       const next = startValue + delta * eased;
       progressRef.current = next;
@@ -58,7 +60,7 @@ export const PackTearOpen: React.FC<PackTearOpenProps> = ({
         rafRef.current = window.requestAnimationFrame(tick);
       } else {
         rafRef.current = null;
-        if (done) done();
+        done?.();
       }
     };
 
@@ -68,8 +70,22 @@ export const PackTearOpen: React.FC<PackTearOpenProps> = ({
   useEffect(() => {
     setIsPointerSupported(typeof window !== 'undefined' && 'PointerEvent' in window);
     if (typeof window === 'undefined') return;
-    const seen = window.localStorage.getItem(HINT_STORAGE_KEY) === '1';
-    setShowHint(!seen);
+    setShowHint(window.localStorage.getItem(HINT_STORAGE_KEY) !== '1');
+  }, []);
+
+  useEffect(() => {
+    if (!containerRef.current || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const width = Math.max(1, entry.contentRect.width);
+      const height = Math.max(1, entry.contentRect.height);
+      setSize({ width, height });
+    });
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -84,15 +100,20 @@ export const PackTearOpen: React.FC<PackTearOpenProps> = ({
 
   useEffect(() => () => stopAnimation(), [stopAnimation]);
 
+  useEffect(() => {
+    if (jitterRef.current.length > 0) return;
+    jitterRef.current = Array.from({ length: JAG_POINT_COUNT + 1 }, () => (Math.random() * 12) - 6);
+  }, []);
+
   const setProgressFromX = useCallback((clientX: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const x = clamp((clientX - rect.left) / rect.width);
-    progressRef.current = x;
-    setProgress(x);
+    const next = clamp((clientX - rect.left) / rect.width);
+    progressRef.current = next;
+    setProgress(next);
 
-    if (showHint && x > 0.08 && typeof window !== 'undefined') {
+    if (showHint && next > 0.08 && typeof window !== 'undefined') {
       window.localStorage.setItem(HINT_STORAGE_KEY, '1');
       setShowHint(false);
     }
@@ -126,47 +147,68 @@ export const PackTearOpen: React.FC<PackTearOpenProps> = ({
 
   const endGesture = useCallback(() => {
     if (!isDraggingRef.current) return;
+
     isDraggingRef.current = false;
     setIsDragging(false);
 
     if (progressRef.current >= SNAP_THRESHOLD) {
       animateTo(1, 260, completeTear);
-    } else {
-      animateTo(0, 220);
+      return;
     }
+
+    animateTo(0, 220);
   }, [animateTo, completeTear]);
 
-  const jaggedPath = useMemo(() => {
-    const width = 100;
-    const active = Math.max(5, width * progress);
-    const points = Math.max(8, Math.floor(MAX_POINTS * progress));
-    const step = active / points;
+  const geometry = useMemo(() => {
+    const width = Math.max(1, size.width);
+    const height = Math.max(1, size.height);
+    const seamStartY = 0.18 * height;
+    const maxTearDepth = 0.55 * height;
+    const tearY = seamStartY + (progress * maxTearDepth);
+    const visibleTearY = progress <= 0.001 ? 0 : tearY;
 
-    const seamPoints: string[] = [];
-    for (let i = 0; i <= points; i++) {
-      const x = i * step;
-      const noise = (Math.sin(i * 1.2) + Math.cos(i * 0.8)) * 1.5;
-      seamPoints.push(`${x},${seamY + noise}`);
-    }
+    const points = Array.from({ length: JAG_POINT_COUNT + 1 }, (_, idx) => {
+      const x = (idx / JAG_POINT_COUNT) * width;
+      const jitter = jitterRef.current[idx] ?? 0;
+      const y = clamp(visibleTearY + jitter, 0, height);
+      return { x, y };
+    });
 
-    const topShape = [`M0,0`, `L${active},0`, `L${active},${seamY}`, ...seamPoints.reverse().map((p) => `L${p}`), 'L0,0', 'Z'];
+    const leftY = points[0]?.y ?? visibleTearY;
+    const rightY = points[points.length - 1]?.y ?? visibleTearY;
+    const tearLine = `M ${points.map((point) => `${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' L ')}`;
+
+    const reversedPoints = [...points].reverse();
+    const insidePath = [
+      `M 0 0`,
+      `L ${width.toFixed(2)} 0`,
+      `L ${width.toFixed(2)} ${rightY.toFixed(2)}`,
+      ...reversedPoints.map((point) => `L ${point.x.toFixed(2)} ${point.y.toFixed(2)}`),
+      `L 0 ${leftY.toFixed(2)}`,
+      'Z'
+    ].join(' ');
+
+    const wrapperPath = [
+      `M 0 ${height.toFixed(2)}`,
+      `L ${width.toFixed(2)} ${height.toFixed(2)}`,
+      `L ${width.toFixed(2)} ${rightY.toFixed(2)}`,
+      ...reversedPoints.map((point) => `L ${point.x.toFixed(2)} ${point.y.toFixed(2)}`),
+      `L 0 ${leftY.toFixed(2)}`,
+      'Z'
+    ].join(' ');
 
     return {
-      topClipPath: topShape.join(' '),
-      seamStroke: `M0,${seamY} ` + seamPoints.map((point) => `L${point}`).join(' '),
-      tearHeadX: active
+      width,
+      height,
+      seamStartY,
+      tearLine,
+      insidePath,
+      wrapperPath
     };
-  }, [progress]);
+  }, [progress, size.height, size.width]);
 
-  const particles = useMemo(() => {
-    if (progress <= 0.05) return [];
-    return Array.from({ length: 8 }, (_, idx) => ({
-      key: idx,
-      left: `${clamp(progress * 100 + (idx - 4) * 2, 1, 98)}%`,
-      top: `${15 + (idx % 3) * 4}%`,
-      opacity: clamp(progress * 1.2 - idx * 0.08, 0, 0.7)
-    }));
-  }, [progress]);
+  const flapLift = progress > 0.1 ? (progress - 0.1) * 26 : 0;
+  const flapRotate = progress > 0.1 ? (progress - 0.1) * -13 : 0;
 
   return (
     <div className="w-full px-2 sm:px-4">
@@ -184,49 +226,59 @@ export const PackTearOpen: React.FC<PackTearOpenProps> = ({
         role="application"
         aria-label="Swipe to rip open pack"
       >
-        <img src={imageSrc} alt="Pack" className="absolute inset-0 h-full w-full object-contain p-5" />
+        <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <clipPath id={insideClipId} clipPathUnits="userSpaceOnUse">
+              <path d={geometry.insidePath} />
+            </clipPath>
+            <clipPath id={wrapperClipId} clipPathUnits="userSpaceOnUse">
+              <path d={geometry.wrapperPath} />
+            </clipPath>
+          </defs>
+        </svg>
 
-        <div
-          className="absolute inset-0 origin-top"
-          style={{
-            transform: `translateY(${-peelLift}px) rotate(${peelRotate}deg)`,
-            transformOrigin: 'top left',
-            transition: isDragging ? 'none' : 'transform 120ms linear'
-          }}
-        >
-          <svg viewBox="0 0 100 100" className="h-full w-full">
-            <defs>
-              <clipPath id="packTearClip" clipPathUnits="userSpaceOnUse">
-                <path d={jaggedPath.topClipPath} />
-              </clipPath>
-            </defs>
-            <image href={imageSrc} x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet" clipPath="url(#packTearClip)" />
-            <path d={jaggedPath.seamStroke} stroke={accentColor} strokeWidth="1.2" fill="none" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 6px rgba(56,189,248,0.8))' }} />
-          </svg>
+        <div className="absolute inset-0" style={{ clipPath: `url(#${insideClipId})` }}>
+          <div
+            className="h-full w-full"
+            style={{
+              background: 'radial-gradient(circle at 50% 10%, rgba(56,189,248,0.22), rgba(11,18,30,0.94) 48%, rgba(2,6,14,0.98) 100%)'
+            }}
+          />
+        </div>
+
+        <div className="absolute inset-0" style={{ clipPath: `url(#${wrapperClipId})` }}>
+          <img src={imageSrc} alt="Pack" className="h-full w-full object-contain p-5" draggable={false} />
         </div>
 
         <div
-          className="absolute h-[2px] w-6 -translate-y-1/2 rounded-full"
+          className="absolute inset-x-0 top-0 overflow-hidden"
           style={{
-            left: `${jaggedPath.tearHeadX}%`,
-            top: `${seamY}%`,
-            background: accentColor,
-            boxShadow: `0 0 12px ${accentColor}`,
+            height: '22%',
+            transform: `translateY(${-flapLift}px) rotate(${flapRotate}deg)`,
+            transformOrigin: 'top center',
+            transition: isDragging ? 'none' : 'transform 120ms linear',
             opacity: progress > 0.02 ? 1 : 0
           }}
           aria-hidden="true"
-        />
+        >
+          <img src={imageSrc} alt="" className="h-[455%] w-full object-contain p-5 pointer-events-none" draggable={false} />
+        </div>
 
-        {particles.map((particle) => (
-          <span
-            key={particle.key}
-            className="pointer-events-none absolute h-1 w-1 rounded-full"
-            style={{ left: particle.left, top: particle.top, backgroundColor: accentColor, opacity: particle.opacity }}
-          />
-        ))}
+        <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" aria-hidden="true">
+          {progress > 0.001 && (
+            <path
+              d={geometry.tearLine}
+              stroke={accentColor}
+              strokeWidth="2"
+              fill="none"
+              strokeLinecap="round"
+              style={{ filter: `drop-shadow(0 0 5px ${accentColor})` }}
+            />
+          )}
+        </svg>
 
         {showHint && !disabled && progress < 0.1 && (
-          <div className="pointer-events-none absolute left-0 right-0 top-[20%] h-[2px] overflow-hidden">
+          <div className="pointer-events-none absolute left-0 right-0 top-[18%] h-[2px] overflow-hidden">
             <div className="h-full w-16 animate-[tearHint_1.6s_ease-in-out_infinite] rounded-full bg-cyan-300/80" />
           </div>
         )}
