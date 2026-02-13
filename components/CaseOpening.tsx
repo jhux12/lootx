@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ChevronLeft, Zap, Volume2, Info, X, ShieldCheck } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
+import { buildValueDistribution, getPackType } from '../utils/packs';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { Input } from './ui/Input';
@@ -88,7 +89,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const { playSound } = useSound();
   
   const matchedBox = boxes.find(b => b.id === boxId);
-  const box = matchedBox ?? boxes[0];
+  const fallbackBox = matchedBox ?? boxes[0];
+  const packType = fallbackBox ? getPackType(fallbackBox) : '';
+  const packTiers = useMemo(() => {
+    if (!fallbackBox) return [];
+    if (isFree || fallbackBox.isDaily) return [fallbackBox];
+    return boxes
+      .filter((candidate) => !candidate.isDaily && getPackType(candidate) === packType)
+      .sort((a, b) => Number(a.price) - Number(b.price));
+  }, [boxes, fallbackBox, isFree, packType]);
+  const [selectedTierId, setSelectedTierId] = useState<string>(matchedBox?.id ?? boxId);
+
+  useEffect(() => {
+    setSelectedTierId(matchedBox?.id ?? boxId);
+  }, [boxId, matchedBox?.id]);
+
+  const selectedTierBox = packTiers.find((tier) => tier.id === selectedTierId) ?? matchedBox ?? packTiers[0] ?? boxes[0];
+  const box = selectedTierBox;
 
   useEffect(() => {
     if (boxes.length === 0) return;
@@ -114,6 +131,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const displayItems = [...items].sort(
     (a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)
   );
+  const [rewardsView, setRewardsView] = useState<'distribution' | 'rewards'>('distribution');
+  const distribution = useMemo(() => buildValueDistribution(items), [items]);
   
   const [isSpinning, setIsSpinning] = useState(false);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
@@ -534,7 +553,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           };
         }>('/api/open-case', {
           method: 'POST',
-          body: JSON.stringify({ boxId: box.id, isFree, operationId })
+          body: JSON.stringify({ boxId: box.id, packType: box.packType ?? getPackType(box), tierId: box.tierId ?? String(box.price), isFree, operationId })
         });
 
         const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
@@ -814,8 +833,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       {!isReady ? (
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="text-center max-w-sm">
-            <p className="text-white text-lg font-semibold">Loading case...</p>
-            <p className="text-gray-400 text-sm mt-2">We&apos;re syncing the drops and odds for this case.</p>
+            <p className="text-white text-lg font-semibold">Loading pack...</p>
+            <p className="text-gray-400 text-sm mt-2">We&apos;re syncing the rewards for this pack.</p>
           </div>
         </div>
       ) : (
@@ -827,7 +846,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
                     className="min-h-11 flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
                 >
-                    <ChevronLeft className="w-4 h-4" /> All cases
+                    <ChevronLeft className="w-4 h-4" /> All packs
                 </button>
                 <div className="flex items-center gap-3">
                     <h2 className="text-2xl font-bold text-white">{box!.name}</h2>
@@ -838,6 +857,32 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 </div>
             </div>
     </div>
+
+        {packTiers.length > 1 && !isFree && !box?.isDaily && (
+          <div className="mb-6 rounded-2xl border border-white/10 bg-[#0f141f]/90 p-4">
+            <p className="text-sm font-semibold text-white">Select Pack Value</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {packTiers.map((tier) => {
+                const isSelected = tier.id === box?.id;
+                return (
+                  <button
+                    key={tier.id}
+                    type="button"
+                    onClick={() => { setSelectedTierId(tier.id); playSound('click'); }}
+                    className={`min-h-11 rounded-xl border px-3 py-2 text-sm font-semibold transition ${isSelected ? 'border-cyan-300/70 bg-cyan-500/20 text-white' : 'border-white/10 bg-white/5 text-gray-300 hover:border-white/30'}`}
+                  >
+                    🪙 {toCoins(tier.price, PRICE_UNIT_MODE).toLocaleString()}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="mb-4 inline-flex rounded-full border border-white/10 bg-[#0f141f] p-1">
+          <button type="button" onClick={() => setRewardsView('distribution')} className={`rounded-full px-4 py-2 text-xs font-semibold ${rewardsView === 'distribution' ? 'bg-white text-[#0b0e14]' : 'text-gray-300'}`}>Distribution</button>
+          <button type="button" onClick={() => setRewardsView('rewards')} className={`rounded-full px-4 py-2 text-xs font-semibold ${rewardsView === 'rewards' ? 'bg-white text-[#0b0e14]' : 'text-gray-300'}`}>All Rewards</button>
+        </div>
 
         {/* SPINNER AREA */}
         <div className={`relative w-full bg-[#0b0e14] border rounded-2xl p-1 mb-8 overflow-hidden shadow-2xl transition-all duration-700 ${isGoldMode ? 'border-yellow-500 shadow-yellow-500/20' : 'border-gray-800'}`}>
@@ -856,7 +901,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       <div className="lootx-box-preview__shimmer" aria-hidden="true"></div>
                       <img
                         src={box!.image}
-                        alt={`${box!.name} box`}
+                        alt={`${box!.name} pack`}
                         className="relative z-10 mx-auto h-28 w-auto max-w-full object-contain sm:h-32"
                       />
                       <p className="relative z-10 mt-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-200 sm:text-sm">
@@ -1117,7 +1162,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   </button>
                                 )}
                                 <button onClick={handleKeep} className="flex-1 rounded-xl btn-logo-gradient py-3 text-sm font-bold text-white shadow-lg transition">
-                                    Keep Item
+                                    Keep reward
                                 </button>
                             </div>
                             </div>
@@ -1127,11 +1172,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
         )}
 
-        {/* Case Contents */}
+        {/* Pack Contents */}
         <div className="mt-12">
             <div className="flex items-center gap-2 mb-6 text-gray-400 text-sm font-bold">
                 <div className="w-1 h-4 bg-gray-600 rounded-full"></div>
-                Case contains
+                Pack rewards
             </div>
             <div className="-mt-4 mb-6 flex items-center gap-2 text-[11px] text-gray-500">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-black/40 text-amber-200">
@@ -1140,6 +1185,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <span>Not redeemable for coins.</span>
             </div>
             
+            {rewardsView === 'distribution' ? (
+              <div className="space-y-2 rounded-2xl border border-white/10 bg-[#0f141f]/80 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Pack Value Distribution</p>
+                {distribution.map((bucket, index) => (
+                  <div key={`${bucket.min}-${bucket.max ?? 'plus'}-${index}`} className="flex items-center justify-between text-sm text-gray-200">
+                    <span>${bucket.min}${bucket.max ? `–$${bucket.max}` : '+'}</span>
+                    <span className="font-semibold">{bucket.chance.toFixed(2)}%</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {displayItems.map((item) => (
                     <button
@@ -1148,17 +1204,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         onClick={() => setSelectedCaseItem(item)}
                         className="group relative flex flex-col items-center rounded-xl border border-gray-800 bg-[#0f1219] p-3 text-left transition-all hover:border-gray-700 hover:bg-[#151a23]"
                     >
-                        <div
-                          className="absolute top-2 left-2 rounded border px-1.5 py-0.5 text-[10px] font-bold"
-                          style={{
-                            color: item.color,
-                            borderColor: `${item.color}66`,
-                            backgroundColor: `${item.color}1a`,
-                          }}
-                        >
-                            {item.chance}%
-                        </div>
-
                         <div className="relative mb-3 flex w-full aspect-square items-center justify-center">
                             <div
                                 className="absolute inset-4 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
@@ -1191,6 +1236,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </button>
                 ))}
             </div>
+            )}
         </div>
         {selectedCaseItem && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
@@ -1290,14 +1336,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           <span>Category</span>
                           <span className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-200">
                             {selectedCaseItem.category}
-                          </span>
-                        </div>
-                      )}
-                      {typeof selectedCaseItem.chance === 'number' && (
-                        <div className="flex items-center justify-between gap-4">
-                          <span>Odds</span>
-                          <span className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-200">
-                            {selectedCaseItem.chance}%
                           </span>
                         </div>
                       )}

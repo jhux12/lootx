@@ -44,6 +44,7 @@ import {
   where,
   writeBatch
 } from 'firebase/firestore';
+import { buildValueDistribution, getPackType } from '../utils/packs';
 
 const sanitizeData = <T extends Record<string, any>>(data: T): T => {
   return Object.fromEntries(
@@ -1320,9 +1321,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const boxesRef = collection(db, 'boxes');
+    const packsRef = collection(db, 'packs');
     const unsubscribe = onSnapshot(boxesRef, (snapshot) => {
+      const loadBoxes = async () => {
       const expiredUserBoxIds: string[] = [];
-      const firebaseBoxes = snapshot.docs
+      const legacyBoxes = snapshot.docs
         .map((docSnap) => {
           const data = docSnap.data();
           const prizeSource = Array.isArray(data.items) ? data.items : data.prizes;
@@ -1373,11 +1376,71 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             items,
             isUserCreated: data.isUserCreated ?? false,
             sellBackRate: data.sellBackRate !== undefined ? Number(data.sellBackRate) : undefined,
-            createdAt
+            createdAt,
+            packType: typeof data.packType === 'string' ? data.packType : undefined,
+            tierId: typeof data.tierId === 'string' ? data.tierId : undefined,
+            houseEdge: data.houseEdge !== undefined ? Number(data.houseEdge) : undefined,
+            valueDistribution: buildValueDistribution(items)
           } as MysteryBox;
         })
         .filter((box) => !box.isUserCreated || (box.createdAt && Date.now() - box.createdAt < USER_BOX_EXPIRY_MS))
         .sort((a, b) => getBoxSortPrice(a) - getBoxSortPrice(b));
+
+      const packSnaps = await getDocs(packsRef);
+      const packBoxes: MysteryBox[] = [];
+      await Promise.all(packSnaps.docs.map(async (packSnap) => {
+        const packData = packSnap.data() ?? {};
+        const tiersSnap = await getDocs(collection(db, 'packs', packSnap.id, 'tiers'));
+        tiersSnap.docs.forEach((tierDoc) => {
+          const tierData = tierDoc.data() ?? {};
+          const prizeSource = Array.isArray(tierData.prizes) ? tierData.prizes : tierData.items;
+          const items = Array.isArray(prizeSource)
+            ? prizeSource.map((item: any, index: number) => {
+              const rarity = (item.rarity ?? 'common') as CaseItem['rarity'];
+              return {
+                id: item.id ?? `${packSnap.id}-${tierDoc.id}-item-${index}`,
+                name: item.name ?? 'Mystery Item',
+                price: Number(item.value ?? item.price ?? 0),
+                image: item.image ?? 'https://picsum.photos/300',
+                rarity,
+                chance: Number(item.weight ?? item.chance ?? 0),
+                color: item.color ?? RARITY_COLORS[rarity] ?? '#9ca3af',
+                brand: typeof item.brand === 'string' ? item.brand : '',
+                category: typeof item.category === 'string' ? item.category : '',
+                tags: Array.isArray(item.tags) ? (item.tags as CaseItem['tags']) : [],
+                sizes: Array.isArray(item.sizes) ? item.sizes.filter((size: unknown) => typeof size === 'string') : [],
+                redeemable: item.redeemable ?? true
+              };
+            })
+            : [];
+          const tierPrice = Number(tierData.price ?? tierData.coinCost ?? tierDoc.id ?? 0);
+          packBoxes.push({
+            id: `${packSnap.id}-${tierDoc.id}`,
+            name: packData.name ?? packSnap.id,
+            price: tierPrice,
+            image: packData.image ?? 'https://picsum.photos/300',
+            accentColor: packData.accentColor ?? '#3b82f6',
+            tag: packData.tag as MysteryBox['tag'],
+            tags: Array.isArray(packData.tags) ? (packData.tags as MysteryBox['tags']) : undefined,
+            items,
+            isUserCreated: false,
+            isDaily: packData.isDaily ?? false,
+            targetEV: tierData.targetEV !== undefined ? Number(tierData.targetEV) : undefined,
+            riskLevel: tierData.riskLevel !== undefined ? Number(tierData.riskLevel) : undefined,
+            sellBackRate: tierData.sellBackRate !== undefined ? Number(tierData.sellBackRate) : undefined,
+            packType: packSnap.id,
+            tierId: String(tierDoc.id),
+            houseEdge: tierData.houseEdge !== undefined ? Number(tierData.houseEdge) : undefined,
+            valueDistribution: buildValueDistribution(items)
+          });
+        });
+      }));
+
+      const firebaseBoxes = packBoxes.length > 0
+        ? [...legacyBoxes.filter((box) => !box.packType), ...packBoxes]
+        : legacyBoxes;
+
+      const enriched = firebaseBoxes.map((entry) => ({ ...entry, packType: getPackType(entry) }));
 
       if (isAuthenticated && user.isAdmin && expiredUserBoxIds.length > 0) {
         expiredUserBoxIds.forEach((boxId) => {
@@ -1391,11 +1454,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const pendingUserCreated = prev.filter(
           (box) =>
             box.isUserCreated &&
-            !firebaseBoxes.some((firebaseBox) => firebaseBox.id === box.id) &&
+            !enriched.some((firebaseBox) => firebaseBox.id === box.id) &&
             !!box.createdAt &&
             Date.now() - box.createdAt < USER_BOX_EXPIRY_MS
         );
-        return [...pendingUserCreated, ...firebaseBoxes].sort((a, b) => getBoxSortPrice(a) - getBoxSortPrice(b));
+        return [...pendingUserCreated, ...enriched].sort((a, b) => getBoxSortPrice(a) - getBoxSortPrice(b));
+      });
+      };
+
+      loadBoxes().catch((error) => {
+        console.error('Failed to hydrate packs from Firebase', error);
       });
     }, (error) => {
       console.error('Failed to load boxes from Firebase', error);

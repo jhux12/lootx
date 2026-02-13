@@ -78,6 +78,20 @@ export interface CaseItem {
   redeemable?: boolean;
 }
 
+export interface ValueDistributionBracket {
+  min: number;
+  max?: number;
+  chance: number;
+}
+
+export interface PackTier {
+  id: string;
+  price: number;
+  houseEdge?: number;
+  items: CaseItem[];
+  valueDistribution?: ValueDistributionBracket[];
+}
+
 export interface MysteryBox {
   id: string;
   name: string;
@@ -95,6 +109,11 @@ export interface MysteryBox {
   isDaily?: boolean;
   sellBackRate?: number;
   createdAt?: number;
+  packType?: string;
+  tierId?: string;
+  packTiers?: PackTier[];
+  houseEdge?: number;
+  valueDistribution?: ValueDistributionBracket[];
 }
 
 export interface CoinPackage {
@@ -142,6 +161,9 @@ export interface InventoryItem extends CaseItem {
   freeShipping?: boolean;
   shippingCostOverrideCoins?: number;
   shippingCostOverrideCents?: number;
+  packType?: string;
+  tier?: string;
+  winValue?: number;
 }
 
 export type ShipmentStatus = 'shipping_requested' | 'shipping' | 'shipped';
