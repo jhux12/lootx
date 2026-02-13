@@ -77,7 +77,7 @@ export const BoxGrid: React.FC<BoxGridProps> = ({
           {viewAllLabel}
         </button>
       </div>
-      <div className="mb-6 flex w-full">
+      <div className="mb-5 flex w-full sm:mb-6">
         <RiskLegend className="w-full justify-center sm:justify-end" />
       </div>
 
