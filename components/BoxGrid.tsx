@@ -4,7 +4,7 @@ import { useBoxes, useUI } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { BoxCard } from './BoxCard';
 import { MysteryBox } from '../types';
-import { RiskLegend } from './RiskLegend';
+import { getPackType } from '../utils/packs';
 
 type BoxGridQuery = {
   tags?: string[];
@@ -22,7 +22,7 @@ type BoxGridProps = {
 };
 
 export const BoxGrid: React.FC<BoxGridProps> = ({
-  title = 'Popular Mystery Boxes',
+  title = 'Popular Packs',
   boxes: boxesOverride,
   viewAllQuery,
   viewAllLabel = 'View all',
@@ -34,8 +34,18 @@ export const BoxGrid: React.FC<BoxGridProps> = ({
   const { playSound } = useSound();
   const [visibleCount, setVisibleCount] = useState(initialVisibleCount);
 
-  const displayBoxes = useMemo(
-    () => (boxesOverride ?? allBoxes).filter((box) => !box.isUserCreated && !box.isDaily),
+  const displayBoxes = useMemo(() => {
+    const base = (boxesOverride ?? allBoxes).filter((box) => !box.isUserCreated && !box.isDaily);
+    const map = new Map<string, MysteryBox>();
+    base.forEach((box) => {
+      const key = getPackType(box);
+      const existing = map.get(key);
+      if (!existing || box.price < existing.price) {
+        map.set(key, box);
+      }
+    });
+    return Array.from(map.values());
+  },
     [allBoxes, boxesOverride]
   );
   const visibleBoxes = useMemo(() => displayBoxes.slice(0, visibleCount), [displayBoxes, visibleCount]);
@@ -77,10 +87,6 @@ export const BoxGrid: React.FC<BoxGridProps> = ({
           {viewAllLabel}
         </button>
       </div>
-      <div className="mb-6 flex w-full">
-        <RiskLegend className="w-full justify-center sm:justify-end" />
-      </div>
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {visibleBoxes.map((box) => (
           <BoxCard key={box.id} box={box} onSelect={handleSelectBox} {...hoverProps} />

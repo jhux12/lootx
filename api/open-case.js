@@ -65,6 +65,8 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'INVALID_REQUEST', message: 'Missing case identifier (boxId).' });
     }
 
+    const requestedPackType = typeof body?.packType === 'string' ? body.packType.trim() : '';
+    const requestedTierId = typeof body?.tierId === 'string' ? body.tierId.trim() : '';
     const boxRef = firestore.collection('boxes').doc(boxId);
     const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;
     const userRef = firestore.collection('users').doc(decoded.uid);
@@ -93,11 +95,44 @@ export default async function handler(req, res) {
         fail(409, 'ALREADY_PROCESSED', 'This case open operation was already processed.', { operationId });
       }
 
-      if (!boxSnap.exists) {
+      let boxData = boxSnap.data() ?? {};
+      let resolvedBoxId = boxId;
+      let packType = requestedPackType;
+      let tierId = requestedTierId;
+
+      if (!boxSnap.exists && requestedPackType && requestedTierId) {
+        const packTierRef = firestore.collection('packs').doc(requestedPackType).collection('tiers').doc(requestedTierId);
+        const [packSnap, tierSnap] = await Promise.all([
+          transaction.get(firestore.collection('packs').doc(requestedPackType)),
+          transaction.get(packTierRef)
+        ]);
+        if (!packSnap.exists || !tierSnap.exists) {
+          fail(404, 'CASE_NOT_FOUND', 'Pack not found.', { packType: requestedPackType, tierId: requestedTierId });
+        }
+        const packData = packSnap.data() ?? {};
+        const tierData = tierSnap.data() ?? {};
+        boxData = {
+          ...packData,
+          ...tierData,
+          name: packData.name ?? requestedPackType,
+          image: packData.image ?? tierData.image,
+          accentColor: packData.accentColor ?? '#3b82f6',
+          items: Array.isArray(tierData.prizes) ? tierData.prizes : tierData.items,
+          price: toFiniteNumber(tierData.price ?? tierData.coinCost, 0),
+          packType: requestedPackType,
+          tierId: requestedTierId,
+          houseEdge: tierData.houseEdge
+        };
+        resolvedBoxId = `${requestedPackType}-${requestedTierId}`;
+      }
+
+      if (!boxSnap.exists && !requestedPackType) {
         fail(404, 'CASE_NOT_FOUND', 'Case not found.', { caseId: boxId });
       }
 
-      const boxData = boxSnap.data() ?? {};
+      if (!packType) packType = typeof boxData.packType === 'string' ? boxData.packType : null;
+      if (!tierId) tierId = typeof boxData.tierId === 'string' ? boxData.tierId : null;
+
       if (boxData.isUserCreated && boxData.createdAt) {
         const createdAt = typeof boxData.createdAt.toMillis === 'function'
           ? boxData.createdAt.toMillis()
@@ -203,7 +238,7 @@ export default async function handler(req, res) {
         });
       }
 
-      const { roll, rollHash, message } = computeRoll(serverSeed, clientSeed, nonce, boxId);
+      const { roll, rollHash, message } = computeRoll(serverSeed, clientSeed, nonce, resolvedBoxId);
       const prize = pickPrizeByWeight(prizes, roll);
       const sizeOptions = normalizeSizes(prize.sizes ?? []);
       const selectedSize = sizeOptions.length ? pickRandomSize(sizeOptions) : null;
@@ -241,12 +276,15 @@ export default async function handler(req, res) {
 
       const obtainedAt = admin.firestore.FieldValue.serverTimestamp();
       const inventoryPayload = {
-        boxId,
+        boxId: resolvedBoxId,
+        packType: packType || null,
+        tier: tierId || null,
         acquisitionCurrencyType: currencyType,
         openCurrencyType: currencyType,
         prizeId: prize.id ?? null,
         name: prize.name ?? 'Mystery Item',
         value: prizeValue,
+        winValue: prizeValue,
         image: prize.image ?? '',
         rarity: prize.rarity ?? 'common',
         status: 'available',
@@ -261,7 +299,9 @@ export default async function handler(req, res) {
 
       const openPayload = {
         uid: decoded.uid,
-        boxId,
+        boxId: resolvedBoxId,
+        packType: packType || null,
+        tierId: tierId || null,
         price,
         priceXP: currencyType === 'XP' ? priceXP : null,
         currencyType,
@@ -292,6 +332,8 @@ export default async function handler(req, res) {
           coinsSpent,
           xpAward: totalXpAward,
           caseId: boxId,
+          packType: packType || null,
+          tierId: tierId || null,
           createdAt: obtainedAt
         }, { merge: true });
       }
