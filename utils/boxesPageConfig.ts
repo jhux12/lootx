@@ -58,6 +58,12 @@ export type BoxesPageConfig = {
   updatedAt?: Timestamp;
   tabs: BoxesPageTabsConfig;
   filters: BoxesPageFiltersConfig;
+  featured: {
+    hotPicksEnabled: boolean;
+    hotPicksTitle: string;
+    hotPickBoxIds: string[];
+    topDropsCount: number;
+  };
   curatedRows: BoxesPageCuratedRow[];
 };
 
@@ -81,6 +87,12 @@ const DEFAULT_CONFIG: BoxesPageConfig = {
       collapseTagChips: true,
       minimalTopRow: true
     }
+  },
+  featured: {
+    hotPicksEnabled: true,
+    hotPicksTitle: 'Hot Picks',
+    hotPickBoxIds: [],
+    topDropsCount: 8
   },
   curatedRows: []
 };
@@ -129,6 +141,7 @@ export const getDefaultBoxesPageConfig = (): BoxesPageConfig => ({
     tagChips: { ...DEFAULT_CONFIG.filters.tagChips, popularTags: [] },
     mobile: { ...DEFAULT_CONFIG.filters.mobile }
   },
+  featured: { ...DEFAULT_CONFIG.featured, hotPickBoxIds: [] },
   curatedRows: []
 });
 
@@ -209,6 +222,18 @@ export const normalizeBoxesPageConfig = (raw: unknown): BoxesPageConfig => {
         collapseTagChips: source.filters?.mobile?.collapseTagChips ?? defaultConfig.filters.mobile.collapseTagChips,
         minimalTopRow: source.filters?.mobile?.minimalTopRow ?? defaultConfig.filters.mobile.minimalTopRow
       }
+    },
+    featured: {
+      hotPicksEnabled: source.featured?.hotPicksEnabled ?? defaultConfig.featured.hotPicksEnabled,
+      hotPicksTitle:
+        typeof source.featured?.hotPicksTitle === 'string' && source.featured.hotPicksTitle.trim()
+          ? source.featured.hotPicksTitle
+          : defaultConfig.featured.hotPicksTitle,
+      hotPickBoxIds: normalizeOptions(source.featured?.hotPickBoxIds),
+      topDropsCount:
+        typeof source.featured?.topDropsCount === 'number' && Number.isFinite(source.featured.topDropsCount)
+          ? Math.min(20, Math.max(3, Math.round(source.featured.topDropsCount)))
+          : defaultConfig.featured.topDropsCount
     },
     curatedRows
   };
