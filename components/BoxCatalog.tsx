@@ -900,7 +900,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           </div>
         </div>
         <div className="flex w-full justify-end">
-          <RiskLegend className="justify-end" />
+          <RiskLegend className="w-full justify-center md:justify-end" />
         </div>
 
         {config.filters.category.enabled && categoryCards.length > 0 && (
