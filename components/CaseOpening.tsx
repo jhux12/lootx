@@ -810,7 +810,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [lastReveal?.serverSeed, lastRoll, playSound]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
+    <div className="w-full max-w-7xl mx-auto px-0 pb-4 pt-0 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
       {!isReady ? (
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="text-center max-w-sm">
@@ -821,7 +821,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       ) : (
         <>
         {/* Breadcrumb */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 px-4 pt-2 sm:mb-6 sm:px-0 sm:pt-0">
             <div className="flex items-center gap-4">
                 <button 
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
@@ -840,7 +840,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     </div>
 
         {/* SPINNER AREA */}
-        <div className={`relative w-full bg-[#0b0e14] border rounded-2xl p-1 mb-8 overflow-hidden shadow-2xl transition-all duration-700 ${isGoldMode ? 'border-yellow-500 shadow-yellow-500/20' : 'border-gray-800'}`}>
+        <div className={`relative w-full bg-[#0b0e14] border rounded-none border-x-0 p-1 mb-8 overflow-hidden shadow-2xl transition-all duration-700 sm:rounded-2xl sm:border-x ${isGoldMode ? 'border-yellow-500 shadow-yellow-500/20' : 'border-gray-800'}`}>
             
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
@@ -915,13 +915,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="bg-[#0b0e14] p-4 flex flex-col sm:flex-row items-center justify-center gap-3 border-t border-gray-800 relative z-20">
+            <div className="bg-[#0b0e14] p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 border-t border-gray-800 relative z-20">
                  <button 
                     onClick={() => handleSpin()}
                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
-                    className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
+                    className={`w-full sm:w-auto sm:min-w-[260px] px-6 sm:px-10 py-3.5 sm:py-4 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/30 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/30 text-black' : 'btn-logo-gradient ring-1 ring-cyan-300/40 shadow-[0_12px_30px_rgba(96,165,250,0.35)] hover:shadow-[0_16px_34px_rgba(96,165,250,0.5)]')}`}
                 >
-                    <span>
+                    <span className="text-base sm:text-lg">
                       {isSyncingFair ? (
                         'Syncing server...'
                       ) : isSpinning ? (
@@ -958,19 +958,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </span>
                  </button>
                  {!isFree && (
-                   <button
+                 <button
                      onClick={handleTryFree}
                      disabled={isSpinning || isSyncingFair || isRotatingSeed}
-                     className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
+                     className="w-full sm:w-auto sm:min-w-[200px] px-6 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 bg-[#182232] hover:bg-[#223047] border border-white/15 flex flex-col items-center leading-tight"
                    >
-                     <span>Try for Free</span>
+                     <span>Demo Spin</span>
                    </button>
                  )}
                  {isAdmin && (
                    <button
                      onClick={() => handleSpin({ isDemo: true, forceGold: true })}
                      disabled={isSpinning || isSyncingFair || isRotatingSeed}
-                     className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
+                     className="w-full sm:w-auto sm:min-w-[200px] px-6 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-xl shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Test Gold Spin</span>
                    </button>
