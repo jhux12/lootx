@@ -915,13 +915,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="bg-[#0b0e14] p-4 flex flex-col sm:flex-row items-center justify-center gap-3 border-t border-gray-800 relative z-20">
+            <div className="bg-[#0b0e14] p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 border-t border-gray-800 relative z-20">
                  <button 
                     onClick={() => handleSpin()}
                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
-                    className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
+                    className={`w-full sm:w-auto sm:min-w-[260px] px-6 sm:px-10 py-3.5 sm:py-4 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/30 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/30 text-black' : 'btn-logo-gradient ring-1 ring-cyan-300/40 shadow-[0_12px_30px_rgba(96,165,250,0.35)] hover:shadow-[0_16px_34px_rgba(96,165,250,0.5)]')}`}
                 >
-                    <span>
+                    <span className="text-base sm:text-lg">
                       {isSyncingFair ? (
                         'Syncing server...'
                       ) : isSpinning ? (
@@ -958,19 +958,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </span>
                  </button>
                  {!isFree && (
-                   <button
+                 <button
                      onClick={handleTryFree}
                      disabled={isSpinning || isSyncingFair || isRotatingSeed}
-                     className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
+                     className="w-full sm:w-auto sm:min-w-[200px] px-6 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 bg-[#182232] hover:bg-[#223047] border border-white/15 flex flex-col items-center leading-tight"
                    >
-                     <span>Try for Free</span>
+                     <span>Demo Spin</span>
                    </button>
                  )}
                  {isAdmin && (
                    <button
                      onClick={() => handleSpin({ isDemo: true, forceGold: true })}
                      disabled={isSpinning || isSyncingFair || isRotatingSeed}
-                     className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
+                     className="w-full sm:w-auto sm:min-w-[200px] px-6 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-xl shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Test Gold Spin</span>
                    </button>
@@ -1021,10 +1021,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         {/* Win Modal Overlay */}
         {showWinModal && wonItem && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:p-4">
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" onClick={closeWinModal}></div>
                 <div
-                  className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111722] to-[#0b0f18] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] animate-in zoom-in-95 duration-300"
+                  className="relative w-full max-h-[90vh] overflow-y-auto rounded-t-3xl border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111722] to-[#0b0f18] shadow-[0_-24px_60px_-30px_rgba(0,0,0,0.9)] sm:max-w-lg sm:rounded-3xl sm:max-h-[88vh] animate-sheet-in"
                   onClick={(event) => event.stopPropagation()}
                 >
                      <div className="absolute inset-0 opacity-60" style={{ background: `radial-gradient(circle at top, ${wonItem.color}22, transparent 60%)` }}></div>
@@ -1193,7 +1193,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
         </div>
         {selectedCaseItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:p-4">
             <button
               type="button"
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -1205,7 +1205,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               role="dialog"
               aria-modal="true"
               aria-labelledby="item-details-title"
-              className="relative w-full max-w-[760px] max-h-[85vh] overflow-hidden rounded-[26px] border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111824] to-[#0b0f18] text-gray-200 shadow-[0_25px_80px_-40px_rgba(15,23,42,0.9)] shadow-purple-500/10 animate-item-modal-in"
+              className="relative w-full max-h-[90vh] overflow-hidden rounded-t-[26px] border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111824] to-[#0b0f18] text-gray-200 shadow-[0_-24px_70px_-35px_rgba(15,23,42,0.92)] shadow-purple-500/10 sm:max-w-[760px] sm:max-h-[88vh] sm:rounded-[26px] animate-item-modal-in"
               style={{
                 borderColor: 'rgba(255,255,255,0.08)',
                 boxShadow:
@@ -1335,11 +1335,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         )}
         <style>{`
           @keyframes item-modal-in {
-            0% { opacity: 0; transform: scale(0.96) translateY(8px); }
-            100% { opacity: 1; transform: scale(1) translateY(0); }
+            0% { opacity: 0; transform: translateY(32px); }
+            100% { opacity: 1; transform: translateY(0); }
           }
           .animate-item-modal-in {
-            animation: item-modal-in 200ms ease-out;
+            animation: item-modal-in 260ms cubic-bezier(0.2, 0.9, 0.2, 1);
+          }
+          @keyframes sheet-in {
+            0% { opacity: 0; transform: translateY(40px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+          .animate-sheet-in {
+            animation: sheet-in 260ms cubic-bezier(0.2, 0.9, 0.2, 1);
           }
           @keyframes box-shimmer {
             0% { transform: translateX(-150%); }
