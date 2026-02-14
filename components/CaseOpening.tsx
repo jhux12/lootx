@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, Zap, Volume2, Info, X, ShieldCheck } from 'lucide-react';
-import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
+import { ChevronLeft, Info, X, ShieldCheck } from 'lucide-react';
+import { XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
 import { useGame } from '../context/GameContext';
@@ -12,6 +12,7 @@ import { authedFetch } from '../utils/authedFetch';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import pullzPattern from '../assets/pullz-p.PNG';
 import { ProvablyFairMiniModal } from './ProvablyFairMiniModal';
+import { PackTearOpen } from './PackTearOpen';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -34,33 +35,6 @@ interface RevealData {
   serverSeedHash: string;
   rotatedAt: number;
 }
-
-const CARD_WIDTH = 160;
-const GAP_WIDTH = 16;
-const ITEM_WIDTH = CARD_WIDTH + GAP_WIDTH;
-const BUFFER_COUNT = 45; // Items before winner
-const toHex = (buffer: ArrayBuffer) =>
-  Array.from(new Uint8Array(buffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-
-const hashString = async (value: string) => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(value);
-  if (typeof crypto === 'undefined' || !crypto.subtle) {
-    const fallback = data.reduce((acc, byte, idx) => acc + byte * (idx + 1), 0);
-    return fallback.toString(16).padStart(64, '0').slice(0, 64);
-  }
-
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return toHex(hashBuffer);
-};
-
-const deriveRollValue = (hash: string) => {
-  const significantPart = hash.slice(0, 13); // 52 bits
-  const intValue = parseInt(significantPart, 16);
-  return intValue / 0x10000000000000; // 2^52
-};
 
 const LAST_ROLL_STORAGE_KEY = 'pullz:last-provably-fair-roll';
 const LAST_REVEAL_STORAGE_KEY = 'pullz:last-provably-fair-reveal';
@@ -116,7 +90,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   );
   
   const [isSpinning, setIsSpinning] = useState(false);
-  const [reelItems, setReelItems] = useState<CaseItem[]>([]);
+  const [pendingSpinResult, setPendingSpinResult] = useState<CaseItem | null>(null);
+  const [hasTearCompleted, setHasTearCompleted] = useState(false);
+  const [isAwaitingResultAfterTear, setIsAwaitingResultAfterTear] = useState(false);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
@@ -139,12 +115,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [selectedCaseItem, setSelectedCaseItem] = useState<CaseItem | null>(null);
   const [spinFeedbackMessage, setSpinFeedbackMessage] = useState<string | null>(null);
   
-  // Gold Spin State
-  const [isGoldMode, setIsGoldMode] = useState(false);
-  const [isBoxPreviewVisible, setIsBoxPreviewVisible] = useState(true);
-  const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
-  
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
@@ -190,16 +160,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
   }, []);
   
-  useEffect(() => {
-    // Fill the static view with random items from the specific box
-    if (items.length > 0) {
-        const staticItems = Array.from({ length: 15 }, () => 
-          items[Math.floor(Math.random() * items.length)]
-        );
-        setReelItems(staticItems);
-    }
-  }, [items]);
-
   useEffect(() => {
     if (!selectedCaseItem) return;
 
@@ -269,36 +229,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return items[items.length - 1];
   };
 
-  const generateReel = (target: CaseItem, pool: CaseItem[], sprinkleGold: boolean) => {
-    const endBuffer = 5; 
-    const newReel: CaseItem[] = [];
-    
-    // Add buffer items
-    for (let i = 0; i < BUFFER_COUNT; i++) {
-        newReel.push(pool[Math.floor(Math.random() * pool.length)]);
-    }
-    
-    // Add winner at exactly BUFFER_COUNT index
-    newReel.push(target);
-    
-    // Add end buffer
-    for (let i = 0; i < endBuffer; i++) {
-        newReel.push(pool[Math.floor(Math.random() * pool.length)]);
-    }
-
-    if (sprinkleGold) {
-      const goldInterval = 9;
-      const goldOffset = Math.floor(Math.random() * goldInterval);
-      for (let i = goldOffset; i < newReel.length; i += goldInterval) {
-        if (i !== BUFFER_COUNT) {
-          newReel[i] = GOLDEN_TICKET_ITEM;
-        }
-      }
-    }
-    
-    return newReel;
-  };
-
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
     if (!isAuthenticated) {
@@ -361,42 +291,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       setIsRotatingSeed(false);
     }
   }, [isAuthenticated, openAuthModal]);
-
-  const animateSpin = (duration: number, onComplete: () => void) => {
-    playSound('spin-start');
-
-    // Reset scroll position immediately
-    if (scrollContainerRef.current) {
-        scrollContainerRef.current.style.transition = 'none';
-        scrollContainerRef.current.style.transform = 'translateX(0)';
-    }
-
-    // Trigger animation next tick
-    // We use a slight delay to ensure React has painted the new items to the DOM
-    setTimeout(() => {
-        if (scrollContainerRef.current) {
-            // Exact center position of the winning item
-            const winnerLeft = BUFFER_COUNT * ITEM_WIDTH;
-            
-            // ORGANIC JITTER
-            // Card width is 160px.
-            // Center is 0 relative to the calculation logic.
-            // +/- 80px hits the border.
-            // +/- 65px is the "safe zone" that stays on the card but looks random.
-            // We want it to land ANYWHERE in this safe zone, not just near the center.
-            const maxOffset = 65;
-            const jitter = Math.floor(Math.random() * (maxOffset * 2)) - maxOffset; // -65 to +65
-            
-            const finalTranslate = -(winnerLeft) + jitter;
-
-            scrollContainerRef.current.style.transition = `transform ${duration/1000}s cubic-bezier(0.15, 0.85, 0.35, 1.0)`;
-            scrollContainerRef.current.style.transform = `translateX(${finalTranslate}px)`;
-        }
-    }, 50);
-
-    // Completion callback
-    setTimeout(onComplete, duration + 200);
-  };
 
   const handleSpin = async ({ isDemo = false, forceGold = false }: { isDemo?: boolean; forceGold?: boolean } = {}) => {
     if (isSpinning) return;
@@ -472,22 +366,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       claimDaily();
     }
 
-    if (isBoxPreviewVisible) {
-      setIsBoxPreviewFading(true);
-      await new Promise((resolve) => window.setTimeout(resolve, 450));
-      setIsBoxPreviewVisible(false);
-      setIsBoxPreviewFading(false);
-    }
-    
     setIsSpinning(true);
     setShowWinModal(false);
-    setIsGoldMode(false);
+    setPendingSpinResult(null);
+    setHasTearCompleted(false);
+    setIsAwaitingResultAfterTear(false);
     setWonItem(null);
     setWonInventoryItem(null);
     setRewardResolved(false);
     setSellOfferGenerated(false);
     playSound('click');
-    
+
     let winner: CaseItem;
     let rollValue = Math.random();
     let rollHash = '';
@@ -605,8 +494,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           boxId: box.id
         });
         setIsSpinning(false);
-        setIsBoxPreviewVisible(true);
-        setIsBoxPreviewFading(false);
+        setPendingSpinResult(null);
+        setHasTearCompleted(false);
+        setIsAwaitingResultAfterTear(false);
         setSpinFeedbackMessage(readableMessage || 'Unable to open case.');
         alert(readableMessage || 'Unable to open case.');
         return;
@@ -637,49 +527,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       setLastRoll(null);
     }
 
-    // 2. Gold spin only triggers when the winner is guaranteed legendary
-    const isGoldEligible = winner.rarity === 'legendary';
-    const goldRollHash = rollHash ? await hashString(`${rollHash}:gold`) : await hashString(`${rollValue}:gold`);
-    const goldRollValue = deriveRollValue(goldRollHash);
-    const triggerGold = (forceGold && isGoldEligible) || (isGoldEligible && goldRollValue < 0.5);
-
-    if (triggerGold) {
-        // --- GOLD SPIN FLOW ---
-        
-        // Stage 1: Spin to Golden Ticket
-        // Note: We use global items pool for buffer if box items are too few, or just box items. 
-        // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
-        const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items, true);
-        setReelItems(ticketReel);
-        
-        animateSpin(4500, () => {
-            // Stage 1 Complete: Activate Gold Mode
-            playSound('gold-mode');
-            setIsGoldMode(true);
-            
-            // Wait a moment to see the ticket
-            setTimeout(() => {
-                // Stage 2: Spin to Actual Winner (using only legendary items in reel)
-                const pool = legendaryPool.length > 0 ? legendaryPool : items;
-                const goldReel = generateReel(winner, pool, true);
-                setReelItems(goldReel);
-                
-                animateSpin(4000, () => {
-                    // Stage 2 Complete
-                    finishSpin(winner);
-                });
-            }, 1000);
-        });
-
-    } else {
-        // --- NORMAL SPIN FLOW ---
-        const normalReel = generateReel(winner, items, true);
-        setReelItems(normalReel);
-        
-        animateSpin(5000, () => {
-            finishSpin(winner);
-        });
-    }
+    setPendingSpinResult(winner);
   };
 
   const handleTryFree = () => {
@@ -694,14 +542,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [showTopUpModal, spinFeedbackMessage]);
 
   useEffect(() => {
-    setIsBoxPreviewVisible(true);
-    setIsBoxPreviewFading(false);
-  }, [boxId]);
+    if (!isSpinning || !hasTearCompleted || !pendingSpinResult) return;
+    finishSpin(pendingSpinResult);
+  }, [hasTearCompleted, isSpinning, pendingSpinResult]);
 
   const finishSpin = (item: CaseItem) => {
     setIsSpinning(false);
-    setIsBoxPreviewVisible(true);
-    setIsBoxPreviewFading(false);
+    setPendingSpinResult(null);
+    setHasTearCompleted(false);
+    setIsAwaitingResultAfterTear(false);
     setShowWinModal(true);
     setWonItem(item);
     setRewardResolved(false);
@@ -839,79 +688,29 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
     </div>
 
-        {/* SPINNER AREA */}
-        <div className={`relative w-full bg-[#0b0e14] border rounded-2xl p-1 mb-8 overflow-hidden shadow-2xl transition-all duration-700 ${isGoldMode ? 'border-yellow-500 shadow-yellow-500/20' : 'border-gray-800'}`}>
-            
-            {/* Gold Mode Overlay Effect */}
-            {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
+        {/* PACK TEAR AREA */}
+        <div className="relative w-full bg-[#0b0e14] border border-gray-800 rounded-2xl p-3 sm:p-4 mb-8 overflow-hidden shadow-2xl transition-all duration-500">
+            <div className="relative min-h-[320px] sm:min-h-[360px] flex flex-col items-center justify-center gap-3 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] rounded-xl p-3 sm:p-5">
+              <PackTearOpen
+                imageSrc={box!.image}
+                onComplete={() => {
+                  setHasTearCompleted(true);
+                  if (!pendingSpinResult) {
+                    setIsAwaitingResultAfterTear(true);
+                  }
+                }}
+                disabled={!isSpinning}
+                accentColor={isFree ? '#22c55e' : '#22d3ee'}
+              />
 
-            {/* Spinner Window */}
-            <div className="relative h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
-                {isBoxPreviewVisible && (
-                  <div
-                    className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
-                    aria-live="polite"
-                  >
-                    <div className={`lootx-box-preview relative w-full max-w-[280px] sm:max-w-[320px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
-                      <div className="lootx-box-preview__shimmer" aria-hidden="true"></div>
-                      <img
-                        src={box!.image}
-                        alt={`${box!.name} box`}
-                        className="relative z-10 mx-auto h-28 w-auto max-w-full object-contain sm:h-32"
-                      />
-                      <p className="relative z-10 mt-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-200 sm:text-sm">
-                        Ready to open
-                      </p>
-                    </div>
-                  </div>
+              <div className="text-center" aria-live="polite">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gray-300">
+                  {isSpinning ? 'SWIPE TO RIP OPEN' : 'READY TO OPEN'}
+                </p>
+                {isAwaitingResultAfterTear && (
+                  <p className="mt-1 text-xs text-cyan-200">Revealing...</p>
                 )}
-
-                {isSpinning && (
-                  <div
-                    className={`absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 z-[26] pointer-events-none ${isGoldMode ? 'bg-yellow-400/50' : 'bg-cyan-400/35'}`}
-                    aria-hidden="true"
-                  ></div>
-                )}
-                
-                {/* Fade Gradients */}
-                <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
-                <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
-
-                {/* The Moving Reel */}
-                <div 
-                    ref={scrollContainerRef}
-                    className={`flex px-[50%] will-change-transform ml-[-80px] transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`} 
-                    style={{ gap: `${GAP_WIDTH}px` }}
-                >
-                    {reelItems.map((item, idx) => (
-                        <div 
-                            key={`${item.id}-${idx}`}
-                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}`}
-                            style={{ 
-                                width: `${CARD_WIDTH}px`, 
-                                height: `${CARD_WIDTH}px`,
-                                boxShadow: item.id === 'golden-ticket' ? undefined : `0 4px 0 0 ${item.color}20` 
-                            }}
-                            onMouseEnter={() => !isSpinning && playSound('hover')}
-                        >
-                            <div
-                                className="absolute inset-4 rounded-full opacity-90"
-                                style={{
-                                  background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
-                                }}
-                            ></div>
-                            <img loading="lazy" decoding="async" 
-                                src={item.image} 
-                                alt={item.name} 
-                                className={`relative z-10 w-24 h-24 object-contain mb-2 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
-                            />
-                            <div 
-                                className="absolute bottom-0 left-0 right-0 h-1 opacity-50 rounded-b-xl"
-                                style={{ backgroundColor: item.color }}
-                            ></div>
-                        </div>
-                    ))}
-                </div>
+              </div>
             </div>
 
             {/* Action Bar */}
@@ -919,13 +718,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                  <button 
                     onClick={() => handleSpin()}
                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
-                    className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
+                    className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient'}`}
                 >
                     <span>
                       {isSyncingFair ? (
                         'Syncing server...'
                       ) : isSpinning ? (
-                        'Spinning...'
+                        'Opening...'
                       ) : isBalanceLoading ? (
                         'Loading balance...'
                       ) : isFree ? (
