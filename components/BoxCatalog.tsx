@@ -448,8 +448,23 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
     : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4';
 
-  const topDrops = useMemo(() => officialBoxes.slice(0, 5), [officialBoxes]);
-  const hotPicks = useMemo(() => officialBoxes.slice(0, 4), [officialBoxes]);
+  const topDrops = useMemo(() => {
+    const count = Math.min(20, Math.max(3, Number(config.featured?.topDropsCount ?? 8)));
+    return [...officialBoxes]
+      .sort((a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE))
+      .slice(0, count);
+  }, [config.featured?.topDropsCount, officialBoxes]);
+
+  const hotPicks = useMemo(() => {
+    const configuredIds = config.featured?.hotPickBoxIds ?? [];
+    const byIds = configuredIds
+      .map((id) => officialBoxes.find((box) => box.id === id))
+      .filter((box): box is typeof officialBoxes[number] => Boolean(box));
+    if (byIds.length > 0) return byIds.slice(0, 6);
+    return [...officialBoxes]
+      .sort((a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE))
+      .slice(0, 4);
+  }, [config.featured?.hotPickBoxIds, officialBoxes]);
 
   const renderScreenshotCard = (box: typeof filteredBoxes[number], compact = false) => (
     <button
@@ -474,7 +489,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           className="relative z-10 h-[110px] w-[110px] object-contain transition-transform duration-300 group-hover:scale-105 sm:h-[130px] sm:w-[130px]"
         />
       </div>
-      <p className="truncate text-sm font-semibold text-white sm:text-base">{box.name}</p>
+      <p className="truncate text-sm font-semibold tracking-tight text-white sm:text-base">{box.name}</p>
       <div className="mx-auto mt-2 inline-flex items-center justify-center rounded-xl border border-orange-500/70 bg-[#1a0f0a] px-3 py-1.5 text-white">
         <CoinAmount
           amount={toCoins(box.price, PRICE_UNIT_MODE)}
@@ -565,26 +580,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
 
   return (
     <section className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-3 pb-16 pt-3 sm:px-6 lg:px-8 animate-in fade-in duration-300 md:gap-8 md:pt-6">
-      <div className="md:hidden rounded-2xl border border-white/10 bg-[#0e0e12] p-3">
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              playSound('click');
-              setView({ type: 'HOME' });
-            }}
-            className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#11131b] text-white"
-            aria-label="Back"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <div className="flex gap-2">
-            <button className="rounded-2xl border border-white/10 bg-[#171822] px-5 py-2.5 text-lg font-semibold text-white">Sign in</button>
-            <button className="rounded-2xl bg-[#ff5a00] px-5 py-2.5 text-lg font-semibold text-white">Sign Up</button>
-          </div>
-        </div>
-      </div>
-
       {topDrops.length > 0 && (
         <div className="md:hidden -mx-3 overflow-hidden border-y border-white/10 bg-gradient-to-r from-[#211507] via-[#3f1c65] to-[#5b2bc9]">
           <div className="flex">
@@ -593,25 +588,27 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
               <span className="mt-1 text-xs font-bold tracking-wide text-white">TOP</span>
               <span className="text-xs font-bold tracking-wide text-white">DROPS</span>
             </div>
-            <div className="flex flex-1 overflow-x-auto">
-              {topDrops.map((box) => (
-                <button
-                  key={box.id}
-                  type="button"
-                  onClick={() => setView({ type: 'CASE_OPENING', boxId: box.id })}
-                  className="min-w-[95px] border-r border-black/30 p-2"
-                >
-                  <img src={box.image} alt={box.name} className="mx-auto h-16 w-16 object-contain" />
-                </button>
-              ))}
+            <div className="flex-1 overflow-hidden">
+              <div className="ticker-animation flex w-max">
+                {[...topDrops, ...topDrops].map((box, index) => (
+                  <button
+                    key={`${box.id}-${index}`}
+                    type="button"
+                    onClick={() => { playSound('click'); setView({ type: 'CASE_OPENING', boxId: box.id }); }}
+                    className="min-w-[95px] border-r border-black/30 p-2"
+                  >
+                    <img src={box.image} alt={box.name} className="mx-auto h-16 w-16 object-contain" />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {hotPicks.length > 0 && (
+      {config.featured?.hotPicksEnabled !== false && hotPicks.length > 0 && (
         <div className="md:hidden space-y-3">
-          <h2 className="pt-1 text-center text-[46px] font-semibold leading-none text-white/95" style={{ fontSize: '44px' }}>Hot Picks</h2>
+          <h2 className="pt-1 text-center text-4xl font-bold tracking-tight text-white">{config.featured?.hotPicksTitle ?? 'Hot Picks'}</h2>
           <div className="grid grid-cols-2 gap-2">
             {hotPicks.map((box) => renderScreenshotCard(box, true))}
           </div>
