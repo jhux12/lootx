@@ -38,6 +38,7 @@ import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CookieConsentToast } from './components/CookieConsentToast';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
+import { DemoSpinnerSection } from './components/DemoSpinnerSection';
 import { getBoxTags } from './utils/boxTags';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
@@ -75,6 +76,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal, authInitialized, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
+  const [demoSpinnerBoxId, setDemoSpinnerBoxId] = useState<string | undefined>(undefined);
   const [showPromoPopup, setShowPromoPopup] = useState(false);
 
   useEffect(() => {
@@ -117,9 +119,11 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       (config) => {
         const rows = normalizeShowcaseRows(config?.showcaseRows);
         setShowcaseRows(rows.length ? rows : null);
+        setDemoSpinnerBoxId(config?.demoSpinnerBoxId);
       },
       () => {
         setShowcaseRows(null);
+        setDemoSpinnerBoxId(undefined);
       }
     );
     return () => unsubscribe();
@@ -170,6 +174,11 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       };
     }) as Array<ShowcaseRowCategories | (ShowcaseRowBoxes & { boxes: typeof baseHomeBoxes })>;
   }, [baseHomeBoxes, showcaseRows]);
+
+  const demoSpinnerBox = useMemo(() => {
+    if (!demoSpinnerBoxId) return baseHomeBoxes[0];
+    return baseHomeBoxes.find((box) => box.id === demoSpinnerBoxId) ?? baseHomeBoxes[0];
+  }, [baseHomeBoxes, demoSpinnerBoxId]);
 
   const gridCols = {
     1: 'grid-cols-1',
@@ -289,6 +298,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       <>
       {view.type === 'HOME' && (
         <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
+          <DemoSpinnerSection box={demoSpinnerBox} />
           {!isAuthenticated && <Hero />}
           {showcaseRowsWithBoxes && showcaseRowsWithBoxes.length > 0 ? (
             <div className="space-y-12">
