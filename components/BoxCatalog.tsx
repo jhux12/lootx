@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Search, Tag, X } from 'lucide-react';
+import { ChevronLeft, Flame, Gem, Search, Tag, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { usePreview } from '../context/PreviewContext';
@@ -9,6 +9,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { RiskLegend } from './RiskLegend';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { CoinAmount } from './CoinAmount';
 import {
   BoxesPageConfig,
   BoxesPageCuratedRow,
@@ -447,6 +448,44 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
     : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4';
 
+  const topDrops = useMemo(() => officialBoxes.slice(0, 5), [officialBoxes]);
+  const hotPicks = useMemo(() => officialBoxes.slice(0, 4), [officialBoxes]);
+
+  const renderScreenshotCard = (box: typeof filteredBoxes[number], compact = false) => (
+    <button
+      key={box.id}
+      type="button"
+      onClick={() => {
+        playSound('click');
+        setView({ type: 'CASE_OPENING', boxId: box.id });
+      }}
+      onMouseEnter={() => playSound('hover')}
+      className={`group w-full rounded-2xl border border-white/5 bg-[#0d0d10] px-2 pb-3 pt-2 text-center transition hover:border-orange-400/40 ${compact ? 'max-w-[180px]' : ''}`}
+    >
+      <div className="relative mb-2 flex h-[128px] items-end justify-center overflow-hidden rounded-xl bg-gradient-to-b from-[#16161a] via-[#121216] to-[#0d0d10] sm:h-[160px]">
+        <div
+          className="absolute bottom-4 h-8 w-24 rounded-full blur-xl"
+          style={{ background: `${box.accentColor}88` }}
+        />
+        <img
+          src={box.image}
+          alt={box.name}
+          loading="lazy"
+          className="relative z-10 h-[110px] w-[110px] object-contain transition-transform duration-300 group-hover:scale-105 sm:h-[130px] sm:w-[130px]"
+        />
+      </div>
+      <p className="truncate text-sm font-semibold text-white sm:text-base">{box.name}</p>
+      <div className="mx-auto mt-2 inline-flex items-center justify-center rounded-xl border border-orange-500/70 bg-[#1a0f0a] px-3 py-1.5 text-white">
+        <CoinAmount
+          amount={toCoins(box.price, PRICE_UNIT_MODE)}
+          formatOptions={{ maximumFractionDigits: 0 }}
+          className="text-lg font-semibold"
+          iconClassName="h-4 w-4"
+        />
+      </div>
+    </button>
+  );
+
   const renderCuratedRow = (row: BoxesPageCuratedRow) => {
     const maxMobile = clampGrid(row.maxMobile, 2);
     const maxDesktop = clampGrid(row.maxDesktop, 4);
@@ -525,7 +564,107 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   const sortVisibilityClass = mobileConfig.minimalTopRow ? 'hidden md:block' : 'block';
 
   return (
-    <section className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 pb-16 pt-4 sm:px-6 lg:px-8 animate-in fade-in duration-300 md:gap-8 md:pt-6">
+    <section className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-3 pb-16 pt-3 sm:px-6 lg:px-8 animate-in fade-in duration-300 md:gap-8 md:pt-6">
+      <div className="md:hidden rounded-2xl border border-white/10 bg-[#0e0e12] p-3">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              playSound('click');
+              setView({ type: 'HOME' });
+            }}
+            className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#11131b] text-white"
+            aria-label="Back"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <div className="flex gap-2">
+            <button className="rounded-2xl border border-white/10 bg-[#171822] px-5 py-2.5 text-lg font-semibold text-white">Sign in</button>
+            <button className="rounded-2xl bg-[#ff5a00] px-5 py-2.5 text-lg font-semibold text-white">Sign Up</button>
+          </div>
+        </div>
+      </div>
+
+      {topDrops.length > 0 && (
+        <div className="md:hidden -mx-3 overflow-hidden border-y border-white/10 bg-gradient-to-r from-[#211507] via-[#3f1c65] to-[#5b2bc9]">
+          <div className="flex">
+            <div className="flex min-w-[96px] flex-col items-center justify-center border-r border-orange-500/50 bg-black/35 px-2 py-2 text-center">
+              <Flame className="h-4 w-4 text-orange-400" />
+              <span className="mt-1 text-xs font-bold tracking-wide text-white">TOP</span>
+              <span className="text-xs font-bold tracking-wide text-white">DROPS</span>
+            </div>
+            <div className="flex flex-1 overflow-x-auto">
+              {topDrops.map((box) => (
+                <button
+                  key={box.id}
+                  type="button"
+                  onClick={() => setView({ type: 'CASE_OPENING', boxId: box.id })}
+                  className="min-w-[95px] border-r border-black/30 p-2"
+                >
+                  <img src={box.image} alt={box.name} className="mx-auto h-16 w-16 object-contain" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hotPicks.length > 0 && (
+        <div className="md:hidden space-y-3">
+          <h2 className="pt-1 text-center text-[46px] font-semibold leading-none text-white/95" style={{ fontSize: '44px' }}>Hot Picks</h2>
+          <div className="grid grid-cols-2 gap-2">
+            {hotPicks.map((box) => renderScreenshotCard(box, true))}
+          </div>
+        </div>
+      )}
+
+      <div className="md:hidden -mx-1 rounded-3xl border border-white/10 bg-[#121317] px-2 pb-4 pt-2">
+        <div className="mb-3 flex items-center gap-2 overflow-x-auto px-1">
+          {categoryOptions.slice(0, 6).map((option, index) => {
+            const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(option.value);
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => handleCategorySelection(option.value)}
+                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-2xl px-3 py-2 text-sm font-semibold ${isSelected ? 'bg-[#1f2026] text-white' : 'text-gray-400'}`}
+              >
+                <Gem className="h-4 w-4 text-[#ff5a00]" />
+                {index === 0 ? 'All' : formatDropdownLabel(option.label)}
+              </button>
+            );
+          })}
+        </div>
+        <div className="mb-4 flex gap-2 px-1">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-gray-500" />
+            <Input
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search boxes"
+              className="h-12 rounded-xl border-white/10 bg-[#0c0d12] pl-10 text-sm"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsTagsOpen(true)}
+            className="h-12 w-12 rounded-xl bg-[#ff5a00] text-white"
+            aria-label="Open filters"
+          >
+            <Tag className="mx-auto h-5 w-5" />
+          </button>
+        </div>
+        <div className="mb-4 flex items-center gap-2 px-2 text-3xl font-semibold text-white">
+          <Gem className="h-6 w-6 text-[#ff5a00]" /> All
+        </div>
+        <div className="grid grid-cols-2 gap-2 px-1">
+          {filteredBoxes.map((box) => renderScreenshotCard(box, true))}
+        </div>
+      </div>
+
+      <div className="hidden md:block">
+      <section className="mx-auto flex w-full flex-col gap-6 animate-in fade-in duration-300 md:gap-8">
       <div className="md:hidden sticky top-0 z-20 -mx-4 bg-[#050811]/95 px-4 pb-4 pt-2 backdrop-blur border-b border-white/10">
         <div className="flex items-center gap-3">
           <button
@@ -948,6 +1087,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           Preview mode enabled
         </div>
       )}
+      </section>
+      </div>
     </section>
   );
-};
+  };
