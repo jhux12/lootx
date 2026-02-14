@@ -484,7 +484,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       onMouseEnter={() => playSound('hover')}
       className={`group w-full rounded-2xl border border-white/5 bg-[#0d0d10] px-2 pb-3 pt-2 text-center transition hover:border-orange-400/40 ${compact ? 'max-w-[180px]' : ''}`}
     >
-      <div className="relative mb-2 flex h-[128px] items-end justify-center overflow-hidden rounded-xl bg-gradient-to-b from-[#16161a] via-[#121216] to-[#0d0d10] sm:h-[160px]">
+      <div
+        className={`relative mb-2 flex items-end justify-center overflow-hidden rounded-xl bg-gradient-to-b from-[#16161a] via-[#121216] to-[#0d0d10] ${compact ? 'h-[146px]' : 'h-[132px] sm:h-[170px]'}`}
+      >
         <div
           className="absolute bottom-4 h-8 w-24 rounded-full blur-xl"
           style={{ background: `${box.accentColor}88` }}
@@ -493,16 +495,16 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           src={box.image}
           alt={box.name}
           loading="lazy"
-          className="relative z-10 h-[110px] w-[110px] object-contain transition-transform duration-300 group-hover:scale-105 sm:h-[130px] sm:w-[130px]"
+          className={`relative z-10 object-contain transition-transform duration-300 group-hover:scale-105 ${compact ? 'h-[128px] w-[128px]' : 'h-[112px] w-[112px] sm:h-[136px] sm:w-[136px]'}`}
         />
       </div>
       <p className="truncate text-sm font-semibold tracking-tight text-white sm:text-base">{box.name}</p>
-      <div className="mx-auto mt-2 inline-flex items-center justify-center rounded-xl border border-orange-500/70 bg-[#1a0f0a] px-3 py-1.5 text-white">
+      <div className="mx-auto mt-2 inline-flex items-center justify-center rounded-xl border border-orange-500/70 bg-[#1a0f0a] px-2.5 py-1 text-white">
         <CoinAmount
           amount={toCoins(box.price, PRICE_UNIT_MODE)}
           formatOptions={{ maximumFractionDigits: 0 }}
-          className="text-lg font-semibold"
-          iconClassName="h-4 w-4"
+          className="text-sm font-semibold"
+          iconClassName="h-3.5 w-3.5"
         />
       </div>
     </button>
