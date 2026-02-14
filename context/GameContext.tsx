@@ -2715,28 +2715,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    const shipmentUpdates = sanitizeDeep({
-      status,
-      trackingNumber: sanitizedTrackingNumber,
-      updatedAt: serverTimestamp()
-    });
-
     try {
-      await setDoc(doc(db, 'shipments', shipmentId), shipmentUpdates, { merge: true });
-    } catch (error) {
-      console.error('Failed to update shipment status in Firebase', error);
-      return;
-    }
-
-    if (userId && inventoryId) {
-      try {
-        await setDoc(doc(db, 'users', userId, 'inventory', inventoryId), {
+      await authedFetch('/api/update-shipment-status', {
+        method: 'POST',
+        body: JSON.stringify({
+          shipmentId,
+          userId,
+          inventoryId,
           status,
           trackingNumber: sanitizedTrackingNumber
-        }, { merge: true });
-      } catch (error) {
-        console.error('Failed to update inventory shipment status in Firebase', error);
-      }
+        })
+      });
+    } catch (error) {
+      console.error('Failed to update shipment status', error);
+      alert('Unable to update shipment right now. Please try again.');
+      return;
     }
 
     setUsers((prev) =>
