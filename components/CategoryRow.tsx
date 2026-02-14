@@ -1,37 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { ShowcaseRowCategories } from '../utils/homepageShowcase';
-
-const clampCount = (value: number | undefined, fallback: number) => {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
-  const rounded = Math.round(value);
-  if (rounded < 1) return fallback;
-  return rounded;
-};
-
-const useMediaQuery = (query: string) => {
-  const [matches, setMatches] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(query).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const media = window.matchMedia(query);
-    const handler = () => setMatches(media.matches);
-    handler();
-    if ('addEventListener' in media) {
-      media.addEventListener('change', handler);
-      return () => media.removeEventListener('change', handler);
-    }
-    media.addListener(handler);
-    return () => media.removeListener(handler);
-  }, [query]);
-
-  return matches;
-};
 
 type CategoryRowProps = {
   row: ShowcaseRowCategories;
@@ -40,9 +11,6 @@ type CategoryRowProps = {
 export const CategoryRow: React.FC<CategoryRowProps> = ({ row }) => {
   const { setView } = useGame();
   const { playSound } = useSound();
-  const isMobile = useMediaQuery('(max-width: 640px)');
-  const visibleCount = clampCount(isMobile ? row.maxMobile : row.maxDesktop, isMobile ? 2 : 4);
-  const gapSize = isMobile ? 12 : 16;
 
   const categories = useMemo(
     () =>
@@ -54,14 +22,6 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({ row }) => {
 
   if (categories.length === 0) return null;
 
-  const cardBasis = `calc((100% - ${gapSize * (visibleCount - 1)}px) / ${visibleCount})`;
-
-  const handleViewAll = () => {
-    playSound('click');
-    setView({ type: 'BOXES' });
-    window.history.replaceState({}, '', '/boxes');
-  };
-
   const handleCategoryClick = (slug: string) => {
     const params = new URLSearchParams();
     params.set('category', slug);
@@ -72,48 +32,30 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({ row }) => {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold text-white">{row.title}</h3>
-          {row.subtitle && <p className="text-sm text-gray-400">{row.subtitle}</p>}
-        </div>
-        <button
-          type="button"
-          onClick={handleViewAll}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 transition hover:text-white"
-        >
-          VIEW ALL <ArrowUpRight className="h-3.5 w-3.5" />
-        </button>
-      </div>
-      <div className="relative">
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 hidden w-10 bg-gradient-to-r from-[#050811] via-[#050811]/80 to-transparent sm:block" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 hidden w-10 bg-gradient-to-l from-[#050811] via-[#050811]/80 to-transparent sm:block" />
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#050811] via-[#050811]/90 to-transparent sm:hidden" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#050811] via-[#050811]/90 to-transparent sm:hidden" />
-        <div className="flex gap-3 overflow-x-auto pb-2 pt-1 snap-x snap-mandatory sm:gap-4">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              type="button"
-              onClick={() => handleCategoryClick(category.categorySlug)}
-              className="group relative min-h-[140px] snap-start overflow-hidden rounded-2xl border border-white/10 bg-[#0b0e14] text-left shadow-[0_0_0_rgba(0,0,0,0)] transition hover:border-white/30 hover:shadow-[0_0_18px_rgba(56,189,248,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
-              style={{ flex: `0 0 ${cardBasis}` }}
-            >
-              <img
-                src={category.imageUrl}
-                alt={category.label || category.categorySlug}
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050811] via-[#050811]/40 to-transparent" />
-              <div className="relative z-10 flex h-full items-end p-4">
-                <span className="text-sm font-semibold text-white drop-shadow">
-                  {category.label || category.categorySlug}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
+      {row.title && <h3 className="text-2xl font-bold text-white">{row.title}</h3>}
+      <div className="space-y-3">
+        {categories.map((category) => (
+          <button
+            key={category.id}
+            type="button"
+            onClick={() => handleCategoryClick(category.categorySlug)}
+            className="group relative flex w-full items-center justify-between overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f1219] via-[#10141d] to-[#0a0d13] px-4 py-4 text-left transition hover:border-white/25"
+          >
+            <div className="relative z-10 flex flex-col gap-3">
+              <h4 className="text-4xl font-bold leading-none text-white sm:text-3xl">{category.label || category.categorySlug}</h4>
+              <span className="inline-flex w-fit items-center gap-1 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-lg font-semibold text-white sm:text-base">
+                View Boxes <ArrowUpRight className="h-4 w-4" />
+              </span>
+            </div>
+            <img
+              src={category.imageUrl}
+              alt={category.label || category.categorySlug}
+              loading="lazy"
+              className="relative z-10 h-24 w-24 shrink-0 object-contain sm:h-28 sm:w-28"
+            />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.06),transparent_60%)]" />
+          </button>
+        ))}
       </div>
     </section>
   );

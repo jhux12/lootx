@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Header } from './components/Header';
-import { LiveTicker } from './components/LiveTicker';
 import { ChatSidebar } from './components/ChatSidebar';
-import { Hero } from './components/Hero';
 import { BoxGrid } from './components/BoxGrid';
 import { BoxCard } from './components/BoxCard';
 import { BoxRow } from './components/BoxRow';
@@ -27,17 +25,15 @@ import { ShieldAlert, Swords } from 'lucide-react';
 import { InboxModal } from './components/InboxModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { HowItWorksSection } from './components/HowItWorksSection';
-import { TrustSection } from './components/TrustSection';
-import { FinalCTA } from './components/FinalCTA';
 import { SiteFooter } from './components/SiteFooter';
 import { ProvablyFairPage } from './components/ProvablyFairPage';
 import { HomeBanners } from './components/HomeBanners';
-import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
 import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CookieConsentToast } from './components/CookieConsentToast';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
+import { DemoSpinnerSection } from './components/DemoSpinnerSection';
 import { getBoxTags } from './utils/boxTags';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
@@ -75,6 +71,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal, authInitialized, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
+  const [demoSpinnerBoxId, setDemoSpinnerBoxId] = useState<string | undefined>(undefined);
   const [showPromoPopup, setShowPromoPopup] = useState(false);
 
   useEffect(() => {
@@ -117,9 +114,11 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       (config) => {
         const rows = normalizeShowcaseRows(config?.showcaseRows);
         setShowcaseRows(rows.length ? rows : null);
+        setDemoSpinnerBoxId(config?.demoSpinnerBoxId);
       },
       () => {
         setShowcaseRows(null);
+        setDemoSpinnerBoxId(undefined);
       }
     );
     return () => unsubscribe();
@@ -170,6 +169,11 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       };
     }) as Array<ShowcaseRowCategories | (ShowcaseRowBoxes & { boxes: typeof baseHomeBoxes })>;
   }, [baseHomeBoxes, showcaseRows]);
+
+  const demoSpinnerBox = useMemo(() => {
+    if (!demoSpinnerBoxId) return baseHomeBoxes[0];
+    return baseHomeBoxes.find((box) => box.id === demoSpinnerBoxId) ?? baseHomeBoxes[0];
+  }, [baseHomeBoxes, demoSpinnerBoxId]);
 
   const gridCols = {
     1: 'grid-cols-1',
@@ -288,10 +292,13 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       ) : (
       <>
       {view.type === 'HOME' && (
-        <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
-          {!isAuthenticated && <Hero />}
+        <div className={`mx-auto flex flex-col gap-8 px-4 pb-16 pt-4 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
+          <HomeBanners />
+          <DemoSpinnerSection box={demoSpinnerBox} />
+          <LegendaryShowcase />
+
           {showcaseRowsWithBoxes && showcaseRowsWithBoxes.length > 0 ? (
-            <div className="space-y-12">
+            <div className="space-y-6">
               {showcaseRowsWithBoxes.map((row) => {
                 if (row.type === 'categories') {
                   return <CategoryRow key={row.id} row={row} />;
@@ -299,12 +306,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
                 if (row.boxes.length === 0) return null;
                 const mobileColumns = clampGrid(row.maxMobile, 2);
                 const desktopColumns = clampGrid(row.maxDesktop, 4);
-                const gridClassName = `grid ${gridCols[1]} gap-4 ${smGridCols[mobileColumns]} ${lgGridCols[desktopColumns]}`;
+                const gridClassName = `grid ${gridCols[1]} gap-3 ${smGridCols[mobileColumns]} ${lgGridCols[desktopColumns]}`;
                 return (
-                  <section key={row.id} className="space-y-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+                  <section key={row.id} className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
                       <div>
-                        <h3 className="text-lg font-semibold text-white">{row.title}</h3>
+                        <h3 className="text-2xl font-bold text-white">{row.title}</h3>
                         {row.subtitle && <p className="text-sm text-gray-400">{row.subtitle}</p>}
                       </div>
                       <button
@@ -314,32 +321,26 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
                           setView({ type: 'BOXES' });
                           window.history.replaceState({}, '', '/boxes');
                         }}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 transition hover:text-white"
+                        className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-gray-300"
                       >
                         View all
                       </button>
                     </div>
                     {row.layout === 'carousel' ? (
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 hidden w-10 bg-gradient-to-r from-[#050811] via-[#050811]/80 to-transparent sm:block" />
-                        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 hidden w-10 bg-gradient-to-l from-[#050811] via-[#050811]/80 to-transparent sm:block" />
-                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#050811] via-[#050811]/90 to-transparent sm:hidden" />
-                        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#050811] via-[#050811]/90 to-transparent sm:hidden" />
-                        <div className="flex gap-3 overflow-x-auto pb-2 pt-1 snap-x snap-mandatory sm:gap-4 sm:overflow-visible">
-                          {row.boxes.map((box) => (
-                            <div key={box.id} className="min-w-[200px] snap-start sm:min-w-0">
-                              <BoxCard
-                                box={box}
-                                size="compact"
-                                onSelect={(boxId) => {
-                                  playSound('click');
-                                  setView({ type: 'CASE_OPENING', boxId });
-                                }}
-                                onHover={() => playSound('hover')}
-                              />
-                            </div>
-                          ))}
-                        </div>
+                      <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory sm:gap-4">
+                        {row.boxes.map((box) => (
+                          <div key={box.id} className="min-w-[170px] snap-start sm:min-w-0">
+                            <BoxCard
+                              box={box}
+                              size="compact"
+                              onSelect={(boxId) => {
+                                playSound('click');
+                                setView({ type: 'CASE_OPENING', boxId });
+                              }}
+                              onHover={() => playSound('hover')}
+                            />
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <div className={gridClassName}>
@@ -368,18 +369,8 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               ))}
             </>
           )}
-          <HomeBanners />
-          <LegendaryShowcase />
-          <TrustSection />
+
           <HowItWorksSection />
-          <CaseLabPromo />
-          <section className="space-y-3">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
-              <span>Live Wins</span>
-            </div>
-            <LiveTicker />
-          </section>
-          <FinalCTA />
         </div>
       )}
       

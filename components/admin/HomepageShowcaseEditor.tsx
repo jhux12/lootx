@@ -50,11 +50,13 @@ export const HomepageShowcaseEditor: React.FC = () => {
   const [activeAddRowId, setActiveAddRowId] = useState<string | null>(null);
   const [boxSearch, setBoxSearch] = useState('');
   const [categoryValidation, setCategoryValidation] = useState<Record<string, boolean>>({});
+  const [demoSpinnerBoxId, setDemoSpinnerBoxId] = useState<string>('');
 
   useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
       (config) => {
         setShowcaseRows(normalizeShowcaseRows(config?.showcaseRows));
+        setDemoSpinnerBoxId(config?.demoSpinnerBoxId ?? '');
         setIsLoading(false);
       },
       () => {
@@ -85,13 +87,23 @@ export const HomepageShowcaseEditor: React.FC = () => {
   const persistRows = async (nextRows: ShowcaseRow[], successMessage?: string) => {
     setShowcaseRows(nextRows);
     try {
-      await saveHomepageConfig(nextRows);
+      await saveHomepageConfig(nextRows, { demoSpinnerBoxId });
       if (successMessage) showToast('success', successMessage);
     } catch (error) {
       showToast('error', 'Something went wrong while saving.');
     }
   };
 
+
+  const handleDemoSpinnerBoxChange = async (nextBoxId: string) => {
+    setDemoSpinnerBoxId(nextBoxId);
+    try {
+      await saveHomepageConfig(showcaseRows, { demoSpinnerBoxId: nextBoxId });
+      showToast('success', 'Demo spinner box updated.');
+    } catch (error) {
+      showToast('error', 'Unable to update demo spinner box.');
+    }
+  };
   const handleAddRow = () => {
     const nextRows = addRow(showcaseRows);
     persistRows(nextRows, 'Row added.');
@@ -256,6 +268,29 @@ export const HomepageShowcaseEditor: React.FC = () => {
         >
           <Plus className="h-4 w-4" /> Add Row
         </button>
+      </div>
+
+
+      <div className="rounded-xl border border-gray-800 bg-[#131720] p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Demo spinner box
+            <Select
+              value={demoSpinnerBoxId}
+              onChange={(event) => void handleDemoSpinnerBoxChange(event.target.value)}
+            >
+              <option value="">Auto (first eligible box)</option>
+              {sortedBoxes.map((box) => (
+                <option key={box.id} value={box.id}>
+                  {box.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <p className="text-xs text-gray-500 sm:max-w-xs">
+            Controls which box appears in the autoplay demo spinner at the top of the homepage.
+          </p>
+        </div>
       </div>
 
       {isLoading ? (
