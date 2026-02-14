@@ -46,6 +46,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
   const [saveNotice, setSaveNotice] = useState('');
   const [saveError, setSaveError] = useState('');
   const [boxSearch, setBoxSearch] = useState<Record<string, string>>({});
+  const [hotPickSearch, setHotPickSearch] = useState('');
   const [categoryValidation, setCategoryValidation] = useState(false);
 
   useEffect(() => {
@@ -185,6 +186,58 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
       ),
     [categoryCards]
   );
+
+  const hotPickCandidates = useMemo(
+    () =>
+      boxes
+        .filter((box) => !box.isDaily && !box.isUserCreated && box.name.toLowerCase().includes(hotPickSearch.toLowerCase()))
+        .slice(0, 16),
+    [boxes, hotPickSearch]
+  );
+
+  const hotPickBoxes = useMemo(
+    () =>
+      (draft.featured.hotPickBoxIds ?? [])
+        .map((id) => boxes.find((box) => box.id === id))
+        .filter((box): box is MysteryBox => Boolean(box)),
+    [boxes, draft.featured.hotPickBoxIds]
+  );
+
+  const addHotPick = (boxId: string) => {
+    const current = draft.featured.hotPickBoxIds ?? [];
+    if (current.includes(boxId)) return;
+    handleDraftChange({
+      featured: {
+        ...draft.featured,
+        hotPickBoxIds: [...current, boxId]
+      }
+    });
+  };
+
+  const removeHotPick = (boxId: string) => {
+    handleDraftChange({
+      featured: {
+        ...draft.featured,
+        hotPickBoxIds: (draft.featured.hotPickBoxIds ?? []).filter((id) => id !== boxId)
+      }
+    });
+  };
+
+  const moveHotPick = (boxId: string, direction: 'up' | 'down') => {
+    const ids = [...(draft.featured.hotPickBoxIds ?? [])];
+    const currentIndex = ids.indexOf(boxId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= ids.length) return;
+    [ids[currentIndex], ids[targetIndex]] = [ids[targetIndex], ids[currentIndex]];
+    handleDraftChange({
+      featured: {
+        ...draft.featured,
+        hotPickBoxIds: ids
+      }
+    });
+  };
+
 
   return (
     <div className="space-y-8">
@@ -493,6 +546,107 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
           </div>
         </div>
       </div>
+
+      <div className="rounded-2xl border border-gray-800 bg-[#0f131c] p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-white">Featured Mobile Sections</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Hot picks title
+            <Input
+              value={draft.featured.hotPicksTitle ?? ''}
+              onChange={(event) =>
+                handleDraftChange({
+                  featured: { ...draft.featured, hotPicksTitle: event.target.value }
+                })
+              }
+            />
+          </label>
+          <label className="space-y-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Top drops count
+            <Input
+              type="number"
+              min={3}
+              max={20}
+              value={draft.featured.topDropsCount ?? 8}
+              onChange={(event) =>
+                handleDraftChange({
+                  featured: {
+                    ...draft.featured,
+                    topDropsCount: Number(event.target.value) || 8
+                  }
+                })
+              }
+            />
+          </label>
+        </div>
+        <label className="flex items-center gap-3 text-sm text-gray-300">
+          <Checkbox
+            checked={draft.featured.hotPicksEnabled}
+            onChange={(event) =>
+              handleDraftChange({
+                featured: { ...draft.featured, hotPicksEnabled: event.target.checked }
+              })
+            }
+          />
+          Enable hot picks section
+        </label>
+
+        <div className="space-y-3 rounded-xl border border-white/10 bg-[#0b0f1a] p-4">
+          <Input
+            value={hotPickSearch}
+            onChange={(event) => setHotPickSearch(event.target.value)}
+            placeholder="Search boxes to add to hot picks"
+          />
+          <div className="flex flex-wrap gap-2">
+            {hotPickCandidates.map((box) => (
+              <button
+                key={box.id}
+                type="button"
+                onClick={() => addHotPick(box.id)}
+                className="rounded-full border border-white/10 bg-[#141826] px-3 py-1 text-xs text-gray-300 transition hover:text-white"
+              >
+                {box.name}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Selected hot picks</p>
+            {hotPickBoxes.length === 0 ? (
+              <p className="text-xs text-gray-500">No hot picks selected. Highest value items will be shown by default.</p>
+            ) : (
+              hotPickBoxes.map((box, index) => (
+                <div key={box.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-[#111623] px-3 py-2">
+                  <span className="truncate text-sm text-gray-200">{index + 1}. {box.name}</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => moveHotPick(box.id, 'up')}
+                      className="rounded-full border border-white/10 p-1.5 text-gray-400 transition hover:text-white"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveHotPick(box.id, 'down')}
+                      className="rounded-full border border-white/10 p-1.5 text-gray-400 transition hover:text-white"
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeHotPick(box.id)}
+                      className="rounded-full border border-white/10 p-1.5 text-gray-400 transition hover:text-white"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
 
       <div className="rounded-2xl border border-gray-800 bg-[#0f131c] p-6 space-y-4">
         <div className="flex items-center justify-between">
