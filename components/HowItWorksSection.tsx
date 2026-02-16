@@ -5,9 +5,9 @@ import { MobileFeatureStrip, MobileFeatureItem } from './MobileFeatureStrip';
 const steps = [
   {
     id: 'open-case',
-    title: 'Open a case',
+    title: 'Pick your case',
     label: 'Step 1',
-    description: 'Pick from curated boxes and crack them open instantly.',
+    description: 'Browse themed boxes and launch your opening instantly from any device.',
     icon: Box,
     cta: {
       label: 'Browse boxes',
@@ -16,16 +16,16 @@ const steps = [
   },
   {
     id: 'win-items',
-    title: 'Win real items',
+    title: 'Reveal your drop',
     label: 'Step 2',
-    description: 'Every case contains real inventory with transparent odds.',
+    description: 'Every outcome follows transparent odds, with live reveal moments for excitement.',
     icon: Sparkles
   },
   {
     id: 'ship-or-sell',
-    title: 'Ship or sell back instantly',
+    title: 'Ship or sell back',
     label: 'Step 3',
-    description: 'Send items to your door or sell them back in seconds.',
+    description: 'Send your rewards to your address or convert them to balance in seconds.',
     icon: Truck,
     cta: {
       label: 'Open a box',
@@ -57,19 +57,17 @@ export const HowItWorksSection: React.FC = () => {
         {steps.map((step, index) => {
           const Icon = step.icon;
           return (
-            <div
+            <article
               key={step.id}
-              className="rounded-2xl border border-white/5 bg-[#0c111b] p-5 transition hover:border-white/15"
+              className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#0d1525] via-[#0b1320] to-[#09101b] p-5 transition hover:border-cyan-300/35"
             >
-              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-purple-200/70">
-                Step {index + 1}
-              </div>
-              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-cyan-300">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100/80">Step {index + 1}</div>
+              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-cyan-300">
                 <Icon className="h-5 w-5" />
               </div>
               <h3 className="text-lg font-semibold text-white">{step.title}</h3>
               <p className="mt-2 text-sm text-gray-400">{step.description}</p>
-            </div>
+            </article>
           );
         })}
       </div>
