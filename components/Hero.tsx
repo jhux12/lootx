@@ -14,11 +14,11 @@ type DemoReelItem = {
   price: number;
 };
 
-const CARD_WIDTH = 376;
-const CARD_GAP = 8;
+const CARD_WIDTH = 286;
+const CARD_GAP = 10;
 const STEP = CARD_WIDTH + CARD_GAP;
 const REPEAT_COUNT = 6;
-const CRUISE_SPEED = 130; // px/sec
+const CRUISE_SPEED = 118; // px/sec
 const LANDING_EVERY_MS = 3200;
 const LANDING_DURATION_MS = 950;
 const LANDING_PAUSE_MS = 820;
@@ -261,7 +261,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-gradient-to-r from-[#070a12] to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-14 bg-gradient-to-l from-[#070a12] to-transparent" />
 
-          <div className="h-[260px] sm:h-[320px] md:h-[430px] py-1">
+          <div className="h-[236px] sm:h-[278px] md:h-[340px] py-1">
             {repeatedItems.length > 0 ? (
               <div
                 ref={trackRef}
@@ -269,21 +269,21 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
                 style={{ width: `${repeatedItems.length * STEP}px` }}
               >
                 {repeatedItems.map((item) => (
-                  <div key={item.sequenceId} className="flex w-[376px] shrink-0 items-stretch">
-                    <div className="relative flex w-full flex-col rounded-[20px] border border-white/10 bg-gradient-to-b from-[#2a2d35] to-[#3a3d45] p-3 sm:p-4">
-                      <div className="flex-1 overflow-hidden rounded-xl bg-black/20">
+                  <div key={item.sequenceId} className="flex w-[286px] shrink-0 items-stretch">
+                    <div className="relative flex w-full flex-col rounded-[18px] border border-white/10 bg-gradient-to-b from-[#2a2d35] to-[#3a3d45] p-2 sm:p-2.5">
+                      <div className="flex-1 overflow-hidden rounded-[14px] bg-black/20">
                         {item.image ? (
                           <img
                             src={item.image}
                             alt={item.name}
-                            className="h-full w-full object-contain p-4 sm:p-6"
+                            className="h-full w-full object-contain p-1 sm:p-2"
                             loading="lazy"
                           />
                         ) : (
                           <div className="h-full w-full" />
                         )}
                       </div>
-                      <div className="mt-2 flex items-center justify-center gap-2 text-2xl font-black text-white/70 sm:text-5xl">
+                      <div className="mt-1.5 flex items-center justify-center gap-1.5 text-xl font-black text-white/75 sm:text-3xl">
                         <span className="text-[#ff4c00]">♦</span>
                         <span>{item.price.toLocaleString()}</span>
                       </div>
