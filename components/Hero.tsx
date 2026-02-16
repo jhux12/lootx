@@ -111,7 +111,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
       const viewportWidth = viewportRef.current?.clientWidth ?? 0;
       const centerIndex = Math.floor(baseItems.length / 2);
       const targetSequenceIndex = baseItems.length + centerIndex;
-      const centeredX = viewportWidth / 2 - (targetSequenceIndex * STEP + STEP / 2);
+      const centeredX = viewportWidth / 2 - (targetSequenceIndex * STEP + CARD_WIDTH / 2);
       xRef.current = centeredX;
       if (trackRef.current) {
         trackRef.current.style.transform = `translate3d(${xRef.current}px,0,0)`;
@@ -150,7 +150,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
 
       for (let repeatIndex = 0; repeatIndex < REPEAT_COUNT; repeatIndex += 1) {
         const sequenceIndex = repeatIndex * baseItems.length + nextIndex;
-        const itemCenter = sequenceIndex * STEP + STEP / 2;
+        const itemCenter = sequenceIndex * STEP + CARD_WIDTH / 2;
         const candidateX = centerX - itemCenter;
         const travelDistance = xRef.current - candidateX;
         if (travelDistance < minTravel) continue;
@@ -163,7 +163,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
 
       if (!Number.isFinite(bestTargetX)) {
         const fallbackSequenceIndex = (REPEAT_COUNT - 2) * baseItems.length + nextIndex;
-        const fallbackItemCenter = fallbackSequenceIndex * STEP + STEP / 2;
+        const fallbackItemCenter = fallbackSequenceIndex * STEP + CARD_WIDTH / 2;
         bestTargetX = centerX - fallbackItemCenter;
         chosenSequenceIndex = fallbackSequenceIndex;
       }
@@ -279,8 +279,8 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
             {repeatedItems.length > 0 ? (
               <div
                 ref={trackRef}
-                className="flex h-full items-stretch gap-2 px-2 will-change-transform"
-                style={{ width: `${repeatedItems.length * STEP}px` }}
+                className="flex h-full items-stretch will-change-transform"
+                style={{ width: `${repeatedItems.length * STEP}px`, columnGap: `${CARD_GAP}px` }}
               >
                 {repeatedItems.map((item, idx) => {
                   const isLanded = landedSequenceIndex === idx;
