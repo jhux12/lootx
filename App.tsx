@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Header } from './components/Header';
 import { LiveTicker } from './components/LiveTicker';
 import { ChatSidebar } from './components/ChatSidebar';
-import { Hero } from './components/Hero';
 import { BoxGrid } from './components/BoxGrid';
 import { BoxCard } from './components/BoxCard';
 import { BoxRow } from './components/BoxRow';
@@ -26,18 +25,17 @@ import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert, Swords } from 'lucide-react';
 import { InboxModal } from './components/InboxModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
-import { HowItWorksSection } from './components/HowItWorksSection';
-import { TrustSection } from './components/TrustSection';
-import { FinalCTA } from './components/FinalCTA';
 import { SiteFooter } from './components/SiteFooter';
 import { ProvablyFairPage } from './components/ProvablyFairPage';
-import { HomeBanners } from './components/HomeBanners';
-import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
 import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CookieConsentToast } from './components/CookieConsentToast';
-import { LegendaryShowcase } from './components/LegendaryShowcase';
+import { HomeTopDropsRow } from './components/HomeTopDropsRow';
+import { HomeHotPicks } from './components/HomeHotPicks';
+import { HomeHowItWorks } from './components/HomeHowItWorks';
+import { HomeFaq } from './components/HomeFaq';
+import { HomeCategoryBlocks } from './components/HomeCategoryBlocks';
 import { getBoxTags } from './utils/boxTags';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
@@ -288,8 +286,34 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       ) : (
       <>
       {view.type === 'HOME' && (
-        <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
-          {!isAuthenticated && <Hero />}
+        <div className={`mx-auto flex flex-col gap-12 px-4 pb-16 pt-6 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
+          <HomeTopDropsRow
+            boxes={baseHomeBoxes}
+            onSelectBox={(boxId) => {
+              playSound('click');
+              setView({ type: 'CASE_OPENING', boxId });
+            }}
+          />
+
+          <HomeHotPicks
+            boxes={baseHomeBoxes}
+            onSelectBox={(boxId) => {
+              playSound('click');
+              setView({ type: 'CASE_OPENING', boxId });
+            }}
+          />
+
+          <HomeHowItWorks />
+          <HomeFaq />
+          <HomeCategoryBlocks
+            boxes={baseHomeBoxes}
+            onSelectCategory={(slug) => {
+              playSound('click');
+              setView({ type: 'BOXES' });
+              window.history.replaceState({}, '', `/boxes?category=${encodeURIComponent(slug)}`);
+            }}
+          />
+
           {showcaseRowsWithBoxes && showcaseRowsWithBoxes.length > 0 ? (
             <div className="space-y-12">
               {showcaseRowsWithBoxes.map((row) => {
@@ -307,17 +331,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
                         <h3 className="text-lg font-semibold text-white">{row.title}</h3>
                         {row.subtitle && <p className="text-sm text-gray-400">{row.subtitle}</p>}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          playSound('click');
-                          setView({ type: 'BOXES' });
-                          window.history.replaceState({}, '', '/boxes');
-                        }}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 transition hover:text-white"
-                      >
-                        View all
-                      </button>
                     </div>
                     {row.layout === 'carousel' ? (
                       <div className="relative">
@@ -368,18 +381,13 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               ))}
             </>
           )}
-          <HomeBanners />
-          <LegendaryShowcase />
-          <TrustSection />
-          <HowItWorksSection />
-          <CaseLabPromo />
+
           <section className="space-y-3">
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
               <span>Live Wins</span>
             </div>
             <LiveTicker />
           </section>
-          <FinalCTA />
         </div>
       )}
       
@@ -616,7 +624,7 @@ const AppLayout: React.FC<{
 
   return (
     <div
-      className="flex flex-1 pt-[72px] md:pt-[80px] lg:pt-[88px]"
+      className="flex flex-1 pt-[112px] md:pt-[118px] lg:pt-[86px]"
       style={{ '--chatw': chatWidth } as React.CSSProperties}
       data-chat-collapsed={isChatCollapsed}
     >
