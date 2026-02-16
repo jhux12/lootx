@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import pullzPattern from '../assets/pullz-p.PNG';
 import { useGame } from '../context/GameContext';
 import { MysteryBox } from '../types';
+import { CoinAmount } from './CoinAmount';
 
 type HeroProps = {
   demoBox?: MysteryBox;
@@ -12,6 +13,7 @@ type DemoReelItem = {
   name: string;
   image: string;
   price: number;
+  color: string;
 };
 
 const CARD_WIDTH = 286;
@@ -23,6 +25,14 @@ const LANDING_EVERY_MS = 3200;
 const LANDING_DURATION_MS = 950;
 const LANDING_PAUSE_MS = 820;
 
+const rarityColorMap: Record<string, string> = {
+  common: '#9ca3af',
+  uncommon: '#22c55e',
+  rare: '#3b82f6',
+  epic: '#a855f7',
+  legendary: '#f59e0b'
+};
+
 const normalizeDemoItems = (box?: MysteryBox): DemoReelItem[] => {
   if (!box) return [];
 
@@ -32,7 +42,8 @@ const normalizeDemoItems = (box?: MysteryBox): DemoReelItem[] => {
       id: item.id || `${box.id}-item-${index}`,
       name: item.name || `Item ${index + 1}`,
       image: item.image || box.image || '',
-      price: Number.isFinite(item.price) ? item.price : Math.max(99, Math.round(box.price || 999))
+      price: Number.isFinite(item.price) ? item.price : Math.max(99, Math.round(box.price || 999)),
+      color: item.color || rarityColorMap[(item.rarity || '').toLowerCase()] || '#22d3ee'
     }))
     .filter((item) => item.image || item.name);
 
@@ -43,7 +54,8 @@ const normalizeDemoItems = (box?: MysteryBox): DemoReelItem[] => {
       id: `${box.id}-fallback`,
       name: box.name || 'Featured Item',
       image: box.image || '',
-      price: Math.max(99, Math.round(box.price || 999))
+      price: Math.max(99, Math.round(box.price || 999)),
+      color: box.accentColor || '#22d3ee'
     }
   ];
 };
@@ -275,7 +287,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
             </div>
           )}
 
-          <div className="h-[236px] sm:h-[278px] md:h-[340px] py-1">
+          <div className="h-[240px] sm:h-[290px] md:h-[340px] py-1">
             {repeatedItems.length > 0 ? (
               <div
                 ref={trackRef}
@@ -286,22 +298,28 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
                   const isLanded = landedSequenceIndex === idx;
                   return (
                   <div key={item.sequenceId} className="flex w-[286px] shrink-0 items-stretch">
-                    <div className={`relative flex w-full flex-col rounded-[18px] border p-2 sm:p-2.5 transition ${isLanded ? 'border-[#ff7a3d] bg-gradient-to-b from-[#3a2a1e] to-[#4a3525] shadow-[0_0_0_1px_rgba(255,122,61,0.35),0_0_24px_rgba(255,122,61,0.25)]' : 'border-white/10 bg-gradient-to-b from-[#2a2d35] to-[#3a3d45]'}`}>
-                      <div className="flex-1 overflow-hidden rounded-[14px] bg-black/20">
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="h-full w-full object-contain p-1 sm:p-2"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="h-full w-full" />
-                        )}
-                      </div>
-                      <div className="mt-1.5 flex items-center justify-center gap-1.5 text-xl font-black text-white/75 sm:text-3xl">
-                        <span className="text-[#ff4c00]">♦</span>
-                        <span>{item.price.toLocaleString()}</span>
+                    <div
+                      className={`relative flex w-full flex-col items-center justify-center overflow-hidden rounded-xl border p-3 transition ${isLanded ? 'scale-[1.01] border-white/30 shadow-[0_0_0_1px_rgba(255,255,255,0.2)]' : 'border-gray-800'} bg-[#151a23]`}
+                      style={{ boxShadow: isLanded ? `0 0 22px ${item.color}66` : `0 4px 0 0 ${item.color}20` }}
+                    >
+                      <div
+                        className="absolute inset-4 rounded-full opacity-90"
+                        style={{
+                          background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
+                        }}
+                      ></div>
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="relative z-10 mb-1 h-32 w-32 object-contain sm:h-36 sm:w-36"
+                        loading="lazy"
+                      />
+                      <div
+                        className="absolute bottom-0 left-0 right-0 h-1.5 rounded-b-xl opacity-80"
+                        style={{ backgroundColor: item.color }}
+                      ></div>
+                      <div className="relative z-10 mt-1 flex items-center justify-center rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-sm font-bold text-white sm:text-base">
+                        <CoinAmount amount={Math.round(item.price)} iconClassName="h-4 w-4" textClassName="text-white font-bold" />
                       </div>
                     </div>
                   </div>
