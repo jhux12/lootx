@@ -1,33 +1,100 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Sparkles, Trophy, Zap } from 'lucide-react';
 import pullzPattern from '../assets/pullz-p.PNG';
 import { useGame } from '../context/GameContext';
-import { MysteryBox } from '../types';
+import { CaseItem, MysteryBox } from '../types';
 
 type HeroProps = {
   demoBox?: MysteryBox;
 };
 
-const SPIN_INTERVAL_MS = 3400;
+const BUFFER_COUNT = 14;
+const ITEM_WIDTH = 116;
+const AUTO_SPIN_INTERVAL_MS = 3600;
+const SPIN_DURATION_MS = 1900;
+
+const createFallbackItem = (box: MysteryBox): CaseItem => ({
+  id: `${box.id}-demo`,
+  name: box.name,
+  price: box.price,
+  image: box.image,
+  rarity: 'rare',
+  chance: 100,
+  color: box.accentColor || '#22d3ee'
+});
+
+const buildReel = (winner: CaseItem, pool: CaseItem[]) => {
+  const validPool = pool.length > 0 ? pool : [winner];
+  const before = Array.from({ length: BUFFER_COUNT }, () => validPool[Math.floor(Math.random() * validPool.length)]);
+  const after = Array.from({ length: BUFFER_COUNT }, () => validPool[Math.floor(Math.random() * validPool.length)]);
+  return [...before, winner, ...after];
+};
 
 export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
   const { isAuthenticated, openAuthModal } = useGame();
-  const [spinCount, setSpinCount] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const intervalRef = useRef<number | null>(null);
+  const [reelItems, setReelItems] = useState<CaseItem[]>([]);
+  const [isSpinning, setIsSpinning] = useState(false);
+
+  const boxItems = useMemo(() => {
+    if (!demoBox) return [];
+    if (demoBox.items.length === 0) return [createFallbackItem(demoBox)];
+    return demoBox.items;
+  }, [demoBox]);
+
+  const demoThumbnails = useMemo(() => boxItems.slice(0, 5), [boxItems]);
+
+  const runSpin = () => {
+    if (!demoBox || boxItems.length === 0 || isSpinning) return;
+    const winner = boxItems[Math.floor(Math.random() * boxItems.length)];
+    setIsSpinning(true);
+    setReelItems(buildReel(winner, boxItems));
+
+    window.setTimeout(() => {
+      if (!scrollContainerRef.current) return;
+      scrollContainerRef.current.style.transition = 'none';
+      scrollContainerRef.current.style.transform = 'translateX(0px)';
+
+      window.setTimeout(() => {
+        if (!scrollContainerRef.current) return;
+        const winnerLeft = BUFFER_COUNT * ITEM_WIDTH;
+        const jitter = Math.floor(Math.random() * 90) - 45;
+        const finalTranslate = -winnerLeft + jitter;
+        scrollContainerRef.current.style.transition = `transform ${SPIN_DURATION_MS / 1000}s cubic-bezier(0.15, 0.85, 0.35, 1)`;
+        scrollContainerRef.current.style.transform = `translateX(${finalTranslate}px)`;
+      }, 36);
+    }, 0);
+
+    window.setTimeout(() => {
+      setIsSpinning(false);
+    }, SPIN_DURATION_MS + 200);
+  };
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setSpinCount((count) => count + 1);
-    }, SPIN_INTERVAL_MS);
+    if (!demoBox || boxItems.length === 0) {
+      setReelItems([]);
+      return;
+    }
+
+    runSpin();
+
+    if (intervalRef.current) {
+      window.clearInterval(intervalRef.current);
+    }
+
+    intervalRef.current = window.setInterval(() => {
+      runSpin();
+    }, AUTO_SPIN_INTERVAL_MS);
 
     return () => {
-      window.clearInterval(timer);
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
-  }, []);
-
-  const demoItems = useMemo(
-    () => (demoBox?.items ?? []).slice(0, 5),
-    [demoBox]
-  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoBox?.id, boxItems.length]);
 
   const scrollToSection = (id: string) => {
     const target = document.getElementById(id);
@@ -66,8 +133,8 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
               </span>
             </h1>
             <p className="max-w-xl text-sm text-gray-300 sm:text-base">
-              Your selected demo box now rotates automatically so every new visitor can feel the rush before opening.
-              Built for smooth mobile and desktop motion.
+              Your selected demo box now spins with the same reel-style motion used on the unboxing experience.
+              Smooth and fully mobile-friendly.
             </p>
           </div>
 
@@ -85,7 +152,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
           </button>
         </div>
 
-        <div className="mx-auto w-full max-w-[520px]">
+        <div className="mx-auto w-full max-w-[560px]">
           <div className="rounded-3xl border border-white/15 bg-gradient-to-b from-white/10 to-white/[0.02] p-3 shadow-[0_35px_70px_-45px_rgba(34,211,238,0.5)] sm:p-4">
             <div className="rounded-2xl border border-white/10 bg-[#090f19]/80 p-3 sm:p-4">
               <div className="mb-4 flex items-center justify-between gap-3">
@@ -94,33 +161,50 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
                   <h2 className="text-base font-bold text-white sm:text-lg">{demoBox?.name ?? 'Select a hero box in Admin'}</h2>
                 </div>
                 <div className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
-                  Auto spinning
+                  {isSpinning ? 'Spinning' : 'Auto spinning'}
                 </div>
               </div>
 
-              <div className="relative mx-auto mb-4 flex h-[220px] w-full max-w-[340px] items-center justify-center sm:h-[260px]">
-                <div className="absolute inset-4 rounded-full border border-dashed border-cyan-300/20" />
-                <div className="absolute h-3 w-3 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.9)]" />
-                <div key={spinCount} className="relative h-[190px] w-[190px] animate-demo-spin sm:h-[220px] sm:w-[220px]">
-                  <div className="absolute inset-0 rounded-[26px] border border-white/20 bg-gradient-to-br from-[#101a2d] via-[#0f1728] to-[#08111f] shadow-[0_24px_40px_-24px_rgba(0,0,0,0.85)]" />
-                  {demoBox?.image ? (
-                    <img
-                      src={demoBox.image}
-                      alt={demoBox.name}
-                      className="absolute inset-[18%] h-[64%] w-[64%] object-contain"
-                      loading="eager"
-                    />
+              <div className="mb-2 overflow-hidden rounded-xl border border-white/10 bg-[#050811]">
+                <div className="relative h-[138px]">
+                  <div className="pointer-events-none absolute inset-y-0 left-1/2 z-20 w-[2px] -translate-x-1/2 bg-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.9)]" />
+                  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#050811] to-transparent" />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#050811] to-transparent" />
+
+                  {reelItems.length > 0 ? (
+                    <div
+                      ref={scrollContainerRef}
+                      className="flex h-full items-stretch py-3"
+                      style={{ width: `${reelItems.length * ITEM_WIDTH}px` }}
+                    >
+                      {reelItems.map((item, idx) => (
+                        <div key={`${item.id}-${idx}`} className="flex w-[116px] shrink-0 items-center justify-center px-1.5">
+                          <div className="w-full rounded-lg border border-white/10 bg-white/5 p-2 text-center">
+                            <img src={item.image} alt={item.name} className="mx-auto h-14 w-14 object-contain" loading="lazy" />
+                            <p className="mt-1 truncate text-[10px] font-semibold text-gray-200">{item.name}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-gray-400">
-                      Choose a demo box in admin to preview it here.
+                    <div className="flex h-full items-center justify-center px-4 text-center text-xs text-gray-400">
+                      Choose a demo box in admin to preview the spinner here.
                     </div>
                   )}
                 </div>
               </div>
 
+              <div className="mb-4 overflow-hidden rounded-lg border border-white/10 bg-white/5 p-2">
+                {demoBox?.image ? (
+                  <img src={demoBox.image} alt={demoBox.name} className="h-24 w-full rounded-md object-cover sm:h-28" loading="eager" />
+                ) : (
+                  <div className="flex h-24 items-center justify-center text-xs text-gray-400 sm:h-28">No box selected.</div>
+                )}
+              </div>
+
               <div className="grid grid-cols-5 gap-2">
-                {demoItems.length > 0 ? (
-                  demoItems.map((item) => (
+                {demoThumbnails.length > 0 ? (
+                  demoThumbnails.map((item) => (
                     <div key={item.id} className="overflow-hidden rounded-lg border border-white/10 bg-white/5 p-1">
                       <img src={item.image} alt={item.name} className="h-10 w-full rounded object-cover sm:h-12" loading="lazy" />
                     </div>
@@ -142,17 +226,8 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
           50% { transform: translate(4%, 4%) rotate(-12deg); }
           100% { transform: translate(-4%, -4%) rotate(-12deg); }
         }
-        @keyframes demo-spin {
-          0% { transform: rotateY(0deg) rotateX(0deg); }
-          40% { transform: rotateY(170deg) rotateX(7deg); }
-          100% { transform: rotateY(360deg) rotateX(0deg); }
-        }
         .animate-hero-drift {
           animation: hero-drift 38s ease-in-out infinite;
-        }
-        .animate-demo-spin {
-          transform-style: preserve-3d;
-          animation: demo-spin 1.7s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
       `}</style>
     </section>
