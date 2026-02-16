@@ -22,6 +22,7 @@ import {
   removeBoxFromRow,
   removeCategoryFromRow,
   saveHomepageConfig,
+  saveHomepageHeroDemoBoxId,
   subscribeHomepageConfig,
   updateCategoryInRow,
   updateRow
@@ -50,11 +51,13 @@ export const HomepageShowcaseEditor: React.FC = () => {
   const [activeAddRowId, setActiveAddRowId] = useState<string | null>(null);
   const [boxSearch, setBoxSearch] = useState('');
   const [categoryValidation, setCategoryValidation] = useState<Record<string, boolean>>({});
+  const [heroDemoBoxId, setHeroDemoBoxId] = useState('');
 
   useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
       (config) => {
         setShowcaseRows(normalizeShowcaseRows(config?.showcaseRows));
+        setHeroDemoBoxId(config?.heroDemoBoxId ?? '');
         setIsLoading(false);
       },
       () => {
@@ -85,10 +88,25 @@ export const HomepageShowcaseEditor: React.FC = () => {
   const persistRows = async (nextRows: ShowcaseRow[], successMessage?: string) => {
     setShowcaseRows(nextRows);
     try {
-      await saveHomepageConfig(nextRows);
+      await saveHomepageConfig(nextRows, heroDemoBoxId);
       if (successMessage) showToast('success', successMessage);
     } catch (error) {
       showToast('error', 'Something went wrong while saving.');
+    }
+  };
+
+  const heroDemoBox = useMemo(
+    () => sortedBoxes.find((box) => box.id === heroDemoBoxId),
+    [heroDemoBoxId, sortedBoxes]
+  );
+
+  const handleHeroDemoBoxChange = async (nextBoxId: string) => {
+    setHeroDemoBoxId(nextBoxId);
+    try {
+      await saveHomepageHeroDemoBoxId(nextBoxId);
+      showToast('success', 'Hero demo box updated.');
+    } catch (error) {
+      showToast('error', 'Unable to save hero demo box.');
     }
   };
 
@@ -256,6 +274,45 @@ export const HomepageShowcaseEditor: React.FC = () => {
         >
           <Plus className="h-4 w-4" /> Add Row
         </button>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-[#111722] p-4 sm:p-5">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-white sm:text-base">Hero demo spinner box</h3>
+            <p className="text-xs text-gray-400 sm:text-sm">
+              Pick the box displayed in the homepage hero spinner. This updates instantly for visitors.
+            </p>
+            <Select
+              value={heroDemoBoxId}
+              onChange={(event) => void handleHeroDemoBoxChange(event.target.value)}
+              className="w-full bg-[#0b0f18] text-sm"
+            >
+              <option value="">Select a demo box…</option>
+              {sortedBoxes.map((box) => (
+                <option key={box.id} value={box.id}>
+                  {box.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-[#0b0f18] p-3">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-200/80">Thumbnail</p>
+            {heroDemoBox?.image ? (
+              <img
+                src={heroDemoBox.image}
+                alt={heroDemoBox.name}
+                className="h-28 w-full rounded-lg object-cover sm:h-32"
+              />
+            ) : (
+              <div className="flex h-28 items-center justify-center rounded-lg border border-white/10 bg-white/5 px-3 text-center text-xs text-gray-400 sm:h-32">
+                No demo box selected yet.
+              </div>
+            )}
+            <p className="mt-2 truncate text-xs text-gray-300">{heroDemoBox?.name ?? '—'}</p>
+          </div>
+        </div>
       </div>
 
       {isLoading ? (
