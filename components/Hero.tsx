@@ -52,6 +52,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
   const { isAuthenticated, openAuthModal } = useGame();
   const [isVisible, setIsVisible] = useState(true);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [landedSequenceIndex, setLandedSequenceIndex] = useState<number | null>(null);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -115,6 +116,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
       if (trackRef.current) {
         trackRef.current.style.transform = `translate3d(${xRef.current}px,0,0)`;
       }
+      setLandedSequenceIndex(targetSequenceIndex);
       return;
     }
 
@@ -144,6 +146,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
       const centerX = viewportWidth / 2;
       let bestTargetX = Number.NEGATIVE_INFINITY;
       let bestDistance = Number.POSITIVE_INFINITY;
+      let chosenSequenceIndex = -1;
 
       for (let repeatIndex = 0; repeatIndex < REPEAT_COUNT; repeatIndex += 1) {
         const sequenceIndex = repeatIndex * baseItems.length + nextIndex;
@@ -154,6 +157,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
         if (travelDistance < bestDistance) {
           bestDistance = travelDistance;
           bestTargetX = candidateX;
+          chosenSequenceIndex = sequenceIndex;
         }
       }
 
@@ -161,6 +165,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
         const fallbackSequenceIndex = (REPEAT_COUNT - 2) * baseItems.length + nextIndex;
         const fallbackItemCenter = fallbackSequenceIndex * STEP + STEP / 2;
         bestTargetX = centerX - fallbackItemCenter;
+        chosenSequenceIndex = fallbackSequenceIndex;
       }
 
       if (bestTargetX > xRef.current) {
@@ -172,6 +177,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
       landingTargetXRef.current = bestTargetX;
       landingStartTimeRef.current = now;
       currentFeaturedIndexRef.current = nextIndex;
+      setLandedSequenceIndex(chosenSequenceIndex);
     };
 
     const tick = (time: number) => {
@@ -209,7 +215,9 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
         modeRef.current = 'cruise';
       }
 
-      normalizeX();
+      if (modeRef.current === 'cruise') {
+        normalizeX();
+      }
 
       if (trackRef.current) {
         trackRef.current.style.transform = `translate3d(${xRef.current}px,0,0)`;
@@ -261,6 +269,12 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-gradient-to-r from-[#070a12] to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-14 bg-gradient-to-l from-[#070a12] to-transparent" />
 
+          {demoBox?.image && (
+            <div className="pointer-events-none absolute right-3 top-3 z-30 overflow-hidden rounded-lg border border-white/20 bg-black/40 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.9)] backdrop-blur">
+              <img src={demoBox.image} alt={demoBox.name || 'Demo box'} className="h-14 w-14 object-cover sm:h-16 sm:w-16" loading="lazy" />
+            </div>
+          )}
+
           <div className="h-[236px] sm:h-[278px] md:h-[340px] py-1">
             {repeatedItems.length > 0 ? (
               <div
@@ -268,9 +282,11 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
                 className="flex h-full items-stretch gap-2 px-2 will-change-transform"
                 style={{ width: `${repeatedItems.length * STEP}px` }}
               >
-                {repeatedItems.map((item) => (
+                {repeatedItems.map((item, idx) => {
+                  const isLanded = landedSequenceIndex === idx;
+                  return (
                   <div key={item.sequenceId} className="flex w-[286px] shrink-0 items-stretch">
-                    <div className="relative flex w-full flex-col rounded-[18px] border border-white/10 bg-gradient-to-b from-[#2a2d35] to-[#3a3d45] p-2 sm:p-2.5">
+                    <div className={`relative flex w-full flex-col rounded-[18px] border p-2 sm:p-2.5 transition ${isLanded ? 'border-[#ff7a3d] bg-gradient-to-b from-[#3a2a1e] to-[#4a3525] shadow-[0_0_0_1px_rgba(255,122,61,0.35),0_0_24px_rgba(255,122,61,0.25)]' : 'border-white/10 bg-gradient-to-b from-[#2a2d35] to-[#3a3d45]'}`}>
                       <div className="flex-1 overflow-hidden rounded-[14px] bg-black/20">
                         {item.image ? (
                           <img
@@ -289,7 +305,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
                       </div>
                     </div>
                   </div>
-                ))}
+                );})}
               </div>
             ) : (
               <div className="flex h-full items-center justify-center px-4 text-center text-sm text-gray-400">
@@ -302,7 +318,7 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
         <button
           type="button"
           onClick={handleViewBoxes}
-          className="w-full rounded-2xl bg-[#ff4c00] px-6 py-4 text-xl font-black uppercase tracking-wide text-white transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a3d]/80 sm:py-5"
+          className="w-full rounded-2xl bg-gradient-to-r from-purple-500 to-cyan-500 px-6 py-4 text-xl font-black uppercase tracking-wide text-white shadow-[0_14px_34px_-18px_rgba(124,58,237,0.85)] transition hover:shadow-[0_0_24px_rgba(34,211,238,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 sm:py-5"
         >
           View Boxes
         </button>
