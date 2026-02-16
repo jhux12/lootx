@@ -75,6 +75,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal, authInitialized, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
+  const [heroDemoBoxId, setHeroDemoBoxId] = useState<string | undefined>(undefined);
   const [showPromoPopup, setShowPromoPopup] = useState(false);
 
   useEffect(() => {
@@ -117,9 +118,11 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       (config) => {
         const rows = normalizeShowcaseRows(config?.showcaseRows);
         setShowcaseRows(rows.length ? rows : null);
+        setHeroDemoBoxId(config?.heroDemoBoxId);
       },
       () => {
         setShowcaseRows(null);
+        setHeroDemoBoxId(undefined);
       }
     );
     return () => unsubscribe();
@@ -153,6 +156,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       };
     })
   ), [baseHomeBoxes]);
+
+  const heroDemoBox = useMemo(() => {
+    if (!baseHomeBoxes.length) return undefined;
+    if (!heroDemoBoxId) return baseHomeBoxes[0];
+    return baseHomeBoxes.find((box) => box.id === heroDemoBoxId) ?? baseHomeBoxes[0];
+  }, [baseHomeBoxes, heroDemoBoxId]);
 
   const showcaseRowsWithBoxes = useMemo(() => {
     if (!showcaseRows) return null;
@@ -289,7 +298,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       <>
       {view.type === 'HOME' && (
         <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
-          {!isAuthenticated && <Hero />}
+          {!isAuthenticated && <Hero demoBox={heroDemoBox} />}
           {showcaseRowsWithBoxes && showcaseRowsWithBoxes.length > 0 ? (
             <div className="space-y-12">
               {showcaseRowsWithBoxes.map((row) => {
