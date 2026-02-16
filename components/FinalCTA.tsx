@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowRight } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 
 export const FinalCTA: React.FC = () => {
@@ -17,17 +18,20 @@ export const FinalCTA: React.FC = () => {
 
   return (
     <section>
-      <div className="rounded-3xl border border-white/10 bg-gradient-to-r from-purple-500/15 via-[#101724] to-cyan-500/15 p-8 text-center sm:p-10">
-        <h2 className="text-2xl font-semibold text-white">Ready to open your first case?</h2>
-        <p className="mt-2 text-sm text-gray-300">
-          Join thousands of players opening premium drops every day.
-        </p>
-        <button
-          onClick={handleGetStarted}
-          className="mt-6 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_-18px_rgba(124,58,237,0.8)] transition hover:translate-y-[-1px]"
-        >
-          Get Started
-        </button>
+      <div className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-[#30104f] via-[#141a2d] to-[#06344a] p-8 text-center sm:p-10">
+        <div className="mx-auto max-w-2xl">
+          <h2 className="text-2xl font-semibold text-white sm:text-3xl">Ready to launch your first premium opening?</h2>
+          <p className="mt-3 text-sm text-gray-200 sm:text-base">
+            Sign in, pick a case, and experience a polished flow that works beautifully on both mobile and desktop.
+          </p>
+          <button
+            onClick={handleGetStarted}
+            className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#111827] shadow-[0_14px_26px_-18px_rgba(255,255,255,0.9)] transition hover:translate-y-[-1px]"
+          >
+            Get started now
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </section>
   );

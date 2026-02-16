@@ -1,7 +1,14 @@
 import React from 'react';
 import heroImage from '../assets/hero.png';
 import pullzPattern from '../assets/pullz-p.PNG';
+import { Sparkles, ShieldCheck, Truck } from 'lucide-react';
 import { useGame } from '../context/GameContext';
+
+const featurePills = [
+  { id: 'fair', label: 'Provably fair drops', icon: ShieldCheck },
+  { id: 'instant', label: 'Instant sellback', icon: Sparkles },
+  { id: 'shipping', label: 'Fast global shipping', icon: Truck }
+];
 
 export const Hero: React.FC = () => {
   const { isAuthenticated, openAuthModal } = useGame();
@@ -13,7 +20,7 @@ export const Hero: React.FC = () => {
     }
   };
 
-  const handleGetStarted = () => {
+  const handlePrimaryCta = () => {
     if (!isAuthenticated) {
       openAuthModal('login');
       return;
@@ -21,74 +28,85 @@ export const Hero: React.FC = () => {
     scrollToSection('popular-boxes');
   };
 
+  const handleSecondaryCta = () => {
+    scrollToSection('how-it-works');
+  };
+
   return (
-    <section className="relative w-full overflow-hidden lg:overflow-visible rounded-[32px] border border-white/5 bg-gradient-to-br from-[#0b101a] via-[#0d121e] to-[#0b1323] px-6 py-8 sm:py-12 sm:px-10 lg:px-14 lg:py-16 h-[62vh] min-h-[520px] max-h-[760px] sm:h-[58vh] sm:min-h-[440px] sm:max-h-[640px]">
-      <div className="pointer-events-none absolute inset-0 rounded-[32px] overflow-hidden">
-        <div
-          className="absolute -inset-[35%] opacity-[0.06] blur-[2px] rotate-[-12deg] bg-repeat animate-hero-drift"
-          style={{ backgroundImage: `url(${pullzPattern})`, backgroundSize: '280px 280px' }}
-        />
-        <div className="absolute -top-28 left-6 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
-        <div className="absolute -bottom-24 right-0 h-80 w-80 rounded-full bg-cyan-500/15 blur-3xl" />
+    <section className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[#0a0f19] p-5 sm:p-8 lg:p-10">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `url(${pullzPattern})`, backgroundSize: '320px 320px' }} />
+        <div className="absolute -top-20 left-1/3 h-56 w-56 rounded-full bg-fuchsia-500/20 blur-3xl" />
+        <div className="absolute -bottom-20 right-10 h-56 w-56 rounded-full bg-sky-500/20 blur-3xl" />
       </div>
-      <div className="relative z-10 mx-auto grid h-full max-w-6xl items-start gap-10 lg:items-center lg:grid-cols-[1.05fr_1fr]">
-        <div className="space-y-6">
-          <div className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-200/70">
-            Mystery Box Website
+
+      <div className="relative z-10 grid items-center gap-7 lg:grid-cols-[1.1fr_1fr] lg:gap-10">
+        <div>
+          <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100/80">
+            Elevated homepage experience
           </div>
-          <div className="space-y-4">
-            <h1 className="text-3xl font-bold text-white sm:text-4xl lg:text-5xl lg:leading-tight">
-              Unbox Premium Items &amp; Win Big
-            </h1>
-            <p className="max-w-xl text-sm text-gray-300 sm:text-base">
-              Open premium mystery boxes featuring sneakers, gaming gear, collectibles, and more.
-              Keep what you win or sell it back instantly.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+
+          <h1 className="mt-4 text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">
+            A premium, app-style landing experience for your drops platform.
+          </h1>
+
+          <p className="mt-4 max-w-xl text-sm text-slate-300 sm:text-base">
+            Welcome users with a bold hero, polished social-proof messaging, and clear calls to action that feel modern on desktop and clean on mobile.
+          </p>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
-              onClick={handleGetStarted}
-              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_-18px_rgba(124,58,237,0.8)] transition hover:shadow-[0_0_24px_rgba(34,211,238,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+              onClick={handlePrimaryCta}
+              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_-20px_rgba(139,92,246,0.95)] transition hover:translate-y-[-1px]"
             >
-              Get Started
+              Start opening cases
+            </button>
+            <button
+              onClick={handleSecondaryCta}
+              className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              Explore how it works
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-gray-400">
-            <span>Provably fair</span>
-            <span className="text-gray-600">•</span>
-            <span>Real inventory</span>
-            <span className="text-gray-600">•</span>
-            <span>Instant sellback</span>
+
+          <div className="mt-6 grid gap-2 sm:grid-cols-3">
+            {featurePills.map((pill) => {
+              const Icon = pill.icon;
+              return (
+                <div key={pill.id} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-[#0b1322]/80 px-3 py-2 text-xs text-slate-200">
+                  <Icon className="h-4 w-4 text-cyan-200" />
+                  <span>{pill.label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
-        <div className="relative flex h-full items-center justify-center">
-          <div className="relative w-full h-[40vh] max-h-[340px] sm:h-[38vh] sm:max-h-[400px] lg:h-[52vh] lg:max-h-[560px] lg:-mr-10 lg:translate-x-6">
+
+        <div className="relative mx-auto w-full max-w-[500px]">
+          <div className="rounded-[24px] border border-white/15 bg-gradient-to-b from-white/10 to-white/[0.02] p-4 backdrop-blur-sm sm:p-6">
             <img
               src={heroImage}
-              className="relative z-10 h-full w-full object-contain object-top scale-110 sm:scale-100 -translate-y-4 sm:translate-y-0 animate-hero-float"
+              className="h-[250px] w-full object-contain sm:h-[320px]"
               alt="Pullz.gg hero"
               loading="eager"
             />
+            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-lg font-bold text-white">24/7</div>
+                <div className="text-[11px] text-slate-300">Live drops</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-lg font-bold text-white">Fair</div>
+                <div className="text-[11px] text-slate-300">Transparent odds</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-lg font-bold text-white">Fast</div>
+                <div className="text-[11px] text-slate-300">Instant actions</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <style>{`
-        @keyframes hero-drift {
-          0% { transform: translate(-4%, -4%) rotate(-12deg); }
-          50% { transform: translate(4%, 4%) rotate(-12deg); }
-          100% { transform: translate(-4%, -4%) rotate(-12deg); }
-        }
-        @keyframes hero-float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
-        .animate-hero-drift {
-          animation: hero-drift 38s ease-in-out infinite;
-        }
-        .animate-hero-float {
-          animation: hero-float 12s ease-in-out infinite;
-        }
-      `}</style>
     </section>
   );
 };
