@@ -8,93 +8,244 @@ type HeroProps = {
   demoBox?: MysteryBox;
 };
 
-const BUFFER_COUNT = 14;
-const ITEM_WIDTH = 116;
-const AUTO_SPIN_INTERVAL_MS = 3600;
-const SPIN_DURATION_MS = 1900;
+type DemoReelItem = {
+  id: string;
+  name: string;
+  image: string;
+};
 
-const createFallbackItem = (box: MysteryBox): CaseItem => ({
+const CARD_WIDTH = 112;
+const CARD_GAP = 10;
+const STEP = CARD_WIDTH + CARD_GAP;
+const REPEAT_COUNT = 6;
+const CRUISE_SPEED = 120; // px/sec
+const LANDING_EVERY_MS = 3400;
+const LANDING_DURATION_MS = 1100;
+const LANDING_PAUSE_MS = 900;
+
+const createFallbackItem = (box: MysteryBox): DemoReelItem => ({
   id: `${box.id}-demo`,
-  name: box.name,
-  price: box.price,
-  image: box.image,
-  rarity: 'rare',
-  chance: 100,
-  color: box.accentColor || '#22d3ee'
+  name: box.name || 'Featured Drop',
+  image: box.image || ''
 });
 
-const buildReel = (winner: CaseItem, pool: CaseItem[]) => {
-  const validPool = pool.length > 0 ? pool : [winner];
-  const before = Array.from({ length: BUFFER_COUNT }, () => validPool[Math.floor(Math.random() * validPool.length)]);
-  const after = Array.from({ length: BUFFER_COUNT }, () => validPool[Math.floor(Math.random() * validPool.length)]);
-  return [...before, winner, ...after];
+const normalizeDemoItems = (box?: MysteryBox): DemoReelItem[] => {
+  if (!box) return [];
+  const mapped = (box.items ?? [])
+    .slice(0, 12)
+    .map((item, index) => ({
+      id: item.id || `${box.id}-item-${index}`,
+      name: item.name || `Drop ${index + 1}`,
+      image: item.image || box.image || ''
+    }))
+    .filter((item) => item.name.trim().length > 0);
+
+  if (mapped.length === 0) {
+    return [createFallbackItem(box)];
+  }
+
+  return mapped;
 };
 
 export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
   const { isAuthenticated, openAuthModal } = useGame();
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const intervalRef = useRef<number | null>(null);
-  const [reelItems, setReelItems] = useState<CaseItem[]>([]);
-  const [isSpinning, setIsSpinning] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [featuredItem, setFeaturedItem] = useState<DemoReelItem | null>(null);
 
-  const boxItems = useMemo(() => {
-    if (!demoBox) return [];
-    if (demoBox.items.length === 0) return [createFallbackItem(demoBox)];
-    return demoBox.items;
-  }, [demoBox]);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
 
-  const demoThumbnails = useMemo(() => boxItems.slice(0, 5), [boxItems]);
+  const frameRef = useRef<number | null>(null);
+  const xRef = useRef(0);
+  const lastTimeRef = useRef<number | null>(null);
+  const modeRef = useRef<'cruise' | 'landing' | 'paused'>('cruise');
+  const pauseUntilRef = useRef(0);
+  const lastLandingAtRef = useRef(0);
+  const landingStartXRef = useRef(0);
+  const landingTargetXRef = useRef(0);
+  const landingStartTimeRef = useRef(0);
+  const currentFeaturedIndexRef = useRef(0);
 
-  const runSpin = () => {
-    if (!demoBox || boxItems.length === 0 || isSpinning) return;
-    const winner = boxItems[Math.floor(Math.random() * boxItems.length)];
-    setIsSpinning(true);
-    setReelItems(buildReel(winner, boxItems));
+  const baseItems = useMemo(() => normalizeDemoItems(demoBox), [demoBox]);
 
-    window.setTimeout(() => {
-      if (!scrollContainerRef.current) return;
-      scrollContainerRef.current.style.transition = 'none';
-      scrollContainerRef.current.style.transform = 'translateX(0px)';
+  const repeatedItems = useMemo(() => {
+    if (baseItems.length === 0) return [] as Array<DemoReelItem & { sequenceId: string; baseIndex: number }>;
+    return Array.from({ length: REPEAT_COUNT }, (_, repeatIndex) =>
+      baseItems.map((item, baseIndex) => ({
+        ...item,
+        baseIndex,
+        sequenceId: `${repeatIndex}-${item.id}-${baseIndex}`
+      }))
+    ).flat();
+  }, [baseItems]);
 
-      window.setTimeout(() => {
-        if (!scrollContainerRef.current) return;
-        const winnerLeft = BUFFER_COUNT * ITEM_WIDTH;
-        const jitter = Math.floor(Math.random() * 90) - 45;
-        const finalTranslate = -winnerLeft + jitter;
-        scrollContainerRef.current.style.transition = `transform ${SPIN_DURATION_MS / 1000}s cubic-bezier(0.15, 0.85, 0.35, 1)`;
-        scrollContainerRef.current.style.transform = `translateX(${finalTranslate}px)`;
-      }, 36);
-    }, 0);
-
-    window.setTimeout(() => {
-      setIsSpinning(false);
-    }, SPIN_DURATION_MS + 200);
-  };
+  const loopWidth = Math.max(baseItems.length * STEP, STEP);
 
   useEffect(() => {
-    if (!demoBox || boxItems.length === 0) {
-      setReelItems([]);
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const apply = () => setPrefersReducedMotion(mediaQuery.matches);
+    apply();
+    mediaQuery.addEventListener('change', apply);
+    return () => mediaQuery.removeEventListener('change', apply);
+  }, []);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      setIsVisible(document.visibilityState === 'visible');
+    };
+    handleVisibility();
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
+  useEffect(() => {
+    if (baseItems.length === 0) {
+      setFeaturedItem(null);
+      return;
+    }
+    currentFeaturedIndexRef.current = 0;
+    setFeaturedItem(baseItems[0]);
+  }, [baseItems]);
+
+  useEffect(() => {
+    if (!trackRef.current) return;
+    trackRef.current.style.transform = `translate3d(${xRef.current}px, 0, 0)`;
+  }, [repeatedItems.length]);
+
+  useEffect(() => {
+    if (baseItems.length === 0 || repeatedItems.length === 0) {
       return;
     }
 
-    runSpin();
-
-    if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
+    if (prefersReducedMotion) {
+      const viewportWidth = viewportRef.current?.clientWidth ?? 0;
+      const centerIndex = Math.floor(baseItems.length / 2);
+      const targetSequenceIndex = baseItems.length + centerIndex;
+      const centeredX = viewportWidth / 2 - (targetSequenceIndex * STEP + STEP / 2);
+      xRef.current = centeredX;
+      if (trackRef.current) {
+        trackRef.current.style.transform = `translate3d(${xRef.current}px, 0, 0)`;
+      }
+      return;
     }
 
-    intervalRef.current = window.setInterval(() => {
-      runSpin();
-    }, AUTO_SPIN_INTERVAL_MS);
-
-    return () => {
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
+    const normalizeX = () => {
+      if (baseItems.length <= 1) return;
+      while (xRef.current <= -loopWidth * 2) {
+        xRef.current += loopWidth;
+      }
+      while (xRef.current > -loopWidth) {
+        xRef.current -= loopWidth;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demoBox?.id, boxItems.length]);
+
+    const chooseLanding = (now: number) => {
+      const viewportWidth = viewportRef.current?.clientWidth ?? 0;
+      if (viewportWidth <= 0 || baseItems.length === 0) return;
+
+      let nextIndex = currentFeaturedIndexRef.current;
+      if (baseItems.length > 1) {
+        nextIndex = Math.floor(Math.random() * baseItems.length);
+        if (nextIndex === currentFeaturedIndexRef.current) {
+          nextIndex = (nextIndex + 1) % baseItems.length;
+        }
+      }
+
+      const minTravel = Math.max(viewportWidth * 0.6, STEP * 3);
+      const centerX = viewportWidth / 2;
+      let bestTargetX = Number.NEGATIVE_INFINITY;
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      for (let repeatIndex = 0; repeatIndex < REPEAT_COUNT; repeatIndex += 1) {
+        const sequenceIndex = repeatIndex * baseItems.length + nextIndex;
+        const itemCenter = sequenceIndex * STEP + STEP / 2;
+        const candidateX = centerX - itemCenter;
+        const travelDistance = xRef.current - candidateX;
+        if (travelDistance < minTravel) continue;
+        if (travelDistance < bestDistance) {
+          bestDistance = travelDistance;
+          bestTargetX = candidateX;
+        }
+      }
+
+      if (!Number.isFinite(bestTargetX)) {
+        const fallbackSequenceIndex = (REPEAT_COUNT - 2) * baseItems.length + nextIndex;
+        const fallbackItemCenter = fallbackSequenceIndex * STEP + STEP / 2;
+        bestTargetX = centerX - fallbackItemCenter;
+      }
+
+      if (bestTargetX > xRef.current) {
+        bestTargetX -= loopWidth;
+      }
+
+      modeRef.current = 'landing';
+      landingStartXRef.current = xRef.current;
+      landingTargetXRef.current = bestTargetX;
+      landingStartTimeRef.current = now;
+      currentFeaturedIndexRef.current = nextIndex;
+      setFeaturedItem(baseItems[nextIndex]);
+    };
+
+    const tick = (time: number) => {
+      if (!isVisible || isHovered) {
+        lastTimeRef.current = time;
+        frameRef.current = window.requestAnimationFrame(tick);
+        return;
+      }
+
+      if (lastTimeRef.current === null) {
+        lastTimeRef.current = time;
+      }
+
+      const dt = (time - (lastTimeRef.current ?? time)) / 1000;
+      lastTimeRef.current = time;
+
+      if (modeRef.current === 'cruise') {
+        xRef.current -= CRUISE_SPEED * dt;
+
+        if (time - lastLandingAtRef.current >= LANDING_EVERY_MS) {
+          lastLandingAtRef.current = time;
+          chooseLanding(time);
+        }
+      } else if (modeRef.current === 'landing') {
+        const progress = Math.min(1, (time - landingStartTimeRef.current) / LANDING_DURATION_MS);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        xRef.current = landingStartXRef.current + (landingTargetXRef.current - landingStartXRef.current) * eased;
+
+        if (progress >= 1) {
+          xRef.current = landingTargetXRef.current;
+          modeRef.current = 'paused';
+          pauseUntilRef.current = time + LANDING_PAUSE_MS;
+        }
+      } else if (modeRef.current === 'paused' && time >= pauseUntilRef.current) {
+        modeRef.current = 'cruise';
+      }
+
+      normalizeX();
+
+      if (trackRef.current) {
+        trackRef.current.style.transform = `translate3d(${xRef.current}px, 0, 0)`;
+      }
+
+      frameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    modeRef.current = 'cruise';
+    lastLandingAtRef.current = 0;
+    lastTimeRef.current = null;
+
+    frameRef.current = window.requestAnimationFrame(tick);
+
+    return () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    };
+  }, [baseItems, repeatedItems, isHovered, isVisible, prefersReducedMotion, loopWidth]);
 
   const scrollToSection = (id: string) => {
     const target = document.getElementById(id);
@@ -161,26 +312,38 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
                   <h2 className="text-base font-bold text-white sm:text-lg">{demoBox?.name ?? 'Select a hero box in Admin'}</h2>
                 </div>
                 <div className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
-                  {isSpinning ? 'Spinning' : 'Auto spinning'}
+                  {prefersReducedMotion ? 'Reduced motion' : 'Auto spinning'}
                 </div>
               </div>
 
-              <div className="mb-2 overflow-hidden rounded-xl border border-white/10 bg-[#050811]">
-                <div className="relative h-[138px]">
-                  <div className="pointer-events-none absolute inset-y-0 left-1/2 z-20 w-[2px] -translate-x-1/2 bg-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.9)]" />
+              <div
+                ref={viewportRef}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className="relative mb-4 overflow-hidden rounded-xl border border-white/10 bg-[#050811]"
+              >
+                <div className="h-[142px] py-3">
+                  <div className="pointer-events-none absolute inset-y-0 left-1/2 z-20 w-[2px] -translate-x-1/2 bg-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.95)]" />
                   <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#050811] to-transparent" />
                   <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#050811] to-transparent" />
 
-                  {reelItems.length > 0 ? (
+                  {repeatedItems.length > 0 ? (
                     <div
-                      ref={scrollContainerRef}
-                      className="flex h-full items-stretch py-3"
-                      style={{ width: `${reelItems.length * ITEM_WIDTH}px` }}
+                      ref={trackRef}
+                      className="flex h-full items-stretch gap-[10px] px-2 will-change-transform"
+                      style={{ width: `${repeatedItems.length * STEP}px` }}
                     >
-                      {reelItems.map((item, idx) => (
-                        <div key={`${item.id}-${idx}`} className="flex w-[116px] shrink-0 items-center justify-center px-1.5">
-                          <div className="w-full rounded-lg border border-white/10 bg-white/5 p-2 text-center">
-                            <img src={item.image} alt={item.name} className="mx-auto h-14 w-14 object-contain" loading="lazy" />
+                      {repeatedItems.map((item) => (
+                        <div
+                          key={item.sequenceId}
+                          className="group flex w-[112px] shrink-0 items-center justify-center"
+                        >
+                          <div className="w-full rounded-xl border border-white/10 bg-white/5 p-2 text-center transition md:group-hover:-translate-y-0.5 md:group-hover:border-white/20">
+                            {item.image ? (
+                              <img src={item.image} alt={item.name} className="mx-auto h-14 w-14 object-contain" loading="lazy" />
+                            ) : (
+                              <div className="mx-auto h-14 w-14 rounded-lg border border-white/10 bg-white/5" />
+                            )}
                             <p className="mt-1 truncate text-[10px] font-semibold text-gray-200">{item.name}</p>
                           </div>
                         </div>
@@ -194,19 +357,32 @@ export const Hero: React.FC<HeroProps> = ({ demoBox }) => {
                 </div>
               </div>
 
-              <div className="mb-4 overflow-hidden rounded-lg border border-white/10 bg-white/5 p-2">
-                {demoBox?.image ? (
-                  <img src={demoBox.image} alt={demoBox.name} className="h-24 w-full rounded-md object-cover sm:h-28" loading="eager" />
-                ) : (
-                  <div className="flex h-24 items-center justify-center text-xs text-gray-400 sm:h-28">No box selected.</div>
-                )}
+              <div className="rounded-xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/10 via-sky-400/5 to-fuchsia-400/10 p-3 shadow-[0_18px_30px_-22px_rgba(34,211,238,0.8)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">Featured Item</p>
+                <div className="mt-2 flex items-center gap-3">
+                  {featuredItem?.image ? (
+                    <img
+                      src={featuredItem.image}
+                      alt={featuredItem.name}
+                      className="h-16 w-16 rounded-lg border border-white/10 bg-white/5 object-contain p-1"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 rounded-lg border border-white/10 bg-white/5" />
+                  )}
+                  <p className="max-w-[210px] truncate text-sm font-semibold text-white sm:max-w-[260px]">{featuredItem?.name ?? 'Waiting for next drop'}</p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-5 gap-2">
-                {demoThumbnails.length > 0 ? (
-                  demoThumbnails.map((item) => (
+              <div className="mt-4 grid grid-cols-5 gap-2">
+                {baseItems.length > 0 ? (
+                  baseItems.slice(0, 5).map((item) => (
                     <div key={item.id} className="overflow-hidden rounded-lg border border-white/10 bg-white/5 p-1">
-                      <img src={item.image} alt={item.name} className="h-10 w-full rounded object-cover sm:h-12" loading="lazy" />
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="h-10 w-full rounded object-cover sm:h-12" loading="lazy" />
+                      ) : (
+                        <div className="h-10 w-full rounded border border-white/10 bg-white/5 sm:h-12" />
+                      )}
                     </div>
                   ))
                 ) : (
