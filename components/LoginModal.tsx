@@ -9,7 +9,11 @@ import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { getAuthErrorMessage } from '../utils/authErrors';
 
-export const LoginModal: React.FC = () => {
+type LoginModalProps = {
+  onSendMagicLink?: (email: string) => Promise<void>;
+};
+
+export const LoginModal: React.FC<LoginModalProps> = ({ onSendMagicLink }) => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
@@ -133,6 +137,31 @@ export const LoginModal: React.FC = () => {
       } finally {
           setIsLoading(false);
       }
+  };
+
+  const handleMagicLink = async () => {
+    if (!onSendMagicLink) return;
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setUserError('Enter your email to receive a magic sign-in link.');
+      return;
+    }
+
+    setIsLoading(true);
+    setUserError(null);
+    setMessage(null);
+    playSound('click');
+
+    try {
+      localStorage.setItem('lastLoginEmail', normalizedEmail);
+      await onSendMagicLink(normalizedEmail);
+      setMessage('Magic link sent. Open it in this same browser/device for instant sign-in.');
+    } catch (err: any) {
+      setUserError(getAuthErrorMessage(err));
+      playSound('error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleMode = () => {
@@ -352,7 +381,16 @@ export const LoginModal: React.FC = () => {
                 </div>
 
                 {mode === 'login' && (
-                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="space-y-3 text-xs">
+                        <button
+                            type="button"
+                            onClick={handleMagicLink}
+                            className="w-full rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-3 py-2.5 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={isLoading || !onSendMagicLink}
+                        >
+                            Email me a magic sign-in link
+                        </button>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
                         <label className="flex items-center gap-2 text-gray-400">
                             <Checkbox
                                 checked={rememberMe}
@@ -368,6 +406,7 @@ export const LoginModal: React.FC = () => {
                         >
                             Forgot password?
                         </button>
+                        </div>
                     </div>
                 )}
 

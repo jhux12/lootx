@@ -38,8 +38,15 @@ import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CookieConsentToast } from './components/CookieConsentToast';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { getBoxTags } from './utils/boxTags';
 import { useSiteChat } from './hooks/useSiteChat';
+import { sendMagicLink } from './src/lib/auth';
+import { FinishSignIn } from './src/pages/FinishSignIn';
+import { CreateUsername } from './src/pages/CreateUsername';
+import { auth, db } from './firebase';
+import { AdminGate } from './components/AdminGate';
 import {
   ShowcaseRow,
   ShowcaseRowBoxes,
@@ -444,29 +451,13 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       )}
 
       {view.type === 'ADMIN' && (
-        user.isAdmin ? (
+        <AdminGate onDeniedHome={() => setView({ type: 'HOME' })}>
           <div className="w-full">
             <AdminPanel />
           </div>
-        ) : (
-          <div className="w-full h-[60vh] flex flex-col items-center justify-center text-center p-4">
-             <div className="bg-red-500/10 p-8 rounded-2xl border border-red-500/30 max-w-md animate-in zoom-in-95">
-                <ShieldAlert className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
-                <p className="text-gray-400 text-sm mb-6">
-                    This area is restricted to authorized personnel only. 
-                    Verification via Admin SDK failed.
-                </p>
-                <button 
-                    onClick={() => setView({ type: 'HOME' })}
-                    className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-white font-bold transition-colors border border-gray-700"
-                >
-                    Return Home
-                </button>
-             </div>
-          </div>
-        )
+        </AdminGate>
       )}
+
 
 
       {view.type === 'PROVABLY_FAIR' && (
@@ -512,7 +503,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       )}
 
       {/* Modals */}
-      {showLoginModal && <LoginModal />}
+      {showLoginModal && <LoginModal onSendMagicLink={sendMagicLink} />}
       {showEmailVerificationModal && <EmailVerificationModal />}
       {showEmailVerifiedModal && <EmailVerifiedModal />}
       {showTopUpModal && <TopUpModal />}
@@ -557,24 +548,108 @@ const AppShell = () => {
   const [lastSeenAt, setLastSeenAt] = useState(0);
   const hasUnseenChatMessages = latestMessageAt > lastSeenAt;
   const [isPromoVisible, setIsPromoVisible] = useState(false);
+  const [pathName, setPathName] = useState(() => (typeof window !== 'undefined' ? window.location.pathname : '/'));
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [needsUsername, setNeedsUsername] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+
   const loadAnalyticsScripts = useCallback(() => {
     // Analytics integrations will be enabled after consent.
   }, []);
 
+  const replacePath = useCallback((nextPath: string) => {
+    if (typeof window === 'undefined') return;
+    window.history.replaceState({}, '', nextPath);
+    setPathName(nextPath);
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const onPopState = () => setPathName(window.location.pathname);
     const handlePromoVisibility = (event: Event) => {
       const detail = (event as CustomEvent<{ isOpen: boolean }>).detail;
       setIsPromoVisible(Boolean(detail?.isOpen));
     };
+
+    window.addEventListener('popstate', onPopState);
     window.addEventListener('pullz:promo-visibility', handlePromoVisibility);
-    return () => window.removeEventListener('pullz:promo-visibility', handlePromoVisibility);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('pullz:promo-visibility', handlePromoVisibility);
+    };
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      setAuthUser(nextUser);
+      setUsernameError(null);
+      if (!nextUser) {
+        setNeedsUsername(false);
+        setUsernameStatus('ready');
+        return;
+      }
+
+      setUsernameStatus('loading');
+      void getDoc(doc(db, 'users', nextUser.uid))
+        .then((snapshot) => {
+          const data = snapshot.data();
+          const hasUsername = typeof data?.username === 'string' && data.username.trim().length > 0;
+          setNeedsUsername(!hasUsername);
+          setUsernameStatus('ready');
+        })
+        .catch((error: any) => {
+          if (error?.code === 'permission-denied') {
+            setUsernameError('Unable to read your profile due to Firestore permissions. Please refresh after rules deploy.');
+            setUsernameStatus('error');
+            return;
+          }
+          setUsernameError('Unable to verify username profile right now.');
+          setUsernameStatus('error');
+        });
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (usernameStatus !== 'ready') return;
+    if (authUser && needsUsername && pathName !== '/create-username') {
+      replacePath('/create-username');
+      return;
+    }
+
+    if (pathName === '/create-username' && (!authUser || !needsUsername)) {
+      replacePath('/');
+    }
+  }, [authUser, needsUsername, pathName, replacePath, usernameStatus]);
 
   const markChatSeen = useCallback(() => {
     if (!latestMessageAt) return;
     setLastSeenAt((prev) => Math.max(prev, latestMessageAt));
   }, [latestMessageAt]);
+
+  if (pathName === '/finish-signin') {
+    return <FinishSignIn />;
+  }
+
+  if (usernameStatus === 'loading') {
+    return <div className="min-h-screen bg-[#050811] px-4 py-10 text-center text-sm text-cyan-300">Loading account…</div>;
+  }
+
+  if (usernameError) {
+    return (
+      <div className="min-h-screen bg-[#050811] px-4 py-10">
+        <div className="mx-auto w-full max-w-lg rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-100">
+          {usernameError}
+        </div>
+      </div>
+    );
+  }
+
+  if (pathName === '/create-username' && authUser && needsUsername) {
+    return <CreateUsername onComplete={() => replacePath('/')} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
