@@ -12,7 +12,7 @@ type BoxCatalogProps = {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
-  const stickyHeaderOffset = 'calc(72px + env(safe-area-inset-top, 0px))';
+  const stickyHeaderOffset = 'var(--pullz-header-height, 72px)';
   const { boxes, setView } = useGame();
   const { playSound } = useSound();
   const [activeCategory, setActiveCategory] = useState('all');
@@ -143,11 +143,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       </div>
 
       <div
-        className="sticky z-30 w-full border-b border-white/5 bg-neutral-950/95 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-neutral-950/80"
+        className="sticky z-30 w-full border-b border-white/5 bg-neutral-950 shadow-xl [transform:translateZ(0)] [will-change:transform]"
         style={{ top: stickyHeaderOffset }}
       >
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="-mx-1 mb-4 flex items-center gap-2 overflow-x-auto px-1 pb-4 scrollbar-hide md:mx-0 md:px-0 md:pb-0 border-b border-white/5 md:border-none [scrollbar-gutter:stable]">
+          <div className="-mx-1 mb-4 flex items-center gap-2 overflow-x-auto px-1 pb-4 scrollbar-hide md:mx-0 md:px-0 md:pb-0 border-b border-white/5 md:border-none [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch]">
             <button
               onClick={() => setActiveCategory('all')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${activeCategory === 'all' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
