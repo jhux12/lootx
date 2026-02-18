@@ -545,13 +545,13 @@ const AppLayout: React.FC<{
 
   return (
     <div
-      className="flex flex-1 pt-[72px]"
+      className="flex flex-1 min-h-0"
       style={{ '--chatw': chatWidth } as React.CSSProperties}
       data-chat-collapsed={isChatCollapsed}
     >
       <MainContent isChatCollapsed={isChatCollapsed} />
       <div
-        className="relative hidden shrink-0 xl:flex transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+        className="relative hidden min-h-0 shrink-0 xl:flex transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
         style={{ width: 'var(--chatw)' }}
       >
         <ChatSidebar
