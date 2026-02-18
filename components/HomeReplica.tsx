@@ -210,7 +210,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
           onClick={onSignUp}
           className="text-center text-2xl font-black uppercase text-white sm:text-4xl"
         >
-          Get a <span className="text-[#6962ff]">free box</span> when signing up!
+          Deposit now and get <span className="text-[#6962ff]">100% Bonus</span> credits!
         </button>
       </section>
 
