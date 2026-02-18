@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { CaseItem, MysteryBox } from '../types';
-import { LiveTicker } from './LiveTicker';
+import { TopDropsSlider } from './TopDropsSlider';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -58,7 +58,6 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const [openFaq, setOpenFaq] = useState(0);
 
   const featuredBoxes = useMemo(() => boxes.slice(0, 8), [boxes]);
-  const chipBoxes = useMemo(() => boxes.slice(0, 18), [boxes]);
   const showcaseBox = useMemo(() => {
     if (demoBoxId) {
       const matched = boxes.find((box) => box.id === demoBoxId);
@@ -215,24 +214,8 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         </button>
       </section>
 
-      <section className="-mx-3 overflow-x-auto border-y border-white/10 bg-black/20 px-3 py-2 sm:mx-0 sm:rounded-xl sm:border">
-        <div className="flex min-w-max items-stretch gap-2 sm:gap-3">
-          <div className="flex w-[56px] shrink-0 flex-col items-center justify-center rounded-md border border-white/15 bg-[#091016] px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#60de92]">
-            <span>Live</span>
-            <span>Drops</span>
-          </div>
-          {chipBoxes.map((box) => (
-            <button
-              type="button"
-              key={`chip-${box.id}`}
-              onClick={() => onOpenBox(box.id)}
-              className="rounded-md border border-white/15 bg-[#0f1118] px-3 py-2 text-left"
-            >
-              <p className="max-w-[100px] truncate text-xs font-semibold text-white">{box.name}</p>
-              <p className="text-[10px] uppercase tracking-[0.14em] text-gray-500">Mystery box</p>
-            </button>
-          ))}
-        </div>
+      <section className="w-full">
+        <TopDropsSlider boxes={boxes} onOpenBox={onOpenBox} />
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
@@ -319,10 +302,6 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         </button>
       </section>
 
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">Live drops</p>
-        <LiveTicker />
-      </section>
     </div>
   );
 };

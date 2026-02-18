@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Search, Filter, ChevronDown, Gamepad2 } from 'lucide-react';
+import { Search, Filter, ChevronDown } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
+import { TopDropsSlider } from './TopDropsSlider';
 
 type BoxCatalogProps = {
   isChatCollapsed: boolean;
@@ -79,43 +80,17 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     [displayBoxes]
   );
 
-  const topDropItems = useMemo(
-    () => displayBoxes
-      .filter((box) => !box.isUserCreated)
-      .flatMap((box) => box.items.slice(0, 2).map((item) => ({ ...item, sourceBoxId: box.id, sourceKey: `${box.id}-${item.id ?? item.name}` })))
-      .slice(0, 20),
-    [displayBoxes]
-  );
-
   return (
     <div className="w-full flex flex-col items-center pb-20">
       <div className="w-full relative z-20">
         <div className="w-full py-0 md:py-6 max-w-screen-2xl mx-auto px-2 md:px-16">
-          <div className="relative flex">
-            <div className="mr-0.5 flex items-center justify-center gap-0.5 overflow-hidden rounded-l border-r border-solid border-r-indigo-500 bg-neutral-800/40 bg-[radial-gradient(ellipse_at_right,rgba(99,102,241,0.25),rgba(99,102,241,0.12)_40%,rgba(99,102,241,0.06)_60%,transparent_85%)]">
-              <div className="flex h-full w-[80px] flex-col items-center justify-center gap-1.5 bg-[radial-gradient(ellipse_80%_100%_at_100%_50%,rgba(99,102,241,0.2),transparent_60%)] px-4 py-2">
-                <Gamepad2 className="h-5 w-5 text-indigo-400" />
-                <div className="text-center text-[11px] font-bold text-white leading-none">TOP<br />DROPS</div>
-              </div>
-            </div>
-            <div className="relative h-[92px] w-full overflow-hidden p-0 mask-linear-fade bg-neutral-900/30 border border-white/5 rounded-r-lg">
-              <div className="absolute top-0 flex h-full items-center gap-2 ticker-animation pl-4">
-                {[...topDropItems, ...topDropItems].map((item, i) => (
-                  <button
-                    key={`${item.sourceKey}-${i}`}
-                    className="h-[70px] w-[70px] bg-neutral-800/80 rounded-md border-b-2 border-indigo-500/50 flex items-center justify-center p-2"
-                    onClick={() => {
-                      playSound('click');
-                      setView({ type: 'CASE_OPENING', boxId: item.sourceBoxId });
-                    }}
-                    type="button"
-                  >
-                    <img src={item.image} className="w-full h-full object-contain" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+          <TopDropsSlider
+            boxes={displayBoxes}
+            onOpenBox={(boxId) => {
+              playSound('click');
+              setView({ type: 'CASE_OPENING', boxId });
+            }}
+          />
         </div>
       </div>
 
