@@ -40,7 +40,6 @@ import { CookieConsentToast } from './components/CookieConsentToast';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
-import { MobileMenuPage } from './components/MobileMenuPage';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
   ShowcaseRow,
@@ -293,43 +292,24 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       ) : (
       <>
       {view.type === 'HOME' && (
-        <>
-          <MobileMenuPage
-            isAuthenticated={isAuthenticated}
-            onNavigate={(nextView) => {
-              playSound('click');
-              setView(nextView);
-            }}
-            onLogin={() => {
-              playSound('click');
-              openAuthModal('login');
-            }}
-            onRegister={() => {
-              playSound('click');
-              openAuthModal('register');
-            }}
-          />
-          <div className="hidden lg:block">
-            <HomeReplica
-              boxes={baseHomeBoxes}
-              demoBoxId={homepageDemoBoxId}
-              isChatCollapsed={isChatCollapsed}
-              onOpenBox={(boxId) => {
-                playSound('click');
-                setView({ type: 'CASE_OPENING', boxId });
-              }}
-              onViewAllBoxes={() => {
-                playSound('click');
-                setView({ type: 'BOXES' });
-                window.history.replaceState({}, '', '/boxes');
-              }}
-              onSignUp={() => {
-                playSound('click');
-                openAuthModal('register');
-              }}
-            />
-          </div>
-        </>
+        <HomeReplica
+          boxes={baseHomeBoxes}
+          demoBoxId={homepageDemoBoxId}
+          isChatCollapsed={isChatCollapsed}
+          onOpenBox={(boxId) => {
+            playSound('click');
+            setView({ type: 'CASE_OPENING', boxId });
+          }}
+          onViewAllBoxes={() => {
+            playSound('click');
+            setView({ type: 'BOXES' });
+            window.history.replaceState({}, '', '/boxes');
+          }}
+          onSignUp={() => {
+            playSound('click');
+            openAuthModal('register');
+          }}
+        />
       )}
       
       {view.type === 'BATTLES' && (
