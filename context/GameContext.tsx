@@ -194,6 +194,7 @@ interface BonusSettings {
   rakebackBasePercent: number;
   rakebackBonusCoins: number;
   rakebackDailyCapCoins: number;
+  dailySpinOdds: Record<string, number>;
 }
 
 const DEFAULT_BONUS_SETTINGS: BonusSettings = {
@@ -208,7 +209,15 @@ const DEFAULT_BONUS_SETTINGS: BonusSettings = {
   rakebackUnlockLevel: 6,
   rakebackBasePercent: 5,
   rakebackBonusCoins: 2500,
-  rakebackDailyCapCoins: 15000
+  rakebackDailyCapCoins: 15000,
+  dailySpinOdds: {
+    '10': 30,
+    '25': 25,
+    '100': 18,
+    '500': 12,
+    '1000': 9,
+    '2500': 6
+  }
 };
 
 const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
@@ -259,7 +268,20 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
   rakebackUnlockLevel: Math.max(1, Number(settings.rakebackUnlockLevel) || DEFAULT_BONUS_SETTINGS.rakebackUnlockLevel),
   rakebackBasePercent: Math.max(0, Number(settings.rakebackBasePercent) || 0),
   rakebackBonusCoins: Math.max(0, Number(settings.rakebackBonusCoins) || 0),
-  rakebackDailyCapCoins: Math.max(0, Number(settings.rakebackDailyCapCoins) || 0)
+  rakebackDailyCapCoins: Math.max(0, Number(settings.rakebackDailyCapCoins) || 0),
+  dailySpinOdds: (() => {
+    const source =
+      settings.dailySpinOdds && typeof settings.dailySpinOdds === 'object'
+        ? settings.dailySpinOdds
+        : DEFAULT_BONUS_SETTINGS.dailySpinOdds;
+
+    const normalizedEntries = Object.entries(source)
+      .map(([amount, weight]) => [String(Math.max(0, Math.floor(Number(amount) || 0))), Math.max(0, Number(weight) || 0)] as const)
+      .filter(([amount]) => Number(amount) > 0);
+
+    const next = Object.fromEntries(normalizedEntries);
+    return Object.keys(next).length > 0 ? next : { ...DEFAULT_BONUS_SETTINGS.dailySpinOdds };
+  })()
 });
 
 const BONUS_SETTINGS_DOC = 'bonus-settings';

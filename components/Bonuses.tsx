@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, ClipboardList, Copy, Gift, Search, ShieldCheck, TrendingUp, X } from 'lucide-react';
+import { ClipboardList, Copy, Gift, Search, ShieldCheck, TrendingUp, X } from 'lucide-react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
@@ -8,6 +8,8 @@ import { db } from '../firebase';
 import { XP_ICON } from '../constants';
 import { Input } from './ui/Input';
 import { OfferwallModal } from './OfferwallModal';
+import { DailySpinPage } from './DailySpinPage';
+import { authedFetch } from '../utils/authedFetch';
 
 type XpShopItem = {
   id: string;
@@ -36,8 +38,6 @@ export const Bonuses: React.FC = () => {
   const {
     user,
     users,
-    addBalance,
-    claimDaily,
     claimRakeback,
     boxes,
     setView,
@@ -60,13 +60,10 @@ export const Bonuses: React.FC = () => {
   const [affiliateInput, setAffiliateInput] = useState('');
   const [affiliateMessage, setAffiliateMessage] = useState('');
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
-  const [isClaimingDaily, setIsClaimingDaily] = useState(false);
   const [isApplyingAffiliate, setIsApplyingAffiliate] = useState(false);
   const [isClaimingRakeback, setIsClaimingRakeback] = useState(false);
   const [isOfferwallOpen, setIsOfferwallOpen] = useState(false);
-  const [nextClaimCountdown, setNextClaimCountdown] = useState('');
 
-  const dailyBox = boxes.find((b) => b.isDaily);
   const xpBalance = Math.floor(user.xpBalance ?? user.xp ?? 0);
   const availableRakeback = Number(user.rakebackBalance ?? 0);
   const hasReferral = Boolean(user.referredBy);
@@ -146,26 +143,6 @@ export const Bonuses: React.FC = () => {
       fallbackUnsub?.();
     };
   }, []);
-
-  useEffect(() => {
-    if (canClaim) {
-      setNextClaimCountdown('');
-      return;
-    }
-
-    const update = () => {
-      const remainingMs = Math.max(0, nextDailyClaimAt - Date.now());
-      const totalSeconds = Math.floor(remainingMs / 1000);
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      setNextClaimCountdown(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
-    };
-
-    update();
-    const interval = window.setInterval(update, 1000);
-    return () => window.clearInterval(interval);
-  }, [canClaim, nextDailyClaimAt]);
 
   const xpBoxById = useMemo(() => {
     const map = new Map<string, { name: string; priceXP: number }>();
@@ -254,26 +231,26 @@ export const Bonuses: React.FC = () => {
     }
   };
 
-  const handleClaimDaily = () => {
+  const handleClaimDaily = async () => {
     if (!isAuthenticated) {
       openAuthModal('login');
-      return;
+      throw new Error('Please login to spin.');
     }
 
     if (!canClaim) {
       playSound('error');
-      return;
+      throw new Error('Daily spin is on cooldown.');
     }
 
-    playSound('success');
-    setIsClaimingDaily(true);
-    if (dailyBox) {
-      setView({ type: 'CASE_OPENING', boxId: dailyBox.id, isFree: true });
-    } else {
-      addBalance(100);
-      claimDaily();
-      setIsClaimingDaily(false);
-    }
+    const data = await authedFetch<{ prizeAmount: number; nextClaimAt: number }>('/api/daily-spin', {
+      method: 'POST'
+    });
+
+    playSound('coins');
+    return {
+      amount: Number(data.prizeAmount ?? 0),
+      nextClaimAt: Number(data.nextClaimAt ?? Date.now() + dailyCooldownMs)
+    };
   };
 
   const handleApplyAffiliateCode = async () => {
@@ -493,26 +470,13 @@ export const Bonuses: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
-                <h3 className="font-bold text-white mb-2 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-yellow-500" /> Daily Free Case
-                </h3>
-                <div className="w-full rounded-lg bg-[#0b0e14] border border-gray-800 p-3 flex items-center justify-center mb-3 h-36">
-                  <img
-                    src={dailyBox?.image || 'https://picsum.photos/id/175/260/180'}
-                    alt={dailyBox?.name || 'Daily Free Case'}
-                    className="h-full w-auto max-w-full object-contain"
-                  />
-                </div>
-                <button
-                  onClick={handleClaimDaily}
-                  disabled={!canClaim || isClaimingDaily}
-                  className={`w-full py-2 rounded-lg font-bold ${canClaim ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-500'}`}
-                >
-                  {canClaim ? (isClaimingDaily ? 'Claiming...' : 'Claim Free Spin') : `Next in ${nextClaimCountdown || '00:00:00'}`}
-                </button>
-              </div>
+            <div className="space-y-4">
+              <DailySpinPage
+                onBack={() => setView({ type: 'HOME' })}
+                onClaim={handleClaimDaily}
+                canSpin={canClaim}
+                nextClaimAt={nextDailyClaimAt}
+              />
 
               <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
                 <h3 className="font-bold text-white mb-2 flex items-center gap-2">

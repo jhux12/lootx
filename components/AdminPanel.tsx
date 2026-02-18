@@ -4250,6 +4250,33 @@ export const AdminPanel: React.FC = () => {
                                         <span className="text-gray-200 font-semibold">{bonusDraft.rakebackDailyCapCoins.toLocaleString()} coins</span>
                                     </div>
                                 </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Daily spin odds weights</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        {[10, 25, 100, 500, 1000, 2500].map((amount) => (
+                                            <div key={amount} className="rounded-lg border border-gray-700 bg-[#0b0e14] p-2">
+                                                <label className="block text-[10px] text-gray-400 mb-1">{amount} coins</label>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    step={0.1}
+                                                    value={Number(bonusDraft.dailySpinOdds?.[String(amount)] ?? 0)}
+                                                    onChange={(event) =>
+                                                        setBonusDraft((prev) => ({
+                                                            ...prev,
+                                                            dailySpinOdds: {
+                                                                ...(prev.dailySpinOdds ?? {}),
+                                                                [String(amount)]: Math.max(0, Number(event.target.value) || 0)
+                                                            }
+                                                        }))
+                                                    }
+                                                    className="w-full bg-[#0f1521] border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">Higher weight means higher chance. Setting 0 disables that prize.</p>
+                                </div>
                             </div>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-800 mt-6 pt-4">
