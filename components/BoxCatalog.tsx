@@ -1,13 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Flame, Gem, Search, Tag, X } from 'lucide-react';
+import { Flame, Gem, Search, Tag, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { usePreview } from '../context/PreviewContext';
 import { BoxCard } from './BoxCard';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { Input } from './ui/Input';
-import { Select } from './ui/Select';
-import { RiskLegend } from './RiskLegend';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import {
@@ -286,7 +284,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
 
   const categoryCards = useMemo(() => config.filters.category.cards ?? [], [config.filters.category.cards]);
   const mobileCategoryScrollbar = useScrollIndicator(categoryCards.length);
-  const desktopCategoryScrollbar = useScrollIndicator(categoryCards.length);
 
   const categoryOptions = useMemo(() => {
     const cardOptions = categoryCards
@@ -482,7 +479,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         setView({ type: 'CASE_OPENING', boxId: box.id });
       }}
       onMouseEnter={() => playSound('hover')}
-      className={`group w-full rounded-2xl border border-white/5 bg-[#0d0d10] px-2 pb-3 pt-2 text-center transition hover:border-orange-400/40 ${compact ? 'max-w-[180px]' : ''}`}
+      className={`group w-full rounded-2xl border border-white/5 bg-[#0d0d10] px-2 pb-3 pt-2 text-center transition hover:border-brand-purple/50 ${compact ? 'max-w-[180px]' : ''}`}
     >
       <div
         className={`relative mb-2 flex items-end justify-center overflow-hidden rounded-xl bg-gradient-to-b from-[#16161a] via-[#121216] to-[#0d0d10] ${compact ? 'h-[146px]' : 'h-[132px] sm:h-[170px]'}`}
@@ -499,7 +496,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         />
       </div>
       <p className="truncate text-sm font-semibold tracking-tight text-white sm:text-base">{box.name}</p>
-      <div className="mx-auto mt-2 inline-flex items-center justify-center rounded-xl border border-orange-500/70 bg-[#1a0f0a] px-2.5 py-1 text-white">
+      <div className="mx-auto mt-2 inline-flex items-center justify-center rounded-xl border border-brand-purple/60 bg-brand-purple/20 px-2.5 py-1 text-white">
         <CoinAmount
           amount={toCoins(box.price, PRICE_UNIT_MODE)}
           formatOptions={{ maximumFractionDigits: 0 }}
@@ -582,18 +579,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
     );
   };
 
-  const mobileConfig = config.filters.mobile;
-  const showTagChipsInline = config.filters.tagChips.enabled && !mobileConfig.collapseTagChips;
-  const categoryVisibilityClass = mobileConfig.minimalTopRow ? 'hidden md:block' : 'block';
-  const sortVisibilityClass = mobileConfig.minimalTopRow ? 'hidden md:block' : 'block';
-
   return (
     <section className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-3 pb-16 pt-3 sm:px-6 lg:px-8 animate-in fade-in duration-300 md:gap-8 md:pt-6">
       {topDropItems.length > 0 && (
-        <div className="md:hidden -mx-3 overflow-hidden border-y border-white/10 bg-gradient-to-r from-[#211507] via-[#3f1c65] to-[#5b2bc9]">
+        <div className="-mx-3 overflow-hidden border-y border-white/10 bg-gradient-to-r from-[#111827] via-[#1f2340] to-[#312e81]">
           <div className="flex">
-            <div className="flex min-w-[96px] flex-col items-center justify-center border-r border-orange-500/50 bg-black/35 px-2 py-2 text-center">
-              <Flame className="h-4 w-4 text-orange-400" />
+            <div className="flex min-w-[96px] flex-col items-center justify-center border-r border-brand-purple/50 bg-black/35 px-2 py-2 text-center">
+              <Flame className="h-4 w-4 text-brand-purple" />
               <span className="mt-1 text-xs font-bold tracking-wide text-white">TOP</span>
               <span className="text-xs font-bold tracking-wide text-white">DROPS</span>
             </div>
@@ -616,7 +608,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       )}
 
       {config.featured?.hotPicksEnabled !== false && hotPicks.length > 0 && (
-        <div className="md:hidden space-y-3">
+        <div className="space-y-3">
           <h2 className="pt-1 text-center text-4xl font-bold tracking-tight text-white">{config.featured?.hotPicksTitle ?? 'Hot Picks'}</h2>
           <div className="grid grid-cols-2 gap-2">
             {hotPicks.map((box) => renderScreenshotCard(box, true))}
@@ -624,7 +616,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         </div>
       )}
 
-      <div className="md:hidden -mx-1 rounded-3xl border border-white/10 bg-[#121317] px-2 pb-4 pt-2">
+      <div className="-mx-1 rounded-3xl border border-white/10 bg-[#121317] px-2 pb-4 pt-2">
         <div className="mb-3 flex items-center gap-2 overflow-x-auto px-1">
           {categoryOptions.slice(0, 6).map((option, index) => {
             const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(option.value);
@@ -635,7 +627,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                 onClick={() => handleCategorySelection(option.value)}
                 className={`inline-flex items-center gap-2 whitespace-nowrap rounded-2xl px-3 py-2 text-sm font-semibold ${isSelected ? 'bg-[#1f2026] text-white' : 'text-gray-400'}`}
               >
-                <Gem className="h-4 w-4 text-[#ff5a00]" />
+                <Gem className="h-4 w-4 text-brand-purple" />
                 {index === 0 ? 'All' : formatDropdownLabel(option.label)}
               </button>
             );
@@ -655,347 +647,18 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           <button
             type="button"
             onClick={() => setIsTagsOpen(true)}
-            className="h-12 w-12 rounded-xl bg-[#ff5a00] text-white"
+            className="h-12 w-12 rounded-xl bg-brand-purple text-white"
             aria-label="Open filters"
           >
             <Tag className="mx-auto h-5 w-5" />
           </button>
         </div>
         <div className="mb-4 flex items-center gap-2 px-2 text-3xl font-semibold text-white">
-          <Gem className="h-6 w-6 text-[#ff5a00]" /> All
+          <Gem className="h-6 w-6 text-brand-purple" /> All
         </div>
         <div className="grid grid-cols-2 gap-2 px-1">
           {filteredBoxes.map((box) => renderScreenshotCard(box, true))}
         </div>
-      </div>
-
-      <div className="hidden md:block">
-      <section className="mx-auto flex w-full flex-col gap-6 animate-in fade-in duration-300 md:gap-8">
-      <div className="md:hidden sticky top-0 z-20 -mx-4 bg-[#050811]/95 px-4 pb-4 pt-2 backdrop-blur border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              playSound('click');
-              setView({ type: 'HOME' });
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#0f141f] text-gray-300"
-            aria-label="Back"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="truncate text-lg font-semibold text-white">Mystery Boxes</h1>
-            {!mobileConfig.compactTop && (
-              <p className="text-xs text-gray-400">Filter by tag to find the box you want.</p>
-            )}
-          </div>
-        </div>
-
-        {config.tabs.enabled && enabledTabs.length > 0 && (
-          <div className="mt-3 flex rounded-full border border-white/10 bg-[#0b0f1a] p-1">
-            {enabledTabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  setActiveTab(tab.id);
-                }}
-                className={`flex-1 truncate rounded-full px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition ${
-                  activeTab === tab.id
-                    ? 'bg-brand-purple/30 text-white shadow-[0_0_12px_rgba(124,58,237,0.35)]'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {config.filters.search.enabled && (
-          <div className="relative mt-3">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-            <Input
-              type="text"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder={config.filters.search.placeholder ?? 'Search boxes'}
-              className="pl-9 pr-3 py-2 text-sm"
-            />
-          </div>
-        )}
-
-        <div className="mt-3 flex justify-end gap-2">
-          {config.filters.tagChips.enabled && (
-            <button
-              type="button"
-              onClick={() => setIsTagsOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0f141f] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-300"
-            >
-              <Tag className="h-3 w-3" /> Tags
-            </button>
-          )}
-        </div>
-        <div className="mt-2 flex w-full justify-center">
-          <RiskLegend className="w-full justify-center" />
-        </div>
-      </div>
-
-      {config.filters.category.enabled && categoryCards.length > 0 && (
-        <div className="md:hidden -mx-4 px-4">
-          <div className="rounded-2xl border border-white/10 bg-[#0b0f1a]/80 p-3 shadow-[0_0_12px_rgba(15,23,42,0.45)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">Categories</p>
-            <div className="relative mt-2">
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-              <div
-                ref={mobileCategoryScrollbar.scrollRef}
-                className="category-scrollbar flex gap-2 overflow-x-scroll pb-2 pt-1"
-              >
-                {categoryCards.map((card) => {
-                  const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(card.categorySlug);
-                  return (
-                    <div
-                      key={card.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleCategoryCardClick(card.categorySlug)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          handleCategoryCardClick(card.categorySlug);
-                        }
-                      }}
-                      className={`group relative min-w-[120px] overflow-hidden rounded-lg border bg-[#0b0e14] text-left transition ${
-                        isSelected
-                          ? 'border-brand-purple/70 shadow-[0_0_10px_rgba(124,58,237,0.35)]'
-                          : 'border-white/10'
-                      }`}
-                    >
-                      <img
-                        src={card.imageUrl}
-                        alt={card.label || card.categorySlug}
-                        loading="lazy"
-                        className="h-12 w-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#050811] via-[#050811]/40 to-transparent" />
-                      <span className="absolute bottom-1.5 left-2 text-[10px] font-semibold text-white drop-shadow">
-                        {card.label || card.categorySlug}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="category-scrollbar-indicator" aria-hidden="true">
-                <span
-                  className="category-scrollbar-indicator__thumb"
-                  style={{
-                    width: `${mobileCategoryScrollbar.thumbStyle.width}px`,
-                    transform: `translateX(${mobileCategoryScrollbar.thumbStyle.left}px)`
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="hidden md:flex md:flex-col md:gap-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                setView({ type: 'HOME' });
-              }}
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#0f141f] px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:text-white"
-            >
-              <ChevronLeft className="w-4 h-4" /> Back
-            </button>
-            <div>
-              <h1 className="text-3xl font-bold text-white">
-                Open Online Mystery Boxes And Win Real-Life Items
-              </h1>
-              <p className="text-sm text-gray-400">Filter by tag to find the box you want.</p>
-            </div>
-          </div>
-        </div>
-
-        {config.tabs.enabled && enabledTabs.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3">
-            {enabledTabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  setActiveTab(tab.id);
-                }}
-                className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
-                  activeTab === tab.id
-                    ? 'border-brand-purple/60 bg-brand-purple/20 text-white shadow-[0_0_12px_rgba(124,58,237,0.35)]'
-                    : 'border-white/10 bg-[#0b0f1a] text-gray-400 hover:border-white/30 hover:text-white'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="hidden md:flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#0b0f1a]/80 p-4 shadow-[0_0_18px_rgba(15,23,42,0.6)]">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          {config.filters.search.enabled && (
-            <div className="relative w-full md:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-              <Input
-                type="text"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder={config.filters.search.placeholder ?? 'Search boxes'}
-                className="pl-9 pr-3 py-2 text-sm"
-              />
-            </div>
-          )}
-
-          <div className="flex w-full items-center justify-between gap-2 md:w-auto md:flex-1">
-            {config.filters.category.enabled && (
-              <div className={`${categoryVisibilityClass} min-w-[170px] flex-1`}>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Category</label>
-                <Select
-                  value={selectedCategory}
-                  onChange={(event) => {
-                    handleCategorySelection(event.target.value);
-                  }}
-                >
-                  {categoryOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label === 'All Categories' ? option.label : formatDropdownLabel(option.label)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
-
-            {config.filters.sort.enabled && (
-              <div className={`${sortVisibilityClass} min-w-[160px] flex-1`}>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Sort</label>
-                <Select
-                  value={sortOption}
-                  onChange={(event) => setSortOption(event.target.value)}
-                >
-                  {sortOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {formatDropdownLabel(option)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
-
-          </div>
-        </div>
-        <div className="flex w-full justify-end">
-          <RiskLegend className="justify-end" />
-        </div>
-
-        {config.filters.category.enabled && categoryCards.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">Categories</p>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-              <div
-                ref={desktopCategoryScrollbar.scrollRef}
-                className="category-scrollbar flex gap-2 overflow-x-scroll pb-2 pt-1"
-              >
-                {categoryCards.map((card) => {
-                  const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(card.categorySlug);
-                  return (
-                    <div
-                      key={card.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleCategoryCardClick(card.categorySlug)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          handleCategoryCardClick(card.categorySlug);
-                        }
-                      }}
-                      className={`group relative min-w-[140px] overflow-hidden rounded-xl border bg-[#0b0e14] text-left transition ${
-                        isSelected
-                          ? 'border-brand-purple/70 shadow-[0_0_12px_rgba(124,58,237,0.35)]'
-                          : 'border-white/10 hover:border-white/30'
-                      }`}
-                    >
-                      <img
-                        src={card.imageUrl}
-                        alt={card.label || card.categorySlug}
-                        loading="lazy"
-                        className="h-16 w-full object-cover transition-transform duration-300 group-hover:scale-105 sm:h-20"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#050811] via-[#050811]/40 to-transparent" />
-                      <span className="absolute bottom-2 left-2 text-[11px] font-semibold text-white drop-shadow">
-                        {card.label || card.categorySlug}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="category-scrollbar-indicator" aria-hidden="true">
-                <span
-                  className="category-scrollbar-indicator__thumb"
-                  style={{
-                    width: `${desktopCategoryScrollbar.thumbStyle.width}px`,
-                    transform: `translateX(${desktopCategoryScrollbar.thumbStyle.left}px)`
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {config.filters.tagChips.enabled && showTagChipsInline && popularTags.length > 0 && (
-          <div className="space-y-2 hidden md:block">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
-              {config.filters.tagChips.label ?? 'Popular tags'}
-            </p>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {popularTags.map((tag) => {
-                  const isSelected = selectedTags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        setSelectedTags((prev) =>
-                          prev.includes(tag) ? prev.filter((existing) => existing !== tag) : [...prev, tag]
-                        );
-                      }}
-                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
-                        isSelected
-                          ? 'bg-blue-600/20 border-blue-500 text-blue-200'
-                          : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'
-                      }`}
-                    >
-                      <Tag className="h-3 w-3" />
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {showCuratedRows && (
@@ -1021,7 +684,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
       )}
 
       {isTagsOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:hidden">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4">
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 pb-10 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h3 className="text-sm font-semibold text-white">Tags</h3>
@@ -1093,8 +756,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           Preview mode enabled
         </div>
       )}
-      </section>
-      </div>
     </section>
   );
-  };
+};
