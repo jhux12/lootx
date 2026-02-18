@@ -880,6 +880,63 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
+            <div className="absolute right-2 top-2 z-40 sm:right-3 sm:top-3">
+              <div className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-black/55 p-1.5 shadow-xl backdrop-blur-sm">
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click');
+                    setShowFairModal(true);
+                  }}
+                  className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-black/65 text-emerald-300 transition hover:border-emerald-300/60 hover:text-emerald-200 sm:h-10 sm:w-10"
+                  aria-label="Open provably fair details"
+                >
+                  <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click');
+                    void handleCopyPageLink();
+                  }}
+                  className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-black/65 text-gray-200 transition hover:border-cyan-300/60 hover:text-cyan-200 sm:h-10 sm:w-10"
+                  aria-label="Copy page link"
+                >
+                  <Copy className="h-4 w-4 sm:h-5 sm:w-5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click');
+                    setShowInfoModal(true);
+                  }}
+                  className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-black/65 text-gray-200 transition hover:border-amber-300/60 hover:text-amber-200 sm:h-10 sm:w-10"
+                  aria-label="Open item availability disclaimer"
+                >
+                  <Info className="h-4 w-4 sm:h-5 sm:w-5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click');
+                    toggleMute();
+                  }}
+                  className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-black/65 text-gray-200 transition hover:border-violet-300/60 hover:text-violet-200 sm:h-10 sm:w-10"
+                  aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
+                >
+                  {muted ? <VolumeX className="h-4 w-4 sm:h-5 sm:w-5" /> : <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />}
+                </button>
+              </div>
+              {copyStatusMessage && (
+                <p className="mt-1 text-right text-[11px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
+                  {copyStatusMessage}
+                </p>
+              )}
+            </div>
+
             {/* Spinner Window */}
             <div className="relative h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
                 {isBoxPreviewVisible && (
@@ -1024,62 +1081,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             )}
         </div>
 
-        <div className="mb-10 px-3 sm:px-0">
-          <div className="mx-auto flex w-full max-w-lg flex-wrap items-center justify-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                setShowFairModal(true);
-              }}
-              className="group flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-black/70 text-emerald-300 transition hover:border-emerald-300/60 hover:text-emerald-200 sm:h-16 sm:w-16"
-              aria-label="Open provably fair details"
-            >
-              <ShieldCheck className="h-6 w-6" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                void handleCopyPageLink();
-              }}
-              className="group flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-black/70 text-gray-200 transition hover:border-cyan-300/60 hover:text-cyan-200 sm:h-16 sm:w-16"
-              aria-label="Copy page link"
-            >
-              <Copy className="h-6 w-6" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                setShowInfoModal(true);
-              }}
-              className="group flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-black/70 text-gray-200 transition hover:border-amber-300/60 hover:text-amber-200 sm:h-16 sm:w-16"
-              aria-label="Open item availability disclaimer"
-            >
-              <Info className="h-6 w-6" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                toggleMute();
-              }}
-              className="group flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-black/70 text-gray-200 transition hover:border-violet-300/60 hover:text-violet-200 sm:h-16 sm:w-16"
-              aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
-            >
-              {muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
-            </button>
-          </div>
-          {copyStatusMessage && (
-            <p className="mt-3 text-center text-xs text-cyan-200 sm:text-sm" role="status" aria-live="polite">
-              {copyStatusMessage}
-            </p>
-          )}
-        </div>
 
         <ProvablyFairMiniModal
           isOpen={showFairModal}
