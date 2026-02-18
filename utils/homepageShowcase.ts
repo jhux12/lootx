@@ -35,6 +35,7 @@ export type ShowcaseRow = ShowcaseRowBoxes | ShowcaseRowCategories;
 
 export type HomepageConfig = {
   showcaseRows: ShowcaseRow[];
+  demoBoxId?: string | null;
 };
 
 export const MAX_SHOWCASE_BOXES = 12;
@@ -119,16 +120,25 @@ export const subscribeHomepageConfig = (
         return;
       }
       const data = snapshot.data() as HomepageConfig;
-      onData({ showcaseRows: normalizeShowcaseRows(data.showcaseRows) });
+      onData({
+        showcaseRows: normalizeShowcaseRows(data.showcaseRows),
+        demoBoxId: typeof data.demoBoxId === 'string' && data.demoBoxId.trim() ? data.demoBoxId : null
+      });
     },
     (error) => {
       if (onError) onError(error as Error);
     }
   );
 
-export const saveHomepageConfig = async (showcaseRows: ShowcaseRow[]) => {
-  const normalizedRows = normalizeShowcaseRows(showcaseRows);
-  await setDoc(HOMEPAGE_DOC_REF, { showcaseRows: normalizedRows }, { merge: true });
+export const saveHomepageConfig = async (configOrRows: HomepageConfig | ShowcaseRow[]) => {
+  const config = Array.isArray(configOrRows)
+    ? { showcaseRows: configOrRows, demoBoxId: null }
+    : configOrRows;
+  const normalizedRows = normalizeShowcaseRows(config.showcaseRows);
+  const demoBoxId = typeof config.demoBoxId === 'string' && config.demoBoxId.trim()
+    ? config.demoBoxId
+    : null;
+  await setDoc(HOMEPAGE_DOC_REF, { showcaseRows: normalizedRows, demoBoxId }, { merge: true });
 };
 
 export const addRow = (rows: ShowcaseRow[]) => {
