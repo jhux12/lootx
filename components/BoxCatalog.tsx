@@ -80,8 +80,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     [displayBoxes]
   );
 
+
+
   return (
-    <div className="w-full flex flex-col items-center pb-20">
+    <div className="w-full pb-20">
       <div className="w-full relative z-20">
         <div className="w-full py-0 md:py-6 max-w-screen-2xl mx-auto px-2 md:px-16">
           <TopDropsSlider
@@ -141,9 +143,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       </div>
 
-      <div className="w-full bg-neutral-950 sticky top-[70px] z-30 shadow-xl border-b border-white/5">
+      <div className="w-full border-b border-white/5 bg-neutral-950 shadow-xl">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-4 md:pb-0 mb-4 border-b border-white/5 md:border-none">
+          <div className="-mx-1 mb-4 flex items-center gap-2 overflow-x-auto border-b border-white/5 px-1 pb-4 scrollbar-hide md:mx-0 md:border-none md:px-0 md:pb-0 [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch]">
             <button
               onClick={() => setActiveCategory('all')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${activeCategory === 'all' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
@@ -162,27 +164,27 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             ))}
           </div>
 
-          <div className="flex flex-col md:flex-row items-center gap-4 bg-neutral-900/50 p-2 rounded-xl border border-white/5">
-            <div className="flex items-center gap-2 bg-neutral-950 rounded-lg px-3 py-2.5 border border-white/5 flex-1 w-full md:w-auto">
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-white/5 bg-neutral-900/50 p-2 md:flex-row">
+            <div className="flex w-full flex-1 items-center gap-2 rounded-lg border border-white/5 bg-neutral-950 px-3 py-2.5 md:w-auto">
               <Search className="h-4 w-4 text-neutral-500" />
               <input
                 type="text"
                 placeholder="Search boxes..."
-                className="bg-transparent border-none outline-none text-sm text-white placeholder-neutral-600 w-full"
+                className="w-full border-none bg-transparent text-sm text-white placeholder-neutral-600 outline-none"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            <div className="hidden md:flex items-center gap-3">
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-neutral-800 rounded-lg text-xs font-bold text-white hover:bg-neutral-700 transition-colors">
+            <div className="hidden items-center gap-3 md:flex">
+              <button className="flex items-center gap-2 rounded-lg bg-neutral-800 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-neutral-700">
                 <span>Default</span>
                 <ChevronDown className="h-3 w-3" />
               </button>
             </div>
 
-            <button className="md:hidden flex items-center justify-center w-full py-2.5 bg-indigo-600 rounded-lg text-sm font-bold text-white" type="button">
-              <Filter className="h-4 w-4 mr-2" /> Filters
+            <button className="flex w-full items-center justify-center rounded-lg bg-indigo-600 py-2.5 text-sm font-bold text-white md:hidden" type="button">
+              <Filter className="mr-2 h-4 w-4" /> Filters
             </button>
           </div>
         </div>
