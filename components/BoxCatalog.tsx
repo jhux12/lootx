@@ -143,12 +143,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       </div>
 
-      <div className="w-full border-b border-white/5 bg-neutral-950 shadow-xl">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="-mx-1 mb-4 flex items-center gap-2 overflow-x-auto border-b border-white/5 px-1 pb-4 scrollbar-hide md:mx-0 md:border-none md:px-0 md:pb-0 [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch]">
+      <div className="sticky z-30 w-full border-y border-white/5 bg-neutral-950/95 shadow-xl backdrop-blur-md top-[var(--pullz-header-height,72px)] md:top-0">
+        <div className="max-w-6xl mx-auto px-4 py-3 md:py-4">
+          <div className="-mx-1 mb-3 flex items-center gap-2 overflow-x-auto border-b border-white/5 px-1 pb-3 scrollbar-hide md:mx-0 md:mb-4 md:border-none md:px-0 md:pb-0 [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch] snap-x snap-mandatory">
             <button
               onClick={() => setActiveCategory('all')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${activeCategory === 'all' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
+              className={`snap-start flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all md:px-4 md:py-2.5 ${activeCategory === 'all' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
             >
               All
             </button>
@@ -156,7 +156,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${activeCategory === cat.id ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
+                className={`snap-start flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all md:px-4 md:py-2.5 ${activeCategory === cat.id ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
               >
                 <div className="w-4 h-4 rounded-full bg-indigo-500" />
                 {cat.title}
@@ -164,8 +164,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             ))}
           </div>
 
-          <div className="flex flex-col items-center gap-4 rounded-xl border border-white/5 bg-neutral-900/50 p-2 md:flex-row">
-            <div className="flex w-full flex-1 items-center gap-2 rounded-lg border border-white/5 bg-neutral-950 px-3 py-2.5 md:w-auto">
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-white/5 bg-neutral-900/50 p-2 md:gap-4 md:flex-row">
+            <div className="flex w-full flex-1 items-center gap-2 rounded-lg border border-white/5 bg-neutral-950 px-3 py-2 md:py-2.5 md:w-auto">
               <Search className="h-4 w-4 text-neutral-500" />
               <input
                 type="text"
@@ -183,14 +183,14 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               </button>
             </div>
 
-            <button className="flex w-full items-center justify-center rounded-lg bg-indigo-600 py-2.5 text-sm font-bold text-white md:hidden" type="button">
+            <button className="flex w-full items-center justify-center rounded-lg bg-indigo-600 py-2 text-sm font-bold text-white md:hidden" type="button">
               <Filter className="mr-2 h-4 w-4" /> Filters
             </button>
           </div>
         </div>
       </div>
 
-      <div className="w-full max-w-6xl mx-auto px-4 py-8 min-h-[100dvh]">
+      <div className="w-full max-w-6xl mx-auto px-4 py-6 md:py-8 min-h-[100dvh]">
         <div className="flex flex-col gap-12">
           {groupedBoxes.map((group) => (
             <div key={group.id} className="flex flex-col gap-4">
@@ -203,7 +203,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5">
                 {group.boxes.map((box) => (
                   <button
                     key={box.id}
@@ -214,7 +214,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                     className="group flex flex-col items-center bg-[#131315] rounded-xl overflow-hidden border border-white/5 cursor-pointer hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
                     type="button"
                   >
-                    <div className="relative w-full h-[170px] sm:h-[180px] p-4 sm:p-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent">
+                    <div className="relative w-full h-[160px] p-3.5 sm:h-[180px] sm:p-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent">
                       <img
                         src={box.image}
                         alt={box.name}
@@ -222,16 +222,16 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       />
                     </div>
 
-                    <div className="w-full p-4 flex flex-col items-center border-t border-white/5 bg-neutral-900/50">
-                      <div className="text-xs font-bold text-white text-center mb-3 line-clamp-1 group-hover:text-indigo-400 transition-colors">
+                    <div className="w-full p-3 sm:p-4 flex flex-col items-center border-t border-white/5 bg-neutral-900/50">
+                      <div className="text-[11px] sm:text-xs font-bold text-white text-center mb-2.5 sm:mb-3 line-clamp-1 group-hover:text-indigo-400 transition-colors">
                         {box.name}
                       </div>
-                      <div className="inline-flex items-center gap-1.5 bg-indigo-600 px-3 sm:px-4 py-1.5 rounded-lg shadow-md shadow-indigo-900/20 group-hover:bg-indigo-500 transition-colors">
+                      <div className="inline-flex items-center gap-1.5 bg-indigo-600 px-2.5 sm:px-4 py-1.5 rounded-lg shadow-md shadow-indigo-900/20 group-hover:bg-indigo-500 transition-colors">
                         <CoinAmount
                           amount={toCoins(box.price, PRICE_UNIT_MODE)}
                           formatOptions={{ maximumFractionDigits: 0 }}
-                          className="text-base sm:text-lg font-bold text-white"
-                          iconClassName="h-4 w-4 sm:h-5 sm:w-5"
+                          className="text-sm sm:text-lg font-bold text-white"
+                          iconClassName="h-3.5 w-3.5 sm:h-5 sm:w-5"
                         />
                       </div>
                     </div>

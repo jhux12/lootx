@@ -511,11 +511,13 @@ const AppShell = () => {
         onOpenInbox={() => setShowInbox(true)}
         unreadChatCount={hasUnseenChatMessages ? 1 : 0}
       />
-      <AppLayout
-        hasUnseenChatMessages={hasUnseenChatMessages}
-        onChatViewed={markChatSeen}
-      />
-      <MobileBottomNav />
+      <div className="pt-[var(--pullz-header-height,72px)] md:pt-0">
+        <AppLayout
+          hasUnseenChatMessages={hasUnseenChatMessages}
+          onChatViewed={markChatSeen}
+        />
+        <MobileBottomNav />
+      </div>
 
       <InboxModal
         isOpen={showInbox}
