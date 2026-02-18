@@ -506,11 +506,14 @@ const AppShell = () => {
   }, [latestMessageAt]);
 
   return (
-    <div className="h-screen overflow-hidden bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+    <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+      <Header
+        onOpenInbox={() => setShowInbox(true)}
+        unreadChatCount={hasUnseenChatMessages ? 1 : 0}
+      />
       <AppLayout
         hasUnseenChatMessages={hasUnseenChatMessages}
         onChatViewed={markChatSeen}
-        onOpenInbox={() => setShowInbox(true)}
       />
       <MobileBottomNav />
 
@@ -530,8 +533,7 @@ const AppShell = () => {
 const AppLayout: React.FC<{
   hasUnseenChatMessages: boolean;
   onChatViewed: () => void;
-  onOpenInbox: () => void;
-}> = ({ hasUnseenChatMessages, onChatViewed, onOpenInbox }) => {
+}> = ({ hasUnseenChatMessages, onChatViewed }) => {
   const { isAuthenticated } = useGame();
   const [isChatCollapsed, setIsChatCollapsed] = useState(!isAuthenticated);
 
@@ -547,13 +549,7 @@ const AppLayout: React.FC<{
       style={{ '--chatw': chatWidth } as React.CSSProperties}
       data-chat-collapsed={isChatCollapsed}
     >
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto [webkit-overflow-scrolling:touch]">
-        <Header
-          onOpenInbox={onOpenInbox}
-          unreadChatCount={hasUnseenChatMessages ? 1 : 0}
-        />
-        <MainContent isChatCollapsed={isChatCollapsed} />
-      </div>
+      <MainContent isChatCollapsed={isChatCollapsed} />
       <div
         className="relative hidden min-h-0 shrink-0 xl:flex transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
         style={{ width: 'var(--chatw)' }}
