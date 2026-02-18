@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Facebook,
   Flame,
@@ -46,7 +46,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   } = useGame();
   const { playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const headerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -78,32 +77,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     };
   }, [isMobileMenuOpen]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const syncHeaderHeight = () => {
-      const headerHeight = headerRef.current?.offsetHeight ?? 72;
-      document.documentElement.style.setProperty('--pullz-header-height', `${headerHeight}px`);
-    };
-
-    syncHeaderHeight();
-
-    const resizeObserver = typeof ResizeObserver === 'undefined'
-      ? null
-      : new ResizeObserver(syncHeaderHeight);
-
-    if (headerRef.current && resizeObserver) {
-      resizeObserver.observe(headerRef.current);
-    }
-
-    window.addEventListener('resize', syncHeaderHeight);
-
-    return () => {
-      window.removeEventListener('resize', syncHeaderHeight);
-      resizeObserver?.disconnect();
-      document.documentElement.style.removeProperty('--pullz-header-height');
-    };
-  }, []);
 
   const navigate = (type: 'HOME' | 'BOXES' | 'BATTLES' | 'BONUSES' | 'LEADERBOARD' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
     playSound('click');
@@ -140,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
 
   return (
     <div className="relative z-50">
-      <header ref={headerRef} className="fixed left-0 right-0 top-0 z-50 border-b border-white/5 bg-neutral-950/90 backdrop-blur-md">
+      <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/5 bg-neutral-950/90 backdrop-blur-md">
         <nav className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-3 lg:gap-x-10">
             <button

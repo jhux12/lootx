@@ -12,7 +12,7 @@ type BoxCatalogProps = {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
-  const stickyHeaderOffset = 'var(--pullz-header-height, 72px)';
+  const stickyHeaderOffset = 'calc(72px + env(safe-area-inset-top, 0px))';
   const { boxes, setView } = useGame();
   const { playSound } = useSound();
   const [activeCategory, setActiveCategory] = useState('all');
@@ -143,7 +143,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       </div>
 
       <div
-        className="sticky z-30 w-full border-b border-white/5 bg-neutral-950 shadow-xl [transform:translateZ(0)] [will-change:transform]"
+        className="sticky z-40 w-full border-b border-white/5 bg-neutral-950 shadow-xl"
         style={{ top: stickyHeaderOffset }}
       >
         <div className="max-w-6xl mx-auto px-4 py-4">
