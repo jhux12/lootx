@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Filter, ChevronDown } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -81,6 +81,50 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     [displayBoxes]
   );
 
+
+  const stickySentinelRef = useRef<HTMLDivElement | null>(null);
+  const stickyContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isMobilePinned, setIsMobilePinned] = useState(false);
+  const [stickyPlaceholderHeight, setStickyPlaceholderHeight] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    let frameId: number | null = null;
+
+    const syncStickyState = () => {
+      const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
+      if (!isMobileViewport) {
+        setIsMobilePinned(false);
+        setStickyPlaceholderHeight(0);
+        return;
+      }
+
+      const headerHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--pullz-header-height')) || 72;
+      const sentinelTop = stickySentinelRef.current?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY;
+      const shouldPin = sentinelTop <= headerHeight;
+      setIsMobilePinned(shouldPin);
+      setStickyPlaceholderHeight(shouldPin ? stickyContainerRef.current?.offsetHeight ?? 0 : 0);
+    };
+
+    const scheduleSync = () => {
+      if (frameId !== null) cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(syncStickyState);
+    };
+
+    scheduleSync();
+    window.addEventListener('scroll', scheduleSync, { passive: true });
+    window.addEventListener('resize', scheduleSync);
+    window.addEventListener('orientationchange', scheduleSync);
+
+    return () => {
+      if (frameId !== null) cancelAnimationFrame(frameId);
+      window.removeEventListener('scroll', scheduleSync);
+      window.removeEventListener('resize', scheduleSync);
+      window.removeEventListener('orientationchange', scheduleSync);
+    };
+  }, []);
+
   return (
     <div className="w-full pb-20">
       <div className="w-full relative z-20">
@@ -142,8 +186,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       </div>
 
+      <div ref={stickySentinelRef} aria-hidden="true" className="h-0" />
       <div
-        className="sticky z-30 w-full border-b border-white/5 bg-neutral-950 shadow-xl"
+        ref={stickyContainerRef}
+        className={`z-30 w-full border-b border-white/5 bg-neutral-950 shadow-xl ${isMobilePinned ? 'fixed left-0 right-0' : 'sticky'}`}
         style={{ top: stickyHeaderOffset }}
       >
         <div className="max-w-6xl mx-auto px-4 py-4">
@@ -191,6 +237,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           </div>
         </div>
       </div>
+
+      {isMobilePinned && <div aria-hidden="true" style={{ height: stickyPlaceholderHeight }} />}
 
       <div className="w-full max-w-6xl mx-auto px-4 py-8 min-h-screen">
         <div className="flex flex-col gap-12">
