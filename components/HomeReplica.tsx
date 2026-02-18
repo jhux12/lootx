@@ -104,18 +104,19 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
             <button
               type="button"
               onClick={() => showcaseBox && onOpenBox(showcaseBox.id)}
-              className="relative flex min-h-[224px] flex-col justify-end overflow-hidden border-b border-[#242a38] bg-[radial-gradient(circle_at_30%_20%,rgba(81,104,255,0.32),transparent_52%),radial-gradient(circle_at_72%_70%,rgba(249,134,36,0.22),transparent_62%),linear-gradient(180deg,#12192b_0%,#0a0d15_100%)] p-5 text-left md:border-b-0 md:border-r"
+              className="relative flex min-h-[320px] flex-col items-center justify-end overflow-hidden border-b border-[#242a38] bg-[radial-gradient(circle_at_30%_20%,rgba(81,104,255,0.32),transparent_52%),radial-gradient(circle_at_72%_70%,rgba(249,134,36,0.22),transparent_62%),linear-gradient(180deg,#12192b_0%,#0a0d15_100%)] p-5 text-center md:min-h-[224px] md:items-start md:border-b-0 md:border-r md:text-left"
             >
+              <div className="pointer-events-none absolute left-1/2 top-[150px] h-10 w-44 -translate-x-1/2 rounded-full bg-orange-400/45 blur-xl md:left-[110px] md:top-[118px] md:w-36 md:translate-x-0" />
               {showcaseBox && (
                 <img
                   loading="lazy"
                   decoding="async"
                   src={showcaseBox.image}
                   alt={showcaseBox.name}
-                  className="pointer-events-none absolute left-7 top-5 h-28 w-28 object-contain opacity-100 sm:h-36 sm:w-36"
+                  className="pointer-events-none absolute left-1/2 top-7 h-44 w-44 -translate-x-1/2 object-contain opacity-100 sm:h-52 sm:w-52 md:left-7 md:top-5 md:h-36 md:w-36 md:translate-x-0"
                 />
               )}
-              <p className="relative z-10 line-clamp-2 text-[40px] font-black uppercase italic leading-[0.9] tracking-tight text-white">
+              <p className="relative z-10 line-clamp-2 text-[50px] font-black uppercase italic leading-[0.88] tracking-tight text-white sm:text-[56px] md:text-[40px]">
                 {showcaseBox?.name ?? 'Iphone 17 Series'}
               </p>
               <div className="relative z-10 mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]">
