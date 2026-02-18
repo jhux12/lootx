@@ -4,7 +4,6 @@ import {
   Flame,
   Gamepad2,
   HelpCircle,
-  Info,
   Instagram,
   LifeBuoy,
   LogOut,
@@ -26,7 +25,6 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
-import { useNotifications } from '../hooks/useNotifications';
 
 type HeaderProps = {
   onOpenInbox: () => void;
@@ -36,7 +34,7 @@ type HeaderProps = {
 const drawerCardClass =
   'flex items-center gap-3 rounded-xl border border-white/5 bg-[#18181b] p-3 text-left transition-colors hover:bg-[#202023]';
 
-export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unreadChatCount: _unreadChatCount }) => {
   const {
     user,
     balance,
@@ -44,8 +42,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) 
     isAuthenticated,
     openAuthModal,
     setShowTopUpModal,
-    logout,
-    notifications
+    logout
   } = useGame();
   const { playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -61,12 +58,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) 
     return () => window.removeEventListener('pullz:open-mobile-menu', openMobileMenu);
   }, []);
 
-
-  const { unreadCount: persistentUnreadCount } = useNotifications(isAuthenticated ? user.id : null);
-  const notificationCount = persistentUnreadCount || notifications.length;
-  const chatCount = typeof unreadChatCount === 'number' ? unreadChatCount : 0;
-  const inboxCount = notificationCount + chatCount;
-  const inboxCountLabel = inboxCount > 99 ? '99+' : inboxCount;
 
   const navigate = (type: 'HOME' | 'BOXES' | 'BATTLES' | 'BONUSES' | 'LEADERBOARD' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
     playSound('click');
@@ -135,7 +126,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) 
             {isAuthenticated ? (
               <>
                 <div className="hidden items-center gap-2 lg:flex">
-                  <div className="flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-[#18181b] pl-3 pr-1.5 py-1">
+                  <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-[#18181b] px-3 py-2">
+                    <Star className="h-4 w-4 text-amber-400" />
+                    <span className="text-sm font-bold text-white">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-[#18181b] pl-3 pr-1.5 py-1.5">
                     <CoinAmount amount={balance} className="text-white text-sm font-bold" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
                     <button
                       onClick={() => {
@@ -149,23 +144,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) 
                     </button>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    playSound('click');
-                    onOpenInbox();
-                  }}
-                  className="relative rounded-lg border border-gray-700 bg-[#111621] p-2 text-gray-200 hover:text-white"
-                  aria-label="Open inbox"
-                >
-                  <Info className="h-4 w-4" />
-                  {inboxCount > 0 && (
-                    <span className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-cyan-400 px-1 text-center text-[10px] font-bold text-[#0b0e14]">
-                      {inboxCountLabel}
-                    </span>
-                  )}
-                </button>
 
                 <div className="hidden items-center gap-2 border-l border-white/10 pl-2 lg:flex">
                   {user.isAdmin && (
@@ -200,16 +178,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) 
             {!isAuthenticated && <div className="flex items-center gap-2 lg:hidden">{authButtons}</div>}
 
             {isAuthenticated && (
-              <div className="flex items-center gap-2 lg:hidden">
+              <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden">
+                <div className="flex items-center gap-1 rounded-md border border-amber-500/20 bg-[#18181b] px-2 py-1 sm:px-2.5">
+                  <Star className="h-3 w-3 text-amber-400" />
+                  <span className="text-[11px] font-bold text-white sm:text-xs">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+                </div>
                 <button
                   onClick={() => {
                     playSound('click');
                     setShowTopUpModal(true);
                   }}
-                  className="flex items-center gap-1 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2 pr-1 py-1"
+                  className="flex items-center gap-1 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2 pr-1 py-1 sm:pl-2.5"
                 >
-                  <Star className="h-3 w-3 text-orange-500" />
-                  <span className="text-xs font-bold text-white">{Math.floor(balance).toLocaleString()}</span>
+                  <CoinAmount amount={balance} className="text-[11px] font-bold text-white sm:text-xs" iconClassName="h-3 w-3" formatOptions={{ maximumFractionDigits: 0 }} />
                   <span className="rounded bg-indigo-600 p-0.5"><Plus className="h-3 w-3" /></span>
                 </button>
               </div>
