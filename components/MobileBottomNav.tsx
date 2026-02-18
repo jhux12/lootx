@@ -44,7 +44,7 @@ export const MobileBottomNav: React.FC = () => {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#080b10]/95 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-3 backdrop-blur lg:hidden"
+      className="fixed bottom-0 left-0 right-0 z-[70] border-t border-white/10 bg-[#080b10]/95 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-3 backdrop-blur lg:hidden"
       aria-label="Primary navigation"
     >
       <nav className="grid grid-cols-5 gap-1">

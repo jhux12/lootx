@@ -219,9 +219,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) 
         </nav>
       </header>
 
-      {isMobileMenuOpen && <button type="button" onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 z-40 bg-black/80 lg:hidden" aria-label="Close menu overlay" />}
+      <button
+        type="button"
+        onClick={() => setIsMobileMenuOpen(false)}
+        className={`fixed inset-0 z-40 bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${isMobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
+        aria-label="Close menu overlay"
+      />
 
-      <div className={`fixed inset-y-0 right-0 z-50 w-full max-w-sm overflow-y-auto bg-[#09090b] px-4 py-4 transition-transform duration-300 ease-in-out lg:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div
+        className={`fixed inset-0 z-50 w-full overflow-y-auto bg-[#09090b] px-4 py-4 transition-all duration-300 ease-out lg:hidden ${
+          isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
+        }`}
+      >
         <div className="mb-6 flex items-center justify-between">
           <button type="button" onClick={() => navigate('HOME')} className="inline-flex items-center"><BrandLockup /></button>
           <button type="button" className="rounded-md p-2 text-gray-300" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu"><X className="h-6 w-6" /></button>
