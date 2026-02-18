@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Flame, Gem, Search, Tag, X } from 'lucide-react';
+import { ChevronLeft, Flame, Gamepad2, Gem, Search, Tag, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { usePreview } from '../context/PreviewContext';
@@ -482,7 +482,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         setView({ type: 'CASE_OPENING', boxId: box.id });
       }}
       onMouseEnter={() => playSound('hover')}
-      className={`group w-full rounded-2xl border border-white/5 bg-[#0d0d10] px-2 pb-3 pt-2 text-center transition hover:border-orange-400/40 ${compact ? 'max-w-[180px]' : ''}`}
+      className={`group w-full rounded-2xl border border-white/5 bg-[#0d0d10] px-2 pb-3 pt-2 text-center transition hover:border-brand-purple/50 ${compact ? 'max-w-[180px]' : ''}`}
     >
       <div
         className={`relative mb-2 flex items-end justify-center overflow-hidden rounded-xl bg-gradient-to-b from-[#16161a] via-[#121216] to-[#0d0d10] ${compact ? 'h-[146px]' : 'h-[132px] sm:h-[170px]'}`}
@@ -499,7 +499,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         />
       </div>
       <p className="truncate text-sm font-semibold tracking-tight text-white sm:text-base">{box.name}</p>
-      <div className="mx-auto mt-2 inline-flex items-center justify-center rounded-xl border border-orange-500/70 bg-[#1a0f0a] px-2.5 py-1 text-white">
+      <div className="mx-auto mt-2 inline-flex items-center justify-center rounded-xl border border-brand-purple/60 bg-brand-purple/20 px-2.5 py-1 text-white">
         <CoinAmount
           amount={toCoins(box.price, PRICE_UNIT_MODE)}
           formatOptions={{ maximumFractionDigits: 0 }}
@@ -590,10 +590,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
   return (
     <section className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-3 pb-16 pt-3 sm:px-6 lg:px-8 animate-in fade-in duration-300 md:gap-8 md:pt-6">
       {topDropItems.length > 0 && (
-        <div className="md:hidden -mx-3 overflow-hidden border-y border-white/10 bg-gradient-to-r from-[#211507] via-[#3f1c65] to-[#5b2bc9]">
+        <div className="md:hidden -mx-3 overflow-hidden border-y border-white/10 bg-gradient-to-r from-[#111827] via-[#1f2340] to-[#312e81]">
           <div className="flex">
-            <div className="flex min-w-[96px] flex-col items-center justify-center border-r border-orange-500/50 bg-black/35 px-2 py-2 text-center">
-              <Flame className="h-4 w-4 text-orange-400" />
+            <div className="flex min-w-[96px] flex-col items-center justify-center border-r border-brand-purple/50 bg-black/35 px-2 py-2 text-center">
+              <Flame className="h-4 w-4 text-brand-purple" />
               <span className="mt-1 text-xs font-bold tracking-wide text-white">TOP</span>
               <span className="text-xs font-bold tracking-wide text-white">DROPS</span>
             </div>
@@ -624,6 +624,48 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
         </div>
       )}
 
+      <div className="hidden md:block space-y-6">
+        {topDropItems.length > 0 && (
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f172a]/90 via-[#1e1b4b]/80 to-[#312e81]/70">
+            <div className="flex">
+              <div className="flex min-w-[120px] flex-col items-center justify-center border-r border-brand-purple/50 bg-black/20 px-4 py-3 text-center">
+                <Gamepad2 className="h-5 w-5 text-indigo-300" />
+                <span className="mt-1 text-xs font-black tracking-wide text-white">TOP</span>
+                <span className="text-xs font-black tracking-wide text-white">DROPS</span>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <div className="ticker-animation flex w-max py-2">
+                  {[...topDropItems, ...topDropItems].map((item, index) => (
+                    <button
+                      key={`${item.sourceKey}-desktop-${index}`}
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setView({ type: 'CASE_OPENING', boxId: item.sourceBoxId });
+                      }}
+                      className="min-w-[92px] border-r border-white/10 p-2"
+                    >
+                      <img src={item.image} alt={item.name} className="mx-auto h-14 w-14 object-contain" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {config.featured?.hotPicksEnabled !== false && hotPicks.length > 0 && (
+          <div className="rounded-3xl border border-white/10 bg-[#111317] px-5 py-6">
+            <h2 className="mb-5 text-center text-4xl font-bold tracking-tight text-white">
+              {config.featured?.hotPicksTitle ?? 'Hot Picks'}
+            </h2>
+            <div className="grid grid-cols-3 gap-4 lg:grid-cols-6">
+              {hotPicks.map((box) => renderScreenshotCard(box, true))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="md:hidden -mx-1 rounded-3xl border border-white/10 bg-[#121317] px-2 pb-4 pt-2">
         <div className="mb-3 flex items-center gap-2 overflow-x-auto px-1">
           {categoryOptions.slice(0, 6).map((option, index) => {
@@ -635,7 +677,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
                 onClick={() => handleCategorySelection(option.value)}
                 className={`inline-flex items-center gap-2 whitespace-nowrap rounded-2xl px-3 py-2 text-sm font-semibold ${isSelected ? 'bg-[#1f2026] text-white' : 'text-gray-400'}`}
               >
-                <Gem className="h-4 w-4 text-[#ff5a00]" />
+                <Gem className="h-4 w-4 text-brand-purple" />
                 {index === 0 ? 'All' : formatDropdownLabel(option.label)}
               </button>
             );
@@ -655,14 +697,14 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
           <button
             type="button"
             onClick={() => setIsTagsOpen(true)}
-            className="h-12 w-12 rounded-xl bg-[#ff5a00] text-white"
+            className="h-12 w-12 rounded-xl bg-brand-purple text-white"
             aria-label="Open filters"
           >
             <Tag className="mx-auto h-5 w-5" />
           </button>
         </div>
         <div className="mb-4 flex items-center gap-2 px-2 text-3xl font-semibold text-white">
-          <Gem className="h-6 w-6 text-[#ff5a00]" /> All
+          <Gem className="h-6 w-6 text-brand-purple" /> All
         </div>
         <div className="grid grid-cols-2 gap-2 px-1">
           {filteredBoxes.map((box) => renderScreenshotCard(box, true))}
