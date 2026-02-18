@@ -39,6 +39,7 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { CookieConsentToast } from './components/CookieConsentToast';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { getBoxTags } from './utils/boxTags';
+import { HomeReplica } from './components/HomeReplica';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
   ShowcaseRow,
@@ -288,99 +289,23 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       ) : (
       <>
       {view.type === 'HOME' && (
-        <div className={`mx-auto flex flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 animate-in fade-in duration-300 ${isChatCollapsed ? 'max-w-[1280px]' : 'max-w-[1200px]'}`}>
-          {!isAuthenticated && <Hero />}
-          {showcaseRowsWithBoxes && showcaseRowsWithBoxes.length > 0 ? (
-            <div className="space-y-12">
-              {showcaseRowsWithBoxes.map((row) => {
-                if (row.type === 'categories') {
-                  return <CategoryRow key={row.id} row={row} />;
-                }
-                if (row.boxes.length === 0) return null;
-                const mobileColumns = clampGrid(row.maxMobile, 2);
-                const desktopColumns = clampGrid(row.maxDesktop, 4);
-                const gridClassName = `grid ${gridCols[1]} gap-4 ${smGridCols[mobileColumns]} ${lgGridCols[desktopColumns]}`;
-                return (
-                  <section key={row.id} className="space-y-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-lg font-semibold text-white">{row.title}</h3>
-                        {row.subtitle && <p className="text-sm text-gray-400">{row.subtitle}</p>}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          playSound('click');
-                          setView({ type: 'BOXES' });
-                          window.history.replaceState({}, '', '/boxes');
-                        }}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 transition hover:text-white"
-                      >
-                        View all
-                      </button>
-                    </div>
-                    {row.layout === 'carousel' ? (
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 hidden w-10 bg-gradient-to-r from-[#050811] via-[#050811]/80 to-transparent sm:block" />
-                        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 hidden w-10 bg-gradient-to-l from-[#050811] via-[#050811]/80 to-transparent sm:block" />
-                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#050811] via-[#050811]/90 to-transparent sm:hidden" />
-                        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#050811] via-[#050811]/90 to-transparent sm:hidden" />
-                        <div className="flex gap-3 overflow-x-auto pb-2 pt-1 snap-x snap-mandatory sm:gap-4 sm:overflow-visible">
-                          {row.boxes.map((box) => (
-                            <div key={box.id} className="min-w-[200px] snap-start sm:min-w-0">
-                              <BoxCard
-                                box={box}
-                                size="compact"
-                                onSelect={(boxId) => {
-                                  playSound('click');
-                                  setView({ type: 'CASE_OPENING', boxId });
-                                }}
-                                onHover={() => playSound('hover')}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className={gridClassName}>
-                        {row.boxes.map((box) => (
-                          <BoxCard
-                            key={box.id}
-                            box={box}
-                            onSelect={(boxId) => {
-                              playSound('click');
-                              setView({ type: 'CASE_OPENING', boxId });
-                            }}
-                            onHover={() => playSound('hover')}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                );
-              })}
-            </div>
-          ) : (
-            <>
-              <BoxGrid />
-              {homeRows.map((row) => (
-                <BoxRow key={row.id} title={row.title} boxes={row.boxes} viewAllQuery={row.query} />
-              ))}
-            </>
-          )}
-          <HomeBanners />
-          <LegendaryShowcase />
-          <TrustSection />
-          <HowItWorksSection />
-          <CaseLabPromo />
-          <section className="space-y-3">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
-              <span>Live Wins</span>
-            </div>
-            <LiveTicker />
-          </section>
-          <FinalCTA />
-        </div>
+        <HomeReplica
+          boxes={baseHomeBoxes}
+          isChatCollapsed={isChatCollapsed}
+          onOpenBox={(boxId) => {
+            playSound('click');
+            setView({ type: 'CASE_OPENING', boxId });
+          }}
+          onViewAllBoxes={() => {
+            playSound('click');
+            setView({ type: 'BOXES' });
+            window.history.replaceState({}, '', '/boxes');
+          }}
+          onSignUp={() => {
+            playSound('click');
+            openAuthModal('register');
+          }}
+        />
       )}
       
       {view.type === 'BATTLES' && (
