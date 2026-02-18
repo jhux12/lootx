@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, Zap, Volume2, Info, X, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, Volume2, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -10,7 +10,6 @@ import { getRiskLabel } from '../utils/caseOdds';
 import { getSellBackValue } from '../utils/sellBack';
 import { authedFetch } from '../utils/authedFetch';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
-import pullzPattern from '../assets/pullz-p.PNG';
 import { ProvablyFairMiniModal } from './ProvablyFairMiniModal';
 
 interface CaseOpeningProps {
@@ -138,10 +137,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [rewardResolved, setRewardResolved] = useState(false);
   const [selectedCaseItem, setSelectedCaseItem] = useState<CaseItem | null>(null);
   const [spinFeedbackMessage, setSpinFeedbackMessage] = useState<string | null>(null);
-  const [spinCount, setSpinCount] = useState(1);
-  const [fastSpinEnabled, setFastSpinEnabled] = useState(false);
-  const [queuedSpinCount, setQueuedSpinCount] = useState(0);
-  const [queuedSpinProgress, setQueuedSpinProgress] = useState(0);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -155,7 +150,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const bodyOverflowRef = useRef<string>('');
   const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
-  const queuedSpinOptionsRef = useRef<{ isDemo?: boolean; forceGold?: boolean } | null>(null);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
@@ -403,10 +397,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setTimeout(onComplete, duration + 200);
   };
 
-  const getSpinDuration = useCallback((duration: number) => {
-    if (!fastSpinEnabled) return duration;
-    return Math.max(900, Math.floor(duration * 0.45));
-  }, [fastSpinEnabled]);
+
 
   const handleSpin = async ({ isDemo = false, forceGold = false }: { isDemo?: boolean; forceGold?: boolean } = {}) => {
     if (isSpinning) return;
@@ -662,7 +653,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items, true);
         setReelItems(ticketReel);
         
-        animateSpin(getSpinDuration(4500), () => {
+        animateSpin(4500, () => {
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
             setIsGoldMode(true);
@@ -674,11 +665,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 const goldReel = generateReel(winner, pool, true);
                 setReelItems(goldReel);
                 
-                animateSpin(getSpinDuration(4000), () => {
+                animateSpin(4000, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
                 });
-            }, fastSpinEnabled ? 250 : 1000);
+            }, 1000);
         });
 
     } else {
@@ -686,7 +677,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const normalReel = generateReel(winner, items, true);
         setReelItems(normalReel);
         
-        animateSpin(getSpinDuration(5000), () => {
+        animateSpin(5000, () => {
             finishSpin(winner);
         });
     }
@@ -694,7 +685,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleTryFree = () => {
     setSpinFeedbackMessage(null);
-    startSpinSequence({ isDemo: true });
+    handleSpin({ isDemo: true });
   };
 
   useEffect(() => {
@@ -713,20 +704,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsBoxPreviewVisible(true);
     setIsBoxPreviewFading(false);
 
-    if (queuedSpinCount > 0) {
-      const nextRemaining = queuedSpinCount - 1;
-      setQueuedSpinCount(nextRemaining);
-      setQueuedSpinProgress((current) => current + 1);
-      setWonItem(item);
-      setRewardResolved(false);
-      window.setTimeout(() => {
-        const options = queuedSpinOptionsRef.current ?? {};
-        handleSpin({ isDemo: options.isDemo, forceGold: options.forceGold });
-      }, fastSpinEnabled ? 160 : 360);
-      return;
-    }
-
-    setQueuedSpinProgress(0);
     setShowWinModal(true);
     setWonItem(item);
     setRewardResolved(false);
@@ -737,13 +714,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     else playSound('win-common');
   };
 
-  const startSpinSequence = (options: { isDemo?: boolean; forceGold?: boolean } = {}) => {
-    queuedSpinOptionsRef.current = options;
-    const totalSpins = Math.max(1, spinCount);
-    setQueuedSpinProgress(1);
-    setQueuedSpinCount(Math.max(0, totalSpins - 1));
-    handleSpin(options);
-  };
+
 
   const closeWinModal = () => {
     if (sellOfferTimerRef.current) {
@@ -949,30 +920,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
             {/* Action Bar */}
             <div className="bg-[#0b0e14] p-4 flex flex-col items-center justify-center gap-3 border-t border-gray-800 relative z-20">
-                 <div className="w-full flex flex-wrap items-center justify-center gap-2">
-                    {[1, 2, 3, 4, 5].map((count) => (
-                      <button
-                        key={count}
-                        type="button"
-                        disabled={isSpinning}
-                        onClick={() => setSpinCount(count)}
-                        className={`h-10 w-10 rounded-lg border text-sm font-bold transition-colors ${spinCount === count ? 'border-indigo-400 bg-indigo-500/20 text-white' : 'border-gray-700 bg-black/30 text-gray-400 hover:text-white'} disabled:opacity-50`}
-                      >
-                        {count}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setFastSpinEnabled((value) => !value)}
-                      disabled={isSpinning}
-                      className={`ml-1 inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold uppercase tracking-wide transition-colors ${fastSpinEnabled ? 'border-indigo-400 bg-indigo-500/20 text-indigo-100' : 'border-gray-700 bg-black/30 text-gray-400 hover:text-white'} disabled:opacity-50`}
-                    >
-                      <Zap className={`h-4 w-4 ${fastSpinEnabled ? 'fill-current' : ''}`} />
-                      Fast
-                    </button>
-                 </div>
                  <button 
-                    onClick={() => startSpinSequence()}
+                    onClick={() => handleSpin()}
                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
                     className={`w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
                 >
@@ -980,11 +929,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       {isSyncingFair ? (
                         'Syncing server...'
                       ) : isSpinning ? (
-                        queuedSpinCount > 0 ? `Spinning ${queuedSpinProgress}/${spinCount}...` : 'Spinning...'
+                        'Spinning...'
                       ) : isBalanceLoading ? (
                         'Loading balance...'
                       ) : isFree ? (
-                        `Free Spin x${spinCount}`
+                        'Free Spin'
                       ) : (
                         <span className="inline-flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
                           <span className="inline-flex items-center gap-2">
@@ -992,11 +941,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             {caseCurrencyType === 'XP' ? (
                               <span className="inline-flex items-center gap-1 text-white">
                                 <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                                <span>{(currentCaseXpPrice * spinCount).toLocaleString()}</span>
+                                <span>{currentCaseXpPrice.toLocaleString()}</span>
                               </span>
                             ) : (
                               <CoinAmount
-                                amount={toCoins(box!.price, PRICE_UNIT_MODE) * spinCount}
+                                amount={toCoins(box!.price, PRICE_UNIT_MODE)}
                                 formatOptions={{ maximumFractionDigits: 0 }}
                                 className="text-white"
                                 iconClassName="w-4 h-4"
@@ -1005,7 +954,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           </span>
                           {previewTotalXp > 0 && (
                             <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-200">
-                              +{(previewTotalXp * spinCount).toLocaleString()} XP
+                              +{previewTotalXp.toLocaleString()} XP
                             </span>
                           )}
                         </span>
@@ -1016,16 +965,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                    <button
                      onClick={handleTryFree}
                      disabled={isSpinning || isSyncingFair || isRotatingSeed}
-                     className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
+                     className="w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
                    >
-                     <span>Try for Free</span>
+                     <span>Demo Spin</span>
                    </button>
                  )}
                  {isAdmin && (
                    <button
-                     onClick={() => startSpinSequence({ isDemo: true, forceGold: true })}
+                     onClick={() => handleSpin({ isDemo: true, forceGold: true })}
                      disabled={isSpinning || isSyncingFair || isRotatingSeed}
-                     className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
+                     className="w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Test Gold Spin</span>
                    </button>
@@ -1074,328 +1023,162 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           }}
         />
 
-        {/* Win Modal Overlay */}
-        {showWinModal && wonItem && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" onClick={closeWinModal}></div>
-                <div
-                  className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111722] to-[#0b0f18] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] animate-in zoom-in-95 duration-300"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                     <div className="absolute inset-0 opacity-60" style={{ background: `radial-gradient(circle at top, ${wonItem.color}22, transparent 60%)` }}></div>
-                     <button
-                       type="button"
-                       aria-label="Close win modal"
-                       onClick={(event) => {
-                         event.stopPropagation();
-                         closeWinModal();
-                       }}
-                       className="absolute right-4 top-4 z-20 rounded-full border border-white/10 bg-black/30 p-2 text-gray-300 transition hover:border-white/30 hover:text-white"
-                     >
-                        <X className="w-4 h-4" />
-                     </button>
-
-                     <div className="relative flex flex-col items-center px-5 pb-6 pt-10 sm:px-8 sm:pb-8">
-                        <div className="flex flex-col items-center gap-2 text-center">
-                            <div className="text-xs uppercase tracking-[0.3em] text-gray-400">Case result</div>
-                            <div className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider">You Won</div>
-                            {isDemoSpin && (
-                                <div className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-200">
-                                    Demo spin — rewards not granted
-                                </div>
-                            )}
-                        </div>
-
-                        <div className={`relative mt-6 flex h-52 w-52 items-center justify-center sm:h-60 sm:w-60 ${isDemoSpin ? 'mb-4' : 'mb-6'}`}>
-                            <div className="absolute inset-0 rounded-full border border-white/10 bg-white/5"></div>
-                            <div
-                              className="absolute inset-6 rounded-full opacity-95"
-                              style={{
-                                background: `radial-gradient(circle, ${wonItem.color}90 0%, ${wonItem.color}3d 48%, ${wonItem.color}00 80%)`,
-                                boxShadow: `0 0 28px ${wonItem.color}55`
-                              }}
-                            ></div>
-                            <div className="absolute inset-4 rounded-full bg-gradient-to-br from-white/10 to-transparent"></div>
-                            <img loading="lazy" decoding="async" src={wonItem.image} alt={wonItem.name} className="relative z-10 h-36 w-36 object-contain drop-shadow-2xl sm:h-44 sm:w-44" />
-                        </div>
-
-                        <div className={`w-full text-center ${isDemoSpin ? 'mb-6' : 'mb-7'}`}>
-                            <h3 className="text-xl sm:text-2xl font-bold text-white">{wonItem.name}</h3>
-                            <CoinAmount
-                              amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
-                              formatOptions={{ maximumFractionDigits: 0 }}
-                              className="mt-2 text-gray-300 font-semibold justify-center"
-                              iconClassName="w-4 h-4"
-                            />
-                        </div>
-
-                        {isDemoSpin ? (
-                            <button onClick={closeWinModal} className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10">
-                                Close
-                            </button>
-                        ) : (
-                            <div className="w-full">
-                                {wonItem.redeemable === false && (
-                                  <div className="mb-3 w-full rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wide text-amber-200">
-                                    Not redeemable for coins
-                                  </div>
-                                )}
-                            <div className="flex w-full flex-col gap-3 sm:flex-row">
-                                {wonItem.redeemable !== false && (
-                                  <button
-                                    onClick={handleSell}
-                                    disabled={isGeneratingSellOffer || isSellingItem}
-                                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-80"
-                                  >
-                                      <span className="flex flex-col items-center justify-center gap-1">
-                                        <span className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-wide text-gray-400">
-                                          {(isGeneratingSellOffer || isSellingItem) && (
-                                            <span className="h-3 w-3 animate-spin rounded-full border border-gray-400/60 border-t-transparent" aria-hidden="true" />
-                                          )}
-                                          {isSellingItem
-                                            ? 'Selling item...'
-                                            : isGeneratingSellOffer
-                                            ? 'Generating offer...'
-                                            : sellOfferGenerated
-                                              ? 'Accept buy back offer'
-                                              : 'Generate buy back offer'}
-                                        </span>
-                                        {sellOfferGenerated && !isGeneratingSellOffer && !isSellingItem && (
-                                          <CoinAmount
-                                            amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
-                                            formatOptions={{ maximumFractionDigits: 0 }}
-                                            className="text-gray-200"
-                                            iconClassName="w-4 h-4"
-                                          />
-                                        )}
-                                      </span>
-                                  </button>
-                                )}
-                                <button onClick={handleKeep} className="flex-1 rounded-xl btn-logo-gradient py-3 text-sm font-bold text-white shadow-lg transition">
-                                    Keep Item
-                                </button>
-                            </div>
-                            </div>
-                        )}
-                     </div>
+        {/* Slide Up Win Sheet */}
+        <div className={`fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
+        <div className={`fixed bottom-0 left-0 right-0 z-[100] transform transition-transform duration-500 ${showWinModal && wonItem ? 'translate-y-0' : 'translate-y-full'}`}>
+          {wonItem && (
+            <div className="mx-auto flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)]">
+              <div className="flex items-center justify-between border-b border-white/10 bg-black/25 px-4 py-4 sm:px-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/15">
+                    <Check className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white sm:text-lg">{isDemoSpin ? 'Demo Spin Result' : 'Item Unboxed'}</h3>
+                    <p className="text-xs text-gray-400">{isDemoSpin ? 'Rewards are not granted in demo mode.' : 'Choose what to do with your item.'}</p>
+                  </div>
                 </div>
+                <button type="button" onClick={closeWinModal} className="rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:text-white">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-5 sm:p-6">
+                <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-white/10 bg-black/25 p-4 text-center">
+                  <div className="absolute inset-0 rounded-2xl opacity-30" style={{ background: `radial-gradient(circle at top, ${wonItem.color}99 0%, transparent 70%)` }} />
+                  <img loading="lazy" decoding="async" src={wonItem.image} alt={wonItem.name} className="relative z-10 mb-3 h-36 w-36 object-contain" />
+                  <h4 className="relative z-10 text-lg font-bold text-white">{wonItem.name}</h4>
+                  <CoinAmount
+                    amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
+                    formatOptions={{ maximumFractionDigits: 0 }}
+                    className="relative z-10 mt-2 font-semibold text-gray-200"
+                    iconClassName="w-4 h-4"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-white/10 bg-black/20 p-4 sm:p-6">
+                {isDemoSpin ? (
+                  <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
+                ) : (
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    {wonItem.redeemable !== false && (
+                      <button
+                        onClick={handleSell}
+                        disabled={isGeneratingSellOffer || isSellingItem}
+                        className="h-12 flex-1 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-100 transition hover:bg-white/10 disabled:opacity-60"
+                      >
+                        {isSellingItem
+                          ? 'Selling item...'
+                          : isGeneratingSellOffer
+                          ? 'Generating offer...'
+                          : sellOfferGenerated
+                            ? 'Accept buy back offer'
+                            : 'Generate buy back offer'}
+                      </button>
+                    )}
+                    <button onClick={handleKeep} className="h-12 flex-1 rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white"> 
+                      <span className="inline-flex items-center gap-2"><PackageOpen className="h-4 w-4" />Keep Item</span>
+                    </button>
+                    {wonItem.redeemable !== false && sellOfferGenerated && !isGeneratingSellOffer && !isSellingItem && (
+                      <div className="flex h-12 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 text-sm font-bold text-emerald-200">
+                        <Wallet className="mr-2 h-4 w-4" />
+                        <CoinAmount amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)} formatOptions={{ maximumFractionDigits: 0 }} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-        )}
+          )}
+        </div>
+
 
         {/* Case Contents */}
-        <div className="mt-12">
-            <div className="flex items-center gap-2 mb-6 text-gray-400 text-sm font-bold">
-                <div className="w-1 h-4 bg-gray-600 rounded-full"></div>
-                Case contains
+        <div className="mt-12 border-t border-white/10 bg-[#0d1118] py-8 sm:py-10">
+            <div className="mb-6 flex items-center gap-3">
+                <div className="rounded-lg border border-white/10 bg-white/5 p-2">
+                  <Gamepad2 className="h-5 w-5 text-indigo-300" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Drop Table</h3>
+                  <p className="text-xs text-gray-400">Tap an item to inspect details.</p>
+                </div>
             </div>
-            <div className="-mt-4 mb-6 flex items-center gap-2 text-[11px] text-gray-500">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-black/40 text-amber-200">
-                    <Info className="h-3.5 w-3.5" />
-                </span>
-                <span>Not redeemable for coins.</span>
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                 {displayItems.map((item) => (
                     <button
-                        key={item.id} 
+                        key={item.id}
                         type="button"
                         onClick={() => setSelectedCaseItem(item)}
-                        className="group relative flex flex-col items-center rounded-xl border border-gray-800 bg-[#0f1219] p-3 text-left transition-all hover:border-gray-700 hover:bg-[#151a23]"
+                        className="group relative overflow-hidden rounded-xl border border-white/10 bg-[#131722] text-left transition-all hover:border-white/20 hover:bg-[#171d2a]"
                     >
-                        <div
-                          className="absolute top-2 left-2 rounded border px-1.5 py-0.5 text-[10px] font-bold"
-                          style={{
-                            color: item.color,
-                            borderColor: `${item.color}66`,
-                            backgroundColor: `${item.color}1a`,
-                          }}
-                        >
-                            {item.chance}%
+                        <div className="absolute inset-0 opacity-25" style={{ background: `radial-gradient(circle at top, ${item.color}88 0%, transparent 70%)` }} />
+                        <div className="relative flex h-36 items-center justify-center p-3 sm:h-40">
+                            <img loading="lazy" decoding="async" src={item.image} alt={item.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
                         </div>
-
-                        <div className="relative mb-3 flex w-full aspect-square items-center justify-center">
-                            <div
-                                className="absolute inset-4 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
-                                style={{
-                                  background: `radial-gradient(circle, ${item.color}80 0%, ${item.color}30 46%, ${item.color}00 78%)`
-                                }}
-                            ></div>
-                            {item.redeemable === false && (
-                              <div className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/50 p-1 text-amber-200">
-                                <Info className="h-3.5 w-3.5" />
-                              </div>
-                            )}
-                            <img loading="lazy" decoding="async" src={item.image} alt={item.name} className="relative z-10 w-3/4 h-3/4 object-contain group-hover:scale-110 transition-transform duration-300" />
+                        <div className="relative border-t border-white/10 bg-black/30 p-3">
+                            <div className="mb-1 truncate text-xs font-bold text-white" title={item.name}>{item.name}</div>
+                            <div className="flex items-center justify-between gap-2">
+                                <CoinAmount
+                                  amount={toCoins(item.price, PRICE_UNIT_MODE)}
+                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                  className="text-sm font-bold text-gray-200"
+                                  iconClassName="w-3.5 h-3.5"
+                                />
+                                <span
+                                  className="rounded border px-1.5 py-0.5 text-[10px] font-bold"
+                                  style={{ color: item.color, borderColor: `${item.color}66`, backgroundColor: `${item.color}1a` }}
+                                >
+                                  {item.chance}%
+                                </span>
+                            </div>
                         </div>
-
-                        <div className="w-full text-left mt-auto">
-                            <div className="text-gray-400 text-xs font-medium truncate mb-0.5">{item.name}</div>
-                            <CoinAmount
-                              amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                              formatOptions={{ maximumFractionDigits: 0 }}
-                              className="text-white font-bold text-sm"
-                              iconClassName="w-3.5 h-3.5"
-                            />
-                        </div>
-
-                        <div 
-                            className="absolute bottom-0 left-0 right-0 h-[2px] rounded-b-xl opacity-50 group-hover:opacity-100 transition-opacity"
-                            style={{ backgroundColor: item.color, boxShadow: `0 0 8px ${item.color}` }}
-                        ></div>
                     </button>
                 ))}
             </div>
         </div>
-        {selectedCaseItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => setSelectedCaseItem(null)}
-              aria-label="Close item details"
-            />
-            <div
-              ref={itemModalRef}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="item-details-title"
-              className="relative w-full max-w-[760px] max-h-[85vh] overflow-hidden rounded-[26px] border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111824] to-[#0b0f18] text-gray-200 shadow-[0_25px_80px_-40px_rgba(15,23,42,0.9)] shadow-purple-500/10 animate-item-modal-in"
-              style={{
-                borderColor: 'rgba(255,255,255,0.08)',
-                boxShadow:
-                  '0 30px 80px -45px rgba(15,23,42,0.9), 0 0 60px -35px rgba(124,58,237,0.45), 0 0 40px -32px rgba(34,211,238,0.45)',
-              }}
-            >
-              <div
-                className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.05]"
-                style={{ backgroundImage: `url(${pullzPattern})` }}
-              />
-              <div className="relative flex max-h-[85vh] flex-col gap-6 overflow-hidden p-5 sm:p-8">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                    Item Details
-                  </span>
-                  <button
-                    ref={itemModalCloseRef}
-                    type="button"
-                    onClick={() => setSelectedCaseItem(null)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:border-white/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
-                    aria-label="Close item details"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-1 md:flex-row md:items-center">
-                  <div className="flex w-full items-center justify-center md:w-1/2">
-                    <div
-                      className="relative flex aspect-square w-full max-w-[280px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_20px_45px_-35px_rgba(34,211,238,0.45)] sm:max-w-[360px] md:max-w-[400px]"
-                      style={{ boxShadow: `0 30px 55px -45px ${selectedCaseItem.color}` }}
-                    >
-                      <img
-                        src={selectedCaseItem.image}
-                        alt={selectedCaseItem.name}
-                        className="h-[78%] w-[78%] object-contain"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex min-h-0 flex-1 flex-col gap-4 text-left">
-                    <h3
-                      id="item-details-title"
-                      className="text-2xl font-bold text-white sm:text-3xl"
-                    >
-                      {selectedCaseItem.name}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
-                        <CoinAmount
-                          amount={toCoins(selectedCaseItem.price, PRICE_UNIT_MODE)}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          className="text-base font-semibold text-white"
-                          iconClassName="w-4 h-4"
-                        />
-                      </div>
-                      {selectedCaseItem.rarity && (
-                        <span
-                          className="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em]"
-                          style={{
-                            borderColor: selectedCaseItem.color,
-                            color: selectedCaseItem.color,
-                            backgroundColor: `${selectedCaseItem.color}1a`,
-                          }}
-                        >
-                          {selectedCaseItem.rarity}
-                        </span>
-                      )}
-                      {selectedCaseItem.redeemable === false && (
-                        <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-200">
-                          Not redeemable
-                        </span>
-                      )}
-                    </div>
-                    <div className="grid gap-3 text-[11px] uppercase tracking-[0.18em] text-gray-400">
-                      <div className="flex items-center justify-between gap-4">
-                        <span>Brand</span>
-                        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-200">
-                          {selectedCaseItem.brand || 'Unknown'}
-                        </span>
-                      </div>
-                      {selectedCaseItem.category && (
-                        <div className="flex items-center justify-between gap-4">
-                          <span>Category</span>
-                          <span className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-200">
-                            {selectedCaseItem.category}
-                          </span>
-                        </div>
-                      )}
-                      {typeof selectedCaseItem.chance === 'number' && (
-                        <div className="flex items-center justify-between gap-4">
-                          <span>Odds</span>
-                          <span className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-200">
-                            {selectedCaseItem.chance}%
-                          </span>
-                        </div>
-                      )}
-                      {selectedCaseItem.tags && selectedCaseItem.tags.length > 0 && (
-                        <div className="flex flex-wrap items-start justify-between gap-4">
-                          <span>Tags</span>
-                          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-200">
-                            {selectedCaseItem.tags.join(', ')}
-                          </span>
-                        </div>
-                      )}
-                      {selectedCaseItem.sizes && selectedCaseItem.sizes.length > 0 && (
-                        <div className="flex flex-wrap items-start justify-between gap-4">
-                          <span>Sizes</span>
-                          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-200">
-                            {selectedCaseItem.sizes.join(', ')}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+        {/* Slide Up Item Sheet */}
+        <div className={`fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${selectedCaseItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={() => setSelectedCaseItem(null)} />
+        <div className={`fixed bottom-0 left-0 right-0 z-[120] transform transition-transform duration-500 ${selectedCaseItem ? 'translate-y-0' : 'translate-y-full'}`}>
+          {selectedCaseItem && (
+            <div ref={itemModalRef} role="dialog" aria-modal="true" aria-labelledby="item-details-title" className="mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)]">
+              <div className="relative flex h-64 items-center justify-center overflow-hidden" style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}99 0%, transparent 72%)` }}>
+                <button
+                  ref={itemModalCloseRef}
+                  type="button"
+                  onClick={() => setSelectedCaseItem(null)}
+                  className="absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white"
+                  aria-label="Close item details"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <img src={selectedCaseItem.image} alt={selectedCaseItem.name} className="relative z-10 h-44 w-44 object-contain drop-shadow-2xl" />
+              </div>
+              <div className="space-y-5 px-5 py-6 sm:px-6">
+                <div className="text-center">
+                  <h3 id="item-details-title" className="text-2xl font-bold text-white">{selectedCaseItem.name}</h3>
+                  <div className="mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase" style={{ color: selectedCaseItem.color, borderColor: `${selectedCaseItem.color}66`, backgroundColor: `${selectedCaseItem.color}1a` }}>
+                    {selectedCaseItem.rarity ?? 'Item'}
                   </div>
                 </div>
-                <div className="flex items-center justify-end border-t border-white/5 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCaseItem(null)}
-                    className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_-18px_rgba(124,58,237,0.8)] transition hover:shadow-[0_0_24px_rgba(34,211,238,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
-                  >
-                    Back to Items
-                  </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Value</span>
+                    <CoinAmount amount={toCoins(selectedCaseItem.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-center text-lg font-bold text-white" iconClassName="w-4 h-4" />
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Drop Chance</span>
+                    <div className="mt-1 text-lg font-bold text-white">{typeof selectedCaseItem.chance === 'number' ? `${selectedCaseItem.chance}%` : '—'}</div>
+                  </div>
                 </div>
+                <button type="button" onClick={() => setSelectedCaseItem(null)} className="h-12 w-full rounded-xl bg-white text-sm font-bold text-black transition hover:bg-gray-200">Close</button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
         <style>{`
-          @keyframes item-modal-in {
-            0% { opacity: 0; transform: scale(0.96) translateY(8px); }
-            100% { opacity: 1; transform: scale(1) translateY(0); }
-          }
-          .animate-item-modal-in {
-            animation: item-modal-in 200ms ease-out;
-          }
           @keyframes box-shimmer {
             0% { transform: translateX(-150%); }
             100% { transform: translateX(150%); }
