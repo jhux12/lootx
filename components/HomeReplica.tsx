@@ -44,11 +44,7 @@ const FAQ_ITEMS: FaqItem[] = [
   }
 ];
 
-const CATEGORIES = [
-  'Trading Cards',
-  'Collectibles',
-  'Tech & Gaming'
-];
+const CATEGORIES = ['Trading Cards', 'Collectibles', 'Tech & Gaming'];
 
 export const HomeReplica: React.FC<HomeReplicaProps> = ({
   boxes,
@@ -59,99 +55,109 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 }) => {
   const [openFaq, setOpenFaq] = useState(0);
 
-  const featuredBoxes = useMemo(() => boxes.slice(0, 6), [boxes]);
+  const featuredBoxes = useMemo(() => boxes.slice(0, 8), [boxes]);
   const chipBoxes = useMemo(() => boxes.slice(0, 18), [boxes]);
   const [demoSpinIndex, setDemoSpinIndex] = useState(0);
 
   const spinnerReel = useMemo(() => {
     if (featuredBoxes.length === 0) return [];
-    return Array.from({ length: 18 }, (_, index) => featuredBoxes[index % featuredBoxes.length]);
+    return Array.from({ length: 30 }, (_, index) => featuredBoxes[index % featuredBoxes.length]);
   }, [featuredBoxes]);
 
   useEffect(() => {
     if (spinnerReel.length <= 1) return undefined;
     const intervalId = window.setInterval(() => {
       setDemoSpinIndex((current) => (current + 1) % spinnerReel.length);
-    }, 1200);
+    }, 1250);
 
     return () => {
       window.clearInterval(intervalId);
     };
   }, [spinnerReel.length]);
 
-  const spinnerCardWidth = 120;
-  const spinnerGap = 12;
+  const spinnerCardWidth = 112;
+  const spinnerGap = 10;
   const activeBox = spinnerReel[demoSpinIndex] ?? featuredBoxes[0];
 
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
-      <section className="rounded-2xl border border-white/10 bg-gradient-to-r from-[#181a25] via-[#1b1d2a] to-[#181a25] px-5 py-9 text-center sm:px-8">
-        <h1 className="text-3xl font-black uppercase tracking-tight text-white sm:text-5xl">
-          Fair Value <span className="text-[#6f67ff]">Guarantee</span>
-        </h1>
-        <p className="mt-3 text-xs uppercase tracking-[0.28em] text-gray-400 sm:text-sm">
-          Discover, open &amp; collect on Pullz
-        </p>
+      <section className="mx-auto w-full max-w-[860px] rounded-2xl border border-white/10 bg-[linear-gradient(125deg,#1a1d2b_10%,#1f2231_45%,#171a28_90%)] px-5 py-10 text-center shadow-[0_20px_55px_-35px_rgba(0,0,0,0.95)] sm:px-8">
+        <div className="rounded-xl border border-white/5 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_60%)] px-4 py-7">
+          <h1 className="text-3xl font-black uppercase italic tracking-tight text-white sm:text-6xl">
+            Fair Value <span className="text-[#c171ff]">Guarantee</span>
+          </h1>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.24em] text-gray-300 sm:text-sm">
+            Discover, open &amp; collect on Pullz
+          </p>
+        </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-[#0b0d13] p-3 sm:p-4">
+      <section className="mx-auto w-full max-w-[860px] rounded-2xl border border-white/10 bg-[#0b0d13] p-3 sm:p-4">
         <p className="pb-3 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
           Best mystery boxes online
         </p>
-        <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#0b0e14] p-1 shadow-2xl">
-          <div className="relative flex h-52 items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] sm:h-60">
-            <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-cyan-400/35" />
-            <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-r from-[#0b0e14] to-transparent sm:w-24" />
-            <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#0b0e14] to-transparent sm:w-24" />
-
-            <div
-              className="flex px-[50%] will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.18,0.84,0.32,1)]"
-              style={{
-                gap: `${spinnerGap}px`,
-                marginLeft: `-${spinnerCardWidth / 2}px`,
-                transform: `translateX(-${demoSpinIndex * (spinnerCardWidth + spinnerGap)}px)`
-              }}
-            >
-              {spinnerReel.map((box, idx) => (
-                <button
-                  type="button"
-                  key={`${box.id}-${idx}`}
-                  onClick={() => onOpenBox(box.id)}
-                  className="relative flex h-[120px] w-[120px] flex-shrink-0 flex-col items-center justify-center rounded-xl border border-gray-800 bg-[#151a23] p-3"
-                >
-                  <div
-                    className="absolute inset-4 rounded-full opacity-90"
-                    style={{
-                      background: `radial-gradient(circle, ${(box.accentColor || '#7e76ff')}75 0%, ${(box.accentColor || '#7e76ff')}2d 45%, ${(box.accentColor || '#7e76ff')}00 78%)`
-                    }}
-                  />
-                  <img
-                    loading="lazy"
-                    decoding="async"
-                    src={box.image}
-                    alt={box.name}
-                    className="relative z-10 h-14 w-14 object-contain"
-                  />
-                  <div
-                    className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl opacity-60"
-                    style={{ backgroundColor: box.accentColor || '#7e76ff' }}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 border-t border-gray-800 bg-[#0b0e14] p-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-[#c9c5ff] sm:text-xs">
-              Demo spinner (same style as unboxing reel)
-            </p>
+        <div className="overflow-hidden rounded-xl border border-[#1f2430] bg-[#0a0d14]">
+          <div className="grid min-h-[184px] md:grid-cols-[300px_1fr]">
             <button
               type="button"
               onClick={() => activeBox && onOpenBox(activeBox.id)}
-              className="rounded-md bg-[#5a55ff] px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-white hover:bg-[#6d68ff]"
+              className="relative flex min-h-[184px] flex-col justify-end overflow-hidden border-b border-[#1f2430] bg-[radial-gradient(circle_at_20%_25%,rgba(78,95,255,0.28),transparent_58%),linear-gradient(180deg,#111728_0%,#0a0d14_100%)] p-4 text-left md:border-b-0 md:border-r"
             >
-              Open shown box
+              {activeBox && (
+                <img
+                  loading="lazy"
+                  decoding="async"
+                  src={activeBox.image}
+                  alt={activeBox.name}
+                  className="pointer-events-none absolute left-6 top-4 h-24 w-24 object-contain opacity-95 sm:h-28 sm:w-28"
+                />
+              )}
+              <p className="relative z-10 text-[30px] font-black uppercase italic leading-none text-white">
+                {activeBox?.name ?? 'Iphone 17 Series'}
+              </p>
+              <div className="relative z-10 mt-2 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.12em]">
+                <span className="rounded bg-[#5860ff] px-2 py-0.5 text-white">New arrival</span>
+                <span className="text-gray-400">Tech &amp; Gaming</span>
+              </div>
             </button>
+
+            <div className="relative flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+              <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-white/60 shadow-[0_0_14px_rgba(255,255,255,0.42)]" />
+              <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-12 bg-gradient-to-r from-[#0a0d14] to-transparent sm:w-20" />
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-12 bg-gradient-to-l from-[#0a0d14] to-transparent sm:w-20" />
+
+              <div
+                className="flex px-[50%] py-6 will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.18,0.84,0.32,1)]"
+                style={{
+                  gap: `${spinnerGap}px`,
+                  marginLeft: `-${spinnerCardWidth / 2}px`,
+                  transform: `translateX(-${demoSpinIndex * (spinnerCardWidth + spinnerGap)}px)`
+                }}
+              >
+                {spinnerReel.map((box, idx) => {
+                  const isCenter = idx === demoSpinIndex;
+                  return (
+                    <button
+                      type="button"
+                      key={`${box.id}-${idx}`}
+                      onClick={() => onOpenBox(box.id)}
+                      className={`relative flex h-[112px] w-[112px] flex-shrink-0 flex-col justify-between rounded-xl border px-3 py-2 text-left ${
+                        isCenter
+                          ? 'border-white/70 bg-[#1a2235] shadow-[0_0_20px_rgba(255,255,255,0.22)]'
+                          : 'border-[#2a3040] bg-[#0f1420]'
+                      }`}
+                    >
+                      <p className="line-clamp-2 text-sm font-semibold text-white">{box.name}</p>
+                      <div className="h-1 w-full rounded-full bg-white/10" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center border-t border-[#1f2430] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#59d189]">
+            ● Live demo mode
           </div>
         </div>
       </section>
@@ -164,20 +170,21 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         >
           View all boxes
         </button>
-        <p className="text-center text-xl font-black uppercase text-white sm:text-3xl">
-          Get a <span className="text-[#6962ff]">free box</span> when signing up!
-        </p>
         <button
           type="button"
           onClick={onSignUp}
-          className="rounded-md border border-[#6962ff66] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#a9a5ff] hover:bg-[#6962ff1f]"
+          className="text-center text-2xl font-black uppercase text-white sm:text-4xl"
         >
-          Claim offer
+          Get a <span className="text-[#6962ff]">free box</span> when signing up!
         </button>
       </section>
 
       <section className="-mx-3 overflow-x-auto border-y border-white/10 bg-black/20 px-3 py-2 sm:mx-0 sm:rounded-xl sm:border">
-        <div className="flex min-w-max gap-2 sm:gap-3">
+        <div className="flex min-w-max items-stretch gap-2 sm:gap-3">
+          <div className="flex w-[54px] shrink-0 flex-col items-center justify-center rounded-md border border-white/15 bg-[#091016] px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#60de92]">
+            <span>Live</span>
+            <span>Drops</span>
+          </div>
           {chipBoxes.map((box) => (
             <button
               type="button"
