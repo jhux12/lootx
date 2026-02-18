@@ -21,6 +21,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const stickyPanelRef = useRef<HTMLDivElement | null>(null);
   const [isMobileStickyPinned, setIsMobileStickyPinned] = useState(false);
   const [stickyPanelHeight, setStickyPanelHeight] = useState(0);
+  const mobilePinnedRef = useRef(false);
 
   const displayBoxes = useMemo(
     () => boxes.filter((box) => !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
@@ -94,6 +95,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       return Number.isFinite(parsed) ? parsed : 72;
     };
 
+    let rafId = 0;
+
     const syncStickyState = () => {
       const sentinel = stickySentinelRef.current;
       const panel = stickyPanelRef.current;
@@ -101,15 +104,32 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
       const headerHeight = getHeaderHeight();
       const sentinelTop = sentinel.getBoundingClientRect().top;
-      const shouldPinOnMobile = window.innerWidth < 768 && sentinelTop <= headerHeight;
+      const isMobile = window.innerWidth < 768;
+      const pinStart = headerHeight;
+      const pinRelease = headerHeight + 24;
+      const shouldPinOnMobile = isMobile
+        ? (mobilePinnedRef.current ? sentinelTop <= pinRelease : sentinelTop <= pinStart)
+        : false;
 
-      setIsMobileStickyPinned((prev) => (prev !== shouldPinOnMobile ? shouldPinOnMobile : prev));
+      if (mobilePinnedRef.current != shouldPinOnMobile) {
+        mobilePinnedRef.current = shouldPinOnMobile;
+        setIsMobileStickyPinned(shouldPinOnMobile);
+      }
+
       setStickyPanelHeight((prev) => (prev !== panel.offsetHeight ? panel.offsetHeight : prev));
+    };
+
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = 0;
+        syncStickyState();
+      });
     };
 
     syncStickyState();
 
-    window.addEventListener('scroll', syncStickyState, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', syncStickyState);
 
     const observer = typeof ResizeObserver === 'undefined'
@@ -121,15 +141,16 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     }
 
     return () => {
-      window.removeEventListener('scroll', syncStickyState);
+      window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', syncStickyState);
       observer?.disconnect();
+      if (rafId) window.cancelAnimationFrame(rafId);
     };
   }, []);
 
   return (
     <div className="w-full pb-20">
-      <div className="w-full relative z-20">
+      <div className="w-full relative z-0">
         <div className="w-full py-0 md:py-6 max-w-screen-2xl mx-auto px-2 md:px-16">
           <TopDropsSlider
             boxes={displayBoxes}
