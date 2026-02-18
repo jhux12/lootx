@@ -142,10 +142,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     <div className="relative z-50">
       <header
         ref={headerRef}
-        className="fixed left-0 right-0 top-0 z-[120] border-b border-white/5 bg-neutral-950 [transform:translate3d(0,0,0)] [backface-visibility:hidden] [contain:paint] [will-change:transform] md:bg-neutral-950/90 md:backdrop-blur-md"
+        className="sticky left-0 right-0 top-0 z-[120] border-b border-white/5 bg-neutral-950 md:bg-neutral-950/90 md:backdrop-blur-md"
       >
-        <nav className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 lg:px-8">
-          <div className="flex items-center gap-3 lg:gap-x-10">
+        <div className="pt-[env(safe-area-inset-top,0px)]">
+          <nav className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 lg:px-8">
+            <div className="flex items-center gap-3 lg:gap-x-10">
             <button
               type="button"
               onClick={() => navigate('HOME')}
@@ -245,8 +246,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
               </div>
             )}
 
-          </div>
-        </nav>
+            </div>
+          </nav>
+        </div>
       </header>
 
       <button
