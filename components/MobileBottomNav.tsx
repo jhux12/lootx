@@ -4,14 +4,14 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
 type NavItem = {
-  id: 'HOME' | 'BOXES' | 'BATTLES' | 'INVENTORY' | 'LEADERBOARD';
+  id: 'MENU' | 'BOXES' | 'BATTLES' | 'INVENTORY' | 'LEADERBOARD';
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   requiresAuth?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'HOME', label: 'Menu', icon: Menu },
+  { id: 'MENU', label: 'Menu', icon: Menu },
   { id: 'BOXES', label: 'Boxes', icon: Box },
   { id: 'BATTLES', label: 'Arena', icon: Swords },
   { id: 'INVENTORY', label: 'Inventory', icon: Backpack, requiresAuth: true },
@@ -24,14 +24,23 @@ export const MobileBottomNav: React.FC = () => {
 
   const handleNav = (item: NavItem) => {
     playSound('click');
+
+    if (item.id === 'MENU') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pullz:open-mobile-menu'));
+      }
+      return;
+    }
+
     if (item.requiresAuth && !isAuthenticated) {
       openAuthModal('login');
       return;
     }
+
     setView({ type: item.id });
   };
 
-  const activeId = useMemo(() => view.type as NavItem['id'], [view.type]);
+  const activeId = useMemo(() => (view.type === 'HOME' ? 'MENU' : (view.type as NavItem['id'])), [view.type]);
 
   return (
     <div

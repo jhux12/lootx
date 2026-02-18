@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Facebook,
   Flame,
@@ -8,7 +8,6 @@ import {
   Instagram,
   LifeBuoy,
   LogOut,
-  Menu,
   Package,
   PenTool,
   Plus,
@@ -50,6 +49,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) 
   } = useGame();
   const { playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const openMobileMenu = () => {
+      setIsMobileMenuOpen(true);
+    };
+
+    window.addEventListener('pullz:open-mobile-menu', openMobileMenu);
+    return () => window.removeEventListener('pullz:open-mobile-menu', openMobileMenu);
+  }, []);
+
 
   const { unreadCount: persistentUnreadCount } = useNotifications(isAuthenticated ? user.id : null);
   const notificationCount = persistentUnreadCount || notifications.length;
@@ -204,17 +215,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox, unreadChatCount }) 
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                setIsMobileMenuOpen(true);
-              }}
-              className="rounded-md p-2 text-gray-300 lg:hidden"
-              aria-label="Open menu"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
           </div>
         </nav>
       </header>
