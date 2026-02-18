@@ -54,9 +54,28 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       setIsMobileMenuOpen(true);
     };
 
+    const toggleMobileMenu = () => {
+      setIsMobileMenuOpen((prev) => !prev);
+    };
+
     window.addEventListener('pullz:open-mobile-menu', openMobileMenu);
-    return () => window.removeEventListener('pullz:open-mobile-menu', openMobileMenu);
+    window.addEventListener('pullz:toggle-mobile-menu', toggleMobileMenu);
+    return () => {
+      window.removeEventListener('pullz:open-mobile-menu', openMobileMenu);
+      window.removeEventListener('pullz:toggle-mobile-menu', toggleMobileMenu);
+    };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    window.dispatchEvent(new CustomEvent('pullz:mobile-menu-state', { detail: { isOpen: isMobileMenuOpen } }));
+    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
 
   const navigate = (type: 'HOME' | 'BOXES' | 'BATTLES' | 'BONUSES' | 'LEADERBOARD' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {

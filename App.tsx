@@ -545,7 +545,7 @@ const AppLayout: React.FC<{
 
   return (
     <div
-      className="flex flex-1 pt-[72px] md:pt-[80px] lg:pt-[88px]"
+      className="flex flex-1 pt-[72px]"
       style={{ '--chatw': chatWidth } as React.CSSProperties}
       data-chat-collapsed={isChatCollapsed}
     >
