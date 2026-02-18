@@ -1,1100 +1,289 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Flame, Gem, Search, Tag, X } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Search, Filter, ChevronDown, Gamepad2 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
-import { usePreview } from '../context/PreviewContext';
-import { BoxCard } from './BoxCard';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
-import { Input } from './ui/Input';
-import { Select } from './ui/Select';
-import { RiskLegend } from './RiskLegend';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
-import {
-  BoxesPageConfig,
-  BoxesPageCuratedRow,
-  BoxesPageTabId,
-  getDefaultBoxesPageConfig,
-  normalizeBoxesPageConfig,
-  subscribeBoxesPageConfig
-} from '../utils/boxesPageConfig';
-
-const DEFAULT_SORT_OPTIONS = ['Price High', 'Price Low', 'Newest', 'Popular'];
-
-const sortLabelToKey = (label?: string) => {
-  const normalized = label?.trim().toLowerCase() ?? '';
-  if (normalized.includes('price') && normalized.includes('low')) return 'price-low';
-  if (normalized.includes('price') && normalized.includes('high')) return 'price-high';
-  if (normalized.includes('new')) return 'newest';
-  return 'price-high';
-};
-
-const clampGrid = (value: number | undefined, fallback: number) => {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
-  return Math.min(6, Math.max(1, Math.round(value)));
-};
-
-const gridCols = {
-  1: 'grid-cols-1',
-  2: 'grid-cols-2',
-  3: 'grid-cols-3',
-  4: 'grid-cols-4',
-  5: 'grid-cols-5',
-  6: 'grid-cols-6'
-} as const;
-
-const smGridCols = {
-  1: 'sm:grid-cols-1',
-  2: 'sm:grid-cols-2',
-  3: 'sm:grid-cols-3',
-  4: 'sm:grid-cols-4',
-  5: 'sm:grid-cols-5',
-  6: 'sm:grid-cols-6'
-} as const;
-
-const lgGridCols = {
-  1: 'lg:grid-cols-1',
-  2: 'lg:grid-cols-2',
-  3: 'lg:grid-cols-3',
-  4: 'lg:grid-cols-4',
-  5: 'lg:grid-cols-5',
-  6: 'lg:grid-cols-6'
-} as const;
-
-const MIN_SCROLLBAR_THUMB_WIDTH = 32;
-
-const useScrollIndicator = (itemsCount: number) => {
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const [thumbStyle, setThumbStyle] = useState({ width: 0, left: 0 });
-
-  const updateThumb = useCallback(() => {
-    const element = scrollRef.current;
-    if (!element) return;
-    const trackWidth = element.clientWidth;
-    const scrollWidth = element.scrollWidth;
-    if (trackWidth <= 0) return;
-    const maxScroll = scrollWidth - trackWidth;
-    const thumbWidth =
-      maxScroll > 0
-        ? Math.max((trackWidth / scrollWidth) * trackWidth, MIN_SCROLLBAR_THUMB_WIDTH)
-        : trackWidth;
-    const maxLeft = Math.max(trackWidth - thumbWidth, 0);
-    const left = maxScroll > 0 ? (element.scrollLeft / maxScroll) * maxLeft : 0;
-    setThumbStyle({ width: thumbWidth, left });
-  }, []);
-
-  useEffect(() => {
-    updateThumb();
-    const element = scrollRef.current;
-    if (!element) return undefined;
-    const handleScroll = () => updateThumb();
-    element.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll);
-    return () => {
-      element.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, [updateThumb, itemsCount]);
-
-  return { scrollRef, thumbStyle };
-};
 
 type BoxCatalogProps = {
   isChatCollapsed: boolean;
 };
 
-type BoxFilterOptions = {
-  tabId?: BoxesPageTabId;
-  searchTerm?: string;
-  tags?: string[];
-  category?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  sortKey?: string;
-};
-
-const applyBoxFilters = (boxes: ReturnType<typeof useGame>['boxes'], options: BoxFilterOptions) => {
-  let filtered = boxes;
-  const hasSearch = Boolean(options.searchTerm?.trim());
-
-  if (options.tabId === 'official') {
-    filtered = filtered.filter((box) => !box.isUserCreated);
-  }
-  if (options.tabId === 'community') {
-    filtered = filtered.filter((box) => box.isUserCreated);
-  }
-
-  if (options.tabId !== 'community') {
-    if (options.category && options.category !== 'All') {
-      const category = normalizeBoxTag(options.category);
-      filtered = filtered.filter((box) => getBoxTags(box).includes(category));
-    }
-
-    if (options.tags && options.tags.length > 0 && !hasSearch) {
-      const normalizedTags = options.tags.map(normalizeBoxTag).filter(Boolean);
-      filtered = filtered.filter((box) => {
-        const tags = getBoxTags(box);
-        return normalizedTags.some((tag) => tags.includes(tag));
-      });
-    }
-  }
-
-  if (typeof options.minPrice === 'number') {
-    filtered = filtered.filter((box) => toCoins(box.price, PRICE_UNIT_MODE) >= options.minPrice!);
-  }
-  if (typeof options.maxPrice === 'number') {
-    filtered = filtered.filter((box) => toCoins(box.price, PRICE_UNIT_MODE) <= options.maxPrice!);
-  }
-
-  if (hasSearch) {
-    const search = options.searchTerm!.toLowerCase();
-    filtered = filtered.filter((box) => {
-      const haystack = `${box.name} ${getBoxTags(box).join(' ')}`.toLowerCase();
-      return haystack.includes(search);
-    });
-  }
-
-  const sortKey = options.sortKey ?? 'price-high';
-  if (sortKey === 'price-low') {
-    filtered = [...filtered].sort(
-      (a, b) => toCoins(a.price, PRICE_UNIT_MODE) - toCoins(b.price, PRICE_UNIT_MODE)
-    );
-  } else if (sortKey === 'price-high') {
-    filtered = [...filtered].sort(
-      (a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)
-    );
-  } else if (sortKey === 'newest') {
-    filtered = [...filtered].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-  }
-
-  return filtered;
-};
-
-const getDefaultTab = (tabs: BoxesPageConfig['tabs']) => {
-  const enabledTabs = tabs.items.filter((tab) => tab.enabled);
-  const defaultConfig = getDefaultBoxesPageConfig();
-  const fallback = enabledTabs[0]?.id ?? defaultConfig.tabs.defaultTabId;
-  if (!tabs.enabled) return defaultConfig.tabs.defaultTabId;
-  if (enabledTabs.some((tab) => tab.id === tabs.defaultTabId)) {
-    return tabs.defaultTabId;
-  }
-  return fallback;
-};
-
-export const BoxCatalog: React.FC<BoxCatalogProps> = ({ isChatCollapsed }) => {
+export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const { boxes, setView } = useGame();
   const { playSound } = useSound();
-  const { previewAsUser } = usePreview();
-  const [config, setConfig] = useState<BoxesPageConfig>(getDefaultBoxesPageConfig());
-  const [activeTab, setActiveTab] = useState<BoxesPageTabId>(getDefaultBoxesPageConfig().tabs.defaultTabId);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [hasCategorySelection, setHasCategorySelection] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [sortOption, setSortOption] = useState('');
-  const [isTagsOpen, setIsTagsOpen] = useState(false);
-  const [categoryQueryParam, setCategoryQueryParam] = useState<string | null>(null);
-  const hasInitializedRef = useRef(false);
-  const hasQueryAppliedRef = useRef(false);
-  const curatedRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const displayBoxes = useMemo(
     () => boxes.filter((box) => !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
     [boxes]
   );
 
-  const officialBoxes = useMemo(
-    () => displayBoxes.filter((box) => !box.isUserCreated),
+  const categories = useMemo(() => {
+    const counts = new Map<string, number>();
+    displayBoxes
+      .filter((box) => !box.isUserCreated)
+      .forEach((box) => {
+        getBoxTags(box).forEach((tag) => {
+          counts.set(tag, (counts.get(tag) ?? 0) + 1);
+        });
+      });
+
+    return Array.from(counts.entries())
+      .map(([id, count]) => ({
+        id,
+        title: id
+          .split(/[-_\s]+/)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' '),
+        count
+      }))
+      .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title));
+  }, [displayBoxes]);
+
+  const filteredBoxes = useMemo(() => {
+    return displayBoxes.filter((box) => {
+      if (box.isUserCreated) return false;
+      const tags = getBoxTags(box);
+      const matchesCategory = activeCategory === 'all' || tags.includes(normalizeBoxTag(activeCategory));
+      const matchesSearch = box.name.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [activeCategory, displayBoxes, searchQuery]);
+
+  const groupedBoxes = useMemo(() => {
+    if (activeCategory !== 'all') {
+      const selected = categories.find((category) => category.id === activeCategory);
+      return [
+        {
+          id: activeCategory,
+          title: selected?.title ?? 'Boxes',
+          boxes: filteredBoxes
+        }
+      ];
+    }
+
+    return categories
+      .map((category) => ({
+        id: category.id,
+        title: category.title,
+        boxes: filteredBoxes.filter((box) => getBoxTags(box).includes(category.id))
+      }))
+      .filter((group) => group.boxes.length > 0);
+  }, [activeCategory, categories, filteredBoxes]);
+
+  const hotPicks = useMemo(
+    () => [...displayBoxes].filter((box) => !box.isUserCreated).sort((a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)).slice(0, 6),
     [displayBoxes]
   );
 
-  useEffect(() => {
-    const unsubscribe = subscribeBoxesPageConfig((nextConfig) => {
-      const normalized = normalizeBoxesPageConfig(nextConfig);
-      setConfig(normalized);
-      if (!hasInitializedRef.current) {
-        const categoryParam =
-          typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('category');
-        const hasCategoryParam = Boolean(categoryParam?.trim());
-        const categoryTabEnabled = normalized.tabs.items.some(
-          (tab) => tab.id === 'category' && tab.enabled
-        );
-        const defaultTab = normalized.tabs.enabled
-          ? (categoryTabEnabled ? 'category' : getDefaultTab(normalized.tabs))
-          : 'category';
-        if (!hasCategoryParam) {
-          setActiveTab(defaultTab);
-          setSelectedCategory('All');
-          setCategoryQueryParam(null);
-        }
-        setSortOption(normalized.filters.sort.default ?? 'Price High');
-        setSearchTerm('');
-        setSelectedTags([]);
-        setHasCategorySelection(false);
-        hasInitializedRef.current = true;
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (isTagsOpen) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }
-    return undefined;
-  }, [isTagsOpen]);
-
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedSearchTerm(searchTerm), 200);
-    return () => window.clearTimeout(timer);
-  }, [searchTerm]);
-  const formatDropdownLabel = (label: string) => {
-    if (!label) return label;
-    return label.charAt(0).toUpperCase() + label.slice(1);
-  };
-
-  const tagStats = useMemo(() => {
-    const counts = new Map<string, number>();
-    displayBoxes.filter((box) => !box.isUserCreated).forEach((box) => {
-      getBoxTags(box).forEach((tag) => {
-        counts.set(tag, (counts.get(tag) ?? 0) + 1);
-      });
-    });
-    return counts;
-  }, [displayBoxes]);
-
-  const tagOptions = useMemo(
-    () => Array.from(tagStats.keys()).sort((a, b) => a.localeCompare(b)),
-    [tagStats]
+  const topDropItems = useMemo(
+    () => displayBoxes
+      .filter((box) => !box.isUserCreated)
+      .flatMap((box) => box.items.slice(0, 2).map((item) => ({ ...item, sourceBoxId: box.id, sourceKey: `${box.id}-${item.id ?? item.name}` })))
+      .slice(0, 20),
+    [displayBoxes]
   );
-
-  const popularTags = useMemo(() => {
-    if (config.filters.tagChips.popularTags && config.filters.tagChips.popularTags.length > 0) {
-      return config.filters.tagChips.popularTags;
-    }
-    return Array.from(tagStats.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([tag]) => tag);
-  }, [config.filters.tagChips.popularTags, tagStats]);
-
-  const categoryCards = useMemo(() => config.filters.category.cards ?? [], [config.filters.category.cards]);
-  const mobileCategoryScrollbar = useScrollIndicator(categoryCards.length);
-  const desktopCategoryScrollbar = useScrollIndicator(categoryCards.length);
-
-  const categoryOptions = useMemo(() => {
-    const cardOptions = categoryCards
-      .filter((card) => card.categorySlug.trim())
-      .map((card) => ({
-        value: card.categorySlug,
-        label: card.label?.trim() || card.categorySlug
-      }));
-    if (cardOptions.length > 0) {
-      return [{ value: 'All', label: 'All Categories' }, ...cardOptions];
-    }
-    const configOptions = config.filters.category.options;
-    if (configOptions && configOptions.length > 0) {
-      return [
-        { value: 'All', label: 'All Categories' },
-        ...configOptions.map((option) => ({ value: option, label: option }))
-      ];
-    }
-    return [
-      { value: 'All', label: 'All Categories' },
-      ...tagOptions.map((option) => ({ value: option, label: option }))
-    ];
-  }, [categoryCards, config.filters.category.options, tagOptions]);
-
-  const sortOptions = useMemo(() => {
-    const configOptions = config.filters.sort.options;
-    if (configOptions && configOptions.length > 0) {
-      return configOptions;
-    }
-    return DEFAULT_SORT_OPTIONS;
-  }, [config.filters.sort.options]);
-
-  useEffect(() => {
-    if (!sortOption && sortOptions.length > 0) {
-      setSortOption(config.filters.sort.default ?? sortOptions[0] ?? 'Price High');
-    }
-  }, [config.filters.sort.default, sortOption, sortOptions]);
-
-  useEffect(() => {
-    if (!selectedCategory) {
-      setSelectedCategory('All');
-    }
-  }, [config.filters.category.default, selectedCategory]);
-
-  const enabledTabs = useMemo(
-    () => config.tabs.items.filter((tab) => tab.enabled),
-    [config.tabs.items]
-  );
-
-  useEffect(() => {
-    if (hasQueryAppliedRef.current) return;
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const categoryParam = params.get('category');
-    if (!categoryParam) return;
-    const normalizedParam = normalizeBoxTag(categoryParam);
-    if (!normalizedParam) return;
-    const matchedOption =
-      categoryOptions.find(
-        (option) =>
-          normalizeBoxTag(option.value) === normalizedParam ||
-          normalizeBoxTag(option.label) === normalizedParam
-      ) ?? null;
-    const selectedValue = matchedOption?.value ?? categoryParam;
-    const isAll = normalizeBoxTag(selectedValue) === 'all' || selectedValue === 'All';
-    const preferredTab = enabledTabs.some((tab) => tab.id === 'official')
-      ? 'official'
-      : getDefaultTab(config.tabs);
-    setActiveTab(preferredTab);
-    setSelectedCategory(isAll ? 'All' : selectedValue);
-    setHasCategorySelection(!isAll);
-    setCategoryQueryParam(isAll ? null : normalizedParam);
-    hasQueryAppliedRef.current = true;
-  }, [categoryOptions, config.tabs, enabledTabs]);
-
-  useEffect(() => {
-    if (!config.tabs.enabled) return;
-    if (!enabledTabs.some((tab) => tab.id === activeTab)) {
-      const categoryTabEnabled = enabledTabs.some((tab) => tab.id === 'category');
-      setActiveTab(categoryTabEnabled ? 'category' : getDefaultTab(config.tabs));
-    }
-  }, [activeTab, config.tabs, enabledTabs]);
-
-  useEffect(() => {
-    if (activeTab !== 'community') return;
-    setSelectedCategory('All');
-    setHasCategorySelection(false);
-    setSelectedTags([]);
-  }, [activeTab]);
-
-  const activeTags = useMemo(() => {
-    if (activeTab === 'community') return [];
-    return selectedTags;
-  }, [activeTab, selectedTags]);
-
-  const handleCategorySelection = (nextValue: string) => {
-    setSelectedCategory(nextValue);
-    const isAll = normalizeBoxTag(nextValue) === 'all' || nextValue === 'All';
-    setHasCategorySelection(!isAll);
-    setCategoryQueryParam(null);
-    setActiveTab('category');
-  };
-
-  const handleCategoryCardClick = (categorySlug: string) => {
-    playSound('click');
-    const normalizedSlug = normalizeBoxTag(categorySlug);
-    const normalizedSelected = normalizeBoxTag(selectedCategory);
-    const isToggleOff = normalizedSelected && normalizedSelected === normalizedSlug;
-    handleCategorySelection(isToggleOff ? 'All' : categorySlug);
-    if (isToggleOff) return;
-    window.setTimeout(() => {
-      const target = curatedRowRefs.current[normalizedSlug];
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 120);
-  };
-
-  const mainSortKey = sortLabelToKey(sortOption);
-
-  const filteredBoxes = useMemo(
-    () =>
-      applyBoxFilters(displayBoxes, {
-        tabId: activeTab,
-        searchTerm: config.filters.search.enabled ? debouncedSearchTerm : undefined,
-        tags: config.filters.tagChips.enabled ? activeTags : [],
-        category:
-          config.filters.category.enabled || categoryQueryParam
-            ? categoryQueryParam ?? selectedCategory
-            : undefined,
-        sortKey: config.filters.sort.enabled ? mainSortKey : undefined
-      }),
-    [
-      activeTab,
-      activeTags,
-      config.filters.category.enabled,
-      config.filters.sort.enabled,
-      config.filters.tagChips.enabled,
-      categoryQueryParam,
-      displayBoxes,
-      mainSortKey,
-      debouncedSearchTerm,
-      selectedCategory
-    ]
-  );
-
-  const curatedRows = useMemo(
-    () => (config.curatedRows ?? []).filter((row) => row.enabled),
-    [config.curatedRows]
-  );
-  const hasActiveSearch = Boolean(debouncedSearchTerm.trim());
-  const hasActiveCategoryFilter = hasCategorySelection || Boolean(categoryQueryParam);
-  const showCuratedRows = activeTab === 'official'
-    && !hasActiveSearch
-    && !hasActiveCategoryFilter
-    && curatedRows.length > 0;
-
-  const gridClassName = isChatCollapsed
-    ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
-    : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4';
-
-  const topDropItems = useMemo(() => {
-    const count = Math.min(20, Math.max(3, Number(config.featured?.topDropsCount ?? 8)));
-    return officialBoxes
-      .flatMap((box) =>
-        box.items.map((item, itemIndex) => ({
-          ...item,
-          sourceBoxId: box.id,
-          sourceKey: `${box.id}-${item.id}-${itemIndex}`
-        }))
-      )
-      .sort((a, b) => b.price - a.price)
-      .slice(0, count);
-  }, [config.featured?.topDropsCount, officialBoxes]);
-
-  const hotPicks = useMemo(() => {
-    const configuredIds = config.featured?.hotPickBoxIds ?? [];
-    const byIds = configuredIds
-      .map((id) => officialBoxes.find((box) => box.id === id))
-      .filter((box): box is typeof officialBoxes[number] => Boolean(box));
-    if (byIds.length > 0) return byIds.slice(0, 6);
-    return [...officialBoxes]
-      .sort((a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE))
-      .slice(0, 4);
-  }, [config.featured?.hotPickBoxIds, officialBoxes]);
-
-  const renderScreenshotCard = (box: typeof filteredBoxes[number], compact = false) => (
-    <button
-      key={box.id}
-      type="button"
-      onClick={() => {
-        playSound('click');
-        setView({ type: 'CASE_OPENING', boxId: box.id });
-      }}
-      onMouseEnter={() => playSound('hover')}
-      className={`group w-full rounded-2xl border border-white/5 bg-[#0d0d10] px-2 pb-3 pt-2 text-center transition hover:border-orange-400/40 ${compact ? 'max-w-[180px]' : ''}`}
-    >
-      <div
-        className={`relative mb-2 flex items-end justify-center overflow-hidden rounded-xl bg-gradient-to-b from-[#16161a] via-[#121216] to-[#0d0d10] ${compact ? 'h-[146px]' : 'h-[132px] sm:h-[170px]'}`}
-      >
-        <div
-          className="absolute bottom-4 h-8 w-24 rounded-full blur-xl"
-          style={{ background: `${box.accentColor}88` }}
-        />
-        <img
-          src={box.image}
-          alt={box.name}
-          loading="lazy"
-          className={`relative z-10 object-contain transition-transform duration-300 group-hover:scale-105 ${compact ? 'h-[128px] w-[128px]' : 'h-[112px] w-[112px] sm:h-[136px] sm:w-[136px]'}`}
-        />
-      </div>
-      <p className="truncate text-sm font-semibold tracking-tight text-white sm:text-base">{box.name}</p>
-      <div className="mx-auto mt-2 inline-flex items-center justify-center rounded-xl border border-orange-500/70 bg-[#1a0f0a] px-2.5 py-1 text-white">
-        <CoinAmount
-          amount={toCoins(box.price, PRICE_UNIT_MODE)}
-          formatOptions={{ maximumFractionDigits: 0 }}
-          className="text-sm font-semibold"
-          iconClassName="h-3.5 w-3.5"
-        />
-      </div>
-    </button>
-  );
-
-  const renderCuratedRow = (row: BoxesPageCuratedRow) => {
-    const maxMobile = clampGrid(row.maxMobile, 2);
-    const maxDesktop = clampGrid(row.maxDesktop, 4);
-    const gridClass = `grid ${gridCols[1]} gap-4 ${smGridCols[maxMobile]} ${lgGridCols[maxDesktop]}`;
-    const rowCategorySlug = row.filter?.category ? normalizeBoxTag(row.filter.category) : null;
-
-    const rowBoxes = row.mode === 'byIds'
-      ? (row.boxIds ?? [])
-          .map((id) => officialBoxes.find((box) => box.id === id))
-          .filter((box): box is typeof officialBoxes[number] => Boolean(box))
-      : applyBoxFilters(officialBoxes, {
-          tags: row.filter?.tag ? [row.filter.tag] : [],
-          category: row.filter?.category,
-          minPrice: row.filter?.minPrice,
-          maxPrice: row.filter?.maxPrice,
-          sortKey: sortLabelToKey(row.filter?.sort)
-        });
-
-    if (rowBoxes.length === 0) return null;
-
-    return (
-      <section
-        key={row.id}
-        ref={(element) => {
-          if (!rowCategorySlug) return;
-          curatedRowRefs.current[rowCategorySlug] = element;
-        }}
-        data-category={rowCategorySlug ?? undefined}
-        className="space-y-4"
-      >
-        <div>
-          <h3 className="text-lg font-semibold text-white">{row.title}</h3>
-          {row.subtitle && <p className="text-sm text-gray-400">{row.subtitle}</p>}
-        </div>
-        {row.layout === 'carousel' ? (
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 hidden w-10 bg-gradient-to-r from-[#050811] via-[#050811]/80 to-transparent sm:block" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 hidden w-10 bg-gradient-to-l from-[#050811] via-[#050811]/80 to-transparent sm:block" />
-            <div className="flex gap-4 overflow-x-auto pb-2 pt-1 snap-x snap-mandatory sm:overflow-visible">
-              {rowBoxes.map((box) => (
-                <div key={box.id} className="min-w-[240px] snap-start sm:min-w-0">
-                  <BoxCard
-                    box={box}
-                    onSelect={(boxId) => {
-                      playSound('click');
-                      setView({ type: 'CASE_OPENING', boxId });
-                    }}
-                    onHover={() => playSound('hover')}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className={gridClass}>
-            {rowBoxes.map((box) => (
-              <BoxCard
-                key={box.id}
-                box={box}
-                onSelect={(boxId) => {
-                  playSound('click');
-                  setView({ type: 'CASE_OPENING', boxId });
-                }}
-                onHover={() => playSound('hover')}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-    );
-  };
-
-  const mobileConfig = config.filters.mobile;
-  const showTagChipsInline = config.filters.tagChips.enabled && !mobileConfig.collapseTagChips;
-  const categoryVisibilityClass = mobileConfig.minimalTopRow ? 'hidden md:block' : 'block';
-  const sortVisibilityClass = mobileConfig.minimalTopRow ? 'hidden md:block' : 'block';
 
   return (
-    <section className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-3 pb-16 pt-3 sm:px-6 lg:px-8 animate-in fade-in duration-300 md:gap-8 md:pt-6">
-      {topDropItems.length > 0 && (
-        <div className="md:hidden -mx-3 overflow-hidden border-y border-white/10 bg-gradient-to-r from-[#211507] via-[#3f1c65] to-[#5b2bc9]">
-          <div className="flex">
-            <div className="flex min-w-[96px] flex-col items-center justify-center border-r border-orange-500/50 bg-black/35 px-2 py-2 text-center">
-              <Flame className="h-4 w-4 text-orange-400" />
-              <span className="mt-1 text-xs font-bold tracking-wide text-white">TOP</span>
-              <span className="text-xs font-bold tracking-wide text-white">DROPS</span>
+    <div className="w-full flex flex-col items-center pb-20">
+      <div className="w-full relative z-20">
+        <div className="w-full py-0 md:py-6 max-w-screen-2xl mx-auto px-2 md:px-16">
+          <div className="relative flex">
+            <div className="mr-0.5 flex items-center justify-center gap-0.5 overflow-hidden rounded-l border-r border-solid border-r-indigo-500 bg-neutral-800/40 bg-[radial-gradient(ellipse_at_right,rgba(99,102,241,0.25),rgba(99,102,241,0.12)_40%,rgba(99,102,241,0.06)_60%,transparent_85%)]">
+              <div className="flex h-full w-[80px] flex-col items-center justify-center gap-1.5 bg-[radial-gradient(ellipse_80%_100%_at_100%_50%,rgba(99,102,241,0.2),transparent_60%)] px-4 py-2">
+                <Gamepad2 className="h-5 w-5 text-indigo-400" />
+                <div className="text-center text-[11px] font-bold text-white leading-none">TOP<br />DROPS</div>
+              </div>
             </div>
-            <div className="flex-1 overflow-hidden">
-              <div className="ticker-animation flex w-max">
-                {[...topDropItems, ...topDropItems].map((item, index) => (
+            <div className="relative h-[92px] w-full overflow-hidden p-0 mask-linear-fade bg-neutral-900/30 border border-white/5 rounded-r-lg">
+              <div className="absolute top-0 flex h-full items-center gap-2 ticker-animation pl-4">
+                {[...topDropItems, ...topDropItems].map((item, i) => (
                   <button
-                    key={`${item.sourceKey}-${index}`}
+                    key={`${item.sourceKey}-${i}`}
+                    className="h-[70px] w-[70px] bg-neutral-800/80 rounded-md border-b-2 border-indigo-500/50 flex items-center justify-center p-2"
+                    onClick={() => {
+                      playSound('click');
+                      setView({ type: 'CASE_OPENING', boxId: item.sourceBoxId });
+                    }}
                     type="button"
-                    onClick={() => { playSound('click'); setView({ type: 'CASE_OPENING', boxId: item.sourceBoxId }); }}
-                    className="min-w-[95px] border-r border-black/30 p-2"
                   >
-                    <img src={item.image} alt={item.name} className="mx-auto h-16 w-16 object-contain" />
+                    <img src={item.image} className="w-full h-full object-contain" />
                   </button>
                 ))}
               </div>
             </div>
           </div>
         </div>
-      )}
-
-      {config.featured?.hotPicksEnabled !== false && hotPicks.length > 0 && (
-        <div className="md:hidden space-y-3">
-          <h2 className="pt-1 text-center text-4xl font-bold tracking-tight text-white">{config.featured?.hotPicksTitle ?? 'Hot Picks'}</h2>
-          <div className="grid grid-cols-2 gap-2">
-            {hotPicks.map((box) => renderScreenshotCard(box, true))}
-          </div>
-        </div>
-      )}
-
-      <div className="md:hidden -mx-1 rounded-3xl border border-white/10 bg-[#121317] px-2 pb-4 pt-2">
-        <div className="mb-3 flex items-center gap-2 overflow-x-auto px-1">
-          {categoryOptions.slice(0, 6).map((option, index) => {
-            const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(option.value);
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => handleCategorySelection(option.value)}
-                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-2xl px-3 py-2 text-sm font-semibold ${isSelected ? 'bg-[#1f2026] text-white' : 'text-gray-400'}`}
-              >
-                <Gem className="h-4 w-4 text-[#ff5a00]" />
-                {index === 0 ? 'All' : formatDropdownLabel(option.label)}
-              </button>
-            );
-          })}
-        </div>
-        <div className="mb-4 flex gap-2 px-1">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-gray-500" />
-            <Input
-              type="text"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search boxes"
-              className="h-12 rounded-xl border-white/10 bg-[#0c0d12] pl-10 text-sm"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsTagsOpen(true)}
-            className="h-12 w-12 rounded-xl bg-[#ff5a00] text-white"
-            aria-label="Open filters"
-          >
-            <Tag className="mx-auto h-5 w-5" />
-          </button>
-        </div>
-        <div className="mb-4 flex items-center gap-2 px-2 text-3xl font-semibold text-white">
-          <Gem className="h-6 w-6 text-[#ff5a00]" /> All
-        </div>
-        <div className="grid grid-cols-2 gap-2 px-1">
-          {filteredBoxes.map((box) => renderScreenshotCard(box, true))}
-        </div>
       </div>
 
-      <div className="hidden md:block">
-      <section className="mx-auto flex w-full flex-col gap-6 animate-in fade-in duration-300 md:gap-8">
-      <div className="md:hidden sticky top-0 z-20 -mx-4 bg-[#050811]/95 px-4 pb-4 pt-2 backdrop-blur border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              playSound('click');
-              setView({ type: 'HOME' });
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#0f141f] text-gray-300"
-            aria-label="Back"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="truncate text-lg font-semibold text-white">Mystery Boxes</h1>
-            {!mobileConfig.compactTop && (
-              <p className="text-xs text-gray-400">Filter by tag to find the box you want.</p>
-            )}
-          </div>
-        </div>
+      <div
+        className="w-full bg-cover bg-center border-y border-white/5 relative"
+        style={{
+          backgroundImage:
+            'linear-gradient(to bottom, rgba(10, 10, 10, 0) 0%, rgba(10, 10, 10, 1) 80%), url("https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/events/d9b9dd07-b0b9-4dd9-ab9a-8c6c39ff2573/dc87c8d4a11b30b9a17b26ab68b228a297884306/banner.webp")'
+        }}
+      >
+        <div className="mx-auto flex max-w-[1675px] flex-col items-center px-4 pt-8 pb-12">
+          <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter mb-8 drop-shadow-lg">
+            Hot <span className="text-indigo-500">Picks</span>
+          </h1>
 
-        {config.tabs.enabled && enabledTabs.length > 0 && (
-          <div className="mt-3 flex rounded-full border border-white/10 bg-[#0b0f1a] p-1">
-            {enabledTabs.map((tab) => (
+          <div className="flex flex-wrap justify-center gap-4 w-full">
+            {hotPicks.map((box) => (
               <button
-                key={tab.id}
-                type="button"
+                key={box.id}
                 onClick={() => {
                   playSound('click');
-                  setActiveTab(tab.id);
+                  setView({ type: 'CASE_OPENING', boxId: box.id });
                 }}
-                className={`flex-1 truncate rounded-full px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition ${
-                  activeTab === tab.id
-                    ? 'bg-brand-purple/30 text-white shadow-[0_0_12px_rgba(124,58,237,0.35)]'
-                    : 'text-gray-400 hover:text-white'
-                }`}
+                className="group relative flex flex-col items-center w-[150px] sm:w-[165px] md:w-[180px] cursor-pointer transition-transform hover:-translate-y-1"
+                type="button"
               >
-                {tab.label}
+                <div className="relative w-full h-[170px] sm:h-[180px] flex items-center justify-center">
+                  <img
+                    src={box.image}
+                    alt={box.name}
+                    className="h-full w-full object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <div className="mt-2 text-center">
+                  <div className="text-xs font-bold text-white truncate max-w-[150px] mb-2">{box.name}</div>
+                  <div className="inline-flex items-center gap-1.5 bg-indigo-900/80 border border-indigo-500/50 rounded-md px-3 py-1">
+                    <CoinAmount
+                      amount={toCoins(box.price, PRICE_UNIT_MODE)}
+                      formatOptions={{ maximumFractionDigits: 0 }}
+                      className="text-sm font-bold text-white"
+                      iconClassName="h-4 w-4"
+                    />
+                  </div>
+                </div>
               </button>
             ))}
           </div>
-        )}
-
-        {config.filters.search.enabled && (
-          <div className="relative mt-3">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-            <Input
-              type="text"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder={config.filters.search.placeholder ?? 'Search boxes'}
-              className="pl-9 pr-3 py-2 text-sm"
-            />
-          </div>
-        )}
-
-        <div className="mt-3 flex justify-end gap-2">
-          {config.filters.tagChips.enabled && (
-            <button
-              type="button"
-              onClick={() => setIsTagsOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0f141f] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-300"
-            >
-              <Tag className="h-3 w-3" /> Tags
-            </button>
-          )}
-        </div>
-        <div className="mt-2 flex w-full justify-center">
-          <RiskLegend className="w-full justify-center" />
         </div>
       </div>
 
-      {config.filters.category.enabled && categoryCards.length > 0 && (
-        <div className="md:hidden -mx-4 px-4">
-          <div className="rounded-2xl border border-white/10 bg-[#0b0f1a]/80 p-3 shadow-[0_0_12px_rgba(15,23,42,0.45)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">Categories</p>
-            <div className="relative mt-2">
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-              <div
-                ref={mobileCategoryScrollbar.scrollRef}
-                className="category-scrollbar flex gap-2 overflow-x-scroll pb-2 pt-1"
-              >
-                {categoryCards.map((card) => {
-                  const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(card.categorySlug);
-                  return (
-                    <div
-                      key={card.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleCategoryCardClick(card.categorySlug)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          handleCategoryCardClick(card.categorySlug);
-                        }
-                      }}
-                      className={`group relative min-w-[120px] overflow-hidden rounded-lg border bg-[#0b0e14] text-left transition ${
-                        isSelected
-                          ? 'border-brand-purple/70 shadow-[0_0_10px_rgba(124,58,237,0.35)]'
-                          : 'border-white/10'
-                      }`}
-                    >
-                      <img
-                        src={card.imageUrl}
-                        alt={card.label || card.categorySlug}
-                        loading="lazy"
-                        className="h-12 w-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#050811] via-[#050811]/40 to-transparent" />
-                      <span className="absolute bottom-1.5 left-2 text-[10px] font-semibold text-white drop-shadow">
-                        {card.label || card.categorySlug}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="category-scrollbar-indicator" aria-hidden="true">
-                <span
-                  className="category-scrollbar-indicator__thumb"
-                  style={{
-                    width: `${mobileCategoryScrollbar.thumbStyle.width}px`,
-                    transform: `translateX(${mobileCategoryScrollbar.thumbStyle.left}px)`
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="hidden md:flex md:flex-col md:gap-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
+      <div className="w-full bg-neutral-950 sticky top-[70px] z-30 shadow-xl border-b border-white/5">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-4 md:pb-0 mb-4 border-b border-white/5 md:border-none">
             <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                setView({ type: 'HOME' });
-              }}
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#0f141f] px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:text-white"
+              onClick={() => setActiveCategory('all')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${activeCategory === 'all' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
             >
-              <ChevronLeft className="w-4 h-4" /> Back
+              All
             </button>
-            <div>
-              <h1 className="text-3xl font-bold text-white">
-                Open Online Mystery Boxes And Win Real-Life Items
-              </h1>
-              <p className="text-sm text-gray-400">Filter by tag to find the box you want.</p>
-            </div>
-          </div>
-        </div>
-
-        {config.tabs.enabled && enabledTabs.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3">
-            {enabledTabs.map((tab) => (
+            {categories.map((cat) => (
               <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  setActiveTab(tab.id);
-                }}
-                className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
-                  activeTab === tab.id
-                    ? 'border-brand-purple/60 bg-brand-purple/20 text-white shadow-[0_0_12px_rgba(124,58,237,0.35)]'
-                    : 'border-white/10 bg-[#0b0f1a] text-gray-400 hover:border-white/30 hover:text-white'
-                }`}
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${activeCategory === cat.id ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
               >
-                {tab.label}
+                <div className="w-4 h-4 rounded-full bg-indigo-500" />
+                {cat.title}
               </button>
             ))}
           </div>
-        )}
-      </div>
 
-      <div className="hidden md:flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#0b0f1a]/80 p-4 shadow-[0_0_18px_rgba(15,23,42,0.6)]">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          {config.filters.search.enabled && (
-            <div className="relative w-full md:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-              <Input
+          <div className="flex flex-col md:flex-row items-center gap-4 bg-neutral-900/50 p-2 rounded-xl border border-white/5">
+            <div className="flex items-center gap-2 bg-neutral-950 rounded-lg px-3 py-2.5 border border-white/5 flex-1 w-full md:w-auto">
+              <Search className="h-4 w-4 text-neutral-500" />
+              <input
                 type="text"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder={config.filters.search.placeholder ?? 'Search boxes'}
-                className="pl-9 pr-3 py-2 text-sm"
+                placeholder="Search boxes..."
+                className="bg-transparent border-none outline-none text-sm text-white placeholder-neutral-600 w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-          )}
 
-          <div className="flex w-full items-center justify-between gap-2 md:w-auto md:flex-1">
-            {config.filters.category.enabled && (
-              <div className={`${categoryVisibilityClass} min-w-[170px] flex-1`}>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Category</label>
-                <Select
-                  value={selectedCategory}
-                  onChange={(event) => {
-                    handleCategorySelection(event.target.value);
-                  }}
-                >
-                  {categoryOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label === 'All Categories' ? option.label : formatDropdownLabel(option.label)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
-
-            {config.filters.sort.enabled && (
-              <div className={`${sortVisibilityClass} min-w-[160px] flex-1`}>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Sort</label>
-                <Select
-                  value={sortOption}
-                  onChange={(event) => setSortOption(event.target.value)}
-                >
-                  {sortOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {formatDropdownLabel(option)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
-
-          </div>
-        </div>
-        <div className="flex w-full justify-end">
-          <RiskLegend className="justify-end" />
-        </div>
-
-        {config.filters.category.enabled && categoryCards.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">Categories</p>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-              <div
-                ref={desktopCategoryScrollbar.scrollRef}
-                className="category-scrollbar flex gap-2 overflow-x-scroll pb-2 pt-1"
-              >
-                {categoryCards.map((card) => {
-                  const isSelected = normalizeBoxTag(selectedCategory) === normalizeBoxTag(card.categorySlug);
-                  return (
-                    <div
-                      key={card.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleCategoryCardClick(card.categorySlug)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          handleCategoryCardClick(card.categorySlug);
-                        }
-                      }}
-                      className={`group relative min-w-[140px] overflow-hidden rounded-xl border bg-[#0b0e14] text-left transition ${
-                        isSelected
-                          ? 'border-brand-purple/70 shadow-[0_0_12px_rgba(124,58,237,0.35)]'
-                          : 'border-white/10 hover:border-white/30'
-                      }`}
-                    >
-                      <img
-                        src={card.imageUrl}
-                        alt={card.label || card.categorySlug}
-                        loading="lazy"
-                        className="h-16 w-full object-cover transition-transform duration-300 group-hover:scale-105 sm:h-20"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#050811] via-[#050811]/40 to-transparent" />
-                      <span className="absolute bottom-2 left-2 text-[11px] font-semibold text-white drop-shadow">
-                        {card.label || card.categorySlug}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="category-scrollbar-indicator" aria-hidden="true">
-                <span
-                  className="category-scrollbar-indicator__thumb"
-                  style={{
-                    width: `${desktopCategoryScrollbar.thumbStyle.width}px`,
-                    transform: `translateX(${desktopCategoryScrollbar.thumbStyle.left}px)`
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {config.filters.tagChips.enabled && showTagChipsInline && popularTags.length > 0 && (
-          <div className="space-y-2 hidden md:block">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
-              {config.filters.tagChips.label ?? 'Popular tags'}
-            </p>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-[#0b0f1a] to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[#0b0f1a] to-transparent" />
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {popularTags.map((tag) => {
-                  const isSelected = selectedTags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        setSelectedTags((prev) =>
-                          prev.includes(tag) ? prev.filter((existing) => existing !== tag) : [...prev, tag]
-                        );
-                      }}
-                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
-                        isSelected
-                          ? 'bg-blue-600/20 border-blue-500 text-blue-200'
-                          : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'
-                      }`}
-                    >
-                      <Tag className="h-3 w-3" />
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {showCuratedRows && (
-        <div className="space-y-10">
-          {curatedRows.map((row) => renderCuratedRow(row))}
-        </div>
-      )}
-
-      {filteredBoxes.length > 0 && (
-        <div className={`grid gap-4 ${gridClassName}`}>
-          {filteredBoxes.map((box) => (
-            <BoxCard
-              key={box.id}
-              box={box}
-              onSelect={(boxId) => {
-                playSound('click');
-                setView({ type: 'CASE_OPENING', boxId });
-              }}
-              onHover={() => playSound('hover')}
-            />
-          ))}
-        </div>
-      )}
-
-      {isTagsOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:hidden">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 pb-10 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-sm font-semibold text-white">Tags</h3>
-              <button
-                type="button"
-                onClick={() => setIsTagsOpen(false)}
-                className="text-gray-400 transition hover:text-white"
-                aria-label="Close tags"
-              >
-                <X className="h-4 w-4" />
+            <div className="hidden md:flex items-center gap-3">
+              <button className="flex items-center gap-2 px-4 py-2.5 bg-neutral-800 rounded-lg text-xs font-bold text-white hover:bg-neutral-700 transition-colors">
+                <span>Default</span>
+                <ChevronDown className="h-3 w-3" />
               </button>
             </div>
-            <div className="space-y-4 pt-4">
-              {config.filters.tagChips.enabled && popularTags.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {popularTags.map((tag) => {
-                    const isSelected = selectedTags.includes(tag);
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => {
-                          playSound('click');
-                          setSelectedTags((prev) =>
-                            prev.includes(tag) ? prev.filter((existing) => existing !== tag) : [...prev, tag]
-                          );
-                        }}
-                        className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
-                          isSelected
-                            ? 'bg-blue-600/20 border-blue-500 text-blue-200'
-                            : 'bg-[#0b0e14] border-gray-700 text-gray-400 hover:border-gray-500'
-                        }`}
-                      >
-                        <Tag className="h-3 w-3" />
-                        {tag}
-                      </button>
-                    );
-                  })}
+
+            <button className="md:hidden flex items-center justify-center w-full py-2.5 bg-indigo-600 rounded-lg text-sm font-bold text-white" type="button">
+              <Filter className="h-4 w-4 mr-2" /> Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full max-w-6xl mx-auto px-4 py-8 min-h-screen">
+        <div className="flex flex-col gap-12">
+          {groupedBoxes.map((group) => (
+            <div key={group.id} className="flex flex-col gap-4">
+              {activeCategory === 'all' && (
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5">
+                    <div className="w-4 h-4 rounded-full bg-indigo-500" />
+                  </div>
+                  <h2 className="text-xl font-bold text-white">{group.title}</h2>
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500">No tags configured.</p>
               )}
+
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {group.boxes.map((box) => (
+                  <button
+                    key={box.id}
+                    onClick={() => {
+                      playSound('click');
+                      setView({ type: 'CASE_OPENING', boxId: box.id });
+                    }}
+                    className="group flex flex-col items-center bg-[#131315] rounded-xl overflow-hidden border border-white/5 cursor-pointer hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
+                    type="button"
+                  >
+                    <div className="relative w-full h-[170px] sm:h-[180px] p-4 sm:p-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent">
+                      <img
+                        src={box.image}
+                        alt={box.name}
+                        className="h-full w-full object-contain drop-shadow-xl group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300"
+                      />
+                    </div>
+
+                    <div className="w-full p-4 flex flex-col items-center border-t border-white/5 bg-neutral-900/50">
+                      <div className="text-xs font-bold text-white text-center mb-3 line-clamp-1 group-hover:text-indigo-400 transition-colors">
+                        {box.name}
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 bg-indigo-600 px-3 sm:px-4 py-1.5 rounded-lg shadow-md shadow-indigo-900/20 group-hover:bg-indigo-500 transition-colors">
+                        <CoinAmount
+                          amount={toCoins(box.price, PRICE_UNIT_MODE)}
+                          formatOptions={{ maximumFractionDigits: 0 }}
+                          className="text-base sm:text-lg font-bold text-white"
+                          iconClassName="h-4 w-4 sm:h-5 sm:w-5"
+                        />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="mt-6 flex items-center justify-between pb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  setSelectedTags([]);
-                }}
-                className="text-xs font-semibold uppercase tracking-wide text-gray-400 transition hover:text-white"
-              >
-                Clear tags
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsTagsOpen(false)}
-                className="rounded-full bg-brand-purple px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-purple-500"
-              >
-                Done
-              </button>
+          ))}
+
+          {groupedBoxes.length === 0 && (
+            <div className="w-full py-20 text-center text-neutral-500">
+              <p>No boxes found matching your search.</p>
             </div>
+          )}
+        </div>
+
+        <div className="mt-20 pt-8 border-t border-white/5">
+          <div className="prose prose-invert prose-sm max-w-none text-neutral-400">
+            <h2 className="text-xl font-bold text-white mb-4">Browse by Category</h2>
+            <p className="mb-4">
+              Pullz mystery boxes are split into category groups. Each box lists every possible item and the exact drop rates before you open.
+            </p>
+            <h2 className="text-xl font-bold text-white mb-4">How Box Opening Works</h2>
+            <p>
+              Browse the full catalog and buy a mystery box online in seconds. Pick any box, and before you open, every item inside is visible along with its drop rate. After opening, choose to ship the item or trade it in for Credits and use them on any other box.
+            </p>
           </div>
         </div>
-      )}
-
-      {previewAsUser && (
-        <div className="sr-only" aria-hidden="true">
-          Preview mode enabled
-        </div>
-      )}
-      </section>
       </div>
-    </section>
+    </div>
   );
-  };
+};
