@@ -151,8 +151,6 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
             </button>
 
             <div className="relative flex items-center overflow-hidden bg-[linear-gradient(180deg,#0a0d14_0%,#07090e_100%)]">
-              <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-[3px] -translate-x-1/2 bg-white shadow-[0_0_22px_rgba(255,255,255,0.7)]" />
-              <div className="pointer-events-none absolute bottom-0 left-1/2 z-20 h-0 w-0 -translate-x-1/2 border-l-[8px] border-r-[8px] border-t-[10px] border-l-transparent border-r-transparent border-t-white" />
               <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-r from-[#090c13] to-transparent sm:w-20" />
               <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#090c13] to-transparent sm:w-20" />
 
