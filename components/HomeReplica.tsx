@@ -63,16 +63,25 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const chipBoxes = useMemo(() => boxes.slice(0, 18), [boxes]);
   const [demoSpinIndex, setDemoSpinIndex] = useState(0);
 
+  const spinnerReel = useMemo(() => {
+    if (featuredBoxes.length === 0) return [];
+    return Array.from({ length: 18 }, (_, index) => featuredBoxes[index % featuredBoxes.length]);
+  }, [featuredBoxes]);
+
   useEffect(() => {
-    if (featuredBoxes.length <= 1) return undefined;
+    if (spinnerReel.length <= 1) return undefined;
     const intervalId = window.setInterval(() => {
-      setDemoSpinIndex((current) => (current + 1) % featuredBoxes.length);
-    }, 1400);
+      setDemoSpinIndex((current) => (current + 1) % spinnerReel.length);
+    }, 1200);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [featuredBoxes]);
+  }, [spinnerReel.length]);
+
+  const spinnerCardWidth = 120;
+  const spinnerGap = 12;
+  const activeBox = spinnerReel[demoSpinIndex] ?? featuredBoxes[0];
 
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
@@ -89,44 +98,57 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         <p className="pb-3 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
           Best mystery boxes online
         </p>
-        <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#090b11] px-3 py-4 sm:px-4 sm:py-5">
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#090b11] to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#090b11] to-transparent" />
-          <div className="pointer-events-none absolute left-1/2 top-3 z-20 h-[calc(100%-24px)] w-[2px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#ffffff33] via-white to-[#ffffff33] shadow-[0_0_18px_rgba(255,255,255,0.45)]" />
+        <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#0b0e14] p-1 shadow-2xl">
+          <div className="relative flex h-52 items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] sm:h-60">
+            <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-cyan-400/35" />
+            <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-r from-[#0b0e14] to-transparent sm:w-24" />
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#0b0e14] to-transparent sm:w-24" />
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 sm:gap-3">
-            {featuredBoxes.map((box, index) => {
-              const offset = Math.abs(index - demoSpinIndex);
-              const isActive = index === demoSpinIndex;
-              return (
+            <div
+              className="flex px-[50%] will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.18,0.84,0.32,1)]"
+              style={{
+                gap: `${spinnerGap}px`,
+                marginLeft: `-${spinnerCardWidth / 2}px`,
+                transform: `translateX(-${demoSpinIndex * (spinnerCardWidth + spinnerGap)}px)`
+              }}
+            >
+              {spinnerReel.map((box, idx) => (
                 <button
                   type="button"
-                  key={box.id}
+                  key={`${box.id}-${idx}`}
                   onClick={() => onOpenBox(box.id)}
-                  className={`relative w-[150px] shrink-0 rounded-xl border px-3 py-4 text-left transition-all duration-500 sm:w-[170px] ${
-                    isActive
-                      ? 'border-white/70 bg-white/10 shadow-[0_0_24px_rgba(255,255,255,0.24)]'
-                      : 'border-white/15 bg-black/30 hover:border-white/35'
-                  } ${offset >= 2 ? 'opacity-60' : 'opacity-100'}`}
+                  className="relative flex h-[120px] w-[120px] flex-shrink-0 flex-col items-center justify-center rounded-xl border border-gray-800 bg-[#151a23] p-3"
                 >
-                  <p className="line-clamp-2 text-sm font-semibold text-white">{box.name}</p>
-                  <p className="mt-5 text-[11px] uppercase tracking-[0.12em] text-gray-400">
-                    {isActive ? 'Demo winning slot' : 'Spinner item'}
-                  </p>
-                  {isActive && (
-                    <div className="absolute inset-0 rounded-xl border border-[#7e76ff99]" />
-                  )}
+                  <div
+                    className="absolute inset-4 rounded-full opacity-90"
+                    style={{
+                      background: `radial-gradient(circle, ${(box.accentColor || '#7e76ff')}75 0%, ${(box.accentColor || '#7e76ff')}2d 45%, ${(box.accentColor || '#7e76ff')}00 78%)`
+                    }}
+                  />
+                  <img
+                    loading="lazy"
+                    decoding="async"
+                    src={box.image}
+                    alt={box.name}
+                    className="relative z-10 h-14 w-14 object-contain"
+                  />
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl opacity-60"
+                    style={{ backgroundColor: box.accentColor || '#7e76ff' }}
+                  />
                 </button>
-              );
-            })}
+              ))}
+            </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-[#7e76ff33] bg-[#7e76ff14] px-3 py-2 text-xs sm:text-sm">
-            <p className="font-semibold uppercase tracking-[0.12em] text-[#c9c5ff]">Demo spinner preview</p>
+          <div className="flex flex-col gap-2 border-t border-gray-800 bg-[#0b0e14] p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-[#c9c5ff] sm:text-xs">
+              Demo spinner (same style as unboxing reel)
+            </p>
             <button
               type="button"
-              onClick={() => featuredBoxes[demoSpinIndex] && onOpenBox(featuredBoxes[demoSpinIndex].id)}
-              className="rounded-md bg-[#5a55ff] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white hover:bg-[#6d68ff]"
+              onClick={() => activeBox && onOpenBox(activeBox.id)}
+              className="rounded-md bg-[#5a55ff] px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-white hover:bg-[#6d68ff]"
             >
               Open shown box
             </button>
