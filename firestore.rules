@@ -19,12 +19,36 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+
+    match /usernames/{usernameLower} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && !exists(/databases/$(database)/documents/usernames/$(usernameLower))
+        && usernameLower.matches('^[a-z0-9_]{3,16}$')
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if isSignedIn()
-        && ((request.auth.uid == uid && !('coins' in request.resource.data)) || isAdmin());
+        && request.auth.uid == uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email is string
+        && request.resource.data.username is string
+        && request.resource.data.username.size() > 0
+        && request.resource.data.usernameLower is string
+        && request.resource.data.usernameLower.matches('^[a-z0-9_]{3,16}$');
       allow update: if isSignedIn()
-        && ((request.auth.uid == uid && request.resource.data.coins == resource.data.coins) || isAdmin());
+        && request.auth.uid == uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email is string
+        && request.resource.data.username is string
+        && request.resource.data.username.size() > 0
+        && request.resource.data.usernameLower is string
+        && request.resource.data.usernameLower.matches('^[a-z0-9_]{3,16}$')
+        && request.resource.data.usernameLower == resource.data.usernameLower;
       allow delete: if false;
     }
 
@@ -99,6 +123,14 @@ service cloud.firestore {
 
     match /provablyFairReveals/{uid}/reveals/{revealId} {
       allow read, write: if false;
+    }
+
+    match /admin/{docId} {
+      allow read, write: if isAdmin();
+
+      match /{document=**} {
+        allow read, write: if isAdmin();
+      }
     }
 
     match /supportCases/{caseId} {
