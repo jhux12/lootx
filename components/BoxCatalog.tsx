@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Filter, ChevronDown } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -12,10 +12,16 @@ type BoxCatalogProps = {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
+  const stickyHeaderOffset = 'var(--pullz-header-height, 72px)';
   const { boxes, setView } = useGame();
   const { playSound } = useSound();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const stickySentinelRef = useRef<HTMLDivElement | null>(null);
+  const stickyPanelRef = useRef<HTMLDivElement | null>(null);
+  const [isMobileStickyPinned, setIsMobileStickyPinned] = useState(false);
+  const [stickyPanelHeight, setStickyPanelHeight] = useState(0);
+  const mobilePinnedRef = useRef(false);
 
   const displayBoxes = useMemo(
     () => boxes.filter((box) => !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
@@ -80,9 +86,71 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     [displayBoxes]
   );
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const getHeaderHeight = () => {
+      const cssValue = getComputedStyle(document.documentElement).getPropertyValue('--pullz-header-height').trim();
+      const parsed = Number.parseFloat(cssValue);
+      return Number.isFinite(parsed) ? parsed : 72;
+    };
+
+    let rafId = 0;
+
+    const syncStickyState = () => {
+      const sentinel = stickySentinelRef.current;
+      const panel = stickyPanelRef.current;
+      if (!sentinel || !panel) return;
+
+      const headerHeight = getHeaderHeight();
+      const sentinelTop = sentinel.getBoundingClientRect().top;
+      const isMobile = window.innerWidth < 768;
+      const pinStart = headerHeight;
+      const pinRelease = headerHeight + 24;
+      const shouldPinOnMobile = isMobile
+        ? (mobilePinnedRef.current ? sentinelTop <= pinRelease : sentinelTop <= pinStart)
+        : false;
+
+      if (mobilePinnedRef.current != shouldPinOnMobile) {
+        mobilePinnedRef.current = shouldPinOnMobile;
+        setIsMobileStickyPinned(shouldPinOnMobile);
+      }
+
+      setStickyPanelHeight((prev) => (prev !== panel.offsetHeight ? panel.offsetHeight : prev));
+    };
+
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = 0;
+        syncStickyState();
+      });
+    };
+
+    syncStickyState();
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', syncStickyState);
+
+    const observer = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(syncStickyState);
+
+    if (stickyPanelRef.current && observer) {
+      observer.observe(stickyPanelRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', syncStickyState);
+      observer?.disconnect();
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, []);
+
   return (
-    <div className="w-full flex flex-col items-center pb-20">
-      <div className="w-full relative z-20">
+    <div className="w-full pb-20">
+      <div className="w-full relative z-0">
         <div className="w-full py-0 md:py-6 max-w-screen-2xl mx-auto px-2 md:px-16">
           <TopDropsSlider
             boxes={displayBoxes}
@@ -141,9 +209,18 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       </div>
 
-      <div className="w-full bg-neutral-950 sticky top-[70px] z-30 shadow-xl border-b border-white/5">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-4 md:pb-0 mb-4 border-b border-white/5 md:border-none">
+      <div
+        ref={stickySentinelRef}
+        className="w-full"
+        style={isMobileStickyPinned ? { height: stickyPanelHeight || undefined } : undefined}
+      >
+        <div
+          ref={stickyPanelRef}
+          className={`${isMobileStickyPinned ? 'fixed left-0 right-0' : 'sticky'} z-30 w-full border-b border-white/5 bg-neutral-950 shadow-xl`}
+          style={{ top: stickyHeaderOffset }}
+        >
+          <div className="max-w-6xl mx-auto px-4 py-4">
+            <div className="-mx-1 mb-4 flex items-center gap-2 overflow-x-auto px-1 pb-4 scrollbar-hide md:mx-0 md:px-0 md:pb-0 border-b border-white/5 md:border-none [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch]">
             <button
               onClick={() => setActiveCategory('all')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${activeCategory === 'all' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
@@ -162,7 +239,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             ))}
           </div>
 
-          <div className="flex flex-col md:flex-row items-center gap-4 bg-neutral-900/50 p-2 rounded-xl border border-white/5">
+            <div className="flex flex-col md:flex-row items-center gap-4 bg-neutral-900/50 p-2 rounded-xl border border-white/5">
             <div className="flex items-center gap-2 bg-neutral-950 rounded-lg px-3 py-2.5 border border-white/5 flex-1 w-full md:w-auto">
               <Search className="h-4 w-4 text-neutral-500" />
               <input
@@ -184,6 +261,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             <button className="md:hidden flex items-center justify-center w-full py-2.5 bg-indigo-600 rounded-lg text-sm font-bold text-white" type="button">
               <Filter className="h-4 w-4 mr-2" /> Filters
             </button>
+            </div>
           </div>
         </div>
       </div>
