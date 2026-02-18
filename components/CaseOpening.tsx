@@ -1165,7 +1165,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Value</span>
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-gray-400">Value</span>
                     <CoinAmount amount={toCoins(selectedCaseItem.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-2 justify-center text-lg font-bold text-white" iconClassName="h-4 w-4" />
                   </div>
                   <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
