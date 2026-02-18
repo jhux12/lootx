@@ -138,6 +138,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [rewardResolved, setRewardResolved] = useState(false);
   const [selectedCaseItem, setSelectedCaseItem] = useState<CaseItem | null>(null);
   const [spinFeedbackMessage, setSpinFeedbackMessage] = useState<string | null>(null);
+  const [spinCount, setSpinCount] = useState(1);
+  const [fastSpinEnabled, setFastSpinEnabled] = useState(false);
+  const [queuedSpinCount, setQueuedSpinCount] = useState(0);
+  const [queuedSpinProgress, setQueuedSpinProgress] = useState(0);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -151,6 +155,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const bodyOverflowRef = useRef<string>('');
   const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
+  const queuedSpinOptionsRef = useRef<{ isDemo?: boolean; forceGold?: boolean } | null>(null);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
@@ -397,6 +402,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     // Completion callback
     setTimeout(onComplete, duration + 200);
   };
+
+  const getSpinDuration = useCallback((duration: number) => {
+    if (!fastSpinEnabled) return duration;
+    return Math.max(900, Math.floor(duration * 0.45));
+  }, [fastSpinEnabled]);
 
   const handleSpin = async ({ isDemo = false, forceGold = false }: { isDemo?: boolean; forceGold?: boolean } = {}) => {
     if (isSpinning) return;
@@ -652,7 +662,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items, true);
         setReelItems(ticketReel);
         
-        animateSpin(4500, () => {
+        animateSpin(getSpinDuration(4500), () => {
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
             setIsGoldMode(true);
@@ -664,11 +674,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 const goldReel = generateReel(winner, pool, true);
                 setReelItems(goldReel);
                 
-                animateSpin(4000, () => {
+                animateSpin(getSpinDuration(4000), () => {
                     // Stage 2 Complete
                     finishSpin(winner);
                 });
-            }, 1000);
+            }, fastSpinEnabled ? 250 : 1000);
         });
 
     } else {
@@ -676,7 +686,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const normalReel = generateReel(winner, items, true);
         setReelItems(normalReel);
         
-        animateSpin(5000, () => {
+        animateSpin(getSpinDuration(5000), () => {
             finishSpin(winner);
         });
     }
@@ -684,7 +694,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleTryFree = () => {
     setSpinFeedbackMessage(null);
-    handleSpin({ isDemo: true });
+    startSpinSequence({ isDemo: true });
   };
 
   useEffect(() => {
@@ -702,6 +712,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsSpinning(false);
     setIsBoxPreviewVisible(true);
     setIsBoxPreviewFading(false);
+
+    if (queuedSpinCount > 0) {
+      const nextRemaining = queuedSpinCount - 1;
+      setQueuedSpinCount(nextRemaining);
+      setQueuedSpinProgress((current) => current + 1);
+      setWonItem(item);
+      setRewardResolved(false);
+      window.setTimeout(() => {
+        const options = queuedSpinOptionsRef.current ?? {};
+        handleSpin({ isDemo: options.isDemo, forceGold: options.forceGold });
+      }, fastSpinEnabled ? 160 : 360);
+      return;
+    }
+
+    setQueuedSpinProgress(0);
     setShowWinModal(true);
     setWonItem(item);
     setRewardResolved(false);
@@ -710,6 +735,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (item.rarity === 'legendary') playSound('win-gold');
     else if (item.rarity === 'epic' || item.rarity === 'rare') playSound('win-rare');
     else playSound('win-common');
+  };
+
+  const startSpinSequence = (options: { isDemo?: boolean; forceGold?: boolean } = {}) => {
+    queuedSpinOptionsRef.current = options;
+    const totalSpins = Math.max(1, spinCount);
+    setQueuedSpinProgress(1);
+    setQueuedSpinCount(Math.max(0, totalSpins - 1));
+    handleSpin(options);
   };
 
   const closeWinModal = () => {
@@ -915,21 +948,43 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="bg-[#0b0e14] p-4 flex flex-col sm:flex-row items-center justify-center gap-3 border-t border-gray-800 relative z-20">
+            <div className="bg-[#0b0e14] p-4 flex flex-col items-center justify-center gap-3 border-t border-gray-800 relative z-20">
+                 <div className="w-full flex flex-wrap items-center justify-center gap-2">
+                    {[1, 2, 3, 4, 5].map((count) => (
+                      <button
+                        key={count}
+                        type="button"
+                        disabled={isSpinning}
+                        onClick={() => setSpinCount(count)}
+                        className={`h-10 w-10 rounded-lg border text-sm font-bold transition-colors ${spinCount === count ? 'border-indigo-400 bg-indigo-500/20 text-white' : 'border-gray-700 bg-black/30 text-gray-400 hover:text-white'} disabled:opacity-50`}
+                      >
+                        {count}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setFastSpinEnabled((value) => !value)}
+                      disabled={isSpinning}
+                      className={`ml-1 inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold uppercase tracking-wide transition-colors ${fastSpinEnabled ? 'border-indigo-400 bg-indigo-500/20 text-indigo-100' : 'border-gray-700 bg-black/30 text-gray-400 hover:text-white'} disabled:opacity-50`}
+                    >
+                      <Zap className={`h-4 w-4 ${fastSpinEnabled ? 'fill-current' : ''}`} />
+                      Fast
+                    </button>
+                 </div>
                  <button 
-                    onClick={() => handleSpin()}
+                    onClick={() => startSpinSequence()}
                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
-                    className={`w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
+                    className={`w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
                 >
                     <span>
                       {isSyncingFair ? (
                         'Syncing server...'
                       ) : isSpinning ? (
-                        'Spinning...'
+                        queuedSpinCount > 0 ? `Spinning ${queuedSpinProgress}/${spinCount}...` : 'Spinning...'
                       ) : isBalanceLoading ? (
                         'Loading balance...'
                       ) : isFree ? (
-                        'Free Spin'
+                        `Free Spin x${spinCount}`
                       ) : (
                         <span className="inline-flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
                           <span className="inline-flex items-center gap-2">
@@ -937,11 +992,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             {caseCurrencyType === 'XP' ? (
                               <span className="inline-flex items-center gap-1 text-white">
                                 <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                                <span>{currentCaseXpPrice.toLocaleString()}</span>
+                                <span>{(currentCaseXpPrice * spinCount).toLocaleString()}</span>
                               </span>
                             ) : (
                               <CoinAmount
-                                amount={toCoins(box!.price, PRICE_UNIT_MODE)}
+                                amount={toCoins(box!.price, PRICE_UNIT_MODE) * spinCount}
                                 formatOptions={{ maximumFractionDigits: 0 }}
                                 className="text-white"
                                 iconClassName="w-4 h-4"
@@ -950,7 +1005,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           </span>
                           {previewTotalXp > 0 && (
                             <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-200">
-                              +{previewTotalXp.toLocaleString()} XP
+                              +{(previewTotalXp * spinCount).toLocaleString()} XP
                             </span>
                           )}
                         </span>
@@ -968,7 +1023,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                  )}
                  {isAdmin && (
                    <button
-                     onClick={() => handleSpin({ isDemo: true, forceGold: true })}
+                     onClick={() => startSpinSequence({ isDemo: true, forceGold: true })}
                      disabled={isSpinning || isSyncingFair || isRotatingSeed}
                      className="w-full sm:w-auto min-w-[200px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
                    >
