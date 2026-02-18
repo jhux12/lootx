@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, Volume2, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -84,7 +84,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     claimDaily,
     registerSpend
   } = useGame();
-  const { playSound } = useSound();
+  const { muted, toggleMute, playSound } = useSound();
   
   const matchedBox = boxes.find(b => b.id === boxId);
   const box = matchedBox ?? boxes[0];
@@ -133,7 +133,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isUpdatingClientSeed, setIsUpdatingClientSeed] = useState(false);
   const [isRotatingSeed, setIsRotatingSeed] = useState(false);
   const [showFairModal, setShowFairModal] = useState(false);
-  const [showFairTooltip, setShowFairTooltip] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [copyStatusMessage, setCopyStatusMessage] = useState<string | null>(null);
   const [rewardResolved, setRewardResolved] = useState(false);
   const [selectedCaseItem, setSelectedCaseItem] = useState<CaseItem | null>(null);
   const [spinFeedbackMessage, setSpinFeedbackMessage] = useState<string | null>(null);
@@ -162,6 +163,36 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const previewTotalXp = Math.max(0, previewXpFromSpend + previewXpFromOpen);
   const currentXpBalance = Math.max(0, Math.floor(Number(user.xpBalance ?? user.xp ?? 0)));
   const isBalanceLoading = isAuthenticated && !authInitialized;
+
+  const handleCopyPageLink = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+
+    const url = window.location.href;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+
+      setCopyStatusMessage('Page link copied.');
+      playSound('success');
+    } catch (error) {
+      console.error('Failed to copy case link', error);
+      setCopyStatusMessage('Could not copy link.');
+      playSound('error');
+    }
+
+    window.setTimeout(() => setCopyStatusMessage(null), 2500);
+  }, [playSound]);
 
   const loadProvablyFairState = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -849,6 +880,65 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
+            <div className="relative z-20 flex justify-end px-2 pt-2 sm:px-3 sm:pt-3">
+              <div>
+                <div className="flex items-center gap-1 rounded-xl border border-white/20 bg-black/55 p-1 shadow-xl backdrop-blur-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('click');
+                      setShowFairModal(true);
+                    }}
+                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition hover:border-emerald-300/60 hover:text-emerald-200 sm:h-9 sm:w-9"
+                    aria-label="Open provably fair details"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('click');
+                      void handleCopyPageLink();
+                    }}
+                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition hover:border-cyan-300/60 hover:text-cyan-200 sm:h-9 sm:w-9"
+                    aria-label="Copy page link"
+                  >
+                    <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('click');
+                      setShowInfoModal(true);
+                    }}
+                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition hover:border-amber-300/60 hover:text-amber-200 sm:h-9 sm:w-9"
+                    aria-label="Open item availability disclaimer"
+                  >
+                    <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('click');
+                      toggleMute();
+                    }}
+                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition hover:border-violet-300/60 hover:text-violet-200 sm:h-9 sm:w-9"
+                    aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
+                  >
+                    {muted ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                  </button>
+                </div>
+                {copyStatusMessage && (
+                  <p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
+                    {copyStatusMessage}
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Spinner Window */}
             <div className="relative h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
                 {isBoxPreviewVisible && (
@@ -993,22 +1083,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             )}
         </div>
 
-        <div className="flex items-center justify-center mb-10">
-            <div 
-                className="relative flex items-center gap-2 text-gray-400 cursor-pointer hover:text-white transition-colors"
-                onClick={() => { playSound('click'); setShowFairModal(true); }}
-                onMouseEnter={() => setShowFairTooltip(true)}
-                onMouseLeave={() => setShowFairTooltip(false)}
-            >
-                <ShieldCheck className="w-5 h-5" />
-                <span className="text-sm font-semibold">Provably Fair</span>
-                {showFairTooltip && (
-                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-black/80 border border-gray-700 text-xs text-gray-200 px-3 py-2 rounded-lg shadow-lg w-56 text-center z-30">
-                        Click to view seed commitments and verify your last spin.
-                    </div>
-                )}
-            </div>
-        </div>
 
         <ProvablyFairMiniModal
           isOpen={showFairModal}
@@ -1022,6 +1096,36 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             }
           }}
         />
+
+        {showInfoModal && (
+          <div
+            className="fixed inset-0 z-[95] flex items-center justify-center bg-black/70 p-4"
+            onClick={() => setShowInfoModal(false)}
+          >
+            <div
+              className="w-full max-w-lg rounded-2xl border border-white/20 bg-[#121722] p-4 text-gray-200 shadow-2xl sm:p-6"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-3 flex items-start justify-between gap-4">
+                <h3 className="text-base font-bold text-white sm:text-lg">Item Availability Disclaimer</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click');
+                    setShowInfoModal(false);
+                  }}
+                  className="rounded-full border border-white/20 p-1 text-gray-300 transition hover:text-white"
+                  aria-label="Close disclaimer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-sm leading-relaxed text-gray-300">
+                Specific items shown or opened may be subject to availability and may not always be available for withdrawal. Certain items are sourced from third-party retailers or marketplaces and availability cannot be guaranteed. If an item becomes unavailable, you may receive a comparable item of equal or greater value or an equivalent amount of Credits, in accordance with our Terms &amp; Conditions.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Slide Up Win Sheet */}
         <div className={`fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
