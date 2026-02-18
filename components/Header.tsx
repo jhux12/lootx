@@ -140,7 +140,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
 
   return (
     <div className="relative z-50">
-      <header ref={headerRef} className="fixed left-0 right-0 top-0 z-50 border-b border-white/5 bg-neutral-950/90 backdrop-blur-md">
+      <header
+        ref={headerRef}
+        className="fixed left-0 right-0 top-0 z-50 border-b border-white/5 bg-neutral-950 md:bg-neutral-950/90 md:backdrop-blur-md"
+      >
         <nav className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-3 lg:gap-x-10">
             <button
