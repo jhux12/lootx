@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { MysteryBox } from '../types';
+import { CaseItem, MysteryBox } from '../types';
 import { LiveTicker } from './LiveTicker';
 
 type HomeReplicaProps = {
@@ -57,38 +57,39 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 
   const featuredBoxes = useMemo(() => boxes.slice(0, 8), [boxes]);
   const chipBoxes = useMemo(() => boxes.slice(0, 18), [boxes]);
+  const showcaseBox = featuredBoxes[0];
+
   const [demoSpinIndex, setDemoSpinIndex] = useState(0);
 
-  const spinnerReel = useMemo(() => {
-    if (featuredBoxes.length === 0) return [];
-    return Array.from({ length: 30 }, (_, index) => featuredBoxes[index % featuredBoxes.length]);
-  }, [featuredBoxes]);
+  const spinnerItems = useMemo<CaseItem[]>(() => {
+    if (!showcaseBox?.items?.length) return [];
+    return Array.from({ length: 42 }, (_, index) => showcaseBox.items[index % showcaseBox.items.length]);
+  }, [showcaseBox]);
 
   useEffect(() => {
-    if (spinnerReel.length <= 1) return undefined;
+    if (spinnerItems.length <= 1) return undefined;
     const intervalId = window.setInterval(() => {
-      setDemoSpinIndex((current) => (current + 1) % spinnerReel.length);
-    }, 1250);
+      setDemoSpinIndex((current) => (current + 1) % spinnerItems.length);
+    }, 1150);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [spinnerReel.length]);
+  }, [spinnerItems.length]);
 
   const spinnerCardWidth = 118;
   const spinnerGap = 11;
-  const activeBox = spinnerReel[demoSpinIndex] ?? featuredBoxes[0];
 
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
-      <section className="mx-auto w-full max-w-[980px] rounded-3xl border border-white/10 bg-[#151922] p-0 shadow-[0_35px_70px_-50px_rgba(0,0,0,1)]">
-        <div className="relative overflow-hidden rounded-3xl px-4 py-12 text-center sm:px-10 sm:py-16">
+      <section className="mx-auto w-full max-w-[920px] rounded-3xl border border-white/10 bg-[#151922] p-0 shadow-[0_35px_70px_-50px_rgba(0,0,0,1)]">
+        <div className="relative overflow-hidden rounded-3xl px-4 py-8 text-center sm:px-10 sm:py-11">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.02)_0%,rgba(255,255,255,0.01)_35%,rgba(0,0,0,0.12)_100%)]" />
           <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(255,255,255,0.05)_0,rgba(255,255,255,0.05)_2px,transparent_2px,transparent_44px),repeating-linear-gradient(-58deg,rgba(255,255,255,0.045)_0,rgba(255,255,255,0.045)_2px,transparent_2px,transparent_44px)] opacity-25" />
-          <h1 className="relative text-4xl font-black uppercase italic leading-none tracking-tight text-white sm:text-7xl">
+          <h1 className="relative text-3xl font-black uppercase italic leading-none tracking-tight text-white sm:text-6xl">
             Fair Value <span className="bg-gradient-to-r from-[#6f7dff] via-[#8f67ff] to-[#ec68c8] bg-clip-text text-transparent">Guarantee</span>
           </h1>
-          <p className="relative mt-4 text-sm font-semibold uppercase tracking-[0.24em] text-gray-300 sm:text-3xl sm:tracking-[0.18em]">
+          <p className="relative mt-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-300 sm:text-lg sm:tracking-[0.18em]">
             Discover, open &amp; collect on Pullz
           </p>
         </div>
@@ -102,20 +103,20 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
           <div className="grid min-h-[224px] md:grid-cols-[360px_1fr]">
             <button
               type="button"
-              onClick={() => activeBox && onOpenBox(activeBox.id)}
+              onClick={() => showcaseBox && onOpenBox(showcaseBox.id)}
               className="relative flex min-h-[224px] flex-col justify-end overflow-hidden border-b border-[#242a38] bg-[radial-gradient(circle_at_30%_20%,rgba(81,104,255,0.32),transparent_52%),radial-gradient(circle_at_72%_70%,rgba(249,134,36,0.22),transparent_62%),linear-gradient(180deg,#12192b_0%,#0a0d15_100%)] p-5 text-left md:border-b-0 md:border-r"
             >
-              {activeBox && (
+              {showcaseBox && (
                 <img
                   loading="lazy"
                   decoding="async"
-                  src={activeBox.image}
-                  alt={activeBox.name}
+                  src={showcaseBox.image}
+                  alt={showcaseBox.name}
                   className="pointer-events-none absolute left-7 top-5 h-28 w-28 object-contain opacity-100 sm:h-36 sm:w-36"
                 />
               )}
-              <p className="relative z-10 text-[44px] font-black uppercase italic leading-[0.9] tracking-tight text-white">
-                {activeBox?.name ?? 'Iphone 17 Series'}
+              <p className="relative z-10 line-clamp-2 text-[40px] font-black uppercase italic leading-[0.9] tracking-tight text-white">
+                {showcaseBox?.name ?? 'Iphone 17 Series'}
               </p>
               <div className="relative z-10 mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]">
                 <span className="rounded bg-[#5f64ff] px-2 py-1 text-white">New arrival</span>
@@ -137,15 +138,13 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                   transform: `translateX(-${demoSpinIndex * (spinnerCardWidth + spinnerGap)}px)`
                 }}
               >
-                {spinnerReel.map((box, idx) => {
+                {spinnerItems.map((item, idx) => {
                   const isCenter = idx === demoSpinIndex;
                   const borderTone = idx % 2 === 0 ? '#f28b2f' : '#9b47ff';
                   return (
-                    <button
-                      type="button"
-                      key={`${box.id}-${idx}`}
-                      onClick={() => onOpenBox(box.id)}
-                      className={`relative flex h-[118px] w-[118px] flex-shrink-0 flex-col justify-between rounded-2xl border bg-[#111827] px-3 py-2 text-left transition ${
+                    <div
+                      key={`${item.id}-${idx}`}
+                      className={`relative flex h-[118px] w-[118px] flex-shrink-0 flex-col items-center justify-center rounded-2xl border bg-[#111827] p-2 transition ${
                         isCenter
                           ? 'border-white/80 shadow-[0_0_20px_rgba(255,255,255,0.35)]'
                           : 'border-[#2a3040]'
@@ -154,9 +153,15 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                         boxShadow: isCenter ? undefined : `inset 0 0 0 1px ${borderTone}66`
                       }}
                     >
-                      <p className="line-clamp-2 text-lg font-semibold leading-tight text-white">{box.name}</p>
-                      <div className="h-1 w-full rounded-full bg-white/10" />
-                    </button>
+                      <img
+                        loading="lazy"
+                        decoding="async"
+                        src={item.image}
+                        alt={item.name}
+                        className="h-12 w-12 object-contain sm:h-14 sm:w-14"
+                      />
+                      <p className="mt-2 line-clamp-2 text-center text-sm font-semibold leading-tight text-white">{item.name}</p>
+                    </div>
                   );
                 })}
               </div>
