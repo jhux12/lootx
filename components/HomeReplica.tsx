@@ -5,6 +5,7 @@ import { LiveTicker } from './LiveTicker';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
+  demoBoxId?: string | null;
   isChatCollapsed: boolean;
   onOpenBox: (boxId: string) => void;
   onViewAllBoxes: () => void;
@@ -48,6 +49,7 @@ const CATEGORIES = ['Trading Cards', 'Collectibles', 'Tech & Gaming'];
 
 export const HomeReplica: React.FC<HomeReplicaProps> = ({
   boxes,
+  demoBoxId,
   isChatCollapsed,
   onOpenBox,
   onViewAllBoxes,
@@ -57,20 +59,43 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 
   const featuredBoxes = useMemo(() => boxes.slice(0, 8), [boxes]);
   const chipBoxes = useMemo(() => boxes.slice(0, 18), [boxes]);
-  const showcaseBox = featuredBoxes[0];
+  const showcaseBox = useMemo(() => {
+    if (demoBoxId) {
+      const matched = boxes.find((box) => box.id === demoBoxId);
+      if (matched) return matched;
+    }
+    return featuredBoxes[0];
+  }, [boxes, demoBoxId, featuredBoxes]);
 
-  const [demoSpinIndex, setDemoSpinIndex] = useState(0);
+  const [demoSpinIndex, setDemoSpinIndex] = useState(10);
+  const [isSpinAnimating, setIsSpinAnimating] = useState(false);
 
   const spinnerItems = useMemo<CaseItem[]>(() => {
     if (!showcaseBox?.items?.length) return [];
-    return Array.from({ length: 42 }, (_, index) => showcaseBox.items[index % showcaseBox.items.length]);
+    return Array.from({ length: 160 }, (_, index) => showcaseBox.items[index % showcaseBox.items.length]);
   }, [showcaseBox]);
 
   useEffect(() => {
+    setDemoSpinIndex(10);
+  }, [showcaseBox?.id]);
+
+  useEffect(() => {
     if (spinnerItems.length <= 1) return undefined;
-    const intervalId = window.setInterval(() => {
-      setDemoSpinIndex((current) => (current + 1) % spinnerItems.length);
-    }, 1150);
+
+    const runDemoSpin = () => {
+      const travel = 12 + Math.floor(Math.random() * 9);
+      setIsSpinAnimating(true);
+      setDemoSpinIndex((current) => {
+        const safeCurrent = current > spinnerItems.length - 28 ? 10 : current;
+        return Math.min(safeCurrent + travel, spinnerItems.length - 1);
+      });
+      window.setTimeout(() => {
+        setIsSpinAnimating(false);
+      }, 2300);
+    };
+
+    runDemoSpin();
+    const intervalId = window.setInterval(runDemoSpin, 5200);
 
     return () => {
       window.clearInterval(intervalId);
@@ -100,11 +125,11 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
           Best mystery boxes online
         </p>
         <div className="overflow-hidden rounded-3xl border border-[#242a38] bg-[#090c13]">
-          <div className="grid min-h-[224px] md:grid-cols-[360px_1fr]">
+          <div className="grid min-h-[240px] md:grid-cols-[360px_1fr]">
             <button
               type="button"
               onClick={() => showcaseBox && onOpenBox(showcaseBox.id)}
-              className="relative flex min-h-[320px] flex-col items-center justify-end overflow-hidden border-b border-[#242a38] bg-[radial-gradient(circle_at_30%_20%,rgba(81,104,255,0.32),transparent_52%),radial-gradient(circle_at_72%_70%,rgba(249,134,36,0.22),transparent_62%),linear-gradient(180deg,#12192b_0%,#0a0d15_100%)] p-5 text-center md:min-h-[224px] md:items-start md:border-b-0 md:border-r md:text-left"
+              className="relative flex min-h-[320px] flex-col items-center justify-end overflow-hidden border-b border-[#242a38] bg-[radial-gradient(circle_at_30%_20%,rgba(81,104,255,0.32),transparent_52%),radial-gradient(circle_at_72%_70%,rgba(249,134,36,0.22),transparent_62%),linear-gradient(180deg,#12192b_0%,#0a0d15_100%)] p-5 text-center md:min-h-[240px] md:items-start md:border-b-0 md:border-r md:text-left"
             >
               <div className="pointer-events-none absolute left-1/2 top-[150px] h-10 w-44 -translate-x-1/2 rounded-full bg-orange-400/45 blur-xl md:left-[110px] md:top-[118px] md:w-36 md:translate-x-0" />
               {showcaseBox && (
@@ -132,7 +157,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
               <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#090c13] to-transparent sm:w-20" />
 
               <div
-                className="flex px-[50%] py-6 will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.18,0.84,0.32,1)]"
+                className={`flex px-[50%] py-6 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[2300ms] ease-[cubic-bezier(0.1,0.92,0.23,1)]' : 'duration-300 ease-linear'}`}
                 style={{
                   gap: `${spinnerGap}px`,
                   marginLeft: `-${spinnerCardWidth / 2}px`,

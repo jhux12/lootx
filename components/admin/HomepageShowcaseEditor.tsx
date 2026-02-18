@@ -50,11 +50,13 @@ export const HomepageShowcaseEditor: React.FC = () => {
   const [activeAddRowId, setActiveAddRowId] = useState<string | null>(null);
   const [boxSearch, setBoxSearch] = useState('');
   const [categoryValidation, setCategoryValidation] = useState<Record<string, boolean>>({});
+  const [demoBoxId, setDemoBoxId] = useState<string>('');
 
   useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
       (config) => {
         setShowcaseRows(normalizeShowcaseRows(config?.showcaseRows));
+        setDemoBoxId(config?.demoBoxId ?? '');
         setIsLoading(false);
       },
       () => {
@@ -82,10 +84,11 @@ export const HomepageShowcaseEditor: React.FC = () => {
     window.setTimeout(() => setToast(null), 3200);
   };
 
-  const persistRows = async (nextRows: ShowcaseRow[], successMessage?: string) => {
+  const persistRows = async (nextRows: ShowcaseRow[], successMessage?: string, nextDemoBoxId = demoBoxId) => {
     setShowcaseRows(nextRows);
+    setDemoBoxId(nextDemoBoxId);
     try {
-      await saveHomepageConfig(nextRows);
+      await saveHomepageConfig({ showcaseRows: nextRows, demoBoxId: nextDemoBoxId || null });
       if (successMessage) showToast('success', successMessage);
     } catch (error) {
       showToast('error', 'Something went wrong while saving.');
@@ -95,6 +98,10 @@ export const HomepageShowcaseEditor: React.FC = () => {
   const handleAddRow = () => {
     const nextRows = addRow(showcaseRows);
     persistRows(nextRows, 'Row added.');
+  };
+
+  const handleDemoBoxChange = (value: string) => {
+    persistRows(showcaseRows, 'Demo spinner box updated.', value);
   };
 
   const handleDeleteRow = (rowId: string) => {
@@ -256,6 +263,26 @@ export const HomepageShowcaseEditor: React.FC = () => {
         >
           <Plus className="h-4 w-4" /> Add Row
         </button>
+      </div>
+
+      <div className="rounded-xl border border-gray-800 bg-[#131720] p-4">
+        <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+          Demo spinner box (homepage hero)
+          <Select
+            value={demoBoxId}
+            onChange={(event) => handleDemoBoxChange(event.target.value)}
+          >
+            <option value="">Auto (first available box)</option>
+            {sortedBoxes.map((box) => (
+              <option key={`demo-${box.id}`} value={box.id}>
+                {box.name}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <p className="mt-2 text-xs text-gray-500">
+          This box powers the featured card and the demo spinner item pool on the homepage.
+        </p>
       </div>
 
       {isLoading ? (

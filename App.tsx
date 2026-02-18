@@ -76,6 +76,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal, authInitialized, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
+  const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
   const [showPromoPopup, setShowPromoPopup] = useState(false);
 
   useEffect(() => {
@@ -118,9 +119,11 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       (config) => {
         const rows = normalizeShowcaseRows(config?.showcaseRows);
         setShowcaseRows(rows.length ? rows : null);
+        setHomepageDemoBoxId(config?.demoBoxId ?? null);
       },
       () => {
         setShowcaseRows(null);
+        setHomepageDemoBoxId(null);
       }
     );
     return () => unsubscribe();
@@ -291,6 +294,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {view.type === 'HOME' && (
         <HomeReplica
           boxes={baseHomeBoxes}
+          demoBoxId={homepageDemoBoxId}
           isChatCollapsed={isChatCollapsed}
           onOpenBox={(boxId) => {
             playSound('click');
