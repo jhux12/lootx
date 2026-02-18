@@ -190,7 +190,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       </div>
 
-      <div className="w-full max-w-6xl mx-auto px-4 py-8 min-h-screen">
+      <div className="w-full max-w-6xl mx-auto px-4 py-8 min-h-[100dvh]">
         <div className="flex flex-col gap-12">
           {groupedBoxes.map((group) => (
             <div key={group.id} className="flex flex-col gap-4">
