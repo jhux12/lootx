@@ -75,33 +75,35 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
     };
   }, [spinnerReel.length]);
 
-  const spinnerCardWidth = 112;
-  const spinnerGap = 10;
+  const spinnerCardWidth = 118;
+  const spinnerGap = 11;
   const activeBox = spinnerReel[demoSpinIndex] ?? featuredBoxes[0];
 
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
-      <section className="mx-auto w-full max-w-[860px] rounded-2xl border border-white/10 bg-[linear-gradient(125deg,#1a1d2b_10%,#1f2231_45%,#171a28_90%)] px-5 py-10 text-center shadow-[0_20px_55px_-35px_rgba(0,0,0,0.95)] sm:px-8">
-        <div className="rounded-xl border border-white/5 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_60%)] px-4 py-7">
-          <h1 className="text-3xl font-black uppercase italic tracking-tight text-white sm:text-6xl">
-            Fair Value <span className="text-[#c171ff]">Guarantee</span>
+      <section className="mx-auto w-full max-w-[980px] rounded-3xl border border-white/10 bg-[#151922] p-0 shadow-[0_35px_70px_-50px_rgba(0,0,0,1)]">
+        <div className="relative overflow-hidden rounded-3xl px-4 py-12 text-center sm:px-10 sm:py-16">
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.02)_0%,rgba(255,255,255,0.01)_35%,rgba(0,0,0,0.12)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(255,255,255,0.05)_0,rgba(255,255,255,0.05)_2px,transparent_2px,transparent_44px),repeating-linear-gradient(-58deg,rgba(255,255,255,0.045)_0,rgba(255,255,255,0.045)_2px,transparent_2px,transparent_44px)] opacity-25" />
+          <h1 className="relative text-4xl font-black uppercase italic leading-none tracking-tight text-white sm:text-7xl">
+            Fair Value <span className="bg-gradient-to-r from-[#6f7dff] via-[#8f67ff] to-[#ec68c8] bg-clip-text text-transparent">Guarantee</span>
           </h1>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.24em] text-gray-300 sm:text-sm">
+          <p className="relative mt-4 text-sm font-semibold uppercase tracking-[0.24em] text-gray-300 sm:text-3xl sm:tracking-[0.18em]">
             Discover, open &amp; collect on Pullz
           </p>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-[860px] rounded-2xl border border-white/10 bg-[#0b0d13] p-3 sm:p-4">
-        <p className="pb-3 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
+      <section className="mx-auto w-full max-w-[980px] rounded-3xl border border-white/10 bg-[#0b0d13] p-3 sm:p-4">
+        <p className="pb-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-500">
           Best mystery boxes online
         </p>
-        <div className="overflow-hidden rounded-xl border border-[#1f2430] bg-[#0a0d14]">
-          <div className="grid min-h-[184px] md:grid-cols-[300px_1fr]">
+        <div className="overflow-hidden rounded-3xl border border-[#242a38] bg-[#090c13]">
+          <div className="grid min-h-[224px] md:grid-cols-[360px_1fr]">
             <button
               type="button"
               onClick={() => activeBox && onOpenBox(activeBox.id)}
-              className="relative flex min-h-[184px] flex-col justify-end overflow-hidden border-b border-[#1f2430] bg-[radial-gradient(circle_at_20%_25%,rgba(78,95,255,0.28),transparent_58%),linear-gradient(180deg,#111728_0%,#0a0d14_100%)] p-4 text-left md:border-b-0 md:border-r"
+              className="relative flex min-h-[224px] flex-col justify-end overflow-hidden border-b border-[#242a38] bg-[radial-gradient(circle_at_30%_20%,rgba(81,104,255,0.32),transparent_52%),radial-gradient(circle_at_72%_70%,rgba(249,134,36,0.22),transparent_62%),linear-gradient(180deg,#12192b_0%,#0a0d15_100%)] p-5 text-left md:border-b-0 md:border-r"
             >
               {activeBox && (
                 <img
@@ -109,22 +111,23 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                   decoding="async"
                   src={activeBox.image}
                   alt={activeBox.name}
-                  className="pointer-events-none absolute left-6 top-4 h-24 w-24 object-contain opacity-95 sm:h-28 sm:w-28"
+                  className="pointer-events-none absolute left-7 top-5 h-28 w-28 object-contain opacity-100 sm:h-36 sm:w-36"
                 />
               )}
-              <p className="relative z-10 text-[30px] font-black uppercase italic leading-none text-white">
+              <p className="relative z-10 text-[44px] font-black uppercase italic leading-[0.9] tracking-tight text-white">
                 {activeBox?.name ?? 'Iphone 17 Series'}
               </p>
-              <div className="relative z-10 mt-2 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.12em]">
-                <span className="rounded bg-[#5860ff] px-2 py-0.5 text-white">New arrival</span>
+              <div className="relative z-10 mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]">
+                <span className="rounded bg-[#5f64ff] px-2 py-1 text-white">New arrival</span>
                 <span className="text-gray-400">Tech &amp; Gaming</span>
               </div>
             </button>
 
-            <div className="relative flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
-              <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-white/60 shadow-[0_0_14px_rgba(255,255,255,0.42)]" />
-              <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-12 bg-gradient-to-r from-[#0a0d14] to-transparent sm:w-20" />
-              <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-12 bg-gradient-to-l from-[#0a0d14] to-transparent sm:w-20" />
+            <div className="relative flex items-center overflow-hidden bg-[linear-gradient(180deg,#0a0d14_0%,#07090e_100%)]">
+              <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-[3px] -translate-x-1/2 bg-white shadow-[0_0_22px_rgba(255,255,255,0.7)]" />
+              <div className="pointer-events-none absolute bottom-0 left-1/2 z-20 h-0 w-0 -translate-x-1/2 border-l-[8px] border-r-[8px] border-t-[10px] border-l-transparent border-r-transparent border-t-white" />
+              <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-r from-[#090c13] to-transparent sm:w-20" />
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#090c13] to-transparent sm:w-20" />
 
               <div
                 className="flex px-[50%] py-6 will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.18,0.84,0.32,1)]"
@@ -136,18 +139,22 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
               >
                 {spinnerReel.map((box, idx) => {
                   const isCenter = idx === demoSpinIndex;
+                  const borderTone = idx % 2 === 0 ? '#f28b2f' : '#9b47ff';
                   return (
                     <button
                       type="button"
                       key={`${box.id}-${idx}`}
                       onClick={() => onOpenBox(box.id)}
-                      className={`relative flex h-[112px] w-[112px] flex-shrink-0 flex-col justify-between rounded-xl border px-3 py-2 text-left ${
+                      className={`relative flex h-[118px] w-[118px] flex-shrink-0 flex-col justify-between rounded-2xl border bg-[#111827] px-3 py-2 text-left transition ${
                         isCenter
-                          ? 'border-white/70 bg-[#1a2235] shadow-[0_0_20px_rgba(255,255,255,0.22)]'
-                          : 'border-[#2a3040] bg-[#0f1420]'
+                          ? 'border-white/80 shadow-[0_0_20px_rgba(255,255,255,0.35)]'
+                          : 'border-[#2a3040]'
                       }`}
+                      style={{
+                        boxShadow: isCenter ? undefined : `inset 0 0 0 1px ${borderTone}66`
+                      }}
                     >
-                      <p className="line-clamp-2 text-sm font-semibold text-white">{box.name}</p>
+                      <p className="line-clamp-2 text-lg font-semibold leading-tight text-white">{box.name}</p>
                       <div className="h-1 w-full rounded-full bg-white/10" />
                     </button>
                   );
@@ -156,7 +163,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-center border-t border-[#1f2430] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#59d189]">
+          <div className="flex items-center justify-center border-t border-[#242a38] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#59d189]">
             ● Live demo mode
           </div>
         </div>
@@ -166,7 +173,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         <button
           type="button"
           onClick={onViewAllBoxes}
-          className="rounded-lg bg-[#5a55ff] px-8 py-3 text-sm font-extrabold uppercase tracking-[0.09em] text-white transition hover:bg-[#6d68ff]"
+          className="rounded-xl bg-[#5a55ff] px-10 py-3 text-sm font-extrabold uppercase tracking-[0.09em] text-white transition hover:bg-[#6d68ff]"
         >
           View all boxes
         </button>
@@ -181,7 +188,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 
       <section className="-mx-3 overflow-x-auto border-y border-white/10 bg-black/20 px-3 py-2 sm:mx-0 sm:rounded-xl sm:border">
         <div className="flex min-w-max items-stretch gap-2 sm:gap-3">
-          <div className="flex w-[54px] shrink-0 flex-col items-center justify-center rounded-md border border-white/15 bg-[#091016] px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#60de92]">
+          <div className="flex w-[56px] shrink-0 flex-col items-center justify-center rounded-md border border-white/15 bg-[#091016] px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#60de92]">
             <span>Live</span>
             <span>Drops</span>
           </div>
