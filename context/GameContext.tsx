@@ -581,6 +581,9 @@ const GUEST_USER: User = {
 
 const ADMIN_EMAIL = 'jhuxf12@outlook.com';
 
+const isAdminEmail = (email?: string | null) =>
+  typeof email === 'string' && email.trim().toLowerCase() === ADMIN_EMAIL;
+
 const getUserRef = (uid: string) => doc(db, 'users', uid);
 
 const normalizeTimestamp = (value: unknown, fallback: number) => {
@@ -954,7 +957,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const data = snapshot.data();
       const profile = buildUserProfile(firebaseUser, data);
-      const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
+      const shouldBeAdmin = isAdminEmail(profile.email);
       if (shouldBeAdmin && !profile.isAdmin) {
         void setDoc(userRef, { isAdmin: true }, { merge: true }).catch((error) => {
           console.error('Failed to backfill admin flag', error);
@@ -1621,7 +1624,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         rakebackTier: null,
         followers: [],
         shippingAddress: undefined,
-        isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+        isAdmin: isAdminEmail(email),
         chatWarnings: 0,
         chatDisabled: false,
         termsFlagged: false
@@ -1764,7 +1767,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         rakebackTier: null,
         followers: [],
         shippingAddress: undefined,
-        isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+        isAdmin: isAdminEmail(email),
         chatWarnings: 0,
         chatDisabled: false,
         termsFlagged: false
