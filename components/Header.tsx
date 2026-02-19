@@ -38,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const {
     user,
     balance,
+    view,
     setView,
     isAuthenticated,
     openAuthModal,
@@ -47,6 +48,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const { playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement | null>(null);
+  const isStickyHeader = view.type !== 'BOXES';
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -142,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     <div className="relative z-50">
       <header
         ref={headerRef}
-        className="sticky left-0 right-0 top-0 z-[120] border-b border-white/5 bg-neutral-950 md:bg-neutral-950/90 md:backdrop-blur-md"
+        className={`${isStickyHeader ? 'sticky left-0 right-0 top-0' : 'relative'} z-[120] border-b border-white/5 bg-neutral-950 md:bg-neutral-950/90 md:backdrop-blur-md`}
       >
         <div className="pt-[env(safe-area-inset-top,0px)]">
           <nav className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 lg:px-8">
