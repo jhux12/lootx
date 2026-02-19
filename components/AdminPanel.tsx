@@ -384,6 +384,7 @@ export const AdminPanel: React.FC = () => {
       comingSoonModeEnabled: stripeSettings.comingSoonModeEnabled,
       authPopupImageUrl: stripeSettings.authPopupImageUrl,
       homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
+      homeCategorySlugs: stripeSettings.homeCategorySlugs,
       howItWorksStepImageUrls: stripeSettings.howItWorksStepImageUrls,
       shippingCashEnabled: stripeSettings.shippingCashEnabled,
       shippingFlatRateInput: (stripeSettings.shippingFlatRateCents / 100).toFixed(2),
@@ -762,6 +763,7 @@ export const AdminPanel: React.FC = () => {
           comingSoonModeEnabled: stripeSettings.comingSoonModeEnabled,
           authPopupImageUrl: stripeSettings.authPopupImageUrl,
           homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
+          homeCategorySlugs: stripeSettings.homeCategorySlugs,
           howItWorksStepImageUrls: stripeSettings.howItWorksStepImageUrls,
           shippingCashEnabled: stripeSettings.shippingCashEnabled,
           shippingFlatRateInput: (stripeSettings.shippingFlatRateCents / 100).toFixed(2),
@@ -2088,6 +2090,7 @@ export const AdminPanel: React.FC = () => {
           comingSoonModeEnabled: stripeSettingsDraft.comingSoonModeEnabled,
           authPopupImageUrl: stripeSettingsDraft.authPopupImageUrl.trim(),
           homeCategoryImageUrls: stripeSettingsDraft.homeCategoryImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
+          homeCategorySlugs: stripeSettingsDraft.homeCategorySlugs.map((slug) => slug.trim()).slice(0, 3),
           howItWorksStepImageUrls: stripeSettingsDraft.howItWorksStepImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
           shippingCashEnabled: stripeSettingsDraft.shippingCashEnabled,
           shippingFlatRateCents,
@@ -5001,6 +5004,21 @@ export const AdminPanel: React.FC = () => {
                                                 setStripeSettingsNotice(false);
                                             }}
                                             placeholder={`Homepage category image ${index + 1} URL`}
+                                            className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                                        />
+                                    ))}
+                                    {[0, 1, 2].map((index) => (
+                                        <Input
+                                            key={`home-category-slug-${index}`}
+                                            type="text"
+                                            value={stripeSettingsDraft.homeCategorySlugs[index] ?? ''}
+                                            onChange={(event) => {
+                                                const nextSlugs = [...stripeSettingsDraft.homeCategorySlugs];
+                                                nextSlugs[index] = event.target.value;
+                                                setStripeSettingsDraft((prev) => ({ ...prev, homeCategorySlugs: nextSlugs }));
+                                                setStripeSettingsNotice(false);
+                                            }}
+                                            placeholder={`Homepage category ${index + 1} slug (for click-through)`}
                                             className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
                                         />
                                     ))}

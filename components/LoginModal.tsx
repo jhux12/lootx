@@ -10,9 +10,10 @@ import { Input } from './ui/Input';
 import { getAuthErrorMessage } from '../utils/authErrors';
 
 export const LoginModal: React.FC = () => {
-  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
+  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
+  const authImageUrl = stripeSettings.authPopupImageUrl.trim() || 'https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/boxes/lg/75992c3ad217db7e58ba5424025c8cb50fc0836a/iphone-17-series.webp';
 
   // Form State
   const [email, setEmail] = useState('');
@@ -180,7 +181,7 @@ export const LoginModal: React.FC = () => {
         <div className="relative hidden w-2/5 overflow-hidden border-r border-white/5 bg-neutral-900 md:flex md:flex-col">
           <div className="absolute inset-0 z-0">
             <img
-              src="https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/boxes/lg/75992c3ad217db7e58ba5424025c8cb50fc0836a/iphone-17-series.webp"
+              src={authImageUrl}
               className="h-full w-full object-cover opacity-40 mix-blend-overlay"
               alt="Promo Background"
             />
@@ -199,12 +200,12 @@ export const LoginModal: React.FC = () => {
 
             <div className="relative mt-8 h-40 w-full">
               <img
-                src="https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/items/md/1668667961cc341ac579ca3c61bcf3ea3089d2cd/surfing-pikachu-vmax.webp"
+                src={authImageUrl}
                 className="absolute left-0 top-10 h-20 w-auto -rotate-12 rounded-md border border-white/10 shadow-2xl"
                 alt="Card"
               />
               <img
-                src="https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/items/lg/cd675b59ff0813381e3b0fe9b98269a0678d3aca/iphone-17-pro-max-512gb.webp"
+                src={authImageUrl}
                 className="absolute right-0 top-0 h-24 w-auto rotate-12 drop-shadow-2xl"
                 alt="Phone"
               />
@@ -213,6 +214,11 @@ export const LoginModal: React.FC = () => {
         </div>
 
         <div className="flex w-full flex-1 flex-col overflow-y-auto bg-[#0F0F11] p-4 sm:p-6 md:p-8">
+          <div className="relative mb-4 overflow-hidden rounded-2xl border border-white/10 md:hidden">
+            <img src={authImageUrl} alt="Auth promotion" className="h-28 w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent" />
+            <p className="absolute bottom-2 left-3 text-xs font-semibold uppercase tracking-[0.12em] text-white/90">Sign in or create your account</p>
+          </div>
           {!isLinkingGoogle && (
             <div className="mb-5 flex w-full rounded-xl border border-white/5 bg-[#18181b] p-1">
               <button

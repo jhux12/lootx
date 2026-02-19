@@ -116,6 +116,7 @@ export interface StripeSettings {
   comingSoonModeEnabled: boolean;
   authPopupImageUrl: string;
   homeCategoryImageUrls: string[];
+  homeCategorySlugs: string[];
   howItWorksStepImageUrls: string[];
   shippingCashEnabled: boolean;
   shippingFlatRateCents: number;

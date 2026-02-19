@@ -226,6 +226,7 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   comingSoonModeEnabled: false,
   authPopupImageUrl: '',
   homeCategoryImageUrls: ['', '', ''],
+  homeCategorySlugs: ['', '', ''],
   howItWorksStepImageUrls: ['', '', ''],
   shippingCashEnabled: false,
   shippingFlatRateCents: 0,
@@ -250,6 +251,12 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
       ? settings.homeCategoryImageUrls
           .filter((imageUrl): imageUrl is string => typeof imageUrl === 'string')
           .map((imageUrl) => imageUrl.trim())
+          .slice(0, 3)
+      : [],
+    homeCategorySlugs: Array.isArray(settings.homeCategorySlugs)
+      ? settings.homeCategorySlugs
+          .filter((slug): slug is string => typeof slug === 'string')
+          .map((slug) => slug.trim())
           .slice(0, 3)
       : [],
     howItWorksStepImageUrls: Array.isArray(settings.howItWorksStepImageUrls)

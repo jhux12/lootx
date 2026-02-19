@@ -56,7 +56,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   onViewAllBoxes,
   onSignUp
 }) => {
-  const { stripeSettings } = useGame();
+  const { stripeSettings, setView } = useGame();
   const [openFaq, setOpenFaq] = useState(0);
 
   const featuredBoxes = useMemo(() => boxes.slice(0, 8), [boxes]);
@@ -105,6 +105,19 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 
   const spinnerCardWidth = 118;
   const spinnerGap = 11;
+
+  const handleCategoryCardClick = (index: number) => {
+    const slug = stripeSettings.homeCategorySlugs[index]?.trim();
+    if (!slug) {
+      onViewAllBoxes();
+      return;
+    }
+
+    const params = new URLSearchParams();
+    params.set('category', slug);
+    window.history.replaceState({}, '', `/boxes?${params.toString()}`);
+    setView({ type: 'BOXES' });
+  };
 
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
@@ -224,9 +237,11 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         {CATEGORIES.map((category, index) => {
           const categoryImage = stripeSettings.homeCategoryImageUrls[index]?.trim();
           return (
-            <article
+            <button
               key={category}
-              className="group relative flex min-h-[200px] flex-col justify-end overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#121520] to-[#0a0c12] p-5"
+              type="button"
+              onClick={() => handleCategoryCardClick(index)}
+              className="group relative flex min-h-[200px] w-full flex-col justify-end overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#121520] to-[#0a0c12] p-5 text-left transition hover:border-white/30"
             >
               {categoryImage ? (
                 <img src={categoryImage} alt={category} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
@@ -238,7 +253,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                   <ChevronRight size={14} />
                 </span>
               </p>
-            </article>
+            </button>
           );
         })}
       </section>
