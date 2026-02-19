@@ -1177,17 +1177,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         }`}
                       >
                         {isSellingItem ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-2 py-1 sm:px-0 sm:py-0">
+                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
                             <Wallet className="h-4 w-4" />
                             Selling item...
                           </span>
                         ) : isGeneratingSellOffer ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-2 py-1 sm:px-0 sm:py-0">
+                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
                             <Wallet className="h-4 w-4" />
                             Generating offer...
                           </span>
                         ) : sellOfferGenerated ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-2 py-1 sm:px-0 sm:py-0">
+                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
                             <Wallet className="h-4 w-4" />
                             Trade for
                             <CoinAmount
@@ -1198,7 +1198,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             />
                           </span>
                         ) : (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-2 py-1 sm:px-0 sm:py-0">
+                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
                             <Wallet className="h-4 w-4" />
                             Generate buy back offer
                           </span>
@@ -1206,7 +1206,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       </button>
                     )}
                     <button onClick={handleKeep} className="h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 btn-logo-gradient px-4 text-sm font-bold text-white"> 
-                      <span className="inline-flex items-center gap-2 rounded-md px-2 py-1 sm:px-0 sm:py-0"><PackageOpen className="h-4 w-4" />Keep Item</span>
+                      <span className="inline-flex items-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0"><PackageOpen className="h-4 w-4" />Keep Item</span>
                     </button>
                   </div>
                 )}
