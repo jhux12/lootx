@@ -54,6 +54,7 @@ export const MobileBottomNav: React.FC = () => {
   };
 
   const activeId = useMemo(() => (view.type === 'HOME' ? 'MENU' : (view.type as NavItem['id'])), [view.type]);
+  const iconClassName = 'h-5 w-5 [stroke-width:1.6]';
 
   return (
     <div
@@ -70,33 +71,33 @@ export const MobileBottomNav: React.FC = () => {
               key={item.id}
               type="button"
               onClick={() => handleNav(item)}
-              className={`flex flex-col items-center gap-0.5 rounded-lg py-1 text-xs font-semibold ${
+              className={`flex flex-col items-center gap-0.5 rounded-lg py-1 text-[11px] font-medium ${
                 isActive ? 'text-white' : 'text-gray-500'
               }`}
               aria-current={isActive ? 'page' : undefined}
             >
               {isMenuToggle ? (
-                <span className="relative mt-0.5 block h-5.5 w-5.5" aria-hidden="true">
+                <span className="relative mt-0.5 block h-5 w-5" aria-hidden="true">
                   <span
-                    className={`absolute left-1 top-[7px] h-0.5 w-4 rounded-full bg-current transition-transform duration-200 ${
+                    className={`absolute left-1 top-[7px] h-px w-3.5 rounded-full bg-current transition-transform duration-200 ${
                       isMenuOpen ? 'translate-y-[4px] rotate-45' : ''
                     }`}
                   />
                   <span
-                    className={`absolute left-1 top-[11px] h-0.5 w-4 rounded-full bg-current transition-opacity duration-200 ${
+                    className={`absolute left-1 top-[11px] h-px w-3.5 rounded-full bg-current transition-opacity duration-200 ${
                       isMenuOpen ? 'opacity-0' : 'opacity-100'
                     }`}
                   />
                   <span
-                    className={`absolute left-1 top-[15px] h-0.5 w-4 rounded-full bg-current transition-transform duration-200 ${
+                    className={`absolute left-1 top-[15px] h-px w-3.5 rounded-full bg-current transition-transform duration-200 ${
                       isMenuOpen ? '-translate-y-[4px] -rotate-45' : ''
                     }`}
                   />
                 </span>
               ) : Icon ? (
-                <Icon className="h-5.5 w-5.5" />
+                <Icon className={iconClassName} />
               ) : null}
-              <span>{item.label}</span>
+              {!isMenuToggle && <span>{item.label}</span>}
             </button>
           );
         })}
