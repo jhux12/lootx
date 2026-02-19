@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Copy } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -1170,26 +1170,34 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       <button
                         onClick={handleSell}
                         disabled={isGeneratingSellOffer || isSellingItem}
-                        className="h-12 flex-1 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-100 transition hover:bg-white/10 disabled:opacity-60"
+                        className={`h-12 flex-1 rounded-xl border px-4 text-sm font-semibold transition disabled:opacity-60 ${
+                          sellOfferGenerated
+                            ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30'
+                            : 'border-white/10 bg-white/5 text-gray-100 hover:bg-white/10'
+                        }`}
                       >
-                        {isSellingItem
-                          ? 'Selling item...'
-                          : isGeneratingSellOffer
-                          ? 'Generating offer...'
-                          : sellOfferGenerated
-                            ? 'Accept buy back offer'
-                            : 'Generate buy back offer'}
+                        {isSellingItem ? (
+                          'Selling item...'
+                        ) : isGeneratingSellOffer ? (
+                          'Generating offer...'
+                        ) : sellOfferGenerated ? (
+                          <span className="inline-flex items-center justify-center gap-2">
+                            Trade for
+                            <CoinAmount
+                              amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
+                              formatOptions={{ maximumFractionDigits: 0 }}
+                              className="text-emerald-50"
+                              iconClassName="h-4 w-4"
+                            />
+                          </span>
+                        ) : (
+                          'Generate buy back offer'
+                        )}
                       </button>
                     )}
                     <button onClick={handleKeep} className="h-12 flex-1 rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white"> 
                       <span className="inline-flex items-center gap-2"><PackageOpen className="h-4 w-4" />Keep Item</span>
                     </button>
-                    {wonItem.redeemable !== false && sellOfferGenerated && !isGeneratingSellOffer && !isSellingItem && (
-                      <div className="flex h-12 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 text-sm font-bold text-emerald-200">
-                        <Wallet className="mr-2 h-4 w-4" />
-                        <CoinAmount amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)} formatOptions={{ maximumFractionDigits: 0 }} />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
