@@ -1170,7 +1170,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       <button
                         onClick={handleSell}
                         disabled={isGeneratingSellOffer || isSellingItem}
-                        className={`h-14 flex-1 rounded-xl border px-4 text-sm font-semibold transition disabled:opacity-60 ${
+                        className={`h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 border px-4 text-sm font-semibold transition disabled:opacity-60 ${
                           sellOfferGenerated
                             ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30'
                             : 'border-white/10 bg-white/5 text-gray-100 hover:bg-white/10'
@@ -1205,7 +1205,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         )}
                       </button>
                     )}
-                    <button onClick={handleKeep} className="h-14 flex-1 rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white"> 
+                    <button onClick={handleKeep} className="h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 btn-logo-gradient px-4 text-sm font-bold text-white"> 
                       <span className="inline-flex items-center gap-2"><PackageOpen className="h-4 w-4" />Keep Item</span>
                     </button>
                   </div>
