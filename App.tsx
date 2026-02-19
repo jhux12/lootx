@@ -481,6 +481,8 @@ export default App;
 
 const AppShell = () => {
   const [showInbox, setShowInbox] = useState(false);
+  const { view } = useGame();
+  const shouldUseStickyHeader = view.type !== 'BOXES';
   const { messages } = useSiteChat();
   const latestMessageAt = messages[messages.length - 1]?.createdAt ?? 0;
   const [lastSeenAt, setLastSeenAt] = useState(0);
@@ -510,10 +512,12 @@ const AppShell = () => {
       <Header
         onOpenInbox={() => setShowInbox(true)}
         unreadChatCount={hasUnseenChatMessages ? 1 : 0}
+        isSticky={shouldUseStickyHeader}
       />
       <AppLayout
         hasUnseenChatMessages={hasUnseenChatMessages}
         onChatViewed={markChatSeen}
+        hasStickyHeader={shouldUseStickyHeader}
       />
       <MobileBottomNav />
 
@@ -533,7 +537,8 @@ const AppShell = () => {
 const AppLayout: React.FC<{
   hasUnseenChatMessages: boolean;
   onChatViewed: () => void;
-}> = ({ hasUnseenChatMessages, onChatViewed }) => {
+  hasStickyHeader: boolean;
+}> = ({ hasUnseenChatMessages, onChatViewed, hasStickyHeader }) => {
   const { isAuthenticated } = useGame();
   const [isChatCollapsed, setIsChatCollapsed] = useState(!isAuthenticated);
 
@@ -545,7 +550,7 @@ const AppLayout: React.FC<{
 
   return (
     <div
-      className="flex flex-1"
+      className={`flex flex-1 ${hasStickyHeader ? 'pt-[var(--pullz-header-height,72px)]' : ''}`}
       style={{ '--chatw': chatWidth } as React.CSSProperties}
       data-chat-collapsed={isChatCollapsed}
     >
