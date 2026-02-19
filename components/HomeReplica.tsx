@@ -275,7 +275,12 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                 className="rounded-2xl border border-white/10 bg-[#0d0f16] p-6 text-center"
               >
                 {stepImage ? (
-                  <img src={stepImage} alt={`Step ${index + 1}`} className="mx-auto h-14 w-14 rounded-xl object-cover" loading="lazy" />
+                  <img
+                    src={stepImage}
+                    alt={`Step ${index + 1}`}
+                    className="mx-auto h-36 w-full max-w-[260px] rounded-xl object-cover sm:h-44"
+                    loading="lazy"
+                  />
                 ) : (
                   <p className="text-5xl font-black text-white/10">{num}</p>
                 )}
