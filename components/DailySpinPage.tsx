@@ -11,7 +11,8 @@ type SpinPrize = {
 
 interface DailySpinPageProps {
   onBack: () => void;
-  onClaim: () => Promise<{ amount: number; nextClaimAt: number }>;
+  onSpinStart: () => Promise<{ amount: number }>;
+  onSpinClaim: () => Promise<{ amount: number; nextClaimAt: number }>;
   canSpin: boolean;
   nextClaimAt: number;
 }
@@ -70,7 +71,7 @@ const formatCountdown = (targetTime: number) => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onClaim, canSpin, nextClaimAt }) => {
+export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStart, onSpinClaim, canSpin, nextClaimAt }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [lastPrize, setLastPrize] = useState<number | null>(null);
@@ -99,19 +100,24 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onClaim, c
     setIsSpinning(true);
 
     try {
-      const claimResult = await onClaim();
-      const winner = PRIZES.find((prize) => prize.amount === claimResult.amount) ?? PRIZES[0];
+      const startResult = await onSpinStart();
+      const winner = PRIZES.find((prize) => prize.amount === startResult.amount) ?? PRIZES[0];
 
       const extraSpins = 5;
       const baseRotation = 360 * extraSpins;
       const targetRotation = rotation + baseRotation + (360 - winner.angle);
 
       setRotation(targetRotation);
-      setLocalNextClaimAt(claimResult.nextClaimAt);
-
-      window.setTimeout(() => {
-        setIsSpinning(false);
-        setLastPrize(winner.amount);
+      window.setTimeout(async () => {
+        try {
+          const claimResult = await onSpinClaim();
+          setLocalNextClaimAt(claimResult.nextClaimAt);
+          setLastPrize(claimResult.amount || winner.amount);
+          setIsSpinning(false);
+        } catch (claimError) {
+          setIsSpinning(false);
+          setErrorMessage((claimError as Error)?.message || 'Unable to claim your spin reward.');
+        }
       }, 5000);
     } catch (error) {
       setIsSpinning(false);
