@@ -224,10 +224,8 @@ export const LoginModal: React.FC = () => {
         </div>
 
         <div className="flex w-full flex-1 flex-col overflow-y-auto bg-[#0F0F11] p-4 sm:p-6 md:p-8">
-          <div className="relative mb-4 overflow-hidden rounded-2xl border border-white/10 md:hidden">
-            <img src={authImages[0]} alt="Auth promotion" className="h-28 w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent" />
-            <p className="absolute bottom-2 left-3 text-xs font-semibold uppercase tracking-[0.12em] text-white/90">Sign in or create your account</p>
+          <div className="relative mb-4 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#1e1b4b]/55 via-[#18181b] to-[#0F0F11] p-3 md:hidden">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/90">Sign in or create your account</p>
           </div>
           {!isLinkingGoogle && (
             <div className="mb-5 flex w-full rounded-xl border border-white/5 bg-[#18181b] p-1">
