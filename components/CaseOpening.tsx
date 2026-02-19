@@ -1131,7 +1131,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         <div className={`fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
         <div className={`fixed bottom-0 left-0 right-0 z-[100] transform transition-transform duration-500 ${showWinModal && wonItem ? 'translate-y-0' : 'translate-y-full'}`}>
           {wonItem && (
-            <div className="mx-auto flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)]">
+            <div className="mx-auto flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] sm:max-h-[86vh]">
               <div className="flex items-center justify-between border-b border-white/10 bg-black/25 px-4 py-4 sm:px-6">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/15">
@@ -1170,26 +1170,44 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       <button
                         onClick={handleSell}
                         disabled={isGeneratingSellOffer || isSellingItem}
-                        className="h-12 flex-1 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-100 transition hover:bg-white/10 disabled:opacity-60"
+                        className={`h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 border px-4 text-sm font-semibold transition disabled:opacity-60 ${
+                          sellOfferGenerated
+                            ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30'
+                            : 'border-white/10 bg-white/5 text-gray-100 hover:bg-white/10'
+                        }`}
                       >
-                        {isSellingItem
-                          ? 'Selling item...'
-                          : isGeneratingSellOffer
-                          ? 'Generating offer...'
-                          : sellOfferGenerated
-                            ? 'Accept buy back offer'
-                            : 'Generate buy back offer'}
+                        {isSellingItem ? (
+                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
+                            <Wallet className="h-4 w-4" />
+                            Selling item...
+                          </span>
+                        ) : isGeneratingSellOffer ? (
+                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
+                            <Wallet className="h-4 w-4" />
+                            Generating offer...
+                          </span>
+                        ) : sellOfferGenerated ? (
+                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
+                            <Wallet className="h-4 w-4" />
+                            Trade for
+                            <CoinAmount
+                              amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
+                              formatOptions={{ maximumFractionDigits: 0 }}
+                              className="text-emerald-50"
+                              iconClassName="h-4 w-4"
+                            />
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
+                            <Wallet className="h-4 w-4" />
+                            Generate buy back offer
+                          </span>
+                        )}
                       </button>
                     )}
-                    <button onClick={handleKeep} className="h-12 flex-1 rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white"> 
-                      <span className="inline-flex items-center gap-2"><PackageOpen className="h-4 w-4" />Keep Item</span>
+                    <button onClick={handleKeep} className="h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 btn-logo-gradient px-4 text-sm font-bold text-white"> 
+                      <span className="inline-flex items-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0"><PackageOpen className="h-4 w-4" />Keep Item</span>
                     </button>
-                    {wonItem.redeemable !== false && sellOfferGenerated && !isGeneratingSellOffer && !isSellingItem && (
-                      <div className="flex h-12 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 text-sm font-bold text-emerald-200">
-                        <Wallet className="mr-2 h-4 w-4" />
-                        <CoinAmount amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)} formatOptions={{ maximumFractionDigits: 0 }} />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
