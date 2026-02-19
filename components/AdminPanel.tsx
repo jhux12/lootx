@@ -383,6 +383,7 @@ export const AdminPanel: React.FC = () => {
   const [stripeSettingsDraft, setStripeSettingsDraft] = useState({
       comingSoonModeEnabled: stripeSettings.comingSoonModeEnabled,
       authPopupImageUrl: stripeSettings.authPopupImageUrl,
+      authPopupImageUrls: stripeSettings.authPopupImageUrls,
       homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
       homeCategorySlugs: stripeSettings.homeCategorySlugs,
       howItWorksStepImageUrls: stripeSettings.howItWorksStepImageUrls,
@@ -762,6 +763,7 @@ export const AdminPanel: React.FC = () => {
       setStripeSettingsDraft({
           comingSoonModeEnabled: stripeSettings.comingSoonModeEnabled,
           authPopupImageUrl: stripeSettings.authPopupImageUrl,
+          authPopupImageUrls: stripeSettings.authPopupImageUrls,
           homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
           homeCategorySlugs: stripeSettings.homeCategorySlugs,
           howItWorksStepImageUrls: stripeSettings.howItWorksStepImageUrls,
@@ -2089,6 +2091,7 @@ export const AdminPanel: React.FC = () => {
       updateStripeSettings({
           comingSoonModeEnabled: stripeSettingsDraft.comingSoonModeEnabled,
           authPopupImageUrl: stripeSettingsDraft.authPopupImageUrl.trim(),
+          authPopupImageUrls: stripeSettingsDraft.authPopupImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
           homeCategoryImageUrls: stripeSettingsDraft.homeCategoryImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
           homeCategorySlugs: stripeSettingsDraft.homeCategorySlugs.map((slug) => slug.trim()).slice(0, 3),
           howItWorksStepImageUrls: stripeSettingsDraft.howItWorksStepImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
@@ -4981,17 +4984,21 @@ export const AdminPanel: React.FC = () => {
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Homepage & auth images</label>
                                 <p className="text-xs text-gray-500 mb-4">Paste CDN image URLs. Optimized for mobile cards and modal artwork.</p>
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <Input
-                                        type="url"
-                                        value={stripeSettingsDraft.authPopupImageUrl}
-                                        onChange={(event) => {
-                                            const nextValue = event.target.value;
-                                            setStripeSettingsDraft((prev) => ({ ...prev, authPopupImageUrl: nextValue }));
-                                            setStripeSettingsNotice(false);
-                                        }}
-                                        placeholder="Auth popup image URL"
-                                        className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
-                                    />
+                                    {[0, 1, 2].map((index) => (
+                                        <Input
+                                            key={`auth-popup-image-${index}`}
+                                            type="url"
+                                            value={stripeSettingsDraft.authPopupImageUrls[index] ?? ''}
+                                            onChange={(event) => {
+                                                const nextUrls = [...stripeSettingsDraft.authPopupImageUrls];
+                                                nextUrls[index] = event.target.value;
+                                                setStripeSettingsDraft((prev) => ({ ...prev, authPopupImageUrls: nextUrls, authPopupImageUrl: nextUrls[0] ?? '' }));
+                                                setStripeSettingsNotice(false);
+                                            }}
+                                            placeholder={`Auth popup image ${index + 1} URL`}
+                                            className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                                        />
+                                    ))}
                                     {[0, 1, 2].map((index) => (
                                         <Input
                                             key={`home-category-image-${index}`}

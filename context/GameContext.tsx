@@ -225,6 +225,7 @@ const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
 const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   comingSoonModeEnabled: false,
   authPopupImageUrl: '',
+  authPopupImageUrls: ['', '', ''],
   homeCategoryImageUrls: ['', '', ''],
   homeCategorySlugs: ['', '', ''],
   howItWorksStepImageUrls: ['', '', ''],
@@ -243,10 +244,22 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
     typeof (settings as { stripeShippingKeyOrId?: string }).stripeShippingKeyOrId === 'string'
       ? (settings as { stripeShippingKeyOrId?: string }).stripeShippingKeyOrId
       : '';
+  const legacyAuthImage = typeof settings.authPopupImageUrl === 'string' ? settings.authPopupImageUrl.trim() : '';
+  const normalizedAuthImages = Array.isArray(settings.authPopupImageUrls)
+    ? settings.authPopupImageUrls
+        .filter((imageUrl): imageUrl is string => typeof imageUrl === 'string')
+        .map((imageUrl) => imageUrl.trim())
+        .slice(0, 3)
+    : [];
 
   return {
     comingSoonModeEnabled: settings.comingSoonModeEnabled === true,
-    authPopupImageUrl: typeof settings.authPopupImageUrl === 'string' ? settings.authPopupImageUrl.trim() : '',
+    authPopupImageUrl: legacyAuthImage,
+    authPopupImageUrls: normalizedAuthImages.length > 0
+      ? normalizedAuthImages
+      : legacyAuthImage
+        ? [legacyAuthImage]
+        : [],
     homeCategoryImageUrls: Array.isArray(settings.homeCategoryImageUrls)
       ? settings.homeCategoryImageUrls
           .filter((imageUrl): imageUrl is string => typeof imageUrl === 'string')
