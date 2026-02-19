@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { X, Mail, Lock, User, AlertCircle, Facebook, Twitter, Twitch, Gamepad2 } from 'lucide-react';
 import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -13,7 +13,7 @@ export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
-  
+
   // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,25 +37,25 @@ export const LoginModal: React.FC = () => {
     setUserError(null);
     setMessage(null);
     playSound('click');
-    
+
     try {
-        if (mode === 'register') {
-            if (!confirmAdult || !acceptTerms) {
-                setUserError('Please confirm you are 18+ and accept the terms to continue.');
-                setIsLoading(false);
-                return;
-            }
-            await register(username, email, password);
-        } else {
-            await login(email, password, rememberMe);
+      if (mode === 'register') {
+        if (!confirmAdult || !acceptTerms) {
+          setUserError('Please confirm you are 18+ and accept the terms to continue.');
+          setIsLoading(false);
+          return;
         }
-        // Success - modal closes inside context functions
+        await register(username, email, password);
+      } else {
+        await login(email, password, rememberMe);
+      }
+      // Success - modal closes inside context functions
     } catch (err: any) {
-        console.error(err);
-        setUserError(getAuthErrorMessage(err));
-        playSound('error');
+      console.error(err);
+      setUserError(getAuthErrorMessage(err));
+      playSound('error');
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -113,41 +113,41 @@ export const LoginModal: React.FC = () => {
   };
 
   const handleForgotPassword = async () => {
-      if (!email.trim()) {
-          setUserError('Enter your email to receive a password reset link.');
-          return;
-      }
+    if (!email.trim()) {
+      setUserError('Enter your email to receive a password reset link.');
+      return;
+    }
 
-      setIsLoading(true);
-      setUserError(null);
-      setMessage(null);
-      playSound('click');
+    setIsLoading(true);
+    setUserError(null);
+    setMessage(null);
+    playSound('click');
 
-      try {
-          await resetPassword(email.trim());
-          setMessage('Password reset link sent. Check your inbox.');
-      } catch (err: any) {
-          console.error(err);
-          setUserError(getAuthErrorMessage(err));
-          playSound('error');
-      } finally {
-          setIsLoading(false);
-      }
+    try {
+      await resetPassword(email.trim());
+      setMessage('Password reset link sent. Check your inbox.');
+    } catch (err: any) {
+      console.error(err);
+      setUserError(getAuthErrorMessage(err));
+      playSound('error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleMode = () => {
-      setMode(prev => {
-        const nextMode = prev === 'login' ? 'register' : 'login';
-        setAuthModalMode(nextMode);
-        return nextMode;
-      });
-      setUserError(null);
-      setMessage(null);
-      setGoogleLinkEmail('');
-      setGoogleLinkPassword('');
-      setGoogleLinkCredential(null);
-      setRememberMe(true);
-      playSound('click');
+    setMode(prev => {
+      const nextMode = prev === 'login' ? 'register' : 'login';
+      setAuthModalMode(nextMode);
+      return nextMode;
+    });
+    setUserError(null);
+    setMessage(null);
+    setGoogleLinkEmail('');
+    setGoogleLinkPassword('');
+    setGoogleLinkCredential(null);
+    setRememberMe(true);
+    playSound('click');
   };
 
   useEffect(() => {
@@ -169,252 +169,328 @@ export const LoginModal: React.FC = () => {
   }, [userError]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in" 
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={() => setShowLoginModal(false)}
-      ></div>
-      
-      <div className="relative w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto bg-[#131720] border border-gray-700 rounded-2xl shadow-2xl p-6 sm:p-8 animate-in zoom-in-95">
-        <button 
-            onClick={() => setShowLoginModal(false)} 
-            className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+      />
+
+      <div className="relative flex w-full max-w-[880px] max-h-[95vh] flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0F0F11] shadow-2xl md:max-h-[650px] md:flex-row">
+        <button
+          onClick={() => setShowLoginModal(false)}
+          className="absolute right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
         >
-            <X className="w-5 h-5" />
+          <X className="h-5 w-5" />
         </button>
 
-        <div className="text-center mb-6">
-            <div className="flex justify-center mb-5">
-                <BrandLockup
-                    className="justify-center"
-                    logoClassName="h-12 md:h-14"
-                    textClassName="text-xl"
-                    showTextOnMobile
-                />
-            </div>
-            <h2 className="text-2xl font-black text-white mb-1">
-                {isLinkingGoogle ? 'Link Google Account' : mode === 'login' ? 'Welcome Back' : 'Create Account'}
+        <div className="relative hidden w-2/5 overflow-hidden border-r border-white/5 bg-neutral-900 md:flex md:flex-col">
+          <div className="absolute inset-0 z-0">
+            <img
+              src="https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/boxes/lg/75992c3ad217db7e58ba5424025c8cb50fc0836a/iphone-17-series.webp"
+              className="h-full w-full object-cover opacity-40 mix-blend-overlay"
+              alt="Promo Background"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/20 via-[#0F0F11]/50 to-[#0F0F11]" />
+          </div>
+
+          <div className="relative z-10 flex h-full flex-col items-center justify-center p-8 text-center">
+            <BrandLockup className="justify-center" logoClassName="h-14" showTextOnMobile />
+            <h2 className="mt-4 text-3xl font-black uppercase italic leading-none tracking-tight text-white">
+              GET A <br />
+              <span className="mt-1 inline-block rounded border border-indigo-500/20 bg-indigo-500/10 px-2 text-indigo-400">FREE BOX</span>
+              <br />
+              WHEN <br />
+              SIGNING UP!
             </h2>
-            <p className="text-gray-500 text-sm">
-                {isLinkingGoogle
-                    ? 'Confirm your password to link Google with your existing account.'
-                    : mode === 'login'
-                        ? 'Sign in to access your Pullz.gg account'
-                        : 'Join Pullz.gg and start winning today'}
-            </p>
+
+            <div className="relative mt-8 h-40 w-full">
+              <img
+                src="https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/items/md/1668667961cc341ac579ca3c61bcf3ea3089d2cd/surfing-pikachu-vmax.webp"
+                className="absolute left-0 top-10 h-20 w-auto -rotate-12 rounded-md border border-white/10 shadow-2xl"
+                alt="Card"
+              />
+              <img
+                src="https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/items/lg/cd675b59ff0813381e3b0fe9b98269a0678d3aca/iphone-17-pro-max-512gb.webp"
+                className="absolute right-0 top-0 h-24 w-auto rotate-12 drop-shadow-2xl"
+                alt="Phone"
+              />
+            </div>
+          </div>
         </div>
 
-        {userError && (
+        <div className="flex w-full flex-1 flex-col overflow-y-auto bg-[#0F0F11] p-4 sm:p-6 md:p-8">
+          {!isLinkingGoogle && (
+            <div className="mb-5 flex w-full rounded-xl border border-white/5 bg-[#18181b] p-1">
+              <button
+                onClick={() => mode !== 'login' && toggleMode()}
+                className={`flex-1 rounded-lg py-2.5 text-sm font-bold transition-all ${mode === 'login' ? 'bg-[#27272a] text-white shadow-sm ring-1 ring-white/5' : 'text-neutral-500 hover:text-neutral-300'}`}
+                type="button"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => mode !== 'register' && toggleMode()}
+                className={`flex-1 rounded-lg py-2.5 text-sm font-bold transition-all ${mode === 'register' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/20' : 'text-neutral-500 hover:text-neutral-300'}`}
+                type="button"
+              >
+                Register
+              </button>
+            </div>
+          )}
+
+          <div className="mb-4 text-left">
+            <h2 className="text-2xl font-black text-white">
+              {isLinkingGoogle ? 'Link Google Account' : mode === 'login' ? 'Welcome Back' : 'Create Account'}
+            </h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              {isLinkingGoogle
+                ? 'Confirm your password to link Google with your existing account.'
+                : mode === 'login'
+                  ? 'Sign in to access your Pullz.gg account.'
+                  : 'Join Pullz.gg and start winning today.'}
+            </p>
+          </div>
+
+          {userError && (
             <div
-                ref={errorBannerRef}
-                role="alert"
-                aria-live="polite"
-                tabIndex={-1}
-                className="mb-4 p-3 bg-red-500/10 border border-red-500/40 rounded-lg flex items-start justify-between gap-3 text-red-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-400/50"
+              ref={errorBannerRef}
+              role="alert"
+              aria-live="polite"
+              tabIndex={-1}
+              className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300 focus:outline-none focus:ring-2 focus:ring-red-400/50"
             >
-                <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                    <span>{userError}</span>
-                </div>
-                <button
-                    type="button"
-                    onClick={() => setUserError(null)}
-                    className="text-red-200/80 hover:text-red-100 transition-colors"
-                    aria-label="Dismiss error"
-                >
-                    <X className="w-4 h-4" />
-                </button>
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{userError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUserError(null)}
+                className="text-red-200/80 transition-colors hover:text-red-100"
+                aria-label="Dismiss error"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-        )}
-        {message && (
-            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2 text-green-300 text-sm">
-                <AlertCircle className="w-4 h-4" /> {message}
-            </div>
-        )}
+          )}
 
-        {!isLinkingGoogle && (
-            <>
-                <button
-                    type="button"
-                    onClick={handleGoogleSignIn}
-                    disabled={isLoading}
-                    className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-[#1f1f1f] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#2a2a2a] disabled:opacity-50"
-                >
-                    <img
-                        src={googleLogo}
-                        alt="Google"
-                        className="h-5 w-5"
+          {message && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">
+              <AlertCircle className="h-4 w-4" /> {message}
+            </div>
+          )}
+
+          {isLinkingGoogle ? (
+            <form onSubmit={handleLinkGoogleAccount} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="ml-1 text-xs font-semibold text-neutral-400">Email</label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+                  <Input
+                    type="email"
+                    value={googleLinkEmail}
+                    readOnly
+                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4 text-white/60"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="ml-1 text-xs font-semibold text-neutral-400">Password</label>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+                  <Input
+                    type="password"
+                    value={googleLinkPassword}
+                    onChange={(e) => setGoogleLinkPassword(e.target.value)}
+                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4"
+                    placeholder="Enter your password"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="mt-2 w-full rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoading ? 'Linking...' : 'Link Google'}
+              </button>
+
+              <button
+                type="button"
+                onClick={clearGoogleLinkState}
+                className="text-center text-xs text-neutral-400 hover:text-neutral-200"
+              >
+                Back to sign in
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {mode === 'register' && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="ml-1 text-xs font-semibold text-neutral-400">Username</label>
+                  <div className="relative">
+                    <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+                    <Input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4"
+                      placeholder="Display Name"
+                      required
                     />
-                    Continue with Google
-                </button>
-
-                <div className="flex items-center gap-3 my-4">
-                    <div className="h-px flex-1 bg-gray-700" />
-                    <span className="text-xs uppercase text-gray-500">or</span>
-                    <div className="h-px flex-1 bg-gray-700" />
+                  </div>
                 </div>
-            </>
-        )}
+              )}
 
-        {isLinkingGoogle ? (
-            <form onSubmit={handleLinkGoogleAccount} className="space-y-4">
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
-                    <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <Input
-                            type="email"
-                            value={googleLinkEmail}
-                            readOnly
-                            className="pl-10 pr-4 py-3 !text-white/60"
-                        />
-                    </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="ml-1 text-xs font-semibold text-neutral-400">Email</label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4"
+                    placeholder="name@example.com"
+                    required
+                  />
                 </div>
+              </div>
 
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Password</label>
-                    <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <Input
-                            type="password"
-                            value={googleLinkPassword}
-                            onChange={(e) => setGoogleLinkPassword(e.target.value)}
-                            className="pl-10 pr-4 py-3"
-                            placeholder="••••••••"
-                            required
-                        />
-                    </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="ml-1 text-xs font-semibold text-neutral-400">Password</label>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4"
+                    placeholder="Enter your password"
+                    required
+                  />
                 </div>
+              </div>
 
-                <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 btn-logo-gradient"
-                >
-                    {isLoading ? 'Linking...' : 'Link Google'}
-                </button>
-
-                <button
+              {mode === 'login' && (
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <label className="flex items-center gap-2 text-neutral-400">
+                    <Checkbox
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
+                    <span>Remember me</span>
+                  </label>
+                  <button
                     type="button"
-                    onClick={clearGoogleLinkState}
-                    className="w-full text-xs text-gray-400 hover:text-gray-200"
-                >
-                    Back to sign in
-                </button>
-            </form>
-        ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {mode === 'register' && (
-                    <div className="animate-in slide-in-from-left-2">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Username</label>
-                        <div className="relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                            <Input 
-                                type="text" 
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className="pl-10 pr-4 py-3"
-                                placeholder="Display Name"
-                                required
-                            />
-                        </div>
-                    </div>
-                )}
-
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
-                    <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <Input 
-                            type="email" 
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="pl-10 pr-4 py-3"
-                            placeholder="user@example.com"
-                            required
-                        />
-                    </div>
-                </div>
-                
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Password</label>
-                    <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <Input 
-                            type="password" 
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="pl-10 pr-4 py-3"
-                            placeholder="••••••••"
-                            required
-                        />
-                    </div>
-                </div>
-
-                {mode === 'login' && (
-                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-                        <label className="flex items-center gap-2 text-gray-400">
-                            <Checkbox
-                                checked={rememberMe}
-                                onChange={(e) => setRememberMe(e.target.checked)}
-                            />
-                            <span>Remember me</span>
-                        </label>
-                        <button
-                            type="button"
-                            onClick={handleForgotPassword}
-                            className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
-                            disabled={isLoading}
-                        >
-                            Forgot password?
-                        </button>
-                    </div>
-                )}
-
-                {mode === 'register' && (
-                    <div className="space-y-3 text-xs text-gray-400">
-                        <label className="flex items-start gap-2">
-                            <Checkbox
-                                required
-                                checked={confirmAdult}
-                                onChange={(e) => setConfirmAdult(e.target.checked)}
-                                className="mt-0.5"
-                            />
-                            <span>I confirm that I am 18 years or older.</span>
-                        </label>
-                        <label className="flex items-start gap-2">
-                            <Checkbox
-                                required
-                                checked={acceptTerms}
-                                onChange={(e) => setAcceptTerms(e.target.checked)}
-                                className="mt-0.5"
-                            />
-                            <span>I agree to the Terms &amp; Conditions.</span>
-                        </label>
-                    </div>
-                )}
-
-                <button 
-                    type="submit" 
+                    onClick={handleForgotPassword}
+                    className="font-semibold text-indigo-400 transition-colors hover:text-indigo-300"
                     disabled={isLoading}
-                    className={`w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${mode === 'login' ? 'btn-logo-gradient' : 'bg-green-600 hover:bg-green-500 shadow-green-600/20'}`}
-                >
-                    {isLoading ? 'Processing...' : (mode === 'login' ? 'Sign In' : 'Create Account')}
-                </button>
-            </form>
-        )}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
 
-        {!isLinkingGoogle && (
-            <div className="mt-6 text-center text-xs text-gray-500">
-                {mode === 'login' ? "Don't have an account?" : "Already have an account?"}
-                <span 
-                    onClick={toggleMode}
-                    className="text-blue-400 font-bold cursor-pointer hover:underline ml-1"
+              {mode === 'register' && (
+                <div className="mt-1 flex flex-col gap-3 text-xs">
+                  <label className="group flex cursor-pointer items-start gap-3">
+                    <Checkbox
+                      required
+                      checked={acceptTerms}
+                      onChange={(e) => setAcceptTerms(e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span className="select-none text-neutral-400 group-hover:text-neutral-300">
+                      I agree to the <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Terms of Service</a> and <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Privacy Policy</a>
+                    </span>
+                  </label>
+
+                  <label className="group flex cursor-pointer items-start gap-3">
+                    <Checkbox
+                      required
+                      checked={confirmAdult}
+                      onChange={(e) => setConfirmAdult(e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span className="select-none text-neutral-400 group-hover:text-neutral-300">
+                      I confirm I am 18 years of age or older
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="mt-2 w-full rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoading ? 'Please wait...' : mode === 'login' ? 'Sign In with Password' : 'Create Account with Password'}
+              </button>
+            </form>
+          )}
+
+          {!isLinkingGoogle && (
+            <>
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/10" />
+                </div>
+                <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
+                  <span className="bg-[#0F0F11] px-3 text-neutral-500">Or Continue With</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                    {mode === 'login' ? 'Register now' : 'Sign in'}
-                </span>
-            </div>
-        )}
+                  <img src={googleLogo} alt="Google" className="h-5 w-5" />
+                  Google
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-neutral-500"
+                >
+                  Apple
+                </button>
+              </div>
+
+              <div className="mt-3 grid grid-cols-4 gap-3">
+                <button type="button" disabled className="flex items-center justify-center rounded-xl border border-white/5 bg-[#18181b] py-3 text-neutral-500">
+                  <Facebook className="h-5 w-5" />
+                </button>
+                <button type="button" disabled className="flex items-center justify-center rounded-xl border border-white/5 bg-[#18181b] py-3 text-neutral-500">
+                  <Twitter className="h-5 w-5" />
+                </button>
+                <button type="button" disabled className="flex items-center justify-center rounded-xl border border-white/5 bg-[#18181b] py-3 text-neutral-500">
+                  <Twitch className="h-5 w-5" />
+                </button>
+                <button type="button" disabled className="flex items-center justify-center rounded-xl border border-white/5 bg-[#18181b] py-3 text-neutral-500">
+                  <Gamepad2 className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="mt-auto pt-5 text-center text-xs text-neutral-500">
+                {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
+                <button
+                  type="button"
+                  onClick={toggleMode}
+                  className="ml-1 font-bold text-indigo-400 hover:underline"
+                >
+                  {mode === 'login' ? 'Register' : 'Sign In'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
