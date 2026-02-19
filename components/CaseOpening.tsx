@@ -184,11 +184,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
 
       setCopyStatusMessage('Page link copied.');
-      playSound('success');
     } catch (error) {
       console.error('Failed to copy case link', error);
       setCopyStatusMessage('Could not copy link.');
-      playSound('error');
     }
 
     window.setTimeout(() => setCopyStatusMessage(null), 2500);

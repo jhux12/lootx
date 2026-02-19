@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { CaseItem, MysteryBox } from '../types';
 import { TopDropsSlider } from './TopDropsSlider';
+import { useGame } from '../context/GameContext';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -55,6 +56,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   onViewAllBoxes,
   onSignUp
 }) => {
+  const { stripeSettings, setView } = useGame();
   const [openFaq, setOpenFaq] = useState(0);
 
   const featuredBoxes = useMemo(() => boxes.slice(0, 8), [boxes]);
@@ -103,6 +105,19 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 
   const spinnerCardWidth = 118;
   const spinnerGap = 11;
+
+  const handleCategoryCardClick = (index: number) => {
+    const slug = stripeSettings.homeCategorySlugs[index]?.trim();
+    if (!slug) {
+      onViewAllBoxes();
+      return;
+    }
+
+    const params = new URLSearchParams();
+    params.set('category', slug);
+    window.history.replaceState({}, '', `/boxes?${params.toString()}`);
+    setView({ type: 'BOXES' });
+  };
 
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
@@ -219,19 +234,28 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        {CATEGORIES.map((category) => (
-          <article
-            key={category}
-            className="group flex min-h-[200px] flex-col justify-end rounded-2xl border border-white/10 bg-gradient-to-b from-[#121520] to-[#0a0c12] p-5"
-          >
-            <p className="flex items-center gap-2 text-2xl font-black uppercase italic text-white">
-              {category}
-              <span className="rounded-full border border-white/20 p-1 text-gray-300 transition group-hover:border-white/50 group-hover:text-white">
-                <ChevronRight size={14} />
-              </span>
-            </p>
-          </article>
-        ))}
+        {CATEGORIES.map((category, index) => {
+          const categoryImage = stripeSettings.homeCategoryImageUrls[index]?.trim();
+          return (
+            <button
+              key={category}
+              type="button"
+              onClick={() => handleCategoryCardClick(index)}
+              className="group relative flex min-h-[200px] w-full flex-col justify-end overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#121520] to-[#0a0c12] p-5 text-left transition hover:border-white/30"
+            >
+              {categoryImage ? (
+                <img src={categoryImage} alt={category} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+              ) : null}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-transparent" />
+              <p className="relative z-10 flex items-center gap-2 text-2xl font-black uppercase italic text-white">
+                {category}
+                <span className="rounded-full border border-white/20 p-1 text-gray-300 transition group-hover:border-white/50 group-hover:text-white">
+                  <ChevronRight size={14} />
+                </span>
+              </p>
+            </button>
+          );
+        })}
       </section>
 
       <section>
@@ -243,16 +267,23 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
             ['01', 'Pick a box', 'Choose a category you love'],
             ['02', 'Open it', 'Reveal your pull instantly'],
             ['03', 'Keep or trade', 'Ship items or convert to credits']
-          ].map(([num, title, description]) => (
-            <article
-              key={num}
-              className="rounded-2xl border border-white/10 bg-[#0d0f16] p-6 text-center"
-            >
-              <p className="text-5xl font-black text-white/10">{num}</p>
-              <p className="mt-5 text-2xl font-extrabold uppercase text-white">{title}</p>
-              <p className="mt-2 text-sm text-gray-400">{description}</p>
-            </article>
-          ))}
+          ].map(([num, title, description], index) => {
+            const stepImage = stripeSettings.howItWorksStepImageUrls[index]?.trim();
+            return (
+              <article
+                key={num}
+                className="rounded-2xl border border-white/10 bg-[#0d0f16] p-6 text-center"
+              >
+                {stepImage ? (
+                  <img src={stepImage} alt={`Step ${index + 1}`} className="mx-auto h-14 w-14 rounded-xl object-cover" loading="lazy" />
+                ) : (
+                  <p className="text-5xl font-black text-white/10">{num}</p>
+                )}
+                <p className="mt-5 text-2xl font-extrabold uppercase text-white">{title}</p>
+                <p className="mt-2 text-sm text-gray-400">{description}</p>
+              </article>
+            );
+          })}
         </div>
       </section>
 

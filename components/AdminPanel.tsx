@@ -382,6 +382,11 @@ export const AdminPanel: React.FC = () => {
   });
   const [stripeSettingsDraft, setStripeSettingsDraft] = useState({
       comingSoonModeEnabled: stripeSettings.comingSoonModeEnabled,
+      authPopupImageUrl: stripeSettings.authPopupImageUrl,
+      authPopupImageUrls: stripeSettings.authPopupImageUrls,
+      homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
+      homeCategorySlugs: stripeSettings.homeCategorySlugs,
+      howItWorksStepImageUrls: stripeSettings.howItWorksStepImageUrls,
       shippingCashEnabled: stripeSettings.shippingCashEnabled,
       shippingFlatRateInput: (stripeSettings.shippingFlatRateCents / 100).toFixed(2),
       stripeShippingProductId: stripeSettings.stripeShippingProductId,
@@ -757,6 +762,11 @@ export const AdminPanel: React.FC = () => {
   useEffect(() => {
       setStripeSettingsDraft({
           comingSoonModeEnabled: stripeSettings.comingSoonModeEnabled,
+          authPopupImageUrl: stripeSettings.authPopupImageUrl,
+          authPopupImageUrls: stripeSettings.authPopupImageUrls,
+          homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
+          homeCategorySlugs: stripeSettings.homeCategorySlugs,
+          howItWorksStepImageUrls: stripeSettings.howItWorksStepImageUrls,
           shippingCashEnabled: stripeSettings.shippingCashEnabled,
           shippingFlatRateInput: (stripeSettings.shippingFlatRateCents / 100).toFixed(2),
           stripeShippingProductId: stripeSettings.stripeShippingProductId,
@@ -2080,6 +2090,11 @@ export const AdminPanel: React.FC = () => {
       const shippingFlatRateCents = Number.isFinite(rawRate) ? Math.max(0, Math.round(rawRate * 100)) : 0;
       updateStripeSettings({
           comingSoonModeEnabled: stripeSettingsDraft.comingSoonModeEnabled,
+          authPopupImageUrl: stripeSettingsDraft.authPopupImageUrl.trim(),
+          authPopupImageUrls: stripeSettingsDraft.authPopupImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
+          homeCategoryImageUrls: stripeSettingsDraft.homeCategoryImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
+          homeCategorySlugs: stripeSettingsDraft.homeCategorySlugs.map((slug) => slug.trim()).slice(0, 3),
+          howItWorksStepImageUrls: stripeSettingsDraft.howItWorksStepImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
           shippingCashEnabled: stripeSettingsDraft.shippingCashEnabled,
           shippingFlatRateCents,
           stripeShippingProductId: stripeSettingsDraft.stripeShippingProductId,
@@ -4963,6 +4978,72 @@ export const AdminPanel: React.FC = () => {
                                     >
                                         Save website settings
                                     </button>
+                                </div>
+                            </div>
+                            <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4 md:col-span-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Homepage & auth images</label>
+                                <p className="text-xs text-gray-500 mb-4">Paste CDN image URLs. Optimized for mobile cards and modal artwork.</p>
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    {[0, 1, 2].map((index) => (
+                                        <Input
+                                            key={`auth-popup-image-${index}`}
+                                            type="url"
+                                            value={stripeSettingsDraft.authPopupImageUrls[index] ?? ''}
+                                            onChange={(event) => {
+                                                const nextUrls = [...stripeSettingsDraft.authPopupImageUrls];
+                                                nextUrls[index] = event.target.value;
+                                                setStripeSettingsDraft((prev) => ({ ...prev, authPopupImageUrls: nextUrls, authPopupImageUrl: nextUrls[0] ?? '' }));
+                                                setStripeSettingsNotice(false);
+                                            }}
+                                            placeholder={`Auth popup image ${index + 1} URL`}
+                                            className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                                        />
+                                    ))}
+                                    {[0, 1, 2].map((index) => (
+                                        <Input
+                                            key={`home-category-image-${index}`}
+                                            type="url"
+                                            value={stripeSettingsDraft.homeCategoryImageUrls[index] ?? ''}
+                                            onChange={(event) => {
+                                                const nextUrls = [...stripeSettingsDraft.homeCategoryImageUrls];
+                                                nextUrls[index] = event.target.value;
+                                                setStripeSettingsDraft((prev) => ({ ...prev, homeCategoryImageUrls: nextUrls }));
+                                                setStripeSettingsNotice(false);
+                                            }}
+                                            placeholder={`Homepage category image ${index + 1} URL`}
+                                            className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                                        />
+                                    ))}
+                                    {[0, 1, 2].map((index) => (
+                                        <Input
+                                            key={`home-category-slug-${index}`}
+                                            type="text"
+                                            value={stripeSettingsDraft.homeCategorySlugs[index] ?? ''}
+                                            onChange={(event) => {
+                                                const nextSlugs = [...stripeSettingsDraft.homeCategorySlugs];
+                                                nextSlugs[index] = event.target.value;
+                                                setStripeSettingsDraft((prev) => ({ ...prev, homeCategorySlugs: nextSlugs }));
+                                                setStripeSettingsNotice(false);
+                                            }}
+                                            placeholder={`Homepage category ${index + 1} slug (for click-through)`}
+                                            className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                                        />
+                                    ))}
+                                    {[0, 1, 2].map((index) => (
+                                        <Input
+                                            key={`how-it-works-image-${index}`}
+                                            type="url"
+                                            value={stripeSettingsDraft.howItWorksStepImageUrls[index] ?? ''}
+                                            onChange={(event) => {
+                                                const nextUrls = [...stripeSettingsDraft.howItWorksStepImageUrls];
+                                                nextUrls[index] = event.target.value;
+                                                setStripeSettingsDraft((prev) => ({ ...prev, howItWorksStepImageUrls: nextUrls }));
+                                                setStripeSettingsNotice(false);
+                                            }}
+                                            placeholder={`How it works step ${index + 1} image URL`}
+                                            className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                                        />
+                                    ))}
                                 </div>
                             </div>
                         </div>

@@ -65,7 +65,6 @@ export const ProvablyFairPage: React.FC = () => {
       setServerSeedHash(data.serverSeedHash);
       setClientSeedInput(data.clientSeed);
       setNonce(data.nonce);
-      playSound('success');
     } catch (error) {
       console.error('Failed to update client seed', error);
       alert('Unable to update client seed. Please try again.');
@@ -89,7 +88,6 @@ export const ProvablyFairPage: React.FC = () => {
       if (typeof window !== 'undefined') {
         window.sessionStorage.setItem(LAST_REVEAL_STORAGE_KEY, JSON.stringify(data.revealed));
       }
-      playSound('success');
     } catch (error) {
       console.error('Failed to rotate server seed', error);
       alert('Unable to rotate server seed. Please try again.');
@@ -115,7 +113,6 @@ export const ProvablyFairPage: React.FC = () => {
 
     try {
       await navigator.clipboard.writeText(proofLines.join('\n'));
-      playSound('success');
       alert('Provably fair proof copied to clipboard.');
     } catch (error) {
       console.error('Failed to copy proof', error);

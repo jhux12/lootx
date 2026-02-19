@@ -224,6 +224,11 @@ const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
 
 const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   comingSoonModeEnabled: false,
+  authPopupImageUrl: '',
+  authPopupImageUrls: ['', '', ''],
+  homeCategoryImageUrls: ['', '', ''],
+  homeCategorySlugs: ['', '', ''],
+  howItWorksStepImageUrls: ['', '', ''],
   shippingCashEnabled: false,
   shippingFlatRateCents: 0,
   shippingCoinEnabled: false,
@@ -239,9 +244,40 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
     typeof (settings as { stripeShippingKeyOrId?: string }).stripeShippingKeyOrId === 'string'
       ? (settings as { stripeShippingKeyOrId?: string }).stripeShippingKeyOrId
       : '';
+  const legacyAuthImage = typeof settings.authPopupImageUrl === 'string' ? settings.authPopupImageUrl.trim() : '';
+  const normalizedAuthImages = Array.isArray(settings.authPopupImageUrls)
+    ? settings.authPopupImageUrls
+        .filter((imageUrl): imageUrl is string => typeof imageUrl === 'string')
+        .map((imageUrl) => imageUrl.trim())
+        .slice(0, 3)
+    : [];
 
   return {
     comingSoonModeEnabled: settings.comingSoonModeEnabled === true,
+    authPopupImageUrl: legacyAuthImage,
+    authPopupImageUrls: normalizedAuthImages.length > 0
+      ? normalizedAuthImages
+      : legacyAuthImage
+        ? [legacyAuthImage]
+        : [],
+    homeCategoryImageUrls: Array.isArray(settings.homeCategoryImageUrls)
+      ? settings.homeCategoryImageUrls
+          .filter((imageUrl): imageUrl is string => typeof imageUrl === 'string')
+          .map((imageUrl) => imageUrl.trim())
+          .slice(0, 3)
+      : [],
+    homeCategorySlugs: Array.isArray(settings.homeCategorySlugs)
+      ? settings.homeCategorySlugs
+          .filter((slug): slug is string => typeof slug === 'string')
+          .map((slug) => slug.trim())
+          .slice(0, 3)
+      : [],
+    howItWorksStepImageUrls: Array.isArray(settings.howItWorksStepImageUrls)
+      ? settings.howItWorksStepImageUrls
+          .filter((imageUrl): imageUrl is string => typeof imageUrl === 'string')
+          .map((imageUrl) => imageUrl.trim())
+          .slice(0, 3)
+      : [],
     shippingCashEnabled: settings.shippingCashEnabled === true,
     shippingFlatRateCents: Math.max(0, Math.round(Number(settings.shippingFlatRateCents) || 0)),
     shippingCoinEnabled: settings.shippingCoinEnabled === true,

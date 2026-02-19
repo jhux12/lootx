@@ -114,6 +114,11 @@ export interface CoinPackage {
 
 export interface StripeSettings {
   comingSoonModeEnabled: boolean;
+  authPopupImageUrl: string;
+  authPopupImageUrls: string[];
+  homeCategoryImageUrls: string[];
+  homeCategorySlugs: string[];
+  howItWorksStepImageUrls: string[];
   shippingCashEnabled: boolean;
   shippingFlatRateCents: number;
   shippingCoinEnabled: boolean;

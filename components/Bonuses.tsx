@@ -20,7 +20,6 @@ export const Bonuses: React.FC = () => {
     }
 
     if (!canClaim) {
-      playSound('error');
       throw new Error('Daily spin is on cooldown.');
     }
 
