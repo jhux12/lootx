@@ -13,7 +13,7 @@ export const Bonuses: React.FC = () => {
   const nextDailyClaimAt = lastDailyClaim + dailyCooldownMs;
   const canClaim = !lastDailyClaim || nextDailyClaimAt <= Date.now();
 
-  const handleClaimDaily = async () => {
+  const handleSpinStart = async () => {
     if (!isAuthenticated) {
       openAuthModal('login');
       throw new Error('Please login to spin.');
@@ -24,8 +24,20 @@ export const Bonuses: React.FC = () => {
       throw new Error('Daily spin is on cooldown.');
     }
 
+    const data = await authedFetch<{ prizeAmount: number }>('/api/daily-spin', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'spin' })
+    });
+
+    return {
+      amount: Number(data.prizeAmount ?? 0)
+    };
+  };
+
+  const handleSpinClaim = async () => {
     const data = await authedFetch<{ prizeAmount: number; nextClaimAt: number }>('/api/daily-spin', {
-      method: 'POST'
+      method: 'POST',
+      body: JSON.stringify({ action: 'claim' })
     });
 
     playSound('coins');
@@ -40,7 +52,8 @@ export const Bonuses: React.FC = () => {
     <div className="max-w-7xl mx-auto p-4 md:p-6">
       <DailySpinPage
         onBack={() => setView({ type: 'HOME' })}
-        onClaim={handleClaimDaily}
+        onSpinStart={handleSpinStart}
+        onSpinClaim={handleSpinClaim}
         canSpin={canClaim}
         nextClaimAt={nextDailyClaimAt}
       />

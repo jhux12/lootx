@@ -2,6 +2,7 @@ import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 
 const BONUS_SETTINGS_DOC = 'bonus-settings';
 const SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const PENDING_SPIN_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_PRIZES = [10, 25, 100, 500, 1000, 2500];
 
 const sanitizeOdds = (input) => {
@@ -62,6 +63,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    const action = req.body?.action === 'claim' ? 'claim' : 'spin';
     const token = extractBearerToken(req.headers.authorization || req.headers.Authorization);
     if (!token) {
       return res.status(401).json({ error: 'UNAUTHENTICATED', message: 'Missing authorization token.' });
@@ -81,6 +83,59 @@ export default async function handler(req, res) {
       const userData = userSnap.exists ? userSnap.data() || {} : {};
       const bonusSettings = bonusSettingsSnap.exists ? bonusSettingsSnap.data() || {} : {};
       const now = Date.now();
+
+      const pendingSpin =
+        userData.dailySpinPending && typeof userData.dailySpinPending === 'object'
+          ? {
+              amount: Math.floor(Number(userData.dailySpinPending.amount ?? 0)),
+              createdAt: Number(userData.dailySpinPending.createdAt ?? 0)
+            }
+          : null;
+      const hasValidPendingSpin =
+        pendingSpin &&
+        Number.isFinite(pendingSpin.amount) &&
+        pendingSpin.amount > 0 &&
+        Number.isFinite(pendingSpin.createdAt) &&
+        pendingSpin.createdAt > 0 &&
+        now - pendingSpin.createdAt <= PENDING_SPIN_TTL_MS;
+
+      if (action === 'claim') {
+        if (!hasValidPendingSpin) {
+          throw Object.assign(new Error('No pending spin to claim.'), {
+            status: 409,
+            code: 'DAILY_SPIN_NOT_PENDING'
+          });
+        }
+
+        const prizeAmount = pendingSpin.amount;
+
+        transaction.set(
+          userRef,
+          {
+            coins: admin.firestore.FieldValue.increment(prizeAmount),
+            lastDailyClaim: now,
+            dailySpinPending: admin.firestore.FieldValue.delete(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          },
+          { merge: true }
+        );
+
+        return {
+          prizeAmount,
+          lastDailyClaim: now,
+          nextClaimAt: now + SPIN_COOLDOWN_MS,
+          claimed: true
+        };
+      }
+
+      if (hasValidPendingSpin) {
+        return {
+          prizeAmount: pendingSpin.amount,
+          nextClaimAt: pendingSpin.createdAt + SPIN_COOLDOWN_MS,
+          pending: true
+        };
+      }
+
       const lastDailyClaim = Number(userData.lastDailyClaim ?? 0);
       const nextClaimAt = lastDailyClaim + SPIN_COOLDOWN_MS;
 
@@ -98,8 +153,10 @@ export default async function handler(req, res) {
       transaction.set(
         userRef,
         {
-          balance: admin.firestore.FieldValue.increment(prizeAmount),
-          lastDailyClaim: now,
+          dailySpinPending: {
+            amount: prizeAmount,
+            createdAt: now
+          },
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         },
         { merge: true }
@@ -107,8 +164,8 @@ export default async function handler(req, res) {
 
       return {
         prizeAmount,
-        lastDailyClaim: now,
         nextClaimAt: now + SPIN_COOLDOWN_MS,
+        pending: true,
         odds: entries
       };
     });
