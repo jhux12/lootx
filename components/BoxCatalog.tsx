@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Filter, ChevronDown } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -16,6 +16,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const { playSound } = useSound();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   const displayBoxes = useMemo(
     () => boxes.filter((box) => !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
@@ -79,6 +80,19 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     () => [...displayBoxes].filter((box) => !box.isUserCreated).sort((a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)).slice(0, 6),
     [displayBoxes]
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get('category') ?? params.get('slug') ?? params.get('categorySlug');
+    if (!slug) return;
+
+    const normalizedSlug = normalizeBoxTag(slug);
+    if (normalizedSlug === 'all' || categories.some((category) => category.id === normalizedSlug)) {
+      setActiveCategory(normalizedSlug);
+    }
+  }, [categories]);
 
 
 
@@ -145,7 +159,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
       <div className="w-full border-b border-white/5 bg-neutral-950 shadow-xl">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="-mx-1 mb-4 flex items-center gap-2 overflow-x-auto border-b border-white/5 px-1 pb-4 scrollbar-hide md:mx-0 md:border-none md:px-0 md:pb-0 [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch]">
+          <div className="-mx-1 mb-4 hidden items-center gap-2 overflow-x-auto border-b border-white/5 px-1 pb-4 scrollbar-hide md:mx-0 md:flex md:border-none md:px-0 md:pb-0 [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch]">
             <button
               onClick={() => setActiveCategory('all')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${activeCategory === 'all' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
@@ -183,10 +197,47 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               </button>
             </div>
 
-            <button className="flex w-full items-center justify-center rounded-lg bg-indigo-600 py-2.5 text-sm font-bold text-white md:hidden" type="button">
-              <Filter className="mr-2 h-4 w-4" /> Filters
+            <button
+              className="flex w-full items-center justify-center rounded-lg bg-indigo-600 py-2.5 text-sm font-bold text-white md:hidden"
+              type="button"
+              onClick={() => setIsMobileFiltersOpen((current) => !current)}
+            >
+              <Filter className="mr-2 h-4 w-4" /> {isMobileFiltersOpen ? 'Hide Filters' : 'Filters'}
             </button>
           </div>
+
+          {isMobileFiltersOpen && (
+            <div className="mt-3 rounded-xl border border-white/10 bg-neutral-950/95 p-3 md:hidden">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Category filters</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveCategory('all');
+                    setIsMobileFiltersOpen(false);
+                  }}
+                  className={`rounded-lg px-3 py-2 text-xs font-bold transition ${activeCategory === 'all' ? 'bg-white/15 text-white' : 'bg-white/5 text-neutral-300'}`}
+                >
+                  All
+                </button>
+                {categories.map((cat) => (
+                  <button
+                    key={`mobile-${cat.id}`}
+                    type="button"
+                    onClick={() => {
+                      setActiveCategory(cat.id);
+                      setIsMobileFiltersOpen(false);
+                    }}
+                    className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
+                      activeCategory === cat.id ? 'bg-indigo-500/30 text-white' : 'bg-white/5 text-neutral-300'
+                    }`}
+                  >
+                    {cat.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

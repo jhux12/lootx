@@ -1223,6 +1223,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <div>
                   <h3 className="text-xl font-bold text-white">Drop Table</h3>
                   <p className="text-xs text-gray-400">Tap an item to inspect details.</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                    <span className="rounded border border-white/15 bg-white/5 px-1.5 py-0.5">% Drop rate</span>
+                    <span className="inline-flex items-center gap-1 rounded border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-amber-200">i Not redeemable for coins</span>
+                  </div>
                 </div>
             </div>
 
@@ -1237,6 +1241,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div className="absolute inset-0 opacity-25" style={{ background: `radial-gradient(circle at top, ${item.color}88 0%, transparent 70%)` }} />
                         <div className="relative flex h-36 items-center justify-center p-3 sm:h-40">
                             <img loading="lazy" decoding="async" src={item.image} alt={item.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
+                            {item.redeemable === false && (
+                              <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100" aria-label="Not redeemable for coins" title="Not redeemable for coins">
+                                i
+                              </span>
+                            )}
                         </div>
                         <div className="relative border-t border-white/10 bg-black/30 p-3">
                             <div className="mb-1 truncate text-xs font-bold text-white" title={item.name}>{item.name}</div>
