@@ -361,13 +361,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
   const handleSaveProfile = async () => {
       await updateUserInfo(profileForm.name, profileForm.avatar);
-      playSound('success');
       alert("Profile updated successfully!");
   };
 
   const handleSaveAddress = async () => {
       await updateAddress(addressForm);
-      playSound('success');
       alert("Shipping address saved!");
   };
 
@@ -403,7 +401,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       await Promise.all(itemsToShip.map((item) => shipItem(item.instanceId)));
       setSelectedShipments([]);
       setShowShippingReview(false);
-      playSound('success');
     } catch (error) {
       console.error('Failed to request shipments', error);
       alert('Unable to request shipment right now. Please try again.');
@@ -456,7 +453,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       if (!data.sessionId) {
         setSelectedShipments([]);
         setShowShippingReview(false);
-        playSound('success');
         return;
       }
       const stripe = await stripePromise;
@@ -492,7 +488,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       await Promise.all(itemsToShip.map((item) => shipItem(item.instanceId)));
       setSelectedShipments([]);
       setShowShippingReview(false);
-      playSound('success');
     } catch (error) {
       console.error('Failed to request free shipping shipments', error);
       alert('Unable to request shipment right now. Please try again.');
@@ -503,17 +498,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
   const handleUpdatePassword = () => {
       if(passwordForm.new !== passwordForm.confirm) {
-          playSound('error');
           alert("New passwords do not match");
           return;
       }
       if(!passwordForm.current || !passwordForm.new) {
-        playSound('error');
         alert("Please fill in all password fields");
         return;
       }
       
-      playSound('success');
       alert("Password updated successfully!");
       setPasswordForm({ current: '', new: '', confirm: '' });
   };

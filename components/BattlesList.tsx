@@ -62,7 +62,6 @@ export const BattlesList: React.FC = () => {
 
   const handleCreateConfirm = () => {
     if (selectedBoxIds.length === 0) return;
-    playSound('success');
     createBattle(selectedBoxIds, playerCount);
     setShowCreateModal(false);
     setSelectedBoxIds([]);

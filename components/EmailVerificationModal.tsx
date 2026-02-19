@@ -29,7 +29,6 @@ export const EmailVerificationModal: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Unable to resend verification email.');
-      playSound('error');
     } finally {
       setIsResending(false);
     }
@@ -46,7 +45,6 @@ export const EmailVerificationModal: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Unable to refresh verification status.');
-      playSound('error');
     } finally {
       setIsRefreshing(false);
     }

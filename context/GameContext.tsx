@@ -224,6 +224,9 @@ const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
 
 const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   comingSoonModeEnabled: false,
+  authPopupImageUrl: '',
+  homeCategoryImageUrls: ['', '', ''],
+  howItWorksStepImageUrls: ['', '', ''],
   shippingCashEnabled: false,
   shippingFlatRateCents: 0,
   shippingCoinEnabled: false,
@@ -242,6 +245,19 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
 
   return {
     comingSoonModeEnabled: settings.comingSoonModeEnabled === true,
+    authPopupImageUrl: typeof settings.authPopupImageUrl === 'string' ? settings.authPopupImageUrl.trim() : '',
+    homeCategoryImageUrls: Array.isArray(settings.homeCategoryImageUrls)
+      ? settings.homeCategoryImageUrls
+          .filter((imageUrl): imageUrl is string => typeof imageUrl === 'string')
+          .map((imageUrl) => imageUrl.trim())
+          .slice(0, 3)
+      : [],
+    howItWorksStepImageUrls: Array.isArray(settings.howItWorksStepImageUrls)
+      ? settings.howItWorksStepImageUrls
+          .filter((imageUrl): imageUrl is string => typeof imageUrl === 'string')
+          .map((imageUrl) => imageUrl.trim())
+          .slice(0, 3)
+      : [],
     shippingCashEnabled: settings.shippingCashEnabled === true,
     shippingFlatRateCents: Math.max(0, Math.round(Number(settings.shippingFlatRateCents) || 0)),
     shippingCoinEnabled: settings.shippingCoinEnabled === true,

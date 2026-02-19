@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import spinSoundUrl from '../assets/spinsound.mp3';
 
-type SoundType = 'click' | 'hover' | 'spin-start' | 'spin-tick' | 'win-common' | 'win-rare' | 'win-gold' | 'gold-mode' | 'coins' | 'error' | 'success';
+type SoundType = 'click' | 'hover' | 'spin-start' | 'spin-tick' | 'win-common' | 'win-rare' | 'win-gold' | 'gold-mode' | 'coins';
 
 interface SoundContextType {
   muted: boolean;
@@ -20,15 +20,12 @@ const SOUND_URLS: Record<SoundType, string> = {
   'win-rare': 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_804a54df5b.mp3?filename=bell-notification-9336.mp3',
   'win-gold': 'https://cdn.pixabay.com/download/audio/2022/10/16/audio_106275f85b.mp3?filename=win-sfx-38507.mp3',
   'gold-mode': 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_8db1f115a5.mp3?filename=magic-spell-6005.mp3',
-  coins: 'https://cdn.pixabay.com/download/audio/2022/03/25/audio_27613c7a0d.mp3?filename=coins-21160.mp3',
-  error: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_c6ccf3232f.mp3?filename=error-2-36058.mp3',
-  success: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/friend-request-14878.mp3?alt=media&token=41e00f87-b353-4b7f-abae-d5eef1d205e5'
+  coins: 'https://cdn.pixabay.com/download/audio/2022/03/25/audio_27613c7a0d.mp3?filename=coins-21160.mp3'
 };
 
 const SOUND_VOLUMES: Partial<Record<SoundType, number>> = {
   'spin-start': 0.2,
-  hover: 0.05,
-  error: 0.25
+  hover: 0.05
 };
 
 export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

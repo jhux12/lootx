@@ -53,7 +53,6 @@ export const LoginModal: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       setUserError(getAuthErrorMessage(err));
-      playSound('error');
     } finally {
       setIsLoading(false);
     }
@@ -77,12 +76,10 @@ export const LoginModal: React.FC = () => {
 
       if (result.status === 'error') {
         setUserError(getAuthErrorMessage(result.message));
-        playSound('error');
       }
     } catch (err: any) {
       console.error(err);
       setUserError(getAuthErrorMessage(err));
-      playSound('error');
     } finally {
       setIsLoading(false);
     }
@@ -101,12 +98,10 @@ export const LoginModal: React.FC = () => {
       const result = await linkGoogleAccount(googleLinkEmail, googleLinkPassword, googleLinkCredential);
       if (result.status === 'error') {
         setUserError(getAuthErrorMessage(result.message));
-        playSound('error');
       }
     } catch (err: any) {
       console.error(err);
       setUserError(getAuthErrorMessage(err));
-      playSound('error');
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +124,6 @@ export const LoginModal: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       setUserError(getAuthErrorMessage(err));
-      playSound('error');
     } finally {
       setIsLoading(false);
     }
