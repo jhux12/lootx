@@ -11,6 +11,13 @@ type BoxCatalogProps = {
   isChatCollapsed: boolean;
 };
 
+const toCategoryKey = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '')
+    .trim();
+
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const { boxes, setView } = useGame();
   const { playSound } = useSound();
@@ -89,8 +96,21 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     if (!slug) return;
 
     const normalizedSlug = normalizeBoxTag(slug);
-    if (normalizedSlug === 'all' || categories.some((category) => category.id === normalizedSlug)) {
-      setActiveCategory(normalizedSlug);
+    if (normalizedSlug === 'all') {
+      setActiveCategory('all');
+      return;
+    }
+
+    const requestedKey = toCategoryKey(normalizedSlug);
+    const matchedCategory = categories.find(
+      (category) =>
+        category.id === normalizedSlug ||
+        toCategoryKey(category.id) === requestedKey ||
+        toCategoryKey(category.title) === requestedKey
+    );
+
+    if (matchedCategory) {
+      setActiveCategory(matchedCategory.id);
     }
   }, [categories]);
 

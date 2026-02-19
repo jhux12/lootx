@@ -1223,9 +1223,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <div>
                   <h3 className="text-xl font-bold text-white">Drop Table</h3>
                   <p className="text-xs text-gray-400">Tap an item to inspect details.</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                    <span className="rounded border border-white/15 bg-white/5 px-1.5 py-0.5">% Drop rate</span>
-                    <span className="inline-flex items-center gap-1 rounded border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-amber-200">i Not redeemable for coins</span>
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] font-medium text-gray-400">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/20 bg-white/10 text-[9px] font-bold text-gray-200">%</span>
+                      Drop rate
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[9px] font-black text-amber-100">i</span>
+                      Not redeemable
+                    </span>
                   </div>
                 </div>
             </div>
