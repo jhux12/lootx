@@ -34,7 +34,6 @@ import { ProvablyFairPage } from './components/ProvablyFairPage';
 import { HomeBanners } from './components/HomeBanners';
 import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
-import { PromoPopupModal } from './components/PromoPopupModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CookieConsentToast } from './components/CookieConsentToast';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
@@ -73,46 +72,10 @@ type MainContentProps = {
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
-  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal, authInitialized, stripeSettings } = useGame();
+  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
-  const [showPromoPopup, setShowPromoPopup] = useState(false);
-
-  useEffect(() => {
-    if (!authInitialized || isAuthenticated || view.type !== 'HOME') return undefined;
-    if (typeof window === 'undefined') return undefined;
-    const hasSeenPromo = window.sessionStorage.getItem('pullz_seen_promo_popup') === '1';
-    if (hasSeenPromo) return undefined;
-
-    const timeoutId = window.setTimeout(() => {
-      setShowPromoPopup(true);
-      window.sessionStorage.setItem('pullz_seen_promo_popup', '1');
-    }, 7000);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [authInitialized, isAuthenticated, view.type]);
-
-  useEffect(() => {
-    if (isAuthenticated && showPromoPopup) {
-      setShowPromoPopup(false);
-    }
-  }, [isAuthenticated, showPromoPopup]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.dispatchEvent(
-      new CustomEvent('pullz:promo-visibility', {
-        detail: { isOpen: showPromoPopup }
-      })
-    );
-  }, [showPromoPopup]);
-
-  const closePromoPopup = () => {
-    setShowPromoPopup(false);
-  };
 
   useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
@@ -445,21 +408,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {showEmailVerificationModal && <EmailVerificationModal />}
       {showEmailVerifiedModal && <EmailVerifiedModal />}
       {showTopUpModal && <TopUpModal />}
-      <PromoPopupModal
-        isOpen={showPromoPopup}
-        onClose={closePromoPopup}
-        onSignUp={() => {
-          playSound('click');
-          closePromoPopup();
-          openAuthModal('register');
-        }}
-        onSignIn={() => {
-          playSound('click');
-          closePromoPopup();
-          openAuthModal('login');
-        }}
-      />
-
       <SiteFooter />
     </main>
   );
@@ -487,19 +435,8 @@ const AppShell = () => {
   const latestMessageAt = messages[messages.length - 1]?.createdAt ?? 0;
   const [lastSeenAt, setLastSeenAt] = useState(0);
   const hasUnseenChatMessages = latestMessageAt > lastSeenAt;
-  const [isPromoVisible, setIsPromoVisible] = useState(false);
   const loadAnalyticsScripts = useCallback(() => {
     // Analytics integrations will be enabled after consent.
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handlePromoVisibility = (event: Event) => {
-      const detail = (event as CustomEvent<{ isOpen: boolean }>).detail;
-      setIsPromoVisible(Boolean(detail?.isOpen));
-    };
-    window.addEventListener('pullz:promo-visibility', handlePromoVisibility);
-    return () => window.removeEventListener('pullz:promo-visibility', handlePromoVisibility);
   }, []);
 
   const markChatSeen = useCallback(() => {
@@ -529,7 +466,7 @@ const AppShell = () => {
         onChatViewed={markChatSeen}
       />
       <ResetPasswordModal />
-      <CookieConsentToast onAnalyticsConsent={loadAnalyticsScripts} isPromoVisible={isPromoVisible} />
+      <CookieConsentToast onAnalyticsConsent={loadAnalyticsScripts} />
     </div>
   );
 };
