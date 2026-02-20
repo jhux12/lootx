@@ -2,7 +2,7 @@ import { admin, adminAuth, firestore } from './firebaseAdmin.js';
 import { getBearerToken } from './http.js';
 import { hmacSha256Hex, randomSeed, sha256 } from './provablyFair.js';
 
-const BATTLE_ENGINE_VERSION = '1.0.0';
+const BATTLE_ENGINE_VERSION = '1.1.0';
 
 export const BATTLE_STATES = {
   LOBBY: 'LOBBY',
@@ -48,7 +48,8 @@ export const battleSummary = (battleId, data) => ({
   entryCostCoins: Number(data.entryCostCoins ?? 0),
   maxPlayers: Number(data.maxPlayers ?? 2),
   players: Array.isArray(data.players) ? data.players : [],
-  cases: Array.isArray(data.cases) ? data.cases : []
+  cases: Array.isArray(data.cases) ? data.cases : [],
+  botFill: data.botFill ?? null
 });
 
 export const assignTeam = (format, playerIndex) => {
@@ -126,10 +127,12 @@ export const computeBattleRoll = ({ serverSeed, battleId, uid, clientSeed, round
 };
 
 export const pickItemByRoll = (items, roll) => {
-  const weighted = (Array.isArray(items) ? items : []).map((item) => ({
-    ...item,
-    weight: Number(item.weight ?? item.chance ?? 0)
-  })).filter((item) => item.weight > 0);
+  const weighted = (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      ...item,
+      weight: Number(item.weight ?? item.chance ?? 0)
+    }))
+    .filter((item) => item.weight > 0);
 
   if (!weighted.length) {
     throw new Error('Case has no weighted items. TODO: hook battle selector to canonical prize odds source.');
@@ -242,7 +245,8 @@ export const runBattleEngine = async (battleId) => {
     if (totalsByTeam.B > totalsByTeam.A) winnerTeam = 'B';
   }
 
-  const pot = Number(battle.entryCostCoins ?? 0) * players.length;
+  const realPlayers = players.filter((player) => player.isHouseBot !== true);
+  const pot = Number(battle.entryCostCoins ?? 0) * realPlayers.length;
   const payoutsByUid = {};
   if (winnerTeam === 'TIE') {
     const share = players.length ? Math.floor(pot / players.length) : 0;
@@ -275,29 +279,39 @@ export const runBattleEngine = async (battleId) => {
     const entryCostCoins = Number(fresh.entryCostCoins ?? 0);
     const freshPlayers = Array.isArray(fresh.players) ? fresh.players : [];
 
-    freshPlayers.forEach((player) => {
-      const userRef = firestore.collection('users').doc(player.uid);
-      transaction.set(userRef, {
-        coinsLocked: admin.firestore.FieldValue.increment(-entryCostCoins),
-        coins: admin.firestore.FieldValue.increment(Number(payoutsByUid[player.uid] ?? 0))
-      }, { merge: true });
-    });
+    freshPlayers
+      .filter((player) => player.isHouseBot !== true)
+      .forEach((player) => {
+        const userRef = firestore.collection('users').doc(player.uid);
+        transaction.set(
+          userRef,
+          {
+            coinsLocked: admin.firestore.FieldValue.increment(-entryCostCoins),
+            coins: admin.firestore.FieldValue.increment(Number(payoutsByUid[player.uid] ?? 0))
+          },
+          { merge: true }
+        );
+      });
 
-    transaction.set(battleRef, {
-      totalsByUid,
-      totalsByTeam,
-      winnerTeam,
-      payoutsByUid,
-      state: BATTLE_STATES.COMPLETE,
-      serverSeedReveal: fresh.serverSeedReveal,
-      version: Number(fresh.version ?? 0) + 1,
-      updatedAt: nowTs(),
-      engine: {
-        running: false,
-        startedRunAt: fresh.engine?.startedRunAt ?? nowTs(),
-        engineVersion: fresh.engine?.engineVersion ?? BATTLE_ENGINE_VERSION
-      }
-    }, { merge: true });
+    transaction.set(
+      battleRef,
+      {
+        totalsByUid,
+        totalsByTeam,
+        winnerTeam,
+        payoutsByUid,
+        state: BATTLE_STATES.COMPLETE,
+        serverSeedReveal: fresh.serverSeedReveal,
+        version: Number(fresh.version ?? 0) + 1,
+        updatedAt: nowTs(),
+        engine: {
+          running: false,
+          startedRunAt: fresh.engine?.startedRunAt ?? nowTs(),
+          engineVersion: fresh.engine?.engineVersion ?? BATTLE_ENGINE_VERSION
+        }
+      },
+      { merge: true }
+    );
   });
 
   return {

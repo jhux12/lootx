@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { collection, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { authedFetch } from '../utils/authedFetch';
+import { db } from '../firebase';
 import { useSound } from '../context/SoundContext';
 import { ProvablyFairPanel, ProvablyFairRevealData, ProvablyFairRollData } from './ProvablyFairPanel';
 
@@ -17,6 +19,12 @@ const readStoredJson = <T,>(key: string): T | null => {
   }
 };
 
+const getBattleIdFromPath = () => {
+  if (typeof window === 'undefined') return null;
+  const match = window.location.pathname.match(/^\/provably-fair\/battle\/([^/]+)$/);
+  return match?.[1] ?? null;
+};
+
 export const ProvablyFairPage: React.FC = () => {
   const { playSound } = useSound();
   const [serverSeedHash, setServerSeedHash] = useState('');
@@ -27,8 +35,30 @@ export const ProvablyFairPage: React.FC = () => {
   const [isSyncingFair, setIsSyncingFair] = useState(false);
   const [isUpdatingClientSeed, setIsUpdatingClientSeed] = useState(false);
   const [isRotatingSeed, setIsRotatingSeed] = useState(false);
+  const [battleVerify, setBattleVerify] = useState<{ battle: any | null; rounds: any[] }>({ battle: null, rounds: [] });
+
+  const battleId = useMemo(() => getBattleIdFromPath(), []);
+
+  useEffect(() => {
+    if (!battleId) return;
+    const battleRef = doc(db, 'battles', battleId);
+    const unsubBattle = onSnapshot(battleRef, (snap) => {
+      setBattleVerify((prev) => ({ ...prev, battle: snap.exists() ? { id: snap.id, ...snap.data() } : null }));
+    });
+
+    const roundsRef = query(collection(db, 'battles', battleId, 'rounds'), orderBy('index', 'asc'));
+    const unsubRounds = onSnapshot(roundsRef, (snapshot) => {
+      setBattleVerify((prev) => ({ ...prev, rounds: snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })) }));
+    });
+
+    return () => {
+      unsubBattle();
+      unsubRounds();
+    };
+  }, [battleId]);
 
   const loadProvablyFairState = useCallback(async () => {
+    if (battleId) return;
     setIsSyncingFair(true);
     try {
       const data = await authedFetch<{ serverSeedHash: string; clientSeed: string; nonce: number }>('/api/provably-fair');
@@ -40,7 +70,7 @@ export const ProvablyFairPage: React.FC = () => {
     } finally {
       setIsSyncingFair(false);
     }
-  }, []);
+  }, [battleId]);
 
   useEffect(() => {
     loadProvablyFairState();
@@ -55,13 +85,10 @@ export const ProvablyFairPage: React.FC = () => {
 
     setIsUpdatingClientSeed(true);
     try {
-      const data = await authedFetch<{ serverSeedHash: string; clientSeed: string; nonce: number }>(
-        '/api/provably-fair/client-seed',
-        {
-          method: 'POST',
-          body: JSON.stringify({ clientSeed: normalizedSeed })
-        }
-      );
+      const data = await authedFetch<{ serverSeedHash: string; clientSeed: string; nonce: number }>('/api/provably-fair/client-seed', {
+        method: 'POST',
+        body: JSON.stringify({ clientSeed: normalizedSeed })
+      });
       setServerSeedHash(data.serverSeedHash);
       setClientSeedInput(data.clientSeed);
       setNonce(data.nonce);
@@ -124,6 +151,59 @@ export const ProvablyFairPage: React.FC = () => {
     if (typeof window === 'undefined') return 'active';
     return window.location.hash === '#verify' ? 'verify' : 'active';
   }, []);
+
+  if (battleId) {
+    const battle = battleVerify.battle;
+    return (
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-3 pb-12 pt-6 sm:px-6">
+        <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 space-y-3">
+          <h1 className="text-xl font-bold text-white">Battle Verification</h1>
+          {battle ? (
+            <>
+              <div className="text-sm text-gray-300 break-all">Server Seed Hash: <span className="text-white">{battle.serverSeedHash}</span></div>
+              <div className="text-sm text-gray-300 break-all">Server Seed Reveal: <span className="text-white">{battle.serverSeedReveal || 'Hidden until battle completes'}</span></div>
+              <div className="space-y-1">
+                <h2 className="text-sm font-semibold text-gray-200">Player Seeds</h2>
+                {(battle.players || []).map((player: any) => (
+                  <div key={player.uid} className="text-xs text-gray-300 break-all">{player.displayName}: <span className="text-white">{player.clientSeed}</span></div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-gray-400 text-sm">Loading battle proof...</div>
+          )}
+        </div>
+
+        <div className="bg-[#131720] border border-gray-800 rounded-xl p-4">
+          <h2 className="text-sm font-semibold text-gray-200 mb-3">Round Proofs</h2>
+          <div className="space-y-3">
+            {battleVerify.rounds.map((round) => (
+              <div key={round.id} className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-2">Round {Number(round.index) + 1}</div>
+                {Object.entries(round.resultsByUid || {}).map(([uid, result]: any) => (
+                  <div key={`${round.id}-${uid}`} className="text-xs text-gray-300 break-all mb-2">
+                    <div className="text-white">{uid}: {result.itemName} (${result.value})</div>
+                    <div>roll: {result.roll}</div>
+                    <div>nonce: {result.nonce}</div>
+                    <div>proof: {result.proof}</div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 text-xs sm:text-sm text-gray-300">
+          <h2 className="font-semibold text-gray-200 mb-2">How to verify</h2>
+          <ol className="list-decimal list-inside space-y-1">
+            <li>Compute sha256(serverSeedReveal) and ensure it matches the committed serverSeedHash.</li>
+            <li>For each player and round, compute HMAC_SHA256(serverSeedReveal, battleId:uid:clientSeed:roundIndex:nonce).</li>
+            <li>Convert hash to roll in [0,1) and verify selected item/value matches recorded result proof.</li>
+          </ol>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 px-4 pb-12 pt-8 sm:px-6 lg:px-8">

@@ -40,6 +40,7 @@ export default async function handler(req, res) {
     const roundDurationMs = Number(body.roundDurationMs ?? 4500);
     const countdownSeconds = Number(body.countdownSeconds ?? 5);
     const entryCostCoins = Math.max(0, Math.floor(Number(body.entryCostCoins ?? 0)));
+    const joinAfterMs = Math.max(2_000, Math.floor(Number(body.botJoinAfterMs ?? 12_000)));
 
     if (!Number.isFinite(roundDurationMs) || roundDurationMs < 1200) {
       return sendJson(res, 400, { error: 'INVALID_ROUND_DURATION', message: 'roundDurationMs must be at least 1200.' });
@@ -99,6 +100,12 @@ export default async function handler(req, res) {
           running: false,
           startedRunAt: null,
           engineVersion: BATTLE_ENGINE_VERSION
+        },
+        botFill: {
+          enabled: true,
+          joinAfterMs,
+          lastTickAt: null,
+          maxBotAddsPerTick: 2
         }
       });
     });
