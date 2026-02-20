@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ExternalLink, Loader2, ShieldCheck, SkipForward, Swords } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ExternalLink, Loader2, ShieldCheck, SkipForward, Swords } from 'lucide-react';
 import { collection, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
@@ -17,6 +17,10 @@ interface RoundDoc {
   resultsByUid: Record<string, { itemName: string; value: number; rarity: string; proof: string; roll: number; imageUrl?: string }>;
 }
 
+interface ProgressResponse {
+  action?: string;
+}
+
 const tsToMs = (value: any) => (value?.toMillis ? value.toMillis() : Number(value ?? 0));
 
 export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
@@ -29,11 +33,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const [showPfModal, setShowPfModal] = useState(false);
   const [playheadRound, setPlayheadRound] = useState(-1);
   const [skipAnimation, setSkipAnimation] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [showForceProgress, setShowForceProgress] = useState(false);
   const progressInFlightRef = useRef(false);
+  const noopSinceRef = useRef<number | null>(null);
 
   useEffect(() => {
     setPlayheadRound(-1);
     setSkipAnimation(false);
+    setLastError(null);
+    setShowForceProgress(false);
+    noopSinceRef.current = null;
   }, [battleId]);
 
   useEffect(() => {
@@ -78,23 +88,46 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
     setTickLoading(true);
     try {
       await authedFetch('/api/battles/tick', { method: 'POST', body: JSON.stringify({ battleId }) });
-    } catch {
-      // noop
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown tick error';
+      console.error('Battle tick failed', { battleId, error });
+      setLastError(`Tick failed: ${message}`);
     } finally {
       setTickLoading(false);
     }
   };
 
-  const callProgress = async () => {
+  const callProgress = async (forced = false) => {
     if (!battle || progressInFlightRef.current) return;
     if (battle.state !== 'RUNNING') return;
 
     progressInFlightRef.current = true;
     setProgressLoading(true);
     try {
-      await authedFetch('/api/battles/progress', { method: 'POST', body: JSON.stringify({ battleId }) });
-    } catch {
-      // noop
+      const response = await authedFetch<ProgressResponse>('/api/battles/progress', { method: 'POST', body: JSON.stringify({ battleId }) });
+      const isNoop = response?.action === 'noop';
+      const nowTs = Date.now();
+
+      if (!isNoop || forced) {
+        noopSinceRef.current = null;
+        setShowForceProgress(false);
+        setLastError(null);
+        return;
+      }
+
+      if (!noopSinceRef.current) {
+        noopSinceRef.current = nowTs;
+        setShowForceProgress(false);
+        return;
+      }
+
+      if (nowTs - noopSinceRef.current > 10000) {
+        setShowForceProgress(true);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown progress error';
+      console.error('Battle progress failed', { battleId, error });
+      setLastError(`Progress failed: ${message}`);
     } finally {
       progressInFlightRef.current = false;
       setProgressLoading(false);
@@ -112,6 +145,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
 
   useEffect(() => {
     if (!battle || battle.state !== 'RUNNING') return;
+
+    noopSinceRef.current = null;
+    setShowForceProgress(false);
 
     void callProgress();
     const interval = window.setInterval(() => void callProgress(), Math.max(2000, roundDurationMs - 250));
@@ -152,6 +188,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pb-10">
+      {lastError && (
+        <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs sm:text-sm text-red-200 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span className="break-words">{lastError}</span>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2 py-4 items-center">
         <button onClick={() => setView({ type: 'BATTLES' })} className="flex items-center gap-1 px-3 py-2 rounded bg-[#131825] text-gray-300 text-sm hover:text-white">
           <ChevronLeft className="w-4 h-4" /> Back
@@ -169,12 +212,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
           <span className="text-xs px-2 py-1 rounded bg-[#0b0e14] border border-gray-700 text-gray-300">{battle.mode}</span>
           <span className="text-xs px-2 py-1 rounded bg-[#0b0e14] border border-gray-700 text-gray-300">{battle.format}</span>
           <span className="text-xs px-2 py-1 rounded bg-[#0b0e14] border border-gray-700 text-gray-300">{battle.winConditionLabel || (battle.mode === 'CRAZY' ? 'Lowest Total' : 'Highest Total')}</span>
-          <div className="sm:ml-auto flex items-center gap-2 w-full sm:w-auto">
+          <div className="sm:ml-auto flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <CoinAmount amount={toCoins(Number(battle.entryCostCoins ?? 0), PRICE_UNIT_MODE)} className="text-green-400 font-black" iconClassName="w-4 h-4" />
             <button onClick={recreateBattle} className="px-3 py-2 text-xs sm:text-sm rounded bg-brand-purple text-white font-semibold">Recreate Battle</button>
             {battle.state !== 'COMPLETE' && (
               <button onClick={() => setSkipAnimation(true)} className="px-3 py-2 text-xs sm:text-sm rounded border border-gray-600 text-gray-200 inline-flex items-center gap-1">
                 <SkipForward className="w-4 h-4" /> Skip
+              </button>
+            )}
+            {battle.state === 'RUNNING' && showForceProgress && (
+              <button onClick={() => void callProgress(true)} className="px-3 py-2 text-xs sm:text-sm rounded border border-amber-500/60 text-amber-200 hover:bg-amber-500/10">
+                Force Progress
               </button>
             )}
           </div>

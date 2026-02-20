@@ -1,7 +1,28 @@
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from '../firebase';
 
+const waitForAuthUser = async (timeoutMs = 5000): Promise<User | null> => {
+  if (auth.currentUser) return auth.currentUser;
+
+  return new Promise<User | null>((resolve) => {
+    const timeout = window.setTimeout(() => {
+      unsubscribe();
+      resolve(null);
+    }, timeoutMs);
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) return;
+      window.clearTimeout(timeout);
+      unsubscribe();
+      resolve(user);
+    });
+  });
+};
+
 export const authedFetch = async <T,>(url: string, options: RequestInit = {}): Promise<T> => {
-  const token = await auth.currentUser?.getIdToken();
+  const user = auth.currentUser ?? (await waitForAuthUser(5000));
+  const token = await user?.getIdToken();
+
   if (!token) {
     throw new Error('Not authenticated');
   }
@@ -14,18 +35,27 @@ export const authedFetch = async <T,>(url: string, options: RequestInit = {}): P
 
   const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
-    let payload: { error?: string; message?: string } | null = null;
+    const responseText = await response.text();
+    let payload: { error?: string; message?: string; details?: unknown } | null = null;
+
     try {
-      payload = await response.json();
+      payload = responseText ? JSON.parse(responseText) : null;
     } catch {
       payload = null;
     }
 
     const errorCode = payload?.error || 'REQUEST_FAILED';
-    const message = payload?.message || `Request failed with status ${response.status}`;
-    const error = new Error(`${errorCode}: ${message}`) as Error & { status?: number; code?: string };
+    const details = payload?.details ? ` | details=${JSON.stringify(payload.details)}` : '';
+    const message = payload?.message || responseText || `Request failed with status ${response.status}`;
+
+    const error = new Error(`[${response.status} ${response.statusText}] ${errorCode}: ${message}${details}`) as Error & {
+      status?: number;
+      code?: string;
+      payload?: unknown;
+    };
     error.status = response.status;
     error.code = errorCode;
+    error.payload = payload ?? responseText;
     throw error;
   }
 
