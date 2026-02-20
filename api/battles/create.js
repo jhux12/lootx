@@ -87,7 +87,7 @@ export default async function handler(req, res) {
           displayName,
           team: assignTeam(format, 0),
           clientSeed: toSafeClientSeed(body.clientSeed),
-          joinedAt: admin.firestore.FieldValue.serverTimestamp()
+          joinedAt: admin.firestore.Timestamp.now()
         }],
         serverSeedHash,
         serverSeedReveal,

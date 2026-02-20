@@ -48,7 +48,7 @@ export default async function handler(req, res) {
       players[index] = {
         ...players[index],
         clientSeed,
-        joinedAt: players[index].joinedAt || admin.firestore.FieldValue.serverTimestamp()
+        joinedAt: players[index].joinedAt || admin.firestore.Timestamp.now()
       };
 
       transaction.set(battleRef, {

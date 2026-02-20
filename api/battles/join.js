@@ -66,7 +66,7 @@ export default async function handler(req, res) {
           displayName,
           team: assignTeam(battle.format, players.length),
           clientSeed: toSafeClientSeed(body.clientSeed),
-          joinedAt: admin.firestore.FieldValue.serverTimestamp()
+          joinedAt: admin.firestore.Timestamp.now()
         });
 
         transaction.set(userRef, {
