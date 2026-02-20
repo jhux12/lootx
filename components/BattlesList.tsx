@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Clock3, Loader2, Plus, Swords, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
+import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { authedFetch } from '../utils/authedFetch';
@@ -26,7 +28,8 @@ const formatStatus = (battle: any, now: number) => {
 };
 
 export const BattlesList: React.FC = () => {
-  const { battles, joinBattle, createBattle, user, boxes } = useGame();
+  const { joinBattle, createBattle, user, boxes } = useGame();
+  const [battleRows, setBattleRows] = useState<any[]>([]);
   const { playSound } = useSound();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedBoxIds, setSelectedBoxIds] = useState<string[]>([]);
@@ -42,8 +45,41 @@ export const BattlesList: React.FC = () => {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const battlesRef = query(collection(db, 'battles'), orderBy('createdAt', 'desc'), limit(10));
+    const unsubscribe = onSnapshot(battlesRef, (snapshot) => {
+      const next = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
+        const players = Array.isArray(data.players) ? data.players : [];
+        return {
+          id: docSnap.id,
+          state: String(data.state ?? 'LOBBY'),
+          startedAtMs: data.startedAt?.toMillis ? data.startedAt.toMillis() : 0,
+          maxPlayers: Number(data.maxPlayers ?? 2),
+          playerCount: players.length,
+          entryCostCoins: Number(data.entryCostCoins ?? 0),
+          rounds: Number(data.roundCount ?? 0),
+          currentRound: Number(data.currentRound ?? 0),
+          players: players.map((player: any) => ({
+            id: player.uid,
+            avatar: player.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(player.uid || 'player')}`
+          })),
+          cases: Array.isArray(data.cases)
+            ? data.cases.map((entry: any) => {
+                const box = boxes.find((candidate) => candidate.id === entry.caseId);
+                return box || { id: entry.caseId, name: entry.caseId, image: '' };
+              })
+            : []
+        };
+      });
+      setBattleRows(next);
+    });
+
+    return () => unsubscribe();
+  }, [boxes]);
+
   const battleAvailableBoxes = useMemo(() => boxes.filter((box) => !box.isUserCreated), [boxes]);
-  const recentBattles = battles.slice(0, 10);
+  const recentBattles = battleRows.slice(0, 10);
 
   const tickBattle = async (battleId: string) => {
     if (inFlightRef.current[battleId]) return;

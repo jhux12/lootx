@@ -96,9 +96,13 @@ export default async function handler(req, res) {
         totalsByTeam: { A: 0, B: 0 },
         winnerTeam: null,
         payoutsByUid: {},
+        currentRound: 0,
+        runId: null,
+        runStartedAt: null,
         engine: {
           running: false,
-          startedRunAt: null,
+          runStartedAt: null,
+          lastHeartbeatAt: null,
           engineVersion: BATTLE_ENGINE_VERSION
         },
         botFill: {

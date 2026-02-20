@@ -8,6 +8,8 @@ import {
   withHttpError
 } from '../_lib/battles.js';
 
+const makeRunId = () => `run_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -23,6 +25,7 @@ export default async function handler(req, res) {
     }
 
     const battleRef = firestore.collection('battles').doc(battleId);
+    let shouldRunEngine = false;
 
     await firestore.runTransaction(async (transaction) => {
       const battleSnap = await transaction.get(battleRef);
@@ -31,36 +34,51 @@ export default async function handler(req, res) {
       }
 
       const battle = battleSnap.data() ?? {};
-      if (battle.state === BATTLE_STATES.COMPLETE) return;
-
       const players = Array.isArray(battle.players) ? battle.players : [];
+
       if (!players.some((player) => player.uid === decoded.uid)) {
         throw { status: 403, error: 'NOT_PARTICIPANT', message: 'Only participants can start the battle.' };
       }
 
-      const startedAtMs = typeof battle.startedAt?.toMillis === 'function'
-        ? battle.startedAt.toMillis()
-        : 0;
+      if ([BATTLE_STATES.COMPLETE, BATTLE_STATES.FINISHING].includes(battle.state)) {
+        shouldRunEngine = false;
+        return;
+      }
 
+      if (battle.state === BATTLE_STATES.RUNNING) {
+        shouldRunEngine = true;
+        return;
+      }
+
+      const startedAtMs = typeof battle.startedAt?.toMillis === 'function' ? battle.startedAt.toMillis() : 0;
       if (battle.state !== BATTLE_STATES.COUNTDOWN || Date.now() < startedAtMs) {
         throw { status: 409, error: 'NOT_READY', message: 'Battle countdown has not finished yet.' };
       }
 
-      if (battle.engine?.running === true) {
-        return;
-      }
+      const runId = typeof battle.runId === 'string' && battle.runId ? battle.runId : makeRunId();
 
       transaction.set(battleRef, {
+        runId,
+        runStartedAt: admin.firestore.FieldValue.serverTimestamp(),
         state: BATTLE_STATES.RUNNING,
         version: Number(battle.version ?? 0) + 1,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        currentRound: Number(battle.currentRound ?? 0),
         engine: {
+          ...(battle.engine ?? {}),
           running: true,
-          startedRunAt: admin.firestore.FieldValue.serverTimestamp(),
+          runStartedAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastHeartbeatAt: admin.firestore.FieldValue.serverTimestamp(),
           engineVersion: BATTLE_ENGINE_VERSION
         }
       }, { merge: true });
+
+      shouldRunEngine = true;
     });
+
+    if (!shouldRunEngine) {
+      return sendJson(res, 200, { ok: true, status: 'noop' });
+    }
 
     const engineResult = await runBattleEngine(battleId);
     return sendJson(res, 200, { ok: true, engineResult });

@@ -13,10 +13,12 @@ interface BattleArenaProps {
 
 interface RoundDoc {
   index: number;
+  revealedAt?: any;
   resultsByUid: Record<string, { itemName: string; value: number; rarity: string; proof: string; roll: number }>;
 }
 
 const tsToMs = (value: any) => (value?.toMillis ? value.toMillis() : Number(value ?? 0));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const { setView, user, joinBattle } = useGame();
@@ -25,7 +27,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const [now, setNow] = useState(Date.now());
   const [tickLoading, setTickLoading] = useState(false);
   const [showPfModal, setShowPfModal] = useState(false);
+  const [displayedRoundIndex, setDisplayedRoundIndex] = useState(-1);
   const startAttemptRef = useRef(false);
+  const isPlaybackRunningRef = useRef(false);
+  const playbackCursorRef = useRef(-1);
 
   useEffect(() => {
     const battleRef = doc(db, 'battles', battleId);
@@ -35,7 +40,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
 
     const roundsRef = query(collection(db, 'battles', battleId, 'rounds'), orderBy('index', 'asc'));
     const unsubRounds = onSnapshot(roundsRef, (snapshot) => {
-      setRounds(snapshot.docs.map((docSnap) => ({ index: Number(docSnap.data().index ?? 0), ...(docSnap.data() as any) })));
+      const nextRounds = snapshot.docs
+        .map((docSnap) => ({ index: Number(docSnap.data().index ?? 0), ...(docSnap.data() as any) }))
+        .sort((a, b) => a.index - b.index);
+      setRounds(nextRounds);
     });
 
     return () => {
@@ -49,12 +57,33 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
     return () => window.clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (!rounds.length) return;
+    if (isPlaybackRunningRef.current) return;
+
+    const roundDurationMs = Math.max(1200, Number(battle?.roundDurationMs ?? 2000));
+
+    const runPlayback = async () => {
+      isPlaybackRunningRef.current = true;
+      try {
+        while (playbackCursorRef.current + 1 < rounds.length) {
+          const nextIndex = playbackCursorRef.current + 1;
+          playbackCursorRef.current = nextIndex;
+          setDisplayedRoundIndex(nextIndex);
+          await sleep(roundDurationMs);
+        }
+      } finally {
+        isPlaybackRunningRef.current = false;
+      }
+    };
+
+    void runPlayback();
+  }, [rounds, battle?.roundDurationMs]);
+
   const players = Array.isArray(battle?.players) ? battle.players : [];
   const isParticipant = players.some((player: any) => player.uid === user.id);
   const startedAtMs = tsToMs(battle?.startedAt);
-  const roundDurationMs = Number(battle?.roundDurationMs ?? 4500);
-  const timelineRound = Math.max(0, Math.floor((now - startedAtMs) / Math.max(1, roundDurationMs)));
-  const shownRound = Math.min(Math.max(1, timelineRound + 1), Math.max(1, Number(battle?.roundCount ?? 1)));
+  const shownRound = Math.max(1, Math.min(Number(battle?.roundCount ?? 1), displayedRoundIndex + 1));
 
   const runTick = async () => {
     if (!battle || tickLoading) return;
@@ -101,11 +130,18 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   if (!battle) return <div className="p-8 text-center text-gray-400">Battle not found.</div>;
 
   const countdownMs = Math.max(0, startedAtMs - now);
-  const latestRound = rounds[Math.min(rounds.length - 1, Math.max(0, timelineRound))];
+  const displayedRound = displayedRoundIndex >= 0 ? rounds[displayedRoundIndex] : null;
+  const fallbackFinalRound = rounds.length ? rounds[rounds.length - 1] : null;
+
+  const resolvePlayerResult = (uid: string) => {
+    if (displayedRound?.resultsByUid?.[uid]) return displayedRound.resultsByUid[uid];
+    if (battle.state === 'COMPLETE' && fallbackFinalRound?.resultsByUid?.[uid]) return fallbackFinalRound.resultsByUid[uid];
+    return null;
+  };
 
   const renderPlayerCard = (player: any) => {
     const total = Number(battle?.totalsByUid?.[player.uid] ?? 0);
-    const lastResult = latestRound?.resultsByUid?.[player.uid];
+    const lastResult = resolvePlayerResult(player.uid);
 
     return (
       <div key={player.uid} className="bg-[#131720] border border-gray-800 rounded-xl p-3">
@@ -198,7 +234,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
               <button
                 onClick={() => {
                   setShowPfModal(false);
-                  if (typeof window !== 'undefined') { window.history.replaceState({}, '', `/provably-fair/battle/${battleId}`); }
+                  if (typeof window !== 'undefined') {
+                    window.history.replaceState({}, '', `/provably-fair/battle/${battleId}`);
+                  }
                   setView({ type: 'PROVABLY_FAIR' });
                 }}
                 className="px-3 py-2 text-sm rounded bg-brand-purple text-white flex items-center gap-2"
