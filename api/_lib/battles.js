@@ -30,6 +30,8 @@ export const parseAuth = async (req) => {
 
 export const nowTs = () => admin.firestore.FieldValue.serverTimestamp();
 
+export const makeBattleRunId = () => `run_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
 const toTimestampMs = (value) => {
   if (!value) return 0;
   if (typeof value.toMillis === 'function') return value.toMillis();
@@ -289,10 +291,14 @@ export const runBattleEngine = async (battleId) => {
       state: BATTLE_STATES.RUNNING,
       currentRound: roundIndex + 1,
       lastRoundWrittenAt: admin.firestore.FieldValue.serverTimestamp(),
+      engineHeartbeatAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       engine: {
         ...(battle.engine ?? {}),
+        starting: false,
         running: true,
+        runId: battle.runId ?? battle.engine?.runId ?? null,
+        runStartedAt: battle.runStartedAt ?? battle.engine?.runStartedAt ?? admin.firestore.FieldValue.serverTimestamp(),
         lastHeartbeatAt: admin.firestore.FieldValue.serverTimestamp(),
         engineVersion: BATTLE_ENGINE_VERSION
       }
@@ -304,9 +310,13 @@ export const runBattleEngine = async (battleId) => {
   await battleRef.set({
     state: BATTLE_STATES.FINISHING,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    engineHeartbeatAt: admin.firestore.FieldValue.serverTimestamp(),
     engine: {
       ...(battle.engine ?? {}),
+      starting: false,
       running: true,
+      runId: battle.runId ?? battle.engine?.runId ?? null,
+      runStartedAt: battle.runStartedAt ?? battle.engine?.runStartedAt ?? admin.firestore.FieldValue.serverTimestamp(),
       lastHeartbeatAt: admin.firestore.FieldValue.serverTimestamp(),
       engineVersion: BATTLE_ENGINE_VERSION
     }
@@ -352,9 +362,13 @@ export const runBattleEngine = async (battleId) => {
       serverSeedReveal: fresh.serverSeedReveal,
       version: Number(fresh.version ?? 0) + 1,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      engineHeartbeatAt: admin.firestore.FieldValue.serverTimestamp(),
       engine: {
         ...(fresh.engine ?? {}),
+        starting: false,
         running: false,
+        runId: fresh.runId ?? fresh.engine?.runId ?? null,
+        runStartedAt: fresh.runStartedAt ?? fresh.engine?.runStartedAt ?? null,
         lastHeartbeatAt: admin.firestore.FieldValue.serverTimestamp(),
         engineVersion: BATTLE_ENGINE_VERSION
       }
@@ -368,6 +382,95 @@ export const runBattleEngine = async (battleId) => {
     winnerTeam: settlement.winnerTeam,
     payoutsByUid: settlement.payoutsByUid
   };
+};
+
+export const maybeStartBattle = async (battleId) => {
+  const battleRef = firestore.collection('battles').doc(battleId);
+  const nowMs = Date.now();
+  let decision = { ok: true, action: 'noop', reason: 'unknown', shouldRunEngine: false };
+
+  await firestore.runTransaction(async (transaction) => {
+    const snap = await transaction.get(battleRef);
+    if (!snap.exists) {
+      throw { status: 404, error: 'BATTLE_NOT_FOUND', message: 'Battle does not exist.' };
+    }
+
+    const battle = snap.data() ?? {};
+    const players = Array.isArray(battle.players) ? battle.players : [];
+    const maxPlayers = Number(battle.maxPlayers ?? 2);
+    const startedAtMs = typeof battle.startedAt?.toMillis === 'function' ? battle.startedAt.toMillis() : 0;
+    const engine = battle.engine ?? {};
+
+    if ([BATTLE_STATES.COMPLETE, BATTLE_STATES.FINISHING].includes(battle.state)) {
+      decision = { ok: true, action: 'noop', reason: 'already_finished', shouldRunEngine: false };
+      return;
+    }
+
+    if (battle.state === BATTLE_STATES.RUNNING || engine.running) {
+      decision = { ok: true, action: 'noop', reason: 'already_running', shouldRunEngine: false };
+      return;
+    }
+
+    if (battle.state !== BATTLE_STATES.COUNTDOWN) {
+      decision = { ok: true, action: 'noop', reason: 'not_countdown', shouldRunEngine: false };
+      return;
+    }
+
+    if (players.length !== maxPlayers) {
+      decision = { ok: true, action: 'noop', reason: 'not_full', shouldRunEngine: false };
+      return;
+    }
+
+    if (nowMs < startedAtMs) {
+      decision = { ok: true, action: 'noop', reason: 'too_early', shouldRunEngine: false };
+      return;
+    }
+
+    if (engine.starting) {
+      decision = { ok: true, action: 'noop', reason: 'already_starting', shouldRunEngine: false };
+      return;
+    }
+
+    const runId = typeof battle.runId === 'string' && battle.runId ? battle.runId : makeBattleRunId();
+    transaction.set(battleRef, {
+      state: BATTLE_STATES.RUNNING,
+      runId,
+      runStartedAt: admin.firestore.FieldValue.serverTimestamp(),
+      version: Number(battle.version ?? 0) + 1,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      engineHeartbeatAt: admin.firestore.FieldValue.serverTimestamp(),
+      engine: {
+        ...engine,
+        starting: true,
+        running: true,
+        runId,
+        runStartedAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastHeartbeatAt: admin.firestore.FieldValue.serverTimestamp(),
+        engineVersion: BATTLE_ENGINE_VERSION
+      }
+    }, { merge: true });
+
+    decision = { ok: true, action: 'started', reason: null, shouldRunEngine: true, runId };
+  });
+
+  if (!decision.shouldRunEngine) return decision;
+
+  try {
+    const engineResult = await runBattleEngine(battleId);
+    return { ...decision, engineResult };
+  } catch (error) {
+    await battleRef.set({
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      engine: {
+        starting: false,
+        running: false,
+        lastErrorAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastErrorMessage: error?.message ?? 'ENGINE_START_FAILED',
+        engineVersion: BATTLE_ENGINE_VERSION
+      }
+    }, { merge: true });
+    throw error;
+  }
 };
 
 export { BATTLE_ENGINE_VERSION };

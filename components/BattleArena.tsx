@@ -17,6 +17,12 @@ interface RoundDoc {
   resultsByUid: Record<string, { itemName: string; value: number; rarity: string; proof: string; roll: number }>;
 }
 
+interface TickResponse {
+  ok?: boolean;
+  action?: string;
+  reason?: string | null;
+}
+
 const tsToMs = (value: any) => (value?.toMillis ? value.toMillis() : Number(value ?? 0));
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -26,9 +32,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const [rounds, setRounds] = useState<RoundDoc[]>([]);
   const [now, setNow] = useState(Date.now());
   const [tickLoading, setTickLoading] = useState(false);
+  const [tickError, setTickError] = useState<string | null>(null);
   const [showPfModal, setShowPfModal] = useState(false);
   const [displayedRoundIndex, setDisplayedRoundIndex] = useState(-1);
-  const startAttemptRef = useRef(false);
   const isPlaybackRunningRef = useRef(false);
   const playbackCursorRef = useRef(-1);
 
@@ -85,51 +91,55 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const startedAtMs = tsToMs(battle?.startedAt);
   const shownRound = Math.max(1, Math.min(Number(battle?.roundCount ?? 1), displayedRoundIndex + 1));
 
-  const runTick = async () => {
-    if (!battle || tickLoading) return;
+  const runTick = async (source: 'auto' | 'manual' = 'auto') => {
+    if (!battle) return;
     if (!['LOBBY', 'COUNTDOWN'].includes(String(battle.state))) return;
-    if ((battle.players || []).length >= Number(battle.maxPlayers ?? 2)) return;
+    if (tickLoading && source === 'auto') return;
 
     setTickLoading(true);
     try {
-      await authedFetch('/api/battles/tick', { method: 'POST', body: JSON.stringify({ battleId }) });
-    } catch {
-      // no-op
+      const payload = await authedFetch<TickResponse>('/api/battles/tick', {
+        method: 'POST',
+        body: JSON.stringify({ battleId })
+      });
+
+      if (!payload?.ok) {
+        setTickError('Tick request did not succeed.');
+        return;
+      }
+
+      if (payload.action === 'noop' && payload.reason && !['too_early', 'not_full', 'not_countdown'].includes(payload.reason)) {
+        setTickError(`Battle tick: ${payload.reason}`);
+        return;
+      }
+
+      setTickError(null);
+    } catch (error: any) {
+      setTickError(error?.message || 'Failed to tick battle.');
     } finally {
       setTickLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!battle) return undefined;
+    if (!['LOBBY', 'COUNTDOWN'].includes(String(battle.state))) return undefined;
+
     void runTick();
-    const interval = window.setInterval(() => void runTick(), 2500);
+    const interval = window.setInterval(() => void runTick(), 2000);
     return () => window.clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battle?.id, battle?.state, battle?.players?.length]);
-
-  useEffect(() => {
-    if (!battle || !isParticipant) return;
-    if (battle.state !== 'COUNTDOWN') {
-      startAttemptRef.current = false;
-      return;
-    }
-    if (Date.now() < startedAtMs || startAttemptRef.current) return;
-
-    startAttemptRef.current = true;
-    void authedFetch('/api/battles/start', {
-      method: 'POST',
-      body: JSON.stringify({ battleId })
-    }).catch(() => {
-      startAttemptRef.current = false;
-    });
-  }, [battle, battleId, isParticipant, startedAtMs]);
+  }, [battle?.id, battle?.state]);
 
   const teamA = useMemo(() => players.filter((player: any) => player.team === 'A'), [players]);
   const teamB = useMemo(() => players.filter((player: any) => player.team === 'B'), [players]);
 
   if (!battle) return <div className="p-8 text-center text-gray-400">Battle not found.</div>;
 
-  const countdownMs = Math.max(0, startedAtMs - now);
+  const remainingMs = startedAtMs - now;
+  const countdownSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  const isStarting = battle.state === 'COUNTDOWN' && remainingMs <= 0;
+  const showForceStart = battle.state === 'COUNTDOWN' && now > startedAtMs + 15000;
   const displayedRound = displayedRoundIndex >= 0 ? rounds[displayedRoundIndex] : null;
   const fallbackFinalRound = rounds.length ? rounds[rounds.length - 1] : null;
 
@@ -186,9 +196,19 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
           <div className="text-xs px-2 py-1 rounded bg-[#0b0e14] border border-gray-700 text-gray-300">Round {shownRound}/{Math.max(1, Number(battle.roundCount ?? 1))}</div>
           <div className="text-xs px-2 py-1 rounded bg-[#0b0e14] border border-gray-700 text-gray-300">{battle.state}</div>
         </div>
-        {battle.state === 'COUNTDOWN' && <div className="mt-2 text-sm text-yellow-300">Starting in {(countdownMs / 1000).toFixed(1)}s</div>}
+        {battle.state === 'COUNTDOWN' && <div className="mt-2 text-sm text-yellow-300">Starting in {countdownSeconds}s</div>}
+        {isStarting && <div className="mt-1 text-xs text-blue-300">Starting…</div>}
         {(battle.state === 'LOBBY' || battle.state === 'COUNTDOWN') && Number(players.length) < Number(battle.maxPlayers ?? 2) && (
           <div className="mt-2 text-xs text-gray-400 flex items-center gap-2">{tickLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null} Waiting for players and bots…</div>
+        )}
+        {tickError && <div className="mt-2 text-xs text-red-300 bg-red-500/10 border border-red-500/30 rounded p-2">{tickError}</div>}
+        {showForceStart && (
+          <button
+            onClick={() => void runTick('manual')}
+            className="mt-2 w-full sm:w-auto text-xs px-3 py-2 rounded bg-amber-500/20 text-amber-200 border border-amber-500/40 hover:bg-amber-500/30"
+          >
+            Force Start
+          </button>
         )}
       </div>
 

@@ -1,6 +1,13 @@
 import { admin, firestore } from '../_lib/firebaseAdmin.js';
 import { readJsonBody, sendJson } from '../_lib/http.js';
-import { BATTLE_STATES, assignTeam, battleSummary, parseAuth, withHttpError } from '../_lib/battles.js';
+import {
+  BATTLE_STATES,
+  assignTeam,
+  battleSummary,
+  maybeStartBattle,
+  parseAuth,
+  withHttpError
+} from '../_lib/battles.js';
 
 const TICK_MIN_INTERVAL_MS = 2000;
 
@@ -108,7 +115,16 @@ export default async function handler(req, res) {
       summary = battleSummary(battleId, { ...battle, ...patch });
     });
 
-    return sendJson(res, 200, { battle: summary });
+    const startResult = await maybeStartBattle(battleId);
+    const refreshed = await battleRef.get();
+    const refreshedData = refreshed.exists ? refreshed.data() ?? {} : {};
+
+    return sendJson(res, 200, {
+      ok: true,
+      action: startResult.action,
+      reason: startResult.reason ?? null,
+      battle: refreshed.exists ? battleSummary(battleId, refreshedData) : summary
+    });
   } catch (error) {
     const safe = withHttpError(error, 'Failed to tick battle.');
     return sendJson(res, safe.status, { error: safe.error, message: safe.message });
