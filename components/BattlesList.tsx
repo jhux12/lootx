@@ -16,21 +16,21 @@ const formatStatus = (battle: any, now: number) => {
   if (state === 'COUNTDOWN') {
     const startedAtMs = Number(battle.startedAtMs ?? 0);
     const secondsLeft = Math.max(0, Math.ceil((startedAtMs - now) / 1000));
-    return { label: `STARTING • ${secondsLeft}s`, intent: 'starting' as const };
+    return { label: `Starting • ${secondsLeft}s`, intent: 'starting' as const };
   }
   if (state === 'RUNNING' || state === 'FINISHING') {
-    return { label: `LIVE • Round ${Math.max(1, Number(battle.currentRound ?? 1))}/${Math.max(1, Number(battle.rounds ?? 1))}`, intent: 'live' as const };
+    return { label: `Live • Round ${Math.max(1, Number(battle.currentRound ?? 1))}/${Math.max(1, Number(battle.rounds ?? 1))}`, intent: 'live' as const };
   }
   if (state === 'COMPLETE') {
-    return { label: 'ENDED', intent: 'ended' as const };
+    return { label: 'Ended', intent: 'ended' as const };
   }
-  return { label: `WAITING • ${playerCount}/${maxPlayers}`, intent: 'waiting' as const };
+  return { label: `Waiting • ${playerCount}/${maxPlayers}`, intent: 'waiting' as const };
 };
 
 export const BattlesList: React.FC = () => {
   const { joinBattle, createBattle, user, boxes } = useGame();
-  const [battleRows, setBattleRows] = useState<any[]>([]);
   const { playSound } = useSound();
+  const [battleRows, setBattleRows] = useState<any[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedBoxIds, setSelectedBoxIds] = useState<string[]>([]);
   const [playerCount, setPlayerCount] = useState(2);
@@ -51,6 +51,7 @@ export const BattlesList: React.FC = () => {
       const next = snapshot.docs.map((docSnap) => {
         const data = docSnap.data();
         const players = Array.isArray(data.players) ? data.players : [];
+
         return {
           id: docSnap.id,
           state: String(data.state ?? 'LOBBY'),
@@ -88,7 +89,7 @@ export const BattlesList: React.FC = () => {
     try {
       await authedFetch('/api/battles/tick', { method: 'POST', body: JSON.stringify({ battleId }) });
     } catch {
-      // Ignore tick failures client-side; battle remains readable.
+      // ignore tick failures client-side
     } finally {
       inFlightRef.current[battleId] = false;
       setTickBusy((prev) => ({ ...prev, [battleId]: false }));
@@ -122,91 +123,106 @@ export const BattlesList: React.FC = () => {
   }, 0);
 
   return (
-    <section className="mt-8 mb-20 px-2 sm:px-4 md:px-0">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
-          <Swords className="w-5 h-5 text-brand-purple" /> Active Battles
-        </h3>
-        <div className="flex flex-wrap gap-2 items-center text-xs text-gray-400 justify-end">
-          <button
-            onClick={() => {
-              playSound('click');
-              setShowCreateModal(true);
-            }}
-            className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-bold text-white transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Create Battle
-          </button>
+    <section className="mt-6 mb-20 px-2 sm:px-4 md:px-0">
+      <div className="relative overflow-hidden rounded-2xl border border-gray-800 bg-[#0f131b] p-4 sm:p-6 mb-5">
+        <Swords className="absolute -right-10 -top-14 w-52 h-52 sm:w-72 sm:h-72 text-brand-purple/25 rotate-[35deg] pointer-events-none" />
+        <div className="relative z-10 max-w-xl">
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Cravin Arena</p>
+          <h2 className="text-3xl sm:text-4xl font-black text-white mt-1">Arena</h2>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+            <button
+              onClick={() => {
+                playSound('click');
+                setShowCreateModal(true);
+              }}
+              className="text-brand-purple hover:text-white underline underline-offset-4"
+            >
+              Create Battle
+            </button>
+            <span className="text-gray-500">•</span>
+            <span className="text-gray-400">Sort: newest</span>
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 max-h-[550px] overflow-y-auto pr-1 custom-scrollbar">
+      <div className="flex justify-end mb-3">
+        <button
+          onClick={() => {
+            playSound('click');
+            setShowCreateModal(true);
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-purple text-white text-sm font-semibold hover:opacity-90"
+        >
+          <Plus className="w-4 h-4" /> Create
+        </button>
+      </div>
+
+      <div className="space-y-3">
         {recentBattles.length === 0 ? (
-          <div className="text-center py-10 bg-[#131720] rounded-xl border border-gray-800 text-gray-500">No active battles. Create one!</div>
+          <div className="rounded-xl border border-dashed border-gray-700 bg-[#0f131b] p-6 text-center text-gray-400">
+            No active battles. Create one to get started.
+          </div>
         ) : (
-          recentBattles.map((battle: any) => {
-            const isFull = battle.playerCount >= battle.maxPlayers;
-            const isParticipating = battle.players.some((player: any) => player.id === user.id);
+          recentBattles.map((battle) => {
             const status = formatStatus(battle, now);
-            const waiting = status.intent === 'waiting';
-            const rowTicking = Boolean(tickBusy[battle.id]);
+            const rowTicking = !!tickBusy[battle.id];
+            const isParticipating = battle.players.some((player: any) => player.id === user.id);
+            const isFull = battle.playerCount >= battle.maxPlayers;
+            const waiting = status.intent === 'waiting' || status.intent === 'starting';
 
             return (
-              <div key={battle.id} className="flex flex-col md:flex-row items-stretch md:items-center bg-[#131720] border border-gray-800 rounded-xl p-2 hover:border-gray-600 transition-colors">
-                <div className="flex items-center gap-4 w-full md:w-auto p-2 border-b md:border-b-0 md:border-r border-gray-800 md:pr-6 md:mr-6">
-                  <div className={`text-xs font-bold uppercase tracking-wider min-w-[120px] ${status.intent === 'live' ? 'text-green-500' : status.intent === 'starting' ? 'text-yellow-400' : 'text-gray-400'}`}>
-                    {status.label}
+              <article key={battle.id} className="rounded-xl border border-gray-800 bg-[#131720] p-3 sm:p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                  <div className="min-w-0 lg:w-56">
+                    <div className="text-[11px] uppercase tracking-wide text-gray-500">Battle #{battle.id.slice(0, 6)}</div>
+                    <div className={`mt-1 inline-flex text-xs px-2 py-1 rounded-full border ${status.intent === 'live' ? 'border-green-500/40 text-green-300 bg-green-500/10' : status.intent === 'ended' ? 'border-gray-600 text-gray-400 bg-gray-500/10' : 'border-brand-purple/40 text-brand-purple bg-brand-purple/10'}`}>
+                      {status.label}
+                    </div>
                   </div>
-                  <div className="flex gap-1 overflow-x-auto max-w-[160px] md:max-w-none no-scrollbar">
-                    {battle.cases.slice(0, 4).map((item: any, index: number) => (
-                      <img key={`${battle.id}-${index}`} src={item.image} className="w-8 h-8 object-contain bg-[#0b0e14] rounded p-0.5 border border-gray-800" />
+
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {battle.cases.map((box: any, index: number) => (
+                      <div key={`${battle.id}-${box.id}-${index}`} className="w-9 h-9 rounded border border-gray-700 bg-[#0b0e14] p-1">
+                        <img src={box.image} alt={box.name} className="w-full h-full object-contain" />
+                      </div>
                     ))}
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2 px-4 py-2">
-                  {Array.from({ length: battle.maxPlayers }).map((_, index) => {
-                    const player = battle.players[index];
-                    return (
-                      <div key={`${battle.id}-slot-${index}`} className="w-8 h-8 rounded bg-[#0b0e14] border border-gray-700 flex items-center justify-center overflow-hidden">
-                        {player ? (
-                          <img src={player.avatar} className="w-full h-full" />
-                        ) : (
-                          <div className="w-2 h-2 rounded-full bg-gray-800" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="ml-auto flex items-center gap-4 p-2 w-full md:w-auto justify-between md:justify-end">
-                  {waiting && (
-                    <div className="flex items-center gap-1 text-xs text-gray-400 min-w-[140px] justify-end">
-                      {rowTicking ? <Loader2 className="w-3 h-3 animate-spin" /> : <Clock3 className="w-3 h-3" />}
-                      <span>{rowTicking ? 'Checking seats…' : 'Waiting for players…'}</span>
-                    </div>
-                  )}
-                  <div className="text-right">
-                    <CoinAmount
-                      amount={Number(battle.entryCostCoins ?? toCoins(battle.cost ?? 0, PRICE_UNIT_MODE))}
-                      formatOptions={{ maximumFractionDigits: 0 }}
-                      className="text-green-500 font-bold justify-end"
-                      iconClassName="w-3.5 h-3.5"
-                    />
-                    <div className="text-[10px] text-gray-500 uppercase font-bold">Entry</div>
+                  <div className="flex items-center gap-2">
+                    {Array.from({ length: battle.maxPlayers }).map((_, index) => {
+                      const player = battle.players[index];
+                      return (
+                        <div key={`${battle.id}-slot-${index}`} className="w-8 h-8 rounded-md bg-[#0b0e14] border border-gray-700 flex items-center justify-center overflow-hidden">
+                          {player ? <img src={player.avatar} alt="Player avatar" className="w-full h-full" /> : <div className="w-2 h-2 rounded-full bg-gray-700" />}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <button
-                    onClick={() => {
-                      playSound('click');
-                      joinBattle(battle.id);
-                    }}
-                    disabled={!isParticipating && isFull}
-                    className={`px-5 py-2 text-sm font-bold rounded-lg transition-colors ${isParticipating ? 'bg-gray-700 hover:bg-gray-600 text-white' : isFull ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-500 text-white'}`}
-                  >
-                    {isParticipating ? 'Spectate' : isFull ? 'Full' : 'Join'}
-                  </button>
+
+                  <div className="lg:ml-auto flex items-center justify-between lg:justify-end gap-4 w-full lg:w-auto">
+                    {waiting && (
+                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                        {rowTicking ? <Loader2 className="w-3 h-3 animate-spin" /> : <Clock3 className="w-3 h-3" />}
+                        <span>{rowTicking ? 'Checking seats…' : 'Waiting for players…'}</span>
+                      </div>
+                    )}
+                    <div className="text-right">
+                      <CoinAmount amount={Number(battle.entryCostCoins ?? 0)} formatOptions={{ maximumFractionDigits: 0 }} className="text-green-400 font-bold justify-end" iconClassName="w-3.5 h-3.5" />
+                      <div className="text-[10px] uppercase text-gray-500">Entry</div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        playSound('click');
+                        joinBattle(battle.id);
+                      }}
+                      disabled={!isParticipating && isFull}
+                      className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${isParticipating ? 'bg-gray-700 hover:bg-gray-600 text-white' : isFull ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-brand-purple hover:opacity-90 text-white'}`}
+                    >
+                      {isParticipating ? 'Spectate' : isFull ? 'Full' : 'Join'}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </article>
             );
           })
         )}
@@ -258,7 +274,7 @@ export const BattlesList: React.FC = () => {
                     if (!box) return null;
                     return (
                       <button key={`${id}-${idx}`} onClick={() => setSelectedBoxIds((prev) => prev.filter((_, pidx) => pidx !== idx))} className="flex-shrink-0 w-20 h-24 bg-[#151a23] rounded border border-gray-700 flex flex-col items-center justify-center p-1">
-                        <img src={box.image} className="w-12 h-12 object-contain mb-1" />
+                        <img src={box.image} className="w-12 h-12 object-contain mb-1" alt={box.name} />
                         <div className="text-[10px] text-gray-400 truncate w-full text-center">{box.name}</div>
                       </button>
                     );
@@ -270,7 +286,7 @@ export const BattlesList: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {battleAvailableBoxes.map((box) => (
                   <button key={box.id} onClick={() => setSelectedBoxIds((prev) => [...prev, box.id])} className="bg-[#0b0e14] hover:bg-[#151a23] border border-gray-800 hover:border-gray-600 rounded-lg p-2 transition-all flex flex-col items-center text-center">
-                    <img src={box.image} className="w-12 h-12 object-contain mb-2" />
+                    <img src={box.image} className="w-12 h-12 object-contain mb-2" alt={box.name} />
                     <div className="text-xs text-gray-300 font-medium truncate w-full">{box.name}</div>
                   </button>
                 ))}
@@ -282,7 +298,7 @@ export const BattlesList: React.FC = () => {
                 <div className="text-xs text-gray-500">Entry Cost</div>
                 <CoinAmount amount={totalCost} formatOptions={{ maximumFractionDigits: 0 }} className="text-xl font-black text-white" iconClassName="w-4 h-4" />
               </div>
-              <button onClick={handleCreateConfirm} disabled={selectedBoxIds.length === 0} className="px-6 py-3 bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg">
+              <button onClick={handleCreateConfirm} disabled={selectedBoxIds.length === 0} className="px-6 py-3 bg-brand-purple hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg">
                 Create Battle
               </button>
             </div>
