@@ -39,31 +39,27 @@ const hash = (value: string) => {
   return Math.abs(out);
 };
 
-const rarityTone = (rarity?: string) => {
+const rarityColor = (rarity?: string) => {
   const key = String(rarity ?? '').toLowerCase();
-  if (key.includes('legend')) return 'text-amber-300';
-  if (key.includes('epic')) return 'text-fuchsia-300';
-  if (key.includes('rare')) return 'text-sky-300';
-  return 'text-gray-400';
+  if (key.includes('legend')) return '#f59e0b';
+  if (key.includes('epic')) return '#d946ef';
+  if (key.includes('rare')) return '#38bdf8';
+  if (key.includes('uncommon')) return '#22c55e';
+  return '#94a3b8';
 };
 
-const poolFill = (pool: DeterministicReelItem[]) => {
-  if (!pool.length) return [FALLBACK_ITEM];
-  return pool;
-};
+const normalizePool = (pool: DeterministicReelItem[]) => (pool.length ? pool : [FALLBACK_ITEM]);
 
-const buildReel = (spinKey: string, sourcePool: DeterministicReelItem[], winner: DeterministicReelItem | null) => {
+const buildReel = (spinKey: string, poolInput: DeterministicReelItem[], winner: DeterministicReelItem | null) => {
   const seed = hash(spinKey);
-  const pool = poolFill(sourcePool);
+  const pool = normalizePool(poolInput);
+
   const reel = Array.from({ length: TOTAL_ITEMS }, (_, index) => {
-    const pick = pool[Math.abs((seed + index * 17) % pool.length)] || FALLBACK_ITEM;
-    return { ...pick, _index: index };
+    const item = pool[Math.abs((seed + index * 17) % pool.length)] || FALLBACK_ITEM;
+    return { ...item, _index: index };
   });
 
-  if (winner) {
-    reel[STOP_INDEX] = { ...winner, _index: STOP_INDEX };
-  }
-
+  if (winner) reel[STOP_INDEX] = { ...winner, _index: STOP_INDEX };
   return reel;
 };
 
@@ -78,18 +74,18 @@ export const DeterministicReel: React.FC<DeterministicReelProps> = memo(({ spinK
   const [transition, setTransition] = useState('none');
 
   const startX = useMemo(() => {
-    const containerW = containerRef.current?.clientWidth ?? 0;
-    const indicatorCenterX = containerW / 2;
-    const startCardIndex = Math.max(0, STOP_INDEX - START_OFFSET);
-    const cardCenterX = startCardIndex * STEP + CARD_W / 2;
-    return indicatorCenterX - cardCenterX;
+    const containerWidth = containerRef.current?.clientWidth ?? 0;
+    const indicatorCenter = containerWidth / 2;
+    const startIndex = Math.max(0, STOP_INDEX - START_OFFSET);
+    const cardCenter = startIndex * STEP + CARD_W / 2;
+    return indicatorCenter - cardCenter;
   }, [spinKey]);
 
   const targetX = useMemo(() => {
-    const containerW = containerRef.current?.clientWidth ?? 0;
-    const indicatorCenterX = containerW / 2;
-    const cardCenterX = STOP_INDEX * STEP + CARD_W / 2;
-    return indicatorCenterX - cardCenterX;
+    const containerWidth = containerRef.current?.clientWidth ?? 0;
+    const indicatorCenter = containerWidth / 2;
+    const cardCenter = STOP_INDEX * STEP + CARD_W / 2;
+    return indicatorCenter - cardCenter;
   }, [spinKey]);
 
   useEffect(() => {
@@ -112,53 +108,51 @@ export const DeterministicReel: React.FC<DeterministicReelProps> = memo(({ spinK
     setTransition('none');
     setTransformX(startX);
 
-    const raf = window.requestAnimationFrame(() => {
-      setTransition(`transform ${durationMs}ms cubic-bezier(0.08, 0.84, 0.2, 1)`);
+    const raf = requestAnimationFrame(() => {
+      setTransition(`transform ${durationMs}ms cubic-bezier(0.08, 0.82, 0.22, 1)`);
       setTransformX(targetX);
     });
 
-    return () => window.cancelAnimationFrame(raf);
-  }, [durationMs, phase, startX, targetX, spinKey]);
+    return () => cancelAnimationFrame(raf);
+  }, [durationMs, phase, spinKey, startX, targetX]);
 
   useEffect(() => {
     if (phase !== 'SPIN') return;
-
     const node = trackRef.current;
     if (!node) return;
 
-    const handleEnd = () => {
+    const onTransitionEnd = () => {
       const winnerRect = winnerRef.current?.getBoundingClientRect();
       const indicatorRect = indicatorRef.current?.getBoundingClientRect();
-      if (!winnerRect || !indicatorRect) {
-        onStopped?.();
-        return;
+
+      if (winnerRect && indicatorRect) {
+        const winnerCenter = winnerRect.left + winnerRect.width / 2;
+        const indicatorCenter = indicatorRect.left + indicatorRect.width / 2;
+        const diff = indicatorCenter - winnerCenter;
+        if (Math.abs(diff) > 2) {
+          setTransition('none');
+          setTransformX((prev) => prev + diff);
+        }
       }
 
-      const winnerCenter = winnerRect.left + winnerRect.width / 2;
-      const indicatorCenter = indicatorRect.left + indicatorRect.width / 2;
-      const diff = indicatorCenter - winnerCenter;
-
-      if (Math.abs(diff) > 2) {
-        setTransition('none');
-        setTransformX((prev) => prev + diff);
-      }
       onStopped?.();
     };
 
-    node.addEventListener('transitionend', handleEnd, { once: true });
-    return () => node.removeEventListener('transitionend', handleEnd);
+    node.addEventListener('transitionend', onTransitionEnd, { once: true });
+    return () => node.removeEventListener('transitionend', onTransitionEnd);
   }, [onStopped, phase, spinKey]);
 
+  const idleClass = phase === 'IDLE' && !winningItem ? 'animate-[battleIdleRail_12s_linear_infinite]' : '';
+
   return (
-    <div ref={containerRef} className="relative h-[128px] overflow-hidden rounded-xl border border-white/10 bg-[#0a0f18]">
-      <div
-        ref={indicatorRef}
-        className="pointer-events-none absolute inset-y-2 left-1/2 z-20 w-[2px] -translate-x-1/2 rounded bg-gradient-to-b from-transparent via-brand-purple to-transparent"
-      />
+    <div ref={containerRef} className="relative h-[134px] overflow-hidden rounded-xl border border-white/10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-[#0b111c]">
+      <div ref={indicatorRef} className="pointer-events-none absolute inset-y-2 left-1/2 z-20 w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-300/80 to-transparent" />
+      <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-12 bg-gradient-to-r from-[#0b111c] to-transparent" />
+      <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-12 bg-gradient-to-l from-[#0b111c] to-transparent" />
 
       <div
         ref={trackRef}
-        className={`absolute left-0 top-1/2 flex -translate-y-1/2 ${phase === 'IDLE' && !winningItem ? 'animate-[idleReel_14s_linear_infinite]' : ''}`}
+        className={`absolute left-0 top-1/2 flex -translate-y-1/2 ${idleClass}`}
         style={{
           gap: `${GAP}px`,
           transform: `translate3d(${transformX}px,0,0)`,
@@ -167,36 +161,32 @@ export const DeterministicReel: React.FC<DeterministicReelProps> = memo(({ spinK
         }}
       >
         {reelItems.map((item, index) => {
-          const isWinner = index === STOP_INDEX && !!winningItem;
+          const isWinner = !!winningItem && index === STOP_INDEX;
+          const accent = rarityColor(item.rarity);
           return (
             <div
               ref={isWinner ? winnerRef : null}
               key={`${item.id}-${index}`}
-              className={`shrink-0 rounded-lg border p-2 ${isWinner && phase !== 'IDLE' ? 'border-brand-purple bg-brand-purple/15 shadow-[0_0_22px_rgba(139,92,246,0.45)]' : 'border-white/10 bg-[#101827]'}`}
+              className={`relative shrink-0 overflow-hidden rounded-xl border bg-[#151a23] p-2 ${isWinner && phase !== 'IDLE' ? 'border-brand-purple shadow-[0_0_16px_rgba(139,92,246,0.5)]' : 'border-white/10'}`}
               style={{ width: `${CARD_W}px`, minWidth: `${CARD_W}px`, height: `${CARD_H}px` }}
             >
-              <div className="flex h-full items-center gap-2">
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-[#1a2333]">
-                  {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.name} width={48} height={48} loading="eager" className="h-12 w-12 object-cover" />
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center text-[10px] text-gray-500">N/A</div>
-                  )}
+              <div className="pointer-events-none absolute inset-2 rounded-full opacity-60" style={{ background: `radial-gradient(circle, ${accent}66 0%, ${accent}22 45%, transparent 78%)` }} />
+              <div className="relative z-10 flex h-full items-center gap-2">
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-[#101726]">
+                  {item.imageUrl ? <img src={item.imageUrl} alt={item.name} width={48} height={48} loading="eager" className="h-12 w-12 object-contain" /> : <div className="flex h-12 w-12 items-center justify-center text-[10px] text-gray-500">N/A</div>}
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-xs font-semibold text-gray-100">{item.name}</div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-emerald-300">{item.value.toLocaleString()}</span>
-                    <span className={`text-[10px] ${rarityTone(item.rarity)}`}>{item.rarity || 'common'}</span>
-                  </div>
+                  <div className="truncate text-[11px] font-semibold text-gray-100">{item.name}</div>
+                  <div className="mt-1 text-[11px] font-bold text-emerald-300">{item.value.toLocaleString()}</div>
                 </div>
               </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 opacity-70" style={{ backgroundColor: accent }} />
             </div>
           );
         })}
       </div>
 
-      <style>{`@keyframes idleReel { 0% { transform: translate3d(${startX}px, 0, 0); } 100% { transform: translate3d(${startX - STEP * 10}px, 0, 0); } }`}</style>
+      <style>{`@keyframes battleIdleRail { 0% { transform: translate3d(${startX}px,0,0); } 100% { transform: translate3d(${startX - STEP * 10}px,0,0); } }`}</style>
     </div>
   );
 });

@@ -35,6 +35,7 @@ export const BattlesList: React.FC = () => {
   const [mode, setMode] = useState<'REGULAR' | 'CRAZY'>('REGULAR');
   const [format, setFormat] = useState<'1V1' | '2V2'>('1V1');
   const [now, setNow] = useState(Date.now());
+  const [isCreatingBattle, setIsCreatingBattle] = useState(false);
   const inFlightRef = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -94,12 +95,15 @@ export const BattlesList: React.FC = () => {
     return () => window.clearInterval(interval);
   }, [rows]);
 
-  const onCreate = () => {
-    if (!selectedBoxIds.length) return;
-    createBattle(selectedBoxIds, format === '2V2' ? 4 : 2, { mode, format });
+  const onCreate = async () => {
+    if (!selectedBoxIds.length || isCreatingBattle) return;
+    setIsCreatingBattle(true);
     playSound('click');
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
+    createBattle(selectedBoxIds, format === '2V2' ? 4 : 2, { mode, format });
     setSelectedBoxIds([]);
     setShowCreateModal(false);
+    window.setTimeout(() => setIsCreatingBattle(false), 1200);
   };
 
   return (
@@ -174,6 +178,20 @@ export const BattlesList: React.FC = () => {
               <button onClick={onCreate} disabled={!selectedBoxIds.length} className="rounded bg-brand-purple px-4 py-2 text-sm font-bold text-white disabled:opacity-40">Create</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {isCreatingBattle && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-[#05080fcc] backdrop-blur-sm">
+          <div className="w-[min(92vw,420px)] rounded-2xl border border-white/10 bg-[#111a2a] p-5 text-center">
+            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-brand-purple/40 border-t-brand-purple" />
+            <div className="text-sm font-bold text-white">Creating your battle…</div>
+            <div className="mt-1 text-xs text-gray-400">Preparing arena and syncing players.</div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded bg-[#1a2438]">
+              <div className="h-full w-1/2 animate-[battleCreate_1.1s_ease-in-out_infinite] rounded bg-brand-purple" />
+            </div>
+          </div>
+          <style>{`@keyframes battleCreate { 0% { transform: translateX(-90%);} 100% { transform: translateX(190%);} }`}</style>
         </div>
       )}
     </section>

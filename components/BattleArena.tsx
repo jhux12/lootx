@@ -31,6 +31,7 @@ type UiPhase =
 
 const introMs = 600;
 const revealMs = 950;
+const freezeAfterSpinMs = 2200;
 const intermissionMs = 450;
 const finalRevealMs = 1200;
 
@@ -292,7 +293,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
           return next;
         });
         onRoundDoneRef.current.add(roundIndex);
-        await wait(revealMs);
+        await wait(revealMs + freezeAfterSpinMs);
 
         if (cancelled || skipRequested) break;
         setUiPhase('UI_INTERMISSION');
@@ -418,6 +419,16 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                   phase={spinPhase}
                   durationMs={spinMs}
                 />
+                <div className="mt-2 min-h-[40px] rounded border border-white/10 bg-[#0b1322] px-2 py-1.5">
+                  {winnerItem && revealedRounds.has(Math.max(0, activeRoundIndex)) ? (
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <div className="min-w-0 truncate text-gray-200">{winnerItem.name}</div>
+                      <div className="font-black text-emerald-300">{winnerItem.value.toLocaleString()}</div>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-gray-500">{player.isEmptySeat ? 'Awaiting player…' : 'Result after spin…'}</div>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -448,7 +459,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
 
         <div className="relative min-h-[560px]">
           <RoundRecapOverlay
-            open={uiPhase === 'UI_ROUND_REVEAL'}
+            open={uiPhase === 'UI_ROUND_REVEAL' && !skipRequested}
             roundIndex={Math.max(0, activeRoundIndex)}
             winnerTeam={roundWinnerTeam}
             deltaValue={Math.max(roundTeamTotals.A, roundTeamTotals.B)}
