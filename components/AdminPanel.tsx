@@ -382,7 +382,6 @@ export const AdminPanel: React.FC = () => {
       sortOrder: 0
   });
   const [stripeSettingsDraft, setStripeSettingsDraft] = useState({
-      comingSoonModeEnabled: stripeSettings.comingSoonModeEnabled,
       authPopupImageUrl: stripeSettings.authPopupImageUrl,
       authPopupImageUrls: stripeSettings.authPopupImageUrls,
       homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
@@ -783,8 +782,7 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       setStripeSettingsDraft({
-          comingSoonModeEnabled: stripeSettings.comingSoonModeEnabled,
-          authPopupImageUrl: stripeSettings.authPopupImageUrl,
+              authPopupImageUrl: stripeSettings.authPopupImageUrl,
           authPopupImageUrls: stripeSettings.authPopupImageUrls,
           homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
           homeCategorySlugs: stripeSettings.homeCategorySlugs,
@@ -2111,7 +2109,6 @@ export const AdminPanel: React.FC = () => {
       const rawRate = Number(stripeSettingsDraft.shippingFlatRateInput);
       const shippingFlatRateCents = Number.isFinite(rawRate) ? Math.max(0, Math.round(rawRate * 100)) : 0;
       updateStripeSettings({
-          comingSoonModeEnabled: stripeSettingsDraft.comingSoonModeEnabled,
           authPopupImageUrl: stripeSettingsDraft.authPopupImageUrl.trim(),
           authPopupImageUrls: stripeSettingsDraft.authPopupImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
           homeCategoryImageUrls: stripeSettingsDraft.homeCategoryImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
@@ -4969,38 +4966,6 @@ export const AdminPanel: React.FC = () => {
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Site Name</label>
                                 <Input type="text" value="LootX" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white" readOnly />
-                            </div>
-                            <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4">
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Coming Soon Mode</label>
-                                <p className="text-xs text-gray-500 mb-3">
-                                    Replaces the public site with a launch page while keeping <span className="text-gray-300">/admin</span> reachable.
-                                </p>
-                                <label className="flex items-center justify-between gap-3 rounded-lg border border-gray-700 px-3 py-2">
-                                    <span className="text-sm text-gray-300">Enable coming soon mode</span>
-                                    <input
-                                        type="checkbox"
-                                        checked={stripeSettingsDraft.comingSoonModeEnabled}
-                                        onChange={(event) => {
-                                            setStripeSettingsDraft((prev) => ({
-                                                ...prev,
-                                                comingSoonModeEnabled: event.target.checked
-                                            }));
-                                            setStripeSettingsNotice(false);
-                                        }}
-                                        className="h-5 w-5 rounded border-gray-600 bg-[#111827] text-brand-purple focus:ring-brand-purple"
-                                    />
-                                </label>
-                                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                                    <span className={`text-xs font-semibold px-3 py-1 rounded-full ${stripeSettingsDraft.comingSoonModeEnabled ? 'bg-amber-500/10 text-amber-300' : 'bg-emerald-500/10 text-emerald-300'}`}>
-                                        {stripeSettingsDraft.comingSoonModeEnabled ? 'Coming soon mode is live' : 'Public site is live'}
-                                    </span>
-                                    <button
-                                        onClick={handleSaveStripeSettings}
-                                        className="px-4 py-2 text-xs font-semibold rounded-lg border border-brand-purple/40 bg-brand-purple/15 text-brand-purple transition-colors hover:bg-brand-purple hover:text-white"
-                                    >
-                                        Save website settings
-                                    </button>
-                                </div>
                             </div>
                             <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4 md:col-span-2">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Homepage & auth images</label>
