@@ -1,26 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ChevronLeft, ExternalLink, Loader2, ShieldCheck, SkipForward, Swords } from 'lucide-react';
+import { ChevronLeft, Crown, ExternalLink, Loader2, ShieldCheck, SkipForward, Swords } from 'lucide-react';
 import { collection, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { CoinAmount } from './CoinAmount';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { authedFetch } from '../utils/authedFetch';
-import { ReelItem, SpinnerReel } from './SpinnerReel';
+import { DeterministicReel, ReelItem } from './battles/DeterministicReel';
+import { RoundRecapOverlay } from './battles/RoundRecapOverlay';
+import { BattleResultTray } from './battles/BattleResultTray';
 
-interface BattleArenaProps {
-  battleId: string;
-}
+type UIPhase = 'LOBBY_VIEW' | 'COUNTDOWN_VIEW' | 'ROUND_INTRO' | 'SPINNING' | 'ROUND_REVEAL' | 'INTERMISSION' | 'FINAL_REVEAL' | 'COMPLETE_VIEW';
 
-interface RoundDoc {
-  index: number;
-  revealedAt?: any;
-  resultsByUid: Record<string, { itemId?: string; itemName: string; value: number; rarity: string; proof: string; roll: number; imageUrl?: string }>;
-}
-
-interface ProgressResponse {
-  action?: string;
-}
+interface BattleArenaProps { battleId: string; }
+interface RoundDoc { index: number; resultsByUid: Record<string, any>; }
 
 const tsToMs = (value: any) => (value?.toMillis ? value.toMillis() : Number(value ?? 0));
 
@@ -29,407 +22,268 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const [battle, setBattle] = useState<any>(null);
   const [rounds, setRounds] = useState<RoundDoc[]>([]);
   const [now, setNow] = useState(Date.now());
+  const [showPfModal, setShowPfModal] = useState(false);
+  const [uiPhase, setUiPhase] = useState<UIPhase>('LOBBY_VIEW');
+  const [playheadRound, setPlayheadRound] = useState(-1);
+  const [skipPlayback, setSkipPlayback] = useState(false);
+  const [showRecap, setShowRecap] = useState(false);
+  const [showResultTray, setShowResultTray] = useState(false);
   const [tickLoading, setTickLoading] = useState(false);
   const [progressLoading, setProgressLoading] = useState(false);
-  const [showPfModal, setShowPfModal] = useState(false);
-  const [playheadRound, setPlayheadRound] = useState(-1);
-  const [skipAnimation, setSkipAnimation] = useState(false);
-  const [lastError, setLastError] = useState<string | null>(null);
-  const [showForceProgress, setShowForceProgress] = useState(false);
-  const [completedSpinRounds, setCompletedSpinRounds] = useState<Set<number>>(new Set());
-  const progressInFlightRef = useRef(false);
-  const noopSinceRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    setPlayheadRound(-1);
-    setSkipAnimation(false);
-    setLastError(null);
-    setShowForceProgress(false);
-    setCompletedSpinRounds(new Set());
-    noopSinceRef.current = null;
-  }, [battleId]);
+  const playbackKeyRef = useRef('');
 
   useEffect(() => {
     const battleRef = doc(db, 'battles', battleId);
-    const unsubBattle = onSnapshot(battleRef, (snap) => {
-      setBattle(snap.exists() ? { id: snap.id, ...snap.data() } : null);
-    });
-
+    const unsubBattle = onSnapshot(battleRef, (snap) => setBattle(snap.exists() ? { id: snap.id, ...snap.data() } : null));
     const roundsRef = query(collection(db, 'battles', battleId, 'rounds'), orderBy('index', 'asc'));
     const unsubRounds = onSnapshot(roundsRef, (snapshot) => {
-      const nextRounds = snapshot.docs
-        .map((docSnap) => ({ index: Number(docSnap.data().index ?? 0), ...(docSnap.data() as any) }))
-        .sort((a, b) => a.index - b.index);
-      setRounds(nextRounds);
+      const parsed = snapshot.docs.map((d) => ({ index: Number(d.data().index ?? 0), ...(d.data() as any) })).sort((a, b) => a.index - b.index);
+      setRounds(parsed);
     });
-
-    return () => {
-      unsubBattle();
-      unsubRounds();
-    };
+    return () => { unsubBattle(); unsubRounds(); };
   }, [battleId]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => setNow(Date.now()), 300);
-    return () => window.clearInterval(interval);
+    const timer = window.setInterval(() => setNow(Date.now()), 400);
+    return () => window.clearInterval(timer);
   }, []);
 
   const players = Array.isArray(battle?.players) ? battle.players : [];
-  const isParticipant = players.some((player: any) => player.uid === user.id);
+  const roundCount = Math.max(1, Number(battle?.roundCount ?? 1));
+  const roundDurationMs = Math.max(1800, Number(battle?.roundDurationMs ?? 3400));
+  const teams = useMemo(() => ({ A: players.filter((p: any) => p.team !== 'B'), B: players.filter((p: any) => p.team === 'B') }), [players]);
   const startedAtMs = tsToMs(battle?.startedAt);
   const countdownMs = Math.max(0, startedAtMs - now);
-  const roundCount = Math.max(1, Number(battle?.roundCount ?? 1));
-  const roundDurationMs = Math.max(1500, Number(battle?.roundDurationMs ?? 3800));
-  const shownRound = Math.max(1, Math.min(roundCount, playheadRound + 1));
-  const roundsByIndex = useMemo(() => new Map(rounds.map((round) => [round.index, round])), [rounds]);
-  const canShowWinner = skipAnimation || playheadRound >= roundCount - 1;
-  const animatedRound = Math.max(0, Math.min(roundCount - 1, playheadRound + 1));
+  const isReplay = battle?.state === 'COMPLETE';
+  const isParticipant = players.some((p: any) => p.uid === user.id);
 
-  const normalizeReelItem = (item: any): ReelItem | null => {
-    const name = item?.itemName || item?.name;
-    if (!name) return null;
-    return {
-      itemId: item?.itemId || item?.id,
-      itemName: String(name),
-      value: Number(item?.value ?? item?.price ?? 0),
-      rarity: item?.rarity,
-      imageUrl: item?.imageUrl || item?.image
-    };
+  const normalizeItem = (it: any): ReelItem | null => {
+    const itemName = it?.itemName || it?.name;
+    if (!itemName) return null;
+    return { itemId: it?.itemId || it?.id, itemName: String(itemName), value: Number(it?.value ?? it?.price ?? 0), rarity: it?.rarity, imageUrl: it?.imageUrl || it?.image };
   };
 
   const fillerPool = useMemo(() => {
-    const caseItems = (Array.isArray(battle?.cases) ? battle.cases : [])
-      .flatMap((entry: any) => (Array.isArray(entry?.items) ? entry.items : []))
-      .map((item: any) => normalizeReelItem(item))
-      .filter(Boolean) as ReelItem[];
-
-    const globalItems = (Array.isArray(items) ? items : [])
-      .slice(0, 30)
-      .map((item) => normalizeReelItem(item))
-      .filter(Boolean) as ReelItem[];
-
-    const seenRoundItems = rounds
-      .flatMap((round) => Object.values(round.resultsByUid ?? {}))
-      .map((item) => normalizeReelItem(item))
-      .filter(Boolean) as ReelItem[];
-
-    const merged = [...caseItems, ...globalItems, ...seenRoundItems];
-    const deduped = new Map<string, ReelItem>();
-    merged.forEach((entry) => {
-      const key = String(entry.itemId || entry.itemName).toLowerCase();
-      if (!deduped.has(key)) deduped.set(key, entry);
+    const source = [
+      ...(Array.isArray(battle?.cases) ? battle.cases.flatMap((c: any) => (Array.isArray(c?.items) ? c.items : [])) : []),
+      ...(Array.isArray(items) ? items.slice(0, 40) : []),
+      ...rounds.flatMap((r) => Object.values(r.resultsByUid ?? {}))
+    ];
+    const dedupe = new Map<string, ReelItem>();
+    source.map(normalizeItem).filter(Boolean).forEach((it) => {
+      const key = `${(it as ReelItem).itemId ?? (it as ReelItem).itemName}`.toLowerCase();
+      if (!dedupe.has(key)) dedupe.set(key, it as ReelItem);
     });
-
-    return Array.from(deduped.values()).slice(0, 40);
+    return Array.from(dedupe.values());
   }, [battle?.cases, items, rounds]);
 
-  const teams = useMemo(
-    () => ({
-      A: players.filter((player: any) => player.team !== 'B'),
-      B: players.filter((player: any) => player.team === 'B')
-    }),
-    [players]
-  );
+  useEffect(() => {
+    setPlayheadRound(-1);
+    setShowResultTray(false);
+    setUiPhase(battle?.state === 'COUNTDOWN' ? 'COUNTDOWN_VIEW' : 'LOBBY_VIEW');
+  }, [battleId, battle?.state]);
 
   useEffect(() => {
-    if (battle?.state !== 'RUNNING' || skipAnimation) return;
-    const activeRound = roundsByIndex.get(animatedRound);
-    if (!activeRound) return;
-    if (completedSpinRounds.has(animatedRound)) return;
+    if (!battle) return;
+    if (skipPlayback) {
+      setPlayheadRound(roundCount - 1);
+      setUiPhase('COMPLETE_VIEW');
+      setShowRecap(false);
+      setTimeout(() => setShowResultTray(true), 200);
+      return;
+    }
+    if (battle.state !== 'RUNNING' && battle.state !== 'COMPLETE') return;
+    const available = rounds.length;
+    if (!available) return;
 
-    const hasAnyResult = players.some((player: any) => !!activeRound.resultsByUid?.[player.uid]);
-    if (!hasAnyResult) return;
+    const playKey = `${battle.id}:${available}:${roundDurationMs}`;
+    if (playKey === playbackKeyRef.current && playheadRound >= available - 1) return;
+    playbackKeyRef.current = playKey;
 
-    const timer = window.setTimeout(() => {
-      setCompletedSpinRounds((prev) => {
-        const next = new Set(prev);
-        next.add(animatedRound);
-        return next;
-      });
-    }, roundDurationMs);
+    let cancelled = false;
+    const run = async () => {
+      for (let i = 0; i < available; i += 1) {
+        if (cancelled) return;
+        setPlayheadRound(i);
+        setUiPhase('ROUND_INTRO');
+        await new Promise((r) => setTimeout(r, 600));
+        if (cancelled) return;
+        setUiPhase('SPINNING');
+        await new Promise((r) => setTimeout(r, roundDurationMs));
+        if (cancelled) return;
+        setUiPhase('ROUND_REVEAL');
+        setShowRecap(true);
+        await new Promise((r) => setTimeout(r, 900));
+        setShowRecap(false);
+        if (i < available - 1) {
+          setUiPhase('INTERMISSION');
+          await new Promise((r) => setTimeout(r, 450));
+        }
+      }
+      setUiPhase('FINAL_REVEAL');
+      setTimeout(() => setShowResultTray(true), 1200);
+    };
 
-    return () => window.clearTimeout(timer);
-  }, [animatedRound, battle?.state, completedSpinRounds, players, roundDurationMs, roundsByIndex, skipAnimation]);
+    void run();
+    return () => { cancelled = true; };
+  }, [battle, rounds.length, roundDurationMs, skipPlayback, roundCount, playheadRound]);
 
   const callTick = async () => {
-    if (!battle || tickLoading) return;
-    if (!['LOBBY', 'COUNTDOWN', 'RUNNING'].includes(String(battle.state))) return;
-
+    if (!battle || !['LOBBY', 'COUNTDOWN'].includes(String(battle.state))) return;
     setTickLoading(true);
-    try {
-      await authedFetch('/api/battles/tick', { method: 'POST', body: JSON.stringify({ battleId }) });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown tick error';
-      console.error('Battle tick failed', { battleId, error });
-      setLastError(`Tick failed: ${message}`);
-    } finally {
-      setTickLoading(false);
-    }
+    try { await authedFetch('/api/battles/tick', { method: 'POST', body: JSON.stringify({ battleId }) }); } finally { setTickLoading(false); }
   };
-
-  const callProgress = async (forced = false) => {
-    if (!battle || progressInFlightRef.current) return;
-    if (battle.state !== 'RUNNING') return;
-
-    progressInFlightRef.current = true;
+  const callProgress = async () => {
+    if (!battle || String(battle.state) !== 'RUNNING') return;
     setProgressLoading(true);
-    try {
-      const response = await authedFetch<ProgressResponse>('/api/battles/progress', { method: 'POST', body: JSON.stringify({ battleId }) });
-      const isNoop = response?.action === 'noop';
-      const nowTs = Date.now();
-
-      if (!isNoop || forced) {
-        noopSinceRef.current = null;
-        setShowForceProgress(false);
-        setLastError(null);
-        return;
-      }
-
-      if (!noopSinceRef.current) {
-        noopSinceRef.current = nowTs;
-        setShowForceProgress(false);
-        return;
-      }
-
-      if (nowTs - noopSinceRef.current > 10000) {
-        setShowForceProgress(true);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown progress error';
-      console.error('Battle progress failed', { battleId, error });
-      setLastError(`Progress failed: ${message}`);
-    } finally {
-      progressInFlightRef.current = false;
-      setProgressLoading(false);
-    }
+    try { await authedFetch('/api/battles/progress', { method: 'POST', body: JSON.stringify({ battleId }) }); } finally { setProgressLoading(false); }
   };
 
   useEffect(() => {
-    if (!battle || !['LOBBY', 'COUNTDOWN'].includes(String(battle.state))) return;
-
-    void callTick();
-    const interval = window.setInterval(() => void callTick(), 2000);
-    return () => window.clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battle?.id, battle?.state, battle?.players?.length]);
+    if (!battle) return;
+    if (battle.state === 'LOBBY' || battle.state === 'COUNTDOWN') {
+      void callTick();
+      const t = window.setInterval(() => void callTick(), 2000);
+      return () => window.clearInterval(t);
+    }
+  }, [battle?.id, battle?.state]);
 
   useEffect(() => {
     if (!battle || battle.state !== 'RUNNING') return;
-
-    noopSinceRef.current = null;
-    setShowForceProgress(false);
-
     void callProgress();
-    const interval = window.setInterval(() => void callProgress(), Math.max(2000, roundDurationMs - 250));
-    return () => window.clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const t = window.setInterval(() => void callProgress(), 2200);
+    return () => window.clearInterval(t);
   }, [battle?.id, battle?.state, roundDurationMs]);
-
-  useEffect(() => {
-    if (!battle || skipAnimation) return;
-    if (playheadRound >= roundCount - 1) return;
-
-    const nextIndex = playheadRound + 1;
-    if (!roundsByIndex.has(nextIndex)) return;
-
-    const timer = window.setTimeout(() => {
-      setPlayheadRound(nextIndex);
-    }, nextIndex === 0 ? 700 : roundDurationMs);
-
-    return () => window.clearTimeout(timer);
-  }, [battle, skipAnimation, playheadRound, roundCount, roundsByIndex, roundDurationMs]);
 
   if (!battle) return <div className="p-8 text-center text-gray-400">Battle not found.</div>;
 
-  const statusLabel = (() => {
-    if (battle.state === 'COUNTDOWN') return `Starting • ${(countdownMs / 1000).toFixed(1)}s`;
-    if (battle.state === 'RUNNING') return `Live • Round ${shownRound}/${roundCount}`;
-    if (battle.state === 'COMPLETE') return 'Replay';
-    return `Waiting • ${players.length}/${Number(battle.maxPlayers ?? 2)}`;
-  })();
+  const status = battle.state === 'COUNTDOWN' ? `Starting ${Math.ceil(countdownMs / 1000)}s` : battle.state === 'RUNNING' ? `Live • ${Math.max(1, playheadRound + 1)}/${roundCount}` : 'Replay';
+  const currentRound = rounds[Math.max(0, playheadRound)];
+  const roundItems = players.map((p: any) => {
+    const result = currentRound?.resultsByUid?.[p.uid];
+    return { uid: p.uid, playerName: p.displayName, itemName: result?.itemName || 'Pending', value: Number(result?.value ?? 0), imageUrl: result?.imageUrl };
+  });
+  const aRoundTotal = roundItems.filter((r) => teams.A.some((p: any) => p.uid === r.uid)).reduce((sum, r) => sum + r.value, 0);
+  const bRoundTotal = roundItems.filter((r) => teams.B.some((p: any) => p.uid === r.uid)).reduce((sum, r) => sum + r.value, 0);
+  const roundWinner: 'A' | 'B' | 'TIE' = aRoundTotal === bRoundTotal ? 'TIE' : aRoundTotal > bRoundTotal ? 'A' : 'B';
 
   const recreateBattle = () => {
-    const caseIds = (Array.isArray(battle?.cases) ? battle.cases : [])
-      .map((entry: any) => entry?.caseId)
-      .filter(Boolean);
-    if (!caseIds.length) return;
-    createBattle(caseIds, Number(battle.maxPlayers ?? 2), { mode: battle.mode, format: battle.format });
+    const caseIds = (Array.isArray(battle?.cases) ? battle.cases : []).map((c: any) => c?.caseId).filter(Boolean);
+    if (caseIds.length) createBattle(caseIds, Number(battle.maxPlayers ?? 2), { mode: battle.mode, format: battle.format });
   };
 
+  const myTeam = players.find((p: any) => p.uid === user.id)?.team === 'B' ? 'B' : 'A';
+  const trayVariant = !isParticipant ? 'SPECTATE' : battle.winnerTeam === myTeam ? 'WIN' : 'LOSE';
+  const myItems = rounds.flatMap((r) => {
+    const result = r.resultsByUid?.[user.id];
+    return result ? [{ id: `${r.index}-${result.itemName}`, itemName: result.itemName, value: Number(result.value ?? 0), imageUrl: result.imageUrl }] : [];
+  });
+  const bestHit = myItems.sort((a, b) => b.value - a.value)[0] || null;
+
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pb-10">
-      {lastError && (
-        <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs sm:text-sm text-red-200 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span className="break-words">{lastError}</span>
+    <div className="mx-auto max-w-7xl px-2 pb-28 sm:px-4">
+      <RoundRecapOverlay visible={showRecap} roundNumber={Math.max(1, playheadRound + 1)} winningTeam={roundWinner} deltaCoins={Math.max(aRoundTotal, bRoundTotal)} items={roundItems} />
+
+      <section className="sticky top-14 z-40 mb-3 rounded-xl border border-gray-800 bg-[#0d1320]/95 p-2 backdrop-blur sm:p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setView({ type: 'BATTLES' })} className="rounded bg-[#161d2c] px-3 py-2 text-xs text-gray-200"><ChevronLeft className="mr-1 inline h-4 w-4" />Back</button>
+          <h2 className="text-sm font-black text-white sm:text-base"><Swords className="mr-1 inline h-4 w-4 text-brand-purple" />Box Battle</h2>
+          <span className="rounded border border-gray-700 px-2 py-1 text-[11px] text-gray-300">{battle.mode}</span>
+          <span className="rounded border border-gray-700 px-2 py-1 text-[11px] text-gray-300">{battle.format}</span>
+          <span className="rounded border border-gray-700 px-2 py-1 text-[11px] text-gray-300">{battle.winConditionLabel || 'Highest'}</span>
+          <CoinAmount amount={toCoins(Number(battle.entryCostCoins ?? 0), PRICE_UNIT_MODE)} className="ml-auto text-sm font-black text-emerald-300" iconClassName="h-3 w-3" />
+          <span className={`rounded px-2 py-1 text-[11px] font-semibold ${battle.state === 'RUNNING' ? 'bg-rose-500/20 text-rose-300' : 'bg-blue-500/20 text-blue-200'}`}>{status}</span>
+          <button onClick={() => setShowPfModal(true)} className="rounded border border-gray-700 px-2 py-1 text-[11px] text-gray-200"><ShieldCheck className="mr-1 inline h-3 w-3" />Provably Fair</button>
+          <button onClick={recreateBattle} className="rounded bg-brand-purple px-2 py-1 text-[11px] font-semibold text-white">Recreate</button>
+          {uiPhase !== 'COMPLETE_VIEW' && <button onClick={() => setSkipPlayback(true)} className="rounded border border-gray-600 px-2 py-1 text-[11px] text-gray-200"><SkipForward className="mr-1 inline h-3 w-3" />Skip</button>}
         </div>
-      )}
+      </section>
 
-      <div className="flex flex-wrap gap-2 py-4 items-center">
-        <button onClick={() => setView({ type: 'BATTLES' })} className="flex items-center gap-1 px-3 py-2 rounded bg-[#131825] text-gray-300 text-sm hover:text-white">
-          <ChevronLeft className="w-4 h-4" /> Back
-        </button>
-        <span className="text-xs px-2 py-1 rounded border border-brand-purple/40 bg-brand-purple/10 text-brand-purple">{statusLabel}</span>
-        {!isParticipant && <span className="text-xs px-2 py-1 rounded border border-blue-500/30 bg-blue-500/10 text-blue-300">Spectator</span>}
-        <button onClick={() => setShowPfModal(true)} className="ml-auto text-xs px-3 py-2 rounded border border-gray-700 text-gray-200 hover:border-brand-purple flex items-center gap-1">
-          <ShieldCheck className="w-4 h-4" /> Provably Fair
-        </button>
-      </div>
+      <section className="rounded-2xl border border-gray-800 bg-[#0b111d] p-3 sm:p-4">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto_1fr]">
+          {(['A', 'B'] as const).map((teamKey) => {
+            const isWinningTeam = battle.state === 'COMPLETE' && battle.winnerTeam === teamKey;
+            return (
+              <div key={teamKey} className={`rounded-xl border p-2 sm:p-3 ${isWinningTeam ? 'border-amber-400/60 shadow-[0_0_30px_rgba(250,204,21,0.2)]' : 'border-gray-700 bg-[#101827]'}`}>
+                <div className="mb-2 text-xs uppercase text-gray-400">Team {teamKey}</div>
+                <div className="space-y-2">
+                  {teams[teamKey].map((player: any) => {
+                    const result = rounds[Math.max(0, playheadRound)]?.resultsByUid?.[player.uid];
+                    const lanePhase: 'IDLE' | 'SPIN' | 'STOPPED' = !result ? 'IDLE' : uiPhase === 'SPINNING' ? 'SPIN' : 'STOPPED';
+                    const total = Number(battle?.totalsByUid?.[player.uid] ?? 0);
+                    return (
+                      <div key={player.uid} className="rounded-lg border border-gray-700 bg-[#0d1320] p-2">
+                        <div className="mb-2 flex items-center gap-2">
+                          <img src={player.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(player.uid)}`} width={28} height={28} className="h-7 w-7 rounded border border-gray-700" />
+                          <div className="truncate text-xs font-semibold text-white">{player.displayName}</div>
+                          {isWinningTeam && <Crown className="h-3.5 w-3.5 text-amber-300" />}
+                          <CoinAmount amount={toCoins(total, PRICE_UNIT_MODE)} className="ml-auto text-xs font-bold text-emerald-300" iconClassName="h-3 w-3" />
+                        </div>
+                        <DeterministicReel
+                          winningItem={normalizeItem(result)}
+                          fillerPool={fillerPool}
+                          spinKey={`${battleId}-${playheadRound}-${player.uid}`}
+                          phase={lanePhase}
+                          durationMs={roundDurationMs}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
 
-      <div className="rounded-2xl border border-gray-800 bg-[#101624] p-4 sm:p-5 mb-4">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2"><Swords className="w-5 h-5 text-brand-purple" /> Box Battle</h2>
-          <span className="text-xs px-2 py-1 rounded bg-[#0b0e14] border border-gray-700 text-gray-300">{battle.mode}</span>
-          <span className="text-xs px-2 py-1 rounded bg-[#0b0e14] border border-gray-700 text-gray-300">{battle.format}</span>
-          <span className="text-xs px-2 py-1 rounded bg-[#0b0e14] border border-gray-700 text-gray-300">{battle.winConditionLabel || (battle.mode === 'CRAZY' ? 'Lowest Total' : 'Highest Total')}</span>
-          <div className="sm:ml-auto flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <CoinAmount amount={toCoins(Number(battle.entryCostCoins ?? 0), PRICE_UNIT_MODE)} className="text-green-400 font-black" iconClassName="w-4 h-4" />
-            <button onClick={recreateBattle} className="px-3 py-2 text-xs sm:text-sm rounded bg-brand-purple text-white font-semibold">Recreate Battle</button>
-            {battle.state !== 'COMPLETE' && (
-              <button onClick={() => setSkipAnimation(true)} className="px-3 py-2 text-xs sm:text-sm rounded border border-gray-600 text-gray-200 inline-flex items-center gap-1">
-                <SkipForward className="w-4 h-4" /> Skip
-              </button>
-            )}
-            {battle.state === 'RUNNING' && showForceProgress && (
-              <button onClick={() => void callProgress(true)} className="px-3 py-2 text-xs sm:text-sm rounded border border-amber-500/60 text-amber-200 hover:bg-amber-500/10">
-                Force Progress
-              </button>
-            )}
+          <div className="order-first flex items-center justify-center lg:order-none lg:flex-col">
+            <div className="mb-2 hidden text-xs text-gray-500 lg:block">Rounds</div>
+            <div className="flex gap-1.5">
+              {Array.from({ length: roundCount }).map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => isReplay && idx <= playheadRound && setPlayheadRound(idx)}
+                  className={`h-2.5 w-2.5 rounded-full ${idx < playheadRound ? 'bg-brand-purple' : idx === playheadRound ? 'animate-pulse bg-emerald-400' : 'bg-gray-600'} ${isReplay && idx <= playheadRound ? 'cursor-pointer' : 'cursor-default'}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
+      </section>
+
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-800 bg-[#0a0f18]/95 p-2 lg:hidden">
+        <div className="mx-auto flex max-w-7xl items-center justify-between text-xs text-gray-300">
+          <span>Team A: {toCoins(Number(battle?.teamTotals?.A ?? 0), PRICE_UNIT_MODE).toLocaleString()}</span>
+          <span>Team B: {toCoins(Number(battle?.teamTotals?.B ?? 0), PRICE_UNIT_MODE).toLocaleString()}</span>
+        </div>
       </div>
 
-      {battle.state === 'RUNNING' && (
-        <div className="mb-4 grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4">
-          {(['A', 'B'] as const).map((teamKey) => (
-            <div key={teamKey} className="rounded-xl border border-gray-800 bg-[#131720] p-3 sm:p-4">
-              <div className="text-xs uppercase tracking-wide text-gray-400 mb-3">Team {teamKey} Reels</div>
-              <div className="space-y-3">
-                {(teams[teamKey].length ? teams[teamKey] : []).map((player: any) => {
-                  const activeRound = roundsByIndex.get(animatedRound);
-                  const winner = normalizeReelItem(activeRound?.resultsByUid?.[player.uid]);
-                  const laneState: 'IDLE' | 'SPIN' | 'STOPPED' = !winner
-                    ? 'IDLE'
-                    : (skipAnimation || completedSpinRounds.has(animatedRound))
-                      ? 'STOPPED'
-                      : 'SPIN';
-
-                  return (
-                    <div key={`${teamKey}-${player.uid}`} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <img src={player.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(player.uid)}`} className="w-7 h-7 rounded-md border border-gray-700" />
-                        <div className="text-xs sm:text-sm font-semibold text-white truncate">{player.displayName}</div>
-                        <div className="ml-auto text-[11px] text-gray-400">{!winner ? 'Waiting for result…' : `Round ${animatedRound + 1}`}</div>
-                      </div>
-                      <SpinnerReel
-                        items={fillerPool}
-                        winningItem={winner}
-                        spinKey={`${battleId}-${animatedRound}-${player.uid}`}
-                        state={laneState}
-                        durationMs={roundDurationMs}
-                      />
-                    </div>
-                  );
-                })}
-                {!teams[teamKey].length && <div className="text-xs text-gray-500">Waiting for players…</div>}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="space-y-3">
-        {players.map((player: any) => (
-          <div key={player.uid} className="rounded-xl border border-gray-800 bg-[#131720] p-3">
-            <div className="flex items-center gap-2 mb-3">
-              <img src={player.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(player.uid)}`} className="w-8 h-8 rounded-md border border-gray-700" />
-              <div className="text-sm font-bold text-white truncate">{player.displayName}</div>
-              <div className="text-[11px] text-gray-500">{player.team === 'B' ? 'Team B' : 'Team A'}</div>
-              <div className="ml-auto">
-                <CoinAmount amount={toCoins(Number(battle?.totalsByUid?.[player.uid] ?? 0), PRICE_UNIT_MODE)} className="text-xs sm:text-sm font-bold text-green-400" iconClassName="w-3 h-3" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-              {Array.from({ length: roundCount }).map((_, roundIndex) => {
-                const round = roundsByIndex.get(roundIndex);
-                const result = round?.resultsByUid?.[player.uid];
-                const revealed = roundIndex <= playheadRound || skipAnimation;
-                const hasData = !!result;
-                const isCurrentSpin = roundIndex === playheadRound + 1 && battle.state === 'RUNNING';
-
-                return (
-                  <div key={`${player.uid}-r-${roundIndex}`} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2 min-h-[88px]">
-                    <div className="text-[10px] uppercase text-gray-500 mb-1">Round {roundIndex + 1}</div>
-                    {!hasData && (
-                      <div className="text-xs text-gray-500 flex items-center gap-1">
-                        {isCurrentSpin ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                        <span>Loading…</span>
-                      </div>
-                    )}
-                    {hasData && !revealed && (
-                      <div className="text-xs text-gray-500 flex items-center gap-1">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        <span>Spinning…</span>
-                      </div>
-                    )}
-                    {hasData && revealed && (
-                      <>
-                        <div className="text-xs text-gray-300 truncate">{result.itemName}</div>
-                        <CoinAmount amount={toCoins(result.value, PRICE_UNIT_MODE)} className="text-xs font-bold text-white mt-1" iconClassName="w-3 h-3" />
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {(battle.state === 'LOBBY' || battle.state === 'COUNTDOWN' || battle.state === 'RUNNING') && (
-        <div className="mt-4 text-xs text-gray-400 flex items-center gap-2">
-          {(tickLoading || progressLoading) ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-          {battle.state === 'RUNNING' ? 'Streaming live rounds…' : 'Waiting for players and countdown…'}
-        </div>
-      )}
-
-      {battle.state === 'COMPLETE' && canShowWinner && (
-        <div className="mt-4 rounded-xl border border-green-700/40 bg-green-500/10 p-4">
-          <div className="text-xs text-green-300 uppercase">Winner</div>
-          <div className="text-xl font-black text-white mt-1">{battle.winnerTeam === 'TIE' ? 'Tie' : `Team ${battle.winnerTeam}`}</div>
-        </div>
-      )}
-
-      {!isParticipant && battle.state !== 'COMPLETE' && (
-        <div className="mt-4">
-          <button onClick={() => joinBattle(battleId)} className="px-3 py-2 text-xs rounded bg-green-600 text-white">Join if slot opens</button>
-        </div>
-      )}
+      {(tickLoading || progressLoading) && <div className="mt-3 flex items-center gap-1 text-xs text-gray-400"><Loader2 className="h-3 w-3 animate-spin" />Syncing battle…</div>}
+      {!isParticipant && battle.state !== 'COMPLETE' && <button onClick={() => joinBattle(battleId)} className="mt-3 rounded bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Join if slot opens</button>}
 
       {showPfModal && (
-        <div className="fixed inset-0 z-[120] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3" onClick={() => setShowPfModal(false)}>
-          <div className="w-full max-w-md bg-[#131720] border border-gray-700 rounded-xl p-4" onClick={(event) => event.stopPropagation()}>
-            <h3 className="text-lg font-bold text-white mb-2">Provably Fair</h3>
-            <p className="text-sm text-gray-300">Battle results are server-generated and revealed with per-round proofs once rounds are written.</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-3" onClick={() => setShowPfModal(false)}>
+          <div className="w-full max-w-sm rounded-xl border border-gray-700 bg-[#111827] p-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-white">Provably Fair</h3>
+            <p className="mt-2 text-sm text-gray-300">Provably fair & verifiable.</p>
+            <p className="text-sm text-gray-300">Every round has stored proof payloads you can audit.</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setShowPfModal(false)} className="px-3 py-2 text-sm rounded border border-gray-700 text-gray-300">Close</button>
-              <button
-                onClick={() => {
-                  setShowPfModal(false);
-                  if (typeof window !== 'undefined') {
-                    window.history.replaceState({}, '', `/fairness/battle/${battleId}`);
-                  }
-                  setView({ type: 'PROVABLY_FAIR' });
-                }}
-                className="px-3 py-2 text-sm rounded bg-brand-purple text-white flex items-center gap-2"
-              >
-                Verify Battle <ExternalLink className="w-4 h-4" />
-              </button>
+              <button onClick={() => setShowPfModal(false)} className="rounded border border-gray-700 px-3 py-2 text-sm text-gray-300">Close</button>
+              <button onClick={() => { setShowPfModal(false); if (typeof window !== 'undefined') window.open(`/fairness/battles/${battleId}`, '_blank'); }} className="rounded bg-brand-purple px-3 py-2 text-sm text-white">Verify Battle <ExternalLink className="ml-1 inline h-3 w-3" /></button>
             </div>
           </div>
         </div>
       )}
+
+      <BattleResultTray
+        open={showResultTray}
+        variant={trayVariant}
+        totalCoins={Number(battle?.totalsByUid?.[user.id] ?? 0)}
+        bestHit={bestHit}
+        recapItems={isParticipant ? myItems : roundItems.map((r) => ({ id: r.uid, itemName: r.itemName, value: r.value, imageUrl: r.imageUrl }))}
+        onRecreate={recreateBattle}
+        onReplay={() => setSkipPlayback(false)}
+        onClose={() => setShowResultTray(false)}
+        isReplay={isReplay}
+      />
     </div>
   );
 };
