@@ -82,33 +82,57 @@ export const BattlesList: React.FC = () => {
   const battleAvailableBoxes = useMemo(() => boxes.filter((box) => !box.isUserCreated), [boxes]);
   const recentBattles = battleRows.slice(0, 10);
 
-  const tickBattle = async (battleId: string) => {
-    if (inFlightRef.current[battleId]) return;
-    inFlightRef.current[battleId] = true;
-    setTickBusy((prev) => ({ ...prev, [battleId]: true }));
+  const performBattleCall = async (battleId: string, action: 'tick' | 'progress') => {
+    const key = `${action}:${battleId}`;
+    if (inFlightRef.current[key]) return;
+
+    inFlightRef.current[key] = true;
+    if (action === 'tick') {
+      setTickBusy((prev) => ({ ...prev, [battleId]: true }));
+    }
+
     try {
-      await authedFetch('/api/battles/tick', { method: 'POST', body: JSON.stringify({ battleId }) });
-    } catch {
-      // ignore tick failures client-side
+      await authedFetch(`/api/battles/${action}`, { method: 'POST', body: JSON.stringify({ battleId }) });
+    } catch (error) {
+      console.error(`Battle ${action} failed`, { battleId, error });
     } finally {
-      inFlightRef.current[battleId] = false;
-      setTickBusy((prev) => ({ ...prev, [battleId]: false }));
+      inFlightRef.current[key] = false;
+      if (action === 'tick') {
+        setTickBusy((prev) => ({ ...prev, [battleId]: false }));
+      }
     }
   };
 
   useEffect(() => {
     const tickable = recentBattles.filter((battle: any) => {
       const state = String((battle as any).state || '').toUpperCase();
-      return (state === 'LOBBY' || state === 'COUNTDOWN') && Number(battle.playerCount ?? 0) < Number(battle.maxPlayers ?? 2);
+      return state === 'LOBBY' || state === 'COUNTDOWN';
     });
 
-    tickable.forEach((battle) => void tickBattle(battle.id));
+    tickable.forEach((battle) => void performBattleCall(battle.id, 'tick'));
     const interval = window.setInterval(() => {
-      tickable.forEach((battle) => void tickBattle(battle.id));
+      tickable.forEach((battle) => void performBattleCall(battle.id, 'tick'));
     }, 2500);
+
     return () => window.clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recentBattles.map((battle) => `${battle.id}:${battle.playerCount}:${(battle as any).state}`).join('|')]);
+
+  useEffect(() => {
+    const runningIds = recentBattles
+      .filter((battle) => String((battle as any).state || '').toUpperCase() === 'RUNNING')
+      .map((battle) => battle.id);
+
+    if (!runningIds.length) return;
+
+    runningIds.forEach((battleId) => void performBattleCall(battleId, 'progress'));
+    const interval = window.setInterval(() => {
+      runningIds.forEach((battleId) => void performBattleCall(battleId, 'progress'));
+    }, 2400);
+
+    return () => window.clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recentBattles.map((battle) => `${battle.id}:${(battle as any).state}:${battle.currentRound}`).join('|')]);
 
   const handleCreateConfirm = () => {
     if (selectedBoxIds.length === 0) return;
@@ -192,7 +216,7 @@ export const BattlesList: React.FC = () => {
                     })}
                   </div>
 
-                  <div className="xl:ml-auto flex items-center justify-between xl:justify-end gap-4 w-full xl:w-auto">
+                  <div className="xl:ml-auto flex flex-wrap items-center justify-between xl:justify-end gap-3 w-full xl:w-auto">
                     <div className={`flex items-center gap-1 text-sm font-semibold ${status.intent === 'live' ? 'text-green-300' : waiting ? 'text-orange-400' : status.intent === 'ended' ? 'text-gray-500' : 'text-gray-300'}`}>
                       {rowTicking ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                       <span>{status.label}</span>
