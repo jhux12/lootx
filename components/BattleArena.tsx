@@ -1,488 +1,190 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, Swords, Trophy } from 'lucide-react';
+import { collection, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
-import { GOLDEN_TICKET_ITEM } from '../constants';
 import { CoinAmount } from './CoinAmount';
-import { ChevronLeft, Swords, Trophy, User, Zap, ToggleLeft, ToggleRight } from 'lucide-react';
-import { CaseItem, BattleRound } from '../types';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { authedFetch } from '../utils/authedFetch';
 
 interface BattleArenaProps {
   battleId: string;
 }
 
-// Sub-component for the visual vertical spinner
-const BattleSpinner: React.FC<{ 
-  winningItem: CaseItem | null, 
-  spinning: boolean,
-  isGoldMode: boolean,
-  pool: CaseItem[] 
-}> = ({ winningItem, spinning, isGoldMode, pool }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [items, setItems] = useState<CaseItem[]>([]);
-  
-  // Height of one item in the strip
-  const ITEM_HEIGHT = 80; // h-20
-  
-  useEffect(() => {
-    // Generate random strip
-    const bufferCount = 30;
-    const strip: CaseItem[] = [];
-    
-    // Pool filter based on mode
-    const activePool = isGoldMode 
-        ? pool.filter(i => ['legendary', 'epic', 'rare'].includes(i.rarity)) 
-        : pool;
+type BattleState = 'LOBBY' | 'COUNTDOWN' | 'RUNNING' | 'FINISHING' | 'COMPLETE' | 'CANCELLED';
 
-    // Fallback if pool empty after filter
-    const finalPool = activePool.length > 0 ? activePool : pool;
-    
-    // Fill random
-    for (let i = 0; i < bufferCount + 5; i++) {
-        strip.push(finalPool[Math.floor(Math.random() * finalPool.length)]);
-    }
+interface RoundDoc {
+  index: number;
+  resultsByUid: Record<string, { itemName: string; value: number; rarity: string; proof: string; roll: number; nonce: number }>;
+}
 
-    // Sprinkle in the gold spin tile occasionally while spinning so it stays visible
-    if (spinning) {
-      const goldInterval = 7;
-      const goldOffset = Math.floor(Math.random() * goldInterval);
-      for (let i = goldOffset; i < strip.length; i += goldInterval) {
-        if (i !== 28) {
-          strip[i] = GOLDEN_TICKET_ITEM;
-        }
-      }
-    }
-    
-    // Insert winner at fixed position if known (e.g. index 28)
-    if (winningItem) {
-       strip[28] = winningItem;
-    }
-    
-    setItems(strip);
-  }, [winningItem, isGoldMode, pool, spinning]);
-
-  useEffect(() => {
-    if (spinning && containerRef.current) {
-        // Reset (instant)
-        containerRef.current.style.transition = 'none';
-        containerRef.current.style.transform = 'translateY(0)';
-
-        // Animate
-        setTimeout(() => {
-           if (containerRef.current) {
-               // Calculate Target Y
-               const targetY = -(28 * ITEM_HEIGHT + (ITEM_HEIGHT/2) - (128/2));
-               const jitter = (Math.random() * 20) - 10;
-               
-               containerRef.current.style.transition = 'transform 3.5s cubic-bezier(0.15, 0.85, 0.35, 1.0)';
-               containerRef.current.style.transform = `translateY(${targetY + jitter}px)`;
-           }
-        }, 50);
-    }
-  }, [spinning]); // Trigger on spinning true
-
-  return (
-    <div className={`h-32 bg-[#0b0e14] border border-gray-800 rounded-xl relative overflow-hidden flex justify-center transition-all duration-500 ${isGoldMode ? 'border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.3)]' : ''}`}>
-       {/* Center Line */}
-       <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-yellow-500/30 z-20 -translate-y-1/2"></div>
-       <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-[#0b0e14] to-transparent z-10"></div>
-       <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#0b0e14] to-transparent z-10"></div>
-       
-       {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 pointer-events-none z-0 animate-pulse"></div>}
-
-       <div 
-         ref={containerRef}
-         className="flex flex-col items-center w-full will-change-transform"
-       >
-         {items.map((item, i) => (
-             <div key={i} className="flex-shrink-0 w-full h-20 flex items-center justify-center p-2 relative">
-                 {/* Special Glow for Legendary items in strip */}
-                 {item.rarity === 'legendary' && <div className="absolute inset-0 bg-yellow-500/10 blur-xl"></div>}
-                 <img src={item.image} className="h-14 w-14 object-contain relative z-10" />
-             </div>
-         ))}
-       </div>
-    </div>
-  );
-};
+const tsToMs = (value: any) => (value?.toMillis ? value.toMillis() : Number(value ?? 0));
 
 export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
-  const { battles, updateBattle, setView, addToInventory, user } = useGame();
-  const battle = battles.find(b => b.id === battleId);
-  
-  const [spinning, setSpinning] = useState(false);
-  const [roundItems, setRoundItems] = useState<{ [playerId: string]: CaseItem }>({});
-  const [waitingCountdown, setWaitingCountdown] = useState(60);
-  const isBattleOwner = battle?.players?.[0]?.id === user.id;
-  
-  // State to track if a specific player is in "Gold Mode" for this round
-  const [goldModePlayers, setGoldModePlayers] = useState<Set<string>>(new Set());
-  
-  // DEBUG STATE
-  const [forceGoldDebug, setForceGoldDebug] = useState(false);
-  
-  // Ref to handle the sequence steps without re-renders breaking logic
-  const processingRound = useRef(false);
-  const rewardsDistributedRef = useRef(false);
-
-  // Helper to get random item from a specific pool
-  const getRandomItem = (pool: CaseItem[]) => {
-    const totalWeight = pool.reduce((sum, item) => sum + item.chance, 0);
-    let random = Math.random() * totalWeight;
-    for (const item of pool) {
-      if (random < item.chance) return item;
-      random -= item.chance;
-    }
-    return pool[pool.length - 1];
-  };
+  const { setView, user } = useGame();
+  const [battle, setBattle] = useState<any>(null);
+  const [rounds, setRounds] = useState<RoundDoc[]>([]);
+  const [now, setNow] = useState(Date.now());
+  const [clientSeed, setClientSeed] = useState('');
+  const [seedSaving, setSeedSaving] = useState(false);
+  const startAttemptRef = useRef(false);
 
   useEffect(() => {
-    if (!battle) return;
-
-    if (battle.status === 'active' && !spinning && !processingRound.current && isBattleOwner) {
-      // Only battle owner triggers new rounds; others wait for synced history
-      if (battle.currentRound < battle.rounds && battle.history.length === battle.currentRound) {
-        startRound();
-      } else if (battle.currentRound >= battle.rounds) {
-        finishBattle();
-      }
-    }
-  }, [battle, spinning, isBattleOwner]);
-
-  useEffect(() => {
-    if (!battle || battle.status !== 'waiting') return;
-    const updateCountdown = () => {
-      const elapsed = Math.floor((Date.now() - battle.createdAt) / 1000);
-      setWaitingCountdown(Math.max(0, 60 - elapsed));
-    };
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-    return () => clearInterval(interval);
-  }, [battle]);
-
-  useEffect(() => {
-    if (!battle) return;
-    if (battle.rewardsDistributed || rewardsDistributedRef.current) return;
-    if (battle.status !== 'finished') return;
-    if (battle.players.length === 0) return;
-
-    const winner = battle.players.reduce((prev, current) => (prev.totalWin > current.totalWin) ? prev : current);
-    if (winner.id !== user.id) return;
-
-    const allDrops = (battle.history || []).flatMap(round => round.drops.map(d => d.item));
-
-    rewardsDistributedRef.current = true;
-    allDrops.forEach(item => addToInventory(item));
-
-    updateBattle({ ...battle, rewardsDistributed: true });
-  }, [battle, addToInventory, updateBattle, user.id]);
-
-  // Sync local round items to remote history so spinners match across clients
-  useEffect(() => {
-    if (!battle) return;
-    const latestRound = battle.history[battle.history.length - 1];
-    if (!latestRound) return;
-
-    const itemsFromHistory: { [playerId: string]: CaseItem } = {};
-    latestRound.drops.forEach(drop => {
-      itemsFromHistory[drop.playerId] = drop.item;
-    });
-
-    setRoundItems(itemsFromHistory);
-    setSpinning(false);
-    processingRound.current = false;
-  }, [battle?.history, battle?.currentRound]);
-
-  // Clear local round items when a new round starts but history is not yet present
-  useEffect(() => {
-    if (!battle) return;
-    if (battle.history.length < battle.currentRound) {
-      setRoundItems({});
-      setSpinning(false);
-      processingRound.current = false;
-    }
-  }, [battle?.currentRound, battle?.history.length]);
-
-  const startRound = () => {
-    if (!battle) return;
-    processingRound.current = true;
-    
-    // Get Items for Current Box
-    const currentBox = battle.cases[battle.currentRound] || battle.cases[battle.cases.length - 1];
-    const pool = currentBox.items || [];
-
-    if (pool.length === 0) {
-        console.error("Box has no items!");
-        processingRound.current = false;
+    const battleRef = doc(db, 'battles', battleId);
+    const unsubBattle = onSnapshot(battleRef, (snap) => {
+      if (!snap.exists()) {
+        setBattle(null);
         return;
-    }
-
-    // 1. Determine FINAL results for this round
-    const finalResults: { [key: string]: CaseItem } = {};
-    const playersGettingGold: string[] = [];
-
-    battle.players.forEach(p => {
-      let item = getRandomItem(pool);
-      
-      // DEBUG: Force high tier item for user if debug is on
-      if (p.id === user.id && forceGoldDebug) {
-           const highTierItems = pool.filter(i => ['legendary', 'epic', 'rare'].includes(i.rarity));
-           item = highTierItems[Math.floor(Math.random() * highTierItems.length)] || item;
       }
-
-      finalResults[p.id] = item;
-      
-      // Check eligibility
-      const isEligible = ['legendary', 'epic', 'rare'].includes(item.rarity);
-      
-      // 20% Chance for Gold Upgrade if item is Epic/Legendary/Gold
-      // OR if DEBUG is on for user
-      if ((isEligible && Math.random() < 0.2) || (p.id === user.id && forceGoldDebug)) {
-          playersGettingGold.push(p.id);
-      }
+      const data = snap.data();
+      setBattle({ id: snap.id, ...data });
+      const me = (data.players || []).find((player: any) => player.uid === user.id);
+      if (me?.clientSeed) setClientSeed(me.clientSeed);
     });
 
-    // 2. Start First Spin
-    // If getting gold, show Gold Ticket first. Else show final result.
-    const firstSpinTargets: { [key: string]: CaseItem } = {};
-    
-    battle.players.forEach(p => {
-        if (playersGettingGold.includes(p.id)) {
-            firstSpinTargets[p.id] = GOLDEN_TICKET_ITEM;
-        } else {
-            firstSpinTargets[p.id] = finalResults[p.id];
-        }
+    const roundsRef = query(collection(db, 'battles', battleId, 'rounds'), orderBy('index', 'asc'));
+    const unsubRounds = onSnapshot(roundsRef, (snapshot) => {
+      setRounds(snapshot.docs.map((docSnap) => ({ index: Number(docSnap.data().index ?? 0), ...(docSnap.data() as any) })));
     });
 
-    setRoundItems(firstSpinTargets);
-    setGoldModePlayers(new Set()); // Reset gold mode
-    setSpinning(true);
-
-    // 3. Handle Sequence
-    if (playersGettingGold.length > 0) {
-        // Multi-stage spin
-        setTimeout(() => {
-            // Stage 1 ends: Landed on Gold Ticket
-            setSpinning(false);
-            
-            setTimeout(() => {
-                // Trigger Gold Mode & Second Spin
-                setGoldModePlayers(new Set(playersGettingGold));
-                setRoundItems(finalResults); // Update targets to real items
-                setSpinning(true); // Spin again
-                
-                setTimeout(() => {
-                   // Stage 2 ends
-                   setSpinning(false);
-                   completeRound(finalResults);
-                   // Cleanup visual state after small delay
-                   setTimeout(() => setGoldModePlayers(new Set()), 2000);
-                }, 4000);
-            }, 1000); // Wait 1s looking at the ticket
-        }, 4000);
-    } else {
-        // Normal single spin
-        setTimeout(() => {
-            setSpinning(false);
-            completeRound(finalResults);
-        }, 4000); 
-    }
-  };
-
-  const completeRound = (results: { [key: string]: CaseItem }) => {
-    if (!battle) return;
-
-    const roundData: BattleRound = {
-      roundNumber: battle.currentRound + 1,
-      drops: battle.players.map(p => ({ playerId: p.id, item: results[p.id] }))
+    return () => {
+      unsubBattle();
+      unsubRounds();
     };
+  }, [battleId, user.id]);
 
-    const updatedPlayers = battle.players.map(p => ({
-      ...p,
-      totalWin: p.totalWin + results[p.id].price
-    }));
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 150);
+    return () => clearInterval(interval);
+  }, []);
 
-    updateBattle({
-      ...battle,
-      currentRound: battle.currentRound + 1,
-      history: [...battle.history, roundData],
-      players: updatedPlayers,
-      status: battle.currentRound + 1 >= battle.rounds ? 'finished' : 'active'
+  const startedAtMs = tsToMs(battle?.startedAt);
+  const roundDurationMs = Number(battle?.roundDurationMs ?? 4500);
+  const timelineRound = Math.max(0, Math.floor((now - startedAtMs) / Math.max(1, roundDurationMs)));
+  const currentRound = Math.min(Number(battle?.roundCount ?? 0), timelineRound + 1);
+  const players = Array.isArray(battle?.players) ? battle.players : [];
+  const isParticipant = players.some((p: any) => p.uid === user.id);
+
+  useEffect(() => {
+    if (!battle || !isParticipant) return;
+    if (battle.state !== 'COUNTDOWN') {
+      startAttemptRef.current = false;
+      return;
+    }
+
+    if (Date.now() < startedAtMs || startAttemptRef.current) return;
+    startAttemptRef.current = true;
+    void authedFetch('/api/battles/start', {
+      method: 'POST',
+      body: JSON.stringify({ battleId })
+    }).catch(() => {
+      startAttemptRef.current = false;
     });
-    
-    processingRound.current = false;
+  }, [battle, battleId, isParticipant, startedAtMs]);
+
+  const winnerBadgeByUid = useMemo(() => {
+    const winnerTeam = battle?.winnerTeam;
+    const map: Record<string, boolean> = {};
+    if (!winnerTeam || winnerTeam === 'TIE') return map;
+    players.forEach((player: any) => {
+      map[player.uid] = player.team === winnerTeam;
+    });
+    return map;
+  }, [battle?.winnerTeam, players]);
+
+  const saveSeed = async () => {
+    setSeedSaving(true);
+    try {
+      await authedFetch('/api/battles/set-seed', {
+        method: 'POST',
+        body: JSON.stringify({ battleId, clientSeed })
+      });
+    } finally {
+      setSeedSaving(false);
+    }
   };
 
-  const finishBattle = () => {
-    // Handled in updateBattle status check
-  };
+  if (!battle) return <div className="p-10 text-center text-gray-400">Battle not found</div>;
 
-  if (!battle) return <div className="p-10 text-center">Battle not found</div>;
-
-  const winnerId = battle.status === 'finished' && battle.players.length > 0
-    ? battle.players.reduce((prev, current) => (prev.totalWin > current.totalWin) ? prev : current).id
-    : null;
-    
-  const currentCase = battle.cases[battle.currentRound] || battle.cases[battle.cases.length - 1];
-  const remainingSpots = Math.max(0, battle.maxPlayers - battle.playerCount);
+  const countdownMs = Math.max(0, startedAtMs - now);
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
-        <div className="flex items-center gap-4">
-            <button 
-                onClick={() => setView({ type: 'HOME' })}
-                className="flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
+    <div className="max-w-7xl mx-auto p-3 sm:p-4 md:p-6 animate-in fade-in duration-300">
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setView({ type: 'BATTLES' })}
+            className="flex items-center gap-2 px-3 py-2 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" /> Exit Battle
+          </button>
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+            <Swords className="w-5 h-5 text-brand-purple" /> Battle Arena
+          </h2>
+          <div className="text-xs text-gray-300 px-2 py-1 rounded bg-[#131720] border border-gray-800">
+            {battle.mode} • {battle.format} • Round {currentRound}/{battle.roundCount}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-[#131720] border border-gray-800 rounded-lg p-3">
+            <div className="text-xs text-gray-500 uppercase">State</div>
+            <div className="text-sm font-bold text-white">{battle.state}</div>
+            {battle.state === 'COUNTDOWN' && <div className="text-xs text-yellow-400 mt-1">Starts in {(countdownMs / 1000).toFixed(1)}s</div>}
+          </div>
+          <div className="bg-[#131720] border border-gray-800 rounded-lg p-3">
+            <div className="text-xs text-gray-500 uppercase">Entry</div>
+            <CoinAmount amount={toCoins(battle.entryCostCoins || 0, PRICE_UNIT_MODE)} className="text-sm font-bold text-green-400" iconClassName="w-3.5 h-3.5" />
+          </div>
+          <div className="bg-[#131720] border border-gray-800 rounded-lg p-3">
+            <div className="text-xs text-gray-500 uppercase">Provably Fair</div>
+            <div className="text-[11px] text-gray-300 break-all">Hash: {battle.serverSeedHash}</div>
+            {battle.serverSeedReveal && <div className="text-[11px] text-green-400 break-all mt-1">Reveal: {battle.serverSeedReveal}</div>}
+          </div>
+        </div>
+
+        {isParticipant && (battle.state === 'LOBBY' || battle.state === 'COUNTDOWN') && (
+          <div className="bg-[#131720] border border-gray-800 rounded-lg p-3 flex flex-col sm:flex-row gap-2 sm:items-center">
+            <input
+              value={clientSeed}
+              onChange={(event) => setClientSeed(event.target.value)}
+              className="flex-1 bg-[#0b0e14] border border-gray-700 rounded px-3 py-2 text-sm text-white"
+              placeholder="Your client seed"
+              maxLength={64}
+            />
+            <button
+              onClick={saveSeed}
+              disabled={seedSaving}
+              className="px-4 py-2 bg-brand-purple hover:bg-purple-600 disabled:opacity-60 text-white rounded text-sm"
             >
-                <ChevronLeft className="w-4 h-4" /> Exit Battle
+              {seedSaving ? 'Saving...' : 'Save Seed'}
             </button>
-            <div className="h-8 w-px bg-gray-800"></div>
-            <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Swords className="w-5 h-5 text-brand-purple" /> Case Battle
-                <span className="text-sm font-normal text-gray-500 bg-[#131720] px-2 py-0.5 rounded border border-gray-800">
-                Round {battle.currentRound + 1} / {battle.rounds}
-                </span>
-            </h2>
-            </div>
-        </div>
-        
-        <div className="flex items-center gap-2 px-4 py-1 bg-[#131720] rounded border border-gray-800 md:ml-4 hidden sm:flex">
-             <span className="text-xs text-gray-400">Opening:</span>
-             <img src={currentCase?.image} className="w-6 h-6 object-contain" />
-             <span className="text-sm font-bold text-white">{currentCase?.name}</span>
-        </div>
-
-        <div className="md:ml-auto flex items-center gap-4 justify-between md:justify-end w-full md:w-auto">
-           
-           {/* DEBUG TOGGLE */}
-           <div 
-             className="flex items-center gap-2 cursor-pointer bg-[#131825] px-3 py-1.5 rounded border border-gray-800/50 hover:border-yellow-500/50 transition-colors"
-             onClick={() => setForceGoldDebug(!forceGoldDebug)}
-           >
-               <span className={`text-xs font-bold ${forceGoldDebug ? 'text-yellow-500' : 'text-gray-500'}`}>TEST: Gold Spin</span>
-               {forceGoldDebug 
-                 ? <ToggleRight className="w-5 h-5 text-yellow-500" /> 
-                 : <ToggleLeft className="w-5 h-5 text-gray-600" />
-               }
-           </div>
-
-           <div className="text-right">
-             <div className="text-xs text-gray-500">Battle Cost</div>
-             <CoinAmount
-               amount={toCoins(battle.cost, PRICE_UNIT_MODE)}
-               formatOptions={{ maximumFractionDigits: 0 }}
-               className="font-bold text-white justify-end"
-               iconClassName="w-3.5 h-3.5"
-             />
-           </div>
-        </div>
+          </div>
+        )}
       </div>
 
-      {battle.status === 'waiting' && (
-        <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="text-yellow-200 font-semibold">Waiting for players to join</div>
-          <div className="text-sm text-yellow-100/80">
-            {remainingSpots === 0 ? 'Starting shortly...' : `${remainingSpots} more ${remainingSpots === 1 ? 'player' : 'players'} needed to start (bots will fill if time expires)`}
-          </div>
-          <div className="font-mono text-yellow-200 text-sm px-3 py-1 bg-yellow-500/10 rounded border border-yellow-500/40">
-            Match start window: {waitingCountdown}s
-          </div>
-        </div>
-      )}
-
-      {/* Arena Grid - Forced 2 columns minimum on mobile to avoid stacking */}
-      <div className={`grid gap-4 grid-cols-2 ${battle.maxPlayers > 2 ? 'md:grid-cols-4' : 'md:grid-cols-2'}`}>
-        {Array.from({ length: battle.maxPlayers }).map((_, index) => {
-          const player = battle.players[index];
-          const isWinner = winnerId === player?.id;
-          const isGold = player && goldModePlayers.has(player.id);
-          
+      <div className={`grid gap-3 grid-cols-2 ${players.length > 2 ? 'md:grid-cols-4' : 'md:grid-cols-2'}`}>
+        {players.map((player: any) => {
+          const total = Number(battle?.totalsByUid?.[player.uid] ?? 0);
+          const latest = rounds[Math.min(rounds.length - 1, Math.max(0, timelineRound))]?.resultsByUid?.[player.uid];
           return (
-            <div key={index} className="flex flex-col gap-4">
-              {/* Player Card */}
-              <div className={`
-                bg-[#131720] border rounded-xl p-4 flex flex-col items-center relative overflow-hidden transition-all duration-300
-                ${isWinner ? 'border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.2)]' : 'border-gray-800'}
-                ${isGold ? 'border-yellow-400 ring-1 ring-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.2)]' : ''}
-              `}>
-                {player ? (
+            <div key={player.uid} className={`bg-[#131720] border rounded-xl p-3 ${winnerBadgeByUid[player.uid] ? 'border-yellow-500' : 'border-gray-800'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-sm font-bold text-white truncate">{player.displayName}</div>
+                {winnerBadgeByUid[player.uid] && <Trophy className="w-4 h-4 text-yellow-500" />}
+              </div>
+              <div className="text-[11px] text-gray-500">Team {player.team}</div>
+              <CoinAmount amount={toCoins(total, PRICE_UNIT_MODE)} className="text-sm font-bold text-green-400 mt-1" iconClassName="w-3 h-3" />
+              <div className="mt-3 bg-[#0b0e14] border border-gray-800 rounded p-2 min-h-[74px]">
+                {latest ? (
                   <>
-                    <img src={player.avatar} className="w-16 h-16 rounded-xl border-4 border-[#0b0e14] shadow-lg z-10" />
-                    <div className="text-center mt-3 z-10">
-                      <div className="font-bold text-white truncate max-w-[120px]">{player.name}</div>
-                      <CoinAmount
-                        amount={toCoins(player.totalWin, PRICE_UNIT_MODE)}
-                        formatOptions={{ maximumFractionDigits: 0 }}
-                        className={`text-sm font-bold ${isWinner ? 'text-yellow-500' : 'text-gray-400'}`}
-                        iconClassName="w-3.5 h-3.5"
-                      />
-                    </div>
-                    {isWinner && <Trophy className="absolute top-2 right-2 w-5 h-5 text-yellow-500 animate-bounce" />}
-                    {isGold && <Zap className="absolute top-2 left-2 w-5 h-5 text-yellow-400 animate-pulse" />}
-                    {isGold && <div className="absolute inset-0 bg-yellow-500/10 animate-pulse z-0"></div>}
+                    <div className="text-xs text-gray-300 truncate">{latest.itemName}</div>
+                    <CoinAmount amount={toCoins(latest.value, PRICE_UNIT_MODE)} className="text-xs font-bold text-white mt-1" iconClassName="w-3 h-3" />
+                    <div className="text-[10px] text-gray-500 mt-1">Roll {latest.roll.toFixed(6)}</div>
                   </>
                 ) : (
-                  <div className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-700 flex items-center justify-center opacity-50">
-                    <User className="w-6 h-6 text-gray-500" />
-                  </div>
+                  <div className="text-xs text-gray-600">Waiting for reveal…</div>
                 )}
-              </div>
-
-              {/* Active Spinner Row */}
-              <div className="relative">
-                 {player && (spinning || (battle.status === 'active' && !roundItems[player.id])) ? (
-                   <BattleSpinner 
-                        winningItem={roundItems[player.id]} 
-                        spinning={spinning} 
-                        isGoldMode={isGold || false}
-                        pool={currentCase?.items || []}
-                   />
-                 ) : (
-                    <div className={`h-32 bg-[#0b0e14] border border-gray-800 rounded-xl flex flex-col items-center justify-center p-2 relative overflow-hidden transition-all ${isGold ? 'border-yellow-500 shadow-lg shadow-yellow-500/10' : ''}`}>
-                        {player && roundItems[player.id] ? (
-                            <>
-                                <div className="absolute inset-0 opacity-10 bg-current" style={{ color: roundItems[player.id].color }}></div>
-                                <img src={roundItems[player.id].image} className={`w-16 h-16 object-contain mb-1 relative z-10 ${roundItems[player.id].id === 'golden-ticket' ? 'animate-bounce' : ''}`} />
-                                <div className="text-center relative z-10">
-                                    <div className="text-[10px] text-gray-400 truncate w-full">{roundItems[player.id].name}</div>
-                                    <CoinAmount
-                                      amount={toCoins(roundItems[player.id].price, PRICE_UNIT_MODE)}
-                                      formatOptions={{ maximumFractionDigits: 0 }}
-                                      className="text-sm font-bold text-white justify-center"
-                                      iconClassName="w-3.5 h-3.5"
-                                    />
-                                </div>
-                            </>
-                        ) : (
-                            <div className="text-gray-700 text-xs font-bold">WAITING</div>
-                        )}
-                    </div>
-                 )}
-              </div>
-
-              {/* History Rows */}
-              <div className="flex flex-col gap-2">
-                {battle.history.slice().reverse().map((round, rIdx) => {
-                  const drop = round.drops.find(d => d.playerId === player?.id);
-                  if (!drop) return null;
-                  return (
-                    <div key={rIdx} className="flex items-center gap-3 bg-[#131720] p-2 rounded-lg border border-gray-800/50 opacity-60 hover:opacity-100 transition-opacity">
-                       <img src={drop.item.image} className="w-10 h-10 object-contain" />
-                       <div className="min-w-0">
-                          <div className="text-[10px] text-gray-400 truncate">{drop.item.name}</div>
-                          <div style={{ color: drop.item.color }}>
-                            <CoinAmount
-                              amount={toCoins(drop.item.price, PRICE_UNIT_MODE)}
-                              formatOptions={{ maximumFractionDigits: 0 }}
-                              className="text-xs font-bold"
-                              iconClassName="w-3 h-3"
-                            />
-                          </div>
-                       </div>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Swords, Plus, X, Trash2, Clock } from 'lucide-react';
+import { Swords, Plus, X, Clock } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
@@ -37,6 +37,8 @@ export const BattlesList: React.FC = () => {
   // Create Battle State
   const [selectedBoxIds, setSelectedBoxIds] = useState<string[]>([]);
   const [playerCount, setPlayerCount] = useState(2);
+  const [mode, setMode] = useState<'REGULAR' | 'CRAZY'>('REGULAR');
+  const [format, setFormat] = useState<'1V1' | '2V2'>('1V1');
 
   // Filter boxes for battle creation (exclude user-created private boxes)
   const battleAvailableBoxes = boxes.filter(b => !b.isUserCreated);
@@ -62,9 +64,11 @@ export const BattlesList: React.FC = () => {
 
   const handleCreateConfirm = () => {
     if (selectedBoxIds.length === 0) return;
-    createBattle(selectedBoxIds, playerCount);
+    createBattle(selectedBoxIds, playerCount, { mode, format });
     setShowCreateModal(false);
     setSelectedBoxIds([]);
+    setMode('REGULAR');
+    setFormat('1V1');
   };
 
   return (
@@ -73,7 +77,7 @@ export const BattlesList: React.FC = () => {
         <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
           <Swords className="w-5 h-5 text-brand-purple" /> Active Battles
         </h3>
-        <div className="flex gap-2 items-center text-xs text-gray-400">
+        <div className="flex flex-wrap gap-2 items-center text-xs text-gray-400 justify-end">
           <span>Showing up to 10 recent battles (scroll for more)</span>
            <button 
              onClick={() => { playSound('click'); setShowCreateModal(true); }}
@@ -184,18 +188,37 @@ export const BattlesList: React.FC = () => {
 
                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                     {/* Settings */}
-                    <div className="mb-6">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Players</label>
-                        <div className="flex gap-2">
-                            {[2, 3, 4].map(num => (
-                                <button
-                                    key={num}
-                                    onClick={() => { playSound('click'); setPlayerCount(num); }}
-                                    className={`flex-1 py-3 rounded-lg border font-bold transition-all ${playerCount === num ? 'bg-brand-purple border-brand-purple text-white' : 'bg-[#0b0e14] border-gray-800 text-gray-400 hover:border-gray-600'}`}
-                                >
-                                    {num} Players
-                                </button>
-                            ))}
+                    <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Mode</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {(['REGULAR', 'CRAZY'] as const).map((value) => (
+                                  <button
+                                    key={value}
+                                    onClick={() => { playSound('click'); setMode(value); }}
+                                    className={`py-3 rounded-lg border font-bold transition-all text-sm ${mode === value ? 'bg-brand-purple border-brand-purple text-white' : 'bg-[#0b0e14] border-gray-800 text-gray-400 hover:border-gray-600'}`}
+                                  >
+                                    {value === 'REGULAR' ? 'Regular' : 'Crazy'}
+                                  </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Format</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {([
+                                  { label: '1v1', value: '1V1', players: 2 },
+                                  { label: '2v2', value: '2V2', players: 4 }
+                                ] as const).map((option) => (
+                                  <button
+                                    key={option.value}
+                                    onClick={() => { playSound('click'); setFormat(option.value); setPlayerCount(option.players); }}
+                                    className={`py-3 rounded-lg border font-bold transition-all text-sm ${format === option.value ? 'bg-brand-purple border-brand-purple text-white' : 'bg-[#0b0e14] border-gray-800 text-gray-400 hover:border-gray-600'}`}
+                                  >
+                                    {option.label.toUpperCase()}
+                                  </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 

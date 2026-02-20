@@ -575,7 +575,7 @@ interface GameContextType {
   dismissNotification: (id: string) => void;
   clearNotifications: () => void;
   sendAdminNotification: (message: string) => Promise<void>;
-  createBattle: (boxIds: string[], maxPlayers: number) => Promise<void>;
+  createBattle: (boxIds: string[], maxPlayers: number, options?: { mode?: 'REGULAR' | 'CRAZY'; format?: '1V1' | '2V2' }) => Promise<void>;
   joinBattle: (battleId: string) => Promise<void>;
   updateBattle: (updatedBattle: Battle) => void;
   createItem: (item: CaseItem) => Promise<void>;
@@ -1515,7 +1515,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Battles Realtime Sync
   useEffect(() => {
-    const battlesRef = collection(db, 'battles');
+    const battlesRef = query(collection(db, 'battles'), orderBy('createdAt', 'desc'), limit(50));
     const unsubscribe = onSnapshot(battlesRef, (snapshot) => {
       const firebaseBattles = snapshot.docs
         .map((docSnap) => {
@@ -1523,44 +1523,39 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const createdAt = data.createdAt?.toMillis
             ? data.createdAt.toMillis()
             : Number(data.createdAt ?? Date.now());
-
-          const players = Array.isArray(data.players)
-            ? data.players.map((p: any) => ({
-                ...p,
-                totalWin: Number(p.totalWin ?? 0)
-              }))
-            : [];
-
-          const history = Array.isArray(data.history)
-            ? data.history.map((round: any) => ({
-                roundNumber: Number(round.roundNumber ?? 0),
-                drops: Array.isArray(round.drops)
-                  ? round.drops.map((drop: any) => ({
-                      playerId: drop.playerId ?? '',
-                      item: drop.item
-                    }))
-                  : []
-              }))
-            : [];
+          const players = Array.isArray(data.players) ? data.players : [];
+          const state = String(data.state ?? 'LOBBY');
+          const status = state === 'COMPLETE' ? 'finished' : state === 'RUNNING' || state === 'FINISHING' ? 'active' : 'waiting';
 
           return {
             id: docSnap.id,
-            mode: data.mode ?? 'Normal',
-            players,
-            playerCount: Number(data.playerCount ?? players.length),
+            mode: data.mode === 'CRAZY' ? 'Inverse' : 'Normal',
+            players: players.map((player: any) => ({
+              id: player.uid,
+              name: player.displayName || 'Player',
+              avatar: player.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(player.uid || 'player')}`,
+              level: 1,
+              xp: 0,
+              totalWin: Number(data.totalsByUid?.[player.uid] ?? 0)
+            })),
+            playerCount: players.length,
             maxPlayers: Number(data.maxPlayers ?? 2),
-            cost: Number(data.cost ?? 0),
-            cases: Array.isArray(data.cases) ? data.cases : [],
-            rounds: Number(data.rounds ?? (Array.isArray(data.cases) ? data.cases.length : 0)),
-            currentRound: Number(data.currentRound ?? 0),
-            status: data.status ?? 'waiting',
-            history,
+            cost: Number(data.entryCostCoins ?? 0),
+            cases: Array.isArray(data.cases)
+              ? data.cases.map((entry: any) => {
+                  const box = boxes.find((candidate) => candidate.id === entry.caseId);
+                  return box || { id: entry.caseId, name: entry.caseId, image: '', price: 0, accentColor: '#6b7280', items: [] };
+                })
+              : [],
+            rounds: Number(data.roundCount ?? 0),
+            currentRound: 0,
+            status,
+            history: [],
             createdAt,
-            rewardsDistributed: data.rewardsDistributed ?? false,
-            botsAdded: data.botsAdded ?? false
+            rewardsDistributed: state === 'COMPLETE',
+            botsAdded: false
           } as Battle;
-        })
-        .sort((a, b) => b.createdAt - a.createdAt);
+        });
 
       setBattles(firebaseBattles);
     }, (error) => {
@@ -1568,58 +1563,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     return () => unsubscribe();
-  }, []);
-
-  // Auto-fill with bots if countdown expires without enough real players
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      battles
-        .filter(b => b.status === 'waiting' && !b.botsAdded && now - b.createdAt >= 60000)
-        .forEach(battle => {
-          const battleRef = doc(db, 'battles', battle.id);
-          runTransaction(db, async (transaction) => {
-            const snap = await transaction.get(battleRef);
-            if (!snap.exists()) return;
-            const data = snap.data() as Battle;
-            if (data.status !== 'waiting') return;
-
-            const players = Array.isArray(data.players) ? data.players : [];
-            const playerCount = Number(data.playerCount ?? players.length ?? 0);
-            const maxPlayers = Number(data.maxPlayers ?? 2);
-            const remaining = maxPlayers - playerCount;
-
-            if (remaining <= 0) {
-              transaction.set(battleRef, { ...data, status: 'active' as Battle['status'] }, { merge: true });
-              return;
-            }
-
-            const bots = Array.from({ length: remaining }).map(() => {
-              const botId = Math.floor(Math.random() * 10000);
-              return {
-                id: `bot-${data.id}-${botId}`,
-                name: `BotUser${botId}`,
-                avatar: `https://picsum.photos/seed/${botId}/100/100`,
-                level: Math.floor(Math.random() * 50) + 1,
-                xp: Math.floor(Math.random() * 5000),
-                totalWin: 0,
-                isBot: true
-              };
-            });
-
-            transaction.set(battleRef, sanitizeDeep({
-              ...data,
-              players: [...players, ...bots],
-              playerCount: maxPlayers,
-              status: 'active' as Battle['status'],
-              botsAdded: true
-            }));
-          }).catch((error) => console.error('Failed to auto-fill bots for battle', battle.id, error));
-        });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [battles]);
+  }, [boxes]);
 
   // --- ACTIONS ---
 
@@ -2315,109 +2259,55 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
   };
 
-  const createBattle = async (boxIds: string[], maxPlayers: number) => {
+  const createBattle = async (boxIds: string[], maxPlayers: number, options?: { mode?: 'REGULAR' | 'CRAZY'; format?: '1V1' | '2V2' }) => {
     if (!isAuthenticated) {
-        openAuthModal('login');
-        return;
-    }
-
-    const selectedCases = boxIds.map(id => boxes.find(b => b.id === id)).filter(b => b !== undefined) as MysteryBox[];
-    const cost = selectedCases.reduce((sum, b) => sum + b.price, 0);
-    const costCoins = toCoins(cost, PRICE_UNIT_MODE);
-
-    if (selectedCases.length === 0) {
-        alert("Please select at least one box");
-        return;
-    }
-
-    if (!deductBalance(costCoins)) {
-      alert("Insufficient funds to create battle!");
+      openAuthModal('login');
       return;
     }
-    
-    const battleRef = doc(collection(db, 'battles'));
-    const newBattle: Battle = {
-      id: battleRef.id,
-      mode: 'Normal',
-      players: [{ ...user, totalWin: 0 }],
-      playerCount: 1,
-      maxPlayers,
-      cost,
-      cases: selectedCases,
-      rounds: selectedCases.length,
-      currentRound: 0,
-      status: 'waiting',
-      history: [],
-      createdAt: Date.now(),
-      rewardsDistributed: false,
-      botsAdded: false
-    };
-    
-    setBattles(prev => [newBattle, ...prev.filter(b => b.id !== newBattle.id)]);
-    try {
-      await setDoc(battleRef, sanitizeDeep(newBattle));
-    } catch (error) {
-      console.error('Failed to create battle in Firebase', error);
+
+    const selectedCases = boxIds.map(id => boxes.find(b => b.id === id)).filter(Boolean) as MysteryBox[];
+    if (!selectedCases.length) {
+      alert('Please select at least one case');
+      return;
     }
-    setView({ type: 'BATTLE_ARENA', battleId: newBattle.id });
+
+    const entryCostCoins = Math.floor(selectedCases.reduce((sum, box) => sum + toCoins(box.price, PRICE_UNIT_MODE), 0));
+
+    try {
+      const response = await authedFetch<{ battleId: string }>('/api/battles/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          mode: options?.mode || 'REGULAR',
+          format: options?.format || (maxPlayers === 4 ? '2V2' : '1V1'),
+          cases: boxIds,
+          roundCount: boxIds.length,
+          entryCostCoins,
+          roundDurationMs: 4500
+        })
+      });
+      setView({ type: 'BATTLE_ARENA', battleId: response.battleId });
+    } catch (error) {
+      console.error('Failed to create battle', error);
+      alert('Unable to create battle. Please check your balance and try again.');
+    }
   };
 
   const joinBattle = async (battleId: string) => {
     if (!isAuthenticated) {
-        openAuthModal('login');
-        return;
-    }
-    const battle = battles.find(b => b.id === battleId);
-    if (!battle) return;
-    if (battle.players.some(p => p.id === user.id)) {
-      setView({ type: 'BATTLE_ARENA', battleId });
+      openAuthModal('login');
       return;
     }
-    if (battle.playerCount >= battle.maxPlayers) {
-      alert("Battle is full!");
-      return;
-    }
-    if (!deductBalance(toCoins(battle.cost, PRICE_UNIT_MODE), { trackRewards: false })) {
-      alert("Insufficient funds to join battle!");
-      return;
-    }
-    const battleRef = doc(db, 'battles', battleId);
+
     try {
-      await runTransaction(db, async (transaction) => {
-        const battleSnap = await transaction.get(battleRef);
-        if (!battleSnap.exists()) {
-          throw new Error('Battle not found');
-        }
-        const data = battleSnap.data() as Battle;
-
-        if (data.players.some(p => p.id === user.id)) {
-          throw new Error('already-joined');
-        }
-
-        if (data.playerCount >= data.maxPlayers) {
-          throw new Error('full');
-        }
-
-        const updatedPlayers = [...data.players, { ...user, totalWin: 0 }];
-        const newCount = updatedPlayers.length;
-
-        transaction.set(battleRef, sanitizeDeep({
-          ...data,
-          players: updatedPlayers,
-          playerCount: newCount,
-          status: (newCount === data.maxPlayers ? 'active' : 'waiting') as Battle['status']
-        }));
+      await authedFetch('/api/battles/join', {
+        method: 'POST',
+        body: JSON.stringify({ battleId })
       });
-    } catch (error: any) {
+      setView({ type: 'BATTLE_ARENA', battleId });
+    } catch (error) {
       console.error('Failed to join battle', error);
-      addBalance(toCoins(battle.cost, PRICE_UNIT_MODE));
-      if (error?.message === 'full') {
-        alert("Battle is full!");
-      }
-      return;
+      alert('Unable to join this battle. It may be full or no longer in lobby state.');
     }
-    registerSpend(toCoins(battle.cost, PRICE_UNIT_MODE));
-    setView({ type: 'BATTLE_ARENA', battleId });
   };
 
   const updateBattle = (updatedBattle: Battle) => {

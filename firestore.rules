@@ -86,7 +86,12 @@ service cloud.firestore {
 
     match /battles/{battleId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if false;
+
+      match /rounds/{roundId} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
     }
 
     match /opens/{openId} {
