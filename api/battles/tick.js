@@ -3,6 +3,7 @@ import { readJsonBody, sendJson } from '../_lib/http.js';
 import { BATTLE_STATES, assignTeam, battleSummary, parseAuth, withHttpError } from '../_lib/battles.js';
 
 const TICK_MIN_INTERVAL_MS = 2000;
+const makeRunId = () => `run_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -20,6 +21,7 @@ export default async function handler(req, res) {
 
     const battleRef = firestore.collection('battles').doc(battleId);
     let summary = null;
+    let action = 'noop';
 
     await firestore.runTransaction(async (transaction) => {
       const snap = await transaction.get(battleRef);
@@ -35,14 +37,13 @@ export default async function handler(req, res) {
       const botFill = {
         enabled: battle.botFill?.enabled !== false,
         joinAfterMs: Math.max(2000, Number(battle.botFill?.joinAfterMs ?? 12000)),
-        lastTickAt: battle.botFill?.lastTickAt ?? null,
-        maxBotAddsPerTick: Math.max(1, Math.floor(Number(battle.botFill?.maxBotAddsPerTick ?? 2)))
+        lastTickAt: battle.botFill?.lastTickAt ?? null
       };
 
       const nowMs = Date.now();
       const lastTickAtMs = typeof botFill.lastTickAt?.toMillis === 'function' ? botFill.lastTickAt.toMillis() : 0;
 
-      if (![BATTLE_STATES.LOBBY, BATTLE_STATES.COUNTDOWN].includes(state)) {
+      if (![BATTLE_STATES.LOBBY, BATTLE_STATES.COUNTDOWN, BATTLE_STATES.RUNNING].includes(state)) {
         summary = battleSummary(battleId, battle);
         return;
       }
@@ -52,7 +53,7 @@ export default async function handler(req, res) {
         return;
       }
 
-      let patch = {
+      const patch = {
         botFill: {
           ...botFill,
           lastTickAt: admin.firestore.Timestamp.now()
@@ -60,17 +61,14 @@ export default async function handler(req, res) {
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       };
 
-      const shouldAddBots =
+      if (
+        state === BATTLE_STATES.LOBBY &&
         botFill.enabled &&
         players.length < maxPlayers &&
-        nowMs >= createdAtMs + botFill.joinAfterMs;
-
-      if (shouldAddBots) {
-        const missing = maxPlayers - players.length;
-        const adds = Math.min(missing, botFill.maxBotAddsPerTick);
+        nowMs >= createdAtMs + botFill.joinAfterMs
+      ) {
         let serial = players.filter((player) => String(player.uid || '').startsWith(`bot_${battleId}_`)).length;
-
-        for (let i = 0; i < adds; i += 1) {
+        while (players.length < maxPlayers) {
           serial += 1;
           const uid = `bot_${battleId}_${serial}`;
           if (players.some((player) => player.uid === uid)) continue;
@@ -85,30 +83,45 @@ export default async function handler(req, res) {
             avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(uid)}`
           });
         }
-
-        patch = {
-          ...patch,
-          players,
-          version: Number(battle.version ?? 0) + 1
-        };
+        patch.players = players;
+        action = 'filled_bots';
       }
 
-      const nextPlayers = patch.players || players;
+      const nextPlayers = Array.isArray(patch.players) ? patch.players : players;
       const isFull = nextPlayers.length >= maxPlayers;
-      if (isFull && state === BATTLE_STATES.LOBBY) {
-        patch = {
-          ...patch,
-          state: BATTLE_STATES.COUNTDOWN,
-          startedAt: admin.firestore.Timestamp.fromMillis(nowMs + Math.max(1, Number(battle.countdownSeconds ?? 5)) * 1000),
-          version: Number((patch.version ?? battle.version) ?? 0) + 1
+
+      if (state === BATTLE_STATES.LOBBY && isFull) {
+        patch.state = BATTLE_STATES.COUNTDOWN;
+        patch.startedAt = admin.firestore.Timestamp.fromMillis(nowMs + Math.max(1, Number(battle.countdownSeconds ?? 5)) * 1000);
+        action = action === 'filled_bots' ? 'filled_bots_countdown' : 'countdown';
+      }
+
+      const startedAtMs = typeof battle.startedAt?.toMillis === 'function'
+        ? battle.startedAt.toMillis()
+        : (typeof patch.startedAt?.toMillis === 'function' ? patch.startedAt.toMillis() : 0);
+
+      if (
+        (state === BATTLE_STATES.COUNTDOWN || patch.state === BATTLE_STATES.COUNTDOWN) &&
+        isFull &&
+        nowMs >= startedAtMs
+      ) {
+        patch.state = BATTLE_STATES.RUNNING;
+        patch.engine = {
+          ...(battle.engine ?? {}),
+          starting: true,
+          running: true,
+          runId: battle.engine?.runId || makeRunId(),
+          runStartedAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastHeartbeatAt: admin.firestore.FieldValue.serverTimestamp()
         };
+        action = 'started';
       }
 
       transaction.set(battleRef, patch, { merge: true });
       summary = battleSummary(battleId, { ...battle, ...patch });
     });
 
-    return sendJson(res, 200, { battle: summary });
+    return sendJson(res, 200, { ok: true, action, state: summary?.state, battle: summary });
   } catch (error) {
     const safe = withHttpError(error, 'Failed to tick battle.');
     return sendJson(res, safe.status, { error: safe.error, message: safe.message });
