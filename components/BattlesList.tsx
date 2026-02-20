@@ -156,6 +156,7 @@ export const BattlesList: React.FC = () => {
         ) : (
           recentBattles.map((battle) => {
             const status = formatStatus(battle, now);
+            const rowTicking = !!tickBusy[battle.id];
             const waiting = status.intent === 'waiting' || status.intent === 'starting';
             const isParticipating = battle.players.some((player: any) => player.id === user.id);
             const isFull = battle.playerCount >= battle.maxPlayers;
@@ -192,9 +193,9 @@ export const BattlesList: React.FC = () => {
                   </div>
 
                   <div className="xl:ml-auto flex items-center justify-between xl:justify-end gap-4 w-full xl:w-auto">
-                    <div className={`flex items-center gap-1 text-sm font-semibold ${waiting ? 'text-orange-400' : 'text-gray-500'}`}>
-                      {waiting ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                      <span>{waiting ? 'Bots joining…' : status.label}</span>
+                    <div className={`flex items-center gap-1 text-sm font-semibold ${status.intent === 'live' ? 'text-green-300' : waiting ? 'text-orange-400' : status.intent === 'ended' ? 'text-gray-500' : 'text-gray-300'}`}>
+                      {rowTicking ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                      <span>{status.label}</span>
                     </div>
                     <div className="text-right">
                       <CoinAmount amount={Number(battle.entryCostCoins ?? 0)} formatOptions={{ maximumFractionDigits: 0 }} className="text-green-400 font-black justify-end text-xl sm:text-2xl" iconClassName="w-4 h-4" />

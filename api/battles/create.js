@@ -72,6 +72,7 @@ export default async function handler(req, res) {
       transaction.set(battleRef, {
         mode,
         format,
+        winConditionLabel: mode === 'CRAZY' ? 'Lowest Total' : 'Highest Total',
         state: BATTLE_STATES.LOBBY,
         version: 1,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -100,6 +101,7 @@ export default async function handler(req, res) {
         runId: null,
         runStartedAt: null,
         engine: {
+          starting: false,
           running: false,
           runStartedAt: null,
           lastHeartbeatAt: null,
