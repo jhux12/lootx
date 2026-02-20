@@ -6,6 +6,7 @@ import { useGame } from '../context/GameContext';
 import { CoinAmount } from './CoinAmount';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { authedFetch } from '../utils/authedFetch';
+import { ReelItem, SpinnerReel } from './SpinnerReel';
 
 interface BattleArenaProps {
   battleId: string;
@@ -14,7 +15,7 @@ interface BattleArenaProps {
 interface RoundDoc {
   index: number;
   revealedAt?: any;
-  resultsByUid: Record<string, { itemName: string; value: number; rarity: string; proof: string; roll: number; imageUrl?: string }>;
+  resultsByUid: Record<string, { itemId?: string; itemName: string; value: number; rarity: string; proof: string; roll: number; imageUrl?: string }>;
 }
 
 interface ProgressResponse {
@@ -24,7 +25,7 @@ interface ProgressResponse {
 const tsToMs = (value: any) => (value?.toMillis ? value.toMillis() : Number(value ?? 0));
 
 export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
-  const { setView, user, joinBattle, createBattle } = useGame();
+  const { setView, user, joinBattle, createBattle, items } = useGame();
   const [battle, setBattle] = useState<any>(null);
   const [rounds, setRounds] = useState<RoundDoc[]>([]);
   const [now, setNow] = useState(Date.now());
@@ -35,6 +36,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [showForceProgress, setShowForceProgress] = useState(false);
+  const [completedSpinRounds, setCompletedSpinRounds] = useState<Set<number>>(new Set());
   const progressInFlightRef = useRef(false);
   const noopSinceRef = useRef<number | null>(null);
 
@@ -43,6 +45,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
     setSkipAnimation(false);
     setLastError(null);
     setShowForceProgress(false);
+    setCompletedSpinRounds(new Set());
     noopSinceRef.current = null;
   }, [battleId]);
 
@@ -80,6 +83,73 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const shownRound = Math.max(1, Math.min(roundCount, playheadRound + 1));
   const roundsByIndex = useMemo(() => new Map(rounds.map((round) => [round.index, round])), [rounds]);
   const canShowWinner = skipAnimation || playheadRound >= roundCount - 1;
+  const animatedRound = Math.max(0, Math.min(roundCount - 1, playheadRound + 1));
+
+  const normalizeReelItem = (item: any): ReelItem | null => {
+    const name = item?.itemName || item?.name;
+    if (!name) return null;
+    return {
+      itemId: item?.itemId || item?.id,
+      itemName: String(name),
+      value: Number(item?.value ?? item?.price ?? 0),
+      rarity: item?.rarity,
+      imageUrl: item?.imageUrl || item?.image
+    };
+  };
+
+  const fillerPool = useMemo(() => {
+    const caseItems = (Array.isArray(battle?.cases) ? battle.cases : [])
+      .flatMap((entry: any) => (Array.isArray(entry?.items) ? entry.items : []))
+      .map((item: any) => normalizeReelItem(item))
+      .filter(Boolean) as ReelItem[];
+
+    const globalItems = (Array.isArray(items) ? items : [])
+      .slice(0, 30)
+      .map((item) => normalizeReelItem(item))
+      .filter(Boolean) as ReelItem[];
+
+    const seenRoundItems = rounds
+      .flatMap((round) => Object.values(round.resultsByUid ?? {}))
+      .map((item) => normalizeReelItem(item))
+      .filter(Boolean) as ReelItem[];
+
+    const merged = [...caseItems, ...globalItems, ...seenRoundItems];
+    const deduped = new Map<string, ReelItem>();
+    merged.forEach((entry) => {
+      const key = String(entry.itemId || entry.itemName).toLowerCase();
+      if (!deduped.has(key)) deduped.set(key, entry);
+    });
+
+    return Array.from(deduped.values()).slice(0, 40);
+  }, [battle?.cases, items, rounds]);
+
+  const teams = useMemo(
+    () => ({
+      A: players.filter((player: any) => player.team !== 'B'),
+      B: players.filter((player: any) => player.team === 'B')
+    }),
+    [players]
+  );
+
+  useEffect(() => {
+    if (battle?.state !== 'RUNNING' || skipAnimation) return;
+    const activeRound = roundsByIndex.get(animatedRound);
+    if (!activeRound) return;
+    if (completedSpinRounds.has(animatedRound)) return;
+
+    const hasAnyResult = players.some((player: any) => !!activeRound.resultsByUid?.[player.uid]);
+    if (!hasAnyResult) return;
+
+    const timer = window.setTimeout(() => {
+      setCompletedSpinRounds((prev) => {
+        const next = new Set(prev);
+        next.add(animatedRound);
+        return next;
+      });
+    }, roundDurationMs);
+
+    return () => window.clearTimeout(timer);
+  }, [animatedRound, battle?.state, completedSpinRounds, players, roundDurationMs, roundsByIndex, skipAnimation]);
 
   const callTick = async () => {
     if (!battle || tickLoading) return;
@@ -228,6 +298,45 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
           </div>
         </div>
       </div>
+
+      {battle.state === 'RUNNING' && (
+        <div className="mb-4 grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4">
+          {(['A', 'B'] as const).map((teamKey) => (
+            <div key={teamKey} className="rounded-xl border border-gray-800 bg-[#131720] p-3 sm:p-4">
+              <div className="text-xs uppercase tracking-wide text-gray-400 mb-3">Team {teamKey} Reels</div>
+              <div className="space-y-3">
+                {(teams[teamKey].length ? teams[teamKey] : []).map((player: any) => {
+                  const activeRound = roundsByIndex.get(animatedRound);
+                  const winner = normalizeReelItem(activeRound?.resultsByUid?.[player.uid]);
+                  const laneState: 'IDLE' | 'SPIN' | 'STOPPED' = !winner
+                    ? 'IDLE'
+                    : (skipAnimation || completedSpinRounds.has(animatedRound))
+                      ? 'STOPPED'
+                      : 'SPIN';
+
+                  return (
+                    <div key={`${teamKey}-${player.uid}`} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <img src={player.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(player.uid)}`} className="w-7 h-7 rounded-md border border-gray-700" />
+                        <div className="text-xs sm:text-sm font-semibold text-white truncate">{player.displayName}</div>
+                        <div className="ml-auto text-[11px] text-gray-400">{!winner ? 'Waiting for result…' : `Round ${animatedRound + 1}`}</div>
+                      </div>
+                      <SpinnerReel
+                        items={fillerPool}
+                        winningItem={winner}
+                        spinKey={`${battleId}-${animatedRound}-${player.uid}`}
+                        state={laneState}
+                        durationMs={roundDurationMs}
+                      />
+                    </div>
+                  );
+                })}
+                {!teams[teamKey].length && <div className="text-xs text-gray-500">Waiting for players…</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-3">
         {players.map((player: any) => (
