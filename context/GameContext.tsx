@@ -952,7 +952,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setViewState(nextView);
     if (typeof window !== 'undefined') {
       scrollToTop();
-      const nextPath = getPathFromView(nextView);
+      const baseNextPath = getPathFromView(nextView);
+      const nextPath =
+        nextView.type === 'BOXES' && window.location.pathname === '/boxes' && window.location.search
+          ? `/boxes${window.location.search}`
+          : baseNextPath;
       const currentPath = `${window.location.pathname}${window.location.search}`;
       if (nextPath !== currentPath) {
         window.history.pushState({}, '', nextPath);
