@@ -223,7 +223,6 @@ const DEFAULT_BONUS_SETTINGS: BonusSettings = {
 const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
 
 const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
-  comingSoonModeEnabled: false,
   authPopupImageUrl: '',
   authPopupImageUrls: ['', '', ''],
   homeCategoryImageUrls: ['', '', ''],
@@ -253,7 +252,6 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
     : [];
 
   return {
-    comingSoonModeEnabled: settings.comingSoonModeEnabled === true,
     authPopupImageUrl: legacyAuthImage,
     authPopupImageUrls: normalizedAuthImages.length > 0
       ? normalizedAuthImages

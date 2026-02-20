@@ -11,6 +11,7 @@ import { BoxCatalog } from './components/BoxCatalog';
 import { CaseOpening } from './components/CaseOpening';
 import { Profile } from './components/Profile';
 import { BattleArena } from './components/BattleArena';
+import { BattlesList } from './components/BattlesList';
 import { Bonuses } from './components/Bonuses';
 import { AdminPanel } from './components/AdminPanel';
 import { LoginModal } from './components/LoginModal';
@@ -23,7 +24,7 @@ import { LegalPage } from './components/LegalPage';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
-import { ShieldAlert, Swords } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 import { InboxModal } from './components/InboxModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { HowItWorksSection } from './components/HowItWorksSection';
@@ -72,7 +73,7 @@ type MainContentProps = {
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
-  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal, stripeSettings } = useGame();
+  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal } = useGame();
   const { playSound } = useSound();
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
@@ -168,91 +169,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   };
 
 
-  const isComingSoonMode = stripeSettings.comingSoonModeEnabled === true;
-  const canBypassComingSoon = user.isAdmin || view.type === 'ADMIN';
-
-  const ComingSoonSplash = () => (
-    <div className="mx-auto mt-4 w-full max-w-3xl px-2 pb-12 sm:px-4">
-      <div className="overflow-hidden rounded-3xl border border-amber-400/30 bg-gradient-to-br from-[#131722] via-[#101521] to-[#0b0f18] shadow-[0_30px_70px_-40px_rgba(251,191,36,0.7)]">
-        <div className="px-5 py-8 sm:px-8 sm:py-10">
-          <div className="inline-flex items-center rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200">
-            Coming soon mode
-          </div>
-          <h1 className="mt-4 text-3xl font-black leading-tight text-white sm:text-4xl">
-            We're tuning the loot machine.
-          </h1>
-          <p className="mt-4 text-sm text-gray-300 sm:text-base">
-            Our hamsters are currently sprinting on the servers, and we're almost ready for prime time.
-            Please check back soon for a shinier, faster, and slightly more dramatic launch.
-          </p>
-          <p className="mt-3 text-xs text-gray-400 sm:text-sm">
-            Yes, this page is intentional. No, the big red button was not pressed (probably).
-          </p>
-
-          <div className="mt-7 grid gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                openAuthModal('login');
-                setView({ type: 'ADMIN' });
-                if (typeof window !== 'undefined') {
-                  window.history.replaceState({}, '', '/admin');
-                }
-              }}
-              className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-            >
-              Admin login
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                setView({ type: 'CONTACT' });
-                if (typeof window !== 'undefined') {
-                  window.history.replaceState({}, '', '/contact');
-                }
-              }}
-              className="w-full rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-300/20"
-            >
-              Contact support team
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const BattlesComingSoon = () => (
-    <div className="mt-6 rounded-2xl border border-gray-800 bg-[#0b0e14] p-6 sm:p-8">
-      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="rounded-xl bg-purple-500/10 p-3 text-purple-400">
-            <Swords className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-purple-200">
-              Coming Soon
-            </div>
-            <h2 className="mt-3 text-2xl font-bold text-white">Case Battles are on the way</h2>
-            <p className="mt-2 text-sm text-gray-400 sm:text-base">
-              We&apos;re polishing the battle arena experience. It&apos;s not available yet, but it will launch soon with
-              mobile-first matchups and fair rewards.
-            </p>
-          </div>
-        </div>
-        <div className="rounded-xl border border-gray-800 bg-[#050811] px-4 py-3 text-left text-xs text-gray-400 sm:text-sm md:text-right">
-          Check back soon for launch updates.
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <main className="flex-1 min-w-0 pb-[90px] sm:pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
-      {isComingSoonMode && !canBypassComingSoon ? (
-        <ComingSoonSplash />
-      ) : (
       <>
       {view.type === 'HOME' && (
         <HomeReplica
@@ -276,12 +195,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       )}
       
       {view.type === 'BATTLES' && (
-        <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
-           <div className="mb-8">
-               <h1 className="text-3xl font-bold text-white mb-2">Case Battles</h1>
-               <p className="text-gray-400">This feature is coming soon and is not yet available.</p>
+        <div className="max-w-[1400px] mx-auto p-3 sm:p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
+           <div className="mb-6">
+               <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Case Battles</h1>
+               <p className="text-gray-400 text-sm sm:text-base">Create or join live battles now.</p>
            </div>
-           <BattlesComingSoon />
+           <BattlesList />
         </div>
       )}
 
@@ -401,7 +320,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       )}
 
       </>
-      )}
 
       {/* Modals */}
       {showLoginModal && <LoginModal />}
