@@ -18,6 +18,17 @@ const toCategoryKey = (value: string) =>
     .replace(/[^a-z0-9]+/g, '')
     .trim();
 
+const toCategoryVariants = (value: string) => {
+  const key = toCategoryKey(value);
+  if (!key) return [];
+
+  const variants = new Set<string>([key]);
+  if (key.endsWith('s') && key.length > 1) variants.add(key.slice(0, -1));
+  else variants.add(`${key}s`);
+
+  return Array.from(variants);
+};
+
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const { boxes, setView } = useGame();
   const { playSound } = useSound();
@@ -101,13 +112,17 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       return;
     }
 
-    const requestedKey = toCategoryKey(normalizedSlug);
-    const matchedCategory = categories.find(
-      (category) =>
-        category.id === normalizedSlug ||
-        toCategoryKey(category.id) === requestedKey ||
-        toCategoryKey(category.title) === requestedKey
-    );
+    const requestedKeys = new Set(toCategoryVariants(normalizedSlug));
+    const matchedCategory = categories.find((category) => {
+      if (category.id === normalizedSlug) return true;
+
+      const categoryKeys = [
+        ...toCategoryVariants(category.id),
+        ...toCategoryVariants(category.title)
+      ];
+
+      return categoryKeys.some((categoryKey) => requestedKeys.has(categoryKey));
+    });
 
     if (matchedCategory) {
       setActiveCategory(matchedCategory.id);

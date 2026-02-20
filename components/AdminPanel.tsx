@@ -15,6 +15,7 @@ import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
+import { getBoxTags } from '../utils/boxTags';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -397,6 +398,27 @@ export const AdminPanel: React.FC = () => {
       caseLabVisibleBoxIds: stripeSettings.caseLabVisibleBoxIds
   });
   const [stripeSettingsNotice, setStripeSettingsNotice] = useState(false);
+
+  const homeCategoryOptions = useMemo(() => {
+      const tags = new Set<string>();
+      boxes.forEach((box) => {
+          if (box.isDaily || box.isUserCreated) return;
+          getBoxTags(box).forEach((tag) => {
+              const normalized = tag.trim().toLowerCase();
+              if (!normalized) return;
+              tags.add(normalized);
+          });
+      });
+
+      const sortedTags = Array.from(tags).sort((a, b) => a.localeCompare(b));
+      return sortedTags.map((tag) => ({
+          value: tag,
+          label: tag
+              .split(/[-_\s]+/)
+              .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+              .join(' ')
+      }));
+  }, [boxes]);
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [balanceDraft, setBalanceDraft] = useState('');
   const [isEditingInventory, setIsEditingInventory] = useState(false);
@@ -5015,19 +5037,31 @@ export const AdminPanel: React.FC = () => {
                                         />
                                     ))}
                                     {[0, 1, 2].map((index) => (
-                                        <Input
-                                            key={`home-category-slug-${index}`}
-                                            type="text"
-                                            value={stripeSettingsDraft.homeCategorySlugs[index] ?? ''}
-                                            onChange={(event) => {
-                                                const nextSlugs = [...stripeSettingsDraft.homeCategorySlugs];
-                                                nextSlugs[index] = event.target.value;
-                                                setStripeSettingsDraft((prev) => ({ ...prev, homeCategorySlugs: nextSlugs }));
-                                                setStripeSettingsNotice(false);
-                                            }}
-                                            placeholder={`Homepage category ${index + 1} slug (for click-through)`}
-                                            className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
-                                        />
+                                        <div key={`home-category-slug-${index}`} className="space-y-1.5">
+                                            <Select
+                                                value={stripeSettingsDraft.homeCategorySlugs[index] ?? ''}
+                                                onChange={(event) => {
+                                                    const nextSlugs = [...stripeSettingsDraft.homeCategorySlugs];
+                                                    nextSlugs[index] = event.target.value;
+                                                    setStripeSettingsDraft((prev) => ({ ...prev, homeCategorySlugs: nextSlugs }));
+                                                    setStripeSettingsNotice(false);
+                                                }}
+                                                placeholder={`Select homepage category ${index + 1}`}
+                                                className="w-full !bg-[#111827] !border-gray-700"
+                                            >
+                                                <option value="">No category</option>
+                                                {homeCategoryOptions.map((option) => (
+                                                    <option key={`home-category-option-${option.value}`} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                            {!homeCategoryOptions.some((option) => option.value === (stripeSettingsDraft.homeCategorySlugs[index] ?? '')) && (stripeSettingsDraft.homeCategorySlugs[index] ?? '').trim() ? (
+                                                <p className="text-[11px] text-amber-300/90">
+                                                    Current value is not in available categories. Pick a category above to ensure click-through works.
+                                                </p>
+                                            ) : null}
+                                        </div>
                                     ))}
                                     {[0, 1, 2].map((index) => (
                                         <Input

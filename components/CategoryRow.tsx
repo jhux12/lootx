@@ -58,16 +58,16 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({ row }) => {
 
   const handleViewAll = () => {
     playSound('click');
-    setView({ type: 'BOXES' });
     window.history.replaceState({}, '', '/boxes');
+    setView({ type: 'BOXES' });
   };
 
   const handleCategoryClick = (slug: string) => {
     const params = new URLSearchParams();
     params.set('category', slug);
     playSound('click');
-    setView({ type: 'BOXES' });
     window.history.replaceState({}, '', `/boxes?${params.toString()}`);
+    setView({ type: 'BOXES' });
   };
 
   return (

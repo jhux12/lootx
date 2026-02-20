@@ -25,7 +25,6 @@ export const BoxRow: React.FC<BoxRowProps> = ({ title, boxes, viewAllQuery }) =>
 
   const handleViewAll = () => {
     playSound('click');
-    setView({ type: 'BOXES' });
     if (viewAllQuery) {
       const params = new URLSearchParams();
       if (viewAllQuery.tags?.length) params.set('tags', viewAllQuery.tags.join(','));
@@ -34,6 +33,7 @@ export const BoxRow: React.FC<BoxRowProps> = ({ title, boxes, viewAllQuery }) =>
       const search = params.toString();
       window.history.replaceState({}, '', `/boxes${search ? `?${search}` : ''}`);
     }
+    setView({ type: 'BOXES' });
   };
 
   return (

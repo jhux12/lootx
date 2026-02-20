@@ -43,7 +43,6 @@ export const BoxGrid: React.FC<BoxGridProps> = ({
 
   const handleViewAll = useCallback(() => {
     playSound('click');
-    setView({ type: 'BOXES' });
     if (viewAllQuery) {
       const params = new URLSearchParams();
       if (viewAllQuery.tags?.length) params.set('tags', viewAllQuery.tags.join(','));
@@ -52,6 +51,7 @@ export const BoxGrid: React.FC<BoxGridProps> = ({
       const search = params.toString();
       window.history.replaceState({}, '', `/boxes${search ? `?${search}` : ''}`);
     }
+    setView({ type: 'BOXES' });
   }, [playSound, setView, viewAllQuery]);
 
   const handleSelectBox = useCallback((boxId: string) => {
