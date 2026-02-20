@@ -18,8 +18,6 @@ interface RoundDoc {
 }
 
 const tsToMs = (value: any) => (value?.toMillis ? value.toMillis() : Number(value ?? 0));
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const { setView, user, joinBattle } = useGame();
   const [battle, setBattle] = useState<any>(null);
@@ -29,8 +27,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const [showPfModal, setShowPfModal] = useState(false);
   const [displayedRoundIndex, setDisplayedRoundIndex] = useState(-1);
   const startAttemptRef = useRef(false);
-  const isPlaybackRunningRef = useRef(false);
-  const playbackCursorRef = useRef(-1);
+
+  useEffect(() => {
+    setDisplayedRoundIndex(-1);
+    startAttemptRef.current = false;
+  }, [battleId]);
 
   useEffect(() => {
     const battleRef = doc(db, 'battles', battleId);
@@ -59,26 +60,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
 
   useEffect(() => {
     if (!rounds.length) return;
-    if (isPlaybackRunningRef.current) return;
+
+    const nextIndex = displayedRoundIndex + 1;
+    if (nextIndex >= rounds.length) return;
 
     const roundDurationMs = Math.max(1200, Number(battle?.roundDurationMs ?? 2000));
+    const timer = window.setTimeout(() => {
+      setDisplayedRoundIndex(nextIndex);
+    }, roundDurationMs);
 
-    const runPlayback = async () => {
-      isPlaybackRunningRef.current = true;
-      try {
-        while (playbackCursorRef.current + 1 < rounds.length) {
-          const nextIndex = playbackCursorRef.current + 1;
-          playbackCursorRef.current = nextIndex;
-          setDisplayedRoundIndex(nextIndex);
-          await sleep(roundDurationMs);
-        }
-      } finally {
-        isPlaybackRunningRef.current = false;
-      }
-    };
-
-    void runPlayback();
-  }, [rounds, battle?.roundDurationMs]);
+    return () => window.clearTimeout(timer);
+  }, [rounds.length, displayedRoundIndex, battle?.roundDurationMs]);
 
   const players = Array.isArray(battle?.players) ? battle.players : [];
   const isParticipant = players.some((player: any) => player.uid === user.id);
@@ -160,7 +152,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
               <CoinAmount amount={toCoins(lastResult.value, PRICE_UNIT_MODE)} className="text-xs font-bold text-white mt-1" iconClassName="w-3 h-3" />
             </>
           ) : (
-            <div className="text-xs text-gray-600">Waiting for reveal…</div>
+            <div className="text-xs text-gray-500 flex items-center gap-1">
+              {(battle.state === 'RUNNING' || battle.state === 'FINISHING') && <Loader2 className="w-3 h-3 animate-spin" />}
+              <span>Spinning…</span>
+            </div>
           )}
         </div>
       </div>

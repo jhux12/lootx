@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Clock3, Loader2, Plus, Swords, X } from 'lucide-react';
+import { Loader2, Plus, Swords, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -16,15 +16,15 @@ const formatStatus = (battle: any, now: number) => {
   if (state === 'COUNTDOWN') {
     const startedAtMs = Number(battle.startedAtMs ?? 0);
     const secondsLeft = Math.max(0, Math.ceil((startedAtMs - now) / 1000));
-    return { label: `Starting • ${secondsLeft}s`, intent: 'starting' as const };
+    return { label: `STARTING • ${secondsLeft}s`, intent: 'starting' as const };
   }
   if (state === 'RUNNING' || state === 'FINISHING') {
-    return { label: `Live • Round ${Math.max(1, Number(battle.currentRound ?? 1))}/${Math.max(1, Number(battle.rounds ?? 1))}`, intent: 'live' as const };
+    return { label: `LIVE • Round ${Math.max(1, Number(battle.currentRound ?? 1))}/${Math.max(1, Number(battle.rounds ?? 1))}`, intent: 'live' as const };
   }
   if (state === 'COMPLETE') {
-    return { label: 'Ended', intent: 'ended' as const };
+    return { label: 'ENDED', intent: 'ended' as const };
   }
-  return { label: `Waiting • ${playerCount}/${maxPlayers}`, intent: 'waiting' as const };
+  return { label: `WAITING • ${playerCount}/${maxPlayers}`, intent: 'waiting' as const };
 };
 
 export const BattlesList: React.FC = () => {
@@ -124,91 +124,81 @@ export const BattlesList: React.FC = () => {
 
   return (
     <section className="mt-6 mb-20 px-2 sm:px-4 md:px-0">
-      <div className="relative overflow-hidden rounded-2xl border border-gray-800 bg-[#0f131b] p-4 sm:p-6 mb-5">
-        <Swords className="absolute -right-10 -top-14 w-52 h-52 sm:w-72 sm:h-72 text-brand-purple/25 rotate-[35deg] pointer-events-none" />
-        <div className="relative z-10 max-w-xl">
-          <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Cravin Arena</p>
-          <h2 className="text-3xl sm:text-4xl font-black text-white mt-1">Arena</h2>
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-            <button
-              onClick={() => {
-                playSound('click');
-                setShowCreateModal(true);
-              }}
-              className="text-brand-purple hover:text-white underline underline-offset-4"
-            >
-              Create Battle
-            </button>
-            <span className="text-gray-500">•</span>
-            <span className="text-gray-400">Sort: newest</span>
-          </div>
-        </div>
+      <div className="rounded-2xl border border-gray-800 bg-[#060d1f] p-4 sm:p-6">
+        <h2 className="text-3xl sm:text-5xl font-black text-white">Case Battles</h2>
+        <p className="text-gray-400 mt-3 text-base sm:text-lg">Create or join live battles now.</p>
       </div>
 
-      <div className="flex justify-end mb-3">
-        <button
-          onClick={() => {
-            playSound('click');
-            setShowCreateModal(true);
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-purple text-white text-sm font-semibold hover:opacity-90"
-        >
-          <Plus className="w-4 h-4" /> Create
-        </button>
+      <div className="mt-5 mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <h3 className="text-2xl font-black text-white flex items-center gap-2">
+          <Swords className="w-5 h-5 text-brand-purple" /> Active Battles
+        </h3>
+        <div className="flex flex-wrap gap-2 items-center lg:justify-end">
+          <span className="text-gray-400 text-sm hidden xl:block">Showing up to 10 recent battles (scroll for more)</span>
+          <button
+            onClick={() => {
+              playSound('click');
+              setShowCreateModal(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-bold hover:bg-green-500"
+          >
+            <Plus className="w-4 h-4" /> Create Battle
+          </button>
+          <button className="px-4 py-2 rounded-xl bg-[#1b2333] text-gray-200 text-sm font-bold hover:bg-[#242f45]">View all</button>
+        </div>
       </div>
 
       <div className="space-y-3">
         {recentBattles.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-700 bg-[#0f131b] p-6 text-center text-gray-400">
+          <div className="rounded-2xl border border-dashed border-gray-700 bg-[#111827] p-6 text-center text-gray-400">
             No active battles. Create one to get started.
           </div>
         ) : (
           recentBattles.map((battle) => {
             const status = formatStatus(battle, now);
-            const rowTicking = !!tickBusy[battle.id];
+            const waiting = status.intent === 'waiting' || status.intent === 'starting';
             const isParticipating = battle.players.some((player: any) => player.id === user.id);
             const isFull = battle.playerCount >= battle.maxPlayers;
-            const waiting = status.intent === 'waiting' || status.intent === 'starting';
 
             return (
-              <article key={battle.id} className="rounded-xl border border-gray-800 bg-[#131720] p-3 sm:p-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                  <div className="min-w-0 lg:w-56">
+              <article key={battle.id} className="rounded-2xl border border-[#273549] bg-[#111827] p-3 sm:p-4">
+                <div className="flex flex-col xl:flex-row xl:items-center gap-3">
+                  <div className="xl:w-36 min-w-0">
                     <div className="text-[11px] uppercase tracking-wide text-gray-500">Battle #{battle.id.slice(0, 6)}</div>
-                    <div className={`mt-1 inline-flex text-xs px-2 py-1 rounded-full border ${status.intent === 'live' ? 'border-green-500/40 text-green-300 bg-green-500/10' : status.intent === 'ended' ? 'border-gray-600 text-gray-400 bg-gray-500/10' : 'border-brand-purple/40 text-brand-purple bg-brand-purple/10'}`}>
-                      {status.label}
-                    </div>
+                    <div className="text-2xl font-bold text-gray-300 leading-tight mt-1">{status.label.split('•')[0].trim()}</div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 items-center">
+                  <div className="h-12 w-px bg-[#273142] hidden xl:block" />
+
+                  <div className="flex flex-wrap gap-2 items-center min-h-10">
                     {battle.cases.map((box: any, index: number) => (
-                      <div key={`${battle.id}-${box.id}-${index}`} className="w-9 h-9 rounded border border-gray-700 bg-[#0b0e14] p-1">
+                      <div key={`${battle.id}-${box.id}-${index}`} className="w-10 h-10 rounded-md border border-[#334155] bg-[#0b1220] p-1">
                         <img src={box.image} alt={box.name} className="w-full h-full object-contain" />
                       </div>
                     ))}
                   </div>
 
+                  <div className="h-12 w-px bg-[#273142] hidden xl:block" />
+
                   <div className="flex items-center gap-2">
                     {Array.from({ length: battle.maxPlayers }).map((_, index) => {
                       const player = battle.players[index];
                       return (
-                        <div key={`${battle.id}-slot-${index}`} className="w-8 h-8 rounded-md bg-[#0b0e14] border border-gray-700 flex items-center justify-center overflow-hidden">
+                        <div key={`${battle.id}-slot-${index}`} className="w-10 h-10 rounded-md bg-[#0b1220] border border-[#334155] flex items-center justify-center overflow-hidden">
                           {player ? <img src={player.avatar} alt="Player avatar" className="w-full h-full" /> : <div className="w-2 h-2 rounded-full bg-gray-700" />}
                         </div>
                       );
                     })}
                   </div>
 
-                  <div className="lg:ml-auto flex items-center justify-between lg:justify-end gap-4 w-full lg:w-auto">
-                    {waiting && (
-                      <div className="flex items-center gap-1 text-xs text-gray-400">
-                        {rowTicking ? <Loader2 className="w-3 h-3 animate-spin" /> : <Clock3 className="w-3 h-3" />}
-                        <span>{rowTicking ? 'Checking seats…' : 'Waiting for players…'}</span>
-                      </div>
-                    )}
+                  <div className="xl:ml-auto flex items-center justify-between xl:justify-end gap-4 w-full xl:w-auto">
+                    <div className={`flex items-center gap-1 text-sm font-semibold ${waiting ? 'text-orange-400' : 'text-gray-500'}`}>
+                      {waiting ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                      <span>{waiting ? 'Bots joining…' : status.label}</span>
+                    </div>
                     <div className="text-right">
-                      <CoinAmount amount={Number(battle.entryCostCoins ?? 0)} formatOptions={{ maximumFractionDigits: 0 }} className="text-green-400 font-bold justify-end" iconClassName="w-3.5 h-3.5" />
-                      <div className="text-[10px] uppercase text-gray-500">Entry</div>
+                      <CoinAmount amount={Number(battle.entryCostCoins ?? 0)} formatOptions={{ maximumFractionDigits: 0 }} className="text-green-400 font-black justify-end text-xl sm:text-2xl" iconClassName="w-4 h-4" />
+                      <div className="text-xs uppercase text-gray-500 font-bold">Cost</div>
                     </div>
                     <button
                       onClick={() => {
@@ -216,7 +206,7 @@ export const BattlesList: React.FC = () => {
                         joinBattle(battle.id);
                       }}
                       disabled={!isParticipating && isFull}
-                      className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${isParticipating ? 'bg-gray-700 hover:bg-gray-600 text-white' : isFull ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-brand-purple hover:opacity-90 text-white'}`}
+                      className={`px-5 py-2.5 text-sm font-bold rounded-xl transition-colors ${isParticipating ? 'bg-[#3d4a61] hover:bg-[#4c5d78] text-white' : isFull ? 'bg-[#243047] text-gray-500 cursor-not-allowed' : 'bg-[#3d4a61] hover:bg-[#4c5d78] text-white'}`}
                     >
                       {isParticipating ? 'Spectate' : isFull ? 'Full' : 'Join'}
                     </button>
