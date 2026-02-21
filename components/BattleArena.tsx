@@ -419,7 +419,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                   phase={spinPhase}
                   durationMs={spinMs}
                 />
-                <div className="mt-2 min-h-[40px] rounded border border-white/10 bg-[#0b1322] px-2 py-1.5">
+                <div className="mt-2 min-h-[48px] rounded border border-white/10 bg-[#0b1322] px-2 py-1.5">
                   {winnerItem && revealedRounds.has(Math.max(0, activeRoundIndex)) ? (
                     <div className="flex items-center justify-between gap-2 text-xs">
                       <div className="min-w-0 truncate text-gray-200">{winnerItem.name}</div>
@@ -457,7 +457,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
           </div>
         </div>
 
-        <div className="relative min-h-[560px]">
+        <div className="relative min-h-[640px]">
           <RoundRecapOverlay
             open={uiPhase === 'UI_ROUND_REVEAL' && !skipRequested}
             roundIndex={Math.max(0, activeRoundIndex)}

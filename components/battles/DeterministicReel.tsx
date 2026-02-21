@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 export interface DeterministicReelItem {
   id: string;
@@ -17,8 +17,8 @@ interface DeterministicReelProps {
   onStopped?: () => void;
 }
 
-const CARD_W = 148;
-const CARD_H = 94;
+const CARD_W = 168;
+const CARD_H = 110;
 const GAP = 12;
 const STEP = CARD_W + GAP;
 const STOP_INDEX = 52;
@@ -73,48 +73,52 @@ export const DeterministicReel: React.FC<DeterministicReelProps> = memo(({ spinK
   const [transformX, setTransformX] = useState(0);
   const [transition, setTransition] = useState('none');
 
-  const startX = useMemo(() => {
+  const measureOffsets = useCallback(() => {
     const containerWidth = containerRef.current?.clientWidth ?? 0;
     const indicatorCenter = containerWidth / 2;
     const startIndex = Math.max(0, STOP_INDEX - START_OFFSET);
-    const cardCenter = startIndex * STEP + CARD_W / 2;
-    return indicatorCenter - cardCenter;
-  }, [spinKey]);
-
-  const targetX = useMemo(() => {
-    const containerWidth = containerRef.current?.clientWidth ?? 0;
-    const indicatorCenter = containerWidth / 2;
-    const cardCenter = STOP_INDEX * STEP + CARD_W / 2;
-    return indicatorCenter - cardCenter;
-  }, [spinKey]);
+    const startCardCenter = startIndex * STEP + CARD_W / 2;
+    const stopCardCenter = STOP_INDEX * STEP + CARD_W / 2;
+    return {
+      startX: indicatorCenter - startCardCenter,
+      targetX: indicatorCenter - stopCardCenter
+    };
+  }, []);
 
   useEffect(() => {
     setReelItems(buildReel(spinKey, fillerPool, winningItem));
   }, [spinKey, fillerPool, winningItem]);
 
   useEffect(() => {
-    if (phase === 'IDLE') {
+    const applyForPhase = () => {
+      const { startX, targetX } = measureOffsets();
+
+      if (phase === 'IDLE') {
+        setTransition('none');
+        setTransformX(startX);
+        return;
+      }
+
+      if (phase === 'STOPPED') {
+        setTransition('none');
+        setTransformX(targetX);
+        return;
+      }
+
       setTransition('none');
       setTransformX(startX);
-      return;
-    }
 
-    if (phase === 'STOPPED') {
-      setTransition('none');
-      setTransformX(targetX);
-      return;
-    }
+      requestAnimationFrame(() => {
+        setTransition(`transform ${durationMs}ms cubic-bezier(0.08, 0.82, 0.22, 1)`);
+        setTransformX(targetX);
+      });
+    };
 
-    setTransition('none');
-    setTransformX(startX);
-
-    const raf = requestAnimationFrame(() => {
-      setTransition(`transform ${durationMs}ms cubic-bezier(0.08, 0.82, 0.22, 1)`);
-      setTransformX(targetX);
-    });
-
-    return () => cancelAnimationFrame(raf);
-  }, [durationMs, phase, spinKey, startX, targetX]);
+    applyForPhase();
+    const onResize = () => applyForPhase();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [durationMs, measureOffsets, phase, spinKey]);
 
   useEffect(() => {
     if (phase !== 'SPIN') return;
@@ -145,48 +149,50 @@ export const DeterministicReel: React.FC<DeterministicReelProps> = memo(({ spinK
   const idleClass = phase === 'IDLE' && !winningItem ? 'animate-[battleIdleRail_12s_linear_infinite]' : '';
 
   return (
-    <div ref={containerRef} className="relative h-[134px] overflow-hidden rounded-xl border border-white/10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-[#0b111c]">
-      <div ref={indicatorRef} className="pointer-events-none absolute inset-y-2 left-1/2 z-20 w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-300/80 to-transparent" />
-      <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-12 bg-gradient-to-r from-[#0b111c] to-transparent" />
-      <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-12 bg-gradient-to-l from-[#0b111c] to-transparent" />
+    <div ref={containerRef} className="relative h-[168px] overflow-hidden rounded-xl border border-white/10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-[#0b111c]">
+      <div ref={indicatorRef} className="pointer-events-none absolute inset-y-2 left-1/2 z-30 w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-300/90 to-transparent" />
+      <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-16 bg-gradient-to-r from-[#0b111c] to-transparent" />
+      <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-[#0b111c] to-transparent" />
 
-      <div
-        ref={trackRef}
-        className={`absolute left-0 top-1/2 flex -translate-y-1/2 ${idleClass}`}
-        style={{
-          gap: `${GAP}px`,
-          transform: `translate3d(${transformX}px,0,0)`,
-          transition,
-          willChange: 'transform'
-        }}
-      >
-        {reelItems.map((item, index) => {
-          const isWinner = !!winningItem && index === STOP_INDEX;
-          const accent = rarityColor(item.rarity);
-          return (
-            <div
-              ref={isWinner ? winnerRef : null}
-              key={`${item.id}-${index}`}
-              className={`relative shrink-0 overflow-hidden rounded-xl border bg-[#151a23] p-2 ${isWinner && phase !== 'IDLE' ? 'border-brand-purple shadow-[0_0_16px_rgba(139,92,246,0.5)]' : 'border-white/10'}`}
-              style={{ width: `${CARD_W}px`, minWidth: `${CARD_W}px`, height: `${CARD_H}px` }}
-            >
-              <div className="pointer-events-none absolute inset-2 rounded-full opacity-60" style={{ background: `radial-gradient(circle, ${accent}66 0%, ${accent}22 45%, transparent 78%)` }} />
-              <div className="relative z-10 flex h-full items-center gap-2">
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-[#101726]">
-                  {item.imageUrl ? <img src={item.imageUrl} alt={item.name} width={48} height={48} loading="eager" className="h-12 w-12 object-contain" /> : <div className="flex h-12 w-12 items-center justify-center text-[10px] text-gray-500">N/A</div>}
+      <div className="absolute inset-0 flex items-center">
+        <div
+          ref={trackRef}
+          className={`relative z-20 flex ${idleClass}`}
+          style={{
+            gap: `${GAP}px`,
+            transform: `translate3d(${transformX}px,0,0)`,
+            transition,
+            willChange: 'transform'
+          }}
+        >
+          {reelItems.map((item, index) => {
+            const isWinner = !!winningItem && index === STOP_INDEX;
+            const accent = rarityColor(item.rarity);
+            return (
+              <div
+                ref={isWinner ? winnerRef : null}
+                key={`${item.id}-${index}`}
+                className={`relative shrink-0 overflow-hidden rounded-xl border bg-[#151a23] p-2 ${isWinner && phase !== 'IDLE' ? 'border-brand-purple shadow-[0_0_20px_rgba(139,92,246,0.6)]' : 'border-white/10'}`}
+                style={{ width: `${CARD_W}px`, minWidth: `${CARD_W}px`, height: `${CARD_H}px` }}
+              >
+                <div className="pointer-events-none absolute inset-2 rounded-full opacity-65" style={{ background: `radial-gradient(circle, ${accent}66 0%, ${accent}24 45%, transparent 80%)` }} />
+                <div className="relative z-10 flex h-full items-center gap-2">
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded bg-[#101726]">
+                    {item.imageUrl ? <img src={item.imageUrl} alt={item.name} width={56} height={56} loading="eager" className="h-14 w-14 object-contain" /> : <div className="flex h-14 w-14 items-center justify-center text-[10px] text-gray-500">N/A</div>}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-[12px] font-semibold text-gray-100">{item.name}</div>
+                    <div className="mt-1 text-[12px] font-bold text-emerald-300">{item.value.toLocaleString()}</div>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <div className="truncate text-[11px] font-semibold text-gray-100">{item.name}</div>
-                  <div className="mt-1 text-[11px] font-bold text-emerald-300">{item.value.toLocaleString()}</div>
-                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-1.5 opacity-80" style={{ backgroundColor: accent }} />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-1 opacity-70" style={{ backgroundColor: accent }} />
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      <style>{`@keyframes battleIdleRail { 0% { transform: translate3d(${startX}px,0,0); } 100% { transform: translate3d(${startX - STEP * 10}px,0,0); } }`}</style>
+      <style>{`@keyframes battleIdleRail { 0% { transform: translate3d(${transformX}px,0,0); } 100% { transform: translate3d(${transformX - STEP * 10}px,0,0); } }`}</style>
     </div>
   );
 });
