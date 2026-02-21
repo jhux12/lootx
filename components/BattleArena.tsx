@@ -396,8 +396,16 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
           {teams[teamKey].map((player: any, slotIndex) => {
             const roundItem = roundsMap.get(Math.max(0, activeRoundIndex))?.resultsByUid?.[player.uid];
             const winnerItem = normalizeItem(roundItem);
+            const currentRoundIndex = Math.max(0, activeRoundIndex);
+            const isRoundRevealed = revealedRounds.has(currentRoundIndex);
             const spinPhase: 'IDLE' | 'SPIN' | 'STOPPED' =
-              player.isEmptySeat || !winnerItem ? 'IDLE' : uiPhase === 'UI_SPINNING' ? 'SPIN' : 'STOPPED';
+              player.isEmptySeat || !winnerItem
+                ? 'IDLE'
+                : uiPhase === 'UI_SPINNING'
+                  ? 'SPIN'
+                  : isRoundRevealed
+                    ? 'STOPPED'
+                    : 'IDLE';
 
             return (
               <div key={`${teamKey}-${player.uid}-${slotIndex}`} className="rounded-lg border border-white/10 bg-[#0f1726] p-2">
