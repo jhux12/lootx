@@ -326,7 +326,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {showEmailVerificationModal && <EmailVerificationModal />}
       {showEmailVerifiedModal && <EmailVerifiedModal />}
       {showTopUpModal && <TopUpModal />}
-      <SiteFooter />
+      {view.type !== 'BATTLE_ARENA' && <SiteFooter />}
     </main>
   );
 };

@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ChevronLeft, ExternalLink, Loader2, ShieldCheck, SkipForward, Swords } from 'lucide-react';
+import { ChevronLeft, Crown, ExternalLink, Loader2, ShieldCheck, SkipForward, Swords } from 'lucide-react';
 import { collection, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { CoinAmount } from './CoinAmount';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { authedFetch } from '../utils/authedFetch';
-import { ReelItem, SpinnerReel } from './SpinnerReel';
+import { BattleResultTray } from './battles/BattleResultTray';
+import { DeterministicReel, DeterministicReelItem } from './battles/DeterministicReel';
+import { RoundRecapOverlay } from './battles/RoundRecapOverlay';
 
 interface BattleArenaProps {
   battleId: string;
@@ -14,53 +16,64 @@ interface BattleArenaProps {
 
 interface RoundDoc {
   index: number;
-  revealedAt?: any;
-  resultsByUid: Record<string, { itemId?: string; itemName: string; value: number; rarity: string; proof: string; roll: number; imageUrl?: string }>;
+  resultsByUid: Record<string, any>;
 }
 
-interface ProgressResponse {
-  action?: string;
-}
+type UiPhase =
+  | 'UI_LOBBY'
+  | 'UI_COUNTDOWN'
+  | 'UI_ROUND_INTRO'
+  | 'UI_SPINNING'
+  | 'UI_ROUND_REVEAL'
+  | 'UI_INTERMISSION'
+  | 'UI_FINAL_REVEAL'
+  | 'UI_COMPLETE';
 
+const introMs = 600;
+const revealMs = 950;
+const freezeAfterSpinMs = 2200;
+const intermissionMs = 450;
+const finalRevealMs = 1200;
+
+const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 const tsToMs = (value: any) => (value?.toMillis ? value.toMillis() : Number(value ?? 0));
+
+const EMPTY_SEAT = (team: 'A' | 'B', idx: number) => ({
+  uid: `empty-${team}-${idx}`,
+  displayName: 'Waiting for player…',
+  avatar: '',
+  team,
+  isEmptySeat: true
+});
 
 export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const { setView, user, joinBattle, createBattle, items } = useGame();
   const [battle, setBattle] = useState<any>(null);
   const [rounds, setRounds] = useState<RoundDoc[]>([]);
   const [now, setNow] = useState(Date.now());
+  const [showFairModal, setShowFairModal] = useState(false);
+  const [uiPhase, setUiPhase] = useState<UiPhase>('UI_LOBBY');
+  const [activeRoundIndex, setActiveRoundIndex] = useState(-1);
+  const [revealedRounds, setRevealedRounds] = useState<Set<number>>(new Set());
+  const [skipRequested, setSkipRequested] = useState(false);
+  const [trayOpen, setTrayOpen] = useState(false);
+  const [displayTotals, setDisplayTotals] = useState({ A: 0, B: 0 });
   const [tickLoading, setTickLoading] = useState(false);
   const [progressLoading, setProgressLoading] = useState(false);
-  const [showPfModal, setShowPfModal] = useState(false);
-  const [playheadRound, setPlayheadRound] = useState(-1);
-  const [skipAnimation, setSkipAnimation] = useState(false);
-  const [lastError, setLastError] = useState<string | null>(null);
-  const [showForceProgress, setShowForceProgress] = useState(false);
-  const [completedSpinRounds, setCompletedSpinRounds] = useState<Set<number>>(new Set());
-  const progressInFlightRef = useRef(false);
-  const noopSinceRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    setPlayheadRound(-1);
-    setSkipAnimation(false);
-    setLastError(null);
-    setShowForceProgress(false);
-    setCompletedSpinRounds(new Set());
-    noopSinceRef.current = null;
-  }, [battleId]);
+  const runningPlaybackRef = useRef(false);
+  const onRoundDoneRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     const battleRef = doc(db, 'battles', battleId);
-    const unsubBattle = onSnapshot(battleRef, (snap) => {
-      setBattle(snap.exists() ? { id: snap.id, ...snap.data() } : null);
-    });
+    const unsubBattle = onSnapshot(battleRef, (snap) => setBattle(snap.exists() ? { id: snap.id, ...snap.data() } : null));
 
     const roundsRef = query(collection(db, 'battles', battleId, 'rounds'), orderBy('index', 'asc'));
     const unsubRounds = onSnapshot(roundsRef, (snapshot) => {
-      const nextRounds = snapshot.docs
+      const parsed = snapshot.docs
         .map((docSnap) => ({ index: Number(docSnap.data().index ?? 0), ...(docSnap.data() as any) }))
         .sort((a, b) => a.index - b.index);
-      setRounds(nextRounds);
+      setRounds(parsed);
     });
 
     return () => {
@@ -70,366 +83,488 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   }, [battleId]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => setNow(Date.now()), 300);
-    return () => window.clearInterval(interval);
+    const timer = window.setInterval(() => setNow(Date.now()), 300);
+    return () => window.clearInterval(timer);
   }, []);
 
-  const players = Array.isArray(battle?.players) ? battle.players : [];
-  const isParticipant = players.some((player: any) => player.uid === user.id);
-  const startedAtMs = tsToMs(battle?.startedAt);
-  const countdownMs = Math.max(0, startedAtMs - now);
-  const roundCount = Math.max(1, Number(battle?.roundCount ?? 1));
-  const roundDurationMs = Math.max(1500, Number(battle?.roundDurationMs ?? 3800));
-  const shownRound = Math.max(1, Math.min(roundCount, playheadRound + 1));
-  const roundsByIndex = useMemo(() => new Map(rounds.map((round) => [round.index, round])), [rounds]);
-  const canShowWinner = skipAnimation || playheadRound >= roundCount - 1;
-  const animatedRound = Math.max(0, Math.min(roundCount - 1, playheadRound + 1));
+  useEffect(() => {
+    setUiPhase('UI_LOBBY');
+    setActiveRoundIndex(-1);
+    setRevealedRounds(new Set());
+    setSkipRequested(false);
+    setTrayOpen(false);
+    onRoundDoneRef.current = new Set();
+  }, [battleId]);
 
-  const normalizeReelItem = (item: any): ReelItem | null => {
-    const name = item?.itemName || item?.name;
-    if (!name) return null;
+  const players = Array.isArray(battle?.players) ? battle.players : [];
+  const roundCount = Math.max(1, Number(battle?.roundCount ?? 1));
+  const maxPlayers = Math.max(2, Number(battle?.maxPlayers ?? 2));
+  const slotsPerTeam = Math.max(1, Math.floor(maxPlayers / 2));
+  const spinMs = Math.min(Math.max(1800, Number(battle?.roundDurationMs ?? 3600)), 4200);
+  const isParticipant = players.some((p: any) => p.uid === user.id);
+
+  const teams = useMemo(() => {
+    const actualA = players.filter((p: any) => p.team !== 'B');
+    const actualB = players.filter((p: any) => p.team === 'B');
+    const filledA = [...actualA];
+    const filledB = [...actualB];
+
+    while (filledA.length < slotsPerTeam) filledA.push(EMPTY_SEAT('A', filledA.length));
+    while (filledB.length < slotsPerTeam) filledB.push(EMPTY_SEAT('B', filledB.length));
+
+    return { A: filledA, B: filledB };
+  }, [players, slotsPerTeam]);
+
+  const normalizeItem = (entry: any): DeterministicReelItem | null => {
+    if (!entry) return null;
+    const name = entry.name || entry.itemName;
+    const id = entry.id || entry.itemId || entry.name || entry.itemName;
+    if (!name || !id) return null;
     return {
-      itemId: item?.itemId || item?.id,
-      itemName: String(name),
-      value: Number(item?.value ?? item?.price ?? 0),
-      rarity: item?.rarity,
-      imageUrl: item?.imageUrl || item?.image
+      id: String(id),
+      name: String(name),
+      imageUrl: String(entry.imageUrl || entry.image || ''),
+      value: Number(entry.value ?? entry.price ?? 0),
+      rarity: entry.rarity
     };
   };
 
   const fillerPool = useMemo(() => {
-    const caseItems = (Array.isArray(battle?.cases) ? battle.cases : [])
-      .flatMap((entry: any) => (Array.isArray(entry?.items) ? entry.items : []))
-      .map((item: any) => normalizeReelItem(item))
-      .filter(Boolean) as ReelItem[];
+    const fromCases = (Array.isArray(battle?.cases) ? battle.cases : []).flatMap((battleCase: any) => Array.isArray(battleCase?.items) ? battleCase.items : []);
+    const fromGlobal = Array.isArray(items) ? items.slice(0, 60) : [];
+    const fromRounds = rounds.flatMap((round) => Object.values(round.resultsByUid ?? {}));
 
-    const globalItems = (Array.isArray(items) ? items : [])
-      .slice(0, 30)
-      .map((item) => normalizeReelItem(item))
-      .filter(Boolean) as ReelItem[];
-
-    const seenRoundItems = rounds
-      .flatMap((round) => Object.values(round.resultsByUid ?? {}))
-      .map((item) => normalizeReelItem(item))
-      .filter(Boolean) as ReelItem[];
-
-    const merged = [...caseItems, ...globalItems, ...seenRoundItems];
-    const deduped = new Map<string, ReelItem>();
-    merged.forEach((entry) => {
-      const key = String(entry.itemId || entry.itemName).toLowerCase();
-      if (!deduped.has(key)) deduped.set(key, entry);
+    const dedupe = new Map<string, DeterministicReelItem>();
+    [...fromCases, ...fromGlobal, ...fromRounds].forEach((entry) => {
+      const item = normalizeItem(entry);
+      if (!item) return;
+      if (!dedupe.has(item.id)) dedupe.set(item.id, item);
     });
 
-    return Array.from(deduped.values()).slice(0, 40);
+    const pool = Array.from(dedupe.values());
+    if (!pool.length) {
+      return [{ id: 'seed-default', name: 'Mystery Item', imageUrl: '', value: 0, rarity: 'common' }];
+    }
+
+    while (pool.length < 20) {
+      pool.push(...pool.slice(0, Math.max(1, Math.min(10, pool.length))));
+    }
+
+    return pool.slice(0, 120);
   }, [battle?.cases, items, rounds]);
 
-  const teams = useMemo(
-    () => ({
-      A: players.filter((player: any) => player.team !== 'B'),
-      B: players.filter((player: any) => player.team === 'B')
-    }),
-    [players]
-  );
+  const roundsMap = useMemo(() => new Map(rounds.map((round) => [round.index, round])), [rounds]);
+  const roundOrder = useMemo(() => rounds.map((round) => round.index).sort((a, b) => a - b), [rounds]);
+
+  const calculateTeamTotalsUntil = (lastRoundIndex: number) => {
+    const totals = { A: 0, B: 0 };
+    for (let idx = 0; idx <= lastRoundIndex; idx += 1) {
+      const round = roundsMap.get(idx);
+      if (!round) continue;
+      players.forEach((player: any) => {
+        const value = Number(round.resultsByUid?.[player.uid]?.value ?? 0);
+        if (player.team === 'B') totals.B += value;
+        else totals.A += value;
+      });
+    }
+    return totals;
+  };
+
+  const targetTotals = useMemo(() => {
+    if (activeRoundIndex < 0) return { A: 0, B: 0 };
+    return calculateTeamTotalsUntil(activeRoundIndex);
+  }, [activeRoundIndex, roundsMap, players]);
 
   useEffect(() => {
-    if (battle?.state !== 'RUNNING' || skipAnimation) return;
-    const activeRound = roundsByIndex.get(animatedRound);
-    if (!activeRound) return;
-    if (completedSpinRounds.has(animatedRound)) return;
+    const startA = displayTotals.A;
+    const startB = displayTotals.B;
+    const deltaA = targetTotals.A - startA;
+    const deltaB = targetTotals.B - startB;
+    const started = performance.now();
+    const duration = 420;
 
-    const hasAnyResult = players.some((player: any) => !!activeRound.resultsByUid?.[player.uid]);
-    if (!hasAnyResult) return;
-
-    const timer = window.setTimeout(() => {
-      setCompletedSpinRounds((prev) => {
-        const next = new Set(prev);
-        next.add(animatedRound);
-        return next;
+    let raf = 0;
+    const tick = (ts: number) => {
+      const progress = Math.min(1, (ts - started) / duration);
+      setDisplayTotals({
+        A: Math.round(startA + deltaA * progress),
+        B: Math.round(startB + deltaB * progress)
       });
-    }, roundDurationMs);
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
 
-    return () => window.clearTimeout(timer);
-  }, [animatedRound, battle?.state, completedSpinRounds, players, roundDurationMs, roundsByIndex, skipAnimation]);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [targetTotals.A, targetTotals.B]);
 
   const callTick = async () => {
-    if (!battle || tickLoading) return;
-    if (!['LOBBY', 'COUNTDOWN', 'RUNNING'].includes(String(battle.state))) return;
-
+    if (!battle || !['LOBBY', 'COUNTDOWN'].includes(String(battle.state))) return;
     setTickLoading(true);
     try {
       await authedFetch('/api/battles/tick', { method: 'POST', body: JSON.stringify({ battleId }) });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown tick error';
-      console.error('Battle tick failed', { battleId, error });
-      setLastError(`Tick failed: ${message}`);
     } finally {
       setTickLoading(false);
     }
   };
 
-  const callProgress = async (forced = false) => {
-    if (!battle || progressInFlightRef.current) return;
-    if (battle.state !== 'RUNNING') return;
-
-    progressInFlightRef.current = true;
+  const callProgress = async () => {
+    if (!battle || String(battle.state) !== 'RUNNING') return;
     setProgressLoading(true);
     try {
-      const response = await authedFetch<ProgressResponse>('/api/battles/progress', { method: 'POST', body: JSON.stringify({ battleId }) });
-      const isNoop = response?.action === 'noop';
-      const nowTs = Date.now();
-
-      if (!isNoop || forced) {
-        noopSinceRef.current = null;
-        setShowForceProgress(false);
-        setLastError(null);
-        return;
-      }
-
-      if (!noopSinceRef.current) {
-        noopSinceRef.current = nowTs;
-        setShowForceProgress(false);
-        return;
-      }
-
-      if (nowTs - noopSinceRef.current > 10000) {
-        setShowForceProgress(true);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown progress error';
-      console.error('Battle progress failed', { battleId, error });
-      setLastError(`Progress failed: ${message}`);
+      await authedFetch('/api/battles/progress', { method: 'POST', body: JSON.stringify({ battleId }) });
     } finally {
-      progressInFlightRef.current = false;
       setProgressLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!battle || !['LOBBY', 'COUNTDOWN'].includes(String(battle.state))) return;
-
-    void callTick();
-    const interval = window.setInterval(() => void callTick(), 2000);
-    return () => window.clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battle?.id, battle?.state, battle?.players?.length]);
+    if (!battle) return;
+    if (battle.state === 'LOBBY' || battle.state === 'COUNTDOWN') {
+      void callTick();
+      const interval = window.setInterval(() => void callTick(), 2000);
+      return () => window.clearInterval(interval);
+    }
+  }, [battle?.id, battle?.state]);
 
   useEffect(() => {
     if (!battle || battle.state !== 'RUNNING') return;
-
-    noopSinceRef.current = null;
-    setShowForceProgress(false);
-
     void callProgress();
-    const interval = window.setInterval(() => void callProgress(), Math.max(2000, roundDurationMs - 250));
+    const interval = window.setInterval(() => void callProgress(), Math.max(2200, spinMs - 300));
     return () => window.clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battle?.id, battle?.state, roundDurationMs]);
+  }, [battle?.id, battle?.state, spinMs]);
 
   useEffect(() => {
-    if (!battle || skipAnimation) return;
-    if (playheadRound >= roundCount - 1) return;
+    if (!battle) return;
 
-    const nextIndex = playheadRound + 1;
-    if (!roundsByIndex.has(nextIndex)) return;
+    if (skipRequested) {
+      setActiveRoundIndex(roundCount - 1);
+      setRevealedRounds(new Set(Array.from({ length: roundCount }).map((_, index) => index)));
+      setUiPhase('UI_COMPLETE');
+      setTrayOpen(true);
+      runningPlaybackRef.current = false;
+      return;
+    }
 
-    const timer = window.setTimeout(() => {
-      setPlayheadRound(nextIndex);
-    }, nextIndex === 0 ? 700 : roundDurationMs);
+    if (battle.state === 'LOBBY') {
+      setUiPhase('UI_LOBBY');
+      return;
+    }
 
-    return () => window.clearTimeout(timer);
-  }, [battle, skipAnimation, playheadRound, roundCount, roundsByIndex, roundDurationMs]);
+    if (battle.state === 'COUNTDOWN') {
+      setUiPhase('UI_COUNTDOWN');
+      return;
+    }
 
-  if (!battle) return <div className="p-8 text-center text-gray-400">Battle not found.</div>;
+    if (battle.state !== 'RUNNING' && battle.state !== 'COMPLETE') return;
+    if (runningPlaybackRef.current) return;
 
-  const statusLabel = (() => {
-    if (battle.state === 'COUNTDOWN') return `Starting • ${(countdownMs / 1000).toFixed(1)}s`;
-    if (battle.state === 'RUNNING') return `Live • Round ${shownRound}/${roundCount}`;
-    if (battle.state === 'COMPLETE') return 'Replay';
-    return `Waiting • ${players.length}/${Number(battle.maxPlayers ?? 2)}`;
-  })();
+    const queue = roundOrder.filter((index) => !onRoundDoneRef.current.has(index));
+    if (!queue.length) {
+      if ((battle.state === 'COMPLETE' || revealedRounds.size >= roundCount) && uiPhase !== 'UI_COMPLETE') {
+        setUiPhase('UI_FINAL_REVEAL');
+        const finalTimer = window.setTimeout(() => {
+          setTrayOpen(true);
+          setUiPhase('UI_COMPLETE');
+        }, finalRevealMs);
+        return () => window.clearTimeout(finalTimer);
+      }
+      return;
+    }
+
+    runningPlaybackRef.current = true;
+    let cancelled = false;
+
+    const runQueue = async () => {
+      for (const roundIndex of queue) {
+        if (cancelled || skipRequested) break;
+        setActiveRoundIndex(roundIndex);
+        setUiPhase('UI_ROUND_INTRO');
+        await wait(introMs);
+
+        if (cancelled || skipRequested) break;
+        setUiPhase('UI_SPINNING');
+        await wait(spinMs);
+
+        if (cancelled || skipRequested) break;
+        setUiPhase('UI_ROUND_REVEAL');
+        setRevealedRounds((prev) => {
+          const next = new Set(prev);
+          next.add(roundIndex);
+          return next;
+        });
+        onRoundDoneRef.current.add(roundIndex);
+        await wait(revealMs + freezeAfterSpinMs);
+
+        if (cancelled || skipRequested) break;
+        setUiPhase('UI_INTERMISSION');
+        await wait(intermissionMs);
+      }
+
+      runningPlaybackRef.current = false;
+
+      if (!cancelled && !skipRequested && (battle.state === 'COMPLETE' || onRoundDoneRef.current.size >= roundCount)) {
+        setUiPhase('UI_FINAL_REVEAL');
+        await wait(finalRevealMs);
+        if (!cancelled) {
+          setTrayOpen(true);
+          setUiPhase('UI_COMPLETE');
+        }
+      }
+    };
+
+    void runQueue();
+
+    return () => {
+      cancelled = true;
+      runningPlaybackRef.current = false;
+    };
+  }, [battle, roundOrder, roundCount, revealedRounds.size, skipRequested, spinMs, uiPhase]);
+
+  if (!battle) {
+    return <div className="p-8 text-center text-gray-400">Battle not found.</div>;
+  }
+
+  const startedAtMs = tsToMs(battle?.startedAt);
+  const countdownMs = Math.max(0, startedAtMs - now);
+  const statusLabel =
+    battle.state === 'COUNTDOWN'
+      ? `Starting • ${(countdownMs / 1000).toFixed(1)}s`
+      : battle.state === 'RUNNING'
+        ? `Live • Round ${Math.max(1, activeRoundIndex + 1)}/${roundCount}`
+        : battle.state === 'COMPLETE'
+          ? 'Replay'
+          : `Waiting • ${players.length}/${maxPlayers}`;
+
+  const roundResult = roundsMap.get(Math.max(0, activeRoundIndex));
+  const roundCards = players.map((player: any) => {
+    const item = roundResult?.resultsByUid?.[player.uid];
+    return {
+      uid: player.uid,
+      playerName: player.displayName,
+      itemName: item?.itemName || 'Pending',
+      value: Number(item?.value ?? 0),
+      imageUrl: item?.imageUrl || ''
+    };
+  });
+
+  const roundTeamTotals = roundCards.reduce(
+    (acc, card) => {
+      const player = players.find((p: any) => p.uid === card.uid);
+      if (!player) return acc;
+      if (player.team === 'B') acc.B += card.value;
+      else acc.A += card.value;
+      return acc;
+    },
+    { A: 0, B: 0 }
+  );
+
+  const roundWinnerTeam: 'A' | 'B' | 'TIE' =
+    roundTeamTotals.A === roundTeamTotals.B ? 'TIE' : roundTeamTotals.A > roundTeamTotals.B ? 'A' : 'B';
+
+  const finalWinnerTeam = String(battle?.winnerTeam || 'TIE');
+  const myTeam = players.find((p: any) => p.uid === user.id)?.team === 'B' ? 'B' : 'A';
+  const trayVariant = !isParticipant ? 'SPECTATE' : finalWinnerTeam === myTeam ? 'WIN' : 'LOSE';
+
+  const myItems = rounds.flatMap((round) => {
+    const item = round.resultsByUid?.[user.id];
+    if (!item) return [];
+    return [{ id: `${round.index}-${item.itemId || item.itemName}`, itemName: String(item.itemName), value: Number(item.value ?? 0), imageUrl: String(item.imageUrl || '') }];
+  });
+
+  const bestHit = [...myItems].sort((a, b) => b.value - a.value)[0] || null;
 
   const recreateBattle = () => {
-    const caseIds = (Array.isArray(battle?.cases) ? battle.cases : [])
-      .map((entry: any) => entry?.caseId)
-      .filter(Boolean);
+    const caseIds = (Array.isArray(battle?.cases) ? battle.cases : []).map((entry: any) => entry?.caseId).filter(Boolean);
     if (!caseIds.length) return;
     createBattle(caseIds, Number(battle.maxPlayers ?? 2), { mode: battle.mode, format: battle.format });
   };
 
-  return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pb-10">
-      {lastError && (
-        <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs sm:text-sm text-red-200 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span className="break-words">{lastError}</span>
+  const totalRange = Math.max(1, displayTotals.A + displayTotals.B);
+  const aPercent = (displayTotals.A / totalRange) * 100;
+
+  const teamColumn = (teamKey: 'A' | 'B') => {
+    const isWinning = uiPhase !== 'UI_LOBBY' && uiPhase !== 'UI_COUNTDOWN' && finalWinnerTeam === teamKey;
+
+    return (
+      <div className={`rounded-xl border p-3 ${isWinning ? 'border-amber-400/40 shadow-[0_0_32px_rgba(251,191,36,0.18)]' : 'border-white/10 bg-[#11192a]'}`}>
+        <div className="mb-2 flex items-center justify-between">
+          <div className="text-xs font-bold uppercase tracking-wide text-gray-400">Team {teamKey}</div>
+          <CoinAmount amount={toCoins(teamKey === 'A' ? displayTotals.A : displayTotals.B, PRICE_UNIT_MODE)} className="text-xs font-black text-emerald-300" iconClassName="h-3 w-3" />
         </div>
-      )}
 
-      <div className="flex flex-wrap gap-2 py-4 items-center">
-        <button onClick={() => setView({ type: 'BATTLES' })} className="flex items-center gap-1 px-3 py-2 rounded bg-[#131825] text-gray-300 text-sm hover:text-white">
-          <ChevronLeft className="w-4 h-4" /> Back
-        </button>
-        <span className="text-xs px-2 py-1 rounded border border-brand-purple/40 bg-brand-purple/10 text-brand-purple">{statusLabel}</span>
-        {!isParticipant && <span className="text-xs px-2 py-1 rounded border border-blue-500/30 bg-blue-500/10 text-blue-300">Spectator</span>}
-        <button onClick={() => setShowPfModal(true)} className="ml-auto text-xs px-3 py-2 rounded border border-gray-700 text-gray-200 hover:border-brand-purple flex items-center gap-1">
-          <ShieldCheck className="w-4 h-4" /> Provably Fair
-        </button>
-      </div>
+        <div className="space-y-2">
+          {teams[teamKey].map((player: any, slotIndex) => {
+            const roundItem = roundsMap.get(Math.max(0, activeRoundIndex))?.resultsByUid?.[player.uid];
+            const winnerItem = normalizeItem(roundItem);
+            const currentRoundIndex = Math.max(0, activeRoundIndex);
+            const isRoundRevealed = revealedRounds.has(currentRoundIndex);
+            const spinPhase: 'IDLE' | 'SPIN' | 'STOPPED' =
+              player.isEmptySeat || !winnerItem
+                ? 'IDLE'
+                : uiPhase === 'UI_SPINNING'
+                  ? 'SPIN'
+                  : isRoundRevealed
+                    ? 'STOPPED'
+                    : 'IDLE';
 
-      <div className="rounded-2xl border border-gray-800 bg-[#101624] p-4 sm:p-5 mb-4">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2"><Swords className="w-5 h-5 text-brand-purple" /> Box Battle</h2>
-          <span className="text-xs px-2 py-1 rounded bg-[#0b0e14] border border-gray-700 text-gray-300">{battle.mode}</span>
-          <span className="text-xs px-2 py-1 rounded bg-[#0b0e14] border border-gray-700 text-gray-300">{battle.format}</span>
-          <span className="text-xs px-2 py-1 rounded bg-[#0b0e14] border border-gray-700 text-gray-300">{battle.winConditionLabel || (battle.mode === 'CRAZY' ? 'Lowest Total' : 'Highest Total')}</span>
-          <div className="sm:ml-auto flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <CoinAmount amount={toCoins(Number(battle.entryCostCoins ?? 0), PRICE_UNIT_MODE)} className="text-green-400 font-black" iconClassName="w-4 h-4" />
-            <button onClick={recreateBattle} className="px-3 py-2 text-xs sm:text-sm rounded bg-brand-purple text-white font-semibold">Recreate Battle</button>
-            {battle.state !== 'COMPLETE' && (
-              <button onClick={() => setSkipAnimation(true)} className="px-3 py-2 text-xs sm:text-sm rounded border border-gray-600 text-gray-200 inline-flex items-center gap-1">
-                <SkipForward className="w-4 h-4" /> Skip
-              </button>
-            )}
-            {battle.state === 'RUNNING' && showForceProgress && (
-              <button onClick={() => void callProgress(true)} className="px-3 py-2 text-xs sm:text-sm rounded border border-amber-500/60 text-amber-200 hover:bg-amber-500/10">
-                Force Progress
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+            return (
+              <div key={`${teamKey}-${player.uid}-${slotIndex}`} className="rounded-lg border border-white/10 bg-[#0f1726] p-2">
+                <div className="mb-2 flex min-h-[32px] items-center gap-2">
+                  {player.isEmptySeat ? (
+                    <div className="h-7 w-7 rounded bg-[#1f2a3f]" />
+                  ) : (
+                    <img src={player.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(player.uid)}`} alt={player.displayName} width={28} height={28} className="h-7 w-7 rounded border border-white/10 object-cover" />
+                  )}
+                  <div className="min-w-0 truncate text-xs font-semibold text-gray-100">{player.displayName}</div>
+                  {!player.isEmptySeat && isWinning && <Crown className="h-3.5 w-3.5 text-amber-300" />}
+                  <div className="ml-auto text-[10px] text-gray-400">{player.isEmptySeat ? 'Empty Seat' : `R${Math.max(1, activeRoundIndex + 1)}`}</div>
+                </div>
 
-      {battle.state === 'RUNNING' && (
-        <div className="mb-4 grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4">
-          {(['A', 'B'] as const).map((teamKey) => (
-            <div key={teamKey} className="rounded-xl border border-gray-800 bg-[#131720] p-3 sm:p-4">
-              <div className="text-xs uppercase tracking-wide text-gray-400 mb-3">Team {teamKey} Reels</div>
-              <div className="space-y-3">
-                {(teams[teamKey].length ? teams[teamKey] : []).map((player: any) => {
-                  const activeRound = roundsByIndex.get(animatedRound);
-                  const winner = normalizeReelItem(activeRound?.resultsByUid?.[player.uid]);
-                  const laneState: 'IDLE' | 'SPIN' | 'STOPPED' = !winner
-                    ? 'IDLE'
-                    : (skipAnimation || completedSpinRounds.has(animatedRound))
-                      ? 'STOPPED'
-                      : 'SPIN';
-
-                  return (
-                    <div key={`${teamKey}-${player.uid}`} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <img src={player.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(player.uid)}`} className="w-7 h-7 rounded-md border border-gray-700" />
-                        <div className="text-xs sm:text-sm font-semibold text-white truncate">{player.displayName}</div>
-                        <div className="ml-auto text-[11px] text-gray-400">{!winner ? 'Waiting for result…' : `Round ${animatedRound + 1}`}</div>
-                      </div>
-                      <SpinnerReel
-                        items={fillerPool}
-                        winningItem={winner}
-                        spinKey={`${battleId}-${animatedRound}-${player.uid}`}
-                        state={laneState}
-                        durationMs={roundDurationMs}
-                      />
+                <DeterministicReel
+                  spinKey={`${battleId}-${Math.max(0, activeRoundIndex)}-${player.uid}`}
+                  winningItem={winnerItem}
+                  fillerPool={fillerPool}
+                  phase={spinPhase}
+                  durationMs={spinMs}
+                />
+                <div className="mt-2 min-h-[48px] rounded border border-white/10 bg-[#0b1322] px-2 py-1.5">
+                  {winnerItem && revealedRounds.has(Math.max(0, activeRoundIndex)) ? (
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <div className="min-w-0 truncate text-gray-200">{winnerItem.name}</div>
+                      <div className="font-black text-emerald-300">{winnerItem.value.toLocaleString()}</div>
                     </div>
-                  );
-                })}
-                {!teams[teamKey].length && <div className="text-xs text-gray-500">Waiting for players…</div>}
+                  ) : (
+                    <div className="text-[11px] text-gray-500">{player.isEmptySeat ? 'Awaiting player…' : 'Result after spin…'}</div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      )}
+      </div>
+    );
+  };
 
-      <div className="space-y-3">
-        {players.map((player: any) => (
-          <div key={player.uid} className="rounded-xl border border-gray-800 bg-[#131720] p-3">
-            <div className="flex items-center gap-2 mb-3">
-              <img src={player.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(player.uid)}`} className="w-8 h-8 rounded-md border border-gray-700" />
-              <div className="text-sm font-bold text-white truncate">{player.displayName}</div>
-              <div className="text-[11px] text-gray-500">{player.team === 'B' ? 'Team B' : 'Team A'}</div>
-              <div className="ml-auto">
-                <CoinAmount amount={toCoins(Number(battle?.totalsByUid?.[player.uid] ?? 0), PRICE_UNIT_MODE)} className="text-xs sm:text-sm font-bold text-green-400" iconClassName="w-3 h-3" />
+  return (
+    <div className="mx-auto max-w-6xl px-2 pb-28 sm:px-4">
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#101827] to-[#0c1320] p-3 sm:p-4">
+        <div className="sticky top-14 z-40 mb-3 rounded-xl border border-white/10 bg-[#0b1220]/95 p-2 backdrop-blur sm:p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => setView({ type: 'BATTLES' })} className="rounded bg-[#162238] px-3 py-2 text-xs text-gray-200"><ChevronLeft className="mr-1 inline h-4 w-4" />Back</button>
+            <h2 className="text-sm font-black text-white sm:text-base"><Swords className="mr-1 inline h-4 w-4 text-brand-purple" />Box Battle</h2>
+            <span className="rounded border border-white/10 px-2 py-1 text-[11px] text-gray-300">{battle.mode || 'REGULAR'}</span>
+            <span className="rounded border border-white/10 px-2 py-1 text-[11px] text-gray-300">{battle.format || '1V1'}</span>
+            <span className="rounded border border-white/10 px-2 py-1 text-[11px] text-gray-300">{battle.winConditionLabel || (battle.mode === 'CRAZY' ? 'Lowest Total' : 'Highest Total')}</span>
+            <CoinAmount amount={toCoins(Number(battle.entryCostCoins ?? 0), PRICE_UNIT_MODE)} className="ml-auto text-sm font-black text-emerald-300" iconClassName="h-3 w-3" />
+            <span className={`rounded px-2 py-1 text-[11px] font-semibold ${battle.state === 'RUNNING' ? 'bg-rose-500/20 text-rose-300' : battle.state === 'COUNTDOWN' ? 'bg-amber-500/20 text-amber-300' : 'bg-sky-500/20 text-sky-300'}`}>{statusLabel}</span>
+            <button onClick={() => setShowFairModal(true)} className="rounded border border-white/15 px-2 py-1 text-[11px] text-gray-200"><ShieldCheck className="mr-1 inline h-3 w-3" />Provably Fair</button>
+            <button onClick={recreateBattle} className="rounded bg-brand-purple px-2 py-1 text-[11px] font-semibold text-white">Recreate</button>
+            {(uiPhase === 'UI_ROUND_INTRO' || uiPhase === 'UI_SPINNING' || uiPhase === 'UI_ROUND_REVEAL' || uiPhase === 'UI_INTERMISSION') && (
+              <button onClick={() => setSkipRequested(true)} className="rounded border border-white/20 px-2 py-1 text-[11px] text-gray-100"><SkipForward className="mr-1 inline h-3 w-3" />Skip</button>
+            )}
+          </div>
+        </div>
+
+        <div className="relative min-h-[640px]">
+          <RoundRecapOverlay
+            open={uiPhase === 'UI_ROUND_REVEAL' && !skipRequested}
+            roundIndex={Math.max(0, activeRoundIndex)}
+            winnerTeam={roundWinnerTeam}
+            deltaValue={Math.max(roundTeamTotals.A, roundTeamTotals.B)}
+            items={roundCards}
+          />
+
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_180px_1fr]">
+            {teamColumn('A')}
+
+            <div className="order-first lg:order-none">
+              <div className="rounded-xl border border-white/10 bg-[#111a2a] p-3 lg:sticky lg:top-[138px]">
+                <div className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">VS</div>
+                <div className="mb-3 h-2 overflow-hidden rounded bg-[#1b2740]">
+                  <div className="h-full bg-gradient-to-r from-brand-purple to-emerald-400 transition-all duration-300" style={{ width: `${aPercent}%` }} />
+                </div>
+                <div className="text-center text-[11px] text-gray-400">Round Timeline</div>
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+                  {Array.from({ length: roundCount }).map((_, idx) => {
+                    const isDone = revealedRounds.has(idx);
+                    const isCurrent = idx === activeRoundIndex;
+                    return (
+                      <button
+                        key={`dot-${idx}`}
+                        onClick={() => {
+                          if (battle.state !== 'COMPLETE') return;
+                          if (!revealedRounds.has(idx)) return;
+                          setActiveRoundIndex(idx);
+                        }}
+                        className={`h-2.5 w-2.5 rounded-full ${isDone ? 'bg-brand-purple' : isCurrent ? 'animate-pulse bg-emerald-400' : 'bg-gray-600'} ${battle.state === 'COMPLETE' && isDone ? 'cursor-pointer' : 'cursor-default'}`}
+                      />
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-              {Array.from({ length: roundCount }).map((_, roundIndex) => {
-                const round = roundsByIndex.get(roundIndex);
-                const result = round?.resultsByUid?.[player.uid];
-                const revealed = roundIndex <= playheadRound || skipAnimation;
-                const hasData = !!result;
-                const isCurrentSpin = roundIndex === playheadRound + 1 && battle.state === 'RUNNING';
-
-                return (
-                  <div key={`${player.uid}-r-${roundIndex}`} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2 min-h-[88px]">
-                    <div className="text-[10px] uppercase text-gray-500 mb-1">Round {roundIndex + 1}</div>
-                    {!hasData && (
-                      <div className="text-xs text-gray-500 flex items-center gap-1">
-                        {isCurrentSpin ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                        <span>Loading…</span>
-                      </div>
-                    )}
-                    {hasData && !revealed && (
-                      <div className="text-xs text-gray-500 flex items-center gap-1">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        <span>Spinning…</span>
-                      </div>
-                    )}
-                    {hasData && revealed && (
-                      <>
-                        <div className="text-xs text-gray-300 truncate">{result.itemName}</div>
-                        <CoinAmount amount={toCoins(result.value, PRICE_UNIT_MODE)} className="text-xs font-bold text-white mt-1" iconClassName="w-3 h-3" />
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            {teamColumn('B')}
           </div>
-        ))}
+        </div>
+
+        {(tickLoading || progressLoading) && (
+          <div className="mt-3 flex items-center gap-1 text-xs text-gray-400">
+            <Loader2 className="h-3 w-3 animate-spin" /> Syncing battle…
+          </div>
+        )}
+
+        {!isParticipant && battle.state !== 'COMPLETE' && (
+          <div className="mt-3">
+            <button onClick={() => joinBattle(battleId)} className="rounded bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Join if slot opens</button>
+          </div>
+        )}
       </div>
 
-      {(battle.state === 'LOBBY' || battle.state === 'COUNTDOWN' || battle.state === 'RUNNING') && (
-        <div className="mt-4 text-xs text-gray-400 flex items-center gap-2">
-          {(tickLoading || progressLoading) ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-          {battle.state === 'RUNNING' ? 'Streaming live rounds…' : 'Waiting for players and countdown…'}
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#0a101b]/95 p-2 lg:hidden">
+        <div className="mx-auto flex max-w-6xl items-center justify-between text-xs text-gray-300">
+          <span>Team A: {toCoins(displayTotals.A, PRICE_UNIT_MODE).toLocaleString()}</span>
+          <span>Team B: {toCoins(displayTotals.B, PRICE_UNIT_MODE).toLocaleString()}</span>
         </div>
-      )}
+      </div>
 
-      {battle.state === 'COMPLETE' && canShowWinner && (
-        <div className="mt-4 rounded-xl border border-green-700/40 bg-green-500/10 p-4">
-          <div className="text-xs text-green-300 uppercase">Winner</div>
-          <div className="text-xl font-black text-white mt-1">{battle.winnerTeam === 'TIE' ? 'Tie' : `Team ${battle.winnerTeam}`}</div>
-        </div>
-      )}
-
-      {!isParticipant && battle.state !== 'COMPLETE' && (
-        <div className="mt-4">
-          <button onClick={() => joinBattle(battleId)} className="px-3 py-2 text-xs rounded bg-green-600 text-white">Join if slot opens</button>
-        </div>
-      )}
-
-      {showPfModal && (
-        <div className="fixed inset-0 z-[120] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3" onClick={() => setShowPfModal(false)}>
-          <div className="w-full max-w-md bg-[#131720] border border-gray-700 rounded-xl p-4" onClick={(event) => event.stopPropagation()}>
-            <h3 className="text-lg font-bold text-white mb-2">Provably Fair</h3>
-            <p className="text-sm text-gray-300">Battle results are server-generated and revealed with per-round proofs once rounds are written.</p>
+      {showFairModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-3" onClick={() => setShowFairModal(false)}>
+          <div className="w-full max-w-sm rounded-xl border border-white/10 bg-[#111a2a] p-4" onClick={(event) => event.stopPropagation()}>
+            <h3 className="text-lg font-bold text-white">Provably Fair</h3>
+            <p className="mt-2 text-sm text-gray-300">Provably fair & verifiable.</p>
+            <p className="text-sm text-gray-300">Every round can be validated against stored proof payloads.</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setShowPfModal(false)} className="px-3 py-2 text-sm rounded border border-gray-700 text-gray-300">Close</button>
+              <button onClick={() => setShowFairModal(false)} className="rounded border border-white/15 px-3 py-2 text-sm text-gray-300">Close</button>
               <button
                 onClick={() => {
-                  setShowPfModal(false);
-                  if (typeof window !== 'undefined') {
-                    window.history.replaceState({}, '', `/fairness/battle/${battleId}`);
-                  }
-                  setView({ type: 'PROVABLY_FAIR' });
+                  setShowFairModal(false);
+                  if (typeof window !== 'undefined') window.open(`/fairness/battles/${battleId}`, '_blank');
                 }}
-                className="px-3 py-2 text-sm rounded bg-brand-purple text-white flex items-center gap-2"
+                className="rounded bg-brand-purple px-3 py-2 text-sm text-white"
               >
-                Verify Battle <ExternalLink className="w-4 h-4" />
+                Verify Battle <ExternalLink className="ml-1 inline h-3 w-3" />
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <BattleResultTray
+        open={trayOpen}
+        variant={trayVariant}
+        totalValue={Number(battle?.totalsByUid?.[user.id] ?? 0)}
+        bestHit={bestHit}
+        items={isParticipant ? myItems : roundCards.map((entry) => ({ id: entry.uid, itemName: entry.itemName, value: entry.value, imageUrl: entry.imageUrl }))}
+        isReplay={battle.state === 'COMPLETE'}
+        onRecreate={recreateBattle}
+        onClose={() => setTrayOpen(false)}
+        onReplay={() => {
+          setTrayOpen(false);
+          setSkipRequested(false);
+          setActiveRoundIndex(0);
+        }}
+      />
     </div>
   );
 };
