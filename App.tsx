@@ -10,7 +10,7 @@ import { CategoryRow } from './components/CategoryRow';
 import { BoxCatalog } from './components/BoxCatalog';
 import { CaseOpening } from './components/CaseOpening';
 import { Profile } from './components/Profile';
-import { BattleArena } from './components/BattleArena';
+import { BattlePage } from './routes/BattlePage';
 import { BattlesList } from './components/BattlesList';
 import { Bonuses } from './components/Bonuses';
 import { AdminPanel } from './components/AdminPanel';
@@ -303,7 +303,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
       {view.type === 'BATTLE_ARENA' && (
         <div className="w-full pt-6">
-          <BattleArena battleId={view.battleId} />
+          <BattlePage battleId={view.battleId} />
         </div>
       )}
 
@@ -394,12 +394,13 @@ const AppLayout: React.FC<{
   onChatViewed: () => void;
   hasStickyHeader: boolean;
 }> = ({ hasUnseenChatMessages, onChatViewed, hasStickyHeader }) => {
-  const { isAuthenticated } = useGame();
-  const [isChatCollapsed, setIsChatCollapsed] = useState(!isAuthenticated);
+  const { isAuthenticated, view } = useGame();
+  const isBattleView = view.type === 'BATTLE_ARENA';
+  const [isChatCollapsed, setIsChatCollapsed] = useState(!isAuthenticated || isBattleView);
 
   useEffect(() => {
-    setIsChatCollapsed(!isAuthenticated);
-  }, [isAuthenticated]);
+    setIsChatCollapsed(!isAuthenticated || isBattleView);
+  }, [isAuthenticated, isBattleView]);
 
   const chatWidth = isChatCollapsed ? '64px' : '380px';
 
@@ -410,7 +411,7 @@ const AppLayout: React.FC<{
       data-chat-collapsed={isChatCollapsed}
     >
       <MainContent isChatCollapsed={isChatCollapsed} />
-      <div
+      {!isBattleView && <div
         className="relative hidden shrink-0 xl:flex transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
         style={{ width: 'var(--chatw)' }}
       >
@@ -420,7 +421,7 @@ const AppLayout: React.FC<{
           hasUnseenMessages={hasUnseenChatMessages}
           onChatViewed={onChatViewed}
         />
-      </div>
+      </div>}
     </div>
   );
 };
