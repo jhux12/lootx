@@ -58,11 +58,15 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const [animatedRounds, setAnimatedRounds] = useState<Set<number>>(new Set());
   const [skipRequested, setSkipRequested] = useState(false);
   const [trayOpen, setTrayOpen] = useState(false);
+  const [playbackTick, setPlaybackTick] = useState(0);
   const [displayTotals, setDisplayTotals] = useState({ A: 0, B: 0 });
   const [tickLoading, setTickLoading] = useState(false);
   const [progressLoading, setProgressLoading] = useState(false);
 
   const runningRoundRef = useRef(false);
+  const animatedRoundsRef = useRef<Set<number>>(new Set());
+  const skipRequestedRef = useRef(false);
+  const trayOpenRef = useRef(false);
 
   useEffect(() => {
     const battleRef = doc(db, 'battles', battleId);
@@ -94,8 +98,24 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
     setAnimatedRounds(new Set());
     setSkipRequested(false);
     setTrayOpen(false);
+    setPlaybackTick(0);
     runningRoundRef.current = false;
+    animatedRoundsRef.current = new Set();
+    skipRequestedRef.current = false;
+    trayOpenRef.current = false;
   }, [battleId]);
+
+  useEffect(() => {
+    animatedRoundsRef.current = animatedRounds;
+  }, [animatedRounds]);
+
+  useEffect(() => {
+    skipRequestedRef.current = skipRequested;
+  }, [skipRequested]);
+
+  useEffect(() => {
+    trayOpenRef.current = trayOpen;
+  }, [trayOpen]);
 
   const players = Array.isArray(battle?.players) ? battle.players : [];
   const roundCount = Math.max(1, Number(battle?.roundCount ?? 1));
@@ -242,10 +262,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
     if (!battle || !skipRequested) return;
     const allAnimated = new Set(Array.from({ length: roundCount }, (_, index) => index));
     setAnimatedRounds(allAnimated);
+    animatedRoundsRef.current = allAnimated;
     setAnimatingRoundIndex(null);
     setActiveRoundIndex(lastRoundIndex);
     setUiPhase('UI_COMPLETE');
     setTrayOpen(true);
+    trayOpenRef.current = true;
     runningRoundRef.current = false;
   }, [battle, lastRoundIndex, roundCount, skipRequested]);
 
@@ -262,29 +284,40 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
       return;
     }
 
-    if (skipRequested || trayOpen) return;
+    if (skipRequestedRef.current || trayOpenRef.current) return;
     if (battle.state !== 'RUNNING' && battle.state !== 'COMPLETE') return;
 
-    if (battle.state === 'COMPLETE' && animatedRounds.has(lastRoundIndex) && uiPhase !== 'UI_COMPLETE') {
+    if (battle.state === 'COMPLETE' && animatedRoundsRef.current.has(lastRoundIndex) && uiPhase !== 'UI_COMPLETE') {
       setTrayOpen(true);
+      trayOpenRef.current = true;
       setUiPhase('UI_COMPLETE');
       return;
     }
 
-    if (runningRoundRef.current || animatingRoundIndex !== null) return;
+    if (runningRoundRef.current) return;
+
+    if (animatingRoundIndex !== null) {
+      setAnimatingRoundIndex(null);
+    }
 
     const nextRoundIndex = Array.from({ length: roundCount }, (_, index) => index).find(
-      (index) => !animatedRounds.has(index) && roundsMap.has(index)
+      (index) => !animatedRoundsRef.current.has(index) && roundsMap.has(index)
     );
 
     if (nextRoundIndex === undefined) {
-      if ((animatedRounds.has(lastRoundIndex) || (battle.state === 'COMPLETE' && allRoundsPresent)) && uiPhase !== 'UI_FINAL_REVEAL' && uiPhase !== 'UI_COMPLETE') {
+      if ((animatedRoundsRef.current.has(lastRoundIndex) || (battle.state === 'COMPLETE' && allRoundsPresent)) && uiPhase !== 'UI_FINAL_REVEAL' && uiPhase !== 'UI_COMPLETE') {
+        runningRoundRef.current = true;
         setUiPhase('UI_FINAL_REVEAL');
         const finalTimer = window.setTimeout(() => {
           setTrayOpen(true);
+          trayOpenRef.current = true;
           setUiPhase('UI_COMPLETE');
+          runningRoundRef.current = false;
         }, Math.max(900, Math.min(1200, finalRevealMs)));
-        return () => window.clearTimeout(finalTimer);
+        return () => {
+          window.clearTimeout(finalTimer);
+          runningRoundRef.current = false;
+        };
       }
       return;
     }
@@ -297,45 +330,50 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
     const runRound = async () => {
       setUiPhase('UI_ROUND_INTRO');
       await wait(introMs);
-      if (cancelled || skipRequested) return;
+      if (cancelled || skipRequestedRef.current) return;
 
       setUiPhase('UI_SPINNING');
       await wait(spinMs);
-      if (cancelled || skipRequested) return;
+      if (cancelled || skipRequestedRef.current) return;
 
       setUiPhase('UI_ROUND_REVEAL');
       setAnimatedRounds((prev) => {
         const next = new Set(prev);
         next.add(nextRoundIndex);
+        animatedRoundsRef.current = next;
         return next;
       });
       await wait(revealMs + freezeAfterSpinMs);
-      if (cancelled || skipRequested) return;
+      if (cancelled || skipRequestedRef.current) return;
 
       if (nextRoundIndex === lastRoundIndex) {
         setAnimatingRoundIndex(null);
         setUiPhase('UI_FINAL_REVEAL');
         await wait(Math.max(900, Math.min(1200, finalRevealMs)));
-        if (!cancelled && !skipRequested) {
+        if (!cancelled && !skipRequestedRef.current) {
           setTrayOpen(true);
+          trayOpenRef.current = true;
           setUiPhase('UI_COMPLETE');
         }
       } else {
         setUiPhase('UI_INTERMISSION');
         await wait(intermissionMs);
-        if (!cancelled && !skipRequested) setAnimatingRoundIndex(null);
+        if (!cancelled && !skipRequestedRef.current) setAnimatingRoundIndex(null);
       }
     };
 
     void runRound().finally(() => {
       runningRoundRef.current = false;
+      if (!cancelled && !skipRequestedRef.current) {
+        setPlaybackTick((value) => value + 1);
+      }
     });
 
     return () => {
       cancelled = true;
       runningRoundRef.current = false;
     };
-  }, [allRoundsPresent, animatedRounds, animatingRoundIndex, battle, lastRoundIndex, roundCount, roundsMap, skipRequested, spinMs, trayOpen, uiPhase]);
+  }, [allRoundsPresent, animatingRoundIndex, battle?.id, battle?.state, lastRoundIndex, playbackTick, roundCount, roundsMap, spinMs, uiPhase]);
 
   if (!battle) {
     return <div className="p-8 text-center text-gray-400">Battle not found.</div>;
