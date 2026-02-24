@@ -10,8 +10,6 @@ import { CategoryRow } from './components/CategoryRow';
 import { BoxCatalog } from './components/BoxCatalog';
 import { CaseOpening } from './components/CaseOpening';
 import { Profile } from './components/Profile';
-import { BattleArena } from './components/BattleArena';
-import { BattlesList } from './components/BattlesList';
 import { Bonuses } from './components/Bonuses';
 import { AdminPanel } from './components/AdminPanel';
 import { LoginModal } from './components/LoginModal';
@@ -40,6 +38,7 @@ import { CookieConsentToast } from './components/CookieConsentToast';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
+import { UpgraderPage } from './components/UpgraderPage';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
   ShowcaseRow,
@@ -194,16 +193,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         />
       )}
       
-      {view.type === 'BATTLES' && (
-        <div className="max-w-[1400px] mx-auto p-3 sm:p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
-           <div className="mb-6">
-               <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Case Battles</h1>
-               <p className="text-gray-400 text-sm sm:text-base">Create or join live battles now.</p>
-           </div>
-           <BattlesList />
-        </div>
-      )}
-
       {view.type === 'BOXES' && (
         <div className="w-full">
           <BoxCatalog isChatCollapsed={isChatCollapsed} />
@@ -301,9 +290,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         </div>
       )}
 
-      {view.type === 'BATTLE_ARENA' && (
-        <div className="w-full pt-6">
-          <BattleArena battleId={view.battleId} />
+      {view.type === 'UPGRADER' && (
+        <div className="w-full pt-4">
+          <UpgraderPage />
         </div>
       )}
 
@@ -326,7 +315,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {showEmailVerificationModal && <EmailVerificationModal />}
       {showEmailVerifiedModal && <EmailVerifiedModal />}
       {showTopUpModal && <TopUpModal />}
-      {view.type !== 'BATTLE_ARENA' && <SiteFooter />}
+      <SiteFooter />
     </main>
   );
 };

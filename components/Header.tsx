@@ -14,7 +14,7 @@ import {
   Shield,
   ShieldCheck,
   Star,
-  Swords,
+  Sparkles,
   Trophy,
   Twitter,
   User as UserIcon,
@@ -106,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     };
   }, []);
 
-  const navigate = (type: 'HOME' | 'BOXES' | 'BATTLES' | 'BONUSES' | 'LEADERBOARD' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
+  const navigate = (type: 'HOME' | 'BOXES' | 'UPGRADER' | 'BONUSES' | 'LEADERBOARD' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
     playSound('click');
     if ((type === 'BONUSES' || type === 'INVENTORY' || type === 'PROFILE') && !isAuthenticated) {
       openAuthModal('login');
@@ -158,9 +158,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             </button>
 
             <div className="hidden lg:flex lg:gap-x-3">
-              <button onClick={() => navigate('BATTLES')} className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-neutral-400 transition-colors hover:border-white/5 hover:bg-neutral-800 hover:text-white">
-                <Gamepad2 className="h-4 w-4" />
-                Games
+              <button onClick={() => navigate('UPGRADER')} className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-neutral-300 transition-colors hover:border-white/5 hover:bg-neutral-800 hover:text-white">
+                <Sparkles className="h-4 w-4 text-cyan-300" />
+                Upgrader
               </button>
               <button onClick={() => navigate('BONUSES')} className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-purple-400 transition-colors hover:border-white/5 hover:bg-neutral-800">
                 <Flame className="h-4 w-4" />
@@ -295,7 +295,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             <h3 className="ml-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Games</h3>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => navigate('BOXES')} className={drawerCardClass}><Package className="h-5 w-5 text-orange-500" /><span className="text-sm font-bold text-white">Boxes</span></button>
-              <button onClick={() => navigate('BATTLES')} className={drawerCardClass}><Swords className="h-5 w-5 text-red-500" /><span className="text-sm font-bold text-white">Battles</span></button>
+              <button onClick={() => navigate('UPGRADER')} className={drawerCardClass}><Sparkles className="h-5 w-5 text-cyan-400" /><span className="text-sm font-bold text-white">Upgrader</span></button>
             </div>
           </section>
 
