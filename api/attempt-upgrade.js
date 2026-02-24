@@ -1,6 +1,8 @@
-import crypto from 'node:crypto';
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
+import { randomSeed, sha256 } from './_lib/provablyFair.js';
+
+const DEFAULT_CLIENT_SEED = 'lootx-player';
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -42,25 +44,29 @@ export default async function handler(req, res) {
 
   const body = await readJsonBody(req);
   if (!body) return sendJson(res, 400, { error: 'BAD_JSON' });
+
   const sourceItemInstanceId = typeof body.sourceItemInstanceId === 'string' ? body.sourceItemInstanceId : '';
   const targetItemId = typeof body.targetItemId === 'string' ? body.targetItemId : '';
-  const clientSeed = typeof body.clientSeed === 'string' && body.clientSeed.trim() ? body.clientSeed.trim() : 'default-client-seed';
+  const inputClientSeed = typeof body.clientSeed === 'string' && body.clientSeed.trim() ? body.clientSeed.trim().slice(0, 64) : null;
 
   if (!sourceItemInstanceId || !targetItemId) return sendJson(res, 400, { error: 'INVALID_INPUT' });
 
   try {
     let resultPayload = null;
+
     await firestore.runTransaction(async (transaction) => {
       const userRef = firestore.collection('users').doc(decoded.uid);
       const sourceRef = userRef.collection('inventory').doc(sourceItemInstanceId);
       const targetRef = firestore.collection('upgraderTargets').doc(targetItemId);
       const settingsRef = firestore.collection('settings').doc('upgrader');
+      const provablyRef = firestore.collection('provablyFair').doc(decoded.uid);
 
-      const [userSnap, sourceSnap, targetSnap, settingsSnap] = await Promise.all([
+      const [userSnap, sourceSnap, targetSnap, settingsSnap, provablySnap] = await Promise.all([
         transaction.get(userRef),
         transaction.get(sourceRef),
         transaction.get(targetRef),
-        transaction.get(settingsRef)
+        transaction.get(settingsRef),
+        transaction.get(provablyRef)
       ]);
 
       if (!sourceSnap.exists) throw new Error('Source item not found in your inventory.');
@@ -89,13 +95,15 @@ export default async function handler(req, res) {
       if (targetItem.maxSourceValue != null && sourceValue > Number(targetItem.maxSourceValue)) throw new Error('Source value above target maximum.');
 
       const userData = userSnap.data() ?? {};
-      const nonce = Math.max(0, Math.floor(toNumber(userData.upgraderNonce, 0))) + 1;
-      const serverSeed = typeof settings.serverSeed === 'string' && settings.serverSeed ? settings.serverSeed : process.env.UPGRADER_SERVER_SEED;
-      if (!serverSeed) throw new Error('Server seed is not configured.');
+      const provablyData = provablySnap.data() ?? {};
+      const serverSeed = typeof provablyData.serverSeed === 'string' && provablyData.serverSeed ? provablyData.serverSeed : randomSeed();
+      const serverSeedHash = typeof provablyData.serverSeedHash === 'string' && provablyData.serverSeedHash ? provablyData.serverSeedHash : sha256(serverSeed);
+      const clientSeed = inputClientSeed || (typeof provablyData.clientSeed === 'string' && provablyData.clientSeed.trim() ? provablyData.clientSeed.trim() : DEFAULT_CLIENT_SEED);
+      const nonce = Math.max(0, Math.floor(toNumber(provablyData.upgradeNonce, 0))) + 1;
 
       const chance = computeChance({ sourceValue, targetValue, settings, sourceItem, targetItem, user: userData });
       const hashInput = `${serverSeed}:${decoded.uid}:${clientSeed}:${nonce}:${targetItemId}:${sourceItemInstanceId}`;
-      const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
+      const hash = sha256(hashInput);
       const roll = parseInt(hash.slice(0, 8), 16) / 0xffffffff;
       const win = roll < chance;
 
@@ -121,9 +129,12 @@ export default async function handler(req, res) {
         }, { merge: true });
       }
 
-      transaction.set(userRef, {
-        upgraderNonce: nonce,
-        lastUpgradeAt: Date.now()
+      transaction.set(userRef, { lastUpgradeAt: Date.now() }, { merge: true });
+      transaction.set(provablyRef, {
+        serverSeed,
+        serverSeedHash,
+        clientSeed,
+        upgradeNonce: nonce
       }, { merge: true });
 
       transaction.set(attemptRef, {
@@ -148,7 +159,7 @@ export default async function handler(req, res) {
         win,
         nonce,
         clientSeed,
-        serverSeedHash: settings.serverSeedHash || crypto.createHash('sha256').update(serverSeed).digest('hex'),
+        serverSeedHash,
         hashInputSummary: {
           uid: decoded.uid,
           nonce,

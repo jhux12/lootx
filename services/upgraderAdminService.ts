@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, deleteField, doc, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { DEFAULT_UPGRADER_SETTINGS, UpgraderSettings, UpgraderTarget, normalizeUpgraderSettings } from '../utils/upgrader';
 
@@ -6,6 +6,7 @@ export const saveUpgraderSettings = async (settings: Partial<UpgraderSettings>) 
   await setDoc(doc(db, 'settings', 'upgrader'), {
     ...DEFAULT_UPGRADER_SETTINGS,
     ...settings,
+    serverSeed: deleteField(),
     updatedAt: Date.now()
   }, { merge: true });
 };
@@ -15,7 +16,7 @@ export const rotateServerSeed = async () => {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(nextSeed));
   const hash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
   await setDoc(doc(db, 'settings', 'upgrader'), {
-    serverSeed: nextSeed,
+    serverSeed: deleteField(),
     serverSeedHash: hash,
     seedRotatedAt: Date.now(),
     updatedAt: Date.now()

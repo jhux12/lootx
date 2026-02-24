@@ -45,7 +45,7 @@ service cloud.firestore {
     }
 
     match /settings/{docId} {
-      allow read: if docId != 'upgrader' || isAdmin() || !('serverSeed' in resource.data);
+      allow read: if true;
       allow write: if isAdmin();
     }
 

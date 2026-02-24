@@ -40,10 +40,11 @@ View your app in AI Studio: https://ai.studio/apps/drive/1jzMWG_BfQY623gwFGCJsYG
   - `sourceItemInstanceId`, `targetItemId`, and optional `clientSeed`.
 
 ### Provably fair verification
-- Hash input:
+- Hash input (uses the same user `provablyFair` server seed used by regular case openings):
   - `serverSeed:uid:clientSeed:nonce:targetItemId:sourceItemInstanceId`
 - Roll conversion:
   - `parseInt(hash.slice(0, 8), 16) / 0xFFFFFFFF`
 - Win condition:
   - `roll < computedChance`
 - Each attempt is logged in `upgradeAttempts` including roll/chance/nonce/serverSeedHash snapshots.
+- Upgrader no longer depends on `settings/upgrader.serverSeed`; it reuses `provablyFair/{uid}.serverSeed` for consistency with case openings.
