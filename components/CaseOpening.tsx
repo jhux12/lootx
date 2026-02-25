@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
@@ -11,6 +11,9 @@ import { getSellBackValue } from '../utils/sellBack';
 import { authedFetch } from '../utils/authedFetch';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { ProvablyFairMiniModal } from './ProvablyFairMiniModal';
+import { db } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { DEFAULT_ECONOMY_SETTINGS, getXpCost, normalizeEconomySettings } from '../utils/economy';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -138,6 +141,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [rewardResolved, setRewardResolved] = useState(false);
   const [selectedCaseItem, setSelectedCaseItem] = useState<CaseItem | null>(null);
   const [spinFeedbackMessage, setSpinFeedbackMessage] = useState<string | null>(null);
+  const [showXpConfirmSheet, setShowXpConfirmSheet] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -162,7 +166,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const previewXpFromOpen = isFree ? 0 : xpPerCaseOpened;
   const previewTotalXp = Math.max(0, previewXpFromSpend + previewXpFromOpen);
   const currentXpBalance = Math.max(0, Math.floor(Number(user.xpBalance ?? user.xp ?? 0)));
+  const [economySettings, setEconomySettings] = useState(DEFAULT_ECONOMY_SETTINGS);
   const isBalanceLoading = isAuthenticated && !authInitialized;
+  const xpCostForCoinCase = useMemo(() => getXpCost(currentCasePrice, economySettings), [currentCasePrice, economySettings]);
+  const xpProgress = useMemo(() => {
+    if (!Number.isFinite(xpCostForCoinCase) || xpCostForCoinCase <= 0) return 0;
+    return Math.max(0, Math.min(1, currentXpBalance / xpCostForCoinCase));
+  }, [currentXpBalance, xpCostForCoinCase]);
+  const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && (currentXpBalance > 0 || xpProgress > 0);
+  const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
+  const xpRingRadius = 14;
+  const xpRingCircumference = 2 * Math.PI * xpRingRadius;
+  const xpRingOffset = xpRingCircumference * (1 - xpProgress);
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -211,6 +226,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   useEffect(() => {
     loadProvablyFairState();
   }, [loadProvablyFairState]);
+
+  useEffect(() => {
+    const economyRef = doc(db, 'settings', 'economy');
+    const unsubscribe = onSnapshot(economyRef, (snapshot) => {
+      const data = snapshot.exists() ? snapshot.data() : {};
+      setEconomySettings(normalizeEconomySettings(data));
+    }, (error) => {
+      console.error('Failed to load economy settings', error);
+      setEconomySettings(DEFAULT_ECONOMY_SETTINGS);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => () => {
     if (sellOfferTimerRef.current) {
@@ -431,7 +459,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
 
-  const handleSpin = async ({ isDemo = false, forceGold = false }: { isDemo?: boolean; forceGold?: boolean } = {}) => {
+  const handleSpin = async ({ isDemo = false, forceGold = false, paymentMethod = 'coins' }: { isDemo?: boolean; forceGold?: boolean; paymentMethod?: 'coins' | 'xp' } = {}) => {
     if (isSpinning) return;
     if (!box || items.length === 0) return;
 
@@ -567,7 +595,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           };
         }>('/api/open-case', {
           method: 'POST',
-          body: JSON.stringify({ boxId: box.id, isFree, operationId })
+          body: JSON.stringify({ boxId: box.id, isFree, operationId, paymentMethod })
         });
 
         const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
@@ -733,6 +761,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsBoxPreviewFading(false);
   }, [boxId]);
 
+  useEffect(() => {
+    if (!showXpOpenUi) {
+      setShowXpConfirmSheet(false);
+    }
+  }, [showXpOpenUi]);
+
   const finishSpin = (item: CaseItem) => {
     setIsSpinning(false);
     setIsBoxPreviewVisible(true);
@@ -878,7 +912,44 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
-            <div className="relative z-20 flex justify-end px-2 pt-2 sm:px-3 sm:pt-3">
+            <div className="relative z-20 flex items-start justify-between gap-2 px-2 pt-2 sm:px-3 sm:pt-3">
+              <div className="min-h-9">
+                {showXpOpenUi && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('click');
+                      setShowXpConfirmSheet(true);
+                    }}
+                    className={`group inline-flex items-center gap-2 rounded-xl border bg-black/55 px-2 py-1 shadow-xl backdrop-blur-sm transition-all ${canOpenWithXp ? 'border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,0.3)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)]' : 'border-white/20 hover:border-cyan-300/45'}`}
+                    aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
+                    title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
+                  >
+                    <div className="relative h-8 w-8 shrink-0">
+                      <svg className="absolute inset-0 -rotate-90" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                        <circle cx="16" cy="16" r={xpRingRadius} fill="none" stroke="rgba(148,163,184,0.28)" strokeWidth="2.5" />
+                        <circle
+                          cx="16"
+                          cy="16"
+                          r={xpRingRadius}
+                          fill="none"
+                          stroke="rgba(34,211,238,0.95)"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeDasharray={xpRingCircumference}
+                          strokeDashoffset={xpRingOffset}
+                          className="transition-all duration-300 ease-out"
+                        />
+                      </svg>
+                      <div className="absolute inset-[5px] rounded-full bg-[#111827] border border-cyan-300/25 flex items-center justify-center">
+                        <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-3.5 w-3.5 object-contain" />
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-cyan-100/85 whitespace-nowrap">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span>
+                  </button>
+                )}
+              </div>
+
               <div>
                 <div className="flex items-center gap-1 rounded-xl border border-white/20 bg-black/55 p-1 shadow-xl backdrop-blur-sm">
                   <button
@@ -1081,6 +1152,54 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             )}
         </div>
 
+
+        {showXpConfirmSheet && showXpOpenUi && (
+          <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-label="Use XP to open case">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/55"
+              onClick={() => setShowXpConfirmSheet(false)}
+              aria-label="Close XP confirmation"
+            />
+            <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-cyan-300/20 bg-[#0b0e14] p-4 shadow-2xl backdrop-blur-sm animate-in slide-in-from-bottom duration-300 sm:mx-auto sm:mb-6 sm:max-w-md sm:rounded-2xl">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-semibold text-white">Open this box with XP?</p>
+                <button
+                  type="button"
+                  onClick={() => setShowXpConfirmSheet(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/50 text-gray-200"
+                  aria-label="Close XP confirmation"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-xs text-gray-300">Open with XP: <span className="font-semibold text-cyan-200">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span></p>
+              {!canOpenWithXp && (
+                <p className="mt-2 text-xs text-amber-300">You need more XP to open this case.</p>
+              )}
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowXpConfirmSheet(false)}
+                  className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm font-semibold text-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowXpConfirmSheet(false);
+                    void handleSpin({ paymentMethod: 'xp' });
+                  }}
+                  disabled={!canOpenWithXp || isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
+                  className="rounded-lg border border-cyan-300/35 bg-cyan-400/15 px-3 py-2 text-sm font-semibold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Use XP
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <ProvablyFairMiniModal
           isOpen={showFairModal}

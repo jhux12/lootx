@@ -142,6 +142,20 @@ type AdminXpRedemption = {
     metadata?: Record<string, unknown>;
 };
 
+
+
+type EconomySettingsDraft = {
+    xpPerDollar: number;
+    coinsPerDollar: number;
+    xpOpenEnabled: boolean;
+};
+
+const DEFAULT_ECONOMY_SETTINGS: EconomySettingsDraft = {
+    xpPerDollar: 250,
+    coinsPerDollar: 100,
+    xpOpenEnabled: true
+};
+
 type AdminSentNotification = {
     id: string;
     title: string;
@@ -365,6 +379,8 @@ export const AdminPanel: React.FC = () => {
   const [timelineSearch, setTimelineSearch] = useState('');
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
   const [bonusSaveNotice, setBonusSaveNotice] = useState(false);
+  const [economyDraft, setEconomyDraft] = useState<EconomySettingsDraft>(DEFAULT_ECONOMY_SETTINGS);
+  const [economySaveNotice, setEconomySaveNotice] = useState(false);
   const [xpShopItems, setXpShopItems] = useState<AdminXpShopItem[]>([]);
   const [xpRedemptions, setXpRedemptions] = useState<AdminXpRedemption[]>([]);
   const [editingXpShopItemId, setEditingXpShopItemId] = useState<string | null>(null);
@@ -765,6 +781,24 @@ export const AdminPanel: React.FC = () => {
   useEffect(() => {
       setBonusDraft(bonusSettings);
   }, [bonusSettings]);
+
+  useEffect(() => {
+      const economyRef = doc(db, 'settings', 'economy');
+      const unsubscribe = onSnapshot(economyRef, (snapshot) => {
+          const data = snapshot.exists() ? snapshot.data() ?? {} : {};
+          const nextDraft: EconomySettingsDraft = {
+              xpPerDollar: Math.max(1, Number(data.xpPerDollar ?? DEFAULT_ECONOMY_SETTINGS.xpPerDollar) || DEFAULT_ECONOMY_SETTINGS.xpPerDollar),
+              coinsPerDollar: Math.max(1, Number(data.coinsPerDollar ?? DEFAULT_ECONOMY_SETTINGS.coinsPerDollar) || DEFAULT_ECONOMY_SETTINGS.coinsPerDollar),
+              xpOpenEnabled: data.xpOpenEnabled !== false
+          };
+          setEconomyDraft(nextDraft);
+      }, (error) => {
+          console.error('Failed to load economy settings', error);
+          setEconomyDraft(DEFAULT_ECONOMY_SETTINGS);
+      });
+
+      return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
       if (!selectedUserId) return;
@@ -1982,6 +2016,17 @@ export const AdminPanel: React.FC = () => {
       updateBonusSettings(bonusDraft);
       setBonusSaveNotice(true);
       window.setTimeout(() => setBonusSaveNotice(false), 3000);
+  };
+
+  const handleSaveEconomySettings = async () => {
+      const payload: EconomySettingsDraft = {
+          xpPerDollar: Math.max(1, Number(economyDraft.xpPerDollar) || DEFAULT_ECONOMY_SETTINGS.xpPerDollar),
+          coinsPerDollar: Math.max(1, Number(economyDraft.coinsPerDollar) || DEFAULT_ECONOMY_SETTINGS.coinsPerDollar),
+          xpOpenEnabled: economyDraft.xpOpenEnabled
+      };
+      await setDoc(doc(db, 'settings', 'economy'), payload, { merge: true });
+      setEconomySaveNotice(true);
+      window.setTimeout(() => setEconomySaveNotice(false), 3000);
   };
 
   const resetXpShopItemDraft = () => {
@@ -4218,6 +4263,63 @@ export const AdminPanel: React.FC = () => {
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
+                                <h3 className="text-lg font-bold text-white">Economy Conversion</h3>
+                                <p className="text-sm text-gray-400">Control XP conversion for opening coin-priced cases.</p>
+                            </div>
+                        </div>
+                        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP equals $1</label>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    step={1}
+                                    value={economyDraft.xpPerDollar}
+                                    onChange={(event) => setEconomyDraft((prev) => ({ ...prev, xpPerDollar: Math.max(1, Number(event.target.value) || 1) }))}
+                                    className="w-full bg-[#0f1521] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Coins equals $1</label>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    step={1}
+                                    value={economyDraft.coinsPerDollar}
+                                    onChange={(event) => setEconomyDraft((prev) => ({ ...prev, coinsPerDollar: Math.max(1, Number(event.target.value) || 1) }))}
+                                    className="w-full bg-[#0f1521] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-4 flex items-center justify-between rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2">
+                            <span className="text-xs font-semibold text-gray-300">Enable XP opens</span>
+                            <button
+                                type="button"
+                                onClick={() => setEconomyDraft((prev) => ({ ...prev, xpOpenEnabled: !prev.xpOpenEnabled }))}
+                                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${economyDraft.xpOpenEnabled ? 'border-emerald-400/40 bg-emerald-400/20 text-emerald-100' : 'border-gray-600 bg-gray-700/40 text-gray-300'}`}
+                            >
+                                {economyDraft.xpOpenEnabled ? 'Enabled' : 'Disabled'}
+                            </button>
+                        </div>
+                        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-800 pt-4">
+                            <p className="text-xs text-gray-500">Used for XP case cost formula: round((priceCoins / coinsPerDollar) * xpPerDollar).</p>
+                            <button
+                                onClick={() => { void handleSaveEconomySettings(); }}
+                                className="w-full sm:w-auto px-5 py-2 bg-cyan-500/15 text-cyan-200 border border-cyan-400/35 rounded-lg text-sm font-bold hover:bg-cyan-500/25 transition-colors"
+                            >
+                                Save economy settings
+                            </button>
+                            {economySaveNotice && (
+                                <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+                                    Economy settings saved.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
                                 <h3 className="text-lg font-bold text-white">Rakeback Settings</h3>
                                 <p className="text-sm text-gray-400">
                                     Configure unlock levels and bonus amounts. Coin values are displayed in coins only.
@@ -4327,6 +4429,63 @@ export const AdminPanel: React.FC = () => {
                             {bonusSaveNotice && (
                                 <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
                                     Bonus settings saved.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Economy Conversion</h3>
+                                <p className="text-sm text-gray-400">Control XP conversion for opening coin-priced cases.</p>
+                            </div>
+                        </div>
+                        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP equals $1</label>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    step={1}
+                                    value={economyDraft.xpPerDollar}
+                                    onChange={(event) => setEconomyDraft((prev) => ({ ...prev, xpPerDollar: Math.max(1, Number(event.target.value) || 1) }))}
+                                    className="w-full bg-[#0f1521] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Coins equals $1</label>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    step={1}
+                                    value={economyDraft.coinsPerDollar}
+                                    onChange={(event) => setEconomyDraft((prev) => ({ ...prev, coinsPerDollar: Math.max(1, Number(event.target.value) || 1) }))}
+                                    className="w-full bg-[#0f1521] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-4 flex items-center justify-between rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2">
+                            <span className="text-xs font-semibold text-gray-300">Enable XP opens</span>
+                            <button
+                                type="button"
+                                onClick={() => setEconomyDraft((prev) => ({ ...prev, xpOpenEnabled: !prev.xpOpenEnabled }))}
+                                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${economyDraft.xpOpenEnabled ? 'border-emerald-400/40 bg-emerald-400/20 text-emerald-100' : 'border-gray-600 bg-gray-700/40 text-gray-300'}`}
+                            >
+                                {economyDraft.xpOpenEnabled ? 'Enabled' : 'Disabled'}
+                            </button>
+                        </div>
+                        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-800 pt-4">
+                            <p className="text-xs text-gray-500">Used for XP case cost formula: round((priceCoins / coinsPerDollar) * xpPerDollar).</p>
+                            <button
+                                onClick={() => { void handleSaveEconomySettings(); }}
+                                className="w-full sm:w-auto px-5 py-2 bg-cyan-500/15 text-cyan-200 border border-cyan-400/35 rounded-lg text-sm font-bold hover:bg-cyan-500/25 transition-colors"
+                            >
+                                Save economy settings
+                            </button>
+                            {economySaveNotice && (
+                                <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+                                    Economy settings saved.
                                 </div>
                             )}
                         </div>
