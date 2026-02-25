@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
@@ -11,6 +11,9 @@ import { getSellBackValue } from '../utils/sellBack';
 import { authedFetch } from '../utils/authedFetch';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { ProvablyFairMiniModal } from './ProvablyFairMiniModal';
+import { db } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { DEFAULT_ECONOMY_SETTINGS, getXpCost, normalizeEconomySettings } from '../utils/economy';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -162,7 +165,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const previewXpFromOpen = isFree ? 0 : xpPerCaseOpened;
   const previewTotalXp = Math.max(0, previewXpFromSpend + previewXpFromOpen);
   const currentXpBalance = Math.max(0, Math.floor(Number(user.xpBalance ?? user.xp ?? 0)));
+  const [economySettings, setEconomySettings] = useState(DEFAULT_ECONOMY_SETTINGS);
   const isBalanceLoading = isAuthenticated && !authInitialized;
+  const xpCostForCoinCase = useMemo(() => getXpCost(currentCasePrice, economySettings), [currentCasePrice, economySettings]);
+  const xpProgress = useMemo(() => {
+    if (!Number.isFinite(xpCostForCoinCase) || xpCostForCoinCase <= 0) return 0;
+    return Math.max(0, Math.min(1, currentXpBalance / xpCostForCoinCase));
+  }, [currentXpBalance, xpCostForCoinCase]);
+  const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && (currentXpBalance > 0 || xpProgress > 0);
+  const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
+  const xpRingRadius = 14;
+  const xpRingCircumference = 2 * Math.PI * xpRingRadius;
+  const xpRingOffset = xpRingCircumference * (1 - xpProgress);
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -211,6 +225,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   useEffect(() => {
     loadProvablyFairState();
   }, [loadProvablyFairState]);
+
+  useEffect(() => {
+    const economyRef = doc(db, 'settings', 'economy');
+    const unsubscribe = onSnapshot(economyRef, (snapshot) => {
+      const data = snapshot.exists() ? snapshot.data() : {};
+      setEconomySettings(normalizeEconomySettings(data));
+    }, (error) => {
+      console.error('Failed to load economy settings', error);
+      setEconomySettings(DEFAULT_ECONOMY_SETTINGS);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => () => {
     if (sellOfferTimerRef.current) {
@@ -431,7 +458,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
 
-  const handleSpin = async ({ isDemo = false, forceGold = false }: { isDemo?: boolean; forceGold?: boolean } = {}) => {
+  const handleSpin = async ({ isDemo = false, forceGold = false, paymentMethod = 'coins' }: { isDemo?: boolean; forceGold?: boolean; paymentMethod?: 'coins' | 'xp' } = {}) => {
     if (isSpinning) return;
     if (!box || items.length === 0) return;
 
@@ -567,7 +594,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           };
         }>('/api/open-case', {
           method: 'POST',
-          body: JSON.stringify({ boxId: box.id, isFree, operationId })
+          body: JSON.stringify({ boxId: box.id, isFree, operationId, paymentMethod })
         });
 
         const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
@@ -1049,6 +1076,46 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       )}
                     </span>
                  </button>
+                 {showXpOpenUi && (
+                   <div className="absolute right-2 bottom-2 sm:right-3 sm:bottom-3 rounded-xl border border-cyan-300/20 bg-[#0f1521]/80 px-2 py-1.5 backdrop-blur-md shadow-[0_0_0_1px_rgba(34,211,238,0.12)]">
+                     <div
+                       className="flex items-center gap-2"
+                       title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
+                     >
+                       <div className="relative h-8 w-8 shrink-0">
+                         <svg className="absolute inset-0 -rotate-90" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                           <circle cx="16" cy="16" r={xpRingRadius} fill="none" stroke="rgba(148,163,184,0.28)" strokeWidth="2.5" />
+                           <circle
+                             cx="16"
+                             cy="16"
+                             r={xpRingRadius}
+                             fill="none"
+                             stroke="rgba(34,211,238,0.95)"
+                             strokeWidth="2.5"
+                             strokeLinecap="round"
+                             strokeDasharray={xpRingCircumference}
+                             strokeDashoffset={xpRingOffset}
+                             className="transition-all duration-300 ease-out"
+                           />
+                         </svg>
+                         <div className="absolute inset-[5px] rounded-full bg-[#111827] border border-cyan-300/25 flex items-center justify-center">
+                           <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-3.5 w-3.5 object-contain" />
+                         </div>
+                       </div>
+                       <div className="text-[10px] text-cyan-100/85 whitespace-nowrap">
+                         Open with XP: {currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}
+                       </div>
+                     </div>
+                     <button
+                       type="button"
+                       onClick={() => handleSpin({ paymentMethod: 'xp' })}
+                       disabled={!canOpenWithXp || isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
+                       className="mt-1 w-full rounded-md border border-cyan-300/30 bg-cyan-400/10 px-2 py-1 text-[10px] sm:text-xs font-semibold text-cyan-100 transition-colors hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-45"
+                     >
+                       Use XP
+                     </button>
+                   </div>
+                 )}
                  {!isFree && (
                    <button
                      onClick={handleTryFree}
