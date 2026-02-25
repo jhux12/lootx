@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Item, Rarity } from './upgraderTypes';
-import { Search, Filter, ArrowUpDown } from 'lucide-react';
+import { Search, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface UpgraderTargetPanelProps {
@@ -22,13 +22,20 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
   const [minVal, setMinVal] = useState<string>('');
   const [maxVal, setMaxVal] = useState<string>('');
   const [sortBy, setSortBy] = useState<'value-asc' | 'value-desc' | 'rarity'>('value-asc');
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
-  const categories = useMemo(() => ['All', ...new Set(items.map(i => i.category))], [items]);
+  const [draftRarity, setDraftRarity] = useState<Rarity | 'All'>('All');
+  const [draftCategory, setDraftCategory] = useState<string>('All');
+  const [draftMin, setDraftMin] = useState<string>('');
+  const [draftMax, setDraftMax] = useState<string>('');
+  const [draftSortBy, setDraftSortBy] = useState<'value-asc' | 'value-desc' | 'rarity'>('value-asc');
+
+  const categories = useMemo(() => ['All', ...new Set(items.map((i) => i.category))], [items]);
   const rarities: (Rarity | 'All')[] = ['All', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic'];
 
   const filteredItems = useMemo(() => {
     return items
-      .filter(item => {
+      .filter((item) => {
         const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
         const matchesRarity = rarityFilter === 'All' || item.rarity === rarityFilter;
         const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
@@ -39,9 +46,41 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
       .sort((a, b) => {
         if (sortBy === 'value-asc') return a.coinValue - b.coinValue;
         if (sortBy === 'value-desc') return b.coinValue - a.coinValue;
-        return 0; // Rarity sort could be more complex, skipping for now
+        return 0;
       });
   }, [items, search, rarityFilter, categoryFilter, minVal, maxVal, sortBy]);
+
+  const openMobileFilters = () => {
+    setDraftRarity(rarityFilter);
+    setDraftCategory(categoryFilter);
+    setDraftMin(minVal);
+    setDraftMax(maxVal);
+    setDraftSortBy(sortBy);
+    setIsMobileFiltersOpen(true);
+  };
+
+  const applyMobileFilters = () => {
+    setRarityFilter(draftRarity);
+    setCategoryFilter(draftCategory);
+    setMinVal(draftMin);
+    setMaxVal(draftMax);
+    setSortBy(draftSortBy);
+    setIsMobileFiltersOpen(false);
+  };
+
+  const clearMobileFilters = () => {
+    setDraftRarity('All');
+    setDraftCategory('All');
+    setDraftMin('');
+    setDraftMax('');
+    setDraftSortBy('value-asc');
+    setRarityFilter('All');
+    setCategoryFilter('All');
+    setMinVal('');
+    setMaxVal('');
+    setSortBy('value-asc');
+    setIsMobileFiltersOpen(false);
+  };
 
   if (loading) {
     return (
@@ -54,64 +93,76 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-200">Target Item</h3>
-          <span className="text-xs text-slate-400 uppercase tracking-wider">{filteredItems.length} Available</span>
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-base sm:text-lg font-semibold text-slate-200">Target Item</h3>
+        <span className="text-[11px] text-slate-400 uppercase tracking-wider">{filteredItems.length} Available</span>
+      </div>
+
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input
+            type="text"
+            placeholder="Search items..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-slate-900/60 border border-slate-800/70 rounded-lg py-2.5 pl-10 pr-4 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors"
+          />
         </div>
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search items..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 pl-10 pr-4 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors"
-            />
-          </div>
+        <div className="md:hidden">
+          <button
+            type="button"
+            onClick={openMobileFilters}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 py-2.5 text-sm font-medium text-slate-200"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            Filters
+          </button>
+        </div>
 
+        <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div className="flex gap-2">
             <select
               value={rarityFilter}
-              onChange={(e) => setRarityFilter(e.target.value as any)}
+              onChange={(e) => setRarityFilter(e.target.value as Rarity | 'All')}
               className="flex-1 bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
             >
-              {rarities.map(r => <option key={r} value={r}>{r}</option>)}
+              {rarities.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="flex-1 bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
             >
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 
           <div className="flex gap-2">
-            <div className="flex-1 flex gap-1">
-              <input
-                type="number"
-                placeholder="Min"
-                value={minVal}
-                onChange={(e) => setMinVal(e.target.value)}
-                className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
-              />
-              <input
-                type="number"
-                placeholder="Max"
-                value={maxVal}
-                onChange={(e) => setMaxVal(e.target.value)}
-                className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
+            <input
+              type="number"
+              placeholder="Min"
+              value={minVal}
+              onChange={(e) => setMinVal(e.target.value)}
+              className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+            />
+            <input
+              type="number"
+              placeholder="Max"
+              value={maxVal}
+              onChange={(e) => setMaxVal(e.target.value)}
+              className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div className="relative">
+            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+              onChange={(e) => setSortBy(e.target.value as 'value-asc' | 'value-desc' | 'rarity')}
+              className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 pl-10 pr-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
             >
               <option value="value-asc">Value Low</option>
               <option value="value-desc">Value High</option>
@@ -120,7 +171,7 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 max-h-[56vh] md:max-h-[500px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
         {filteredItems.map((item) => {
           const isSelected = selectedId === item.id;
 
@@ -132,14 +183,14 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
               onClick={() => onSelect(item)}
               className={`
                 relative group cursor-pointer rounded-xl border p-2 transition-all duration-200
-                ${isSelected 
-                  ? 'bg-indigo-500/10 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' 
-                  : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'}
+                ${isSelected
+                  ? 'bg-indigo-500/10 border-indigo-400 shadow-[0_0_14px_rgba(99,102,241,0.25)]'
+                  : 'bg-slate-900/30 border-slate-800/60 hover:border-slate-700'}
               `}
             >
-              <div className="aspect-square rounded-lg bg-slate-800/50 overflow-hidden mb-2">
-                <img 
-                  src={item.imageUrl} 
+              <div className="aspect-[1.15/1] sm:aspect-square rounded-lg bg-slate-800/45 overflow-hidden mb-2">
+                <img
+                  src={item.imageUrl}
                   alt={item.name}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
@@ -151,13 +202,13 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
                   <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${getRarityColor(item.rarity)}`}>
                     {item.rarity}
                   </span>
-                  <span className="text-xs font-mono text-indigo-400">{Math.round(item.coinValue).toLocaleString()} coins</span>
+                  <span className="text-xs font-mono text-indigo-300">{Math.round(item.coinValue).toLocaleString()} coins</span>
                 </div>
                 <p className="text-xs font-medium text-slate-300 truncate leading-tight">{item.name}</p>
               </div>
 
               {isSelected && (
-                <div className="absolute -top-2 -right-2 bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+                <div className="absolute top-1.5 right-1.5 bg-indigo-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-lg">
                   TARGET
                 </div>
               )}
@@ -165,6 +216,71 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
           );
         })}
       </div>
+
+      {isMobileFiltersOpen && (
+        <div className="md:hidden fixed inset-0 z-[80]">
+          <button type="button" className="absolute inset-0 bg-black/65" onClick={() => setIsMobileFiltersOpen(false)} aria-label="Close filters" />
+          <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl border-t border-slate-700 bg-slate-950 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-white">Filters</h4>
+              <button type="button" onClick={() => setIsMobileFiltersOpen(false)} className="text-slate-300">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={draftRarity}
+                onChange={(e) => setDraftRarity(e.target.value as Rarity | 'All')}
+                className="bg-slate-900/80 border border-slate-700 rounded-lg py-2 px-3 text-sm text-slate-200"
+              >
+                {rarities.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <select
+                value={draftCategory}
+                onChange={(e) => setDraftCategory(e.target.value)}
+                className="bg-slate-900/80 border border-slate-700 rounded-lg py-2 px-3 text-sm text-slate-200"
+              >
+                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <input
+                type="number"
+                placeholder="Min"
+                value={draftMin}
+                onChange={(e) => setDraftMin(e.target.value)}
+                className="bg-slate-900/80 border border-slate-700 rounded-lg py-2 px-3 text-sm text-slate-200"
+              />
+              <input
+                type="number"
+                placeholder="Max"
+                value={draftMax}
+                onChange={(e) => setDraftMax(e.target.value)}
+                className="bg-slate-900/80 border border-slate-700 rounded-lg py-2 px-3 text-sm text-slate-200"
+              />
+              <div className="col-span-2 relative">
+                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <select
+                  value={draftSortBy}
+                  onChange={(e) => setDraftSortBy(e.target.value as 'value-asc' | 'value-desc' | 'rarity')}
+                  className="w-full bg-slate-900/80 border border-slate-700 rounded-lg py-2 pl-10 pr-3 text-sm text-slate-200"
+                >
+                  <option value="value-asc">Value Low</option>
+                  <option value="value-desc">Value High</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button type="button" onClick={clearMobileFilters} className="rounded-lg border border-slate-700 py-2 text-sm font-semibold text-slate-200">
+                Clear
+              </button>
+              <button type="button" onClick={applyMobileFilters} className="rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white">
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -91,7 +91,11 @@ export default function UpgraderPage() {
   }, [settings, targets]);
 
   const chance = useMemo(() => {
-    if (!source || !target || !settings) return 0;
+    if (!source || !target) return 0;
+    if (!settings) {
+      const fallbackChance = (source.coinValue / target.coinValue) * 0.95 * 100;
+      return Math.min(80, Math.max(0.01, fallbackChance));
+    }
     return computeUpgradeChance({
       sourceValue: source.coinValue,
       targetValue: target.coinValue,
@@ -155,22 +159,22 @@ export default function UpgraderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 pb-44 sm:pb-32">
+    <div className="min-h-screen bg-slate-950 text-slate-200 pb-[calc(120px+env(safe-area-inset-bottom))] sm:pb-32">
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex flex-col min-w-0">
-            <h1 className="text-xl font-black uppercase tracking-tighter text-white">Upgrader</h1>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">High Risk, High Reward</p>
+            <h1 className="text-lg sm:text-xl font-black uppercase tracking-tighter text-white">Upgrader</h1>
+            <p className="hidden sm:block text-[10px] text-slate-500 font-bold uppercase tracking-widest">High Risk, High Reward</p>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-800/80 px-3 sm:px-4 py-2 rounded-full border border-slate-700 shadow-inner">
-            <Coins className="w-4 h-4 text-amber-400" />
-            <span className="font-mono font-bold text-slate-100 text-sm sm:text-base">{Math.round(Number(user?.balance ?? 0)).toLocaleString()}</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-800/70 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-slate-700/80 shadow-inner">
+            <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+            <span className="font-mono font-bold text-slate-100 text-xs sm:text-base">{Math.round(Number(user?.balance ?? 0)).toLocaleString()}</span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {error && (
           <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{error}</div>
         )}
@@ -181,9 +185,9 @@ export default function UpgraderPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
           <div className="lg:col-span-5 space-y-6">
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6">
+            <div className="bg-slate-900/35 border border-slate-800/50 rounded-2xl p-3 sm:p-6">
               <UpgraderSourcePanel
                 items={realInventoryItems}
                 selectedId={source?.id || null}
@@ -202,7 +206,7 @@ export default function UpgraderPage() {
           </div>
 
           <div className="lg:col-span-6 space-y-6">
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6">
+            <div className="bg-slate-900/35 border border-slate-800/50 rounded-2xl p-3 sm:p-6">
               <UpgraderTargetPanel
                 items={filteredTargets}
                 selectedId={target?.id || null}
@@ -220,6 +224,7 @@ export default function UpgraderPage() {
         onUpgrade={handleUpgrade}
         disabled={realInventoryItems.length === 0 || !settings?.enabled || isSubmitting}
         chanceOverride={chance}
+        settings={settings}
       />
 
       <UpgraderResultModal

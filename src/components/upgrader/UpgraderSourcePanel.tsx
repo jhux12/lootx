@@ -16,6 +16,8 @@ export const UpgraderSourcePanel: React.FC<UpgraderSourcePanelProps> = ({
   onSelect,
   loading = false,
 }) => {
+  const featuredMode = items.length > 0 && items.length <= 2;
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -27,13 +29,15 @@ export const UpgraderSourcePanel: React.FC<UpgraderSourcePanelProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-200">Your Inventory</h3>
-        <span className="text-xs text-slate-400 uppercase tracking-wider">{items.length} Items</span>
+        <h3 className="text-base sm:text-lg font-semibold text-slate-200">Your Inventory</h3>
+        <span className="text-[11px] text-slate-400 uppercase tracking-wider">{items.length} Items</span>
       </div>
-      
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+
+      <div
+        className={`grid ${featuredMode ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 md:grid-cols-3'} gap-3 max-h-[520px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar`}
+      >
         {items.map((item) => {
           const isSelected = selectedId === item.id;
           const isDisabled = item.locked || item.shipping;
@@ -45,16 +49,17 @@ export const UpgraderSourcePanel: React.FC<UpgraderSourcePanelProps> = ({
               whileTap={!isDisabled ? { scale: 0.98 } : {}}
               onClick={() => !isDisabled && onSelect(item)}
               className={`
-                relative group cursor-pointer rounded-xl border p-2 transition-all duration-200
-                ${isSelected 
-                  ? 'bg-emerald-500/10 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
-                  : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'}
+                relative group cursor-pointer rounded-xl border transition-all duration-200
+                ${featuredMode ? 'p-3' : 'p-2'}
+                ${isSelected
+                  ? 'bg-emerald-500/10 border-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.24)]'
+                  : 'bg-slate-900/30 border-slate-800/60 hover:border-slate-700'}
                 ${isDisabled ? 'opacity-50 cursor-not-allowed grayscale' : ''}
               `}
             >
-              <div className="aspect-square rounded-lg bg-slate-800/50 overflow-hidden mb-2 relative">
-                <img 
-                  src={item.imageUrl} 
+              <div className={`rounded-lg bg-slate-800/45 overflow-hidden mb-2 relative ${featuredMode ? 'aspect-[1.2/1]' : 'aspect-square'}`}>
+                <img
+                  src={item.imageUrl}
                   alt={item.name}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
@@ -76,13 +81,13 @@ export const UpgraderSourcePanel: React.FC<UpgraderSourcePanelProps> = ({
                   <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${getRarityColor(item.rarity)}`}>
                     {item.rarity}
                   </span>
-                  <span className="text-xs font-mono text-emerald-400">{Math.round(item.coinValue).toLocaleString()} coins</span>
+                  <span className="text-xs font-mono text-emerald-300">{Math.round(item.coinValue).toLocaleString()} coins</span>
                 </div>
                 <p className="text-xs font-medium text-slate-300 truncate leading-tight">{item.name}</p>
               </div>
 
               {isSelected && (
-                <div className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+                <div className="absolute -top-2 -right-1.5 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-lg">
                   SELECTED
                 </div>
               )}

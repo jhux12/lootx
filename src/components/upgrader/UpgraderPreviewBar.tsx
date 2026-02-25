@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { InventoryItem, Item } from './upgraderTypes';
 import { AlertCircle, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
+import { UpgraderSettings } from '../../utils/upgrader';
 
 interface UpgraderPreviewBarProps {
   source: InventoryItem | null;
@@ -9,7 +10,13 @@ interface UpgraderPreviewBarProps {
   onUpgrade: () => void;
   disabled?: boolean;
   chanceOverride?: number;
+  settings?: UpgraderSettings | null;
 }
+
+const toPercent = (value: number, fallback: number) => {
+  if (!Number.isFinite(value)) return fallback;
+  return value <= 1 ? value * 100 : value;
+};
 
 export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
   source,
@@ -17,80 +24,94 @@ export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
   onUpgrade,
   disabled = false,
   chanceOverride,
+  settings,
 }) => {
-  const calculateChance = () => {
-    if (!source || !target) return 0;
-    // Mock chance calculation: (source / target) * 0.95 (edge)
-    const rawChance = (source.coinValue / target.coinValue) * 0.95 * 100;
-    return Math.min(Math.max(rawChance, 0.01), 80).toFixed(2);
-  };
+  const [isScrolling, setIsScrolling] = useState(false);
 
-  const chance = typeof chanceOverride === 'number' ? chanceOverride.toFixed(2) : calculateChance();
-  const isValid = source && target && source.coinValue < target.coinValue;
-  
-  const warnings = [];
-  if (source && target && source.coinValue >= target.coinValue) {
-    warnings.push("Target must be higher value than source.");
-  }
-  if (!source) warnings.push("Select a source item.");
-  if (!target) warnings.push("Select a target item.");
+  useEffect(() => {
+    let timeoutId: number | undefined;
+    const onScroll = () => {
+      const nearBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight - 120;
+      if (nearBottom) {
+        setIsScrolling(false);
+        return;
+      }
+      setIsScrolling(true);
+      window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => setIsScrolling(false), 250);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  const chanceText = useMemo(() => {
+    if (!source || !target) return '—';
+
+    if (typeof chanceOverride === 'number') {
+      return `${Math.max(0, chanceOverride).toFixed(2)}%`;
+    }
+
+    const edge = settings?.edgeMultiplier ?? 0.95;
+    const minChance = toPercent(settings?.minChance ?? 0.01, 0.01);
+    const maxChance = toPercent(settings?.maxChance ?? 80, 80);
+    const rawChance = ((source.coinValue / target.coinValue) * edge) * 100;
+    const chance = Math.min(maxChance, Math.max(minChance, rawChance));
+
+    return `${chance.toFixed(2)}%`;
+  }, [chanceOverride, settings, source, target]);
+
+  const isValid = Boolean(source && target && source.coinValue < target.coinValue);
+  const warning = source && target && source.coinValue >= target.coinValue ? 'Target must be higher value' : null;
+  const sourceLabel = source ? `${source.name} (${Math.round(source.coinValue).toLocaleString()})` : 'Select source';
+  const targetLabel = target ? `${target.name} (${Math.round(target.coinValue).toLocaleString()})` : 'Select target';
 
   return (
-    <div className="fixed bottom-[70px] sm:bottom-0 left-0 right-0 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800 p-4 z-40">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-6">
-          <div className="hidden sm:flex flex-col">
-            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Upgrade Chance</span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-black text-white">{chance}%</span>
-              <span className="text-xs text-slate-400 font-medium">ESTIMATED</span>
-            </div>
+    <div
+      className="fixed left-0 right-0 z-40 px-2 sm:px-4"
+      style={{ bottom: 'calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom))' }}
+    >
+      <div className="max-w-7xl mx-auto rounded-xl border border-slate-800/70 bg-slate-950/90 backdrop-blur-xl shadow-lg">
+        <div className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 transition-all duration-200 ${isScrolling ? 'py-2' : 'py-2.5 sm:py-3'}`}>
+          <div className="min-w-[76px] sm:min-w-[88px]">
+            <p className="text-[9px] uppercase tracking-wider text-slate-500 font-bold">Chance</p>
+            <p className="text-base sm:text-lg font-black text-white leading-none">{chanceText}</p>
           </div>
 
-          <div className="h-10 w-[1px] bg-slate-800 hidden md:block" />
-
-          <div className="flex flex-col gap-1">
-            {warnings.length > 0 ? (
-              <div className="flex items-center gap-2 text-amber-500">
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-xs font-medium">{warnings[0]}</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold">From</span>
-                  <span className="text-sm font-semibold text-slate-200 truncate max-w-[120px]">{source?.name}</span>
-                </div>
-                <div className="text-slate-600">→</div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold">To</span>
-                  <span className="text-sm font-semibold text-slate-200 truncate max-w-[120px]">{target?.name}</span>
-                </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] sm:text-xs text-slate-300 truncate font-medium">
+              {sourceLabel} <span className="text-slate-500">→</span> {targetLabel}
+            </p>
+            {!isScrolling && warning && (
+              <div className="mt-0.5 inline-flex items-center gap-1 text-amber-400">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span className="text-[10px] sm:text-xs font-medium truncate">{warning}</span>
               </div>
             )}
           </div>
-        </div>
 
-        <motion.button
-          whileHover={!disabled && isValid ? { scale: 1.02, boxShadow: '0 0 20px rgba(99,102,241,0.4)' } : {}}
-          whileTap={!disabled && isValid ? { scale: 0.98 } : {}}
-          disabled={disabled || !isValid}
-          onClick={onUpgrade}
-          className={`
-            relative overflow-hidden group px-12 py-4 rounded-xl font-black text-lg uppercase tracking-wider transition-all duration-200
-            ${!isValid || disabled 
-              ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
-              : 'bg-indigo-600 text-white hover:bg-indigo-500'}
-          `}
-        >
-          <div className="relative z-10 flex items-center gap-2">
-            <Zap className={`w-5 h-5 ${isValid ? 'fill-current' : ''}`} />
-            Upgrade Now
-          </div>
-          {isValid && !disabled && (
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
-          )}
-        </motion.button>
+          <motion.button
+            whileHover={!disabled && isValid ? { scale: 1.02, boxShadow: '0 0 20px rgba(99,102,241,0.28)' } : {}}
+            whileTap={!disabled && isValid ? { scale: 0.98 } : {}}
+            disabled={disabled || !isValid}
+            onClick={onUpgrade}
+            className={`
+              relative overflow-hidden group rounded-lg font-black uppercase tracking-wide transition-all duration-200 shrink-0
+              ${isScrolling ? 'px-4 py-2 text-xs' : 'px-5 sm:px-6 py-2.5 text-xs sm:text-sm'}
+              ${!isValid || disabled
+                ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-500'}
+            `}
+          >
+            <div className="relative z-10 flex items-center gap-1.5">
+              <Zap className={`w-4 h-4 ${isValid ? 'fill-current' : ''}`} />
+              Upgrade
+            </div>
+          </motion.button>
+        </div>
       </div>
     </div>
   );
