@@ -24,6 +24,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const controls = useAnimation();
 
   const spinRunIdRef = useRef(0);
+  const resultTimeoutRef = useRef<number | null>(null);
   const size = 200;
   const strokeWidth = 12;
   const radius = (size - strokeWidth) / 2;
@@ -35,12 +36,23 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   useEffect(() => {
     if (!isSpinning) {
       spinRunIdRef.current += 1;
+      if (resultTimeoutRef.current) {
+        window.clearTimeout(resultTimeoutRef.current);
+        resultTimeoutRef.current = null;
+      }
       void controls.stop();
+      controls.set({ rotate: 0 });
       return;
     }
 
     if (spinMode === 'indeterminate') {
       spinRunIdRef.current += 1;
+      if (resultTimeoutRef.current) {
+        window.clearTimeout(resultTimeoutRef.current);
+        resultTimeoutRef.current = null;
+      }
+      void controls.stop();
+      controls.set({ rotate: 0 });
       void controls.start({
         rotate: [0, 360],
         transition: {
@@ -52,6 +64,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       return;
     }
 
+    void controls.stop();
+    controls.set({ rotate: 0 });
     void startResolveSpin();
   }, [chance, controls, forcedWin, isSpinning, spinMode]);
 
@@ -82,11 +96,20 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       }
     });
 
-    window.setTimeout(() => {
+    resultTimeoutRef.current = window.setTimeout(() => {
       if (spinRunIdRef.current !== spinRunId) return;
+      resultTimeoutRef.current = null;
       onFinish(isWin);
     }, SPIN_RESULT_DELAY_MS);
   };
+
+
+  useEffect(() => () => {
+    if (resultTimeoutRef.current) {
+      window.clearTimeout(resultTimeoutRef.current);
+      resultTimeoutRef.current = null;
+    }
+  }, []);
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
