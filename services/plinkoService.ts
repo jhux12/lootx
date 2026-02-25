@@ -29,15 +29,9 @@ export const listPlinkoPoolItems = async (poolId: string) => {
 };
 
 export const attemptPlinko = async (payload: { bet: number; clientSeed?: string }) => {
-  const response = await authedFetch('/api/attempt-plinko', {
+  const response = await authedFetch<any>('/api/attempt-plinko', {
     method: 'POST',
     body: JSON.stringify(payload)
   });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data?.message || 'Plinko attempt failed.');
-  }
-
-  return response.json();
+  return response;
 };

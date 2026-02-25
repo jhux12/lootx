@@ -30,15 +30,9 @@ export const getUpgraderTargets = async () => {
 };
 
 export const attemptUpgrade = async (payload: { sourceItemInstanceId: string; targetItemId: string; clientSeed?: string }) => {
-  const response = await authedFetch('/api/attempt-upgrade', {
+  const response = await authedFetch<any>('/api/attempt-upgrade', {
     method: 'POST',
     body: JSON.stringify(payload)
   });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data?.message || 'Upgrade attempt failed.');
-  }
-
-  return response.json();
+  return response;
 };
