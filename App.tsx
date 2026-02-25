@@ -38,7 +38,7 @@ import { CookieConsentToast } from './components/CookieConsentToast';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
-import { UpgraderPage } from './components/UpgraderPage';
+import { PlinkoPage } from './components/PlinkoPage';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
   ShowcaseRow,
@@ -290,9 +290,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         </div>
       )}
 
-      {view.type === 'UPGRADER' && (
-        <div className="w-full pt-4">
-          <UpgraderPage />
+      {view.type === 'PLINKO' && (
+        <div className="w-full pt-2 sm:pt-4">
+          <PlinkoPage />
         </div>
       )}
 

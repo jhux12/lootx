@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Backpack, Box, Crown, Sparkles } from 'lucide-react';
+import { Backpack, Box, Crown, Gamepad2 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
 type NavItem = {
-  id: 'MENU' | 'BOXES' | 'UPGRADER' | 'INVENTORY' | 'LEADERBOARD';
+  id: 'MENU' | 'BOXES' | 'PLINKO' | 'INVENTORY' | 'LEADERBOARD';
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
   requiresAuth?: boolean;
@@ -13,7 +13,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { id: 'MENU', label: 'Menu' },
   { id: 'BOXES', label: 'Boxes', icon: Box },
-  { id: 'UPGRADER', label: 'Upgrader', icon: Sparkles },
+  { id: 'PLINKO', label: 'Plinko', icon: Gamepad2 },
   { id: 'INVENTORY', label: 'Inventory', icon: Backpack, requiresAuth: true },
   { id: 'LEADERBOARD', label: 'Ladder', icon: Crown }
 ];
