@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Item } from './upgraderTypes';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { X, RotateCcw, Home, Skull, Check } from 'lucide-react';
 import { UpgraderSpinner } from './UpgraderSpinner';
 import { CoinAmount } from '../../../components/CoinAmount';
@@ -32,6 +32,26 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
     if (!isOpen) return;
     setDisplayStatus(status === 'win' ? 'settling-win' : 'settling-lose');
   }, [isOpen, status, spinId]);
+
+  const confettiPieces = useMemo(
+    () =>
+      Array.from({ length: 18 }, (_, index) => {
+        const angle = (360 / 18) * index + Math.random() * 12 - 6;
+        const distance = 58 + Math.random() * 70;
+        const size = 5 + Math.random() * 5;
+        const delay = Math.random() * 0.15;
+
+        return {
+          id: `${spinId}-${index}`,
+          angle,
+          distance,
+          size,
+          delay,
+          duration: 0.62 + Math.random() * 0.24
+        };
+      }),
+    [spinId]
+  );
 
   if (!isOpen) return null;
 
@@ -99,17 +119,54 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
 
               <div className="overflow-y-auto p-5 sm:p-6">
                 {isWin && target ? (
-                  <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-emerald-400/20 bg-black/25 p-4 text-center">
+                  <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-emerald-400/20 bg-black/25 p-4 text-center overflow-hidden">
+                    <AnimatePresence>
+                      <motion.div
+                        key={`ring-${spinId}`}
+                        className="pointer-events-none absolute inset-0 m-auto h-28 w-28 rounded-full border border-emerald-300/60"
+                        initial={{ scale: 0.8, opacity: 0.6 }}
+                        animate={{ scale: 1.8, opacity: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.6, ease: 'easeOut' }}
+                      />
+                    </AnimatePresence>
+
                     <div className="absolute inset-0 rounded-2xl opacity-30 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.5)_0%,transparent_72%)]" />
-                    <img src={target.imageUrl} alt={target.name} className="relative z-10 mb-3 h-32 w-32 object-contain" />
-                    <p className="relative z-10 text-xs font-bold text-emerald-400 uppercase tracking-wider">{target.rarity}</p>
-                    <h4 className="relative z-10 text-lg font-bold text-white truncate max-w-full">{target.name}</h4>
-                    <CoinAmount
-                      amount={Math.round(target.coinValue)}
-                      formatOptions={{ maximumFractionDigits: 0 }}
-                      className="relative z-10 mt-2 font-semibold text-gray-200"
-                      iconClassName="w-4 h-4"
-                    />
+
+                    <div className="pointer-events-none absolute inset-0">
+                      {confettiPieces.map((piece) => (
+                        <motion.div
+                          key={piece.id}
+                          className="absolute left-1/2 top-1/3 rounded-sm bg-emerald-300"
+                          style={{ width: piece.size, height: piece.size * 1.8 }}
+                          initial={{ x: 0, y: 0, opacity: 0, rotate: 0 }}
+                          animate={{
+                            x: Math.cos((piece.angle * Math.PI) / 180) * piece.distance,
+                            y: Math.sin((piece.angle * Math.PI) / 180) * piece.distance + 36,
+                            opacity: [0, 1, 0],
+                            rotate: piece.angle > 180 ? -250 : 250
+                          }}
+                          transition={{ duration: piece.duration, delay: piece.delay, ease: 'easeOut' }}
+                        />
+                      ))}
+                    </div>
+
+                    <motion.div
+                      initial={{ scale: 0.6, opacity: 0.4 }}
+                      animate={{ scale: [0.6, 1.1, 1], opacity: 1 }}
+                      transition={{ duration: 0.6, times: [0, 0.6, 1], type: 'spring', stiffness: 260, damping: 18 }}
+                      className="relative z-10 flex flex-col items-center"
+                    >
+                      <img src={target.imageUrl} alt={target.name} className="mb-3 h-28 w-28 object-contain sm:h-32 sm:w-32 drop-shadow-[0_0_24px_rgba(52,211,153,0.5)]" />
+                      <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{target.rarity}</p>
+                      <h4 className="text-lg font-bold text-white truncate max-w-full">{target.name}</h4>
+                      <CoinAmount
+                        amount={Math.round(target.coinValue)}
+                        formatOptions={{ maximumFractionDigits: 0 }}
+                        className="mt-2 font-semibold text-gray-200"
+                        iconClassName="w-4 h-4"
+                      />
+                    </motion.div>
                   </div>
                 ) : (
                   <div className="mx-auto max-w-sm rounded-2xl border border-red-500/20 bg-black/25 p-6 text-center">
