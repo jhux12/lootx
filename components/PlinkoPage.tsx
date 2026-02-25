@@ -172,6 +172,14 @@ export const PlinkoPage: React.FC = () => {
   const rows = board?.rows ?? 16;
   const boardWidth = rows * PEG_SPACING + 80;
   const boardHeight = rows * PEG_SPACING + 150;
+  const slotLaneWidth = (rows + 1) * PEG_SPACING;
+
+  const formatCompactValue = (value: number) => {
+    if (!Number.isFinite(value) || value <= 0) return '0';
+    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+    return `${Math.round(value)}`;
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl p-3 sm:p-6">
@@ -217,28 +225,26 @@ export const PlinkoPage: React.FC = () => {
                 />
               )}
 
-              <div className="absolute inset-x-0 bottom-0 h-[88px]">
-                {board?.slots.map((slot, index) => {
-                  const preview = slotPrizes[index];
-                  const isHit = index === result?.slotIndex;
-                  return (
-                    <div
-                      key={`${slot.poolId}-${index}`}
-                      className={`absolute -translate-x-1/2 rounded-lg border p-1 text-center ${isHit ? 'border-emerald-300 bg-emerald-500/20' : 'border-emerald-500/40 bg-emerald-500/10'}`}
-                      style={{ left: `calc(50% + ${(index - rows / 2) * PEG_SPACING}px)`, width: '64px' }}
-                    >
-                      <div className="h-10 w-full overflow-hidden rounded-md bg-black/30">
-                        {preview?.imageUrl ? (
-                          <img src={preview.imageUrl} alt={preview.name} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-[9px] text-gray-400">No item</div>
-                        )}
+              <div
+                className="absolute bottom-0 left-1/2 -translate-x-1/2"
+                style={{ width: `${slotLaneWidth}px` }}
+              >
+                <div className="grid" style={{ gridTemplateColumns: `repeat(${rows + 1}, minmax(0, 1fr))` }}>
+                  {board?.slots.map((slot, index) => {
+                    const preview = slotPrizes[index];
+                    const isHit = index === result?.slotIndex;
+                    return (
+                      <div key={`${slot.poolId}-${index}`} className="flex justify-center">
+                        <div
+                          className={`w-[20px] rounded-md border px-0.5 py-1 text-center ${isHit ? 'border-emerald-300 bg-emerald-500/25' : 'border-emerald-500/40 bg-emerald-500/10'}`}
+                        >
+                          <div className="truncate text-[8px] font-semibold leading-tight text-white">{slot.label.slice(0, 1)}</div>
+                          <div className="mt-0.5 truncate text-[8px] leading-tight text-emerald-200">{formatCompactValue(preview?.coinValue ?? 0)}</div>
+                        </div>
                       </div>
-                      <div className="mt-1 truncate text-[9px] font-semibold text-white">{preview?.name ?? slot.label}</div>
-                      <div className="text-[9px] text-emerald-200">{Math.round(preview?.coinValue ?? 0).toLocaleString()}</div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
