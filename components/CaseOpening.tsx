@@ -141,6 +141,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [rewardResolved, setRewardResolved] = useState(false);
   const [selectedCaseItem, setSelectedCaseItem] = useState<CaseItem | null>(null);
   const [spinFeedbackMessage, setSpinFeedbackMessage] = useState<string | null>(null);
+  const [showXpUseAction, setShowXpUseAction] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -177,6 +178,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const xpRingRadius = 14;
   const xpRingCircumference = 2 * Math.PI * xpRingRadius;
   const xpRingOffset = xpRingCircumference * (1 - xpProgress);
+  const isXpReadyToOpen = canOpenWithXp && xpProgress >= 1;
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -760,6 +762,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsBoxPreviewFading(false);
   }, [boxId]);
 
+  useEffect(() => {
+    if (!isXpReadyToOpen || !showXpOpenUi) {
+      setShowXpUseAction(false);
+    }
+  }, [isXpReadyToOpen, showXpOpenUi]);
+
   const finishSpin = (item: CaseItem) => {
     setIsSpinning(false);
     setIsBoxPreviewVisible(true);
@@ -966,6 +974,58 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
             {/* Spinner Window */}
             <div className="relative h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+                {showXpOpenUi && (
+                  <div
+                    className="absolute left-2 top-2 z-30 flex items-center gap-1.5 sm:left-3 sm:top-3"
+                    title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isXpReadyToOpen) return;
+                        setShowXpUseAction((prev) => !prev);
+                      }}
+                      disabled={!isXpReadyToOpen || isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
+                      className="relative h-8 w-8 rounded-full border border-cyan-300/35 bg-[#0f1521]/85 backdrop-blur-sm transition-all hover:border-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-70"
+                      aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
+                    >
+                      <svg className="absolute inset-0 -rotate-90" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                        <circle cx="16" cy="16" r={xpRingRadius} fill="none" stroke="rgba(148,163,184,0.28)" strokeWidth="2.5" />
+                        <circle
+                          cx="16"
+                          cy="16"
+                          r={xpRingRadius}
+                          fill="none"
+                          stroke="rgba(34,211,238,0.95)"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeDasharray={xpRingCircumference}
+                          strokeDashoffset={xpRingOffset}
+                          className="transition-all duration-300 ease-out"
+                        />
+                      </svg>
+                      <span className="absolute inset-[5px] rounded-full bg-[#111827] border border-cyan-300/25 flex items-center justify-center">
+                        <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-3.5 w-3.5 object-contain" />
+                      </span>
+                    </button>
+                    <span className="text-[10px] font-semibold text-cyan-100/85 whitespace-nowrap">
+                      {currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}
+                    </span>
+                    {showXpUseAction && isXpReadyToOpen && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowXpUseAction(false);
+                          void handleSpin({ paymentMethod: 'xp' });
+                        }}
+                        disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
+                        className="rounded-md border border-cyan-300/30 bg-cyan-400/10 px-2 py-1 text-[10px] sm:text-xs font-semibold text-cyan-100 transition-colors hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Use XP
+                      </button>
+                    )}
+                  </div>
+                )}
                 {isBoxPreviewVisible && (
                   <div
                     className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
@@ -1076,46 +1136,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       )}
                     </span>
                  </button>
-                 {showXpOpenUi && (
-                   <div className="absolute right-2 bottom-2 sm:right-3 sm:bottom-3 rounded-xl border border-cyan-300/20 bg-[#0f1521]/80 px-2 py-1.5 backdrop-blur-md shadow-[0_0_0_1px_rgba(34,211,238,0.12)]">
-                     <div
-                       className="flex items-center gap-2"
-                       title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
-                     >
-                       <div className="relative h-8 w-8 shrink-0">
-                         <svg className="absolute inset-0 -rotate-90" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
-                           <circle cx="16" cy="16" r={xpRingRadius} fill="none" stroke="rgba(148,163,184,0.28)" strokeWidth="2.5" />
-                           <circle
-                             cx="16"
-                             cy="16"
-                             r={xpRingRadius}
-                             fill="none"
-                             stroke="rgba(34,211,238,0.95)"
-                             strokeWidth="2.5"
-                             strokeLinecap="round"
-                             strokeDasharray={xpRingCircumference}
-                             strokeDashoffset={xpRingOffset}
-                             className="transition-all duration-300 ease-out"
-                           />
-                         </svg>
-                         <div className="absolute inset-[5px] rounded-full bg-[#111827] border border-cyan-300/25 flex items-center justify-center">
-                           <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-3.5 w-3.5 object-contain" />
-                         </div>
-                       </div>
-                       <div className="text-[10px] text-cyan-100/85 whitespace-nowrap">
-                         Open with XP: {currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}
-                       </div>
-                     </div>
-                     <button
-                       type="button"
-                       onClick={() => handleSpin({ paymentMethod: 'xp' })}
-                       disabled={!canOpenWithXp || isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
-                       className="mt-1 w-full rounded-md border border-cyan-300/30 bg-cyan-400/10 px-2 py-1 text-[10px] sm:text-xs font-semibold text-cyan-100 transition-colors hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-45"
-                     >
-                       Use XP
-                     </button>
-                   </div>
-                 )}
                  {!isFree && (
                    <button
                      onClick={handleTryFree}
