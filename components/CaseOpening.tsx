@@ -390,8 +390,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
   }, [isAuthenticated, openAuthModal]);
 
-  const animateSpin = (duration: number, onComplete: () => void) => {
-    playSound('spin-start');
+  const animateSpin = (duration: number, onComplete: () => void, options?: { playStartSound?: boolean }) => {
+    const shouldPlayStartSound = options?.playStartSound ?? true;
+    if (shouldPlayStartSound) {
+      playSound('spin-start');
+    }
 
     // Reset scroll position immediately
     if (scrollContainerRef.current) {
@@ -699,7 +702,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 animateSpin(4000, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
-                });
+                }, { playStartSound: false });
             }, 1000);
         });
 
