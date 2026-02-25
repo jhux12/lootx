@@ -29,7 +29,10 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('settling-lose');
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setDisplayStatus('settling-lose');
+      return;
+    }
     setDisplayStatus(status === 'win' ? 'settling-win' : 'settling-lose');
   }, [isOpen, status, spinId]);
 
