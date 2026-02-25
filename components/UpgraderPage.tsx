@@ -9,6 +9,8 @@ import { UpgradeResultModal } from './upgrader/UpgradeResultModal';
 import { UpgradeSpinWheel } from './upgrader/UpgradeSpinWheel';
 import { computeUpgradeChance, getItemCoinValue, UpgraderSettings, UpgraderTarget } from '../utils/upgrader';
 
+const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
 export const UpgraderPage: React.FC = () => {
   const { inventory, isAuthenticated, openAuthModal } = useGame();
   const [settings, setSettings] = useState<UpgraderSettings | null>(null);
@@ -16,7 +18,8 @@ export const UpgraderPage: React.FC = () => {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSpinning, setIsSpinning] = useState(false);
+  const [spinPhase, setSpinPhase] = useState<'idle' | 'loading' | 'settling'>('idle');
+  const [markerAngle, setMarkerAngle] = useState(0);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<null | { win: boolean; roll: number; chance: number; awardedItem?: { name: string; imageUrl: string } }>(null);
@@ -55,20 +58,33 @@ export const UpgraderPage: React.FC = () => {
     if (!sourceItem || !targetItem || !settings) return;
     setError(null);
     setIsSubmitting(true);
-    setIsSpinning(true);
+    setSpinPhase('loading');
+
     try {
-      const minSpinDelay = new Promise((resolve) => window.setTimeout(resolve, 2200));
-      const payloadPromise = attemptUpgrade({ sourceItemInstanceId: sourceItem.instanceId, targetItemId: targetItem.id, clientSeed: `${Date.now()}` });
-      const [payload] = await Promise.all([payloadPromise, minSpinDelay]);
+      const payload = await attemptUpgrade({
+        sourceItemInstanceId: sourceItem.instanceId,
+        targetItemId: targetItem.id,
+        clientSeed: `${Date.now()}`
+      });
+
+      const currentBase = ((markerAngle % 360) + 360) % 360;
+      const settleAngle = currentBase + 1080 + payload.roll * 360;
+
+      setSpinPhase('settling');
+      setMarkerAngle(settleAngle);
+      await sleep(1450);
+
+      setMarkerAngle(((settleAngle % 360) + 360) % 360);
+      setSpinPhase('idle');
       setResult(payload);
       setCooldownUntil(Date.now() + settings.cooldownMs);
       setSelectedSourceId(null);
       setSelectedTargetId(null);
     } catch (attemptError) {
+      setSpinPhase('idle');
       setError(attemptError instanceof Error ? attemptError.message : 'Failed to upgrade item.');
     } finally {
       setIsSubmitting(false);
-      setIsSpinning(false);
     }
   };
 
@@ -85,7 +101,7 @@ export const UpgraderPage: React.FC = () => {
         <TargetPicker targets={targets} selectedId={selectedTargetId} onSelect={setSelectedTargetId} filters={filters} onFilterChange={setFilters} />
       </div>
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <UpgradeSpinWheel chance={chance} spinning={isSpinning} target={targetItem} />
+        <UpgradeSpinWheel chance={chance} phase={spinPhase} markerAngle={markerAngle} target={targetItem} />
         <ChancePreview chance={chance} sourceName={sourceItem?.name} targetName={targetItem?.name} />
         <button disabled={isDisabled} onClick={onAttempt} title={isCooldown ? 'Cooldown active' : ''} className="h-14 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 px-8 text-lg font-black text-white disabled:cursor-not-allowed disabled:opacity-50 xl:col-span-2">
           {isSubmitting ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Rolling…</span> : 'Upgrade Now'}
