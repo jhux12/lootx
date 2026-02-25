@@ -11,9 +11,7 @@ interface SoundContextType {
 
 const SoundContext = createContext<SoundContextType | undefined>(undefined);
 
-const SOUND_URLS: Record<SoundType, string> = {
-  click: spinSoundUrl,
-  hover: spinSoundUrl,
+const SOUND_URLS: Partial<Record<SoundType, string>> = {
   'spin-start': spinSoundUrl,
   'spin-tick': spinSoundUrl,
   'win-common': spinSoundUrl,
@@ -32,15 +30,15 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [muted, setMuted] = useState(false);
   const audioRefs = useRef<Partial<Record<SoundType, HTMLAudioElement>>>({});
   const didInitRef = useRef(false);
-  const hoverThrottleRef = useRef(0);
 
   const initializeAudio = useCallback(() => {
     if (didInitRef.current || typeof window === 'undefined') return;
     didInitRef.current = true;
 
-    (Object.keys(SOUND_URLS) as SoundType[]).forEach((key) => {
+    (Object.entries(SOUND_URLS) as [SoundType, string][]).forEach(([key, url]) => {
+      if (!url) return;
       try {
-        const audio = new Audio(SOUND_URLS[key]);
+        const audio = new Audio(url);
         audio.preload = 'none';
         audio.volume = SOUND_VOLUMES[key] ?? 0.4;
         audioRefs.current[key] = audio;
@@ -64,13 +62,12 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const playSound = useCallback((type: SoundType) => {
     if (muted) return;
+
+    // Intentionally disable noisy UI click/hover sounds.
+    if (type === 'click' || type === 'hover') return;
+
     initializeAudio();
 
-    if (type === 'hover') {
-      const now = Date.now();
-      if (now - hoverThrottleRef.current < 250) return;
-      hoverThrottleRef.current = now;
-    }
 
     const audio = audioRefs.current[type];
     if (!audio) return;
