@@ -11,6 +11,7 @@ export type UpgraderSettings = {
   allowFromFreeBox: boolean;
   allowFromPromo: boolean;
   requireTargetHigherValue: boolean;
+  sourceItemIdsEnabled?: string[];
   categoriesEnabled?: string[];
   raritiesEnabled?: string[];
   rarityBonusEnabled?: boolean;
@@ -46,6 +47,7 @@ export const DEFAULT_UPGRADER_SETTINGS: UpgraderSettings = {
   allowFromFreeBox: false,
   allowFromPromo: false,
   requireTargetHigherValue: true,
+  sourceItemIdsEnabled: [],
   categoriesEnabled: [],
   raritiesEnabled: [],
   rarityBonusEnabled: false,
@@ -71,6 +73,7 @@ export const normalizeUpgraderSettings = (value: Partial<UpgraderSettings> | nul
   allowFromFreeBox: value?.allowFromFreeBox === true,
   allowFromPromo: value?.allowFromPromo === true,
   requireTargetHigherValue: value?.requireTargetHigherValue !== false,
+  sourceItemIdsEnabled: Array.isArray(value?.sourceItemIdsEnabled) ? value?.sourceItemIdsEnabled.map((entry) => String(entry).trim()).filter(Boolean) : [],
   categoriesEnabled: Array.isArray(value?.categoriesEnabled) ? value?.categoriesEnabled.filter(Boolean) : [],
   raritiesEnabled: Array.isArray(value?.raritiesEnabled) ? value?.raritiesEnabled.filter(Boolean) : [],
   rarityBonusEnabled: value?.rarityBonusEnabled === true,

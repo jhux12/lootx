@@ -8,6 +8,7 @@ interface UpgraderPreviewBarProps {
   target: Item | null;
   onUpgrade: () => void;
   disabled?: boolean;
+  chanceOverride?: number;
 }
 
 export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
@@ -15,6 +16,7 @@ export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
   target,
   onUpgrade,
   disabled = false,
+  chanceOverride,
 }) => {
   const calculateChance = () => {
     if (!source || !target) return 0;
@@ -23,7 +25,7 @@ export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
     return Math.min(Math.max(rawChance, 0.01), 80).toFixed(2);
   };
 
-  const chance = calculateChance();
+  const chance = typeof chanceOverride === 'number' ? chanceOverride.toFixed(2) : calculateChance();
   const isValid = source && target && source.coinValue < target.coinValue;
   
   const warnings = [];
@@ -34,7 +36,7 @@ export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
   if (!target) warnings.push("Select a target item.");
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800 p-4 z-40">
+    <div className="fixed bottom-[70px] sm:bottom-0 left-0 right-0 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800 p-4 z-40">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-6">
           <div className="hidden sm:flex flex-col">
