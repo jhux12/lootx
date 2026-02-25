@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, Volume2, VolumeX } from 'lucide-react';
+import { BarChart3, Loader2, Settings, Volume2, VolumeX } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { attemptPlinko, getPlinkoBoard, getPlinkoSettings, listPlinkoPoolItems } from '../services/plinkoService';
 import { PlinkoBoard as PlinkoBoardType, PlinkoSettings } from '../utils/plinko';
@@ -144,6 +144,7 @@ const SlotRow: React.FC<{
   landingSlotIndex: number | null;
 }> = ({ board, layout, slotPrizes, resultSlotIndex, landingSlotIndex }) => {
   const centerSlot = Math.floor(layout.slotCount / 2);
+  const compactMode = layout.pegSpacing <= 18;
 
   return (
     <div
@@ -184,8 +185,10 @@ const SlotRow: React.FC<{
               >
                 <div className="absolute inset-x-0 top-0 h-[8px]" style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.26), rgba(255,255,255,0.02))' }} />
                 <div className="pt-3 text-center">
-                  <div className="truncate px-0.5 text-[8px] font-bold uppercase tracking-[0.03em] text-white">{slot.label}</div>
-                  <div className="mt-1 truncate px-0.5 text-[8px] text-gray-200">{preview?.name ?? 'No item'}</div>
+                  <div className="truncate px-0.5 text-[8px] font-bold uppercase tracking-[0.03em] text-white">
+                    {compactMode ? slot.label.charAt(0) : slot.label}
+                  </div>
+                  {!compactMode && <div className="mt-1 truncate px-0.5 text-[8px] text-gray-200">{preview?.name ?? 'No item'}</div>}
                   <div className="mt-1 text-[8px] font-semibold text-emerald-200">{formatCompactValue(preview?.coinValue ?? 0)}</div>
                 </div>
               </div>
@@ -208,9 +211,9 @@ const PlinkoBoard: React.FC<{
   landingSlotIndex: number | null;
 }> = ({ board, layout, ballMotion, isBallVisible, slotPrizes, resultSlotIndex, landingSlotIndex }) => {
   return (
-    <div className="mt-6 pb-1">
-      <div className="mx-auto w-full max-w-[960px] rounded-2xl border border-white/10 bg-[#02060a] p-2 shadow-[0_24px_45px_rgba(0,0,0,0.42)] sm:p-4">
-        <div className="relative mx-auto w-full max-w-[760px]">
+    <div className="relative bg-gray-900">
+      <div className="mx-auto flex h-full w-full max-w-[760px] flex-col px-3 pb-4 pt-4 sm:px-4">
+        <div className="relative w-full">
           <div className="relative w-full" style={{ aspectRatio: `${layout.boardWidth} / ${layout.boardHeight}` }}>
             <PegBoardSvg layout={layout} />
 
@@ -244,8 +247,124 @@ const PlinkoBoard: React.FC<{
   );
 };
 
+const TopNav: React.FC<{ balance: number; onTopUp: () => void }> = ({ balance, onTopUp }) => (
+  <nav className="sticky top-0 z-10 w-full border-b border-white/5 bg-gray-700/95 px-4 shadow-lg backdrop-blur">
+    <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-3">
+      <div className="text-lg font-extrabold text-white">Pullz.gg</div>
+      <div className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold tabular-nums text-white sm:text-base">
+        <span className="mr-1 text-slate-400">$</span>
+        {balance.toFixed(2)}
+      </div>
+      <button
+        type="button"
+        onClick={onTopUp}
+        className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 active:bg-blue-700 sm:text-base"
+      >
+        Add
+      </button>
+    </div>
+  </nav>
+);
+
+const ControlsPanel: React.FC<{
+  bet: number;
+  setBet: (value: number) => void;
+  minBet: number;
+  maxBet: number;
+  isLoading: boolean;
+  canDrop: boolean;
+  onDrop: () => void;
+  soundEnabled: boolean;
+  toggleSound: () => void;
+}> = ({ bet, setBet, minBet, maxBet, isLoading, canDrop, onDrop, soundEnabled, toggleSound }) => {
+  const [mode, setMode] = useState<'manual' | 'auto'>('manual');
+
+  return (
+    <div className="flex flex-col gap-5 bg-slate-700 p-3 lg:max-w-80">
+      <div className="flex gap-1 rounded-full bg-slate-900 p-1">
+        <button
+          type="button"
+          onClick={() => setMode('manual')}
+          className={`flex-1 rounded-full py-2 text-sm font-medium text-white transition ${mode === 'manual' ? 'bg-slate-600' : 'hover:bg-slate-600/70'}`}
+        >
+          Manual
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('auto')}
+          className={`flex-1 rounded-full py-2 text-sm font-medium text-white transition ${mode === 'auto' ? 'bg-slate-600' : 'hover:bg-slate-600/70'}`}
+        >
+          Auto
+        </button>
+      </div>
+
+      <div>
+        <label htmlFor="betAmount" className="text-sm font-medium text-slate-300">Bet Amount</label>
+        <div className="flex">
+          <div className="relative flex-1">
+            <input
+              id="betAmount"
+              value={bet}
+              type="number"
+              min={minBet}
+              max={maxBet}
+              step="1"
+              onChange={(event) => setBet(Number(event.target.value || 0))}
+              className="w-full rounded-l-md border-2 border-slate-600 bg-slate-900 py-2 pl-7 pr-2 text-sm text-white transition-colors hover:cursor-pointer focus:border-slate-500 focus:outline-none"
+            />
+            <div className="absolute left-3 top-2 select-none text-slate-500" aria-hidden="true">$</div>
+          </div>
+          <button type="button" onClick={() => setBet(Math.max(minBet, Math.floor(bet / 2)))} className="bg-slate-600 px-4 font-bold text-white transition-colors hover:bg-slate-500 active:bg-slate-400">1/2</button>
+          <button type="button" onClick={() => setBet(Math.min(maxBet, Math.floor(bet * 2)))} className="relative rounded-r-md bg-slate-600 px-4 text-sm font-bold text-white transition-colors hover:bg-slate-500 active:bg-slate-400">2×</button>
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="riskLevel" className="text-sm font-medium text-slate-300">Risk</label>
+        <select id="riskLevel" defaultValue="MEDIUM" className="mt-1 block w-full rounded-md border-2 border-slate-600 bg-slate-900 py-2 pl-3 pr-8 text-sm text-white focus:border-slate-500 focus:outline-none">
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+        </select>
+      </div>
+
+      <div>
+        <label htmlFor="rowCount" className="text-sm font-medium text-slate-300">Rows</label>
+        <select id="rowCount" defaultValue="16" className="mt-1 block w-full rounded-md border-2 border-slate-600 bg-slate-900 py-2 pl-3 pr-8 text-sm text-white focus:border-slate-500 focus:outline-none">
+          {Array.from({ length: 9 }, (_, index) => 8 + index).map((rowOption) => (
+            <option key={rowOption} value={rowOption}>{rowOption}</option>
+          ))}
+        </select>
+      </div>
+
+      <button
+        onClick={onDrop}
+        disabled={!canDrop || isLoading}
+        className="touch-manipulation rounded-md bg-green-500 py-3 font-semibold text-slate-900 transition-colors hover:bg-green-400 active:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-600 disabled:text-neutral-400"
+      >
+        {isLoading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Dropping…</span> : 'Drop Ball'}
+      </button>
+      {!canDrop && <p className="text-xs text-slate-300">Sign in and use a valid bet range to play.</p>}
+
+      <div className="mt-auto pt-4">
+        <div className="flex items-center gap-2 border-t border-slate-600 pt-3">
+          <button type="button" onClick={toggleSound} className="rounded-full p-2 text-slate-300 transition hover:bg-slate-600 active:bg-slate-500">
+            {soundEnabled ? <Volume2 className="size-5" /> : <VolumeX className="size-5" />}
+          </button>
+          <button type="button" className="rounded-full p-2 text-slate-300 transition hover:bg-slate-600 active:bg-slate-500">
+            <Settings className="size-5" />
+          </button>
+          <button type="button" className="rounded-full p-2 text-slate-300 transition hover:bg-slate-600 active:bg-slate-500">
+            <BarChart3 className="size-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const PlinkoPage: React.FC = () => {
-  const { isAuthenticated, openAuthModal, addInventoryItemFromServer, sellItem, syncBalance } = useGame();
+  const { isAuthenticated, openAuthModal, addInventoryItemFromServer, sellItem, syncBalance, user, setShowTopUpModal } = useGame();
   const [settings, setSettings] = useState<PlinkoSettings | null>(null);
   const [board, setBoard] = useState<PlinkoBoardType | null>(null);
   const [bet, setBet] = useState(100);
@@ -415,17 +534,8 @@ export const PlinkoPage: React.FC = () => {
     }
   };
 
-  const quickBets = useMemo(() => {
-    if (!settings) return [100, 500, 1000, 5000];
-    return [settings.minBet, Math.max(settings.minBet, 500), 1000, Math.min(settings.maxBet, 5000)];
-  }, [settings]);
-
-  if (!isAuthenticated) {
-    return <div className="mx-auto max-w-xl p-6 text-center"><h1 className="text-2xl font-black">Plinko (Items)</h1><p className="mt-2 text-gray-400">Sign in to drop and win real items.</p><button onClick={() => openAuthModal('login')} className="mt-4 rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white">Sign in</button></div>;
-  }
-
   return (
-    <div className="mx-auto w-full max-w-6xl p-2 sm:p-6">
+    <div className="min-h-dvh w-full bg-slate-800 text-white">
       <style>{`
         @keyframes plinkoSlotGlow {
           from { filter: brightness(0.96); }
@@ -455,53 +565,40 @@ export const PlinkoPage: React.FC = () => {
         }
       `}</style>
 
-      <div className="rounded-2xl border border-emerald-500/30 bg-[#071016] p-3 shadow-[0_0_90px_rgba(34,197,94,0.1)] sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-white sm:text-3xl">Plinko (Items)</h1>
-            <p className="text-sm text-gray-400">Arcade-style board with SVG pegs, aligned landing slots, and deterministic path animation.</p>
+      <TopNav balance={Number(user?.coins ?? 0)} onTopUp={() => setShowTopUpModal(true)} />
+
+      <div className="mx-auto mt-5 min-w-[300px] max-w-xl px-3 pb-6 drop-shadow-xl md:mt-8 lg:max-w-7xl lg:px-5">
+        <div className="overflow-hidden rounded-lg border border-white/10 shadow-[0_18px_40px_rgba(0,0,0,0.35)]">
+          <div className="flex flex-col lg:flex-row">
+            <div className="w-full lg:w-[300px] lg:min-w-[280px] lg:max-w-[320px]">
+              <ControlsPanel
+                bet={bet}
+                setBet={setBet}
+                minBet={settings?.minBet ?? 100}
+                maxBet={settings?.maxBet ?? 50000}
+                isLoading={isLoading}
+                canDrop={Boolean(isAuthenticated && settings?.enabled && board && layout && bet >= (settings?.minBet ?? 100) && bet <= (settings?.maxBet ?? 50000))}
+                onDrop={() => { void runDrop(); }}
+                soundEnabled={soundEnabled}
+                toggleSound={() => setSoundEnabled((prev) => !prev)}
+              />
+            </div>
+
+            <div className="min-h-[320px] flex-1">
+              {board && layout && (
+                <PlinkoBoard
+                  board={board}
+                  layout={layout}
+                  ballMotion={ballMotion}
+                  isBallVisible={isBallVisible}
+                  slotPrizes={slotPrizes}
+                  resultSlotIndex={result?.slotIndex ?? null}
+                  landingSlotIndex={landingSlotIndex}
+                />
+              )}
+            </div>
           </div>
-          <button onClick={() => setSoundEnabled((prev) => !prev)} className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-white">
-            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-          </button>
         </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-          {quickBets.map((quickBet) => (
-            <button key={quickBet} onClick={() => setBet(quickBet)} className="rounded-xl border border-white/10 bg-[#0b131c] px-3 py-2 text-sm font-semibold text-gray-100">
-              {quickBet.toLocaleString()}
-            </button>
-          ))}
-          <input
-            type="number"
-            value={bet}
-            onChange={(event) => setBet(Number(event.target.value || 0))}
-            min={settings?.minBet ?? 100}
-            max={settings?.maxBet ?? 50000}
-            className="col-span-2 rounded-xl border border-white/10 bg-[#0b131c] px-3 py-2 text-sm text-white sm:col-span-4 lg:col-span-1"
-            placeholder="Bet"
-          />
-        </div>
-
-        {board && layout && (
-          <PlinkoBoard
-            board={board}
-            layout={layout}
-            ballMotion={ballMotion}
-            isBallVisible={isBallVisible}
-            slotPrizes={slotPrizes}
-            resultSlotIndex={result?.slotIndex ?? null}
-            landingSlotIndex={landingSlotIndex}
-          />
-        )}
-
-        <button
-          onClick={() => { void runDrop(); }}
-          disabled={!settings?.enabled || isLoading || !board || !layout || bet < (settings?.minBet ?? 100) || bet > (settings?.maxBet ?? 50000)}
-          className="mt-4 h-12 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 text-base font-black text-black disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isLoading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Dropping…</span> : 'Drop Ball'}
-        </button>
         {error && <div className="mt-3 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
       </div>
 
