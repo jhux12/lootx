@@ -19,6 +19,30 @@ type SlotTone = {
   glow: string;
 };
 
+type BallMotion = {
+  x: number;
+  y: number;
+  ms: number;
+  ease: string;
+  scale: number;
+};
+
+type BoardLayout = {
+  rows: number;
+  slotCount: number;
+  pegSpacing: number;
+  rowHeight: number;
+  topOffset: number;
+  boardWidth: number;
+  boardHeight: number;
+  centerX: number;
+  binsTop: number;
+  binHeight: number;
+  slotsStartX: number;
+  pegs: Array<{ x: number; y: number; row: number; col: number }>;
+  binCenters: number[];
+};
+
 const getSlotTone = (label: string): SlotTone => {
   const key = label.trim().toLowerCase();
   if (key.includes('jackpot')) return { border: '#ff5a1f', bg: 'rgba(43,16,7,0.94)', glow: 'rgba(255,84,26,0.7)' };
@@ -36,106 +60,150 @@ const formatCompactValue = (value: number) => {
   return `${Math.round(value)}`;
 };
 
-const PegGrid: React.FC<{
-  rows: number;
-  pegSpacing: number;
-}> = ({ rows, pegSpacing }) => {
-  const pegs = useMemo(() => {
-    const out: Array<{ row: number; col: number; x: number; y: number }> = [];
-    for (let row = 0; row < rows; row += 1) {
-      for (let col = 0; col < row + 1; col += 1) {
-        out.push({ row, col, x: (col - row / 2) * pegSpacing, y: row * pegSpacing });
-      }
+const createBoardLayout = (rows: number, pegSpacing: number): BoardLayout => {
+  const slotCount = rows + 1;
+  const rowHeight = pegSpacing * 1.08;
+  const topOffset = 46;
+  const boardWidth = Math.max(340, (rows + 2.5) * pegSpacing);
+  const centerX = boardWidth / 2;
+  const binsTop = topOffset + rows * rowHeight + 14;
+  const binHeight = Math.max(74, Math.min(92, pegSpacing * 3.2));
+  const boardHeight = binsTop + binHeight + 18;
+  const slotsStartX = centerX - (rows * pegSpacing) / 2;
+
+  const pegs: Array<{ x: number; y: number; row: number; col: number }> = [];
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < row + 1; col += 1) {
+      pegs.push({
+        row,
+        col,
+        x: centerX + (col - row / 2) * pegSpacing,
+        y: topOffset + row * rowHeight
+      });
     }
-    return out;
-  }, [rows, pegSpacing]);
+  }
+
+  const binCenters = Array.from({ length: slotCount }, (_, index) => slotsStartX + (index + 0.5) * pegSpacing);
+
+  return {
+    rows,
+    slotCount,
+    pegSpacing,
+    rowHeight,
+    topOffset,
+    boardWidth,
+    boardHeight,
+    centerX,
+    binsTop,
+    binHeight,
+    slotsStartX,
+    pegs,
+    binCenters
+  };
+};
+
+const PegBoardSvg: React.FC<{ layout: BoardLayout }> = ({ layout }) => {
+  const finalRowY = layout.topOffset + (layout.rows - 1) * layout.rowHeight;
 
   return (
-    <>
-      {pegs.map((peg) => (
-        <div
-          key={`${peg.row}-${peg.col}`}
-          className="absolute h-2.5 w-2.5 rounded-full bg-white"
-          style={{
-            left: `calc(50% + ${peg.x}px)`,
-            top: `${peg.y + 34}px`,
-            transform: 'translate(-50%, -50%)',
-            boxShadow: '0 0 8px rgba(255,255,255,0.38), 0 0 2px rgba(255,255,255,0.9)'
-          }}
+    <svg className="h-full w-full" viewBox={`0 0 ${layout.boardWidth} ${layout.boardHeight}`} preserveAspectRatio="xMidYMid meet" aria-hidden>
+      <defs>
+        <radialGradient id="pegGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.95)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.35)" />
+        </radialGradient>
+      </defs>
+
+      {layout.binCenters.map((x, index) => (
+        <line
+          key={`channel-${index}`}
+          x1={x}
+          y1={finalRowY + 6}
+          x2={x}
+          y2={layout.binsTop - 2}
+          stroke="rgba(255,255,255,0.10)"
+          strokeWidth="1"
         />
       ))}
-    </>
+
+      {layout.pegs.map((peg) => (
+        <g key={`${peg.row}-${peg.col}`}>
+          <circle cx={peg.x} cy={peg.y} r="7" fill="rgba(255,255,255,0.09)" />
+          <circle cx={peg.x} cy={peg.y} r="3.2" fill="url(#pegGlow)" />
+        </g>
+      ))}
+    </svg>
   );
 };
 
 const SlotRow: React.FC<{
   board: PlinkoBoardType;
-  pegSpacing: number;
+  layout: BoardLayout;
   slotPrizes: Record<number, SlotPrizePreview>;
   resultSlotIndex: number | null;
   landingSlotIndex: number | null;
-}> = ({ board, pegSpacing, slotPrizes, resultSlotIndex, landingSlotIndex }) => {
-  const rows = board.rows;
-  const slotCount = rows + 1;
-  const laneWidth = slotCount * pegSpacing;
-  const finalPegY = (rows - 1) * pegSpacing + 34;
-  const slotsTop = finalPegY + pegSpacing * 0.6;
-  const slotHeight = Math.max(72, Math.min(96, pegSpacing * 4));
+}> = ({ board, layout, slotPrizes, resultSlotIndex, landingSlotIndex }) => {
+  const centerSlot = Math.floor(layout.slotCount / 2);
+  const compact = layout.pegSpacing < 28;
 
   return (
-    <div className="absolute inset-x-0 bottom-0">
+    <div
+      className="absolute"
+      style={{
+        left: `${layout.slotsStartX}px`,
+        top: `${layout.binsTop}px`,
+        width: `${layout.slotCount * layout.pegSpacing}px`,
+        height: `${layout.binHeight}px`
+      }}
+    >
       <div
-        className="absolute left-1/2 -translate-x-1/2"
-        style={{ width: `${laneWidth}px`, top: `${slotsTop - 46}px`, height: `${slotHeight + 46}px` }}
-      >
-        <div className="absolute inset-x-0 top-0 h-10">
-          {Array.from({ length: slotCount }).map((_, index) => (
-            <div
-              key={`guide-${index}`}
-              className="absolute top-0 h-full"
-              style={{
-                left: `${index * pegSpacing}px`,
-                width: `${pegSpacing}px`,
-                background: 'linear-gradient(to bottom, rgba(120,160,210,0.12), rgba(120,160,210,0.02))',
-                borderLeft: '1px solid rgba(255,255,255,0.04)'
-              }}
-            />
-          ))}
-        </div>
+        className="pointer-events-none absolute top-[-38px] h-[38px] w-[2px] rounded-full"
+        style={{
+          left: `${(centerSlot + 0.5) * layout.pegSpacing}px`,
+          transform: 'translateX(-50%)',
+          background: 'linear-gradient(to bottom, rgba(110,231,183,0.7), rgba(110,231,183,0))',
+          boxShadow: '0 0 12px rgba(16,185,129,0.55)'
+        }}
+      />
 
-        <div className="absolute inset-x-0 bottom-0 flex" style={{ height: `${slotHeight}px` }}>
-          {board.slots.map((slot, index) => {
-            const preview = slotPrizes[index];
-            const tone = getSlotTone(slot.label);
-            const isResult = resultSlotIndex === index;
-            const isLanding = landingSlotIndex === index;
+      <div className="flex h-full">
+        {board.slots.map((slot, index) => {
+          const preview = slotPrizes[index];
+          const tone = getSlotTone(slot.label);
+          const isResult = resultSlotIndex === index;
+          const isLanding = landingSlotIndex === index;
 
-            return (
+          return (
+            <div key={`${slot.poolId}-${index}`} className="relative shrink-0" style={{ width: `${layout.pegSpacing}px` }}>
               <div
-                key={`${slot.poolId}-${index}`}
-                className="relative shrink-0"
-                style={{ width: `${pegSpacing}px` }}
+                className={`plinko-slot-bin h-full w-full ${isLanding ? 'plinko-slot-landing' : ''} ${isResult ? 'plinko-slot-result' : ''}`}
+                style={{
+                  borderColor: tone.border,
+                  background: `linear-gradient(to bottom, rgba(255,255,255,0.12), ${tone.bg} 24%)`,
+                  boxShadow: `inset 0 -8px 14px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.13), 0 0 10px ${tone.glow}`
+                }}
               >
-                <div
-                  className={`plinko-slot-bin h-full w-full ${isLanding ? 'plinko-slot-landing' : ''} ${isResult ? 'plinko-slot-result' : ''}`}
-                  style={{
-                    borderColor: tone.border,
-                    background: `linear-gradient(to bottom, rgba(255,255,255,0.08), ${tone.bg} 24%)`,
-                    boxShadow: `inset 0 -8px 14px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.13), 0 0 10px ${tone.glow}`
-                  }}
-                >
-                  <div className="absolute inset-x-0 top-0 h-[7px]" style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.24), rgba(255,255,255,0.02))' }} />
-                  <div className="pt-3 text-center">
-                    <div className="truncate px-0.5 text-[8px] font-bold uppercase tracking-[0.03em] text-white">{slot.label}</div>
-                    <div className="mt-1 truncate px-0.5 text-[8px] text-gray-200">{preview?.name ?? 'No item'}</div>
-                    <div className="mt-1 text-[8px] font-semibold text-emerald-200">{formatCompactValue(preview?.coinValue ?? 0)}</div>
+                <div className="absolute inset-x-0 top-0 h-[8px]" style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.26), rgba(255,255,255,0.02))' }} />
+                <div className="pt-2 text-center">
+                  <div className={`truncate px-0.5 font-black uppercase tracking-[0.06em] text-white ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
+                    {compact ? slot.label.slice(0, 1) : slot.label}
+                  </div>
+
+                  {!compact && (
+                    <div className="mt-1 truncate px-0.5 text-[9px] text-gray-200">
+                      {preview?.name ?? 'No item'}
+                    </div>
+                  )}
+
+                  <div className={`mt-1 font-semibold text-emerald-200 ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
+                    {formatCompactValue(preview?.coinValue ?? 0)}
                   </div>
                 </div>
-                {index < slotCount - 1 && <div className="absolute right-0 top-0 h-full w-px bg-white/15" />}
               </div>
-            );
-          })}
-        </div>
+              {index < layout.slotCount - 1 && <div className="absolute right-0 top-0 h-full w-px bg-white/20" />}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -143,36 +211,44 @@ const SlotRow: React.FC<{
 
 const PlinkoBoard: React.FC<{
   board: PlinkoBoardType;
-  pegSpacing: number;
-  ballRow: number;
-  ballX: number;
+  layout: BoardLayout;
+  ballMotion: BallMotion;
+  isBallVisible: boolean;
   slotPrizes: Record<number, SlotPrizePreview>;
   resultSlotIndex: number | null;
   landingSlotIndex: number | null;
-}> = ({ board, pegSpacing, ballRow, ballX, slotPrizes, resultSlotIndex, landingSlotIndex }) => {
-  const boardWidth = board.rows * pegSpacing + 80;
-  const boardHeight = board.rows * pegSpacing + 220;
-
+}> = ({ board, layout, ballMotion, isBallVisible, slotPrizes, resultSlotIndex, landingSlotIndex }) => {
   return (
-    <div className="mt-6 overflow-x-auto pb-2">
-      <div className="relative mx-auto min-h-[500px] min-w-[340px] max-w-[920px] rounded-2xl border border-white/10 bg-[#02060a] p-3 shadow-[0_24px_45px_rgba(0,0,0,0.42)] sm:p-4">
-        <div className="relative mx-auto" style={{ width: `${boardWidth}px`, height: `${boardHeight}px` }}>
-          <PegGrid rows={board.rows} pegSpacing={pegSpacing} />
+    <div className="mt-6 pb-1">
+      <div className="mx-auto w-full max-w-[960px] rounded-2xl border border-white/10 bg-[#02060a] p-2 shadow-[0_24px_45px_rgba(0,0,0,0.42)] sm:p-4">
+        <div className="relative mx-auto w-full max-w-[760px]">
+          <div className="relative w-full" style={{ aspectRatio: `${layout.boardWidth} / ${layout.boardHeight}` }}>
+            <PegBoardSvg layout={layout} />
 
-          {ballRow >= 0 && (
-            <div
-              className="absolute h-4 w-4 rounded-full bg-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.9)] transition-all duration-100"
-              style={{ left: `calc(50% + ${ballX}px)`, top: `${ballRow * pegSpacing + 18}px`, transform: 'translate(-50%, -50%)' }}
+            <SlotRow
+              board={board}
+              layout={layout}
+              slotPrizes={slotPrizes}
+              resultSlotIndex={resultSlotIndex}
+              landingSlotIndex={landingSlotIndex}
             />
-          )}
 
-          <SlotRow
-            board={board}
-            pegSpacing={pegSpacing}
-            slotPrizes={slotPrizes}
-            resultSlotIndex={resultSlotIndex}
-            landingSlotIndex={landingSlotIndex}
-          />
+            {isBallVisible && (
+              <div
+                className="absolute h-4 w-4 rounded-full bg-emerald-400"
+                style={{
+                  left: `${(ballMotion.x / layout.boardWidth) * 100}%`,
+                  top: `${(ballMotion.y / layout.boardHeight) * 100}%`,
+                  transform: `translate(-50%, -50%) scale(${ballMotion.scale})`,
+                  boxShadow: '0 0 14px rgba(16,185,129,0.9)',
+                  transitionProperty: 'left, top, transform',
+                  transitionDuration: `${ballMotion.ms}ms`,
+                  transitionTimingFunction: ballMotion.ease,
+                  zIndex: 4
+                }}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -187,8 +263,8 @@ export const PlinkoPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [ballRow, setBallRow] = useState(-1);
-  const [ballX, setBallX] = useState(0);
+  const [ballMotion, setBallMotion] = useState<BallMotion>({ x: 0, y: 0, ms: 120, ease: 'linear', scale: 1 });
+  const [isBallVisible, setIsBallVisible] = useState(false);
   const [result, setResult] = useState<any | null>(null);
   const [landingSlotIndex, setLandingSlotIndex] = useState<number | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
@@ -211,15 +287,17 @@ export const PlinkoPage: React.FC = () => {
 
     const syncSpacing = () => {
       const viewport = window.innerWidth;
-      const available = Math.max(320, Math.min(920, viewport - 64));
-      const dynamicSpacing = Math.floor((available - 80) / Math.max(1, board.rows));
-      setPegSpacing(Math.max(18, Math.min(30, dynamicSpacing)));
+      const available = Math.max(300, Math.min(960, viewport - 44));
+      const dynamicSpacing = Math.floor((available - 120) / Math.max(1, board.rows));
+      setPegSpacing(Math.max(18, Math.min(36, dynamicSpacing)));
     };
 
     syncSpacing();
     window.addEventListener('resize', syncSpacing);
     return () => window.removeEventListener('resize', syncSpacing);
   }, [board]);
+
+  const layout = useMemo(() => (board ? createBoardLayout(board.rows, pegSpacing) : null), [board, pegSpacing]);
 
   useEffect(() => {
     if (!board || !settings) return;
@@ -263,7 +341,7 @@ export const PlinkoPage: React.FC = () => {
       openAuthModal('login');
       return;
     }
-    if (!board || !settings) return;
+    if (!board || !settings || !layout) return;
 
     setError(null);
     setIsLoading(true);
@@ -278,18 +356,33 @@ export const PlinkoPage: React.FC = () => {
         : String(payload.pathBits ?? '').split('').map((bit) => Number(bit));
 
       const targetSlot = Number(payload.slotIndex);
-      setLandingSlotIndex(targetSlot);
+      let currentX = layout.centerX;
+      let currentY = layout.topOffset - layout.rowHeight * 0.6;
 
-      let rights = 0;
-      for (let i = 0; i < pathBits.length; i += 1) {
-        if (pathBits[i] === 1) rights += 1;
-        setBallRow(i + 1);
-        setBallX((rights - (i + 1) / 2) * pegSpacing);
-        await sleep(90);
+      setIsBallVisible(true);
+      setBallMotion({ x: currentX, y: currentY, ms: 60, ease: 'linear', scale: 1 });
+      await sleep(70);
+
+      for (let i = 0; i < Math.min(pathBits.length, board.rows); i += 1) {
+        const bit = pathBits[i] === 1 ? 1 : 0;
+        const progress = i / Math.max(1, board.rows - 1);
+        const baseDuration = Math.round(72 + progress * 78);
+        currentX += bit === 1 ? layout.pegSpacing / 2 : -layout.pegSpacing / 2;
+        currentY = layout.topOffset + i * layout.rowHeight;
+
+        setBallMotion({ x: currentX, y: currentY - 3, ms: Math.round(baseDuration * 0.68), ease: 'cubic-bezier(0.24,0.86,0.2,1)', scale: 1.03 });
+        await sleep(Math.round(baseDuration * 0.68));
+        setBallMotion({ x: currentX, y: currentY, ms: Math.round(baseDuration * 0.32), ease: 'cubic-bezier(0.3,0,0.5,1)', scale: 0.97 });
+        await sleep(Math.round(baseDuration * 0.32));
       }
 
-      setBallX((targetSlot - board.rows / 2) * pegSpacing);
-      await sleep(220);
+      setLandingSlotIndex(targetSlot);
+      await sleep(300);
+
+      const finalX = layout.binCenters[targetSlot] ?? layout.centerX;
+      const finalY = layout.binsTop + layout.binHeight * 0.35;
+      setBallMotion({ x: finalX, y: finalY, ms: 340, ease: 'cubic-bezier(0.16,0.72,0.22,1)', scale: 1.06 });
+      await sleep(340);
 
       const awarded = payload.awardedItem;
       const inventoryItem: InventoryItem = {
@@ -329,7 +422,7 @@ export const PlinkoPage: React.FC = () => {
       setLandingSlotIndex(null);
     } finally {
       setIsLoading(false);
-      setBallRow(-1);
+      setIsBallVisible(false);
     }
   };
 
@@ -343,41 +436,41 @@ export const PlinkoPage: React.FC = () => {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl p-3 sm:p-6">
+    <div className="mx-auto w-full max-w-6xl p-2 sm:p-6">
       <style>{`
         @keyframes plinkoSlotGlow {
-          from { filter: brightness(0.95); transform: translateZ(0); }
-          to { filter: brightness(1.08); transform: translateZ(0); }
+          from { filter: brightness(0.96); }
+          to { filter: brightness(1.08); }
         }
         @keyframes plinkoSlotLand {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-          100% { transform: scale(1); }
+          0% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-2px) scale(1.05); }
+          100% { transform: translateY(0) scale(1); }
         }
         .plinko-slot-bin {
           position: relative;
           border-width: 1px;
           border-top-width: 0;
-          border-radius: 0 0 10px 10px;
-          animation: plinkoSlotGlow 2.6s ease-in-out infinite alternate;
+          border-radius: 0 0 14px 14px;
+          animation: plinkoSlotGlow 2.4s ease-in-out infinite alternate;
           overflow: hidden;
           backdrop-filter: blur(2px);
         }
         .plinko-slot-landing {
-          animation: plinkoSlotLand 0.45s ease-in-out infinite, plinkoSlotGlow 1.4s ease-in-out infinite alternate;
-          box-shadow: inset 0 -10px 14px rgba(0,0,0,0.34), 0 0 18px rgba(52,211,153,0.55) !important;
+          animation: plinkoSlotLand 0.5s ease-in-out infinite, plinkoSlotGlow 1.2s ease-in-out infinite alternate;
+          box-shadow: inset 0 -10px 16px rgba(0,0,0,0.34), 0 0 20px rgba(52,211,153,0.6) !important;
           z-index: 2;
         }
         .plinko-slot-result {
-          box-shadow: inset 0 -10px 14px rgba(0,0,0,0.34), 0 0 16px rgba(110,231,183,0.75) !important;
+          box-shadow: inset 0 -10px 14px rgba(0,0,0,0.34), 0 0 18px rgba(110,231,183,0.75) !important;
         }
       `}</style>
 
-      <div className="rounded-2xl border border-emerald-500/30 bg-[#071016] p-4 shadow-[0_0_90px_rgba(34,197,94,0.1)] sm:p-6">
+      <div className="rounded-2xl border border-emerald-500/30 bg-[#071016] p-3 shadow-[0_0_90px_rgba(34,197,94,0.1)] sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-black text-white sm:text-3xl">Plinko (Items)</h1>
-            <p className="text-sm text-gray-400">Premium arcade board with connected landing bins and tier glow channels.</p>
+            <p className="text-sm text-gray-400">Arcade-style board with SVG pegs, aligned landing slots, and deterministic path animation.</p>
           </div>
           <button onClick={() => setSoundEnabled((prev) => !prev)} className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-white">
             {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
@@ -401,12 +494,12 @@ export const PlinkoPage: React.FC = () => {
           />
         </div>
 
-        {board && (
+        {board && layout && (
           <PlinkoBoard
             board={board}
-            pegSpacing={pegSpacing}
-            ballRow={ballRow}
-            ballX={ballX}
+            layout={layout}
+            ballMotion={ballMotion}
+            isBallVisible={isBallVisible}
             slotPrizes={slotPrizes}
             resultSlotIndex={result?.slotIndex ?? null}
             landingSlotIndex={landingSlotIndex}
@@ -415,7 +508,7 @@ export const PlinkoPage: React.FC = () => {
 
         <button
           onClick={() => { void runDrop(); }}
-          disabled={!settings?.enabled || isLoading || !board || bet < (settings?.minBet ?? 100) || bet > (settings?.maxBet ?? 50000)}
+          disabled={!settings?.enabled || isLoading || !board || !layout || bet < (settings?.minBet ?? 100) || bet > (settings?.maxBet ?? 50000)}
           className="mt-4 h-12 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 text-base font-black text-black disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Dropping…</span> : 'Drop Ball'}
