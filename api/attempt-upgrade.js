@@ -9,6 +9,8 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const toSafeString = (value, fallback = '') => (typeof value === 'string' ? value : fallback);
+
 const getCoinValue = (item = {}) => Math.max(0, toNumber(item.coinValue ?? item.value ?? item.price, 0));
 
 const computeChance = ({ sourceValue, targetValue, settings, sourceItem, targetItem, user }) => {
@@ -110,19 +112,27 @@ export default async function handler(req, res) {
       const attemptRef = firestore.collection('upgradeAttempts').doc();
       const awardedRef = win ? userRef.collection('inventory').doc() : null;
 
+      const targetName = toSafeString(targetItem.name, 'Upgrader Target');
+      const targetImage = toSafeString(targetItem.imageUrl || targetItem.image, '');
+      const targetRarity = toSafeString(targetItem.rarity, 'common');
+      const targetCategory = toSafeString(targetItem.category, 'misc');
+      const sourceName = toSafeString(sourceItem.name, 'Inventory Item');
+      const sourceRarity = toSafeString(sourceItem.rarity, 'common');
+      const sourceCategory = toSafeString(sourceItem.category, 'misc');
+
       transaction.delete(sourceRef);
       if (awardedRef) {
         transaction.set(awardedRef, {
           instanceId: awardedRef.id,
           id: targetItemId,
-          name: targetItem.name,
-          image: targetItem.imageUrl,
+          name: targetName,
+          image: targetImage,
           price: targetValue,
           coinValue: targetValue,
-          rarity: targetItem.rarity,
-          category: targetItem.category,
+          rarity: targetRarity,
+          category: targetCategory,
           chance: 0,
-          color: targetItem.color || '#22d3ee',
+          color: toSafeString(targetItem.color, '#22d3ee'),
           obtainedAt: Date.now(),
           status: 'available',
           source: 'upgrader'
@@ -142,17 +152,17 @@ export default async function handler(req, res) {
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         sourceItemInstanceId,
         sourceItemSnapshot: {
-          name: sourceItem.name,
+          name: sourceName,
           value: sourceValue,
-          rarity: sourceItem.rarity,
-          category: sourceItem.category
+          rarity: sourceRarity,
+          category: sourceCategory
         },
         targetItemId,
         targetItemSnapshot: {
-          name: targetItem.name,
+          name: targetName,
           value: targetValue,
-          rarity: targetItem.rarity,
-          category: targetItem.category
+          rarity: targetRarity,
+          category: targetCategory
         },
         chance,
         roll,
@@ -175,7 +185,7 @@ export default async function handler(req, res) {
         roll,
         chance,
         attemptId: attemptRef.id,
-        awardedItem: awardedRef ? { id: awardedRef.id, name: targetItem.name, imageUrl: targetItem.imageUrl } : undefined
+        awardedItem: awardedRef ? { id: awardedRef.id, name: targetName, imageUrl: targetImage } : undefined
       };
     });
 
