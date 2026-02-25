@@ -4,7 +4,6 @@ import { UpgraderTargetPanel } from '../components/upgrader/UpgraderTargetPanel'
 import { UpgraderPreviewBar } from '../components/upgrader/UpgraderPreviewBar';
 import { UpgraderResultModal } from '../components/upgrader/UpgraderResultModal';
 import { InventoryItem, Item, Rarity } from '../components/upgrader/upgraderTypes';
-import { Coins } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import { attemptUpgrade, getUpgraderSettings, getUpgraderTargets } from '../../services/upgraderService';
 import { computeUpgradeChance, UpgraderSettings } from '../../utils/upgrader';
@@ -20,7 +19,7 @@ const rarityMap: Record<string, Rarity> = {
 };
 
 export default function UpgraderPage() {
-  const { inventory, isAuthenticated, openAuthModal, user } = useGame();
+  const { inventory, isAuthenticated, openAuthModal } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -31,6 +30,7 @@ export default function UpgraderPage() {
   const [resultState, setResultState] = useState<'processing' | 'win' | 'lose'>('processing');
   const [modalTarget, setModalTarget] = useState<Item | null>(null);
   const [modalChance, setModalChance] = useState(0);
+  const [spinId, setSpinId] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -113,10 +113,6 @@ export default function UpgraderPage() {
     if (!source || !target || !settings || isSubmitting) return;
     setError(null);
     setIsSubmitting(true);
-    setIsModalOpen(true);
-    setResultState('processing');
-    setModalTarget(target);
-    setModalChance(chance);
 
     try {
       const response = await attemptUpgrade({
@@ -125,7 +121,11 @@ export default function UpgraderPage() {
         clientSeed: `${Date.now()}`
       });
 
+      setModalTarget(target);
+      setModalChance(chance);
       setResultState(response.win ? 'win' : 'lose');
+      setSpinId((prev) => prev + 1);
+      setIsModalOpen(true);
       setSource(null);
       setTarget(null);
     } catch (attemptError) {
@@ -161,15 +161,10 @@ export default function UpgraderPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 pb-[calc(120px+env(safe-area-inset-bottom))] sm:pb-32">
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center gap-2 sm:gap-3">
           <div className="flex flex-col min-w-0">
             <h1 className="text-lg sm:text-xl font-black uppercase tracking-tighter text-white">Upgrader</h1>
             <p className="hidden sm:block text-[10px] text-slate-500 font-bold uppercase tracking-widest">High Risk, High Reward</p>
-          </div>
-
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-800/70 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-slate-700/80 shadow-inner">
-            <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
-            <span className="font-mono font-bold text-slate-100 text-xs sm:text-base">{Math.round(Number(user?.balance ?? 0)).toLocaleString()}</span>
           </div>
         </div>
       </header>
@@ -234,6 +229,7 @@ export default function UpgraderPage() {
         onRetry={handleRetry}
         chance={modalChance}
         status={resultState}
+        spinId={spinId}
       />
     </div>
   );

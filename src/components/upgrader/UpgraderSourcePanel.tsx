@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { InventoryItem } from './upgraderTypes';
 import { Lock, Package, Search, X } from 'lucide-react';
+import { CoinAmount } from '../../../components/CoinAmount';
 import { motion } from 'motion/react';
 
 interface UpgraderSourcePanelProps {
@@ -109,7 +110,7 @@ export const UpgraderSourcePanel: React.FC<UpgraderSourcePanelProps> = ({
                     <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${getRarityColor(item.rarity)}`}>
                       {item.rarity}
                     </span>
-                    <span className="text-xs font-mono text-emerald-300">{Math.round(item.coinValue).toLocaleString()} coins</span>
+                    <CoinAmount amount={Math.round(item.coinValue)} className="text-xs font-mono text-emerald-300" iconClassName="h-3.5 w-3.5" />
                   </div>
                   <p className="text-xs font-medium text-slate-300 truncate leading-tight">{item.name}</p>
                 </div>
@@ -151,7 +152,7 @@ export const UpgraderSourcePanel: React.FC<UpgraderSourcePanelProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
                   <span className="block text-[10px] font-bold uppercase tracking-wide text-gray-400">Value</span>
-                  <div className="mt-1 text-lg font-bold text-white">{Math.round(infoItem.coinValue).toLocaleString()} coins</div>
+                  <div className="mt-1 text-lg font-bold text-white"><CoinAmount amount={Math.round(infoItem.coinValue)} iconClassName="h-4 w-4" /></div>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
                   <span className="block text-[10px] font-bold uppercase tracking-wide text-gray-400">Status</span>
