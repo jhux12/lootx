@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Item } from './upgraderTypes';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { X, RotateCcw, Home, Skull, Check } from 'lucide-react';
 import { UpgraderSpinner } from './UpgraderSpinner';
 import { CoinAmount } from '../../../components/CoinAmount';
@@ -27,11 +27,43 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   spinId
 }) => {
   const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('settling-lose');
+  const [showWinFx, setShowWinFx] = useState(false);
+
+  const confetti = useMemo(
+    () =>
+      Array.from({ length: 18 }).map((_, index) => {
+        const angle = (Math.PI * 2 * index) / 18;
+        const distance = 55 + Math.random() * 80;
+        const x = Math.cos(angle) * distance;
+        const y = Math.sin(angle) * distance * 0.6;
+
+        return {
+          id: `${spinId}-${index}`,
+          x,
+          y,
+          delay: Math.random() * 0.12,
+          size: 5 + Math.random() * 4,
+          hue: 130 + Math.random() * 35
+        };
+      }),
+    [spinId]
+  );
 
   useEffect(() => {
     if (!isOpen) return;
     setDisplayStatus(status === 'win' ? 'settling-win' : 'settling-lose');
   }, [isOpen, status, spinId]);
+
+  useEffect(() => {
+    if (displayStatus !== 'win') {
+      setShowWinFx(false);
+      return;
+    }
+
+    setShowWinFx(true);
+    const timeout = window.setTimeout(() => setShowWinFx(false), 820);
+    return () => window.clearTimeout(timeout);
+  }, [displayStatus]);
 
   if (!isOpen) return null;
 
@@ -99,9 +131,50 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
 
               <div className="overflow-y-auto p-5 sm:p-6">
                 {isWin && target ? (
-                  <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-emerald-400/20 bg-black/25 p-4 text-center">
-                    <div className="absolute inset-0 rounded-2xl opacity-30 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.5)_0%,transparent_72%)]" />
-                    <img src={target.imageUrl} alt={target.name} className="relative z-10 mb-3 h-32 w-32 object-contain" />
+                  <motion.div
+                    initial={{ scale: 0.6, opacity: 0.7 }}
+                    animate={{ scale: [0.6, 1.1, 1], opacity: 1 }}
+                    transition={{ duration: 0.55, times: [0, 0.68, 1], type: 'spring', stiffness: 280, damping: 20 }}
+                    className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-emerald-400/20 bg-black/25 p-4 text-center"
+                    style={{ boxShadow: '0 0 40px rgba(16,185,129,0.18)' }}
+                  >
+                    <AnimatePresence>
+                      {showWinFx && (
+                        <>
+                          <motion.div
+                            initial={{ scale: 0.8, opacity: 0.6 }}
+                            animate={{ scale: 1.8, opacity: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.6, ease: 'easeOut' }}
+                            className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-emerald-300/70"
+                          />
+                          {confetti.map((particle) => (
+                            <motion.div
+                              key={particle.id}
+                              initial={{ x: 0, y: 0, opacity: 1, scale: 0.8 }}
+                              animate={{
+                                x: particle.x,
+                                y: particle.y + 38,
+                                opacity: 0,
+                                rotate: particle.x > 0 ? 120 : -120,
+                                scale: 1
+                              }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.8, ease: 'easeOut', delay: particle.delay }}
+                              className="pointer-events-none absolute left-1/2 top-1/2 rounded-full"
+                              style={{
+                                width: particle.size,
+                                height: particle.size,
+                                backgroundColor: `hsl(${particle.hue} 85% 62%)`
+                              }}
+                            />
+                          ))}
+                        </>
+                      )}
+                    </AnimatePresence>
+
+                    <div className="absolute inset-0 rounded-2xl opacity-35 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.55)_0%,transparent_72%)]" />
+                    <img src={target.imageUrl} alt={target.name} className="relative z-10 mb-3 h-28 w-28 sm:h-32 sm:w-32 object-contain" />
                     <p className="relative z-10 text-xs font-bold text-emerald-400 uppercase tracking-wider">{target.rarity}</p>
                     <h4 className="relative z-10 text-lg font-bold text-white truncate max-w-full">{target.name}</h4>
                     <CoinAmount
@@ -110,7 +183,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                       className="relative z-10 mt-2 font-semibold text-gray-200"
                       iconClassName="w-4 h-4"
                     />
-                  </div>
+                  </motion.div>
                 ) : (
                   <div className="mx-auto max-w-sm rounded-2xl border border-red-500/20 bg-black/25 p-6 text-center">
                     <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-red-500/20 border border-red-400/30">
