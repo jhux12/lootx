@@ -96,6 +96,24 @@
         0% { transform: translateX(0); }
         100% { transform: translateX(-50%); }
       }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #334155;
+      }
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
     </style>
     <script>
       // Prevent pinch and double-tap zooming on mobile
@@ -132,6 +150,7 @@
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "motion/react": "https://esm.sh/motion@^12.23.24/react",
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
     "firebase/": "https://esm.sh/firebase@10.12.2/"
   }

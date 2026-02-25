@@ -13,7 +13,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { id: 'MENU', label: 'Menu' },
   { id: 'BOXES', label: 'Boxes', icon: Box },
-  { id: 'PLINKO', label: 'Plinko', icon: Gamepad2 },
+  { id: 'PLINKO', label: 'Upgrader', icon: Gamepad2 },
   { id: 'INVENTORY', label: 'Inventory', icon: Backpack, requiresAuth: true },
   { id: 'LEADERBOARD', label: 'Ladder', icon: Crown }
 ];
