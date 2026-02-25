@@ -8,6 +8,7 @@ import { Coins } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import { attemptUpgrade, getUpgraderSettings, getUpgraderTargets } from '../../services/upgraderService';
 import { computeUpgradeChance, UpgraderSettings } from '../../utils/upgrader';
+import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
 
 const rarityMap: Record<string, Rarity> = {
   common: 'Common',
@@ -43,7 +44,7 @@ export default function UpgraderPage() {
             id: entry.id,
             name: entry.name,
             imageUrl: entry.imageUrl,
-            coinValue: Number(entry.coinValue ?? 0),
+            coinValue: toCoins(Number(entry.coinValue ?? 0), PRICE_UNIT_MODE),
             rarity: rarityMap[String(entry.rarity).toLowerCase()] ?? 'Common',
             category: entry.category || 'General',
             enabled: entry.enabled !== false
@@ -68,7 +69,7 @@ export default function UpgraderPage() {
         id: item.instanceId,
         name: item.name,
         imageUrl: item.image,
-        coinValue: Number(item.price ?? 0),
+        coinValue: toCoins(Number(item.price ?? 0), PRICE_UNIT_MODE),
         rarity: rarityMap[item.rarity] ?? 'Common',
         category: item.category || 'General',
         locked: item.locked,
@@ -164,7 +165,7 @@ export default function UpgraderPage() {
 
           <div className="flex items-center gap-2 bg-slate-800/80 px-3 sm:px-4 py-2 rounded-full border border-slate-700 shadow-inner">
             <Coins className="w-4 h-4 text-amber-400" />
-            <span className="font-mono font-bold text-slate-100 text-sm sm:text-base">{Number(user?.balance ?? 0).toFixed(2)}</span>
+            <span className="font-mono font-bold text-slate-100 text-sm sm:text-base">{Math.round(Number(user?.balance ?? 0)).toLocaleString()}</span>
           </div>
         </div>
       </header>

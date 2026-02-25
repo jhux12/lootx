@@ -11,7 +11,7 @@ import { db } from '../firebase';
 import { HomepageShowcaseEditor } from './admin/HomepageShowcaseEditor';
 import { BoxesPageConfigEditor } from './admin/BoxesPageConfigEditor';
 import { LegalEditor } from './admin/LegalEditor';
-import { PlinkoAdminSection } from './admin/PlinkoAdminSection';
+import { UpgraderAdminSection } from './admin/UpgraderAdminSection';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -4961,7 +4961,7 @@ export const AdminPanel: React.FC = () => {
             {/* TAB: SETTINGS */}
             {activeTab === 'settings' && (
                 <div className="space-y-6">
-                    <PlinkoAdminSection />
+                    <UpgraderAdminSection />
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <h3 className="text-lg font-bold text-white mb-4">General Configuration</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

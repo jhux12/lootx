@@ -76,7 +76,7 @@ export const UpgraderSourcePanel: React.FC<UpgraderSourcePanelProps> = ({
                   <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${getRarityColor(item.rarity)}`}>
                     {item.rarity}
                   </span>
-                  <span className="text-xs font-mono text-emerald-400">${item.coinValue.toFixed(2)}</span>
+                  <span className="text-xs font-mono text-emerald-400">{Math.round(item.coinValue).toLocaleString()} coins</span>
                 </div>
                 <p className="text-xs font-medium text-slate-300 truncate leading-tight">{item.name}</p>
               </div>

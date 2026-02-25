@@ -24,6 +24,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   chance
 }) => {
   const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('processing');
+  const [spinSession, setSpinSession] = useState(0);
 
   useEffect(() => {
     if (!isOpen) {
@@ -33,6 +34,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
 
     if (status === 'processing') {
       setDisplayStatus('processing');
+      setSpinSession((prev) => prev + 1);
       return;
     }
 
@@ -69,6 +71,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                 className="py-6 sm:py-10 flex flex-col items-center gap-4 sm:gap-6 w-full"
               >
                 <UpgraderSpinner
+                  key={spinSession}
                   chance={chance}
                   isSpinning
                   onFinish={(didWin) => setDisplayStatus(didWin ? 'win' : 'lose')}
@@ -110,7 +113,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                       <div className="text-left min-w-0">
                         <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{target.rarity}</p>
                         <p className="text-sm font-bold text-white leading-tight truncate">{target.name}</p>
-                        <p className="text-xs font-mono text-slate-400">${target.coinValue.toFixed(2)}</p>
+                        <p className="text-xs font-mono text-slate-400">{Math.round(target.coinValue).toLocaleString()} coins</p>
                       </div>
                     </div>
                   </div>

@@ -113,8 +113,8 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
               onChange={(e) => setSortBy(e.target.value as any)}
               className="bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
             >
-              <option value="value-asc">Price Low</option>
-              <option value="value-desc">Price High</option>
+              <option value="value-asc">Value Low</option>
+              <option value="value-desc">Value High</option>
             </select>
           </div>
         </div>
@@ -151,7 +151,7 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
                   <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${getRarityColor(item.rarity)}`}>
                     {item.rarity}
                   </span>
-                  <span className="text-xs font-mono text-indigo-400">${item.coinValue.toFixed(2)}</span>
+                  <span className="text-xs font-mono text-indigo-400">{Math.round(item.coinValue).toLocaleString()} coins</span>
                 </div>
                 <p className="text-xs font-medium text-slate-300 truncate leading-tight">{item.name}</p>
               </div>
