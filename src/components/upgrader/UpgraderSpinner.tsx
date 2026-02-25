@@ -1,75 +1,72 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { motion, useAnimation } from 'motion/react';
 
 interface UpgraderSpinnerProps {
   chance: number;
   onFinish: (isWin: boolean) => void;
   isSpinning: boolean;
+  spinMode?: 'resolve' | 'indeterminate';
 }
 
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   chance,
   onFinish,
   isSpinning,
+  spinMode = 'resolve'
 }) => {
   const controls = useAnimation();
-  const [rotation, setRotation] = useState(0);
   const size = 200;
   const strokeWidth = 12;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  
-  // The win zone is a segment of the circle
-  // We'll start it at the top (270 degrees)
+
   const winZoneAngle = (chance / 100) * 360;
   const dashOffset = circumference - (chance / 100) * circumference;
 
   useEffect(() => {
-    if (isSpinning) {
-      startSpin();
+    if (!isSpinning) {
+      void controls.stop();
+      return;
     }
-  }, [isSpinning]);
 
-  const startSpin = async () => {
-    // Determine result first
+    if (spinMode === 'indeterminate') {
+      void controls.start({
+        rotate: [0, 360],
+        transition: {
+          duration: 1.2,
+          ease: 'linear',
+          repeat: Infinity
+        }
+      });
+      return;
+    }
+
+    void startResolveSpin();
+  }, [controls, isSpinning, spinMode]);
+
+  const startResolveSpin = async () => {
     const isWin = Math.random() * 100 <= chance;
-    
-    // Calculate target rotation
-    // We want at least 5 full rotations (1800 deg)
-    // Plus a random offset within the win or lose zone
     const baseRotations = 5 * 360;
-    let finalAngle = 0;
-    
-    if (isWin) {
-      // Land between 0 and winZoneAngle
-      finalAngle = Math.random() * winZoneAngle;
-    } else {
-      // Land between winZoneAngle and 360
-      finalAngle = winZoneAngle + Math.random() * (360 - winZoneAngle);
-    }
-
-    // Adjust for the fact that 0 deg is at the top (12 o'clock)
-    // SVG stroke-dasharray starts at 3 o'clock (90 deg) by default if not rotated
-    // But we rotate the SVG container -90deg in CSS to start at top.
-    
+    const finalAngle = isWin
+      ? Math.random() * winZoneAngle
+      : winZoneAngle + Math.random() * (360 - winZoneAngle);
     const totalRotation = baseRotations + finalAngle;
 
     await controls.start({
       rotate: totalRotation,
       transition: {
         duration: 4,
-        ease: [0.45, 0.05, 0.55, 0.95], // Custom cubic-bezier for "slowing down" feel
-      },
+        ease: [0.45, 0.05, 0.55, 0.95]
+      }
     });
 
-    setTimeout(() => {
+    window.setTimeout(() => {
       onFinish(isWin);
     }, 500);
   };
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-      {/* Background Track */}
       <svg width={size} height={size} className="transform -rotate-90">
         <circle
           cx={size / 2}
@@ -80,7 +77,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
           strokeWidth={strokeWidth}
           className="text-slate-800"
         />
-        {/* Win Zone Segment */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -95,13 +91,11 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
         />
       </svg>
 
-      {/* Center Info */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-3xl font-black text-white">{chance.toFixed(1)}%</span>
         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Chance</span>
       </div>
 
-      {/* Needle / Indicator */}
       <motion.div
         animate={controls}
         className="absolute inset-0 flex items-start justify-center"
@@ -112,7 +106,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
         </div>
       </motion.div>
 
-      {/* Outer Glow Decor */}
       <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none" />
       <div className="absolute inset-[-10px] rounded-full border border-white/5 pointer-events-none" />
     </div>

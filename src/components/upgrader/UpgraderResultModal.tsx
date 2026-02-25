@@ -1,7 +1,8 @@
 import React from 'react';
 import { Item } from './upgraderTypes';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, RotateCcw, Home, Trophy, Skull, Loader2 } from 'lucide-react';
+import { X, RotateCcw, Home, Trophy, Skull } from 'lucide-react';
+import { UpgraderSpinner } from './UpgraderSpinner';
 
 interface UpgraderResultModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   target,
   onRetry,
   status,
+  chance
 }) => {
   if (!isOpen) return null;
 
@@ -46,9 +48,12 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                 exit={{ opacity: 0 }}
                 className="py-10 flex flex-col items-center gap-6 w-full"
               >
-                <div className="h-24 w-24 rounded-full border border-indigo-500/40 bg-indigo-500/10 flex items-center justify-center">
-                  <Loader2 className="h-10 w-10 text-indigo-300 animate-spin" />
-                </div>
+                <UpgraderSpinner
+                  chance={chance}
+                  isSpinning={status === 'processing'}
+                  onFinish={() => {}}
+                  spinMode="indeterminate"
+                />
                 <div className="space-y-2">
                   <h2 className="text-2xl font-black text-white uppercase tracking-tight">Upgrading...</h2>
                   <p className="text-slate-400 text-sm">Waiting for server result</p>
