@@ -1,6 +1,7 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { computeRoll, pickPrizeByWeight, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
+import { normalizeEconomySettings, getXpCost } from './_lib/economy.js';
 
 const DEFAULT_CLIENT_SEED = 'lootx-player';
 const STARTER_COINS = 1000;
@@ -59,6 +60,7 @@ export default async function handler(req, res) {
     uid = decoded.uid;
     const body = await readJsonBody(req);
     const boxId = typeof body?.boxId === 'string' ? body.boxId : (typeof body?.caseId === 'string' ? body.caseId : null);
+    const requestedPaymentMethod = body?.paymentMethod === 'xp' ? 'xp' : 'coins';
     requestBoxId = boxId;
     const isFree = body?.isFree === true;
     if (!boxId || typeof boxId !== 'string') {
@@ -70,6 +72,7 @@ export default async function handler(req, res) {
     const userRef = firestore.collection('users').doc(decoded.uid);
     const provablyRef = firestore.collection('provablyFair').doc(decoded.uid);
     const bonusSettingsRef = firestore.collection('settings').doc('bonus-settings');
+    const economySettingsRef = firestore.collection('settings').doc('economy');
     const inventoryRef = userRef.collection('inventory').doc();
     const openRef = firestore.collection('opens').doc();
     const operationId = typeof body?.operationId === 'string' && body.operationId.trim().length
@@ -81,11 +84,12 @@ export default async function handler(req, res) {
     let responsePayload;
 
     await firestore.runTransaction(async (transaction) => {
-      const [boxSnap, userSnap, provablySnap, bonusSettingsSnap, processedOpSnap] = await Promise.all([
+      const [boxSnap, userSnap, provablySnap, bonusSettingsSnap, economySettingsSnap, processedOpSnap] = await Promise.all([
         transaction.get(boxRef),
         transaction.get(userRef),
         transaction.get(provablyRef),
         transaction.get(bonusSettingsRef),
+        transaction.get(economySettingsRef),
         transaction.get(processedOpRef)
       ]);
 
@@ -145,6 +149,16 @@ export default async function handler(req, res) {
       const hasCoins = Number.isFinite(toFiniteNumber(rawCoins, Number.NaN));
       const currentCoins = hasCoins ? toFiniteNumber(rawCoins, 0) : (userSnap.exists ? 0 : STARTER_COINS);
       const currentXp = Math.max(0, Math.floor(toFiniteNumber(userData.xpBalance ?? userData.xp, 0)));
+      const normalizedEconomy = normalizeEconomySettings(economySettingsSnap.exists ? economySettingsSnap.data() ?? {} : {});
+      if (!economySettingsSnap.exists) {
+        transaction.set(economySettingsRef, normalizedEconomy, { merge: true });
+      }
+      const xpCostForCoinCase = getXpCost(price, normalizedEconomy);
+      const shouldUseXpForOpen = !isFree && currencyType === 'COIN' && requestedPaymentMethod === 'xp';
+      const paidWithXp = currencyType === 'XP' || shouldUseXpForOpen;
+      if (shouldUseXpForOpen && normalizedEconomy.xpOpenEnabled !== true) {
+        fail(403, 'XP_OPEN_DISABLED', 'Opening cases with XP is currently disabled.');
+      }
       const bonusSettings = bonusSettingsSnap.exists ? bonusSettingsSnap.data() ?? {} : {};
       const openCaseRule = bonusSettings?.earnRules?.openCase ?? {};
       const xpPer100CoinsWagered = toSafeNonNegativeNumber(
@@ -164,12 +178,12 @@ export default async function handler(req, res) {
       const xpSystemEnabled = bonusSettings.enabled === false ? false : true;
       const allowXpCaseAward = bonusSettings.awardXpForXpCases === true
         || openCaseRule.allowXpCurrency === true;
-      const coinsSpent = !isFree && currencyType === 'COIN' ? price : 0;
+      const coinsSpent = !isFree && currencyType === 'COIN' && !shouldUseXpForOpen ? price : 0;
       if (!Number.isFinite(coinsSpent)) {
         fail(400, 'INVALID_REQUEST', 'Invalid case price for XP calculation.', { caseId: boxId });
       }
       const xpFromSpend = Math.floor((Math.max(0, coinsSpent) / 100) * xpPer100CoinsWagered);
-      const shouldAwardForOpenType = currencyType === 'COIN' || allowXpCaseAward;
+      const shouldAwardForOpenType = !paidWithXp || allowXpCaseAward;
       const xpFromOpen = !isFree && shouldAwardForOpenType ? xpPerCaseOpened : 0;
       const totalXpAward = xpSystemEnabled && shouldAwardForOpenType
         ? Math.max(0, Math.floor((xpFromSpend + xpFromOpen + baseXpBonus) * xpMultiplier))
@@ -178,25 +192,30 @@ export default async function handler(req, res) {
       if (!userSnap.exists) {
         transaction.set(userRef, {
           coins: currentCoins,
+          xpBalance: 0,
+          xp: 0,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
       }
 
-      if (currencyType === 'XP') {
+      if (currencyType === 'XP' || shouldUseXpForOpen) {
+        const requiredXp = currencyType === 'XP' ? priceXP : xpCostForCoinCase;
         if (!Number.isInteger(priceXP) || priceXP <= 0) {
-          fail(400, 'INVALID_REQUEST', 'This XP case is missing a valid XP price.', { caseId: boxId });
+          if (currencyType === 'XP') {
+            fail(400, 'INVALID_REQUEST', 'This XP case is missing a valid XP price.', { caseId: boxId });
+          }
         }
-        if (currentXp < priceXP) {
+        if (currentXp < requiredXp) {
           fail(402, 'INSUFFICIENT_FUNDS', 'Not enough XP to open this case.', {
-            currencyType,
+            currencyType: shouldUseXpForOpen ? 'XP' : currencyType,
             caseId: boxId,
             xpBalance: currentXp,
-            priceXP
+            priceXP: requiredXp
           });
         }
       } else if (!isFree && currentCoins < price) {
         fail(402, 'INSUFFICIENT_FUNDS', 'Not enough coins to open this case.', {
-          currencyType,
+          currencyType: paidWithXp ? 'XP' : currencyType,
           caseId: boxId,
           coins: currentCoins,
           price
@@ -208,13 +227,14 @@ export default async function handler(req, res) {
       const sizeOptions = normalizeSizes(prize.sizes ?? []);
       const selectedSize = sizeOptions.length ? pickRandomSize(sizeOptions) : null;
       const prizeValue = Number(prize.value ?? prize.price ?? 0);
-      const coinCost = currencyType === 'COIN' && !isFree ? price : 0;
+      const resolvedXpCost = currencyType === 'XP' ? priceXP : xpCostForCoinCase;
+      const coinCost = currencyType === 'COIN' && !isFree && !shouldUseXpForOpen ? price : 0;
       const newCoins = currencyType === 'COIN' ? currentCoins - coinCost : currentCoins;
-      const spentXpBalance = currencyType === 'XP' ? currentXp - priceXP : currentXp;
+      const spentXpBalance = paidWithXp ? currentXp - resolvedXpCost : currentXp;
       const newXpBalance = Math.max(0, Math.floor(spentXpBalance + totalXpAward));
       const updatedXpBalance = Math.max(0, Math.floor(currentXp + totalXpAward));
 
-      const nextUserPatch = currencyType === 'XP'
+      const nextUserPatch = paidWithXp
         ? { xpBalance: newXpBalance, xp: newXpBalance }
         : { coins: newCoins };
 
@@ -243,7 +263,7 @@ export default async function handler(req, res) {
       const inventoryPayload = {
         boxId,
         acquisitionCurrencyType: currencyType,
-        openCurrencyType: currencyType,
+        openCurrencyType: paidWithXp ? 'XP' : currencyType,
         prizeId: prize.id ?? null,
         name: prize.name ?? 'Mystery Item',
         value: prizeValue,
@@ -263,8 +283,9 @@ export default async function handler(req, res) {
         uid: decoded.uid,
         boxId,
         price,
-        priceXP: currencyType === 'XP' ? priceXP : null,
-        currencyType,
+        priceXP: paidWithXp ? resolvedXpCost : null,
+        currencyType: paidWithXp ? 'XP' : currencyType,
+        paymentMethod: paidWithXp ? 'xp' : 'coins',
         prize: {
           id: prize.id ?? null,
           name: prize.name ?? 'Mystery Item',
@@ -285,6 +306,18 @@ export default async function handler(req, res) {
       };
       transaction.set(openRef, openPayload);
 
+      if (paidWithXp) {
+        const transactionRef = userRef.collection('transactions').doc();
+        transaction.set(transactionRef, {
+          type: 'case_open_xp',
+          caseId: boxId,
+          openId: openRef.id,
+          amountXp: resolvedXpCost,
+          paymentMethod: 'xp',
+          createdAt: obtainedAt
+        });
+      }
+
       if (totalXpAward > 0) {
         transaction.set(xpLedgerRef, {
           type: 'CASE_OPEN',
@@ -299,8 +332,9 @@ export default async function handler(req, res) {
       responsePayload = {
         ok: true,
         price,
-        priceXP: currencyType === 'XP' ? priceXP : null,
-        currencyType,
+        priceXP: paidWithXp ? resolvedXpCost : null,
+        currencyType: paidWithXp ? 'XP' : currencyType,
+        paymentMethod: paidWithXp ? 'xp' : 'coins',
         prize: {
           ...prize,
           price: prizeValue,
@@ -311,7 +345,7 @@ export default async function handler(req, res) {
         sellBackRate: appliedSellBackRate,
         newCoinBalance: newCoins,
         newCoins,
-        newXpBalance: currencyType === 'XP' ? newXpBalance : updatedXpBalance,
+        newXpBalance: paidWithXp ? newXpBalance : updatedXpBalance,
         xpAwarded: totalXpAward,
         xpSettingsUsed: {
           xpPer100: xpPer100CoinsWagered,
@@ -355,6 +389,7 @@ export default async function handler(req, res) {
         operationId,
         boxId,
         currencyType,
+        paymentMethod: paidWithXp ? 'xp' : 'coins',
         coinsSpent,
         xpPer100CoinsWagered,
         xpPerCaseOpened,
