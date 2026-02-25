@@ -28,6 +28,8 @@ export default function UpgraderPage() {
   const [settings, setSettings] = useState<UpgraderSettings | null>(null);
   const [targets, setTargets] = useState<Item[]>([]);
   const [resultState, setResultState] = useState<'processing' | 'win' | 'lose'>('processing');
+  const [modalTarget, setModalTarget] = useState<Item | null>(null);
+  const [modalChance, setModalChance] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -108,6 +110,8 @@ export default function UpgraderPage() {
     setIsSubmitting(true);
     setIsModalOpen(true);
     setResultState('processing');
+    setModalTarget(target);
+    setModalChance(chance);
 
     try {
       const response = await attemptUpgrade({
@@ -220,9 +224,9 @@ export default function UpgraderPage() {
       <UpgraderResultModal
         isOpen={isModalOpen}
         onClose={closeModal}
-        target={target}
+        target={modalTarget}
         onRetry={handleRetry}
-        chance={chance}
+        chance={modalChance}
         status={resultState}
       />
     </div>
