@@ -6,13 +6,15 @@ interface UpgraderSpinnerProps {
   onFinish: (isWin: boolean) => void;
   isSpinning: boolean;
   spinMode?: 'resolve' | 'indeterminate';
+  forcedWin?: boolean;
 }
 
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   chance,
   onFinish,
   isSpinning,
-  spinMode = 'resolve'
+  spinMode = 'resolve',
+  forcedWin
 }) => {
   const controls = useAnimation();
   const size = 200;
@@ -42,27 +44,28 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     }
 
     void startResolveSpin();
-  }, [controls, isSpinning, spinMode]);
+  }, [chance, controls, forcedWin, isSpinning, spinMode]);
 
   const startResolveSpin = async () => {
-    const isWin = Math.random() * 100 <= chance;
+    const isWin = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= chance;
     const baseRotations = 5 * 360;
+    const safeWinZoneAngle = Math.min(359.9, Math.max(0.1, winZoneAngle));
     const finalAngle = isWin
-      ? Math.random() * winZoneAngle
-      : winZoneAngle + Math.random() * (360 - winZoneAngle);
+      ? Math.random() * safeWinZoneAngle
+      : safeWinZoneAngle + Math.random() * (360 - safeWinZoneAngle);
     const totalRotation = baseRotations + finalAngle;
 
     await controls.start({
       rotate: totalRotation,
       transition: {
-        duration: 4,
-        ease: [0.45, 0.05, 0.55, 0.95]
+        duration: 2.2,
+        ease: [0.32, 0.02, 0.16, 1]
       }
     });
 
     window.setTimeout(() => {
       onFinish(isWin);
-    }, 500);
+    }, 150);
   };
 
   return (
