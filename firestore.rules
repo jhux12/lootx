@@ -45,8 +45,28 @@ service cloud.firestore {
     }
 
     match /settings/{docId} {
+      allow read: if docId != 'plinko' || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /plinkoBoards/{boardId} {
+      allow read: if (resource.data == null || resource.data.enabled != false) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /plinkoPools/{poolId} {
       allow read: if true;
       allow write: if isAdmin();
+
+      match /items/{itemId} {
+        allow read: if (resource.data.enabled == true) || isAdmin();
+        allow write: if isAdmin();
+      }
+    }
+
+    match /plinkoDrops/{dropId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow write: if false;
     }
 
     match /upgraderTargets/{targetId} {

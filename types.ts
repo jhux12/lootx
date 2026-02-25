@@ -299,4 +299,4 @@ export type ViewState =
   | { type: 'CASE_OPENING'; boxId: string; isFree?: boolean }
   | { type: 'BATTLE_ARENA'; battleId: string }
   | { type: 'BATTLES' }
-  | { type: 'UPGRADER' };
+  | { type: 'PLINKO' };
