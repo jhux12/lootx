@@ -9,6 +9,11 @@ interface UpgraderSpinnerProps {
   forcedWin?: boolean;
 }
 
+const SPIN_FULL_ROTATIONS = 8;
+const SPIN_SETTLE_DURATION_S = 4.2;
+const SPIN_RESULT_DELAY_MS = 180;
+const RESULT_ZONE_EDGE_BUFFER = 4;
+
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   chance,
   onFinish,
@@ -48,24 +53,32 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
 
   const startResolveSpin = async () => {
     const isWin = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= chance;
-    const baseRotations = 5 * 360;
+    const baseRotations = SPIN_FULL_ROTATIONS * 360;
     const safeWinZoneAngle = Math.min(359.9, Math.max(0.1, winZoneAngle));
+
+    const winStart = RESULT_ZONE_EDGE_BUFFER;
+    const winEnd = Math.max(winStart + 0.1, safeWinZoneAngle - RESULT_ZONE_EDGE_BUFFER);
+
+    const loseStart = Math.min(359.8, safeWinZoneAngle + RESULT_ZONE_EDGE_BUFFER);
+    const loseEnd = 360 - RESULT_ZONE_EDGE_BUFFER;
+
     const finalAngle = isWin
-      ? Math.random() * safeWinZoneAngle
-      : safeWinZoneAngle + Math.random() * (360 - safeWinZoneAngle);
+      ? winStart + Math.random() * Math.max(0.1, winEnd - winStart)
+      : loseStart + Math.random() * Math.max(0.1, loseEnd - loseStart);
+
     const totalRotation = baseRotations + finalAngle;
 
     await controls.start({
       rotate: totalRotation,
       transition: {
-        duration: 2.2,
-        ease: [0.32, 0.02, 0.16, 1]
+        duration: SPIN_SETTLE_DURATION_S,
+        ease: [0.1, 0.82, 0.18, 1]
       }
     });
 
     window.setTimeout(() => {
       onFinish(isWin);
-    }, 150);
+    }, SPIN_RESULT_DELAY_MS);
   };
 
   return (
