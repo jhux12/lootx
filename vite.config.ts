@@ -11,7 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
-      'motion/react': 'https://esm.sh/motion/react',
+      'motion/react': path.resolve(__dirname, 'src/shims_motion_react.tsx'),
     }
   }
 });
