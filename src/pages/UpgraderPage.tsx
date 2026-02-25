@@ -3,17 +3,19 @@ import { UpgraderSourcePanel } from '../components/upgrader/UpgraderSourcePanel'
 import { UpgraderTargetPanel } from '../components/upgrader/UpgraderTargetPanel';
 import { UpgraderPreviewBar } from '../components/upgrader/UpgraderPreviewBar';
 import { UpgraderResultModal } from '../components/upgrader/UpgraderResultModal';
-import { MOCK_TARGETS } from '../components/upgrader/upgraderMockData';
 import { InventoryItem, Item, Rarity } from '../components/upgrader/upgraderTypes';
 import { Coins } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
+import { attemptUpgrade, getUpgraderSettings, getUpgraderTargets } from '../../services/upgraderService';
+import { computeUpgradeChance, UpgraderSettings } from '../../utils/upgrader';
 
 const rarityMap: Record<string, Rarity> = {
   common: 'Common',
   uncommon: 'Uncommon',
   rare: 'Rare',
   epic: 'Epic',
-  legendary: 'Legendary'
+  legendary: 'Legendary',
+  mythic: 'Mythic'
 };
 
 export default function UpgraderPage() {
@@ -22,15 +24,44 @@ export default function UpgraderPage() {
   const [target, setTarget] = useState<Item | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [settings, setSettings] = useState<UpgraderSettings | null>(null);
+  const [targets, setTargets] = useState<Item[]>([]);
+  const [resultState, setResultState] = useState<'processing' | 'win' | 'lose'>('processing');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
+    void (async () => {
+      setLoading(true);
+      try {
+        const [nextSettings, nextTargets] = await Promise.all([getUpgraderSettings(), getUpgraderTargets()]);
+        setSettings(nextSettings);
+        setTargets(
+          nextTargets.map((entry) => ({
+            id: entry.id,
+            name: entry.name,
+            imageUrl: entry.imageUrl,
+            coinValue: Number(entry.coinValue ?? 0),
+            rarity: rarityMap[String(entry.rarity).toLowerCase()] ?? 'Common',
+            category: entry.category || 'General',
+            enabled: entry.enabled !== false
+          }))
+        );
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load upgrader data.');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const realInventoryItems = useMemo<InventoryItem[]>(() => {
+    const allowedIds = settings?.sourceItemIdsEnabled ?? [];
+    const hasSourceAllowList = allowedIds.length > 0;
+
     return inventory
       .filter((item) => (item.status ?? 'available') === 'available')
+      .filter((item) => !hasSourceAllowList || allowedIds.includes(String(item.id ?? '')))
       .map((item) => ({
         id: item.instanceId,
         name: item.name,
@@ -41,23 +72,64 @@ export default function UpgraderPage() {
         locked: item.locked,
         shipping: item.status === 'shipping' || item.status === 'shipping_requested'
       }));
-  }, [inventory]);
+  }, [inventory, settings?.sourceItemIdsEnabled]);
 
-  const calculateChance = () => {
-    if (!source || !target) return 0;
-    const rawChance = (source.coinValue / target.coinValue) * 0.95 * 100;
-    return Math.min(Math.max(rawChance, 0.01), 80);
+  const filteredTargets = useMemo(() => {
+    if (!settings) return targets;
+    const categories = settings.categoriesEnabled ?? [];
+    const rarities = settings.raritiesEnabled ?? [];
+    return targets.filter((item) => {
+      const normalizedCategory = String(item.category ?? '');
+      const normalizedRarity = String(item.rarity ?? '').toLowerCase();
+      const categoryAllowed = categories.length === 0 || categories.includes(normalizedCategory);
+      const rarityAllowed = rarities.length === 0 || rarities.includes(normalizedRarity);
+      return categoryAllowed && rarityAllowed;
+    });
+  }, [settings, targets]);
+
+  const chance = useMemo(() => {
+    if (!source || !target || !settings) return 0;
+    return computeUpgradeChance({
+      sourceValue: source.coinValue,
+      targetValue: target.coinValue,
+      settings,
+      isSameRarity: String(source.rarity).toLowerCase() === String(target.rarity).toLowerCase()
+    }) * 100;
+  }, [settings, source, target]);
+
+  const closeModal = () => {
+    if (isSubmitting) return;
+    setIsModalOpen(false);
   };
 
-  const chance = calculateChance();
-
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
+    if (!source || !target || !settings || isSubmitting) return;
+    setError(null);
+    setIsSubmitting(true);
     setIsModalOpen(true);
+    setResultState('processing');
+
+    try {
+      const response = await attemptUpgrade({
+        sourceItemInstanceId: source.id,
+        targetItemId: target.id,
+        clientSeed: `${Date.now()}`
+      });
+
+      setResultState(response.win ? 'win' : 'lose');
+      setSource(null);
+      setTarget(null);
+    } catch (attemptError) {
+      setError(attemptError instanceof Error ? attemptError.message : 'Upgrade failed.');
+      setIsModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleRetry = () => {
+    if (isSubmitting) return;
     setIsModalOpen(false);
-    setTimeout(() => setIsModalOpen(true), 100);
   };
 
   if (!isAuthenticated) {
@@ -78,7 +150,7 @@ export default function UpgraderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 pb-32">
+    <div className="min-h-screen bg-slate-950 text-slate-200 pb-44 sm:pb-32">
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
           <div className="flex flex-col min-w-0">
@@ -94,6 +166,10 @@ export default function UpgraderPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+        {error && (
+          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{error}</div>
+        )}
+
         {realInventoryItems.length === 0 && !loading && (
           <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-200 text-sm">
             Your inventory has no available items to upgrade yet.
@@ -123,7 +199,7 @@ export default function UpgraderPage() {
           <div className="lg:col-span-6 space-y-6">
             <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6">
               <UpgraderTargetPanel
-                items={MOCK_TARGETS}
+                items={filteredTargets}
                 selectedId={target?.id || null}
                 onSelect={setTarget}
                 loading={loading}
@@ -137,15 +213,17 @@ export default function UpgraderPage() {
         source={source}
         target={target}
         onUpgrade={handleUpgrade}
-        disabled={realInventoryItems.length === 0}
+        disabled={realInventoryItems.length === 0 || !settings?.enabled || isSubmitting}
+        chanceOverride={chance}
       />
 
       <UpgraderResultModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={closeModal}
         target={target}
         onRetry={handleRetry}
         chance={chance}
+        status={resultState}
       />
     </div>
   );

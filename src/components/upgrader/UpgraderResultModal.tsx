@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Item } from './upgraderTypes';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, RotateCcw, Home, Trophy, Skull } from 'lucide-react';
-import { UpgraderSpinner } from './UpgraderSpinner';
+import { X, RotateCcw, Home, Trophy, Skull, Loader2 } from 'lucide-react';
 
 interface UpgraderResultModalProps {
   isOpen: boolean;
@@ -10,6 +9,7 @@ interface UpgraderResultModalProps {
   target: Item | null;
   onRetry: () => void;
   chance: number;
+  status: 'processing' | 'win' | 'lose';
 }
 
 export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
@@ -17,25 +17,8 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   onClose,
   target,
   onRetry,
-  chance,
+  status,
 }) => {
-  const [status, setStatus] = useState<'processing' | 'win' | 'lose'>('processing');
-  const [isSpinning, setIsSpinning] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setStatus('processing');
-      setIsSpinning(true);
-    } else {
-      setIsSpinning(false);
-    }
-  }, [isOpen]);
-
-  const handleFinish = (isWin: boolean) => {
-    setIsSpinning(false);
-    setStatus(isWin ? 'win' : 'lose');
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -46,7 +29,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
         exit={{ scale: 0.9, opacity: 0 }}
         className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl"
       >
-        <button 
+        <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 text-slate-500 hover:text-white transition-colors z-10"
         >
@@ -61,14 +44,11 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="py-6 flex flex-col items-center gap-8 w-full"
+                className="py-10 flex flex-col items-center gap-6 w-full"
               >
-                <UpgraderSpinner 
-                  chance={chance} 
-                  isSpinning={isSpinning} 
-                  onFinish={handleFinish} 
-                />
-                
+                <div className="h-24 w-24 rounded-full border border-indigo-500/40 bg-indigo-500/10 flex items-center justify-center">
+                  <Loader2 className="h-10 w-10 text-indigo-300 animate-spin" />
+                </div>
                 <div className="space-y-2">
                   <h2 className="text-2xl font-black text-white uppercase tracking-tight">Upgrading...</h2>
                   <p className="text-slate-400 text-sm">Waiting for server result</p>
@@ -89,7 +69,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                     <Trophy className="w-12 h-12 text-white" />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <h2 className="text-4xl font-black text-emerald-500 uppercase italic tracking-tighter">SUCCESS!</h2>
                   <p className="text-slate-300">You upgraded to a new item!</p>
@@ -109,13 +89,13 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                 )}
 
                 <div className="flex gap-3 w-full mt-4">
-                  <button 
+                  <button
                     onClick={onRetry}
                     className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
                   >
                     <RotateCcw className="w-4 h-4" /> Try Again
                   </button>
-                  <button 
+                  <button
                     onClick={onClose}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
                   >
@@ -135,28 +115,24 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                 <div className="relative w-24 h-24 bg-red-500 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(239,68,68,0.4)]">
                   <Skull className="w-12 h-12 text-white" />
                 </div>
-                
+
                 <div className="space-y-2">
                   <h2 className="text-4xl font-black text-red-500 uppercase italic tracking-tighter">BUSTED</h2>
                   <p className="text-slate-300">Your item was consumed.</p>
                 </div>
 
-                <div className="bg-slate-800/50 p-6 rounded-2xl border border-red-500/20 w-full text-slate-400 text-sm italic">
-                  Better luck next time!
-                </div>
-
                 <div className="flex gap-3 w-full mt-4">
-                  <button 
+                  <button
                     onClick={onRetry}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
                   >
                     <RotateCcw className="w-4 h-4" /> Try Again
                   </button>
-                  <button 
+                  <button
                     onClick={onClose}
-                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors"
+                    className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
                   >
-                    Back
+                    <Home className="w-4 h-4" /> Close
                   </button>
                 </div>
               </motion.div>
