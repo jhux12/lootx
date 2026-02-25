@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, useAnimation } from 'motion/react';
 
 interface UpgraderSpinnerProps {
@@ -22,6 +22,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   forcedWin
 }) => {
   const controls = useAnimation();
+
+  const spinRunIdRef = useRef(0);
   const size = 200;
   const strokeWidth = 12;
   const radius = (size - strokeWidth) / 2;
@@ -32,11 +34,13 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
 
   useEffect(() => {
     if (!isSpinning) {
+      spinRunIdRef.current += 1;
       void controls.stop();
       return;
     }
 
     if (spinMode === 'indeterminate') {
+      spinRunIdRef.current += 1;
       void controls.start({
         rotate: [0, 360],
         transition: {
@@ -52,6 +56,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   }, [chance, controls, forcedWin, isSpinning, spinMode]);
 
   const startResolveSpin = async () => {
+    const spinRunId = spinRunIdRef.current + 1;
+    spinRunIdRef.current = spinRunId;
     const isWin = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= chance;
     const baseRotations = SPIN_FULL_ROTATIONS * 360;
     const safeWinZoneAngle = Math.min(359.9, Math.max(0.1, winZoneAngle));
@@ -77,6 +83,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     });
 
     window.setTimeout(() => {
+      if (spinRunIdRef.current !== spinRunId) return;
       onFinish(isWin);
     }, SPIN_RESULT_DELAY_MS);
   };

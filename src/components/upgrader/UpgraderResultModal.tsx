@@ -62,7 +62,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
           <AnimatePresence mode="wait">
             {showSpinner && (
               <motion.div
-                key={displayStatus}
+                key="spinner"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
