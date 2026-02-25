@@ -1,6 +1,16 @@
-import { addDoc, collection, deleteDoc, deleteField, doc, getDocs, setDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, deleteField, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { DEFAULT_PLINKO_SETTINGS, normalizePlinkoBoard, normalizePlinkoSettings, PlinkoBoard, PlinkoPoolItem, PlinkoSettings } from '../utils/plinko';
+
+export const getPlinkoSettingsAdmin = async (): Promise<PlinkoSettings> => {
+  const privateSnap = await getDoc(doc(db, 'settings', 'plinko'));
+  if (privateSnap.exists()) {
+    return normalizePlinkoSettings(privateSnap.data() as Partial<PlinkoSettings>);
+  }
+
+  const publicSnap = await getDoc(doc(db, 'settings', 'plinkoPublic'));
+  return normalizePlinkoSettings(publicSnap.exists() ? (publicSnap.data() as Partial<PlinkoSettings>) : undefined);
+};
 
 export const savePlinkoSettings = async (settings: Partial<PlinkoSettings>) => {
   const merged = { ...DEFAULT_PLINKO_SETTINGS, ...settings, updatedAt: Date.now() };

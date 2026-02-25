@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   deletePlinkoPoolItem,
+  getPlinkoSettingsAdmin,
   listPlinkoBoardsAdmin,
   listPlinkoPoolItemsAdmin,
   rotatePlinkoServerSeedHash,
@@ -20,6 +21,14 @@ export const PlinkoAdminSection: React.FC = () => {
   const [poolDraft, setPoolDraft] = useState<Partial<PlinkoPoolItem>>({ enabled: true, weight: 1 });
   const [previewBet, setPreviewBet] = useState(1000);
   const [previewSlotIndex, setPreviewSlotIndex] = useState(0);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsStatus, setSettingsStatus] = useState<string | null>(null);
+
+  const reloadSettings = async () => {
+    const loaded = await getPlinkoSettingsAdmin();
+    setSettingsDraft(loaded);
+    setSettingsStatus(null);
+  };
 
   const reloadBoards = async () => {
     const next = await listPlinkoBoardsAdmin();
@@ -37,6 +46,7 @@ export const PlinkoAdminSection: React.FC = () => {
   };
 
   useEffect(() => {
+    void reloadSettings();
     void reloadBoards();
   }, []);
 
@@ -77,9 +87,32 @@ export const PlinkoAdminSection: React.FC = () => {
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         <button onClick={() => setSettingsDraft((prev) => ({ ...prev, enabled: !prev.enabled }))} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white">{settingsDraft.enabled ? 'Disable' : 'Enable'} Plinko</button>
-        <button onClick={() => { void savePlinkoSettings(settingsDraft); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-black">Save Settings</button>
+        <button
+          onClick={async () => {
+            setIsSavingSettings(true);
+            setSettingsStatus(null);
+            try {
+              await savePlinkoSettings(settingsDraft);
+              await reloadSettings();
+              setSettingsStatus('Settings saved.');
+            } catch (error) {
+              setSettingsStatus(error instanceof Error ? error.message : 'Failed to save settings.');
+            } finally {
+              setIsSavingSettings(false);
+            }
+          }}
+          disabled={isSavingSettings}
+          className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-black disabled:opacity-50"
+        >
+          {isSavingSettings ? 'Saving…' : 'Save Settings'}
+        </button>
         <button onClick={() => { void rotatePlinkoServerSeedHash(); }} className="rounded-lg border border-emerald-500/50 px-3 py-2 text-xs text-emerald-300">Rotate Seed Hash</button>
       </div>
+      {settingsStatus && (
+        <div className={`mt-2 rounded-lg border px-3 py-2 text-xs ${settingsStatus === 'Settings saved.' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200' : 'border-rose-500/40 bg-rose-500/10 text-rose-200'}`}>
+          {settingsStatus}
+        </div>
+      )}
 
       <h4 className="mt-6 text-base font-bold text-white">Boards</h4>
       <div className="mt-2 flex flex-wrap gap-2">
