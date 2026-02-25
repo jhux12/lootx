@@ -38,7 +38,7 @@ import { CookieConsentToast } from './components/CookieConsentToast';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
-import UpgraderPage from './src/pages/UpgraderPage';
+import { UpgraderPage } from './components/UpgraderPage';
 import UpgraderSettingsPage from './src/pages/admin/UpgraderSettingsPage';
 import UpgraderTargetsPage from './src/pages/admin/UpgraderTargetsPage';
 import { useSiteChat } from './hooks/useSiteChat';

@@ -93,7 +93,7 @@ export const UpgraderPage: React.FC = () => {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] p-3 sm:p-6">
+    <div className="mx-auto w-full max-w-[1400px] p-3 pb-28 sm:p-6 sm:pb-10">
       <h1 className="text-2xl font-black text-white sm:text-3xl">Upgrader</h1>
       <p className="mb-4 text-sm text-gray-400">Risk one item to upgrade into a higher-value target.</p>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -103,9 +103,18 @@ export const UpgraderPage: React.FC = () => {
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <UpgradeSpinWheel chance={chance} phase={spinPhase} rotationDeg={wheelRotation} target={targetItem} />
         <ChancePreview chance={chance} sourceName={sourceItem?.name} targetName={targetItem?.name} />
-        <button disabled={isDisabled} onClick={onAttempt} title={isCooldown ? 'Cooldown active' : ''} className="h-14 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 px-8 text-lg font-black text-white disabled:cursor-not-allowed disabled:opacity-50 xl:col-span-2">
-          {isSubmitting ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Rolling…</span> : 'Upgrade Now'}
-        </button>
+        <div className="xl:col-span-2">
+          <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+64px)] z-30 px-3 lg:static lg:px-0">
+            <button
+              disabled={isDisabled}
+              onClick={onAttempt}
+              title={isCooldown ? 'Cooldown active' : ''}
+              className="h-14 w-full rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 px-8 text-lg font-black text-white shadow-lg shadow-cyan-900/30 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSubmitting ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Rolling…</span> : 'Upgrade Now'}
+            </button>
+          </div>
+        </div>
       </div>
       {error && <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-2 text-sm text-rose-200">{error}</div>}
       <UpgradeResultModal result={result} onClose={() => setResult(null)} />
