@@ -40,7 +40,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
         window.clearTimeout(resultTimeoutRef.current);
         resultTimeoutRef.current = null;
       }
-      void controls.stop();
       controls.set({ rotate: 0 });
       return;
     }
@@ -51,7 +50,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
         window.clearTimeout(resultTimeoutRef.current);
         resultTimeoutRef.current = null;
       }
-      void controls.stop();
       controls.set({ rotate: 0 });
       void controls.start({
         rotate: [0, 360],
@@ -64,7 +62,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       return;
     }
 
-    void controls.stop();
     controls.set({ rotate: 0 });
     void startResolveSpin();
   }, [chance, controls, forcedWin, isSpinning, spinMode]);

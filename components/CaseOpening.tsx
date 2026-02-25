@@ -601,13 +601,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             registerSpend(spentAmount);
           }
         }
-        console.info('Case-open XP debug', {
-          caseId: box.id,
-          xpAwarded: Number(data.xpAwarded ?? 0),
-          newXpBalance: Number(data.newXpBalance ?? 0),
-          currencyType: data.currencyType ?? 'COIN',
-          xpSettingsUsed: data.xpSettingsUsed ?? null
-        });
+        if (import.meta.env.DEV) {
+          console.info('Case-open XP debug', {
+            caseId: box.id,
+            xpAwarded: Number(data.xpAwarded ?? 0),
+            newXpBalance: Number(data.newXpBalance ?? 0),
+            currencyType: data.currencyType ?? 'COIN',
+            xpSettingsUsed: data.xpSettingsUsed ?? null
+          });
+        }
         setWonInventoryItem(inventoryItem);
         rollValue = data.provablyFair.roll;
         rollHash = data.provablyFair.rollHash;

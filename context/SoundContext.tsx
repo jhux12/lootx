@@ -12,15 +12,15 @@ interface SoundContextType {
 const SoundContext = createContext<SoundContextType | undefined>(undefined);
 
 const SOUND_URLS: Record<SoundType, string> = {
-  click: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_2769490204.mp3?filename=ui-click-43196.mp3',
-  hover: 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_3f7601614f.mp3?filename=interface-124464.mp3',
+  click: spinSoundUrl,
+  hover: spinSoundUrl,
   'spin-start': spinSoundUrl,
-  'spin-tick': 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_736a623910.mp3?filename=click-21156.mp3',
-  'win-common': 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c153e1.mp3?filename=success-1-6297.mp3',
-  'win-rare': 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_804a54df5b.mp3?filename=bell-notification-9336.mp3',
-  'win-gold': 'https://cdn.pixabay.com/download/audio/2022/10/16/audio_106275f85b.mp3?filename=win-sfx-38507.mp3',
-  'gold-mode': 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_8db1f115a5.mp3?filename=magic-spell-6005.mp3',
-  coins: 'https://cdn.pixabay.com/download/audio/2022/03/25/audio_27613c7a0d.mp3?filename=coins-21160.mp3'
+  'spin-tick': spinSoundUrl,
+  'win-common': spinSoundUrl,
+  'win-rare': spinSoundUrl,
+  'win-gold': spinSoundUrl,
+  'gold-mode': spinSoundUrl,
+  coins: spinSoundUrl
 };
 
 const SOUND_VOLUMES: Partial<Record<SoundType, number>> = {
