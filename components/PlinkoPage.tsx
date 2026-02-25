@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, Volume2, VolumeX } from 'lucide-react';
+import { HelpCircle, History, Loader2, Volume2, VolumeX } from 'lucide-react';
+import pullzLogo from '../assets/pullz-p.PNG';
 import { useGame } from '../context/GameContext';
 import { attemptPlinko, getPlinkoBoard, getPlinkoSettings, listPlinkoPoolItems } from '../services/plinkoService';
 import { PlinkoBoard as PlinkoBoardType, PlinkoSettings } from '../utils/plinko';
@@ -106,7 +107,7 @@ const PegBoardSvg: React.FC<{ layout: BoardLayout }> = ({ layout }) => {
   const finalRowY = layout.topOffset + (layout.rows - 1) * layout.rowHeight;
 
   return (
-    <svg className="h-full w-full" viewBox={`0 0 ${layout.boardWidth} ${layout.boardHeight}`} preserveAspectRatio="xMidYMid meet" aria-hidden>
+    <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${layout.boardWidth} ${layout.boardHeight}`} preserveAspectRatio="xMidYMid meet" aria-hidden>
       <defs>
         <radialGradient id="pegGlow" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="rgba(255,255,255,0.95)" />
@@ -136,69 +137,147 @@ const PegBoardSvg: React.FC<{ layout: BoardLayout }> = ({ layout }) => {
   );
 };
 
-const SlotRow: React.FC<{
+const BinTilesRow: React.FC<{
   board: PlinkoBoardType;
-  layout: BoardLayout;
   slotPrizes: Record<number, SlotPrizePreview>;
   resultSlotIndex: number | null;
   landingSlotIndex: number | null;
-}> = ({ board, layout, slotPrizes, resultSlotIndex, landingSlotIndex }) => {
-  const centerSlot = Math.floor(layout.slotCount / 2);
+}> = ({ board, slotPrizes, resultSlotIndex, landingSlotIndex }) => (
+  <div className="flex h-full w-full max-w-[760px] items-end gap-1">
+    {board.slots.map((slot, index) => {
+      const preview = slotPrizes[index];
+      const tone = getSlotTone(slot.label);
+      const isResult = resultSlotIndex === index;
+      const isLanding = landingSlotIndex === index;
+
+      return (
+        <div
+          key={`${slot.poolId}-${index}`}
+          className={`plinko-slot-bin relative flex h-full min-w-0 flex-1 items-center justify-center rounded-sm px-0.5 md:rounded-md ${isLanding ? 'plinko-slot-landing' : ''} ${isResult ? 'plinko-slot-result' : ''}`}
+          style={{
+            borderColor: tone.border,
+            background: `linear-gradient(to bottom, rgba(255,255,255,0.28), ${tone.bg} 35%)`,
+            boxShadow: `inset 0 -5px 10px rgba(0,0,0,0.34), 0 0 8px ${tone.glow}`
+          }}
+        >
+          <span className="truncate text-[7px] font-bold uppercase tracking-[0.02em] text-white lg:text-[9px]">{slot.label}</span>
+          <span className="sr-only">{preview?.name ?? 'No item'} {formatCompactValue(preview?.coinValue ?? 0)}</span>
+        </div>
+      );
+    })}
+  </div>
+);
+
+const PlinkoTopNav: React.FC<{ balance: number }> = ({ balance }) => (
+  <nav className="sticky top-0 z-10 w-full bg-gray-700 px-5 drop-shadow-lg">
+    <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3">
+      <img className="h-6 sm:h-7" src={pullzLogo} alt="Pullz.gg" />
+      <div className="mx-auto">
+        <div className="flex overflow-hidden rounded-md">
+          <div className="flex gap-2 bg-slate-900 px-3 py-2 text-sm font-semibold tabular-nums text-white sm:text-base">
+            <span className="select-none text-gray-500">$</span>
+            <span className="min-w-16 text-right">{Math.floor(balance).toLocaleString()}</span>
+          </div>
+          <button className="bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 active:bg-blue-700 sm:text-base">
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+);
+
+const PlinkoSidebar: React.FC<{
+  board: PlinkoBoardType | null;
+  settings: PlinkoSettings | null;
+  bet: number;
+  setBet: (value: number) => void;
+  isLoading: boolean;
+  soundEnabled: boolean;
+  onToggleSound: () => void;
+  onDrop: () => void;
+}> = ({ board, settings, bet, setBet, isLoading, soundEnabled, onToggleSound, onDrop }) => {
+  const [mode, setMode] = useState<'manual' | 'auto'>('manual');
+  const minBet = settings?.minBet ?? 100;
+  const maxBet = settings?.maxBet ?? 50000;
+  const dropDisabled = !settings?.enabled || isLoading || !board || bet < minBet || bet > maxBet;
 
   return (
-    <div
-      className="absolute"
-      style={{
-        left: `${layout.slotsStartX}px`,
-        top: `${layout.binsTop}px`,
-        width: `${layout.slotCount * layout.pegSpacing}px`,
-        height: `${layout.binHeight}px`
-      }}
-    >
-      <div
-        className="pointer-events-none absolute top-[-38px] h-[38px] w-[2px] rounded-full"
-        style={{
-          left: `${(centerSlot + 0.5) * layout.pegSpacing}px`,
-          transform: 'translateX(-50%)',
-          background: 'linear-gradient(to bottom, rgba(110,231,183,0.7), rgba(110,231,183,0))',
-          boxShadow: '0 0 12px rgba(16,185,129,0.55)'
-        }}
-      />
+    <div className="flex flex-col gap-5 bg-slate-700 p-3 lg:max-w-80">
+      <div className="flex gap-1 rounded-full bg-slate-900 p-1">
+        <button
+          type="button"
+          onClick={() => setMode('manual')}
+          className={`flex-1 rounded-full py-2 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-50 hover:[&:not(:disabled)]:bg-slate-600 active:[&:not(:disabled)]:bg-slate-500 ${mode === 'manual' ? 'bg-slate-600' : ''}`}
+        >
+          Manual
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('auto')}
+          className={`flex-1 rounded-full py-2 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-50 hover:[&:not(:disabled)]:bg-slate-600 active:[&:not(:disabled)]:bg-slate-500 ${mode === 'auto' ? 'bg-slate-600' : ''}`}
+        >
+          Auto
+        </button>
+      </div>
 
-      <div className="flex h-full">
-        {board.slots.map((slot, index) => {
-          const preview = slotPrizes[index];
-          const tone = getSlotTone(slot.label);
-          const isResult = resultSlotIndex === index;
-          const isLanding = landingSlotIndex === index;
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-300">Bet Amount</label>
+        <div className="flex">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-2 select-none text-slate-500">$</span>
+            <input
+              type="number"
+              value={bet}
+              onChange={(event) => setBet(Number(event.target.value || 0))}
+              min={minBet}
+              max={maxBet}
+              className="w-full rounded-l-md border-2 border-slate-600 bg-slate-900 py-2 pl-7 pr-2 text-sm text-white transition-colors hover:cursor-pointer focus:border-slate-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 hover:[&:not(:disabled)]:border-slate-500"
+            />
+          </div>
+          <button type="button" onClick={() => setBet(Math.max(minBet, Math.floor(bet / 2)))} className="touch-manipulation bg-slate-600 px-4 font-bold diagonal-fractions text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 hover:[&:not(:disabled)]:bg-slate-500 active:[&:not(:disabled)]:bg-slate-400">1/2</button>
+          <button type="button" onClick={() => setBet(Math.min(maxBet, Math.floor(bet * 2)))} className="relative touch-manipulation rounded-r-md bg-slate-600 px-4 text-sm font-bold text-white transition-colors after:absolute after:left-0 after:inline-block after:h-1/2 after:w-[2px] after:bg-slate-800 after:content-[''] disabled:cursor-not-allowed disabled:opacity-50 hover:[&:not(:disabled)]:bg-slate-500 active:[&:not(:disabled)]:bg-slate-400">2x</button>
+        </div>
+      </div>
 
-          return (
-            <div key={`${slot.poolId}-${index}`} className="relative shrink-0" style={{ width: `${layout.pegSpacing}px` }}>
-              <div
-                className={`plinko-slot-bin h-full w-full ${isLanding ? 'plinko-slot-landing' : ''} ${isResult ? 'plinko-slot-result' : ''}`}
-                style={{
-                  borderColor: tone.border,
-                  background: `linear-gradient(to bottom, rgba(255,255,255,0.12), ${tone.bg} 24%)`,
-                  boxShadow: `inset 0 -8px 14px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.13), 0 0 10px ${tone.glow}`
-                }}
-              >
-                <div className="absolute inset-x-0 top-0 h-[8px]" style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.26), rgba(255,255,255,0.02))' }} />
-                <div className="pt-3 text-center">
-                  <div className="truncate px-0.5 text-[8px] font-bold uppercase tracking-[0.03em] text-white">{slot.label}</div>
-                  <div className="mt-1 truncate px-0.5 text-[8px] text-gray-200">{preview?.name ?? 'No item'}</div>
-                  <div className="mt-1 text-[8px] font-semibold text-emerald-200">{formatCompactValue(preview?.coinValue ?? 0)}</div>
-                </div>
-              </div>
-              {index < layout.slotCount - 1 && <div className="absolute right-0 top-0 h-full w-px bg-white/20" />}
-            </div>
-          );
-        })}
+      <div className="relative space-y-2">
+        <label className="text-sm font-medium text-slate-300">Risk</label>
+        <select className="block w-full appearance-none rounded-md border-2 border-slate-600 bg-slate-900 py-2 pl-3 pr-8 text-sm text-white transition hover:cursor-pointer focus:border-slate-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 hover:[&:not(:disabled)]:border-slate-500" value={board?.name ?? 'medium'} disabled>
+          <option>{board?.name ?? 'medium'}</option>
+        </select>
+        <svg className="absolute right-3 top-9 text-slate-500" width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.51a.75.75 0 01-1.08 0l-4.25-4.51a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+      </div>
+
+      <div className="relative space-y-2">
+        <label className="text-sm font-medium text-slate-300">Rows</label>
+        <select className="block w-full appearance-none rounded-md border-2 border-slate-600 bg-slate-900 py-2 pl-3 pr-8 text-sm text-white transition hover:cursor-pointer focus:border-slate-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 hover:[&:not(:disabled)]:border-slate-500" value={board?.rows ?? settings?.rows ?? 16} disabled>
+          <option>{board?.rows ?? settings?.rows ?? 16}</option>
+        </select>
+        <svg className="absolute right-3 top-9 text-slate-500" width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.51a.75.75 0 01-1.08 0l-4.25-4.51a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+      </div>
+
+      <button onClick={onDrop} disabled={dropDisabled} className="touch-manipulation rounded-md bg-green-500 py-3 font-semibold text-slate-900 transition-colors hover:bg-green-400 active:bg-green-600 disabled:bg-neutral-600 disabled:text-neutral-400">
+        {isLoading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Dropping…</span> : 'Drop Ball'}
+      </button>
+
+      <div className="mt-auto pt-5">
+        <div className="flex items-center gap-4 border-t border-slate-600 pt-3">
+          <button type="button" onClick={onToggleSound} className="rounded-full p-2 text-slate-300 transition hover:bg-slate-600 active:bg-slate-500">
+            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </button>
+          <button type="button" className="rounded-full p-2 text-slate-300 transition hover:bg-slate-600 active:bg-slate-500"><History className="h-4 w-4" /></button>
+          <button type="button" className="rounded-full p-2 text-slate-300 transition hover:bg-slate-600 active:bg-slate-500"><HelpCircle className="h-4 w-4" /></button>
+        </div>
       </div>
     </div>
   );
 };
 
-const PlinkoBoard: React.FC<{
+const PlinkoBoardPanel: React.FC<{
   board: PlinkoBoardType;
   layout: BoardLayout;
   ballMotion: BallMotion;
@@ -206,46 +285,55 @@ const PlinkoBoard: React.FC<{
   slotPrizes: Record<number, SlotPrizePreview>;
   resultSlotIndex: number | null;
   landingSlotIndex: number | null;
-}> = ({ board, layout, ballMotion, isBallVisible, slotPrizes, resultSlotIndex, landingSlotIndex }) => {
-  return (
-    <div className="mt-6 pb-1">
-      <div className="mx-auto w-full max-w-[960px] rounded-2xl border border-white/10 bg-[#02060a] p-2 shadow-[0_24px_45px_rgba(0,0,0,0.42)] sm:p-4">
-        <div className="relative mx-auto w-full max-w-[760px]">
-          <div className="relative w-full" style={{ aspectRatio: `${layout.boardWidth} / ${layout.boardHeight}` }}>
-            <PegBoardSvg layout={layout} />
+  history: string[];
+}> = ({ board, layout, ballMotion, isBallVisible, slotPrizes, resultSlotIndex, landingSlotIndex, history }) => (
+  <div className="relative bg-gray-900">
+    <div className="mx-auto flex h-full flex-col px-4 pb-4" style={{ maxWidth: 760 }}>
+      <div className="relative w-full" style={{ aspectRatio: '760 / 570' }}>
+        <canvas className="absolute inset-0 h-full w-full" />
+        <PegBoardSvg layout={layout} />
 
-            <SlotRow
-              board={board}
-              layout={layout}
-              slotPrizes={slotPrizes}
-              resultSlotIndex={resultSlotIndex}
-              landingSlotIndex={landingSlotIndex}
-            />
+        {isBallVisible && (
+          <div
+            className="plinko-ball absolute h-4 w-4 rounded-full bg-emerald-400"
+            style={{
+              left: `${(ballMotion.x / layout.boardWidth) * 100}%`,
+              top: `${(ballMotion.y / layout.boardHeight) * 100}%`,
+              transform: `translate(-50%, -50%) scale(${ballMotion.scale})`,
+              boxShadow: '0 0 14px rgba(16,185,129,0.9)',
+              transitionProperty: 'left, top, transform',
+              transitionDuration: `${ballMotion.ms}ms`,
+              transitionTimingFunction: ballMotion.ease,
+              zIndex: 4
+            }}
+          />
+        )}
+      </div>
 
-            {isBallVisible && (
-              <div
-                className="absolute h-4 w-4 rounded-full bg-emerald-400"
-                style={{
-                  left: `${(ballMotion.x / layout.boardWidth) * 100}%`,
-                  top: `${(ballMotion.y / layout.boardHeight) * 100}%`,
-                  transform: `translate(-50%, -50%) scale(${ballMotion.scale})`,
-                  boxShadow: '0 0 14px rgba(16,185,129,0.9)',
-                  transitionProperty: 'left, top, transform',
-                  transitionDuration: `${ballMotion.ms}ms`,
-                  transitionTimingFunction: ballMotion.ease,
-                  zIndex: 4
-                }}
-              />
-            )}
-          </div>
-        </div>
+      <div className="flex h-[clamp(10px,0.352px+2.609vw,16px)] w-full justify-center lg:h-7">
+        <BinTilesRow
+          board={board}
+          slotPrizes={slotPrizes}
+          resultSlotIndex={resultSlotIndex}
+          landingSlotIndex={landingSlotIndex}
+        />
       </div>
     </div>
-  );
-};
+
+    <div className="absolute right-[5%] top-1/2 -translate-y-1/2">
+      <div style={{ aspectRatio: '1 / 4' }} className="flex w-[clamp(1.5rem,0.893rem+2.857vw,2rem)] flex-col overflow-hidden rounded-sm text-[clamp(8px,5.568px+0.714vw,10px)] md:rounded-md lg:w-12 lg:text-sm">
+        {history.map((entry, index) => (
+          <div key={`${entry}-${index}`} className="flex flex-1 items-center justify-center border-b border-slate-700 bg-slate-800 text-slate-200 last:border-b-0">
+            {entry}
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
 
 export const PlinkoPage: React.FC = () => {
-  const { isAuthenticated, openAuthModal, addInventoryItemFromServer, sellItem, syncBalance } = useGame();
+  const { isAuthenticated, openAuthModal, addInventoryItemFromServer, sellItem, syncBalance, balance } = useGame();
   const [settings, setSettings] = useState<PlinkoSettings | null>(null);
   const [board, setBoard] = useState<PlinkoBoardType | null>(null);
   const [bet, setBet] = useState(100);
@@ -260,6 +348,7 @@ export const PlinkoPage: React.FC = () => {
   const [isSelling, setIsSelling] = useState(false);
   const [slotPrizes, setSlotPrizes] = useState<Record<number, SlotPrizePreview>>({});
   const [pegSpacing, setPegSpacing] = useState(22);
+  const [history, setHistory] = useState<string[]>(['—', '—', '—', '—']);
 
   useEffect(() => {
     void (async () => {
@@ -405,6 +494,7 @@ export const PlinkoPage: React.FC = () => {
       }
       setWonInventoryItem(inventoryItem);
       setResult(payload);
+      setHistory((prev) => [formatCompactValue(inventoryItem.price), ...prev].slice(0, 4));
       setLandingSlotIndex(null);
     } catch (dropError) {
       setError(dropError instanceof Error ? dropError.message : 'Drop failed.');
@@ -415,94 +505,88 @@ export const PlinkoPage: React.FC = () => {
     }
   };
 
-  const quickBets = useMemo(() => {
-    if (!settings) return [100, 500, 1000, 5000];
-    return [settings.minBet, Math.max(settings.minBet, 500), 1000, Math.min(settings.maxBet, 5000)];
-  }, [settings]);
-
   if (!isAuthenticated) {
-    return <div className="mx-auto max-w-xl p-6 text-center"><h1 className="text-2xl font-black">Plinko (Items)</h1><p className="mt-2 text-gray-400">Sign in to drop and win real items.</p><button onClick={() => openAuthModal('login')} className="mt-4 rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white">Sign in</button></div>;
+    return (
+      <div className="relative flex min-h-dvh w-full flex-col">
+        <PlinkoTopNav balance={balance} />
+        <div className="flex-1 px-5">
+          <div className="mx-auto mt-5 min-w-[300px] max-w-xl drop-shadow-xl md:mt-10 lg:max-w-7xl">
+            <div className="rounded-lg bg-slate-700 p-6 text-center text-white">Sign in to drop and win real items.</div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl p-2 sm:p-6">
+    <div className="relative flex min-h-dvh w-full flex-col">
       <style>{`
         @keyframes plinkoSlotGlow {
-          from { filter: brightness(0.96); }
-          to { filter: brightness(1.08); }
+          from { filter: brightness(0.95) saturate(0.95); }
+          to { filter: brightness(1.06) saturate(1.12); }
         }
         @keyframes plinkoSlotLand {
           0% { transform: translateY(0) scale(1); }
-          50% { transform: translateY(-2px) scale(1.05); }
+          50% { transform: translateY(-1px) scale(1.08); }
           100% { transform: translateY(0) scale(1); }
+        }
+        @keyframes plinkoBallPulse {
+          0% { box-shadow: 0 0 10px rgba(16,185,129,0.55); }
+          100% { box-shadow: 0 0 16px rgba(110,231,183,0.95); }
         }
         .plinko-slot-bin {
           position: relative;
           border-width: 1px;
-          border-top-width: 0;
-          border-radius: 0 0 14px 14px;
+          border-radius: 3px;
           animation: plinkoSlotGlow 2.4s ease-in-out infinite alternate;
           overflow: hidden;
-          backdrop-filter: blur(2px);
+          backdrop-filter: blur(1px);
         }
         .plinko-slot-landing {
           animation: plinkoSlotLand 0.5s ease-in-out infinite, plinkoSlotGlow 1.2s ease-in-out infinite alternate;
-          box-shadow: inset 0 -10px 16px rgba(0,0,0,0.34), 0 0 20px rgba(52,211,153,0.6) !important;
+          box-shadow: inset 0 -10px 16px rgba(0,0,0,0.34), 0 0 20px rgba(52,211,153,0.75) !important;
           z-index: 2;
         }
         .plinko-slot-result {
-          box-shadow: inset 0 -10px 14px rgba(0,0,0,0.34), 0 0 18px rgba(110,231,183,0.75) !important;
+          box-shadow: inset 0 -10px 14px rgba(0,0,0,0.34), 0 0 18px rgba(110,231,183,0.85) !important;
+        }
+        .plinko-ball {
+          animation: plinkoBallPulse 420ms ease-in-out infinite alternate;
         }
       `}</style>
 
-      <div className="rounded-2xl border border-emerald-500/30 bg-[#071016] p-3 shadow-[0_0_90px_rgba(34,197,94,0.1)] sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-white sm:text-3xl">Plinko (Items)</h1>
-            <p className="text-sm text-gray-400">Arcade-style board with SVG pegs, aligned landing slots, and deterministic path animation.</p>
+      <PlinkoTopNav balance={balance} />
+
+      <div className="flex-1 px-5">
+        <div className="mx-auto mt-5 min-w-[300px] max-w-xl drop-shadow-xl md:mt-10 lg:max-w-7xl">
+          <div className="flex flex-col-reverse overflow-hidden rounded-lg lg:w-full lg:flex-row">
+            <PlinkoSidebar
+              board={board}
+              settings={settings}
+              bet={bet}
+              setBet={setBet}
+              isLoading={isLoading}
+              soundEnabled={soundEnabled}
+              onToggleSound={() => setSoundEnabled((prev) => !prev)}
+              onDrop={() => { void runDrop(); }}
+            />
+            <div className="flex-1">
+              {board && layout && (
+                <PlinkoBoardPanel
+                  board={board}
+                  layout={layout}
+                  ballMotion={ballMotion}
+                  isBallVisible={isBallVisible}
+                  slotPrizes={slotPrizes}
+                  resultSlotIndex={result?.slotIndex ?? null}
+                  landingSlotIndex={landingSlotIndex}
+                  history={history}
+                />
+              )}
+            </div>
           </div>
-          <button onClick={() => setSoundEnabled((prev) => !prev)} className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-white">
-            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-          </button>
+          {error && <div className="mt-3 rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
         </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-          {quickBets.map((quickBet) => (
-            <button key={quickBet} onClick={() => setBet(quickBet)} className="rounded-xl border border-white/10 bg-[#0b131c] px-3 py-2 text-sm font-semibold text-gray-100">
-              {quickBet.toLocaleString()}
-            </button>
-          ))}
-          <input
-            type="number"
-            value={bet}
-            onChange={(event) => setBet(Number(event.target.value || 0))}
-            min={settings?.minBet ?? 100}
-            max={settings?.maxBet ?? 50000}
-            className="col-span-2 rounded-xl border border-white/10 bg-[#0b131c] px-3 py-2 text-sm text-white sm:col-span-4 lg:col-span-1"
-            placeholder="Bet"
-          />
-        </div>
-
-        {board && layout && (
-          <PlinkoBoard
-            board={board}
-            layout={layout}
-            ballMotion={ballMotion}
-            isBallVisible={isBallVisible}
-            slotPrizes={slotPrizes}
-            resultSlotIndex={result?.slotIndex ?? null}
-            landingSlotIndex={landingSlotIndex}
-          />
-        )}
-
-        <button
-          onClick={() => { void runDrop(); }}
-          disabled={!settings?.enabled || isLoading || !board || !layout || bet < (settings?.minBet ?? 100) || bet > (settings?.maxBet ?? 50000)}
-          className="mt-4 h-12 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 text-base font-black text-black disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isLoading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Dropping…</span> : 'Drop Ball'}
-        </button>
-        {error && <div className="mt-3 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
       </div>
 
       {result && wonInventoryItem && (
@@ -510,7 +594,7 @@ export const PlinkoPage: React.FC = () => {
           <div className="w-full max-w-md rounded-2xl border border-emerald-400/40 bg-[#0a1018] p-5">
             <h2 className="text-xl font-black text-white">You won: {wonInventoryItem.name}</h2>
             <p className="mt-1 text-sm text-emerald-300">Slot {result.slotIndex + 1} · {result.slotLabel}</p>
-            <img src={wonInventoryItem.image} alt={wonInventoryItem.name} className="mt-4 h-40 w-full rounded-xl object-contain bg-black/20" />
+            <img src={wonInventoryItem.image} alt={wonInventoryItem.name} className="mt-4 h-40 w-full rounded-xl bg-black/20 object-contain" />
             <p className="mt-3 text-sm text-gray-300">Value band: {Math.round(result.minValue).toLocaleString()} - {Math.round(result.maxValue).toLocaleString()} coins</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button onClick={() => { setResult(null); setWonInventoryItem(null); }} className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-white">Keep</button>
