@@ -13,7 +13,7 @@ interface UpgraderResultModalProps {
   status: 'processing' | 'win' | 'lose';
 }
 
-type DisplayStatus = 'processing' | 'settling-win' | 'settling-lose' | 'win' | 'lose';
+type DisplayStatus = 'settling-win' | 'settling-lose' | 'win' | 'lose';
 
 export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   isOpen,
@@ -23,27 +23,21 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   status,
   chance
 }) => {
-  const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('processing');
+  const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('settling-lose');
   const [spinSession, setSpinSession] = useState(0);
 
   useEffect(() => {
     if (!isOpen) {
-      setDisplayStatus('processing');
-      return;
-    }
-
-    if (status === 'processing') {
-      setDisplayStatus('processing');
-      setSpinSession((prev) => prev + 1);
       return;
     }
 
     setDisplayStatus(status === 'win' ? 'settling-win' : 'settling-lose');
+    setSpinSession((prev) => prev + 1);
   }, [isOpen, status]);
 
   if (!isOpen) return null;
 
-  const showSpinner = displayStatus === 'processing' || displayStatus === 'settling-win' || displayStatus === 'settling-lose';
+  const showSpinner = displayStatus === 'settling-win' || displayStatus === 'settling-lose';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm">
@@ -75,14 +69,11 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                   chance={chance}
                   isSpinning
                   onFinish={(didWin) => setDisplayStatus(didWin ? 'win' : 'lose')}
-                  spinMode={displayStatus === 'processing' ? 'indeterminate' : 'resolve'}
                   forcedWin={displayStatus === 'settling-win' ? true : displayStatus === 'settling-lose' ? false : undefined}
                 />
                 <div className="space-y-2">
                   <h2 className="text-2xl font-black text-white uppercase tracking-tight">Upgrading...</h2>
-                  <p className="text-slate-400 text-sm">
-                    {displayStatus === 'processing' ? 'Waiting for server result' : 'Finalizing spin'}
-                  </p>
+                  <p className="text-slate-400 text-sm">Finalizing spin</p>
                 </div>
               </motion.div>
             )}
@@ -113,7 +104,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                       <div className="text-left min-w-0">
                         <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{target.rarity}</p>
                         <p className="text-sm font-bold text-white leading-tight truncate">{target.name}</p>
-                        <p className="text-xs font-mono text-slate-400">{Math.round(target.coinValue).toLocaleString()} coins</p>
+                        <p className="text-xs font-mono text-slate-400 inline-flex items-center gap-1"><span aria-hidden="true">🪙</span>{Math.round(target.coinValue).toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
