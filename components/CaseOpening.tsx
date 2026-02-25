@@ -145,11 +145,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const spinnerViewportRef = useRef<HTMLDivElement>(null);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const bodyOverflowRef = useRef<string>('');
   const sellOfferTimerRef = useRef<number | null>(null);
+  const spinCleanupRef = useRef<(() => void) | null>(null);
+  const spinFrameRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
   const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
@@ -213,6 +216,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [loadProvablyFairState]);
 
   useEffect(() => () => {
+    if (spinCleanupRef.current) {
+      spinCleanupRef.current();
+    }
+    if (spinFrameRef.current) {
+      window.cancelAnimationFrame(spinFrameRef.current);
+    }
     if (sellOfferTimerRef.current) {
       window.clearTimeout(sellOfferTimerRef.current);
     }
@@ -390,41 +399,104 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
   }, [isAuthenticated, openAuthModal]);
 
-  const animateSpin = (duration: number, onComplete: () => void) => {
-    playSound('spin-start');
+  const getItemWidth = useCallback(() => {
+    const reelElement = scrollContainerRef.current;
+    if (!reelElement) return ITEM_WIDTH;
 
-    // Reset scroll position immediately
-    if (scrollContainerRef.current) {
-        scrollContainerRef.current.style.transition = 'none';
-        scrollContainerRef.current.style.transform = 'translateX(0)';
+    const firstItem = reelElement.children[0] as HTMLElement | undefined;
+    const secondItem = reelElement.children[1] as HTMLElement | undefined;
+    if (!firstItem) return ITEM_WIDTH;
+
+    const firstRect = firstItem.getBoundingClientRect();
+    if (secondItem) {
+      const secondRect = secondItem.getBoundingClientRect();
+      const measuredWidth = secondRect.left - firstRect.left;
+      if (Number.isFinite(measuredWidth) && measuredWidth > 0) {
+        return measuredWidth;
+      }
     }
 
-    // Trigger animation next tick
-    // We use a slight delay to ensure React has painted the new items to the DOM
-    setTimeout(() => {
-        if (scrollContainerRef.current) {
-            // Exact center position of the winning item
-            const winnerLeft = BUFFER_COUNT * ITEM_WIDTH;
-            
-            // ORGANIC JITTER
-            // Card width is 160px.
-            // Center is 0 relative to the calculation logic.
-            // +/- 80px hits the border.
-            // +/- 65px is the "safe zone" that stays on the card but looks random.
-            // We want it to land ANYWHERE in this safe zone, not just near the center.
-            const maxOffset = 65;
-            const jitter = Math.floor(Math.random() * (maxOffset * 2)) - maxOffset; // -65 to +65
-            
-            const finalTranslate = -(winnerLeft) + jitter;
+    return firstRect.width + GAP_WIDTH;
+  }, []);
 
-            scrollContainerRef.current.style.transition = `transform ${duration/1000}s cubic-bezier(0.15, 0.85, 0.35, 1.0)`;
-            scrollContainerRef.current.style.transform = `translateX(${finalTranslate}px)`;
-        }
-    }, 50);
+  const getViewportWidth = useCallback(() => {
+    const viewportRect = spinnerViewportRef.current?.getBoundingClientRect();
+    if (viewportRect && viewportRect.width > 0) {
+      return viewportRect.width;
+    }
+    return scrollContainerRef.current?.parentElement?.getBoundingClientRect().width ?? 0;
+  }, []);
 
-    // Completion callback
-    setTimeout(onComplete, duration + 200);
-  };
+  const attachTransitionEnd = useCallback((
+    element: HTMLDivElement,
+    duration: number,
+    onFinish: () => void
+  ) => {
+    let didFinish = false;
+
+    const finishOnce = () => {
+      if (didFinish) return;
+      didFinish = true;
+      window.clearTimeout(fallbackTimer);
+      onFinish();
+    };
+
+    const onTransitionEnd = (event: TransitionEvent) => {
+      if (event.target !== element || event.propertyName !== 'transform') return;
+      finishOnce();
+    };
+
+    const fallbackTimer = window.setTimeout(() => {
+      finishOnce();
+    }, duration + 1000);
+
+    element.addEventListener('transitionend', onTransitionEnd, { once: true });
+
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      element.removeEventListener('transitionend', onTransitionEnd);
+    };
+  }, []);
+
+  const animateSpin = useCallback((duration: number, onComplete: () => void) => {
+    const reelElement = scrollContainerRef.current;
+    if (!reelElement) {
+      onComplete();
+      return;
+    }
+
+    playSound('spin-start');
+
+    if (spinCleanupRef.current) {
+      spinCleanupRef.current();
+      spinCleanupRef.current = null;
+    }
+    if (spinFrameRef.current) {
+      window.cancelAnimationFrame(spinFrameRef.current);
+      spinFrameRef.current = null;
+    }
+
+    reelElement.style.transition = 'none';
+    reelElement.style.transform = 'translate3d(0px, 0, 0)';
+    void reelElement.offsetHeight;
+
+    spinFrameRef.current = window.requestAnimationFrame(() => {
+      spinFrameRef.current = window.requestAnimationFrame(() => {
+        const itemWidth = getItemWidth();
+        const viewportWidth = getViewportWidth();
+        const targetIndex = BUFFER_COUNT;
+        const finalTranslate = (targetIndex * itemWidth) - (viewportWidth / 2) + (itemWidth / 2);
+
+        spinCleanupRef.current = attachTransitionEnd(reelElement, duration, () => {
+          spinCleanupRef.current = null;
+          onComplete();
+        });
+
+        reelElement.style.transition = `transform ${duration}ms cubic-bezier(0.08, 0.6, 0.2, 1)`;
+        reelElement.style.transform = `translate3d(${-finalTranslate}px, 0, 0)`;
+      });
+    });
+  }, [attachTransitionEnd, getItemWidth, getViewportWidth, playSound]);
 
 
 
@@ -938,7 +1010,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Spinner Window */}
-            <div className="relative h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+            <div ref={spinnerViewportRef} className="relative h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
                 {isBoxPreviewVisible && (
                   <div
                     className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
