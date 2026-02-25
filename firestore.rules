@@ -49,6 +49,16 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /upgraderTargets/{targetId} {
+      allow read: if (resource.data.enabled == true) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /upgradeAttempts/{attemptId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
+
     match /site/{docId} {
       allow read: if true;
       allow write: if isAdmin();

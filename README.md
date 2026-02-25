@@ -24,3 +24,27 @@ View your app in AI Studio: https://ai.studio/apps/drive/1jzMWG_BfQY623gwFGCJsYG
 
 1. Add the environment variables from `.env.example` to your Vercel project settings (only `VITE_GEMINI_API_KEY` is required; Firebase client config is baked into the build).
 2. Deploy with the default Vercel build command (`npm run build`). The app outputs static assets to `dist` (configured in `vercel.json`).
+
+## Upgrader configuration
+
+### Firestore setup
+- Create `settings/upgrader` with:
+  - `enabled`, `edgeMultiplier`, `minChance`, `maxChance`, `minUpgradeRatio`, `cooldownMs`, `allowFromFreeBox`, `allowFromPromo`, `requireTargetHigherValue`, `maxTargetValue`, `categoriesEnabled`, `raritiesEnabled`, `serverSeed`, `serverSeedHash`.
+- Create `upgraderTargets` documents with:
+  - `name`, `imageUrl`, `coinValue`, `rarity`, `category`, `enabled`, `featured`, `weight`, `minSourceValue`, `maxSourceValue`.
+
+### Runtime
+- User flow is available at `/upgrader`.
+- Upgrade execution is server-side at `POST /api/attempt-upgrade`.
+- Requests must include Firebase bearer token and body:
+  - `sourceItemInstanceId`, `targetItemId`, and optional `clientSeed`.
+
+### Provably fair verification
+- Hash input (uses the same user `provablyFair` server seed used by regular case openings):
+  - `serverSeed:uid:clientSeed:nonce:targetItemId:sourceItemInstanceId`
+- Roll conversion:
+  - `parseInt(hash.slice(0, 8), 16) / 0xFFFFFFFF`
+- Win condition:
+  - `roll < computedChance`
+- Each attempt is logged in `upgradeAttempts` including roll/chance/nonce/serverSeedHash snapshots.
+- Upgrader no longer depends on `settings/upgrader.serverSeed`; it reuses `provablyFair/{uid}.serverSeed` for consistency with case openings.
