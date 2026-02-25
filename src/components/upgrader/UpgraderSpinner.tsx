@@ -33,6 +33,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const [animation, setAnimation] = useState<SpinnerAnimation>({ rotate: 0 });
   const spinRunIdRef = useRef(0);
   const resultTimeoutRef = useRef<number | null>(null);
+  const hasActiveSpinRef = useRef(false);
 
   const size = 200;
   const strokeWidth = 12;
@@ -44,6 +45,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
 
   useEffect(() => {
     if (!isSpinning) {
+      hasActiveSpinRef.current = false;
       spinRunIdRef.current += 1;
       if (resultTimeoutRef.current) {
         window.clearTimeout(resultTimeoutRef.current);
@@ -52,6 +54,12 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       setAnimation({ rotate: 0 });
       return;
     }
+
+    if (hasActiveSpinRef.current) {
+      return;
+    }
+
+    hasActiveSpinRef.current = true;
 
     if (spinMode === 'indeterminate') {
       spinRunIdRef.current += 1;
@@ -108,11 +116,13 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     resultTimeoutRef.current = window.setTimeout(() => {
       if (spinRunIdRef.current !== spinRunId) return;
       resultTimeoutRef.current = null;
+      hasActiveSpinRef.current = false;
       onFinish(isWin);
     }, SPIN_SETTLE_DURATION_S * 1000 + SPIN_RESULT_DELAY_MS);
   };
 
   useEffect(() => () => {
+    hasActiveSpinRef.current = false;
     if (resultTimeoutRef.current) {
       window.clearTimeout(resultTimeoutRef.current);
       resultTimeoutRef.current = null;
