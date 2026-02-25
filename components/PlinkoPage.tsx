@@ -137,60 +137,36 @@ const PegBoardSvg: React.FC<{ layout: BoardLayout }> = ({ layout }) => {
   );
 };
 
-const SlotRow: React.FC<{
+const BinTilesRow: React.FC<{
   board: PlinkoBoardType;
-  layout: BoardLayout;
   slotPrizes: Record<number, SlotPrizePreview>;
   resultSlotIndex: number | null;
   landingSlotIndex: number | null;
-}> = ({ board, layout, slotPrizes, resultSlotIndex, landingSlotIndex }) => {
-  const centerSlot = Math.floor(layout.slotCount / 2);
+}> = ({ board, slotPrizes, resultSlotIndex, landingSlotIndex }) => (
+  <div className="flex h-full w-full max-w-[760px] items-end gap-1">
+    {board.slots.map((slot, index) => {
+      const preview = slotPrizes[index];
+      const tone = getSlotTone(slot.label);
+      const isResult = resultSlotIndex === index;
+      const isLanding = landingSlotIndex === index;
 
-  return (
-    <>
-      <div
-        className="pointer-events-none absolute top-[-38px] h-[38px] w-[2px] rounded-full"
-        style={{
-          left: `${((layout.slotsStartX + (centerSlot + 0.5) * layout.pegSpacing) / layout.boardWidth) * 100}%`,
-          transform: 'translateX(-50%)',
-          background: 'linear-gradient(to bottom, rgba(110,231,183,0.7), rgba(110,231,183,0))',
-          boxShadow: '0 0 12px rgba(16,185,129,0.55)'
-        }}
-      />
-      <div className="absolute inset-x-0" style={{ top: `${(layout.binsTop / layout.boardHeight) * 100}%`, height: `${(layout.binHeight / layout.boardHeight) * 100}%` }}>
-        <div className="mx-auto flex h-full" style={{ width: `${(layout.slotCount * layout.pegSpacing / layout.boardWidth) * 100}%` }}>
-          {board.slots.map((slot, index) => {
-            const preview = slotPrizes[index];
-            const tone = getSlotTone(slot.label);
-            const isResult = resultSlotIndex === index;
-            const isLanding = landingSlotIndex === index;
-
-            return (
-              <div key={`${slot.poolId}-${index}`} className="relative h-full shrink-0" style={{ width: `${100 / layout.slotCount}%` }}>
-                <div
-                  className={`plinko-slot-bin h-full w-full ${isLanding ? 'plinko-slot-landing' : ''} ${isResult ? 'plinko-slot-result' : ''}`}
-                  style={{
-                    borderColor: tone.border,
-                    background: `linear-gradient(to bottom, rgba(255,255,255,0.12), ${tone.bg} 24%)`,
-                    boxShadow: `inset 0 -8px 14px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.13), 0 0 10px ${tone.glow}`
-                  }}
-                >
-                  <div className="absolute inset-x-0 top-0 h-[8px]" style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.26), rgba(255,255,255,0.02))' }} />
-                  <div className="pt-3 text-center">
-                    <div className="truncate px-0.5 text-[8px] font-bold uppercase tracking-[0.03em] text-white">{slot.label}</div>
-                    <div className="mt-1 truncate px-0.5 text-[8px] text-gray-200">{preview?.name ?? 'No item'}</div>
-                    <div className="mt-1 text-[8px] font-semibold text-emerald-200">{formatCompactValue(preview?.coinValue ?? 0)}</div>
-                  </div>
-                </div>
-                {index < layout.slotCount - 1 && <div className="absolute right-0 top-0 h-full w-px bg-white/20" />}
-              </div>
-            );
-          })}
+      return (
+        <div
+          key={`${slot.poolId}-${index}`}
+          className={`plinko-slot-bin relative flex h-full min-w-0 flex-1 items-center justify-center rounded-sm px-0.5 md:rounded-md ${isLanding ? 'plinko-slot-landing' : ''} ${isResult ? 'plinko-slot-result' : ''}`}
+          style={{
+            borderColor: tone.border,
+            background: `linear-gradient(to bottom, rgba(255,255,255,0.28), ${tone.bg} 35%)`,
+            boxShadow: `inset 0 -5px 10px rgba(0,0,0,0.34), 0 0 8px ${tone.glow}`
+          }}
+        >
+          <span className="truncate text-[7px] font-bold uppercase tracking-[0.02em] text-white lg:text-[9px]">{slot.label}</span>
+          <span className="sr-only">{preview?.name ?? 'No item'} {formatCompactValue(preview?.coinValue ?? 0)}</span>
         </div>
-      </div>
-    </>
-  );
-};
+      );
+    })}
+  </div>
+);
 
 const PlinkoTopNav: React.FC<{ balance: number }> = ({ balance }) => (
   <nav className="sticky top-0 z-10 w-full bg-gray-700 px-5 drop-shadow-lg">
@@ -317,17 +293,9 @@ const PlinkoBoardPanel: React.FC<{
         <canvas className="absolute inset-0 h-full w-full" />
         <PegBoardSvg layout={layout} />
 
-        <SlotRow
-          board={board}
-          layout={layout}
-          slotPrizes={slotPrizes}
-          resultSlotIndex={resultSlotIndex}
-          landingSlotIndex={landingSlotIndex}
-        />
-
         {isBallVisible && (
           <div
-            className="absolute h-4 w-4 rounded-full bg-emerald-400"
+            className="plinko-ball absolute h-4 w-4 rounded-full bg-emerald-400"
             style={{
               left: `${(ballMotion.x / layout.boardWidth) * 100}%`,
               top: `${(ballMotion.y / layout.boardHeight) * 100}%`,
@@ -342,7 +310,14 @@ const PlinkoBoardPanel: React.FC<{
         )}
       </div>
 
-      <div className="flex h-[clamp(10px,0.352px+2.609vw,16px)] w-full justify-center lg:h-7" />
+      <div className="flex h-[clamp(10px,0.352px+2.609vw,16px)] w-full justify-center lg:h-7">
+        <BinTilesRow
+          board={board}
+          slotPrizes={slotPrizes}
+          resultSlotIndex={resultSlotIndex}
+          landingSlotIndex={landingSlotIndex}
+        />
+      </div>
     </div>
 
     <div className="absolute right-[5%] top-1/2 -translate-y-1/2">
@@ -547,30 +522,36 @@ export const PlinkoPage: React.FC = () => {
     <div className="relative flex min-h-dvh w-full flex-col">
       <style>{`
         @keyframes plinkoSlotGlow {
-          from { filter: brightness(0.96); }
-          to { filter: brightness(1.08); }
+          from { filter: brightness(0.95) saturate(0.95); }
+          to { filter: brightness(1.06) saturate(1.12); }
         }
         @keyframes plinkoSlotLand {
           0% { transform: translateY(0) scale(1); }
-          50% { transform: translateY(-2px) scale(1.05); }
+          50% { transform: translateY(-1px) scale(1.08); }
           100% { transform: translateY(0) scale(1); }
+        }
+        @keyframes plinkoBallPulse {
+          0% { box-shadow: 0 0 10px rgba(16,185,129,0.55); }
+          100% { box-shadow: 0 0 16px rgba(110,231,183,0.95); }
         }
         .plinko-slot-bin {
           position: relative;
           border-width: 1px;
-          border-top-width: 0;
-          border-radius: 0 0 14px 14px;
+          border-radius: 3px;
           animation: plinkoSlotGlow 2.4s ease-in-out infinite alternate;
           overflow: hidden;
-          backdrop-filter: blur(2px);
+          backdrop-filter: blur(1px);
         }
         .plinko-slot-landing {
           animation: plinkoSlotLand 0.5s ease-in-out infinite, plinkoSlotGlow 1.2s ease-in-out infinite alternate;
-          box-shadow: inset 0 -10px 16px rgba(0,0,0,0.34), 0 0 20px rgba(52,211,153,0.6) !important;
+          box-shadow: inset 0 -10px 16px rgba(0,0,0,0.34), 0 0 20px rgba(52,211,153,0.75) !important;
           z-index: 2;
         }
         .plinko-slot-result {
-          box-shadow: inset 0 -10px 14px rgba(0,0,0,0.34), 0 0 18px rgba(110,231,183,0.75) !important;
+          box-shadow: inset 0 -10px 14px rgba(0,0,0,0.34), 0 0 18px rgba(110,231,183,0.85) !important;
+        }
+        .plinko-ball {
+          animation: plinkoBallPulse 420ms ease-in-out infinite alternate;
         }
       `}</style>
 
