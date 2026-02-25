@@ -741,11 +741,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setShowWinModal(true);
     setWonItem(item);
     setRewardResolved(false);
-    
-    // Play appropriate win sound
-    if (item.rarity === 'legendary') playSound('win-gold');
-    else if (item.rarity === 'epic' || item.rarity === 'rare') playSound('win-rare');
-    else playSound('win-common');
   };
 
 

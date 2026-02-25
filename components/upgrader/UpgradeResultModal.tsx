@@ -18,7 +18,12 @@ export const UpgradeResultModal: React.FC<Props> = ({ result, onClose }) => {
           </div>
         )}
         <div className="mt-3 text-xs text-gray-400">Roll {(result.roll * 100).toFixed(4)} · Chance {(result.chance * 100).toFixed(2)}%</div>
-        <button onClick={onClose} className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white">Close</button>
+        <button
+          onClick={onClose}
+          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white sm:text-base"
+        >
+          Close
+        </button>
       </div>
     </div>
   );
