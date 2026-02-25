@@ -38,7 +38,9 @@ import { CookieConsentToast } from './components/CookieConsentToast';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
-import { PlinkoPage } from './components/PlinkoPage';
+import UpgraderPage from './src/pages/UpgraderPage';
+import UpgraderSettingsPage from './src/pages/admin/UpgraderSettingsPage';
+import UpgraderTargetsPage from './src/pages/admin/UpgraderTargetsPage';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
   ShowcaseRow,
@@ -291,8 +293,20 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       )}
 
       {view.type === 'PLINKO' && (
-        <div className="w-full pt-2 sm:pt-4">
-          <PlinkoPage />
+        <div className="w-full">
+          <UpgraderPage />
+        </div>
+      )}
+
+      {view.type === 'ADMIN_UPGRADER_SETTINGS' && (
+        <div className="w-full">
+          <UpgraderSettingsPage />
+        </div>
+      )}
+
+      {view.type === 'ADMIN_UPGRADER_TARGETS' && (
+        <div className="w-full">
+          <UpgraderTargetsPage />
         </div>
       )}
 

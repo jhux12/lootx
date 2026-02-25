@@ -159,7 +159,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             <div className="hidden lg:flex lg:gap-x-3">
               <button onClick={() => navigate('PLINKO')} className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition-colors hover:border-white/5 hover:bg-neutral-800 hover:text-white">
                 <Gamepad2 className="h-4 w-4 text-emerald-300" />
-                Arcade · Plinko
+                Arcade · Upgrader
               </button>
               <button onClick={() => navigate('BONUSES')} className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-purple-400 transition-colors hover:border-white/5 hover:bg-neutral-800">
                 <Flame className="h-4 w-4" />
@@ -294,7 +294,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             <h3 className="ml-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Games</h3>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => navigate('BOXES')} className={drawerCardClass}><Package className="h-5 w-5 text-orange-500" /><span className="text-sm font-bold text-white">Boxes</span></button>
-              <button onClick={() => navigate('PLINKO')} className={drawerCardClass}><Gamepad2 className="h-5 w-5 text-emerald-400" /><span className="text-sm font-bold text-white">Arcade · Plinko</span></button>
+              <button onClick={() => navigate('PLINKO')} className={drawerCardClass}><Gamepad2 className="h-5 w-5 text-emerald-400" /><span className="text-sm font-bold text-white">Arcade · Upgrader</span></button>
             </div>
           </section>
 

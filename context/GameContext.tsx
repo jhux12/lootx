@@ -396,7 +396,7 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'PLINKO' };
   }
 
-  if (primary === 'plinko') {
+  if (primary === 'plinko' || primary === 'upgrader') {
     return { type: 'PLINKO' };
   }
 
@@ -435,6 +435,14 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'PROVABLY_FAIR' };
   }
 
+  if (primary === 'admin' && secondary === 'upgrader' && segments[2] === 'targets') {
+    return { type: 'ADMIN_UPGRADER_TARGETS' };
+  }
+
+  if (primary === 'admin' && secondary === 'upgrader') {
+    return { type: 'ADMIN_UPGRADER_SETTINGS' };
+  }
+
   if (primary === 'admin') {
     return { type: 'ADMIN' };
   }
@@ -453,7 +461,7 @@ const getPathFromView = (view: ViewState): string => {
     case 'BOXES':
       return '/boxes';
     case 'PLINKO':
-      return '/arcade/plinko';
+      return '/upgrader';
     case 'PROFILE':
       return view.userId ? `/profile/${view.userId}` : '/profile';
     case 'INVENTORY':
@@ -468,6 +476,10 @@ const getPathFromView = (view: ViewState): string => {
       return '/privacy';
     case 'ADMIN':
       return '/admin';
+    case 'ADMIN_UPGRADER_SETTINGS':
+      return '/admin/upgrader';
+    case 'ADMIN_UPGRADER_TARGETS':
+      return '/admin/upgrader/targets';
     case 'LEADERBOARD':
       return '/leaderboard';
     case 'CUSTOM_CREATOR':
