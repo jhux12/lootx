@@ -54,15 +54,19 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   const [showFairModal, setShowFairModal] = useState(false);
   const [uiPhase, setUiPhase] = useState<UiPhase>('UI_LOBBY');
   const [activeRoundIndex, setActiveRoundIndex] = useState(-1);
-  const [revealedRounds, setRevealedRounds] = useState<Set<number>>(new Set());
+  const [animatingRoundIndex, setAnimatingRoundIndex] = useState<number | null>(null);
+  const [animatedRounds, setAnimatedRounds] = useState<Set<number>>(new Set());
   const [skipRequested, setSkipRequested] = useState(false);
   const [trayOpen, setTrayOpen] = useState(false);
+  const [playbackTick, setPlaybackTick] = useState(0);
   const [displayTotals, setDisplayTotals] = useState({ A: 0, B: 0 });
   const [tickLoading, setTickLoading] = useState(false);
   const [progressLoading, setProgressLoading] = useState(false);
 
-  const runningPlaybackRef = useRef(false);
-  const onRoundDoneRef = useRef<Set<number>>(new Set());
+  const runningRoundRef = useRef(false);
+  const animatedRoundsRef = useRef<Set<number>>(new Set());
+  const skipRequestedRef = useRef(false);
+  const trayOpenRef = useRef(false);
 
   useEffect(() => {
     const battleRef = doc(db, 'battles', battleId);
@@ -90,11 +94,28 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   useEffect(() => {
     setUiPhase('UI_LOBBY');
     setActiveRoundIndex(-1);
-    setRevealedRounds(new Set());
+    setAnimatingRoundIndex(null);
+    setAnimatedRounds(new Set());
     setSkipRequested(false);
     setTrayOpen(false);
-    onRoundDoneRef.current = new Set();
+    setPlaybackTick(0);
+    runningRoundRef.current = false;
+    animatedRoundsRef.current = new Set();
+    skipRequestedRef.current = false;
+    trayOpenRef.current = false;
   }, [battleId]);
+
+  useEffect(() => {
+    animatedRoundsRef.current = animatedRounds;
+  }, [animatedRounds]);
+
+  useEffect(() => {
+    skipRequestedRef.current = skipRequested;
+  }, [skipRequested]);
+
+  useEffect(() => {
+    trayOpenRef.current = trayOpen;
+  }, [trayOpen]);
 
   const players = Array.isArray(battle?.players) ? battle.players : [];
   const roundCount = Math.max(1, Number(battle?.roundCount ?? 1));
@@ -154,8 +175,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   }, [battle?.cases, items, rounds]);
 
   const roundsMap = useMemo(() => new Map(rounds.map((round) => [round.index, round])), [rounds]);
-  const roundOrder = useMemo(() => rounds.map((round) => round.index).sort((a, b) => a - b), [rounds]);
-
   const calculateTeamTotalsUntil = (lastRoundIndex: number) => {
     const totals = { A: 0, B: 0 };
     for (let idx = 0; idx <= lastRoundIndex; idx += 1) {
@@ -233,17 +252,27 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
     return () => window.clearInterval(interval);
   }, [battle?.id, battle?.state, spinMs]);
 
+  const lastRoundIndex = Math.max(0, roundCount - 1);
+  const allRoundsPresent = useMemo(
+    () => Array.from({ length: roundCount }).every((_, index) => roundsMap.has(index)),
+    [roundCount, roundsMap]
+  );
+
+  useEffect(() => {
+    if (!battle || !skipRequested) return;
+    const allAnimated = new Set(Array.from({ length: roundCount }, (_, index) => index));
+    setAnimatedRounds(allAnimated);
+    animatedRoundsRef.current = allAnimated;
+    setAnimatingRoundIndex(null);
+    setActiveRoundIndex(lastRoundIndex);
+    setUiPhase('UI_COMPLETE');
+    setTrayOpen(true);
+    trayOpenRef.current = true;
+    runningRoundRef.current = false;
+  }, [battle, lastRoundIndex, roundCount, skipRequested]);
+
   useEffect(() => {
     if (!battle) return;
-
-    if (skipRequested) {
-      setActiveRoundIndex(roundCount - 1);
-      setRevealedRounds(new Set(Array.from({ length: roundCount }).map((_, index) => index)));
-      setUiPhase('UI_COMPLETE');
-      setTrayOpen(true);
-      runningPlaybackRef.current = false;
-      return;
-    }
 
     if (battle.state === 'LOBBY') {
       setUiPhase('UI_LOBBY');
@@ -255,70 +284,96 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
       return;
     }
 
+    if (skipRequestedRef.current || trayOpenRef.current) return;
     if (battle.state !== 'RUNNING' && battle.state !== 'COMPLETE') return;
-    if (runningPlaybackRef.current) return;
 
-    const queue = roundOrder.filter((index) => !onRoundDoneRef.current.has(index));
-    if (!queue.length) {
-      if ((battle.state === 'COMPLETE' || revealedRounds.size >= roundCount) && uiPhase !== 'UI_COMPLETE') {
+    if (battle.state === 'COMPLETE' && animatedRoundsRef.current.has(lastRoundIndex) && uiPhase !== 'UI_COMPLETE') {
+      setTrayOpen(true);
+      trayOpenRef.current = true;
+      setUiPhase('UI_COMPLETE');
+      return;
+    }
+
+    if (runningRoundRef.current) return;
+
+    if (animatingRoundIndex !== null) {
+      setAnimatingRoundIndex(null);
+    }
+
+    const nextRoundIndex = Array.from({ length: roundCount }, (_, index) => index).find(
+      (index) => !animatedRoundsRef.current.has(index) && roundsMap.has(index)
+    );
+
+    if (nextRoundIndex === undefined) {
+      if ((animatedRoundsRef.current.has(lastRoundIndex) || (battle.state === 'COMPLETE' && allRoundsPresent)) && uiPhase !== 'UI_FINAL_REVEAL' && uiPhase !== 'UI_COMPLETE') {
+        runningRoundRef.current = true;
         setUiPhase('UI_FINAL_REVEAL');
         const finalTimer = window.setTimeout(() => {
           setTrayOpen(true);
+          trayOpenRef.current = true;
           setUiPhase('UI_COMPLETE');
-        }, finalRevealMs);
-        return () => window.clearTimeout(finalTimer);
+          runningRoundRef.current = false;
+        }, Math.max(900, Math.min(1200, finalRevealMs)));
+        return () => {
+          window.clearTimeout(finalTimer);
+          runningRoundRef.current = false;
+        };
       }
       return;
     }
 
-    runningPlaybackRef.current = true;
+    runningRoundRef.current = true;
+    setAnimatingRoundIndex(nextRoundIndex);
+    setActiveRoundIndex(nextRoundIndex);
+
     let cancelled = false;
+    const runRound = async () => {
+      setUiPhase('UI_ROUND_INTRO');
+      await wait(introMs);
+      if (cancelled || skipRequestedRef.current) return;
 
-    const runQueue = async () => {
-      for (const roundIndex of queue) {
-        if (cancelled || skipRequested) break;
-        setActiveRoundIndex(roundIndex);
-        setUiPhase('UI_ROUND_INTRO');
-        await wait(introMs);
+      setUiPhase('UI_SPINNING');
+      await wait(spinMs);
+      if (cancelled || skipRequestedRef.current) return;
 
-        if (cancelled || skipRequested) break;
-        setUiPhase('UI_SPINNING');
-        await wait(spinMs);
+      setUiPhase('UI_ROUND_REVEAL');
+      setAnimatedRounds((prev) => {
+        const next = new Set(prev);
+        next.add(nextRoundIndex);
+        animatedRoundsRef.current = next;
+        return next;
+      });
+      await wait(revealMs + freezeAfterSpinMs);
+      if (cancelled || skipRequestedRef.current) return;
 
-        if (cancelled || skipRequested) break;
-        setUiPhase('UI_ROUND_REVEAL');
-        setRevealedRounds((prev) => {
-          const next = new Set(prev);
-          next.add(roundIndex);
-          return next;
-        });
-        onRoundDoneRef.current.add(roundIndex);
-        await wait(revealMs + freezeAfterSpinMs);
-
-        if (cancelled || skipRequested) break;
-        setUiPhase('UI_INTERMISSION');
-        await wait(intermissionMs);
-      }
-
-      runningPlaybackRef.current = false;
-
-      if (!cancelled && !skipRequested && (battle.state === 'COMPLETE' || onRoundDoneRef.current.size >= roundCount)) {
+      if (nextRoundIndex === lastRoundIndex) {
+        setAnimatingRoundIndex(null);
         setUiPhase('UI_FINAL_REVEAL');
-        await wait(finalRevealMs);
-        if (!cancelled) {
+        await wait(Math.max(900, Math.min(1200, finalRevealMs)));
+        if (!cancelled && !skipRequestedRef.current) {
           setTrayOpen(true);
+          trayOpenRef.current = true;
           setUiPhase('UI_COMPLETE');
         }
+      } else {
+        setUiPhase('UI_INTERMISSION');
+        await wait(intermissionMs);
+        if (!cancelled && !skipRequestedRef.current) setAnimatingRoundIndex(null);
       }
     };
 
-    void runQueue();
+    void runRound().finally(() => {
+      runningRoundRef.current = false;
+      if (!cancelled && !skipRequestedRef.current) {
+        setPlaybackTick((value) => value + 1);
+      }
+    });
 
     return () => {
       cancelled = true;
-      runningPlaybackRef.current = false;
+      runningRoundRef.current = false;
     };
-  }, [battle, roundOrder, roundCount, revealedRounds.size, skipRequested, spinMs, uiPhase]);
+  }, [allRoundsPresent, animatingRoundIndex, battle?.id, battle?.state, lastRoundIndex, playbackTick, roundCount, roundsMap, spinMs, uiPhase]);
 
   if (!battle) {
     return <div className="p-8 text-center text-gray-400">Battle not found.</div>;
@@ -397,7 +452,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
             const roundItem = roundsMap.get(Math.max(0, activeRoundIndex))?.resultsByUid?.[player.uid];
             const winnerItem = normalizeItem(roundItem);
             const currentRoundIndex = Math.max(0, activeRoundIndex);
-            const isRoundRevealed = revealedRounds.has(currentRoundIndex);
+            const isRoundRevealed = animatedRounds.has(currentRoundIndex);
             const spinPhase: 'IDLE' | 'SPIN' | 'STOPPED' =
               player.isEmptySeat || !winnerItem
                 ? 'IDLE'
@@ -428,7 +483,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                   durationMs={spinMs}
                 />
                 <div className="mt-2 min-h-[48px] rounded border border-white/10 bg-[#0b1322] px-2 py-1.5">
-                  {winnerItem && revealedRounds.has(Math.max(0, activeRoundIndex)) ? (
+                  {winnerItem && animatedRounds.has(Math.max(0, activeRoundIndex)) ? (
                     <div className="flex items-center justify-between gap-2 text-xs">
                       <div className="min-w-0 truncate text-gray-200">{winnerItem.name}</div>
                       <div className="font-black text-emerald-300">{winnerItem.value.toLocaleString()}</div>
@@ -486,14 +541,14 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                 <div className="text-center text-[11px] text-gray-400">Round Timeline</div>
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
                   {Array.from({ length: roundCount }).map((_, idx) => {
-                    const isDone = revealedRounds.has(idx);
+                    const isDone = animatedRounds.has(idx);
                     const isCurrent = idx === activeRoundIndex;
                     return (
                       <button
                         key={`dot-${idx}`}
                         onClick={() => {
                           if (battle.state !== 'COMPLETE') return;
-                          if (!revealedRounds.has(idx)) return;
+                          if (!animatedRounds.has(idx)) return;
                           setActiveRoundIndex(idx);
                         }}
                         className={`h-2.5 w-2.5 rounded-full ${isDone ? 'bg-brand-purple' : isCurrent ? 'animate-pulse bg-emerald-400' : 'bg-gray-600'} ${battle.state === 'COMPLETE' && isDone ? 'cursor-pointer' : 'cursor-default'}`}

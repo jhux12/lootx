@@ -72,6 +72,7 @@ export const DeterministicReel: React.FC<DeterministicReelProps> = memo(({ spinK
   const [reelItems, setReelItems] = useState(() => buildReel(spinKey, fillerPool, winningItem));
   const [transformX, setTransformX] = useState(0);
   const [transition, setTransition] = useState('none');
+  const stopGuardRef = useRef<string | null>(null);
 
   const measureOffsets = useCallback(() => {
     const containerWidth = containerRef.current?.clientWidth ?? 0;
@@ -125,7 +126,12 @@ export const DeterministicReel: React.FC<DeterministicReelProps> = memo(({ spinK
     const node = trackRef.current;
     if (!node) return;
 
-    const onTransitionEnd = () => {
+    stopGuardRef.current = null;
+
+    const safeStop = () => {
+      if (stopGuardRef.current === spinKey) return;
+      stopGuardRef.current = spinKey;
+
       const winnerRect = winnerRef.current?.getBoundingClientRect();
       const indicatorRect = indicatorRef.current?.getBoundingClientRect();
 
@@ -142,9 +148,22 @@ export const DeterministicReel: React.FC<DeterministicReelProps> = memo(({ spinK
       onStopped?.();
     };
 
-    node.addEventListener('transitionend', onTransitionEnd, { once: true });
-    return () => node.removeEventListener('transitionend', onTransitionEnd);
-  }, [onStopped, phase, spinKey]);
+    const onTransitionEnd = (event: TransitionEvent) => {
+      if (event.target !== node || event.propertyName !== 'transform') return;
+      window.clearTimeout(fallbackTimer);
+      safeStop();
+    };
+
+    const fallbackTimer = window.setTimeout(() => {
+      safeStop();
+    }, durationMs + 200);
+
+    node.addEventListener('transitionend', onTransitionEnd);
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      node.removeEventListener('transitionend', onTransitionEnd);
+    };
+  }, [durationMs, onStopped, phase, spinKey]);
 
   const idleClass = phase === 'IDLE' && !winningItem ? 'animate-[battleIdleRail_12s_linear_infinite]' : '';
 
