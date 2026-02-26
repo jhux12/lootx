@@ -18,7 +18,9 @@ export const SiteFooter: React.FC = () => {
         <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
           <BrandLockup
             className="justify-start"
-            logoClassName="h-10 md:h-12"
+            logoClassName="h-10 w-10 md:h-12 md:w-12"
+            logoWidth={1024}
+            logoHeight={1024}
             textClassName="text-lg"
             showTextOnMobile
           />
