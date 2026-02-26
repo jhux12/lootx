@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { deleteUpgraderTarget, listUpgraderTargetsAdmin, rotateServerSeed, saveUpgraderSettings, saveUpgraderTarget } from '../../services/upgraderAdminService';
+import { getUpgraderSettings } from '../../services/upgraderService';
 import { computeUpgradeChance, DEFAULT_UPGRADER_SETTINGS, normalizeUpgraderSettings, UpgraderSettings, UpgraderTarget } from '../../utils/upgrader';
 
 export const UpgraderAdminSection: React.FC = () => {
@@ -17,7 +18,16 @@ export const UpgraderAdminSection: React.FC = () => {
 
   useEffect(() => {
     void reloadTargets();
+    void (async () => {
+      const nextSettings = await getUpgraderSettings();
+      setSettingsDraft(nextSettings);
+    })();
   }, []);
+
+  const updateChancePercent = (key: 'minChance' | 'maxChance', percentValue: number) => {
+    const normalizedPercent = Number.isFinite(percentValue) ? percentValue : 0;
+    setSettingsDraft((prev) => normalizeUpgraderSettings({ ...prev, [key]: normalizedPercent / 100 }));
+  };
 
   return (
     <div className="rounded-xl border border-cyan-500/20 bg-[#091521] p-4 sm:p-6">
@@ -25,14 +35,30 @@ export const UpgraderAdminSection: React.FC = () => {
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[
           ['edgeMultiplier', 'Edge Multiplier'],
-          ['minChance', 'Min Chance'],
-          ['maxChance', 'Max Chance'],
+          ['minChance', 'Min Chance (%)'],
+          ['maxChance', 'Max Chance (%)'],
           ['minUpgradeRatio', 'Min Upgrade Ratio'],
           ['cooldownMs', 'Cooldown (ms)'],
           ['maxTargetValue', 'Max Target Value']
         ].map(([key, label]) => (
           <label key={key} className="text-xs text-gray-400">{label}
-            <input type="number" value={Number((settingsDraft as any)[key] ?? 0)} onChange={(e) => setSettingsDraft((prev) => normalizeUpgraderSettings({ ...prev, [key]: Number(e.target.value) }))} className="mt-1 w-full rounded-lg border border-white/10 bg-[#0b0e14] px-3 py-2 text-sm text-white" />
+            <input
+              type="number"
+              step={key === 'minChance' ? '0.0001' : key === 'maxChance' ? '0.01' : 'any'}
+              min={key === 'minChance' ? '0.0001' : undefined}
+              value={key === 'minChance' || key === 'maxChance'
+                ? Number(((settingsDraft as any)[key] ?? 0) * 100)
+                : Number((settingsDraft as any)[key] ?? 0)}
+              onChange={(e) => {
+                const nextValue = Number(e.target.value);
+                if (key === 'minChance' || key === 'maxChance') {
+                  updateChancePercent(key, nextValue);
+                  return;
+                }
+                setSettingsDraft((prev) => normalizeUpgraderSettings({ ...prev, [key]: nextValue }));
+              }}
+              className="mt-1 w-full rounded-lg border border-white/10 bg-[#0b0e14] px-3 py-2 text-sm text-white"
+            />
           </label>
         ))}
       </div>

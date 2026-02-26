@@ -9,10 +9,9 @@ interface UpgraderSpinnerProps {
   forcedWin?: boolean;
 }
 
-const SPIN_FULL_ROTATIONS = 8;
-const SPIN_SETTLE_DURATION_S = 4.2;
+const SPIN_FULL_ROTATIONS = 10;
+const SPIN_SETTLE_DURATION_S = 5.8;
 const SPIN_RESULT_DELAY_MS = 180;
-const RESULT_ZONE_EDGE_BUFFER = 4;
 
 type SpinnerAnimation = {
   rotate: number | number[];
@@ -21,6 +20,12 @@ type SpinnerAnimation = {
     ease: 'linear' | number[];
     repeat?: number;
   };
+};
+
+const randomInRange = (min: number, max: number) => {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return 0;
+  if (max <= min) return min;
+  return min + Math.random() * (max - min);
 };
 
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
@@ -40,8 +45,9 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  const winZoneAngle = (chance / 100) * 360;
-  const dashOffset = circumference - (chance / 100) * circumference;
+  const safeChance = Math.min(99.9999, Math.max(0.0001, chance));
+  const winZoneAngle = (safeChance / 100) * 360;
+  const dashOffset = circumference - (safeChance / 100) * circumference;
 
   useEffect(() => {
     if (!isSpinning) {
@@ -70,7 +76,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       setAnimation({
         rotate: [0, 360],
         transition: {
-          duration: 1.2,
+          duration: 1.4,
           ease: 'linear',
           repeat: Infinity
         }
@@ -78,26 +84,22 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       return;
     }
 
-    startResolveSpin();
-  }, [chance, forcedWin, isSpinning, spinMode]);
-
-  const startResolveSpin = () => {
     const spinRunId = spinRunIdRef.current + 1;
     spinRunIdRef.current = spinRunId;
 
-    const isWin = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= chance;
+    const isWin = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
     const baseRotations = SPIN_FULL_ROTATIONS * 360;
-    const safeWinZoneAngle = Math.min(359.9, Math.max(0.1, winZoneAngle));
 
-    const winStart = RESULT_ZONE_EDGE_BUFFER;
-    const winEnd = Math.max(winStart + 0.1, safeWinZoneAngle - RESULT_ZONE_EDGE_BUFFER);
+    const edgePadding = 0.2;
+    const winStart = edgePadding;
+    const winEnd = Math.max(winStart + 0.01, winZoneAngle - edgePadding);
 
-    const loseStart = Math.min(359.8, safeWinZoneAngle + RESULT_ZONE_EDGE_BUFFER);
-    const loseEnd = 360 - RESULT_ZONE_EDGE_BUFFER;
+    const loseStart = Math.min(359.99, winZoneAngle + edgePadding);
+    const loseEnd = 360 - edgePadding;
 
     const finalAngle = isWin
-      ? winStart + Math.random() * Math.max(0.1, winEnd - winStart)
-      : loseStart + Math.random() * Math.max(0.1, loseEnd - loseStart);
+      ? randomInRange(winStart, winEnd)
+      : randomInRange(loseStart, loseEnd);
 
     const totalRotation = baseRotations + finalAngle;
 
@@ -105,7 +107,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       rotate: totalRotation,
       transition: {
         duration: SPIN_SETTLE_DURATION_S,
-        ease: [0.1, 0.82, 0.18, 1]
+        ease: [0.08, 0.86, 0.16, 1]
       }
     });
 
@@ -119,7 +121,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       hasActiveSpinRef.current = false;
       onFinish(isWin);
     }, SPIN_SETTLE_DURATION_S * 1000 + SPIN_RESULT_DELAY_MS);
-  };
+  }, [isSpinning, spinMode, forcedWin, safeChance, onFinish, winZoneAngle]);
 
   useEffect(() => () => {
     hasActiveSpinRef.current = false;
@@ -156,7 +158,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       </svg>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-black text-white">{chance.toFixed(1)}%</span>
+        <span className="text-3xl font-black text-white">{safeChance.toFixed(safeChance >= 1 ? 1 : 4)}%</span>
         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Chance</span>
       </div>
 

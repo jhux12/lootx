@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Item } from './upgraderTypes';
 import { motion } from 'motion/react';
-import { X, RotateCcw, Home, Skull, Check } from 'lucide-react';
+import { X, RotateCcw, Home, Skull, Check, Zap } from 'lucide-react';
 import { UpgraderSpinner } from './UpgraderSpinner';
 import { CoinAmount } from '../../../components/CoinAmount';
 
@@ -13,6 +13,9 @@ interface UpgraderResultModalProps {
   chance: number;
   status: 'processing' | 'win' | 'lose';
   spinId: number;
+  awaitingConfirmation: boolean;
+  isConfirming: boolean;
+  onConfirmUpgrade: () => void;
 }
 
 type DisplayStatus = 'settling-win' | 'settling-lose' | 'win' | 'lose';
@@ -24,7 +27,10 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   onRetry,
   status,
   chance,
-  spinId
+  spinId,
+  awaitingConfirmation,
+  isConfirming,
+  onConfirmUpgrade
 }) => {
   const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('settling-lose');
 
@@ -33,8 +39,13 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
       setDisplayStatus('settling-lose');
       return;
     }
+
+    if (awaitingConfirmation || status === 'processing') {
+      return;
+    }
+
     setDisplayStatus(status === 'win' ? 'settling-win' : 'settling-lose');
-  }, [isOpen, status, spinId]);
+  }, [awaitingConfirmation, isOpen, status, spinId]);
 
   if (!isOpen) return null;
 
@@ -44,7 +55,41 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
 
   return (
     <>
-      {isSettling && (
+      {awaitingConfirmation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.92, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl"
+          >
+            <button
+              onClick={onClose}
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 text-slate-500 hover:text-white transition-colors z-10"
+            >
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+
+            <div className="p-5 sm:p-8 flex flex-col items-center text-center py-8 sm:py-10 gap-4 sm:gap-6">
+              <UpgraderSpinner chance={chance} isSpinning={false} onFinish={() => undefined} />
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">Confirm Upgrade</h2>
+                <p className="text-slate-400 text-sm">Tap upgrade again to start the spin.</p>
+              </div>
+              <button
+                type="button"
+                disabled={isConfirming}
+                onClick={onConfirmUpgrade}
+                className="w-full sm:w-auto rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 text-sm font-bold uppercase tracking-wide transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                {isConfirming ? 'Preparing...' : 'Upgrade'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {!awaitingConfirmation && isSettling && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm">
           <motion.div
             initial={{ scale: 0.92, opacity: 0 }}

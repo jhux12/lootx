@@ -32,6 +32,8 @@ export default function UpgraderPage() {
   const [modalChance, setModalChance] = useState(0);
   const [spinId, setSpinId] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [pendingUpgrade, setPendingUpgrade] = useState<{ sourceId: string; targetId: string } | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -94,7 +96,7 @@ export default function UpgraderPage() {
     if (!source || !target) return 0;
     if (!settings) {
       const fallbackChance = (source.coinValue / target.coinValue) * 0.95 * 100;
-      return Math.min(80, Math.max(0.01, fallbackChance));
+      return Math.min(80, Math.max(0.0001, fallbackChance));
     }
     return computeUpgradeChance({
       sourceValue: source.coinValue,
@@ -107,30 +109,45 @@ export default function UpgraderPage() {
   const closeModal = () => {
     if (isSubmitting) return;
     setIsModalOpen(false);
+    setAwaitingConfirmation(false);
+    setPendingUpgrade(null);
   };
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = () => {
     if (!source || !target || !settings || isSubmitting) return;
+
     setError(null);
+    setModalTarget(target);
+    setModalChance(chance);
+    setResultState('processing');
+    setAwaitingConfirmation(true);
+    setPendingUpgrade({ sourceId: source.id, targetId: target.id });
+    setIsModalOpen(true);
+  };
+
+  const handleConfirmUpgrade = async () => {
+    if (!pendingUpgrade || !settings || isSubmitting) return;
+
     setIsSubmitting(true);
 
     try {
       const response = await attemptUpgrade({
-        sourceItemInstanceId: source.id,
-        targetItemId: target.id,
+        sourceItemInstanceId: pendingUpgrade.sourceId,
+        targetItemId: pendingUpgrade.targetId,
         clientSeed: `${Date.now()}`
       });
 
-      setModalTarget(target);
-      setModalChance(chance);
       setResultState(response.win ? 'win' : 'lose');
       setSpinId((prev) => prev + 1);
-      setIsModalOpen(true);
+      setAwaitingConfirmation(false);
       setSource(null);
       setTarget(null);
+      setPendingUpgrade(null);
     } catch (attemptError) {
       setError(attemptError instanceof Error ? attemptError.message : 'Upgrade failed.');
       setIsModalOpen(false);
+      setAwaitingConfirmation(false);
+      setPendingUpgrade(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -139,6 +156,8 @@ export default function UpgraderPage() {
   const handleRetry = () => {
     if (isSubmitting) return;
     setIsModalOpen(false);
+    setAwaitingConfirmation(false);
+    setPendingUpgrade(null);
   };
 
   if (!isAuthenticated) {
@@ -230,6 +249,9 @@ export default function UpgraderPage() {
         chance={modalChance}
         status={resultState}
         spinId={spinId}
+        awaitingConfirmation={awaitingConfirmation}
+        isConfirming={isSubmitting && awaitingConfirmation}
+        onConfirmUpgrade={handleConfirmUpgrade}
       />
     </div>
   );

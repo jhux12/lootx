@@ -18,6 +18,13 @@ const toPercent = (value: number, fallback: number) => {
   return value <= 1 ? value * 100 : value;
 };
 
+const formatChancePercent = (value: number) => {
+  const safeValue = Math.max(0, value);
+  if (safeValue >= 1) return `${safeValue.toFixed(2)}%`;
+  if (safeValue >= 0.01) return `${safeValue.toFixed(3)}%`;
+  return `${safeValue.toFixed(4)}%`;
+};
+
 export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
   source,
   target,
@@ -52,16 +59,16 @@ export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
     if (!source || !target) return '—';
 
     if (typeof chanceOverride === 'number') {
-      return `${Math.max(0, chanceOverride).toFixed(2)}%`;
+      return formatChancePercent(chanceOverride);
     }
 
     const edge = settings?.edgeMultiplier ?? 0.95;
-    const minChance = toPercent(settings?.minChance ?? 0.01, 0.01);
+    const minChance = toPercent(settings?.minChance ?? 0.0001, 0.0001);
     const maxChance = toPercent(settings?.maxChance ?? 80, 80);
     const rawChance = ((source.coinValue / target.coinValue) * edge) * 100;
     const chance = Math.min(maxChance, Math.max(minChance, rawChance));
 
-    return `${chance.toFixed(2)}%`;
+    return formatChancePercent(chance);
   }, [chanceOverride, settings, source, target]);
 
   const isValid = Boolean(source && target && source.coinValue < target.coinValue);
