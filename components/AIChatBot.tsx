@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Loader2, Sparkles } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Minus } from 'lucide-react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import { Input } from './ui/Input';
 import { buildSiteSearchContext } from '../utils/siteSearch';
@@ -48,6 +48,7 @@ type ChatVariant = 'sidebar' | 'modal';
 interface AIChatBotProps {
   isOpen: boolean;
   onClose?: () => void;
+  onMinimize?: () => void;
   variant?: ChatVariant;
   storageKey?: string;
 }
@@ -59,6 +60,7 @@ const DEFAULT_MESSAGES: Message[] = [
 export const AIChatBot: React.FC<AIChatBotProps> = ({ 
   isOpen, 
   onClose, 
+  onMinimize,
   variant = 'sidebar',
   storageKey = 'pullz-ai-support-session'
 }) => {
@@ -160,17 +162,17 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
 
   const containerClass = variant === 'sidebar'
     ? "bg-[#131720] border border-gray-800 rounded-2xl shadow-xl flex flex-col h-full overflow-hidden"
-    : "fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-4";
+    : "fixed inset-0 z-[85] bg-black/75 flex items-stretch sm:items-center justify-center p-0 sm:px-4 sm:py-4";
 
   const panelClass = variant === 'sidebar'
     ? "flex flex-col h-full min-h-0"
-    : "w-full sm:w-[420px] bg-[#131720] border border-gray-800 rounded-2xl shadow-2xl flex flex-col max-h-[80vh] min-h-0 animate-in slide-in-from-bottom-10 fade-in duration-200";
+    : "w-full sm:w-[420px] bg-[#131720] border-x border-t border-gray-800 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] mt-[env(safe-area-inset-top)] mb-[env(safe-area-inset-bottom)] sm:h-auto sm:max-h-[80vh] min-h-0 animate-in slide-in-from-bottom-8 fade-in duration-200";
 
   return (
     <div className={containerClass}>
       <div className={panelClass}>
         {/* Header */}
-        <div className="p-4 bg-[#0b0e14] border-b border-gray-800 flex items-center gap-3">
+        <div className="px-4 py-3 sm:p-4 bg-[#0b0e14] border-b border-gray-800 flex items-center gap-3">
             <div className="p-2 bg-brand-purple/20 rounded-lg">
                 <Sparkles className="w-5 h-5 text-brand-purple" />
             </div>
@@ -186,14 +188,27 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
                     Online
                 </p>
             </div>
-            {variant === 'modal' && onClose && (
-              <button 
-                onClick={onClose} 
-                className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
-                aria-label="Close support chat"
-              >
-                <X className="w-4 h-4" />
-              </button>
+            {variant === 'modal' && (
+              <div className="flex items-center gap-1">
+                {onMinimize && (
+                  <button
+                    onClick={onMinimize}
+                    className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                    aria-label="Minimize support chat"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                )}
+                {onClose && (
+                  <button
+                    onClick={onClose}
+                    className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                    aria-label="Close support chat"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             )}
         </div>
         <div className="px-4 py-2 bg-[#0f1219] border-b border-gray-800 text-[10px] sm:text-xs text-gray-400">
@@ -201,7 +216,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-[#0f1219]">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-[#0f1219]">
             {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-wrap break-words ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-[#1a2130] text-gray-200 rounded-tl-none border border-gray-700'}`}>
@@ -221,7 +236,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
         </div>
 
         {/* Input */}
-        <div className="p-3 bg-[#0b0e14] border-t border-gray-800">
+        <div className="p-3 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#0b0e14] border-t border-gray-800">
             <form 
                 onSubmit={(e) => { e.preventDefault(); handleSend(); }}
                 className="relative"

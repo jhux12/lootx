@@ -17,9 +17,11 @@ import {
   Trophy,
   Twitter,
   User as UserIcon,
+  Bot,
   X,
   Youtube
 } from 'lucide-react';
+import { AIChatBot } from './AIChatBot';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
@@ -98,6 +100,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const { playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(false);
+  const [isSupportDropdownOpen, setIsSupportDropdownOpen] = useState(false);
+  const [isMobileAiSupportOpen, setIsMobileAiSupportOpen] = useState(false);
+  const [isMobileAiSupportMinimized, setIsMobileAiSupportMinimized] = useState(false);
+  const aiSupportOpenTimeoutRef = useRef<number | null>(null);
   const headerRef = useRef<HTMLElement | null>(null);
   const targetXp = Math.floor(user.xpBalance ?? user.xp ?? 0);
   const animatedBalance = useAnimatedNumber(balance);
@@ -160,6 +166,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (aiSupportOpenTimeoutRef.current !== null && typeof window !== 'undefined') {
+        window.clearTimeout(aiSupportOpenTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const navigate = (type: 'HOME' | 'BOXES' | 'PLINKO' | 'BONUSES' | 'LEADERBOARD' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
     playSound('click');
     if ((type === 'BONUSES' || type === 'INVENTORY' || type === 'PROFILE') && !isAuthenticated) {
@@ -169,6 +183,28 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     setView({ type } as any);
     setIsMobileMenuOpen(false);
     setIsGamesMenuOpen(false);
+    setIsSupportDropdownOpen(false);
+  };
+
+  const openMobileAiSupport = () => {
+    playSound('click');
+    setIsMobileMenuOpen(false);
+    setIsSupportDropdownOpen(false);
+    setIsMobileAiSupportMinimized(false);
+
+    if (aiSupportOpenTimeoutRef.current !== null && typeof window !== 'undefined') {
+      window.clearTimeout(aiSupportOpenTimeoutRef.current);
+    }
+
+    if (typeof window === 'undefined') {
+      setIsMobileAiSupportOpen(true);
+      return;
+    }
+
+    aiSupportOpenTimeoutRef.current = window.setTimeout(() => {
+      setIsMobileAiSupportOpen(true);
+      aiSupportOpenTimeoutRef.current = null;
+    }, 320);
   };
 
   const authButtons = useMemo(() => (
@@ -419,7 +455,36 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
 
           <section className="space-y-3">
             <h3 className="ml-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Info and Support</h3>
-            <button onClick={() => navigate('CONTACT')} className={`${drawerCardClass} w-full`}><LifeBuoy className="h-5 w-5 text-white" /><span className="text-sm font-bold text-white">Support</span></button>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setIsSupportDropdownOpen((prev) => !prev);
+                }}
+                aria-expanded={isSupportDropdownOpen}
+                className={`${drawerCardClass} w-full justify-between`}
+              >
+                <span className="flex items-center gap-3">
+                  <LifeBuoy className="h-5 w-5 text-white" />
+                  <span className="text-sm font-bold text-white">Support</span>
+                </span>
+                <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${isSupportDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isSupportDropdownOpen && (
+                <div className="space-y-2 pl-2">
+                  <button onClick={() => navigate('CONTACT')} className={`${drawerCardClass} w-full`}>
+                    <LifeBuoy className="h-5 w-5 text-white" />
+                    <span className="text-sm font-bold text-white">Contact Us</span>
+                  </button>
+                  <button onClick={openMobileAiSupport} className={`${drawerCardClass} w-full`}>
+                    <Bot className="h-5 w-5 text-brand-purple" />
+                    <span className="text-sm font-bold text-white">Support AI</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </section>
 
           <section className="mt-2 flex flex-col items-center gap-6">
@@ -441,6 +506,38 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           </section>
         </div>
       </div>
+
+      {isMobileAiSupportOpen && !isMobileAiSupportMinimized && (
+        <AIChatBot
+          isOpen
+          variant="modal"
+          storageKey="pullz-mobile-menu-ai-support"
+          onMinimize={() => setIsMobileAiSupportMinimized(true)}
+          onClose={() => {
+            if (aiSupportOpenTimeoutRef.current !== null && typeof window !== 'undefined') {
+              window.clearTimeout(aiSupportOpenTimeoutRef.current);
+              aiSupportOpenTimeoutRef.current = null;
+            }
+            setIsMobileAiSupportOpen(false);
+            setIsMobileAiSupportMinimized(false);
+          }}
+        />
+      )}
+
+      {isMobileAiSupportOpen && isMobileAiSupportMinimized && (
+        <button
+          type="button"
+          onClick={() => {
+            playSound('click');
+            setIsMobileAiSupportMinimized(false);
+          }}
+          className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-[90] inline-flex items-center gap-2 rounded-full border border-brand-purple/40 bg-[#111621] px-4 py-2 text-sm font-semibold text-white shadow-xl animate-in slide-in-from-bottom-5 fade-in duration-200"
+          aria-label="Reopen AI support"
+        >
+          <Bot className="h-4 w-4 text-brand-purple" />
+          AI Support
+        </button>
+      )}
     </div>
   );
 };
