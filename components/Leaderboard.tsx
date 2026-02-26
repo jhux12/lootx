@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Flame, Gem, Menu } from 'lucide-react';
+import { ArrowLeft, Flame, Menu } from 'lucide-react';
 import { collection, doc, getCountFromServer, getDoc, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { COIN_ICON } from '../constants';
 
 interface RewardsSettings {
   enabled: boolean;
@@ -116,6 +117,29 @@ export const Leaderboard: React.FC = () => {
     return () => window.clearInterval(id);
   }, [settings.seasonEndsAt]);
 
+
+  useEffect(() => {
+    if (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt) return;
+    let cancelled = false;
+    const settle = async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        await fetch('/api/rewards/settle-season', {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        });
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('Failed to settle rewards season from client trigger', error);
+        }
+      }
+    };
+    void settle();
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.seasonEndsAt]);
+
   useEffect(() => {
     let mounted = true;
     const run = async () => {
@@ -196,7 +220,7 @@ export const Leaderboard: React.FC = () => {
               <Flame className="mr-2 h-4 w-4" />0
             </div>
             <div className="flex items-center rounded-2xl border border-white/15 bg-[#151922] px-3 py-2 text-sm font-bold">
-              <Gem className="mr-1.5 h-4 w-4 text-orange-400" />
+              <img src={COIN_ICON} alt="Coins" className="mr-1.5 h-4 w-4 object-contain" />
               {Number(user.balance ?? 0).toLocaleString()}
             </div>
             <button className="rounded-2xl bg-[#ff5b00] px-4 py-2 text-sm font-extrabold text-white sm:px-6">Refill</button>
@@ -231,7 +255,7 @@ export const Leaderboard: React.FC = () => {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                 <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Rank: <span className="font-black">{myRank ? `#${myRank}` : 'Unranked'}</span></div>
                 <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Points: <span className="font-black text-[#ff5b00]">{myPoints.toLocaleString()} pts</span></div>
-                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold flex items-center gap-2">Reward: <Gem className="h-4 w-4 text-orange-400" /><span className="font-black">{myReward.label}</span></div>
+                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold flex items-center gap-2">Reward: <img src={COIN_ICON} alt="Coins" className="h-4 w-4 object-contain" /><span className="font-black">{myReward.label}</span></div>
               </div>
             </section>
 
@@ -290,7 +314,7 @@ export const Leaderboard: React.FC = () => {
                         </div>
                         <div className="hidden text-2xl font-black text-[#ff5b00] sm:block">{entry.points.toLocaleString()} <span className="text-[#ff5b00]">pts</span></div>
                         <div className="ml-auto flex items-center justify-end gap-2 text-2xl font-black">
-                          <Gem className="h-5 w-5 text-orange-400" />
+                          <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" />
                           <span>{rowReward.label}</span>
                         </div>
                       </div>
@@ -302,7 +326,7 @@ export const Leaderboard: React.FC = () => {
 
             <section className="rounded-2xl border border-orange-500/25 bg-gradient-to-r from-[#2d1205] via-[#1a0f08] to-[#0d0f14] p-4 sm:p-6">
               <div className="text-2xl font-black">Rank 11-100</div>
-              <p className="mt-1 text-base text-orange-100/90 sm:text-lg">5 lucky users in ranks 11-100 will randomly be selected to receive <Gem className="inline h-4 w-4 text-orange-300" /> 100</p>
+              <p className="mt-1 text-base text-orange-100/90 sm:text-lg">5 lucky users in ranks 11-100 will randomly be selected to receive <img src={COIN_ICON} alt="Coins" className="inline h-4 w-4 object-contain" /> 100</p>
             </section>
           </div>
         )}

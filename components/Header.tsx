@@ -14,7 +14,6 @@ import {
   RefreshCw,
   Shield,
   ShieldCheck,
-  Star,
   Trophy,
   Twitter,
   User as UserIcon,
@@ -25,6 +24,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
+import { XP_ICON } from '../constants';
 
 type HeaderProps = {
   onOpenInbox: () => void;
@@ -207,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
               <>
                 <div className="hidden items-center gap-2 lg:flex">
                   <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-[#18181b] px-3 py-2">
-                    <Star className="h-4 w-4 text-amber-400" />
+                    <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
                     <span className="text-sm font-bold text-white">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-[#18181b] pl-3 pr-1.5 py-1.5">
@@ -259,7 +259,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             {isAuthenticated && (
               <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden">
                 <div className="flex items-center gap-1 rounded-md border border-amber-500/20 bg-[#18181b] px-2 py-1 sm:px-2.5">
-                  <Star className="h-3 w-3 text-amber-400" />
+                  <img src={XP_ICON} alt="XP" className="h-3 w-3 object-contain" />
                   <span className="text-[11px] font-bold text-white sm:text-xs">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
                 </div>
                 <button

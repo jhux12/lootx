@@ -145,4 +145,118 @@ export const applySpendAndRewards = async ({
   return { pointsAdded, seasonId: settings.seasonId };
 };
 
+
+const payoutForEntry = (settings, rank, points) => {
+  const byRank = Array.isArray(settings?.rewardRules?.payoutsByRank) ? settings.rewardRules.payoutsByRank : [];
+  const byPoints = Array.isArray(settings?.rewardRules?.payoutsByPoints) ? settings.rewardRules.payoutsByPoints : [];
+  const rankMatch = byRank.find((entry) => rank >= Number(entry.minRank) && rank <= Number(entry.maxRank));
+  const pointsMatch = [...byPoints]
+    .sort((a, b) => Number(b.minPoints) - Number(a.minPoints))
+    .find((entry) => points >= Number(entry.minPoints));
+  const selected = rankMatch ?? pointsMatch;
+  if (!selected) return { coins: 0, xp: 0, itemId: '' };
+  return {
+    coins: Math.max(0, Math.floor(toNumber(selected.rewardAmountCoins, 0))),
+    xp: Math.max(0, Math.floor(toNumber(selected.rewardAmountXP, 0))),
+    itemId: typeof selected.rewardItemId === 'string' ? selected.rewardItemId : ''
+  };
+};
+
+export const settleExpiredRewardsSeason = async ({ force = false, maxUsers = 100 } = {}) => {
+  const { settings } = await getRewardsSettings(null);
+  if (settings.enabled === false) {
+    return { settled: false, reason: 'disabled' };
+  }
+
+  const now = Date.now();
+  if (!force && (!settings.seasonEndsAt || now < settings.seasonEndsAt)) {
+    return { settled: false, reason: 'season_active' };
+  }
+
+  const seasonId = settings.seasonId;
+  const topQuery = firestore
+    .collection('leaderboards')
+    .doc(`rewardsSeason_${seasonId}`)
+    .collection('users')
+    .orderBy('points', 'desc')
+    .orderBy('updatedAt', 'asc')
+    .limit(Math.max(1, Math.min(1000, Math.floor(maxUsers))));
+
+  const topSnap = await topQuery.get();
+  if (topSnap.empty) {
+    await firestore.collection('settings').doc('rewards').set({
+      lastSettledSeasonId: seasonId,
+      rewardsSettledAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    return { settled: true, awardedUsers: 0, totalCoinsAwarded: 0, seasonId };
+  }
+
+  let totalCoinsAwarded = 0;
+  let totalXpAwarded = 0;
+  let awardedUsers = 0;
+
+  for (let idx = 0; idx < topSnap.docs.length; idx += 1) {
+    const docSnap = topSnap.docs[idx];
+    const uid = docSnap.id;
+    const points = Math.max(0, Math.floor(toNumber(docSnap.data()?.points, 0)));
+    const rank = idx + 1;
+    const payout = payoutForEntry(settings, rank, points);
+    if (payout.coins <= 0 && payout.xp <= 0 && !payout.itemId) continue;
+
+    const payoutRef = firestore.collection('rewardsPayouts').doc(`${seasonId}_${uid}`);
+    const userRef = firestore.collection('users').doc(uid);
+
+    const applied = await firestore.runTransaction(async (tx) => {
+      const payoutSnap = await tx.get(payoutRef);
+      if (payoutSnap.exists) return false;
+
+      const userPatch = {
+        rewardLastPayoutSeasonId: seasonId,
+        rewardLastPayoutAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      if (payout.coins > 0) {
+        userPatch.coins = admin.firestore.FieldValue.increment(payout.coins);
+      }
+      if (payout.xp > 0) {
+        userPatch.xpBalance = admin.firestore.FieldValue.increment(payout.xp);
+        userPatch.xp = admin.firestore.FieldValue.increment(payout.xp);
+      }
+
+      tx.set(userRef, userPatch, { merge: true });
+      tx.set(payoutRef, {
+        uid,
+        seasonId,
+        rank,
+        points,
+        payoutCoins: payout.coins,
+        payoutXP: payout.xp,
+        payoutItemId: payout.itemId || null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        source: 'season_settlement'
+      });
+      return true;
+    });
+
+    if (applied) {
+      awardedUsers += 1;
+      totalCoinsAwarded += payout.coins;
+      totalXpAwarded += payout.xp;
+    }
+  }
+
+  await firestore.collection('settings').doc('rewards').set({
+    lastSettledSeasonId: seasonId,
+    rewardsSettledAt: admin.firestore.FieldValue.serverTimestamp(),
+    rewardsLastSettlementSummary: {
+      seasonId,
+      awardedUsers,
+      totalCoinsAwarded,
+      totalXpAwarded,
+      processedAt: Date.now()
+    }
+  }, { merge: true });
+
+  return { settled: true, seasonId, awardedUsers, totalCoinsAwarded, totalXpAwarded };
+};
+
 export { DEFAULT_REWARDS_SETTINGS };

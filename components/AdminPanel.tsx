@@ -82,9 +82,12 @@ const DEFAULT_REWARDS_SETTINGS = {
     pointsPerCoinSpent: 1,
     seasonEndsAt: '',
     rewardRulesMode: 'rank' as 'rank' | 'points',
-    rankRulesText: '[{"minRank":1,"maxRank":1,"rewardAmountCoins":100000}]',
+    rankRulesText: '[{"minRank":4,"maxRank":10,"rewardAmountCoins":1000}]',
     pointsRulesText: '[{"minPoints":1000,"rewardAmountCoins":10000}]',
-    payoutType: 'coins' as 'coins' | 'xp' | 'item' | 'none'
+    payoutType: 'coins' as 'coins' | 'xp' | 'item' | 'none',
+    top1CoinReward: 5000,
+    top2CoinReward: 3000,
+    top3CoinReward: 2000
 };
 
 const DEFAULT_LOCKS: UserLocks = {
@@ -798,14 +801,22 @@ export const AdminPanel: React.FC = () => {
       const rewardsRef = doc(db, 'settings', 'rewards');
       const unsubscribe = onSnapshot(rewardsRef, (snapshot) => {
           const data = snapshot.data() as Record<string, any> | undefined;
+          const rankRules = Array.isArray(data?.rewardRules?.payoutsByRank) ? data.rewardRules.payoutsByRank : [];
+          const getTopReward = (rank: number, fallback: number) => {
+              const exactRule = rankRules.find((entry: any) => Number(entry?.minRank) === rank && Number(entry?.maxRank) === rank);
+              return Math.max(0, Number(exactRule?.rewardAmountCoins) || fallback);
+          };
           setRewardsDraft({
               enabled: data?.enabled !== false,
               pointsPerCoinSpent: Math.max(0, Number(data?.pointsPerCoinSpent) || 1),
               seasonEndsAt: data?.seasonEndsAt ? new Date(typeof data.seasonEndsAt?.toMillis === 'function' ? data.seasonEndsAt.toMillis() : Number(data.seasonEndsAt)).toISOString().slice(0, 16) : '',
               rewardRulesMode: Array.isArray(data?.rewardRules?.payoutsByPoints) && data.rewardRules.payoutsByPoints.length > 0 ? 'points' : 'rank',
-              rankRulesText: JSON.stringify(data?.rewardRules?.payoutsByRank ?? [], null, 2),
+              rankRulesText: JSON.stringify(rankRules.filter((entry: any) => !(Number(entry?.minRank) >= 1 && Number(entry?.maxRank) <= 3)), null, 2),
               pointsRulesText: JSON.stringify(data?.rewardRules?.payoutsByPoints ?? [], null, 2),
-              payoutType: ['coins', 'xp', 'item', 'none'].includes(data?.rewardRules?.payoutType) ? data.rewardRules.payoutType : 'coins'
+              payoutType: ['coins', 'xp', 'item', 'none'].includes(data?.rewardRules?.payoutType) ? data.rewardRules.payoutType : 'coins',
+              top1CoinReward: getTopReward(1, DEFAULT_REWARDS_SETTINGS.top1CoinReward),
+              top2CoinReward: getTopReward(2, DEFAULT_REWARDS_SETTINGS.top2CoinReward),
+              top3CoinReward: getTopReward(3, DEFAULT_REWARDS_SETTINGS.top3CoinReward)
           });
       });
       return () => unsubscribe();
@@ -815,13 +826,18 @@ export const AdminPanel: React.FC = () => {
       try {
           const parsedRank = JSON.parse(rewardsDraft.rankRulesText || '[]');
           const parsedPoints = JSON.parse(rewardsDraft.pointsRulesText || '[]');
+          const topRankRules = [
+              { minRank: 1, maxRank: 1, rewardAmountCoins: Math.max(0, Math.floor(Number(rewardsDraft.top1CoinReward) || 0)) },
+              { minRank: 2, maxRank: 2, rewardAmountCoins: Math.max(0, Math.floor(Number(rewardsDraft.top2CoinReward) || 0)) },
+              { minRank: 3, maxRank: 3, rewardAmountCoins: Math.max(0, Math.floor(Number(rewardsDraft.top3CoinReward) || 0)) }
+          ];
           await setDoc(doc(db, 'settings', 'rewards'), {
               enabled: rewardsDraft.enabled,
               pointsPerCoinSpent: Math.max(0, Number(rewardsDraft.pointsPerCoinSpent) || 1),
               seasonEndsAt: rewardsDraft.seasonEndsAt ? new Date(rewardsDraft.seasonEndsAt).getTime() : null,
               rewardRules: {
                   payoutType: rewardsDraft.payoutType,
-                  payoutsByRank: rewardsDraft.rewardRulesMode === 'rank' ? parsedRank : [],
+                  payoutsByRank: rewardsDraft.rewardRulesMode === 'rank' ? [...topRankRules, ...parsedRank] : topRankRules,
                   payoutsByPoints: rewardsDraft.rewardRulesMode === 'points' ? parsedPoints : []
               }
           }, { merge: true });
@@ -4571,12 +4587,23 @@ export const AdminPanel: React.FC = () => {
                                 </Select>
                             </label>
                         </div>
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <label className="text-sm text-gray-300">Top 1 coin reward
+                                <Input type="number" min={0} step={1} value={rewardsDraft.top1CoinReward} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, top1CoinReward: Number(e.target.value) }))} className="mt-1" />
+                            </label>
+                            <label className="text-sm text-gray-300">Top 2 coin reward
+                                <Input type="number" min={0} step={1} value={rewardsDraft.top2CoinReward} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, top2CoinReward: Number(e.target.value) }))} className="mt-1" />
+                            </label>
+                            <label className="text-sm text-gray-300">Top 3 coin reward
+                                <Input type="number" min={0} step={1} value={rewardsDraft.top3CoinReward} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, top3CoinReward: Number(e.target.value) }))} className="mt-1" />
+                            </label>
+                        </div>
                         <div className="mt-4 flex items-center gap-3">
                             <button type="button" onClick={() => setRewardsDraft((prev) => ({ ...prev, rewardRulesMode: 'rank' }))} className={`px-3 py-2 rounded-lg text-xs font-bold ${rewardsDraft.rewardRulesMode === 'rank' ? 'bg-cyan-500/20 text-cyan-200' : 'bg-[#0b0e14] text-gray-400 border border-gray-800'}`}>By Rank</button>
                             <button type="button" onClick={() => setRewardsDraft((prev) => ({ ...prev, rewardRulesMode: 'points' }))} className={`px-3 py-2 rounded-lg text-xs font-bold ${rewardsDraft.rewardRulesMode === 'points' ? 'bg-cyan-500/20 text-cyan-200' : 'bg-[#0b0e14] text-gray-400 border border-gray-800'}`}>By Points</button>
                         </div>
                         <div className="mt-4">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rules JSON</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rules JSON (rank rules should start at rank 4+)</label>
                             <Textarea rows={6} value={rewardsDraft.rewardRulesMode === 'rank' ? rewardsDraft.rankRulesText : rewardsDraft.pointsRulesText} onChange={(e) => setRewardsDraft((prev) => prev.rewardRulesMode === 'rank' ? { ...prev, rankRulesText: e.target.value } : { ...prev, pointsRulesText: e.target.value })} className="w-full" />
                         </div>
                         <div className="mt-4 flex items-center gap-3">
