@@ -1,5 +1,5 @@
 import { admin, firestore } from '../_lib/firebaseAdmin.js';
-import { applySpendAndRewards } from '../_lib/rewards.js';
+import { applySpendAndRewards, getRewardsSettings } from '../_lib/rewards.js';
 import { readJsonBody, sendJson } from '../_lib/http.js';
 import {
   BATTLE_STATES,
@@ -37,6 +37,7 @@ export default async function handler(req, res) {
         transaction.get(battleRef),
         transaction.get(userRef)
       ]);
+      const { settings: rewardsSettings } = await getRewardsSettings(transaction);
 
       if (!battleSnap.exists) {
         throw { status: 404, error: 'BATTLE_NOT_FOUND', message: 'Battle does not exist.' };
@@ -83,7 +84,8 @@ export default async function handler(req, res) {
           coinsSpent: entryCostCoins,
           context: 'battle_join',
           referenceId: battleId,
-          userData
+          userData,
+          rewardsSettings
         });
       }
 

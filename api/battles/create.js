@@ -1,5 +1,5 @@
 import { admin, firestore } from '../_lib/firebaseAdmin.js';
-import { applySpendAndRewards } from '../_lib/rewards.js';
+import { applySpendAndRewards, getRewardsSettings } from '../_lib/rewards.js';
 import { readJsonBody, sendJson } from '../_lib/http.js';
 import {
   BATTLE_ENGINE_VERSION,
@@ -59,6 +59,7 @@ export default async function handler(req, res) {
 
     await firestore.runTransaction(async (transaction) => {
       const userSnap = await transaction.get(userRef);
+      const { settings: rewardsSettings } = await getRewardsSettings(transaction);
       const userData = userSnap.data() ?? {};
       const coins = Number(userData.coins ?? userData.balance ?? 0);
       if (coins < entryCostCoins) {
@@ -77,7 +78,8 @@ export default async function handler(req, res) {
         coinsSpent: entryCostCoins,
         context: 'battle_create',
         referenceId: battleRef.id,
-        userData
+        userData,
+        rewardsSettings
       });
 
       transaction.set(battleRef, {

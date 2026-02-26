@@ -1,7 +1,7 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { randomSeed, sha256 } from './_lib/provablyFair.js';
-import { applySpendAndRewards } from './_lib/rewards.js';
+import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 
 const DEFAULTS = {
   enabled: true,
@@ -76,6 +76,7 @@ export default async function handler(req, res) {
       ]);
 
       const settingsData = settingsSnap.exists ? settingsSnap.data() ?? {} : {};
+      const { settings: rewardsSettings } = await getRewardsSettings(transaction);
       const settings = {
         ...DEFAULTS,
         ...settingsData,
@@ -168,7 +169,8 @@ export default async function handler(req, res) {
         coinsSpent: bet,
         context: 'plinko_drop',
         referenceId: dropRef.id,
-        userData
+        userData,
+        rewardsSettings
       });
 
       transaction.set(settingsRef, {

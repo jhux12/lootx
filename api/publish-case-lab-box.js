@@ -1,5 +1,5 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
-import { applySpendAndRewards } from './_lib/rewards.js';
+import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
@@ -57,6 +57,7 @@ export default async function handler(req, res) {
 
     await firestore.runTransaction(async (transaction) => {
       const userSnap = await transaction.get(userRef);
+      const { settings: rewardsSettings } = await getRewardsSettings(transaction);
       const userData = userSnap.data() ?? {};
       const currentCoins = toNumber(userData.coins ?? userData.balance, 0);
 
@@ -75,7 +76,8 @@ export default async function handler(req, res) {
           coinsSpent: caseLabPublishFeeCoins,
           context: 'case_lab_publish',
           referenceId: boxRef.id,
-          userData
+          userData,
+          rewardsSettings
         });
       } else {
         newCoins = currentCoins;

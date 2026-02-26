@@ -90,12 +90,16 @@ export const applySpendAndRewards = async ({
   coinsSpent,
   context,
   referenceId,
-  userData = {}
+  userData = {},
+  rewardsSettings = null
 }) => {
   const spendAmount = Math.max(0, Math.floor(toNumber(coinsSpent, 0)));
   if (spendAmount <= 0) return { pointsAdded: 0, seasonId: null };
 
-  const { settings } = await getRewardsSettings(transaction);
+  const settings = rewardsSettings ?? (transaction ? null : (await getRewardsSettings(null)).settings);
+  if (!settings) {
+    throw new Error('Rewards settings must be read before writes in Firestore transactions.');
+  }
   if (settings.enabled === false) return { pointsAdded: 0, seasonId: settings.seasonId };
 
   const pointsAdded = Math.max(0, Math.round(spendAmount * settings.pointsPerCoinSpent));
