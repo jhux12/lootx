@@ -87,7 +87,8 @@ const DEFAULT_REWARDS_SETTINGS = {
     payoutType: 'coins' as 'coins' | 'xp' | 'item' | 'none',
     top1CoinReward: 5000,
     top2CoinReward: 3000,
-    top3CoinReward: 2000
+    top3CoinReward: 2000,
+    heroImageUrl: ''
 };
 
 const DEFAULT_LOCKS: UserLocks = {
@@ -816,7 +817,8 @@ export const AdminPanel: React.FC = () => {
               payoutType: ['coins', 'xp', 'item', 'none'].includes(data?.rewardRules?.payoutType) ? data.rewardRules.payoutType : 'coins',
               top1CoinReward: getTopReward(1, DEFAULT_REWARDS_SETTINGS.top1CoinReward),
               top2CoinReward: getTopReward(2, DEFAULT_REWARDS_SETTINGS.top2CoinReward),
-              top3CoinReward: getTopReward(3, DEFAULT_REWARDS_SETTINGS.top3CoinReward)
+              top3CoinReward: getTopReward(3, DEFAULT_REWARDS_SETTINGS.top3CoinReward),
+              heroImageUrl: typeof data?.heroImageUrl === 'string' ? data.heroImageUrl : ''
           });
       });
       return () => unsubscribe();
@@ -835,6 +837,7 @@ export const AdminPanel: React.FC = () => {
               enabled: rewardsDraft.enabled,
               pointsPerCoinSpent: Math.max(0, Number(rewardsDraft.pointsPerCoinSpent) || 1),
               seasonEndsAt: rewardsDraft.seasonEndsAt ? new Date(rewardsDraft.seasonEndsAt).getTime() : null,
+              heroImageUrl: rewardsDraft.heroImageUrl.trim(),
               rewardRules: {
                   payoutType: rewardsDraft.payoutType,
                   payoutsByRank: rewardsDraft.rewardRulesMode === 'rank' ? [...topRankRules, ...parsedRank] : topRankRules,
@@ -4585,6 +4588,10 @@ export const AdminPanel: React.FC = () => {
                             </label>
                             <label className="text-sm text-gray-300">Season end (optional)
                                 <Input type="datetime-local" value={rewardsDraft.seasonEndsAt} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, seasonEndsAt: e.target.value }))} className="mt-1" />
+                            </label>
+                            <label className="text-sm text-gray-300 md:col-span-2">Leaderboard hero image URL
+                                <Input type="url" value={rewardsDraft.heroImageUrl} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, heroImageUrl: e.target.value }))} placeholder="https://your-cdn.com/leaderboard-hero.jpg" className="mt-1" />
+                                <span className="mt-1 block text-xs text-gray-500">Recommended: 1800×600 (3:1 ratio). Mobile crops from center.</span>
                             </label>
                             <label className="text-sm text-gray-300">Payout type
                                 <Select value={rewardsDraft.payoutType} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, payoutType: e.target.value as any }))} className="mt-1">
