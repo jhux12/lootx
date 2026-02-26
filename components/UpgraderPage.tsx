@@ -10,6 +10,7 @@ import { UpgradeSpinWheel } from './upgrader/UpgradeSpinWheel';
 import { computeUpgradeChance, getItemCoinValue, UpgraderSettings, UpgraderTarget } from '../utils/upgrader';
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+const waitForNextPaint = () => new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
 
 export const UpgraderPage: React.FC = () => {
   const { inventory, isAuthenticated, openAuthModal } = useGame();
@@ -68,6 +69,10 @@ export const UpgraderPage: React.FC = () => {
 
       const currentBase = ((wheelRotation % 360) + 360) % 360;
       const settleAngle = currentBase + 1440 + payload.roll * 360;
+
+      setSpinPhase('idle');
+      setWheelRotation(currentBase);
+      await waitForNextPaint();
 
       setSpinPhase('settling');
       setWheelRotation(settleAngle);
