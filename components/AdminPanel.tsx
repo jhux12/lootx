@@ -1915,12 +1915,17 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleSaveBox = () => {
+      const allowsZeroPrice = Boolean(newBox.isDaily);
       if(!newBox.name || !hasExplicitBoxPrice) {
           alert("Please fill in box details");
           return;
       }
-      if (effectiveBoxPrice <= 0) {
-          alert(isXpBox ? 'XP boxes require a positive XP price.' : 'Boxes require a positive coin price.');
+      if (effectiveBoxPrice < 0) {
+          alert(isXpBox ? 'XP boxes cannot have a negative price.' : 'Boxes cannot have a negative coin price.');
+          return;
+      }
+      if (effectiveBoxPrice === 0 && !allowsZeroPrice) {
+          alert(isXpBox ? 'XP boxes require a positive XP price unless marked as a free daily case.' : 'Boxes require a positive coin price unless marked as a free daily case.');
           return;
       }
       
@@ -3004,6 +3009,9 @@ export const AdminPanel: React.FC = () => {
                                         <Calendar className="w-3 h-3 text-yellow-500" /> Set as Daily Free Case
                                     </label>
                                 </div>
+                                <p className="text-[10px] text-gray-500">
+                                    Daily free cases can be saved with a price of 0.
+                                </p>
                             </div>
                         </div>
 
