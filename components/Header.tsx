@@ -35,6 +35,56 @@ type HeaderProps = {
 const drawerCardClass =
   'flex items-center gap-3 rounded-xl border border-white/5 bg-[#18181b] p-3 text-left transition-colors hover:bg-[#202023]';
 
+const BALANCE_ANIMATION_DURATION_MS = 550;
+
+const useAnimatedNumber = (value: number, durationMs = BALANCE_ANIMATION_DURATION_MS) => {
+  const [displayValue, setDisplayValue] = useState(value);
+  const currentValueRef = useRef(value);
+
+  useEffect(() => {
+    currentValueRef.current = displayValue;
+  }, [displayValue]);
+
+  useEffect(() => {
+    if (!Number.isFinite(value)) {
+      setDisplayValue(0);
+      currentValueRef.current = 0;
+      return;
+    }
+
+    const startValue = currentValueRef.current;
+    if (startValue === value) {
+      setDisplayValue(value);
+      currentValueRef.current = value;
+      return;
+    }
+
+    const nowTime = () => (typeof performance === 'undefined' ? Date.now() : performance.now());
+    const startTime = nowTime();
+    let frame = 0;
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - startTime) / durationMs, 1);
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      const nextValue = startValue + (value - startValue) * easedProgress;
+      setDisplayValue(nextValue);
+
+      if (progress < 1) {
+        frame = requestAnimationFrame(tick);
+      } else {
+        currentValueRef.current = value;
+        setDisplayValue(value);
+      }
+    };
+
+    frame = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(frame);
+  }, [durationMs, value]);
+
+  return displayValue;
+};
+
 export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unreadChatCount: _unreadChatCount, isSticky = true }) => {
   const {
     user,
@@ -49,6 +99,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement | null>(null);
+  const targetXp = Math.floor(user.xpBalance ?? user.xp ?? 0);
+  const animatedBalance = useAnimatedNumber(balance);
+  const animatedXp = useAnimatedNumber(targetXp);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -208,7 +261,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 <div className="hidden items-center gap-2 lg:flex">
                   <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5">
                     <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" />
-                    <span className="text-xs font-bold text-white">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+                    <span className="text-xs font-bold text-white">{Math.floor(animatedXp).toLocaleString()}</span>
                   </div>
                   <div className="relative overflow-hidden rounded-lg p-[1px]">
                     <span
@@ -220,7 +273,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                       className="pointer-events-none absolute inset-[1px] rounded-[7px] bg-[#18181b]"
                     />
                     <div className="relative z-10 flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-[#18181b] pl-3 pr-1.5 py-1.5">
-                      <CoinAmount amount={balance} className="text-white text-sm font-bold" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                      <CoinAmount amount={animatedBalance} className="text-white text-sm font-bold" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
                       <button
                         onClick={() => {
                           playSound('click');
@@ -270,7 +323,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
               <div className="flex items-center gap-2 lg:hidden">
                 <div className="flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5 sm:px-3">
                   <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                  <span className="text-xs font-bold text-white sm:text-sm">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+                  <span className="text-xs font-bold text-white sm:text-sm">{Math.floor(animatedXp).toLocaleString()}</span>
                 </div>
                 <div className="relative overflow-hidden rounded-md p-[1px]">
                   <span
@@ -288,7 +341,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     }}
                     className="relative z-10 flex items-center gap-1.5 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2.5 pr-1.5 py-1.5 sm:pl-3"
                   >
-                    <CoinAmount amount={balance} className="text-xs font-bold text-white sm:text-sm" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                    <CoinAmount amount={animatedBalance} className="text-xs font-bold text-white sm:text-sm" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
                     <span className="rounded bg-indigo-600 p-1"><Plus className="h-3.5 w-3.5" /></span>
                   </button>
                 </div>
