@@ -3,11 +3,19 @@ import { db } from '../firebase';
 import { DEFAULT_UPGRADER_SETTINGS, UpgraderSettings, UpgraderTarget, normalizeUpgraderSettings } from '../utils/upgrader';
 
 export const saveUpgraderSettings = async (settings: Partial<UpgraderSettings>) => {
-  await setDoc(doc(db, 'settings', 'upgrader'), {
+  const payload: Record<string, unknown> = {
     ...DEFAULT_UPGRADER_SETTINGS,
     ...settings,
     serverSeed: deleteField(),
     updatedAt: Date.now()
+  };
+
+  if (typeof settings.serverSeedHash !== 'string') {
+    delete payload.serverSeedHash;
+  }
+
+  await setDoc(doc(db, 'settings', 'upgrader'), {
+    ...payload
   }, { merge: true });
 };
 
