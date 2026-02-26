@@ -34,7 +34,6 @@ import { HomeBanners } from './components/HomeBanners';
 import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { CookieConsentToast } from './components/CookieConsentToast';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
@@ -356,9 +355,6 @@ const AppShell = () => {
   const latestMessageAt = messages[messages.length - 1]?.createdAt ?? 0;
   const [lastSeenAt, setLastSeenAt] = useState(0);
   const hasUnseenChatMessages = latestMessageAt > lastSeenAt;
-  const loadAnalyticsScripts = useCallback(() => {
-    // Analytics integrations will be enabled after consent.
-  }, []);
 
   const markChatSeen = useCallback(() => {
     if (!latestMessageAt) return;
@@ -387,7 +383,6 @@ const AppShell = () => {
         onChatViewed={markChatSeen}
       />
       <ResetPasswordModal />
-      <CookieConsentToast onAnalyticsConsent={loadAnalyticsScripts} />
     </div>
   );
 };
@@ -397,12 +392,7 @@ const AppLayout: React.FC<{
   onChatViewed: () => void;
   hasStickyHeader: boolean;
 }> = ({ hasUnseenChatMessages, onChatViewed, hasStickyHeader }) => {
-  const { isAuthenticated } = useGame();
-  const [isChatCollapsed, setIsChatCollapsed] = useState(!isAuthenticated);
-
-  useEffect(() => {
-    setIsChatCollapsed(!isAuthenticated);
-  }, [isAuthenticated]);
+  const [isChatCollapsed, setIsChatCollapsed] = useState(true);
 
   const chatWidth = isChatCollapsed ? '64px' : '380px';
 
