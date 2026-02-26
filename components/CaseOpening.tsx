@@ -200,7 +200,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
       setCopyStatusMessage('Page link copied.');
     } catch (error) {
-      console.error('Failed to copy case link', error);
+      console.error('Failed to copy box link', error);
       setCopyStatusMessage('Could not copy link.');
     }
 
@@ -657,11 +657,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const status = typeof (error as { status?: unknown })?.status === 'number'
           ? (error as { status: number }).status
           : 'unknown';
-        const rawMessage = error instanceof Error ? error.message : 'OPEN_FAILED: Unable to open case.';
+        const rawMessage = error instanceof Error ? error.message : 'OPEN_FAILED: Unable to open box.';
         const readableMessage = rawMessage.includes(':') ? rawMessage.split(':').slice(1).join(':').trim() : rawMessage;
         const errorCode = rawMessage.includes(':') ? rawMessage.split(':')[0] : 'OPEN_FAILED';
 
-        console.error('Failed to open case', {
+        console.error('Failed to open box', {
           status,
           code: errorCode,
           message: readableMessage,
@@ -670,8 +670,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         setIsSpinning(false);
         setIsBoxPreviewVisible(true);
         setIsBoxPreviewFading(false);
-        setSpinFeedbackMessage(readableMessage || 'Unable to open case.');
-        alert(readableMessage || 'Unable to open case.');
+        setSpinFeedbackMessage(readableMessage || 'Unable to open box.');
+        alert(readableMessage || 'Unable to open box.');
         return;
       }
     }
@@ -881,8 +881,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       {!isReady ? (
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="text-center max-w-sm">
-            <p className="text-white text-lg font-semibold">Loading case...</p>
-            <p className="text-gray-400 text-sm mt-2">We&apos;re syncing the drops and odds for this case.</p>
+            <p className="text-white text-lg font-semibold">Loading box...</p>
+            <p className="text-gray-400 text-sm mt-2">We&apos;re syncing the drops and odds for this box.</p>
           </div>
         </div>
       ) : (
@@ -894,7 +894,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
                     className="min-h-11 flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
                 >
-                    <ChevronLeft className="w-4 h-4" /> All cases
+                    <ChevronLeft className="w-4 h-4" /> All boxes
                 </button>
                 <div className="flex items-center gap-3">
                     <h2 className="text-2xl font-bold text-white">{box!.name}</h2>
@@ -1154,7 +1154,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
         {showXpConfirmSheet && showXpOpenUi && (
-          <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-label="Use XP to open case">
+          <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-label="Use XP to open box">
             <button
               type="button"
               className="absolute inset-0 bg-black/55"
@@ -1175,7 +1175,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               </div>
               <p className="text-xs text-gray-300">Open with XP: <span className="font-semibold text-cyan-200">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span></p>
               {!canOpenWithXp && (
-                <p className="mt-2 text-xs text-amber-300">You need more XP to open this case.</p>
+                <p className="mt-2 text-xs text-amber-300">You need more XP to open this box.</p>
               )}
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
@@ -1333,7 +1333,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         </div>
 
 
-        {/* Case Contents */}
+        {/* Box Contents */}
         <div className="mt-12 border-t border-white/10 bg-[#0d1118] py-8 sm:py-10">
             <div className="mb-6 flex items-center gap-3">
                 <div className="rounded-lg border border-white/10 bg-white/5 p-2">

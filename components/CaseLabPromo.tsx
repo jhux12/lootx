@@ -12,8 +12,8 @@ export const CaseLabPromo: React.FC = () => {
           <div className="space-y-3 text-center md:text-left">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-200/70">Introducing</p>
             <div>
-              <h2 className="text-2xl font-semibold text-white">Case Lab</h2>
-              <p className="mt-2 text-sm text-gray-300">Craft your own custom cases</p>
+              <h2 className="text-2xl font-semibold text-white">Box Lab</h2>
+              <p className="mt-2 text-sm text-gray-300">Craft your own custom boxes</p>
             </div>
             <button
               onClick={() => setView({ type: 'CUSTOM_CREATOR' })}
@@ -25,7 +25,7 @@ export const CaseLabPromo: React.FC = () => {
           <div className="w-full max-w-[260px] md:max-w-[320px]">
             <img
               src={caselabImage}
-              alt="Case Lab preview"
+              alt="Box Lab preview"
               className="h-[140px] w-full object-contain md:h-[160px]"
               loading="lazy"
             />

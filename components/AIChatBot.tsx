@@ -13,10 +13,10 @@ interface Message {
 const GEMINI_API_KEY = "AIzaSyCB04Pk1auWCF-hU6Gnmm3gRDxhpZOylwU";
 
 const SITE_CONTEXT = `
-Pullz.gg is a mystery box and case battle experience. The site includes:
-- Mystery boxes with real-world items shown in each case.
-- Case Battles where players open the same cases and the highest total wins.
-- Case Lab for creating custom cases.
+Pullz.gg is a mystery box and box battle experience. The site includes:
+- Mystery boxes with real-world items shown in each box.
+- Box Battles where players open the same boxes and the highest total wins.
+- Box Lab for creating custom boxes.
 - Provably fair outcomes that can be verified.
 - Site coins used for gameplay.
 `.trim();
@@ -230,7 +230,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
                     type="text" 
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ask about battles, cases..."
+                    placeholder="Ask about battles, boxes..."
                     className="pl-4 pr-12 py-3 text-sm"
                 />
                 <button 

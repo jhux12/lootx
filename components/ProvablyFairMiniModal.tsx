@@ -29,7 +29,7 @@ export const ProvablyFairMiniModal: React.FC<ProvablyFairMiniModalProps> = ({ is
         </div>
 
         <p className="text-sm leading-relaxed text-gray-300">
-          Every case opening is generated using a verifiable provably fair system. We commit to results before you spin, and you can independently verify outcomes.
+          Every box opening is generated using a verifiable provably fair system. We commit to results before you spin, and you can independently verify outcomes.
         </p>
 
         <ul className="mt-4 space-y-2 text-sm text-gray-300">

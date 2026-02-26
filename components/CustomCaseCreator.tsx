@@ -94,8 +94,8 @@ export const CustomCaseCreator: React.FC = () => {
         // Removed 'success' sound on create
         setView({ type: 'CASE_OPENING', boxId: publishedBoxId });
       } catch (error) {
-        console.error('Failed to publish Case Lab box', error);
-        alert('Unable to publish your Case Lab box right now. Please try again.');
+        console.error('Failed to publish Box Lab box', error);
+        alert('Unable to publish your Box Lab box right now. Please try again.');
       }
   };
 
@@ -173,14 +173,14 @@ export const CustomCaseCreator: React.FC = () => {
                     <FlaskConical className="w-6 h-6 text-brand-purple" />
                </div>
                <div>
-                    <h1 className="text-3xl font-black text-white">Case Lab</h1>
-                    <p className="text-gray-400 text-sm">Engineer your luck. Tune your risk balance for a custom case.</p>
+                    <h1 className="text-3xl font-black text-white">Box Lab</h1>
+                    <p className="text-gray-400 text-sm">Engineer your luck. Tune your risk balance for a custom box.</p>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-gray-300">
                       <button
                         type="button"
                         onClick={() => setShowLabInfo(true)}
                         className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 font-semibold text-gray-200 transition hover:border-brand-purple/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple/60"
-                        aria-label="How Case Lab works"
+                        aria-label="How Box Lab works"
                       >
                         <Info className="h-3.5 w-3.5" />
                         How it works
@@ -195,13 +195,13 @@ export const CustomCaseCreator: React.FC = () => {
             type="button"
             onClick={() => setShowLabInfo(false)}
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            aria-label="Close Case Lab info"
+            aria-label="Close Box Lab info"
           />
           <div className="relative w-full max-w-xl rounded-2xl border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111722] to-[#0b0f18] p-5 text-gray-200 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-xs uppercase tracking-[0.3em] text-purple-300/80">Case Lab Guide</div>
-                <h2 className="mt-2 text-xl font-black text-white sm:text-2xl">Design your custom case</h2>
+                <div className="text-xs uppercase tracking-[0.3em] text-purple-300/80">Box Lab Guide</div>
+                <h2 className="mt-2 text-xl font-black text-white sm:text-2xl">Design your custom box</h2>
               </div>
               <button
                 type="button"
@@ -215,22 +215,22 @@ export const CustomCaseCreator: React.FC = () => {
             <ol className="mt-4 space-y-3 text-sm text-gray-300">
               <li className="flex gap-3">
                 <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">1</span>
-                <p>Pick one or more source boxes, then choose which items from those boxes should be included in your case and give it a memorable name.</p>
+                <p>Pick one or more source boxes, then choose which items from those boxes should be included in your box and give it a memorable name.</p>
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">2</span>
-                <p>Tap <span className="font-semibold text-white">Synthesize Odds</span> to balance the odds and calculate the case price.</p>
+                <p>Tap <span className="font-semibold text-white">Synthesize Odds</span> to balance the odds and calculate the box price.</p>
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">3</span>
                 <p>
-                  Create and open your case instantly. Case Lab wins can be sold back for{' '}
+                  Create and open your box instantly. Box Lab wins can be sold back for{' '}
                   <span className="font-semibold text-emerald-300">{stripeSettings.caseLabSellBackPercent}% of item value</span>.
                 </p>
               </li>
             </ol>
             <div className="mt-5 flex flex-col gap-2 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
-              <span>Case Lab cases are for experimentation and custom odds.</span>
+              <span>Box Lab boxes are for experimentation and custom odds.</span>
               <button
                 type="button"
                 onClick={() => setShowLabInfo(false)}
@@ -280,7 +280,7 @@ export const CustomCaseCreator: React.FC = () => {
                       )}
                       {sourceBoxOptions.length === 0 && (
                         <p className="mt-2 rounded-lg border border-dashed border-gray-700 px-3 py-2 text-xs text-amber-300">
-                          No source boxes are enabled right now. Ask an admin to select boxes in Case Lab settings.
+                          No source boxes are enabled right now. Ask an admin to select boxes in Box Lab settings.
                         </p>
                       )}
                   </div>
@@ -358,7 +358,7 @@ export const CustomCaseCreator: React.FC = () => {
           <div className="space-y-6">
               <div className="bg-[#131720] border border-gray-800 rounded-xl p-6 sticky top-24">
                   <div className="mb-6">
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Case Name</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Box Name</label>
                       <Input 
                         type="text" 
                         placeholder="My Luck Experiment #1" 
@@ -387,9 +387,9 @@ export const CustomCaseCreator: React.FC = () => {
                           ))}
                       </div>
                       {selectedBoxImage ? (
-                          <p className="mt-2 text-xs text-gray-500">Selected image is ready for your Case Lab box.</p>
+                          <p className="mt-2 text-xs text-gray-500">Selected image is ready for your Box Lab box.</p>
                       ) : (
-                          <p className="mt-2 text-xs text-amber-300">Choose a cover image to publish your Case Lab box.</p>
+                          <p className="mt-2 text-xs text-amber-300">Choose a cover image to publish your Box Lab box.</p>
                       )}
                   </div>
 
@@ -443,7 +443,7 @@ export const CustomCaseCreator: React.FC = () => {
                               />
                           </div>
                           <p className="mt-2 text-xs text-gray-500">
-                              One-time fee charged when publishing a Case Lab box.
+                              One-time fee charged when publishing a Box Lab box.
                           </p>
                       </div>
                   </div>

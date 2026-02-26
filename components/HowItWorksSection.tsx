@@ -4,8 +4,8 @@ import { MobileFeatureStrip, MobileFeatureItem } from './MobileFeatureStrip';
 
 const steps = [
   {
-    id: 'open-case',
-    title: 'Open a case',
+    id: 'open-box',
+    title: 'Open a box',
     label: 'Step 1',
     description: 'Pick from curated boxes and crack them open instantly.',
     icon: Box,
@@ -18,7 +18,7 @@ const steps = [
     id: 'win-items',
     title: 'Win real items',
     label: 'Step 2',
-    description: 'Every case contains real inventory with transparent odds.',
+    description: 'Every box contains real inventory with transparent odds.',
     icon: Sparkles
   },
   {

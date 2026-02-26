@@ -100,7 +100,7 @@ const DEFAULT_LOCKS: UserLocks = {
 };
 
 const LOCK_LABELS: Record<keyof UserLocks, string> = {
-    openCases: 'Open Cases',
+    openCases: 'Open Boxes',
     deposits: 'Deposits',
     withdraws: 'Withdraws',
     marketplace: 'Marketplace',
@@ -651,7 +651,7 @@ export const AdminPanel: React.FC = () => {
               amount: -45,
               createdAt: base - 1000 * 60 * 30,
               sourceId: `case-${profileId.slice(0, 6)}-open`,
-              memo: 'Opened Neon Nexus Case'
+              memo: 'Opened Neon Nexus Box'
           },
           {
               id: makeId('ledger'),
@@ -1793,7 +1793,7 @@ export const AdminPanel: React.FC = () => {
           amount: totalValue === 0 ? 0 : -Math.abs(totalValue),
           createdAt: Date.now(),
           sourceId: voidSourceId.trim(),
-          memo: voidReason.trim() || 'Voided case open'
+          memo: voidReason.trim() || 'Voided box open'
       };
       appendLedgerEntry(selectedUserId, entry);
       updateInventoryRecords(selectedUserId, (prevItems) => {
@@ -1803,7 +1803,7 @@ export const AdminPanel: React.FC = () => {
                   id: makeId('history'),
                   action: 'void_open',
                   createdAt: Date.now(),
-                  note: voidReason.trim() || 'Case open voided',
+                  note: voidReason.trim() || 'Box open voided',
                   adminUid: adminUser?.id ?? 'admin'
               };
               return {
@@ -1819,7 +1819,7 @@ export const AdminPanel: React.FC = () => {
           'void_case_open',
           { sourceId: voidSourceId.trim(), affectedItems: impactedItems.length },
           { ledgerAmount: entry.amount, affectedItems: impactedItems.length },
-          voidReason.trim() || 'Case open voided'
+          voidReason.trim() || 'Box open voided'
       );
       setVoidSourceId('');
       setVoidReason('');
@@ -1928,7 +1928,7 @@ export const AdminPanel: React.FC = () => {
           return;
       }
       if (effectiveBoxPrice === 0 && !allowsZeroPrice) {
-          alert(isXpBox ? 'XP boxes require a positive XP price unless marked as a free daily case.' : 'Boxes require a positive coin price unless marked as a free daily case.');
+          alert(isXpBox ? 'XP boxes require a positive XP price unless marked as a free daily box.' : 'Boxes require a positive coin price unless marked as a free daily box.');
           return;
       }
       
@@ -2402,7 +2402,7 @@ export const AdminPanel: React.FC = () => {
                      onClick={() => setActiveTab('case-lab')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'case-lab' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
-                       <Beaker className="w-4 h-4" /> Case Lab
+                       <Beaker className="w-4 h-4" /> Box Lab
                    </button>
                    <button 
                      onClick={() => setActiveTab('legal')}
@@ -2438,7 +2438,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'fees' && 'Fees & Shipping'}
                     {activeTab === 'homepage' && 'Homepage Showcase'}
                     {activeTab === 'boxes-page' && 'Boxes Page'}
-                    {activeTab === 'case-lab' && 'Case Lab'}
+                    {activeTab === 'case-lab' && 'Box Lab'}
                     {activeTab === 'legal' && 'Legal Content'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
@@ -2484,7 +2484,7 @@ export const AdminPanel: React.FC = () => {
                                         <div className={`w-2 h-2 rounded-full ${i % 2 === 0 ? 'bg-green-500' : 'bg-blue-500'}`}></div>
                                         <div>
                                             <div className="text-sm font-bold text-gray-200">
-                                                {i % 2 === 0 ? 'Deposit' : 'Case Opening'}
+                                                {i % 2 === 0 ? 'Deposit' : 'Box Opening'}
                                             </div>
                                             <div className="text-xs text-gray-500">2 minutes ago</div>
                                         </div>
@@ -2655,7 +2655,7 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                            <p className="mt-2 text-[10px] text-gray-500">Tags power Case Lab filters and box item search.</p>
+                            <p className="mt-2 text-[10px] text-gray-500">Tags power Box Lab filters and box item search.</p>
                         </div>
                         <div className="mb-4">
                             <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Size Options</label>
@@ -3009,11 +3009,11 @@ export const AdminPanel: React.FC = () => {
                                         className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
                                     />
                                     <label htmlFor="daily-case" className="text-sm text-gray-400 flex items-center gap-1">
-                                        <Calendar className="w-3 h-3 text-yellow-500" /> Set as Daily Free Case
+                                        <Calendar className="w-3 h-3 text-yellow-500" /> Set as Daily Free Box
                                     </label>
                                 </div>
                                 <p className="text-[10px] text-gray-500">
-                                    Daily free cases can be saved with a price of 0.
+                                    Daily free boxes can be saved with a price of 0.
                                 </p>
                             </div>
                         </div>
@@ -3688,12 +3688,12 @@ export const AdminPanel: React.FC = () => {
                                                 </button>
                                             </div>
                                             <div className="border-t border-gray-800 pt-4 space-y-2">
-                                                <label className="block text-[10px] uppercase text-gray-500 font-bold">Void Case Open</label>
+                                                <label className="block text-[10px] uppercase text-gray-500 font-bold">Void Box Open</label>
                                                 <Input
                                                     type="text"
                                                     value={voidSourceId}
                                                     onChange={(event) => setVoidSourceId(event.target.value)}
-                                                    placeholder="Case open ID"
+                                                    placeholder="Box open ID"
                                                     className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
                                                 />
                                                 <Textarea
@@ -3746,7 +3746,7 @@ export const AdminPanel: React.FC = () => {
                                             >
                                                 <option value="all">All entry types</option>
                                                 <option value="deposit">Deposit</option>
-                                                <option value="case_open">Case open</option>
+                                                <option value="case_open">Box open</option>
                                                 <option value="sell_back">Sell back</option>
                                                 <option value="bonus">Bonus</option>
                                                 <option value="admin_adjustment">Admin adjustment</option>
@@ -4134,15 +4134,15 @@ export const AdminPanel: React.FC = () => {
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                             <div>
                                 <h3 className="text-lg font-bold text-white">Support Threads</h3>
-                                <p className="text-sm text-gray-400">Review user requests, reply, and manage case status.</p>
+                                <p className="text-sm text-gray-400">Review user requests, reply, and manage box status.</p>
                             </div>
-                            <div className="text-xs text-gray-400">{supportCases.length} total cases</div>
+                            <div className="text-xs text-gray-400">{supportCases.length} total boxes</div>
                         </div>
                     </div>
 
                     {supportCases.length === 0 ? (
                         <div className="bg-[#131720] border border-gray-800 rounded-xl p-8 text-center text-gray-500">
-                            No support cases found yet.
+                            No support boxes found yet.
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -4181,7 +4181,7 @@ export const AdminPanel: React.FC = () => {
                                         {isExpanded && (
                                             <div className="border-t border-gray-800 px-4 py-4 sm:px-6">
                                                 <div className="flex flex-col gap-3 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
-                                                    <span>Case ID: {caseItem.id}</span>
+                                                    <span>Box ID: {caseItem.id}</span>
                                                     <span>Created {formatSupportTimestamp(caseItem.createdAt)}</span>
                                                 </div>
                                                 <div className="mt-4 space-y-3">
@@ -4293,7 +4293,7 @@ export const AdminPanel: React.FC = () => {
                                     </p>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP per case opened</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP per box opened</label>
                                     <Input
                                         type="number"
                                         min={0}
@@ -4330,7 +4330,7 @@ export const AdminPanel: React.FC = () => {
                                         className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                                     />
                                     <p className="text-xs text-gray-500 mt-2">
-                                        Multiplies case-open XP rewards after wager/open/base values are combined.
+                                        Multiplies box-open XP rewards after wager/open/base values are combined.
                                     </p>
                                 </div>
                             </div>
@@ -4341,7 +4341,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
                                 <h3 className="text-lg font-bold text-white">Economy Conversion</h3>
-                                <p className="text-sm text-gray-400">Control XP conversion for opening coin-priced cases.</p>
+                                <p className="text-sm text-gray-400">Control XP conversion for opening coin-priced boxes.</p>
                             </div>
                         </div>
                         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -4379,7 +4379,7 @@ export const AdminPanel: React.FC = () => {
                             </button>
                         </div>
                         <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-800 pt-4">
-                            <p className="text-xs text-gray-500">Used for XP case cost formula: round((priceCoins / coinsPerDollar) * xpPerDollar).</p>
+                            <p className="text-xs text-gray-500">Used for XP box cost formula: round((priceCoins / coinsPerDollar) * xpPerDollar).</p>
                             <button
                                 onClick={() => { void handleSaveEconomySettings(); }}
                                 className="w-full sm:w-auto px-5 py-2 bg-cyan-500/15 text-cyan-200 border border-cyan-400/35 rounded-lg text-sm font-bold hover:bg-cyan-500/25 transition-colors"
@@ -4515,7 +4515,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
                                 <h3 className="text-lg font-bold text-white">Economy Conversion</h3>
-                                <p className="text-sm text-gray-400">Control XP conversion for opening coin-priced cases.</p>
+                                <p className="text-sm text-gray-400">Control XP conversion for opening coin-priced boxes.</p>
                             </div>
                         </div>
                         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -4553,7 +4553,7 @@ export const AdminPanel: React.FC = () => {
                             </button>
                         </div>
                         <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-800 pt-4">
-                            <p className="text-xs text-gray-500">Used for XP case cost formula: round((priceCoins / coinsPerDollar) * xpPerDollar).</p>
+                            <p className="text-xs text-gray-500">Used for XP box cost formula: round((priceCoins / coinsPerDollar) * xpPerDollar).</p>
                             <button
                                 onClick={() => { void handleSaveEconomySettings(); }}
                                 className="w-full sm:w-auto px-5 py-2 bg-cyan-500/15 text-cyan-200 border border-cyan-400/35 rounded-lg text-sm font-bold hover:bg-cyan-500/25 transition-colors"
@@ -4825,7 +4825,7 @@ export const AdminPanel: React.FC = () => {
                                             <div className="flex items-start justify-between gap-3">
                                                 <div>
                                                     <div className="text-sm font-bold text-white">{item.title}</div>
-                                                    <div className="text-xs text-gray-500 mt-1">{item.category} • {item.fulfillmentType}{item.fulfillmentType === 'XP_BOX' && item.metadata?.caseId ? ` • Case: ${item.metadata.caseId}` : ''}{item.metadata?.unlockRakeback ? ' • Unlocks Rakeback' : ''}</div>
+                                                    <div className="text-xs text-gray-500 mt-1">{item.category} • {item.fulfillmentType}{item.fulfillmentType === 'XP_BOX' && item.metadata?.caseId ? ` • Box: ${item.metadata.caseId}` : ''}{item.metadata?.unlockRakeback ? ' • Unlocks Rakeback' : ''}</div>
                                                     <div className="text-xs text-gray-400 mt-1">{item.xpCost.toLocaleString()} XP</div>
                                                 </div>
                                                 <div className="flex gap-2">
@@ -5047,9 +5047,9 @@ export const AdminPanel: React.FC = () => {
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div>
-                                <h3 className="text-lg font-bold text-white">Case Lab Fees</h3>
+                                <h3 className="text-lg font-bold text-white">Box Lab Fees</h3>
                                 <p className="text-sm text-gray-400">
-                                    Apply a one-time fee when publishing Case Lab boxes.
+                                    Apply a one-time fee when publishing Box Lab boxes.
                                 </p>
                             </div>
                         </div>
@@ -5071,7 +5071,7 @@ export const AdminPanel: React.FC = () => {
                                     placeholder="0"
                                 />
                                 <p className="mt-2 text-xs text-gray-500">
-                                    One-time fee charged when publishing a Case Lab box.
+                                    One-time fee charged when publishing a Box Lab box.
                                 </p>
                             </div>
                         </div>
@@ -5095,9 +5095,9 @@ export const AdminPanel: React.FC = () => {
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div>
-                                <h3 className="text-lg font-bold text-white">Case Lab Settings</h3>
+                                <h3 className="text-lg font-bold text-white">Box Lab Settings</h3>
                                 <p className="text-sm text-gray-400">
-                                    Control default sell back rates for Case Lab boxes.
+                                    Control default sell back rates for Box Lab boxes.
                                 </p>
                             </div>
                         </div>
@@ -5119,7 +5119,7 @@ export const AdminPanel: React.FC = () => {
                                     className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                                 />
                                 <p className="mt-2 text-xs text-gray-500">
-                                    Percent of item value paid on Case Lab sell backs.
+                                    Percent of item value paid on Box Lab sell backs.
                                 </p>
                             </div>
                         </div>
@@ -5127,7 +5127,7 @@ export const AdminPanel: React.FC = () => {
                             <div className="flex flex-col gap-1">
                                 <label className="block text-xs font-bold text-gray-500 uppercase">Available source boxes</label>
                                 <p className="text-xs text-gray-500">
-                                    Choose exactly which boxes can be used in Case Lab (for item picking and cover images).
+                                    Choose exactly which boxes can be used in Box Lab (for item picking and cover images).
                                 </p>
                             </div>
                             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -5166,22 +5166,22 @@ export const AdminPanel: React.FC = () => {
                                 </div>
                             )}
                             <p className="mt-2 text-xs text-gray-500">
-                                If nothing is selected, Case Lab will continue showing all eligible boxes.
+                                If nothing is selected, Box Lab will continue showing all eligible boxes.
                             </p>
                         </div>
                         <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <span className="text-xs text-gray-500">
-                                Case Lab settings are stored with the Stripe configuration in Firestore.
+                                Box Lab settings are stored with the Stripe configuration in Firestore.
                             </span>
                             <button
                                 onClick={handleSaveStripeSettings}
                                 className="w-full sm:w-auto px-5 py-2 bg-brand-purple/20 text-brand-purple border border-brand-purple/40 rounded-lg text-sm font-bold hover:bg-brand-purple hover:text-white transition-colors"
                             >
-                                Save Case Lab settings
+                                Save Box Lab settings
                             </button>
                             {stripeSettingsNotice && (
                                 <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
-                                    Case Lab settings saved.
+                                    Box Lab settings saved.
                                 </div>
                             )}
                         </div>
@@ -5191,7 +5191,7 @@ export const AdminPanel: React.FC = () => {
                             <div>
                                 <h3 className="text-lg font-bold text-white">User Created Boxes</h3>
                                 <p className="text-sm text-gray-400">
-                                    Remove Case Lab boxes that are expired or no longer needed.
+                                    Remove Box Lab boxes that are expired or no longer needed.
                                 </p>
                             </div>
                             <span className="text-xs text-gray-500">

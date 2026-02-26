@@ -67,7 +67,7 @@ export const ProvablyFairPanel: React.FC<ProvablyFairPanelProps> = ({
           </div>
           <h1 className="mt-4 text-2xl font-black text-white sm:text-3xl">Provably Fair</h1>
           <p className="mt-2 max-w-3xl text-sm text-gray-300 sm:text-base">
-            Every case opening is generated with a verifiable system. We commit to fairness before you spin,
+            Every box opening is generated with a verifiable system. We commit to fairness before you spin,
             and you can audit each result independently.
           </p>
         </div>
@@ -202,12 +202,12 @@ export const ProvablyFairPanel: React.FC<ProvablyFairPanelProps> = ({
                       <div className="break-all text-gray-200">{lastRoll.rollHash}</div>
                     </div>
                     <div>
-                      <div className="text-gray-500">HMAC Message (client:nonce:case)</div>
+                      <div className="text-gray-500">HMAC Message (client:nonce:box)</div>
                       <div className="break-all text-gray-400">{lastRoll.message}</div>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">Spin a case first to generate verifiable proof data for your result.</p>
+                  <p className="text-sm text-gray-500">Spin a box first to generate verifiable proof data for your result.</p>
                 )}
               </div>
             </div>

@@ -3,13 +3,13 @@ import { Box, Sparkles, Truck } from 'lucide-react';
 
 const steps = [
   {
-    title: 'Open a case',
+    title: 'Open a box',
     description: 'Pick from curated boxes and crack them open instantly.',
     icon: Box
   },
   {
     title: 'Win real items',
-    description: 'Every case contains real inventory with transparent odds.',
+    description: 'Every box contains real inventory with transparent odds.',
     icon: Sparkles
   },
   {

@@ -768,8 +768,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   {dailyBox && canClaimDaily && (
                       <div className="bg-gradient-to-br from-[#1a2130] to-[#131720] border border-yellow-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                           <div>
-                              <div className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-400/80 mb-1">Free Signup Case Available</div>
-                              <h4 className="text-lg font-bold text-white">Open your free signup case</h4>
+                              <div className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-400/80 mb-1">Free Signup Box Available</div>
+                              <h4 className="text-lg font-bold text-white">Open your free signup box</h4>
                           </div>
                           <button
                               onClick={() => setView({ type: 'CASE_OPENING', boxId: dailyBox.id, isFree: true })}
@@ -856,7 +856,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </h3>
                           <p className="text-gray-500 mb-6">
                               {inventoryFilter === 'inventory'
-                                  ? 'Open cases to collect items you can ship or sell back.'
+                                  ? 'Open boxes to collect items you can ship or sell back.'
                                   : inventoryFilter === 'processing'
                                     ? 'Ship an item to start tracking its progress here.'
                                     : 'Once items are shipped, tracking details will appear here.'}
