@@ -206,22 +206,32 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             {isAuthenticated ? (
               <>
                 <div className="hidden items-center gap-2 lg:flex">
-                  <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-[#18181b] px-3 py-2">
-                    <img src={XP_ICON} alt="XP" className="h-8 w-8 object-contain" />
-                    <span className="text-sm font-bold text-white">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5">
+                    <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" />
+                    <span className="text-xs font-bold text-white">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
                   </div>
-                  <div className="flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-[#18181b] pl-3 pr-1.5 py-1.5">
-                    <CoinAmount amount={balance} className="text-white text-sm font-bold" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
-                    <button
-                      onClick={() => {
-                        playSound('click');
-                        setShowTopUpModal(true);
-                      }}
-                      className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-white hover:bg-indigo-500"
-                      aria-label="Top up"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
+                  <div className="relative overflow-hidden rounded-lg p-[1px]">
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 rounded-lg bg-[conic-gradient(from_0deg,_#3b82f6,_#6366f1,_#8b5cf6,_#6366f1,_#3b82f6)] animate-[spin_10s_linear_infinite]"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-[1px] rounded-[7px] bg-[#18181b]"
+                    />
+                    <div className="relative z-10 flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-[#18181b] pl-3 pr-1.5 py-1.5">
+                      <CoinAmount amount={balance} className="text-white text-sm font-bold" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setShowTopUpModal(true);
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-white transition-colors hover:bg-indigo-500"
+                        aria-label="Top up"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -257,21 +267,31 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             {!isAuthenticated && <div className="flex items-center gap-2 lg:hidden">{authButtons}</div>}
 
             {isAuthenticated && (
-              <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden">
-                <div className="flex items-center gap-1 rounded-md border border-amber-500/20 bg-[#18181b] px-2 py-1 sm:px-2.5">
-                  <img src={XP_ICON} alt="XP" className="h-3 w-3 object-contain" />
-                  <span className="text-[11px] font-bold text-white sm:text-xs">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+              <div className="flex items-center gap-2 lg:hidden">
+                <div className="flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5 sm:px-3">
+                  <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+                  <span className="text-xs font-bold text-white sm:text-sm">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
                 </div>
-                <button
-                  onClick={() => {
-                    playSound('click');
-                    setShowTopUpModal(true);
-                  }}
-                  className="flex items-center gap-1 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2 pr-1 py-1 sm:pl-2.5"
-                >
-                  <CoinAmount amount={balance} className="text-[11px] font-bold text-white sm:text-xs" iconClassName="h-3 w-3" formatOptions={{ maximumFractionDigits: 0 }} />
-                  <span className="rounded bg-indigo-600 p-0.5"><Plus className="h-3 w-3" /></span>
-                </button>
+                <div className="relative overflow-hidden rounded-md p-[1px]">
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 rounded-md bg-[conic-gradient(from_0deg,_#3b82f6,_#6366f1,_#8b5cf6,_#6366f1,_#3b82f6)] animate-[spin_10s_linear_infinite]"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-[1px] rounded-[5px] bg-[#18181b]"
+                  />
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      setShowTopUpModal(true);
+                    }}
+                    className="relative z-10 flex items-center gap-1.5 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2.5 pr-1.5 py-1.5 sm:pl-3"
+                  >
+                    <CoinAmount amount={balance} className="text-xs font-bold text-white sm:text-sm" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                    <span className="rounded bg-indigo-600 p-1"><Plus className="h-3.5 w-3.5" /></span>
+                  </button>
+                </div>
               </div>
             )}
 
