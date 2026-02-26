@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Item } from './upgraderTypes';
 import { motion } from 'motion/react';
-import { X, RotateCcw, Home, Skull, Check, Zap } from 'lucide-react';
+import { X, RotateCcw, Home, Skull, Check, Zap, ShieldCheck, Copy, Volume2, VolumeX } from 'lucide-react';
 import { UpgraderSpinner } from './UpgraderSpinner';
 import { CoinAmount } from '../../../components/CoinAmount';
+import { useSound } from '../../../context/SoundContext';
 
 interface UpgraderResultModalProps {
   isOpen: boolean;
@@ -33,6 +34,79 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   onConfirmUpgrade
 }) => {
   const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('settling-lose');
+  const [copyStatusMessage, setCopyStatusMessage] = useState<string | null>(null);
+  const { muted, toggleMute, playSound } = useSound();
+
+  const handleCopyPageLink = async () => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(window.location.href);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = window.location.href;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopyStatusMessage('Link copied');
+    } catch {
+      setCopyStatusMessage('Copy failed');
+    } finally {
+      window.setTimeout(() => setCopyStatusMessage(null), 1800);
+    }
+  };
+
+  const SpinnerActionRow = (
+    <div className="w-full max-w-xs space-y-2">
+      <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/35 p-2">
+        <button
+          type="button"
+          onClick={() => {
+            playSound('click');
+            if (typeof window !== 'undefined') window.location.assign('/provably-fair#verify');
+          }}
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/60 text-emerald-300 transition hover:border-emerald-300/60 hover:text-emerald-200"
+          aria-label="Open provably fair details"
+        >
+          <ShieldCheck className="h-4 w-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            playSound('click');
+            void handleCopyPageLink();
+          }}
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/60 text-gray-200 transition hover:border-cyan-300/60 hover:text-cyan-200"
+          aria-label="Copy page link"
+        >
+          <Copy className="h-4 w-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            playSound('click');
+            toggleMute();
+          }}
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/60 text-gray-200 transition hover:border-violet-300/60 hover:text-violet-200"
+          aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
+        >
+          {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+        </button>
+      </div>
+      {copyStatusMessage && (
+        <p className="text-center text-xs text-cyan-200" role="status" aria-live="polite">
+          {copyStatusMessage}
+        </p>
+      )}
+    </div>
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -70,6 +144,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
             </button>
 
             <div className="p-5 sm:p-8 flex flex-col items-center text-center py-8 sm:py-10 gap-4 sm:gap-6">
+              {SpinnerActionRow}
               <UpgraderSpinner chance={chance} isSpinning={false} onFinish={() => undefined} />
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">Confirm Upgrade</h2>
@@ -104,6 +179,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
             </button>
 
             <div className="p-5 sm:p-8 flex flex-col items-center text-center py-10 sm:py-12 gap-4 sm:gap-6">
+              {SpinnerActionRow}
               <UpgraderSpinner
                 key={spinId}
                 chance={chance}
