@@ -13,17 +13,10 @@ export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
-  const fallbackAuthImages = [
-    'https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/boxes/lg/75992c3ad217db7e58ba5424025c8cb50fc0836a/iphone-17-series.webp',
-    'https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/items/md/1668667961cc341ac579ca3c61bcf3ea3089d2cd/surfing-pikachu-vmax.webp',
-    'https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/items/lg/cd675b59ff0813381e3b0fe9b98269a0678d3aca/iphone-17-pro-max-512gb.webp'
-  ] as const;
-  const authImages = [0, 1, 2].map((index) => {
-    const configured = stripeSettings.authPopupImageUrls[index]?.trim();
-    if (configured) return configured;
-    if (index === 0 && stripeSettings.authPopupImageUrl.trim()) return stripeSettings.authPopupImageUrl.trim();
-    return fallbackAuthImages[index];
-  });
+  const fallbackAuthImage =
+    'https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/boxes/lg/75992c3ad217db7e58ba5424025c8cb50fc0836a/iphone-17-series.webp';
+  const authImage =
+    stripeSettings.authPopupImageUrls[0]?.trim() || stripeSettings.authPopupImageUrl.trim() || fallbackAuthImage;
 
   // Form State
   const [email, setEmail] = useState('');
@@ -191,7 +184,7 @@ export const LoginModal: React.FC = () => {
         <div className="relative hidden w-2/5 overflow-hidden border-r border-white/5 bg-neutral-900 md:flex md:flex-col">
           <div className="absolute inset-0 z-0">
             <img
-              src={authImages[0]}
+              src={authImage}
               className="h-full w-full object-cover opacity-40 mix-blend-overlay"
               alt="Promo Background"
             />
@@ -207,19 +200,6 @@ export const LoginModal: React.FC = () => {
               WHEN <br />
               SIGNING UP!
             </h2>
-
-            <div className="relative mt-8 h-40 w-full">
-              <img
-                src={authImages[1]}
-                className="absolute left-0 top-10 h-20 w-auto -rotate-12 rounded-md border border-white/10 shadow-2xl"
-                alt="Card"
-              />
-              <img
-                src={authImages[2]}
-                className="absolute right-0 top-0 h-24 w-auto rotate-12 drop-shadow-2xl"
-                alt="Phone"
-              />
-            </div>
           </div>
         </div>
 
