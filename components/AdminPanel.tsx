@@ -5326,6 +5326,22 @@ export const AdminPanel: React.FC = () => {
                                         />
                                     ))}
                                 </div>
+                                <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    <span className="text-xs text-gray-500">
+                                        Save to publish image and category updates for homepage and auth flows.
+                                    </span>
+                                    <button
+                                        onClick={handleSaveStripeSettings}
+                                        className="w-full sm:w-auto px-5 py-2 bg-brand-purple/20 text-brand-purple border border-brand-purple/40 rounded-lg text-sm font-bold hover:bg-brand-purple hover:text-white transition-colors"
+                                    >
+                                        Save general configuration
+                                    </button>
+                                </div>
+                                {stripeSettingsNotice && (
+                                    <div className="mt-3 text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+                                        General configuration saved.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
