@@ -128,7 +128,6 @@ export default function UpgraderPage() {
   const handleConfirmUpgrade = async () => {
     if (!pendingUpgrade || !settings || isSubmitting) return;
 
-    setAwaitingConfirmation(false);
     setIsSubmitting(true);
 
     try {
@@ -140,12 +139,14 @@ export default function UpgraderPage() {
 
       setResultState(response.win ? 'win' : 'lose');
       setSpinId((prev) => prev + 1);
+      setAwaitingConfirmation(false);
       setSource(null);
       setTarget(null);
       setPendingUpgrade(null);
     } catch (attemptError) {
       setError(attemptError instanceof Error ? attemptError.message : 'Upgrade failed.');
       setIsModalOpen(false);
+      setAwaitingConfirmation(false);
       setPendingUpgrade(null);
     } finally {
       setIsSubmitting(false);
@@ -249,7 +250,7 @@ export default function UpgraderPage() {
         status={resultState}
         spinId={spinId}
         awaitingConfirmation={awaitingConfirmation}
-        isConfirming={isSubmitting && awaitingConfirmation === false && resultState === 'processing'}
+        isConfirming={isSubmitting && awaitingConfirmation}
         onConfirmUpgrade={handleConfirmUpgrade}
       />
     </div>
