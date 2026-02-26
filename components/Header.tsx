@@ -210,10 +210,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" />
                     <span className="text-xs font-bold text-white">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
                   </div>
-                  <div className="relative rounded-lg p-[1px]">
+                  <div className="relative overflow-hidden rounded-lg p-[1px]">
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 rounded-lg bg-[conic-gradient(from_0deg,_#3b82f6,_#8b5cf6,_#6366f1,_#3b82f6)] opacity-85 blur-[0.5px] animate-[spin_10s_linear_infinite]"
+                      className="pointer-events-none absolute inset-0 rounded-lg bg-[conic-gradient(from_0deg,_#3b82f6,_#6366f1,_#8b5cf6,_#6366f1,_#3b82f6)] animate-[spin_10s_linear_infinite]"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-[1px] rounded-[7px] bg-[#18181b]"
                     />
                     <div className="relative z-10 flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-[#18181b] pl-3 pr-1.5 py-1.5">
                       <CoinAmount amount={balance} className="text-white text-sm font-bold" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
