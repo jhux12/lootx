@@ -22,9 +22,14 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if isSignedIn()
-        && ((request.auth.uid == uid && !('coins' in request.resource.data)) || isAdmin());
+        && ((request.auth.uid == uid && !('coins' in request.resource.data) && !('rewardPointsBalance' in request.resource.data) && !('rewardPointsSeason' in request.resource.data)) || isAdmin());
       allow update: if isSignedIn()
-        && ((request.auth.uid == uid && request.resource.data.coins == resource.data.coins) || isAdmin());
+        && ((request.auth.uid == uid
+          && request.resource.data.coins == resource.data.coins
+          && request.resource.data.rewardPointsBalance == resource.data.rewardPointsBalance
+          && request.resource.data.rewardPointsSeason == resource.data.rewardPointsSeason
+          && request.resource.data.rewardPointsSeasonId == resource.data.rewardPointsSeasonId)
+          || isAdmin());
       allow delete: if false;
     }
 
@@ -112,6 +117,17 @@ service cloud.firestore {
     match /coin_packages/{packageId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+
+    match /leaderboards/{boardId} {
+      allow read: if true;
+      allow write: if false;
+
+      match /users/{uid} {
+        allow read: if true;
+        allow write: if false;
+      }
     }
 
     match /battles/{battleId} {

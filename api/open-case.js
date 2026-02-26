@@ -2,6 +2,7 @@ import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { computeRoll, pickPrizeByWeight, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { normalizeEconomySettings, getXpCost } from './_lib/economy.js';
+import { applySpendAndRewards } from './_lib/rewards.js';
 
 const DEFAULT_CLIENT_SEED = 'lootx-player';
 const STARTER_COINS = 1000;
@@ -239,6 +240,18 @@ export default async function handler(req, res) {
         : { coins: newCoins };
 
       transaction.set(userRef, nextUserPatch, { merge: true });
+
+      if (coinCost > 0) {
+        await applySpendAndRewards({
+          transaction,
+          uid: decoded.uid,
+          userRef,
+          coinsSpent: coinCost,
+          context: 'case_open',
+          referenceId: openRef.id,
+          userData
+        });
+      }
 
       if (totalXpAward > 0) {
         const dateKey = new Date().toISOString().slice(0, 10);

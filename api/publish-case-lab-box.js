@@ -1,4 +1,5 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
+import { applySpendAndRewards } from './_lib/rewards.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
@@ -66,6 +67,16 @@ export default async function handler(req, res) {
       if (caseLabPublishFeeCoins > 0) {
         newCoins = currentCoins - caseLabPublishFeeCoins;
         transaction.set(userRef, { coins: newCoins }, { merge: true });
+
+        await applySpendAndRewards({
+          transaction,
+          uid: decoded.uid,
+          userRef,
+          coinsSpent: caseLabPublishFeeCoins,
+          context: 'case_lab_publish',
+          referenceId: boxRef.id,
+          userData
+        });
       } else {
         newCoins = currentCoins;
       }
