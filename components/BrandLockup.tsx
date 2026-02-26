@@ -4,6 +4,8 @@ import pullzLogo from '../assets/pullz-p.PNG';
 type BrandLockupProps = {
   className?: string;
   logoClassName?: string;
+  logoWidth?: number;
+  logoHeight?: number;
   textClassName?: string;
   showText?: boolean;
   showTextOnMobile?: boolean;
@@ -12,6 +14,8 @@ type BrandLockupProps = {
 export const BrandLockup: React.FC<BrandLockupProps> = ({
   className = '',
   logoClassName = 'h-12 md:h-14 lg:h-16',
+  logoWidth = 500,
+  logoHeight = 250,
   textClassName = 'text-lg md:text-xl',
   showText = true,
   showTextOnMobile = false,
@@ -20,8 +24,8 @@ export const BrandLockup: React.FC<BrandLockupProps> = ({
     <img
       src={pullzLogo}
       alt="PULLZ Logo"
-      width={500}
-      height={250}
+      width={logoWidth}
+      height={logoHeight}
       className={`${logoClassName} object-contain`}
     />
     {showText && (
