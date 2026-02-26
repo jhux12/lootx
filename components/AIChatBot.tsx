@@ -162,17 +162,17 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
 
   const containerClass = variant === 'sidebar'
     ? "bg-[#131720] border border-gray-800 rounded-2xl shadow-xl flex flex-col h-full overflow-hidden"
-    : "fixed inset-0 z-[85] bg-black/75 flex items-end sm:items-center justify-center p-0 sm:p-4";
+    : "fixed inset-0 z-[85] bg-black/75 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))]";
 
   const panelClass = variant === 'sidebar'
     ? "flex flex-col h-full min-h-0"
-    : "w-full sm:w-[420px] bg-[#131720] border border-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-[calc(100dvh-0.5rem)] max-h-[calc(100dvh-0.5rem)] sm:h-auto sm:max-h-[80vh] min-h-0 animate-in slide-in-from-bottom-8 fade-in duration-200";
+    : "w-full sm:w-[420px] bg-[#131720] border border-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-full max-h-full sm:h-auto sm:max-h-[80vh] min-h-0 animate-in slide-in-from-bottom-8 fade-in duration-200";
 
   return (
     <div className={containerClass}>
       <div className={panelClass}>
         {/* Header */}
-        <div className="p-4 bg-[#0b0e14] border-b border-gray-800 flex items-center gap-3">
+        <div className="px-4 py-3 sm:p-4 bg-[#0b0e14] border-b border-gray-800 flex items-center gap-3">
             <div className="p-2 bg-brand-purple/20 rounded-lg">
                 <Sparkles className="w-5 h-5 text-brand-purple" />
             </div>
@@ -236,7 +236,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
         </div>
 
         {/* Input */}
-        <div className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-[#0b0e14] border-t border-gray-800">
+        <div className="p-3 pb-[max(0.875rem,env(safe-area-inset-bottom))] bg-[#0b0e14] border-t border-gray-800">
             <form 
                 onSubmit={(e) => { e.preventDefault(); handleSend(); }}
                 className="relative"
