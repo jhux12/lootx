@@ -231,7 +231,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const normalizedInventory = normalizeItems(inventorySource).sort((a, b) => b.obtainedAt - a.obtainedAt);
 
   const dailyBox = boxes.find((box) => box.isDaily);
-  const canClaimDaily = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
+  const canClaimDaily = !user.lastFreeBoxClaim;
 
   const filteredInventory = normalizedInventory.filter((item) => {
     if (inventoryFilter === 'processing') return item.status === 'shipping' || item.status === 'shipping_requested';
@@ -768,14 +768,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   {dailyBox && canClaimDaily && (
                       <div className="bg-gradient-to-br from-[#1a2130] to-[#131720] border border-yellow-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                           <div>
-                              <div className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-400/80 mb-1">Daily Free Case Available</div>
-                              <h4 className="text-lg font-bold text-white">Open your daily case</h4>
+                              <div className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-400/80 mb-1">Free Signup Case Available</div>
+                              <h4 className="text-lg font-bold text-white">Open your free signup case</h4>
                           </div>
                           <button
                               onClick={() => setView({ type: 'CASE_OPENING', boxId: dailyBox.id, isFree: true })}
                               className="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-yellow-500 text-black font-bold text-sm hover:bg-yellow-400 transition-colors"
                           >
-                              Open Daily Case
+                              Open Free Box
                           </button>
                       </div>
                   )}

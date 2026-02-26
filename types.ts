@@ -25,6 +25,7 @@ export interface User {
   balance?: number;
   followers?: string[];
   lastDailyClaim?: number;
+  lastFreeBoxClaim?: number;
   totalSpent?: number;
   rakebackBalance?: number;
   rakebackEarnedToday?: number;

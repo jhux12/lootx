@@ -84,7 +84,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     bonusSettings,
     isAuthenticated,
     openAuthModal,
-    claimDaily,
+    claimFreeBox,
     registerSpend
   } = useGame();
   const { muted, toggleMute, playSound } = useSound();
@@ -155,7 +155,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const bodyOverflowRef = useRef<string>('');
   const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
-  const canFreeSpin = !user.lastDailyClaim || (Date.now() - user.lastDailyClaim > 24 * 60 * 60 * 1000);
+  const canFreeSpin = !user.lastFreeBoxClaim;
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
   const currentCaseXpPrice = Math.max(0, Math.floor(Number(box?.priceXP ?? 0)));
@@ -527,10 +527,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return;
       }
       if (!canFreeSpin) {
-        alert("Free case already claimed. Come back in 24 hours.");
+        alert("Free signup box already claimed.");
         return;
       }
-      claimDaily();
+      claimFreeBox();
     }
 
     if (isBoxPreviewVisible) {

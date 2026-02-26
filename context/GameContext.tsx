@@ -519,6 +519,7 @@ type PersistUserData = Partial<{
   name: string;
   avatar: string;
   lastDailyClaim: number;
+  lastFreeBoxClaim: number;
   isAdmin: boolean;
 }>;
 
@@ -611,7 +612,7 @@ interface GameContextType {
   createUserBox: (box: MysteryBox) => Promise<string>; // User Custom
   updateBox: (box: MysteryBox) => void;
   deleteBox: (boxId: string) => Promise<void>;
-  claimDaily: () => void;
+  claimFreeBox: () => void;
   claimRakeback: () => Promise<void>;
   updateBonusSettings: (settings: BonusSettings) => void;
   updateStripeSettings: (settings: StripeSettings) => void;
@@ -726,6 +727,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
   const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
   const xp = Number(data.xpBalance ?? data.xp ?? 0);
   const lastDailyClaim = data.lastDailyClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyClaim, 0);
+  const lastFreeBoxClaim = data.lastFreeBoxClaim === undefined ? undefined : normalizeTimestamp(data.lastFreeBoxClaim, 0);
   const followerIds = Array.isArray(data.followers)
     ? data.followers
     : Array.isArray(data.friends)
@@ -751,6 +753,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     xpEarnedLifetime: Number(data.xpEarnedLifetime ?? 0),
     xpSpentLifetime: Number(data.xpSpentLifetime ?? 0),
     lastDailyClaim,
+    lastFreeBoxClaim,
     totalSpent: Number(data.totalSpent ?? 0),
     rakebackBalance: Number(data.rakebackBalance ?? 0),
     rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
@@ -782,6 +785,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
   const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
   const xp = Number(data.xpBalance ?? data.xp ?? 0);
   const lastDailyClaim = data.lastDailyClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyClaim, 0);
+  const lastFreeBoxClaim = data.lastFreeBoxClaim === undefined ? undefined : normalizeTimestamp(data.lastFreeBoxClaim, 0);
   const followerIds = Array.isArray(data.followers)
     ? data.followers
     : Array.isArray(data.friends)
@@ -808,6 +812,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     xpEarnedLifetime: Number(data.xpEarnedLifetime ?? 0),
     xpSpentLifetime: Number(data.xpSpentLifetime ?? 0),
     lastDailyClaim,
+    lastFreeBoxClaim,
     totalSpent: Number(data.totalSpent ?? 0),
     rakebackBalance: Number(data.rakebackBalance ?? 0),
     rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
@@ -1638,6 +1643,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         xp: 0,
         xpBalance: 0,
         lastDailyClaim: undefined,
+        lastFreeBoxClaim: undefined,
         totalSpent: 0,
         rakebackBalance: 0,
         rakebackEarnedToday: 0,
@@ -1781,6 +1787,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         xpBalance: 0,
         balance: SIGNUP_CREDIT_COINS,
         lastDailyClaim: undefined,
+        lastFreeBoxClaim: undefined,
         totalSpent: 0,
         rakebackBalance: 0,
         rakebackEarnedToday: 0,
@@ -2598,10 +2605,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       removeAdminBox(boxId);
   };
 
-  const claimDaily = async () => {
+  const claimFreeBox = async () => {
     const timestamp = Date.now();
-    setUser(prev => ({ ...prev, lastDailyClaim: timestamp }));
-    persistUserData({ lastDailyClaim: timestamp });
+    setUser(prev => ({ ...prev, lastFreeBoxClaim: timestamp }));
+    persistUserData({ lastFreeBoxClaim: timestamp });
   };
 
   const claimRakeback = async () => {
@@ -2799,7 +2806,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       createUserBox,
       updateBox,
       deleteBox,
-      claimDaily,
+      claimFreeBox,
       claimRakeback,
       updateBonusSettings,
       updateStripeSettings,
@@ -2820,7 +2827,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       addNotification, dismissNotification, clearNotifications, sendAdminNotification, updateUserFlags,
       updateUserAdminData, updateUserBalance, createBattle, joinBattle, updateBattle, createItem, updateItem,
       deleteItem, createCoinPackage, updateCoinPackage, deleteCoinPackage, createBox, createUserBox, updateBox,
-      deleteBox, claimDaily, claimRakeback, updateBonusSettings, updateStripeSettings, awardCaseOpenXp,
+      deleteBox, claimFreeBox, claimRakeback, updateBonusSettings, updateStripeSettings, awardCaseOpenXp,
       registerSpend, generateAffiliateCode, updateUserProgress, updateShipmentStatus, authInitialized
     ]);
 

@@ -19,7 +19,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export const MobileBottomNav: React.FC = () => {
-  const { view, setView, isAuthenticated, openAuthModal } = useGame();
+  const { view, setView, isAuthenticated, openAuthModal, user, boxes } = useGame();
   const { playSound } = useSound();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -54,6 +54,10 @@ export const MobileBottomNav: React.FC = () => {
   };
 
   const activeId = useMemo(() => (view.type === 'HOME' ? 'MENU' : (view.type as NavItem['id'])), [view.type]);
+
+  const hasFreeSignupBox = useMemo(() => (
+    isAuthenticated && boxes.some((box) => box.isDaily) && !user.lastFreeBoxClaim
+  ), [boxes, isAuthenticated, user.lastFreeBoxClaim]);
   const iconClassName = 'h-5 w-5 [stroke-width:1.6]';
 
   return (
@@ -95,7 +99,12 @@ export const MobileBottomNav: React.FC = () => {
                   />
                 </span>
               ) : Icon ? (
-                <Icon className={iconClassName} />
+                <span className="relative">
+                  <Icon className={iconClassName} />
+                  {item.id === 'INVENTORY' && hasFreeSignupBox && (
+                    <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#080b10]" aria-hidden="true" />
+                  )}
+                </span>
               ) : null}
               {!isMenuToggle && <span>{item.label}</span>}
             </button>
