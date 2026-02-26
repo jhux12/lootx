@@ -10,6 +10,7 @@ import { UpgradeSpinWheel } from './upgrader/UpgradeSpinWheel';
 import { computeUpgradeChance, getItemCoinValue, UpgraderSettings, UpgraderTarget } from '../utils/upgrader';
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+const waitForNextPaint = () => new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
 
 export const UpgraderPage: React.FC = () => {
   const { inventory, isAuthenticated, openAuthModal } = useGame();
@@ -18,7 +19,7 @@ export const UpgraderPage: React.FC = () => {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [spinPhase, setSpinPhase] = useState<'idle' | 'loading' | 'settling'>('idle');
+  const [spinPhase, setSpinPhase] = useState<'idle' | 'settling'>('idle');
   const [wheelRotation, setWheelRotation] = useState(0);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +59,6 @@ export const UpgraderPage: React.FC = () => {
     if (!sourceItem || !targetItem || !settings) return;
     setError(null);
     setIsSubmitting(true);
-    setSpinPhase('loading');
 
     try {
       const payload = await attemptUpgrade({
@@ -69,6 +69,10 @@ export const UpgraderPage: React.FC = () => {
 
       const currentBase = ((wheelRotation % 360) + 360) % 360;
       const settleAngle = currentBase + 1440 + payload.roll * 360;
+
+      setSpinPhase('idle');
+      setWheelRotation(currentBase);
+      await waitForNextPaint();
 
       setSpinPhase('settling');
       setWheelRotation(settleAngle);
@@ -104,7 +108,7 @@ export const UpgraderPage: React.FC = () => {
         <UpgradeSpinWheel chance={chance} phase={spinPhase} rotationDeg={wheelRotation} target={targetItem} />
         <ChancePreview chance={chance} sourceName={sourceItem?.name} targetName={targetItem?.name} />
         <button disabled={isDisabled} onClick={onAttempt} title={isCooldown ? 'Cooldown active' : ''} className="h-14 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 px-8 text-lg font-black text-white disabled:cursor-not-allowed disabled:opacity-50 xl:col-span-2">
-          {isSubmitting ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Rolling…</span> : 'Upgrade Now'}
+          {isSubmitting ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Calculating result…</span> : 'Upgrade Now'}
         </button>
       </div>
       {error && <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-2 text-sm text-rose-200">{error}</div>}
