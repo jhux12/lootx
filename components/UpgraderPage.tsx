@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Copy, Loader2, ShieldCheck, Volume2, VolumeX } from 'lucide-react';
 import { useGame } from '../context/GameContext';
+import { useSound } from '../context/SoundContext';
 import { attemptUpgrade, getUpgraderSettings, getUpgraderTargets } from '../services/upgraderService';
 import { ChancePreview } from './upgrader/ChancePreview';
 import { SourceInventoryPicker } from './upgrader/SourceInventoryPicker';
@@ -14,6 +15,7 @@ const waitForNextPaint = () => new Promise<void>((resolve) => window.requestAnim
 
 export const UpgraderPage: React.FC = () => {
   const { inventory, isAuthenticated, openAuthModal } = useGame();
+  const { muted, toggleMute, playSound } = useSound();
   const [settings, setSettings] = useState<UpgraderSettings | null>(null);
   const [targets, setTargets] = useState<UpgraderTarget[]>([]);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
@@ -25,6 +27,7 @@ export const UpgraderPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<null | { win: boolean; roll: number; chance: number; awardedItem?: { name: string; imageUrl: string } }>(null);
   const [filters, setFilters] = useState({ rarity: '', category: '', min: 0, max: 0, sort: 'asc' as 'asc' | 'desc' });
+  const [copyStatusMessage, setCopyStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -59,6 +62,7 @@ export const UpgraderPage: React.FC = () => {
     if (!sourceItem || !targetItem || !settings) return;
     setError(null);
     setIsSubmitting(true);
+    playSound('upgrader-spin');
 
     try {
       const payload = await attemptUpgrade({
@@ -92,6 +96,31 @@ export const UpgraderPage: React.FC = () => {
     }
   };
 
+  const handleCopyPageLink = async () => {
+    if (typeof window === 'undefined') return;
+    const pageUrl = window.location.href;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(pageUrl);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = pageUrl;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopyStatusMessage('Link copied');
+    } catch {
+      setCopyStatusMessage('Copy failed');
+    } finally {
+      window.setTimeout(() => setCopyStatusMessage(null), 1800);
+    }
+  };
+
   if (!isAuthenticated) {
     return <div className="mx-auto max-w-2xl p-6 text-center"><h1 className="text-2xl font-bold text-white">Upgrader</h1><p className="mt-2 text-gray-400">Sign in to use upgrades.</p><button onClick={() => openAuthModal('login')} className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white">Sign in</button></div>;
   }
@@ -105,7 +134,51 @@ export const UpgraderPage: React.FC = () => {
         <TargetPicker targets={targets} selectedId={selectedTargetId} onSelect={setSelectedTargetId} filters={filters} onFilterChange={setFilters} />
       </div>
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <UpgradeSpinWheel chance={chance} phase={spinPhase} rotationDeg={wheelRotation} target={targetItem} />
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-end gap-2 rounded-xl border border-white/10 bg-black/35 p-2">
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                if (typeof window !== 'undefined') window.location.assign('/provably-fair#verify');
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/60 text-emerald-300 transition hover:border-emerald-300/60 hover:text-emerald-200"
+              aria-label="Open provably fair details"
+            >
+              <ShieldCheck className="h-4 w-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                void handleCopyPageLink();
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/60 text-gray-200 transition hover:border-cyan-300/60 hover:text-cyan-200"
+              aria-label="Copy page link"
+            >
+              <Copy className="h-4 w-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                toggleMute();
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/60 text-gray-200 transition hover:border-violet-300/60 hover:text-violet-200"
+              aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
+            >
+              {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            </button>
+          </div>
+          {copyStatusMessage && (
+            <p className="text-right text-xs text-cyan-200" role="status" aria-live="polite">
+              {copyStatusMessage}
+            </p>
+          )}
+          <UpgradeSpinWheel chance={chance} phase={spinPhase} rotationDeg={wheelRotation} target={targetItem} />
+        </div>
         <ChancePreview chance={chance} sourceName={sourceItem?.name} targetName={targetItem?.name} />
         <button disabled={isDisabled} onClick={onAttempt} title={isCooldown ? 'Cooldown active' : ''} className="h-14 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 px-8 text-lg font-black text-white disabled:cursor-not-allowed disabled:opacity-50 xl:col-span-2">
           {isSubmitting ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Calculating result…</span> : 'Upgrade Now'}

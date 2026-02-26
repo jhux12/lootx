@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
+import { useSound } from '../../../context/SoundContext';
 
 interface UpgraderSpinnerProps {
   chance: number;
@@ -36,6 +37,9 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   forcedWin
 }) => {
   const [animation, setAnimation] = useState<SpinnerAnimation>({ rotate: 0 });
+
+  const { playSound } = useSound();
+  const previousSpinningRef = useRef(isSpinning);
   const spinRunIdRef = useRef(0);
   const resultTimeoutRef = useRef<number | null>(null);
   const hasActiveSpinRef = useRef(false);
@@ -48,6 +52,14 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const safeChance = Math.min(99.9999, Math.max(0.0001, chance));
   const winZoneAngle = (safeChance / 100) * 360;
   const dashOffset = circumference - (safeChance / 100) * circumference;
+
+
+  useEffect(() => {
+    if (isSpinning && !previousSpinningRef.current) {
+      playSound('upgrader-spin');
+    }
+    previousSpinningRef.current = isSpinning;
+  }, [isSpinning, playSound]);
 
   useEffect(() => {
     if (!isSpinning) {
