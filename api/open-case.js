@@ -2,6 +2,7 @@ import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { computeRoll, pickPrizeByWeight, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { normalizeEconomySettings, getXpCost } from './_lib/economy.js';
+import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 
 const DEFAULT_CLIENT_SEED = 'lootx-player';
 const STARTER_COINS = 1000;
@@ -150,6 +151,7 @@ export default async function handler(req, res) {
       const currentCoins = hasCoins ? toFiniteNumber(rawCoins, 0) : (userSnap.exists ? 0 : STARTER_COINS);
       const currentXp = Math.max(0, Math.floor(toFiniteNumber(userData.xpBalance ?? userData.xp, 0)));
       const normalizedEconomy = normalizeEconomySettings(economySettingsSnap.exists ? economySettingsSnap.data() ?? {} : {});
+      const { settings: rewardsSettings } = await getRewardsSettings(transaction);
       if (!economySettingsSnap.exists) {
         transaction.set(economySettingsRef, normalizedEconomy, { merge: true });
       }
@@ -178,6 +180,7 @@ export default async function handler(req, res) {
       const xpSystemEnabled = bonusSettings.enabled === false ? false : true;
       const allowXpCaseAward = bonusSettings.awardXpForXpCases === true
         || openCaseRule.allowXpCurrency === true;
+
       const coinsSpent = !isFree && currencyType === 'COIN' && !shouldUseXpForOpen ? price : 0;
       if (!Number.isFinite(coinsSpent)) {
         fail(400, 'INVALID_REQUEST', 'Invalid case price for XP calculation.', { caseId: boxId });
@@ -239,6 +242,19 @@ export default async function handler(req, res) {
         : { coins: newCoins };
 
       transaction.set(userRef, nextUserPatch, { merge: true });
+
+      if (coinCost > 0) {
+        await applySpendAndRewards({
+          transaction,
+          uid: decoded.uid,
+          userRef,
+          coinsSpent: coinCost,
+          context: 'case_open',
+          referenceId: openRef.id,
+          userData,
+          rewardsSettings
+        });
+      }
 
       if (totalXpAward > 0) {
         const dateKey = new Date().toISOString().slice(0, 10);

@@ -1,137 +1,346 @@
-import React, { useMemo } from 'react';
-import { Trophy, Medal, Sparkles } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Flame, Menu } from 'lucide-react';
+import { collection, doc, getCountFromServer, getDoc, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
-import { XP_ICON } from '../constants';
-import { CoinAmount } from './CoinAmount';
+import { COIN_ICON } from '../constants';
+
+interface RewardsSettings {
+  enabled: boolean;
+  pointsPerCoinSpent: number;
+  seasonEndsAt: number | null;
+  seasonId: string;
+  rewardRules: {
+    payoutType: 'coins' | 'xp' | 'item' | 'none';
+    payoutsByRank: Array<{ minRank: number; maxRank: number; rewardAmountCoins?: number; rewardAmountXP?: number; rewardItemId?: string }>;
+    payoutsByPoints: Array<{ minPoints: number; rewardAmountCoins?: number; rewardAmountXP?: number }>;
+  };
+}
+
+interface LeaderboardEntry {
+  uid: string;
+  displayName: string;
+  avatarUrl: string;
+  points: number;
+}
+
+const DEFAULT_SETTINGS: RewardsSettings = {
+  enabled: true,
+  pointsPerCoinSpent: 1,
+  seasonEndsAt: null,
+  seasonId: 'season_open',
+  rewardRules: { payoutType: 'none', payoutsByRank: [], payoutsByPoints: [] }
+};
+
+const normalizeSettings = (raw: Record<string, any> | undefined): RewardsSettings => {
+  const seasonEndsAt = typeof raw?.seasonEndsAt?.toMillis === 'function'
+    ? raw.seasonEndsAt.toMillis()
+    : (Number.isFinite(Number(raw?.seasonEndsAt)) ? Number(raw?.seasonEndsAt) : null);
+  const seasonId = seasonEndsAt ? `season_${new Date(seasonEndsAt).toISOString().slice(0, 10)}` : 'season_open';
+  return {
+    enabled: raw?.enabled !== false,
+    pointsPerCoinSpent: Math.max(0, Number(raw?.pointsPerCoinSpent) || 1),
+    seasonEndsAt,
+    seasonId,
+    rewardRules: {
+      payoutType: ['coins', 'xp', 'item', 'none'].includes(raw?.rewardRules?.payoutType) ? raw.rewardRules.payoutType : 'none',
+      payoutsByRank: Array.isArray(raw?.rewardRules?.payoutsByRank) ? raw.rewardRules.payoutsByRank : [],
+      payoutsByPoints: Array.isArray(raw?.rewardRules?.payoutsByPoints) ? raw.rewardRules.payoutsByPoints : []
+    }
+  };
+};
+
+const rewardByRule = (settings: RewardsSettings, rank: number | null, points: number) => {
+  if (settings.rewardRules.payoutType === 'none') return { label: '0', coins: 0 };
+
+  const rankMatch = rank
+    ? settings.rewardRules.payoutsByRank.find((rule) => rank >= Number(rule.minRank) && rank <= Number(rule.maxRank))
+    : undefined;
+
+  const pointsMatch = [...settings.rewardRules.payoutsByPoints]
+    .sort((a, b) => Number(b.minPoints) - Number(a.minPoints))
+    .find((rule) => points >= Number(rule.minPoints));
+
+  const source = rankMatch ?? pointsMatch;
+  if (!source) return { label: '0', coins: 0 };
+
+  if (settings.rewardRules.payoutType === 'coins') {
+    const amount = Number(source.rewardAmountCoins ?? 0);
+    return { label: amount.toLocaleString(), coins: amount };
+  }
+
+  if (settings.rewardRules.payoutType === 'xp') {
+    return { label: `${Number(source.rewardAmountXP ?? 0).toLocaleString()} XP`, coins: 0 };
+  }
+
+  if (settings.rewardRules.payoutType === 'item') {
+    return { label: source.rewardItemId ? String(source.rewardItemId) : 'Item', coins: 0 };
+  }
+
+  return { label: '0', coins: 0 };
+};
+
+const getTimeLeft = (seasonEndsAt: number | null) => {
+  if (!seasonEndsAt) return null;
+  const ms = Math.max(0, seasonEndsAt - Date.now());
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((ms / (1000 * 60)) % 60);
+  const seconds = Math.floor((ms / 1000) % 60);
+  return { days, hours, minutes, seconds };
+};
+
+const avatarFallback = (name: string) => name.trim().charAt(0).toUpperCase() || 'P';
 
 export const Leaderboard: React.FC = () => {
-    const { users, setView } = useGame();
-    const { playSound } = useSound();
+  const { user, setView } = useGame();
+  const { playSound } = useSound();
+  const [settings, setSettings] = useState<RewardsSettings>(DEFAULT_SETTINGS);
+  const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [myRank, setMyRank] = useState<number | null>(null);
+  const [myPoints, setMyPoints] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(getTimeLeft(DEFAULT_SETTINGS.seasonEndsAt));
 
-    const leaderboardData = useMemo(() => {
-        return [...users]
-            .map((u) => ({
-                ...u,
-                weeklyXp: u.xp ?? 0,
-                profit: 0,
-            }))
-            .sort((a, b) => b.weeklyXp - a.weeklyXp);
-    }, [users]);
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
+      setSettings(normalizeSettings(snap.data() as Record<string, any>));
+    });
+    return () => unsub();
+  }, []);
 
-    const openProfile = (userId: string) => {
-        playSound('click');
-        setView({ type: 'PROFILE', userId });
+  useEffect(() => {
+    setTimeLeft(getTimeLeft(settings.seasonEndsAt));
+    if (!settings.seasonEndsAt) return;
+    const id = window.setInterval(() => setTimeLeft(getTimeLeft(settings.seasonEndsAt)), 1000);
+    return () => window.clearInterval(id);
+  }, [settings.seasonEndsAt]);
+
+
+  useEffect(() => {
+    if (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt) return;
+    let cancelled = false;
+    const settle = async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        await fetch('/api/rewards/settle-season', {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        });
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('Failed to settle rewards season from client trigger', error);
+        }
+      }
+    };
+    void settle();
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.seasonEndsAt]);
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      setLoading(true);
+      const topQuery = query(
+        collection(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users'),
+        orderBy('points', 'desc'),
+        orderBy('updatedAt', 'asc'),
+        limit(100)
+      );
+      const topSnap = await getDocs(topQuery);
+      const top = topSnap.docs.map((d) => ({
+        uid: d.id,
+        displayName: String(d.data().displayName ?? 'Player'),
+        avatarUrl: String(d.data().avatarUrl ?? ''),
+        points: Number(d.data().points ?? 0)
+      }));
+
+      const myDoc = await getDoc(doc(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users', user.id));
+      const points = myDoc.exists() ? Number(myDoc.data().points ?? 0) : 0;
+
+      let rank: number | null = null;
+      if (points > 0) {
+        const higherQuery = query(
+          collection(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users'),
+          where('points', '>', points)
+        );
+        const countSnap = await getCountFromServer(higherQuery);
+        rank = countSnap.data().count + 1;
+      }
+
+      if (mounted) {
+        setLeaders(top);
+        setMyPoints(points);
+        setMyRank(rank);
+        setLoading(false);
+      }
     };
 
-    const getRankIcon = (index: number) => {
-        if (index === 0) return <Trophy className="w-6 h-6 text-yellow-500 fill-yellow-500" />;
-        if (index === 1) return <Medal className="w-6 h-6 text-gray-300 fill-gray-300" />;
-        if (index === 2) return <Medal className="w-6 h-6 text-orange-700 fill-orange-700" />;
-        return <span className="font-bold text-gray-500">#{index + 1}</span>;
+    void run();
+    return () => {
+      mounted = false;
     };
+  }, [settings.seasonId, user.id]);
 
-    return (
-        <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="text-center mb-10">
-                <h1 className="text-4xl font-black text-white mb-3 uppercase tracking-tight flex items-center justify-center gap-3">
-                    <Sparkles className="w-8 h-8 text-brand-purple" /> 
-                    Weekly XP Leaderboard
-                </h1>
-                <p className="text-gray-400">Top players by XP earned this week. Reset in <span className="text-white font-mono font-bold">2d 14h</span>.</p>
-            </div>
+  const myReward = useMemo(() => rewardByRule(settings, myRank, myPoints), [settings, myRank, myPoints]);
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                {/* Top 3 Cards */}
-                {[1, 0, 2].map((idx) => {
-                    const user = leaderboardData[idx];
-                    if(!user) return null;
-                    const isFirst = idx === 0;
-                    return (
-                        <button 
-                            key={user.id} 
-                            onClick={() => openProfile(user.id)}
-                            className={`bg-[#131720] border rounded-2xl p-6 flex flex-col items-center relative ${isFirst ? 'border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.15)] order-1 md:order-2 scale-105' : 'border-gray-800 order-2 md:order-1'} hover:border-brand-purple transition-colors cursor-pointer`}
-                        >
-                            {isFirst && <div className="absolute -top-6"><Trophy className="w-12 h-12 text-yellow-500 drop-shadow-lg" /></div>}
-                            
-                            <div className="relative mt-4">
-                                <img src={user.avatar} className={`w-24 h-24 rounded-full border-4 ${isFirst ? 'border-yellow-500' : 'border-gray-700'}`} />
-                                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#0b0e14] px-3 py-1 rounded-full text-xs font-bold border border-gray-700 text-white whitespace-nowrap">
-                                    XP {(user.xpBalance ?? user.xp ?? 0).toLocaleString()}
-                                </div>
-                            </div>
-                            
-                            <h2 className="text-xl font-bold text-white mt-6 mb-1">{user.name}</h2>
-                            <div className="text-brand-purple font-black text-lg flex items-center gap-2">
-                                <img src={XP_ICON} alt="XP" className="w-7 h-7 object-contain" />
-                                <span>{user.weeklyXp.toLocaleString()} XP</span>
-                            </div>
-                            <div className="text-xs text-gray-500 uppercase font-bold mt-1">Weekly Earned</div>
-                        </button>
-                    )
-                })}
-            </div>
+  const topThree = useMemo(() => {
+    const picks = leaders.slice(0, 3);
+    if (picks.length < 3) return picks;
+    return [picks[1], picks[0], picks[2]];
+  }, [leaders]);
 
-            {/* List View */}
-            <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-[#0b0e14] text-gray-400 font-bold text-xs uppercase border-b border-gray-800">
-                            <tr>
-                                <th className="px-6 py-4">Rank</th>
-                                <th className="px-6 py-4">Player</th>
-                                <th className="px-6 py-4 text-right">Weekly XP</th>
-                                <th className="px-6 py-4 text-right">Total Profit</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-800 text-sm">
-                            {leaderboardData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                                        No players found. Check back soon!
-                                    </td>
-                                </tr>
-                            ) : (
-                                leaderboardData.map((user, index) => (
-                                    <tr key={user.id} className="hover:bg-[#1a2130] transition-colors">
-                                        <td className="px-6 py-4 flex items-center justify-center md:justify-start w-20">
-                                            {getRankIcon(index)}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <button 
-                                                onClick={() => openProfile(user.id)} 
-                                                className="flex items-center gap-3 text-left hover:opacity-90 transition-opacity"
-                                            >
-                                                <img src={user.avatar} className="w-8 h-8 rounded-lg" />
-                                                <div>
-                                                    <div className="font-bold text-white">{user.name}</div>
-                                                    <div className="text-xs text-gray-500">Level {user.level}</div>
-                                                </div>
-                                            </button>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="text-brand-purple font-bold flex items-center justify-end gap-2">
-                                                <img src={XP_ICON} alt="XP" className="w-7 h-7 object-contain" />
-                                                <span>{user.weeklyXp.toLocaleString()} XP</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <CoinAmount
-                                              amount={user.profit}
-                                              formatOptions={{ maximumFractionDigits: 0 }}
-                                              showSign
-                                              className={`font-bold ${user.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}
-                                              iconClassName="w-3.5 h-3.5"
-                                            />
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+  const lowerRows = useMemo(() => leaders.slice(3), [leaders]);
+
+  return (
+    <div className="min-h-screen bg-[#05070b] text-white">
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-black/90 backdrop-blur">
+        <div className="mx-auto flex h-20 w-full max-w-[1280px] items-center gap-2 px-3 sm:px-5">
+          <button
+            onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
+            className="rounded-lg p-2 text-gray-300 hover:bg-white/5 md:hidden"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+
+          <div className="text-3xl font-black tracking-tight italic lowercase">pullz</div>
+
+          <div className="ml-2 hidden items-center gap-2 md:flex">
+            <button className="rounded-2xl border border-white/10 bg-[#121722] px-6 py-3 text-lg font-semibold text-gray-300">Games</button>
+            <button className="rounded-2xl border border-white/10 bg-[#121722] px-6 py-3 text-lg font-semibold text-gray-300">Rewards</button>
+            <button className="rounded-2xl border border-white/10 bg-[#171b24] px-6 py-3 text-lg font-semibold text-white">Leaderboard</button>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <div className="hidden items-center rounded-2xl border border-orange-500/35 bg-orange-500/10 px-3 py-2 text-sm font-bold text-orange-300 sm:flex">
+              <Flame className="mr-2 h-4 w-4" />0
             </div>
+            <div className="flex items-center rounded-2xl border border-white/15 bg-[#151922] px-3 py-2 text-sm font-bold">
+              <img src={COIN_ICON} alt="Coins" className="mr-1.5 h-4 w-4 object-contain" />
+              {Number(user.balance ?? 0).toLocaleString()}
+            </div>
+            <button className="rounded-2xl bg-[#ff5b00] px-4 py-2 text-sm font-extrabold text-white sm:px-6">Refill</button>
+            <button className="rounded-2xl border border-white/10 bg-[#151922] p-2.5 text-gray-200"><Menu className="h-5 w-5" /></button>
+          </div>
         </div>
-    );
+      </header>
+
+      <main className="mx-auto w-full max-w-[1280px] px-3 pb-10 pt-24 sm:px-5 sm:pt-28">
+        {!settings.enabled ? (
+          <div className="rounded-2xl border border-white/10 bg-[#101217] p-6 text-center text-gray-300">Rewards are currently disabled.</div>
+        ) : (
+          <div className="space-y-8">
+            {timeLeft && (
+              <section className="mx-auto w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0f1117] p-4 sm:p-5">
+                <div className="flex items-center justify-center gap-3 sm:gap-5">
+                  <div className="hidden items-center gap-2 text-sm font-semibold text-gray-400 sm:flex">
+                    <Flame className="h-4 w-4 text-orange-500" /> Ends in:
+                  </div>
+                  {[['DAYS', timeLeft.days], ['HRS', timeLeft.hours], ['MIN', timeLeft.minutes], ['SEC', timeLeft.seconds]].map(([label, value]) => (
+                    <div key={String(label)} className="w-16 rounded-xl bg-gradient-to-b from-white/20 to-white/5 px-2 py-2 text-center shadow-[inset_0_2px_12px_rgba(255,255,255,0.2)] sm:w-20 sm:py-3">
+                      <div className="text-lg font-black text-[#ff5b00] sm:text-2xl">{String(value).padStart(2, '0')}</div>
+                      <div className="text-[10px] font-bold tracking-wider text-gray-300 sm:text-xs">{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section>
+              <h2 className="mb-4 text-center text-3xl font-bold">My Stats</h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Rank: <span className="font-black">{myRank ? `#${myRank}` : 'Unranked'}</span></div>
+                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Points: <span className="font-black text-[#ff5b00]">{myPoints.toLocaleString()} pts</span></div>
+                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold flex items-center gap-2">Reward: <img src={COIN_ICON} alt="Coins" className="h-4 w-4 object-contain" /><span className="font-black">{myReward.label}</span></div>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              {(loading ? Array.from({ length: 3 }) : topThree).map((entry, idx) => {
+                if (!entry) {
+                  return <div key={`loading-${idx}`} className="h-[280px] rounded-[26px] border border-white/10 bg-white/5 animate-pulse" />;
+                }
+
+                const actualRank = leaders.findIndex((leader) => leader.uid === entry.uid) + 1;
+                const badge = actualRank === 1 ? '1' : actualRank === 2 ? '2' : '3';
+                const highlight = actualRank === 1
+                  ? 'from-yellow-500/30 via-yellow-500/10 to-transparent border-yellow-500/40'
+                  : actualRank === 2
+                    ? 'from-gray-300/25 via-gray-300/10 to-transparent border-gray-300/35'
+                    : 'from-orange-500/25 via-orange-500/10 to-transparent border-orange-500/35';
+
+                return (
+                  <article key={entry.uid} className={`relative overflow-hidden rounded-[26px] border bg-gradient-to-b p-6 text-center ${highlight}`}>
+                    <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-lime-400 text-6xl font-black text-white">
+                      {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full rounded-full object-cover" /> : avatarFallback(entry.displayName)}
+                    </div>
+                    <div className="absolute left-1/2 top-[126px] -translate-x-1/2 rounded-xl bg-[#ff8a00] px-4 py-2 text-xl font-black text-black">#{badge}</div>
+                    <div className="mt-8 text-4xl font-bold text-white truncate">{entry.displayName}</div>
+                    <div className="mt-2 flex items-center justify-center gap-2 text-xl font-black text-orange-300"> 
+                      <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" />
+                      <span>{rewardByRule(settings, actualRank, entry.points).label}</span>
+                    </div>
+                    <div className="mt-2 text-3xl font-black text-[#ffb347]">{entry.points.toLocaleString()} pts</div>
+                  </article>
+                );
+              })}
+            </section>
+
+            <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d0f14]">
+              <div className="grid grid-cols-[80px_1fr_120px] gap-2 border-b border-white/10 px-4 py-3 text-sm font-bold text-gray-400 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6 sm:text-[28px]">
+                <div>Rank</div>
+                <div>Player</div>
+                <div className="hidden sm:block">Points</div>
+                <div className="text-right">Reward</div>
+              </div>
+
+              {loading ? (
+                <div className="space-y-2 p-3 sm:p-4">
+                  {Array.from({ length: 7 }).map((_, i) => <div key={i} className="h-[72px] rounded-2xl bg-white/5 animate-pulse" />)}
+                </div>
+              ) : (
+                <div className="space-y-2 p-3 sm:p-4">
+                  {lowerRows.map((entry, index) => {
+                    const rank = index + 4;
+                    const rowReward = rewardByRule(settings, rank, entry.points);
+                    return (
+                      <div key={entry.uid} className="grid grid-cols-[80px_1fr_120px] items-center gap-2 rounded-2xl border border-white/10 bg-[#121419] px-4 py-4 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6">
+                        <div className="text-2xl font-black text-white">{rank}</div>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-lime-400 text-lg font-black text-white">
+                            {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full rounded-full object-cover" /> : avatarFallback(entry.displayName)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate text-2xl font-extrabold text-white">{entry.displayName}</div>
+                            <div className="mt-0.5 flex items-center gap-1.5 text-sm font-bold text-orange-300">
+                              <img src={COIN_ICON} alt="Coins" className="h-3.5 w-3.5 object-contain" />
+                              <span>{rowReward.label}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="hidden text-2xl font-black text-[#ff5b00] sm:block">{entry.points.toLocaleString()} <span className="text-[#ff5b00]">pts</span></div>
+                        <div className="ml-auto flex items-center justify-end gap-2 text-2xl font-black">
+                          <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" />
+                          <span>{rowReward.label}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-orange-500/25 bg-gradient-to-r from-[#2d1205] via-[#1a0f08] to-[#0d0f14] p-4 sm:p-6">
+              <div className="text-2xl font-black">Rank 11-100</div>
+              <p className="mt-1 text-base text-orange-100/90 sm:text-lg">5 lucky users in ranks 11-100 will randomly be selected to receive <img src={COIN_ICON} alt="Coins" className="inline h-4 w-4 object-contain" /> 100</p>
+            </section>
+          </div>
+        )}
+      </main>
+    </div>
+  );
 };

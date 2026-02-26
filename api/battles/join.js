@@ -1,4 +1,5 @@
 import { admin, firestore } from '../_lib/firebaseAdmin.js';
+import { applySpendAndRewards, getRewardsSettings } from '../_lib/rewards.js';
 import { readJsonBody, sendJson } from '../_lib/http.js';
 import {
   BATTLE_STATES,
@@ -26,7 +27,8 @@ export default async function handler(req, res) {
     const battleRef = firestore.collection('battles').doc(battleId);
     const userRef = firestore.collection('users').doc(decoded.uid);
     const userRecord = await userRef.get();
-    const displayName = userRecord.data()?.displayName || userRecord.data()?.name || decoded.name || 'Player';
+    const userData = userRecord.data() ?? {};
+    const displayName = userData.displayName || userData.name || decoded.name || 'Player';
 
     let summary = null;
 
@@ -35,6 +37,7 @@ export default async function handler(req, res) {
         transaction.get(battleRef),
         transaction.get(userRef)
       ]);
+      const { settings: rewardsSettings } = await getRewardsSettings(transaction);
 
       if (!battleSnap.exists) {
         throw { status: 404, error: 'BATTLE_NOT_FOUND', message: 'Battle does not exist.' };
@@ -73,6 +76,17 @@ export default async function handler(req, res) {
           coins: admin.firestore.FieldValue.increment(-entryCostCoins),
           coinsLocked: admin.firestore.FieldValue.increment(entryCostCoins)
         }, { merge: true });
+
+        await applySpendAndRewards({
+          transaction,
+          uid: decoded.uid,
+          userRef,
+          coinsSpent: entryCostCoins,
+          context: 'battle_join',
+          referenceId: battleId,
+          userData,
+          rewardsSettings
+        });
       }
 
       const isFull = players.length >= maxPlayers;

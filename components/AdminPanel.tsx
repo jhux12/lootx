@@ -77,6 +77,19 @@ Pixel Booster,120,https://picsum.photos/200,common,35,#9ca3af,,pokemon,booster-p
 `;
 const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
+const DEFAULT_REWARDS_SETTINGS = {
+    enabled: true,
+    pointsPerCoinSpent: 1,
+    seasonEndsAt: '',
+    rewardRulesMode: 'rank' as 'rank' | 'points',
+    rankRulesText: '[{"minRank":4,"maxRank":10,"rewardAmountCoins":1000}]',
+    pointsRulesText: '[{"minPoints":1000,"rewardAmountCoins":10000}]',
+    payoutType: 'coins' as 'coins' | 'xp' | 'item' | 'none',
+    top1CoinReward: 5000,
+    top2CoinReward: 3000,
+    top3CoinReward: 2000
+};
+
 const DEFAULT_LOCKS: UserLocks = {
     openCases: false,
     deposits: false,
@@ -378,6 +391,8 @@ export const AdminPanel: React.FC = () => {
   const [timelineFilter, setTimelineFilter] = useState<'all' | 'ledger' | 'inventory' | 'admin'>('all');
   const [timelineSearch, setTimelineSearch] = useState('');
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
+  const [rewardsDraft, setRewardsDraft] = useState(DEFAULT_REWARDS_SETTINGS);
+  const [rewardsSettingsNotice, setRewardsSettingsNotice] = useState(false);
   const [bonusSaveNotice, setBonusSaveNotice] = useState(false);
   const [economyDraft, setEconomyDraft] = useState<EconomySettingsDraft>(DEFAULT_ECONOMY_SETTINGS);
   const [economySaveNotice, setEconomySaveNotice] = useState(false);
@@ -781,6 +796,57 @@ export const AdminPanel: React.FC = () => {
   useEffect(() => {
       setBonusDraft(bonusSettings);
   }, [bonusSettings]);
+
+  useEffect(() => {
+      const rewardsRef = doc(db, 'settings', 'rewards');
+      const unsubscribe = onSnapshot(rewardsRef, (snapshot) => {
+          const data = snapshot.data() as Record<string, any> | undefined;
+          const rankRules = Array.isArray(data?.rewardRules?.payoutsByRank) ? data.rewardRules.payoutsByRank : [];
+          const getTopReward = (rank: number, fallback: number) => {
+              const exactRule = rankRules.find((entry: any) => Number(entry?.minRank) === rank && Number(entry?.maxRank) === rank);
+              return Math.max(0, Number(exactRule?.rewardAmountCoins) || fallback);
+          };
+          setRewardsDraft({
+              enabled: data?.enabled !== false,
+              pointsPerCoinSpent: Math.max(0, Number(data?.pointsPerCoinSpent) || 1),
+              seasonEndsAt: data?.seasonEndsAt ? new Date(typeof data.seasonEndsAt?.toMillis === 'function' ? data.seasonEndsAt.toMillis() : Number(data.seasonEndsAt)).toISOString().slice(0, 16) : '',
+              rewardRulesMode: Array.isArray(data?.rewardRules?.payoutsByPoints) && data.rewardRules.payoutsByPoints.length > 0 ? 'points' : 'rank',
+              rankRulesText: JSON.stringify(rankRules.filter((entry: any) => !(Number(entry?.minRank) >= 1 && Number(entry?.maxRank) <= 3)), null, 2),
+              pointsRulesText: JSON.stringify(data?.rewardRules?.payoutsByPoints ?? [], null, 2),
+              payoutType: ['coins', 'xp', 'item', 'none'].includes(data?.rewardRules?.payoutType) ? data.rewardRules.payoutType : 'coins',
+              top1CoinReward: getTopReward(1, DEFAULT_REWARDS_SETTINGS.top1CoinReward),
+              top2CoinReward: getTopReward(2, DEFAULT_REWARDS_SETTINGS.top2CoinReward),
+              top3CoinReward: getTopReward(3, DEFAULT_REWARDS_SETTINGS.top3CoinReward)
+          });
+      });
+      return () => unsubscribe();
+  }, []);
+
+  const handleSaveRewardsSettings = async () => {
+      try {
+          const parsedRank = JSON.parse(rewardsDraft.rankRulesText || '[]');
+          const parsedPoints = JSON.parse(rewardsDraft.pointsRulesText || '[]');
+          const topRankRules = [
+              { minRank: 1, maxRank: 1, rewardAmountCoins: Math.max(0, Math.floor(Number(rewardsDraft.top1CoinReward) || 0)) },
+              { minRank: 2, maxRank: 2, rewardAmountCoins: Math.max(0, Math.floor(Number(rewardsDraft.top2CoinReward) || 0)) },
+              { minRank: 3, maxRank: 3, rewardAmountCoins: Math.max(0, Math.floor(Number(rewardsDraft.top3CoinReward) || 0)) }
+          ];
+          await setDoc(doc(db, 'settings', 'rewards'), {
+              enabled: rewardsDraft.enabled,
+              pointsPerCoinSpent: Math.max(0, Number(rewardsDraft.pointsPerCoinSpent) || 1),
+              seasonEndsAt: rewardsDraft.seasonEndsAt ? new Date(rewardsDraft.seasonEndsAt).getTime() : null,
+              rewardRules: {
+                  payoutType: rewardsDraft.payoutType,
+                  payoutsByRank: rewardsDraft.rewardRulesMode === 'rank' ? [...topRankRules, ...parsedRank] : topRankRules,
+                  payoutsByPoints: rewardsDraft.rewardRulesMode === 'points' ? parsedPoints : []
+              }
+          }, { merge: true });
+          setRewardsSettingsNotice(true);
+          window.setTimeout(() => setRewardsSettingsNotice(false), 2200);
+      } catch (error) {
+          console.error('Failed to save rewards settings', error);
+      }
+  };
 
   useEffect(() => {
       const economyRef = doc(db, 'settings', 'economy');
@@ -4488,6 +4554,61 @@ export const AdminPanel: React.FC = () => {
                                     Economy settings saved.
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Rewards Settings</h3>
+                                <p className="text-sm text-gray-400">Configure rewards points, season end time, and payout rules.</p>
+                            </div>
+                            <div className={`text-xs font-semibold px-3 py-1 rounded-full ${rewardsDraft.enabled ? 'bg-emerald-500/10 text-emerald-300' : 'bg-gray-800 text-gray-400'}`}>
+                                {rewardsDraft.enabled ? 'Enabled' : 'Disabled'}
+                            </div>
+                        </div>
+                        <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <label className="text-sm text-gray-300">Rewards enabled
+                                <Checkbox checked={rewardsDraft.enabled} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, enabled: e.target.checked }))} className="ml-3" />
+                            </label>
+                            <label className="text-sm text-gray-300">Points per coin spent
+                                <Input type="number" min={0} step={0.1} value={rewardsDraft.pointsPerCoinSpent} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, pointsPerCoinSpent: Number(e.target.value) }))} className="mt-1" />
+                            </label>
+                            <label className="text-sm text-gray-300">Season end (optional)
+                                <Input type="datetime-local" value={rewardsDraft.seasonEndsAt} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, seasonEndsAt: e.target.value }))} className="mt-1" />
+                            </label>
+                            <label className="text-sm text-gray-300">Payout type
+                                <Select value={rewardsDraft.payoutType} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, payoutType: e.target.value as any }))} className="mt-1">
+                                    <option value="coins">Coins</option>
+                                    <option value="xp">XP</option>
+                                    <option value="item">Item</option>
+                                    <option value="none">None</option>
+                                </Select>
+                            </label>
+                        </div>
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <label className="text-sm text-gray-300">Top 1 coin reward
+                                <Input type="number" min={0} step={1} value={rewardsDraft.top1CoinReward} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, top1CoinReward: Number(e.target.value) }))} className="mt-1" />
+                            </label>
+                            <label className="text-sm text-gray-300">Top 2 coin reward
+                                <Input type="number" min={0} step={1} value={rewardsDraft.top2CoinReward} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, top2CoinReward: Number(e.target.value) }))} className="mt-1" />
+                            </label>
+                            <label className="text-sm text-gray-300">Top 3 coin reward
+                                <Input type="number" min={0} step={1} value={rewardsDraft.top3CoinReward} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, top3CoinReward: Number(e.target.value) }))} className="mt-1" />
+                            </label>
+                        </div>
+                        <div className="mt-4 flex items-center gap-3">
+                            <button type="button" onClick={() => setRewardsDraft((prev) => ({ ...prev, rewardRulesMode: 'rank' }))} className={`px-3 py-2 rounded-lg text-xs font-bold ${rewardsDraft.rewardRulesMode === 'rank' ? 'bg-cyan-500/20 text-cyan-200' : 'bg-[#0b0e14] text-gray-400 border border-gray-800'}`}>By Rank</button>
+                            <button type="button" onClick={() => setRewardsDraft((prev) => ({ ...prev, rewardRulesMode: 'points' }))} className={`px-3 py-2 rounded-lg text-xs font-bold ${rewardsDraft.rewardRulesMode === 'points' ? 'bg-cyan-500/20 text-cyan-200' : 'bg-[#0b0e14] text-gray-400 border border-gray-800'}`}>By Points</button>
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rules JSON (rank rules should start at rank 4+)</label>
+                            <Textarea rows={6} value={rewardsDraft.rewardRulesMode === 'rank' ? rewardsDraft.rankRulesText : rewardsDraft.pointsRulesText} onChange={(e) => setRewardsDraft((prev) => prev.rewardRulesMode === 'rank' ? { ...prev, rankRulesText: e.target.value } : { ...prev, pointsRulesText: e.target.value })} className="w-full" />
+                        </div>
+                        <div className="mt-4 flex items-center gap-3">
+                            <button onClick={() => { void handleSaveRewardsSettings(); }} className="px-5 py-2 bg-cyan-500/15 text-cyan-200 border border-cyan-400/35 rounded-lg text-sm font-bold hover:bg-cyan-500/25 transition-colors">Save rewards settings</button>
+                            {rewardsSettingsNotice && <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">Rewards settings saved.</div>}
                         </div>
                     </div>
 
