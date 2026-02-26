@@ -151,6 +151,7 @@ export default async function handler(req, res) {
       const currentCoins = hasCoins ? toFiniteNumber(rawCoins, 0) : (userSnap.exists ? 0 : STARTER_COINS);
       const currentXp = Math.max(0, Math.floor(toFiniteNumber(userData.xpBalance ?? userData.xp, 0)));
       const normalizedEconomy = normalizeEconomySettings(economySettingsSnap.exists ? economySettingsSnap.data() ?? {} : {});
+      const { settings: rewardsSettings } = await getRewardsSettings(transaction);
       if (!economySettingsSnap.exists) {
         transaction.set(economySettingsRef, normalizedEconomy, { merge: true });
       }
@@ -179,7 +180,6 @@ export default async function handler(req, res) {
       const xpSystemEnabled = bonusSettings.enabled === false ? false : true;
       const allowXpCaseAward = bonusSettings.awardXpForXpCases === true
         || openCaseRule.allowXpCurrency === true;
-      const { settings: rewardsSettings } = await getRewardsSettings(transaction);
 
       const coinsSpent = !isFree && currencyType === 'COIN' && !shouldUseXpForOpen ? price : 0;
       if (!Number.isFinite(coinsSpent)) {
