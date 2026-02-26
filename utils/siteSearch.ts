@@ -18,16 +18,16 @@ const SITE_SEARCH_ENTRIES: SiteSearchEntry[] = [
       'In Inventory, you can ship items or sell them back for coins. Select items and review shipping, then ship an item to start tracking its progress. Once items are shipped, tracking details appear in the Shipped tab with a tracking number.'
   },
   {
-    title: 'Case Battles',
-    keywords: ['battle', 'case battle', 'arena', 'versus', 'round'],
+    title: 'Box Battles',
+    keywords: ['battle', 'box battle', 'arena', 'versus', 'round'],
     content:
-      'Case Battles let players open the same cases and the highest total wins. The battle arena is a core gameplay mode on Pullz.gg.'
+      'Box Battles let players open the same boxes and the highest total wins. The battle arena is a core gameplay mode on Pullz.gg.'
   },
   {
-    title: 'Case Lab',
-    keywords: ['case lab', 'custom case', 'custom', 'create', 'odds'],
+    title: 'Box Lab',
+    keywords: ['box lab', 'custom box', 'custom', 'create', 'odds'],
     content:
-      'Case Lab lets you create custom cases with specific odds and publish them for others to open.'
+      'Box Lab lets you create custom boxes with specific odds and publish them for others to open.'
   },
   {
     title: 'Provably fair',

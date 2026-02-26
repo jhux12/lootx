@@ -2294,7 +2294,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const selectedCases = boxIds.map(id => boxes.find(b => b.id === id)).filter(Boolean) as MysteryBox[];
     if (!selectedCases.length) {
-      alert('Please select at least one case');
+      alert('Please select at least one box');
       return;
     }
 
