@@ -1,7 +1,7 @@
 import React from 'react';
 import { UpgraderTarget } from '../../utils/upgrader';
 
-type SpinPhase = 'idle' | 'loading' | 'settling';
+type SpinPhase = 'idle' | 'settling';
 
 type Props = {
   chance: number;

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { attemptUpgrade, getUpgraderSettings, getUpgraderTargets } from '../services/upgraderService';
@@ -18,10 +18,8 @@ export const UpgraderPage: React.FC = () => {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [spinPhase, setSpinPhase] = useState<'idle' | 'loading' | 'settling'>('idle');
+  const [spinPhase, setSpinPhase] = useState<'idle' | 'settling'>('idle');
   const [wheelRotation, setWheelRotation] = useState(0);
-  const wheelRotationRef = useRef(0);
-  const spinFrameRef = useRef<number | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<null | { win: boolean; roll: number; chance: number; awardedItem?: { name: string; imageUrl: string } }>(null);
@@ -60,7 +58,6 @@ export const UpgraderPage: React.FC = () => {
     if (!sourceItem || !targetItem || !settings) return;
     setError(null);
     setIsSubmitting(true);
-    setSpinPhase('loading');
 
     try {
       const payload = await attemptUpgrade({
@@ -69,7 +66,7 @@ export const UpgraderPage: React.FC = () => {
         clientSeed: `${Date.now()}`
       });
 
-      const currentBase = ((wheelRotationRef.current % 360) + 360) % 360;
+      const currentBase = ((wheelRotation % 360) + 360) % 360;
       const settleAngle = currentBase + 1440 + payload.roll * 360;
 
       setSpinPhase('settling');
@@ -90,39 +87,6 @@ export const UpgraderPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    wheelRotationRef.current = wheelRotation;
-  }, [wheelRotation]);
-
-  useEffect(() => {
-    if (spinPhase !== 'loading') {
-      if (spinFrameRef.current != null) {
-        window.cancelAnimationFrame(spinFrameRef.current);
-        spinFrameRef.current = null;
-      }
-      return;
-    }
-
-    const spinSpeedDegPerMs = 0.48;
-    let previousTick = performance.now();
-
-    const tick = (nowMs: number) => {
-      const elapsedMs = nowMs - previousTick;
-      previousTick = nowMs;
-      setWheelRotation((current) => current + elapsedMs * spinSpeedDegPerMs);
-      spinFrameRef.current = window.requestAnimationFrame(tick);
-    };
-
-    spinFrameRef.current = window.requestAnimationFrame(tick);
-
-    return () => {
-      if (spinFrameRef.current != null) {
-        window.cancelAnimationFrame(spinFrameRef.current);
-        spinFrameRef.current = null;
-      }
-    };
-  }, [spinPhase]);
-
   if (!isAuthenticated) {
     return <div className="mx-auto max-w-2xl p-6 text-center"><h1 className="text-2xl font-bold text-white">Upgrader</h1><p className="mt-2 text-gray-400">Sign in to use upgrades.</p><button onClick={() => openAuthModal('login')} className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white">Sign in</button></div>;
   }
@@ -139,7 +103,7 @@ export const UpgraderPage: React.FC = () => {
         <UpgradeSpinWheel chance={chance} phase={spinPhase} rotationDeg={wheelRotation} target={targetItem} />
         <ChancePreview chance={chance} sourceName={sourceItem?.name} targetName={targetItem?.name} />
         <button disabled={isDisabled} onClick={onAttempt} title={isCooldown ? 'Cooldown active' : ''} className="h-14 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 px-8 text-lg font-black text-white disabled:cursor-not-allowed disabled:opacity-50 xl:col-span-2">
-          {isSubmitting ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Rolling…</span> : 'Upgrade Now'}
+          {isSubmitting ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Calculating result…</span> : 'Upgrade Now'}
         </button>
       </div>
       {error && <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-2 text-sm text-rose-200">{error}</div>}
