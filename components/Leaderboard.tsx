@@ -280,6 +280,10 @@ export const Leaderboard: React.FC = () => {
                     </div>
                     <div className="absolute left-1/2 top-[126px] -translate-x-1/2 rounded-xl bg-[#ff8a00] px-4 py-2 text-xl font-black text-black">#{badge}</div>
                     <div className="mt-8 text-4xl font-bold text-white truncate">{entry.displayName}</div>
+                    <div className="mt-2 flex items-center justify-center gap-2 text-xl font-black text-orange-300"> 
+                      <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" />
+                      <span>{rewardByRule(settings, actualRank, entry.points).label}</span>
+                    </div>
                     <div className="mt-2 text-3xl font-black text-[#ffb347]">{entry.points.toLocaleString()} pts</div>
                   </article>
                 );
@@ -310,7 +314,13 @@ export const Leaderboard: React.FC = () => {
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-lime-400 text-lg font-black text-white">
                             {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full rounded-full object-cover" /> : avatarFallback(entry.displayName)}
                           </div>
-                          <div className="truncate text-2xl font-extrabold text-white">{entry.displayName}</div>
+                          <div className="min-w-0">
+                            <div className="truncate text-2xl font-extrabold text-white">{entry.displayName}</div>
+                            <div className="mt-0.5 flex items-center gap-1.5 text-sm font-bold text-orange-300">
+                              <img src={COIN_ICON} alt="Coins" className="h-3.5 w-3.5 object-contain" />
+                              <span>{rowReward.label}</span>
+                            </div>
+                          </div>
                         </div>
                         <div className="hidden text-2xl font-black text-[#ff5b00] sm:block">{entry.points.toLocaleString()} <span className="text-[#ff5b00]">pts</span></div>
                         <div className="ml-auto flex items-center justify-end gap-2 text-2xl font-black">
