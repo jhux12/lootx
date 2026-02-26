@@ -27,12 +27,12 @@ export default function UpgraderSettingsPage() {
   );
 
   const calculatedChance = () => {
-    if (!settings) return '0.00';
+    if (!settings) return '0.0001';
     const s = parseFloat(previewSource) || 0;
     const t = parseFloat(previewTarget) || 1;
-    if (s <= 0 || t <= 0) return '0.00';
+    if (s <= 0 || t <= 0) return '0.0001';
     const chance = (s / t) * settings.edgeMultiplier;
-    return (Math.min(Math.max(chance, settings.minChance), settings.maxChance) * 100).toFixed(2);
+    return (Math.min(Math.max(chance, settings.minChance), settings.maxChance) * 100).toFixed(4);
   };
 
   const handleSave = async () => {
@@ -137,7 +137,7 @@ export default function UpgraderSettingsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase">Min Chance (%)</label>
-                <input type="number" step="0.01" value={(settings.minChance * 100).toFixed(2)} onChange={(e) => setSettings({ ...settings, minChance: Number(e.target.value || 0) / 100 })} className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-sm" />
+                <input type="number" step="0.0001" min="0.0001" value={(settings.minChance * 100).toFixed(4)} onChange={(e) => setSettings({ ...settings, minChance: Number(e.target.value || 0) / 100 })} className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-sm" />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase">Max Chance (%)</label>
