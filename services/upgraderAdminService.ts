@@ -1,6 +1,7 @@
 import { addDoc, collection, deleteDoc, deleteField, doc, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { DEFAULT_UPGRADER_SETTINGS, UpgraderSettings, UpgraderTarget, normalizeUpgraderSettings } from '../utils/upgrader';
+import { sanitizeForFirestore } from '../utils/firestoreSanitize';
 
 export const saveUpgraderSettings = async (settings: Partial<UpgraderSettings>) => {
   const payload: Record<string, unknown> = {
@@ -14,9 +15,7 @@ export const saveUpgraderSettings = async (settings: Partial<UpgraderSettings>) 
     delete payload.serverSeedHash;
   }
 
-  await setDoc(doc(db, 'settings', 'upgrader'), {
-    ...payload
-  }, { merge: true });
+  await setDoc(doc(db, 'settings', 'upgrader'), sanitizeForFirestore(payload), { merge: true });
 };
 
 export const rotateServerSeed = async () => {
