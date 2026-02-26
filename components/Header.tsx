@@ -272,16 +272,26 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
                   <span className="text-xs font-bold text-white sm:text-sm">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
                 </div>
-                <button
-                  onClick={() => {
-                    playSound('click');
-                    setShowTopUpModal(true);
-                  }}
-                  className="flex items-center gap-1.5 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2.5 pr-1.5 py-1.5 sm:pl-3"
-                >
-                  <CoinAmount amount={balance} className="text-xs font-bold text-white sm:text-sm" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
-                  <span className="rounded bg-indigo-600 p-1"><Plus className="h-3.5 w-3.5" /></span>
-                </button>
+                <div className="relative overflow-hidden rounded-md p-[1px]">
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 rounded-md bg-[conic-gradient(from_0deg,_#3b82f6,_#6366f1,_#8b5cf6,_#6366f1,_#3b82f6)] animate-[spin_10s_linear_infinite]"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-[1px] rounded-[5px] bg-[#18181b]"
+                  />
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      setShowTopUpModal(true);
+                    }}
+                    className="relative z-10 flex items-center gap-1.5 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2.5 pr-1.5 py-1.5 sm:pl-3"
+                  >
+                    <CoinAmount amount={balance} className="text-xs font-bold text-white sm:text-sm" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                    <span className="rounded bg-indigo-600 p-1"><Plus className="h-3.5 w-3.5" /></span>
+                  </button>
+                </div>
               </div>
             )}
 
