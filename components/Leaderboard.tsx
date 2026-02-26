@@ -102,6 +102,7 @@ export const Leaderboard: React.FC = () => {
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myPoints, setMyPoints] = useState(0);
   const [timeLeft, setTimeLeft] = useState(getTimeLeft(DEFAULT_SETTINGS.seasonEndsAt));
+  const [heroImageUrl, setHeroImageUrl] = useState('');
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
@@ -117,6 +118,20 @@ export const Leaderboard: React.FC = () => {
     return () => window.clearInterval(id);
   }, [settings.seasonEndsAt]);
 
+
+
+  useEffect(() => {
+    const savedHeroImage = window.localStorage.getItem('leaderboardHeroImageUrl');
+    if (savedHeroImage) setHeroImageUrl(savedHeroImage);
+  }, []);
+
+  useEffect(() => {
+    if (!heroImageUrl.trim()) {
+      window.localStorage.removeItem('leaderboardHeroImageUrl');
+      return;
+    }
+    window.localStorage.setItem('leaderboardHeroImageUrl', heroImageUrl.trim());
+  }, [heroImageUrl]);
 
   useEffect(() => {
     if (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt) return;
@@ -230,6 +245,37 @@ export const Leaderboard: React.FC = () => {
       </header>
 
       <main className="mx-auto w-full max-w-[1280px] px-3 pb-10 pt-24 sm:px-5 sm:pt-28">
+        <section className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#111725]">
+          <div className="relative aspect-[16/7] w-full sm:aspect-[3/1]">
+            {heroImageUrl.trim() ? (
+              <img
+                src={heroImageUrl.trim()}
+                alt="Leaderboard hero"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_20%_15%,rgba(111,125,255,0.35),transparent_46%),radial-gradient(circle_at_80%_80%,rgba(88,213,179,0.25),transparent_52%),linear-gradient(180deg,#171f32_0%,#0f1320_100%)] px-4 text-center">
+                <div>
+                  <p className="text-2xl font-black uppercase tracking-wide text-white sm:text-4xl">Leaderboard Hero</p>
+                  <p className="mt-2 text-sm text-[#cdd3f5] sm:text-base">Paste an image URL below to customize this banner.</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="border-t border-white/10 bg-[#0f1523] p-3 sm:p-4">
+            <label htmlFor="leaderboard-hero-url" className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-[#b9c1ed]">
+              Hero image URL
+            </label>
+            <input
+              id="leaderboard-hero-url"
+              type="url"
+              value={heroImageUrl}
+              onChange={(event) => setHeroImageUrl(event.target.value)}
+              placeholder="https://your-cdn.com/leaderboard-hero.jpg"
+              className="w-full rounded-xl border border-[#373f57] bg-[#0c111d] px-3 py-2.5 text-sm text-white outline-none transition focus:border-[#7f74ff] focus:ring-2 focus:ring-[#7f74ff]/35"
+            />
+          </div>
+        </section>
         {!settings.enabled ? (
           <div className="rounded-2xl border border-white/10 bg-[#101217] p-6 text-center text-gray-300">Rewards are currently disabled.</div>
         ) : (
