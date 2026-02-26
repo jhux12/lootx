@@ -207,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
               <>
                 <div className="hidden items-center gap-2 lg:flex">
                   <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-[#18181b] px-3 py-2">
-                    <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+                    <img src={XP_ICON} alt="XP" className="h-8 w-8 object-contain" />
                     <span className="text-sm font-bold text-white">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-[#18181b] pl-3 pr-1.5 py-1.5">
