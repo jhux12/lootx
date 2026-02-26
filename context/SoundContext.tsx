@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import spinSoundUrl from '../assets/spinsound.mp3';
+import upgraderSoundUrl from '../assets/upgrader.mp3';
 
-type SoundType = 'click' | 'hover' | 'spin-start' | 'spin-tick' | 'win-common' | 'win-rare' | 'win-gold' | 'gold-mode' | 'coins';
+type SoundType = 'click' | 'hover' | 'spin-start' | 'spin-tick' | 'win-common' | 'win-rare' | 'win-gold' | 'gold-mode' | 'coins' | 'upgrader-spin';
 
 interface SoundContextType {
   muted: boolean;
@@ -18,12 +19,14 @@ const SOUND_URLS: Partial<Record<SoundType, string>> = {
   'win-rare': spinSoundUrl,
   'win-gold': spinSoundUrl,
   'gold-mode': spinSoundUrl,
-  coins: spinSoundUrl
+  coins: spinSoundUrl,
+  'upgrader-spin': upgraderSoundUrl
 };
 
 const SOUND_VOLUMES: Partial<Record<SoundType, number>> = {
   'spin-start': 0.2,
-  hover: 0.05
+  hover: 0.05,
+  'upgrader-spin': 0.25
 };
 
 export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
