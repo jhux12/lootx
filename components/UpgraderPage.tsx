@@ -62,6 +62,7 @@ export const UpgraderPage: React.FC = () => {
     if (!sourceItem || !targetItem || !settings) return;
     setError(null);
     setIsSubmitting(true);
+    playSound('upgrader-spin');
 
     try {
       const payload = await attemptUpgrade({
@@ -78,7 +79,6 @@ export const UpgraderPage: React.FC = () => {
       await waitForNextPaint();
 
       setSpinPhase('settling');
-      playSound('upgrader-spin');
       setWheelRotation(settleAngle);
       await sleep(1750);
 
