@@ -38,7 +38,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const [animation, setAnimation] = useState<SpinnerAnimation>({ rotate: 0 });
   const spinRunIdRef = useRef(0);
   const resultTimeoutRef = useRef<number | null>(null);
-  const hasActiveSpinRef = useRef(false);
+  const spinningRef = useRef(false);
+  const rotationRef = useRef(0);
 
   const size = 200;
   const strokeWidth = 12;
@@ -51,21 +52,22 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
 
   useEffect(() => {
     if (!isSpinning) {
-      hasActiveSpinRef.current = false;
+      spinningRef.current = false;
       spinRunIdRef.current += 1;
       if (resultTimeoutRef.current) {
         window.clearTimeout(resultTimeoutRef.current);
         resultTimeoutRef.current = null;
       }
+      rotationRef.current = 0;
       setAnimation({ rotate: 0 });
       return;
     }
 
-    if (hasActiveSpinRef.current) {
+    if (spinningRef.current) {
       return;
     }
 
-    hasActiveSpinRef.current = true;
+    spinningRef.current = true;
 
     if (spinMode === 'indeterminate') {
       spinRunIdRef.current += 1;
@@ -87,44 +89,66 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     const spinRunId = spinRunIdRef.current + 1;
     spinRunIdRef.current = spinRunId;
 
-    const isWin = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
-    const baseRotations = SPIN_FULL_ROTATIONS * 360;
+    const runSpin = async () => {
+      try {
+        const isWin = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
+        const baseRotations = SPIN_FULL_ROTATIONS * 360;
 
-    const edgePadding = 0.2;
-    const winStart = edgePadding;
-    const winEnd = Math.max(winStart + 0.01, winZoneAngle - edgePadding);
+        const edgePadding = 0.2;
+        const winStart = edgePadding;
+        const winEnd = Math.max(winStart + 0.01, winZoneAngle - edgePadding);
 
-    const loseStart = Math.min(359.99, winZoneAngle + edgePadding);
-    const loseEnd = 360 - edgePadding;
+        const loseStart = Math.min(359.99, winZoneAngle + edgePadding);
+        const loseEnd = 360 - edgePadding;
 
-    const finalAngle = isWin
-      ? randomInRange(winStart, winEnd)
-      : randomInRange(loseStart, loseEnd);
+        const finalAngle = isWin
+          ? randomInRange(winStart, winEnd)
+          : randomInRange(loseStart, loseEnd);
 
-    const totalRotation = baseRotations + finalAngle;
+        const normalizedBaseRotation = ((rotationRef.current % 360) + 360) % 360;
+        const totalRotation = normalizedBaseRotation + baseRotations + finalAngle;
 
-    setAnimation({
-      rotate: totalRotation,
-      transition: {
-        duration: SPIN_SETTLE_DURATION_S,
-        ease: [0.08, 0.86, 0.16, 1]
+        setAnimation({ rotate: normalizedBaseRotation });
+        await new Promise<void>((resolve) => {
+          window.requestAnimationFrame(() => resolve());
+        });
+
+        if (spinRunIdRef.current !== spinRunId) return;
+
+        setAnimation({
+          rotate: totalRotation,
+          transition: {
+            duration: SPIN_SETTLE_DURATION_S,
+            ease: [0.08, 0.86, 0.16, 1]
+          }
+        });
+
+        if (resultTimeoutRef.current) {
+          window.clearTimeout(resultTimeoutRef.current);
+        }
+
+        resultTimeoutRef.current = window.setTimeout(() => {
+          if (spinRunIdRef.current !== spinRunId) return;
+          resultTimeoutRef.current = null;
+
+          const normalizedFinalRotation = ((totalRotation % 360) + 360) % 360;
+          rotationRef.current = normalizedFinalRotation;
+          setAnimation({ rotate: normalizedFinalRotation });
+          spinningRef.current = false;
+          onFinish(isWin);
+        }, SPIN_SETTLE_DURATION_S * 1000 + SPIN_RESULT_DELAY_MS);
+      } finally {
+        if (spinRunIdRef.current === spinRunId && !resultTimeoutRef.current) {
+          spinningRef.current = false;
+        }
       }
-    });
+    };
 
-    if (resultTimeoutRef.current) {
-      window.clearTimeout(resultTimeoutRef.current);
-    }
-
-    resultTimeoutRef.current = window.setTimeout(() => {
-      if (spinRunIdRef.current !== spinRunId) return;
-      resultTimeoutRef.current = null;
-      hasActiveSpinRef.current = false;
-      onFinish(isWin);
-    }, SPIN_SETTLE_DURATION_S * 1000 + SPIN_RESULT_DELAY_MS);
+    void runSpin();
   }, [isSpinning, spinMode, forcedWin, safeChance, onFinish, winZoneAngle]);
 
   useEffect(() => () => {
-    hasActiveSpinRef.current = false;
+    spinningRef.current = false;
     if (resultTimeoutRef.current) {
       window.clearTimeout(resultTimeoutRef.current);
       resultTimeoutRef.current = null;

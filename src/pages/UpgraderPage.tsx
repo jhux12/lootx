@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { UpgraderSourcePanel } from '../components/upgrader/UpgraderSourcePanel';
 import { UpgraderTargetPanel } from '../components/upgrader/UpgraderTargetPanel';
 import { UpgraderPreviewBar } from '../components/upgrader/UpgraderPreviewBar';
@@ -34,6 +34,7 @@ export default function UpgraderPage() {
   const [error, setError] = useState<string | null>(null);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [pendingUpgrade, setPendingUpgrade] = useState<{ sourceId: string; targetId: string } | null>(null);
+  const spinningRef = useRef(false);
 
   useEffect(() => {
     void (async () => {
@@ -114,7 +115,7 @@ export default function UpgraderPage() {
   };
 
   const handleUpgrade = () => {
-    if (!source || !target || !settings || isSubmitting) return;
+    if (!source || !target || !settings || isSubmitting || isModalOpen || spinningRef.current) return;
 
     setError(null);
     setModalTarget(target);
@@ -127,6 +128,9 @@ export default function UpgraderPage() {
 
   const handleConfirmUpgrade = async () => {
     if (!pendingUpgrade || !settings || isSubmitting) return;
+    if (spinningRef.current) return;
+    spinningRef.current = true;
+    console.log('Upgrade attempt started');
 
     setIsSubmitting(true);
 
@@ -150,6 +154,7 @@ export default function UpgraderPage() {
       setPendingUpgrade(null);
     } finally {
       setIsSubmitting(false);
+      spinningRef.current = false;
     }
   };
 
@@ -236,7 +241,7 @@ export default function UpgraderPage() {
         source={source}
         target={target}
         onUpgrade={handleUpgrade}
-        disabled={realInventoryItems.length === 0 || !settings?.enabled || isSubmitting}
+        disabled={realInventoryItems.length === 0 || !settings?.enabled || isSubmitting || isModalOpen || spinningRef.current}
         chanceOverride={chance}
         settings={settings}
       />
