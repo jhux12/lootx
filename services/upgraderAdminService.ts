@@ -1,14 +1,21 @@
 import { addDoc, collection, deleteDoc, deleteField, doc, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { DEFAULT_UPGRADER_SETTINGS, UpgraderSettings, UpgraderTarget, normalizeUpgraderSettings } from '../utils/upgrader';
+import { sanitizeForFirestore } from '../utils/firestoreSanitize';
 
 export const saveUpgraderSettings = async (settings: Partial<UpgraderSettings>) => {
-  await setDoc(doc(db, 'settings', 'upgrader'), {
+  const payload: Record<string, unknown> = {
     ...DEFAULT_UPGRADER_SETTINGS,
     ...settings,
     serverSeed: deleteField(),
     updatedAt: Date.now()
-  }, { merge: true });
+  };
+
+  if (typeof settings.serverSeedHash !== 'string') {
+    delete payload.serverSeedHash;
+  }
+
+  await setDoc(doc(db, 'settings', 'upgrader'), sanitizeForFirestore(payload), { merge: true });
 };
 
 export const rotateServerSeed = async () => {
