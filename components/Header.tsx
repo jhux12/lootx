@@ -257,20 +257,20 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             {!isAuthenticated && <div className="flex items-center gap-2 lg:hidden">{authButtons}</div>}
 
             {isAuthenticated && (
-              <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden">
-                <div className="flex items-center gap-1 rounded-md border border-amber-500/20 bg-[#18181b] px-2 py-1 sm:px-2.5">
-                  <img src={XP_ICON} alt="XP" className="h-3 w-3 object-contain" />
-                  <span className="text-[11px] font-bold text-white sm:text-xs">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
+              <div className="flex items-center gap-2 lg:hidden">
+                <div className="flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5 sm:px-3">
+                  <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+                  <span className="text-xs font-bold text-white sm:text-sm">{Math.floor(user.xpBalance ?? user.xp ?? 0).toLocaleString()}</span>
                 </div>
                 <button
                   onClick={() => {
                     playSound('click');
                     setShowTopUpModal(true);
                   }}
-                  className="flex items-center gap-1 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2 pr-1 py-1 sm:pl-2.5"
+                  className="flex items-center gap-1.5 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2.5 pr-1.5 py-1.5 sm:pl-3"
                 >
-                  <CoinAmount amount={balance} className="text-[11px] font-bold text-white sm:text-xs" iconClassName="h-3 w-3" formatOptions={{ maximumFractionDigits: 0 }} />
-                  <span className="rounded bg-indigo-600 p-0.5"><Plus className="h-3 w-3" /></span>
+                  <CoinAmount amount={balance} className="text-xs font-bold text-white sm:text-sm" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                  <span className="rounded bg-indigo-600 p-1"><Plus className="h-3.5 w-3.5" /></span>
                 </button>
               </div>
             )}
