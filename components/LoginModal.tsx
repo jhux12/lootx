@@ -199,7 +199,7 @@ export const LoginModal: React.FC = () => {
           </div>
 
           <div className="relative z-10 flex h-full flex-col items-center justify-center p-8 text-center">
-            <BrandLockup className="justify-center" logoClassName="h-14" showTextOnMobile />
+            <BrandLockup className="justify-center" showText={false} logoClassName="h-20 w-40 object-contain sm:h-24 sm:w-48" showTextOnMobile />
             <h2 className="mt-4 text-3xl font-black uppercase italic leading-none tracking-tight text-white">
               GET A <br />
               <span className="mt-1 inline-block rounded border border-indigo-500/20 bg-indigo-500/10 px-2 text-indigo-400">FREE BOX</span>
@@ -254,8 +254,8 @@ export const LoginModal: React.FC = () => {
               {isLinkingGoogle
                 ? 'Confirm your password to link Google with your existing account.'
                 : mode === 'login'
-                  ? 'Sign in to access your Pullz.gg account.'
-                  : 'Join Pullz.gg and start winning today.'}
+                  ? 'Sign in to access your account.'
+                  : 'Create your account and start winning today.'}
             </p>
           </div>
 
