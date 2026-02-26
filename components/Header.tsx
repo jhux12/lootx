@@ -53,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const [isSupportDropdownOpen, setIsSupportDropdownOpen] = useState(false);
   const [isMobileAiSupportOpen, setIsMobileAiSupportOpen] = useState(false);
   const [isMobileAiSupportMinimized, setIsMobileAiSupportMinimized] = useState(false);
+  const aiSupportOpenTimeoutRef = useRef<number | null>(null);
   const headerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -112,6 +113,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (aiSupportOpenTimeoutRef.current !== null && typeof window !== 'undefined') {
+        window.clearTimeout(aiSupportOpenTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const navigate = (type: 'HOME' | 'BOXES' | 'PLINKO' | 'BONUSES' | 'LEADERBOARD' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
     playSound('click');
     if ((type === 'BONUSES' || type === 'INVENTORY' || type === 'PROFILE') && !isAuthenticated) {
@@ -128,8 +137,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     playSound('click');
     setIsMobileMenuOpen(false);
     setIsSupportDropdownOpen(false);
-    setIsMobileAiSupportOpen(true);
     setIsMobileAiSupportMinimized(false);
+
+    if (aiSupportOpenTimeoutRef.current !== null && typeof window !== 'undefined') {
+      window.clearTimeout(aiSupportOpenTimeoutRef.current);
+    }
+
+    if (typeof window === 'undefined') {
+      setIsMobileAiSupportOpen(true);
+      return;
+    }
+
+    aiSupportOpenTimeoutRef.current = window.setTimeout(() => {
+      setIsMobileAiSupportOpen(true);
+      aiSupportOpenTimeoutRef.current = null;
+    }, 320);
   };
 
   const authButtons = useMemo(() => (
@@ -419,6 +441,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           storageKey="pullz-mobile-menu-ai-support"
           onMinimize={() => setIsMobileAiSupportMinimized(true)}
           onClose={() => {
+            if (aiSupportOpenTimeoutRef.current !== null && typeof window !== 'undefined') {
+              window.clearTimeout(aiSupportOpenTimeoutRef.current);
+              aiSupportOpenTimeoutRef.current = null;
+            }
             setIsMobileAiSupportOpen(false);
             setIsMobileAiSupportMinimized(false);
           }}
@@ -432,7 +458,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             playSound('click');
             setIsMobileAiSupportMinimized(false);
           }}
-          className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-[60] inline-flex items-center gap-2 rounded-full border border-brand-purple/40 bg-[#111621] px-4 py-2 text-sm font-semibold text-white shadow-xl"
+          className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-[90] inline-flex items-center gap-2 rounded-full border border-brand-purple/40 bg-[#111621] px-4 py-2 text-sm font-semibold text-white shadow-xl animate-in slide-in-from-bottom-5 fade-in duration-200"
           aria-label="Reopen AI support"
         >
           <Bot className="h-4 w-4 text-brand-purple" />

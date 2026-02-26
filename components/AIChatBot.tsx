@@ -162,11 +162,11 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
 
   const containerClass = variant === 'sidebar'
     ? "bg-[#131720] border border-gray-800 rounded-2xl shadow-xl flex flex-col h-full overflow-hidden"
-    : "fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-4";
+    : "fixed inset-0 z-[85] bg-black/75 flex items-end sm:items-center justify-center p-0 sm:p-4";
 
   const panelClass = variant === 'sidebar'
     ? "flex flex-col h-full min-h-0"
-    : "w-full sm:w-[420px] bg-[#131720] border border-gray-800 rounded-2xl shadow-2xl flex flex-col max-h-[80vh] min-h-0 animate-in slide-in-from-bottom-10 fade-in duration-200";
+    : "w-full sm:w-[420px] bg-[#131720] border border-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-[78dvh] max-h-[78dvh] sm:h-auto sm:max-h-[80vh] min-h-0 animate-in slide-in-from-bottom-8 fade-in duration-200";
 
   return (
     <div className={containerClass}>
