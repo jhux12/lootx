@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Loader2, Sparkles } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Minus } from 'lucide-react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import { Input } from './ui/Input';
 import { buildSiteSearchContext } from '../utils/siteSearch';
@@ -48,6 +48,7 @@ type ChatVariant = 'sidebar' | 'modal';
 interface AIChatBotProps {
   isOpen: boolean;
   onClose?: () => void;
+  onMinimize?: () => void;
   variant?: ChatVariant;
   storageKey?: string;
 }
@@ -59,6 +60,7 @@ const DEFAULT_MESSAGES: Message[] = [
 export const AIChatBot: React.FC<AIChatBotProps> = ({ 
   isOpen, 
   onClose, 
+  onMinimize,
   variant = 'sidebar',
   storageKey = 'pullz-ai-support-session'
 }) => {
@@ -186,14 +188,27 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
                     Online
                 </p>
             </div>
-            {variant === 'modal' && onClose && (
-              <button 
-                onClick={onClose} 
-                className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
-                aria-label="Close support chat"
-              >
-                <X className="w-4 h-4" />
-              </button>
+            {variant === 'modal' && (
+              <div className="flex items-center gap-1">
+                {onMinimize && (
+                  <button
+                    onClick={onMinimize}
+                    className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                    aria-label="Minimize support chat"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                )}
+                {onClose && (
+                  <button
+                    onClick={onClose}
+                    className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                    aria-label="Close support chat"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             )}
         </div>
         <div className="px-4 py-2 bg-[#0f1219] border-b border-gray-800 text-[10px] sm:text-xs text-gray-400">
