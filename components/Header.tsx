@@ -148,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
         className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/5 bg-neutral-950 md:bg-neutral-950/90 md:backdrop-blur-md`}
       >
         <div className="pt-[env(safe-area-inset-top,0px)]">
-          <nav className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 lg:px-8">
+          <nav className="mx-auto flex h-[88px] sm:h-[96px] max-w-7xl items-center justify-between px-4 lg:px-8">
             <div className="flex items-center gap-3 lg:gap-x-10">
             <button
               type="button"
@@ -156,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
               className="inline-flex items-center"
               aria-label="Go home"
             >
-              <BrandLockup showText={false} logoClassName="h-14 w-14 sm:h-16 sm:w-16" />
+              <BrandLockup showText={false} logoClassName="h-16 w-16 sm:h-20 sm:w-20" />
             </button>
 
             <div className="hidden lg:flex lg:gap-x-3">
