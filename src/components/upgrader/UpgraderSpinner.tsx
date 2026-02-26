@@ -36,9 +36,10 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   forcedWin
 }) => {
   const [animation, setAnimation] = useState<SpinnerAnimation>({ rotate: 0 });
+  const spinAudioRef = useRef<HTMLAudioElement | null>(null);
+  const spinningRef = useRef(false);
   const spinRunIdRef = useRef(0);
   const resultTimeoutRef = useRef<number | null>(null);
-  const hasActiveSpinRef = useRef(false);
 
   const size = 200;
   const strokeWidth = 12;
@@ -50,28 +51,42 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const dashOffset = circumference - (safeChance / 100) * circumference;
 
   useEffect(() => {
+    const audio = new Audio('/assets/upgrader.mp3');
+    audio.preload = 'auto';
+    spinAudioRef.current = audio;
+
+    return () => {
+      audio.pause();
+      audio.src = '';
+      spinAudioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!isSpinning) {
-      hasActiveSpinRef.current = false;
+      spinningRef.current = false;
       spinRunIdRef.current += 1;
       if (resultTimeoutRef.current) {
         window.clearTimeout(resultTimeoutRef.current);
         resultTimeoutRef.current = null;
       }
+      if (spinAudioRef.current) spinAudioRef.current.pause();
       setAnimation({ rotate: 0 });
       return;
     }
 
-    if (hasActiveSpinRef.current) {
-      return;
-    }
-
-    hasActiveSpinRef.current = true;
+    if (spinningRef.current) return;
+    spinningRef.current = true;
 
     if (spinMode === 'indeterminate') {
       spinRunIdRef.current += 1;
       if (resultTimeoutRef.current) {
         window.clearTimeout(resultTimeoutRef.current);
         resultTimeoutRef.current = null;
+      }
+      if (spinAudioRef.current) {
+        spinAudioRef.current.currentTime = 0;
+        spinAudioRef.current.play().catch(() => {});
       }
       setAnimation({
         rotate: [0, 360],
@@ -103,6 +118,11 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
 
     const totalRotation = baseRotations + finalAngle;
 
+    if (spinAudioRef.current) {
+      spinAudioRef.current.currentTime = 0;
+      spinAudioRef.current.play().catch(() => {});
+    }
+
     setAnimation({
       rotate: totalRotation,
       transition: {
@@ -118,16 +138,22 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     resultTimeoutRef.current = window.setTimeout(() => {
       if (spinRunIdRef.current !== spinRunId) return;
       resultTimeoutRef.current = null;
-      hasActiveSpinRef.current = false;
+      if (spinAudioRef.current) spinAudioRef.current.pause();
+      spinningRef.current = false;
       onFinish(isWin);
     }, SPIN_SETTLE_DURATION_S * 1000 + SPIN_RESULT_DELAY_MS);
   }, [isSpinning, spinMode, forcedWin, safeChance, onFinish, winZoneAngle]);
 
   useEffect(() => () => {
-    hasActiveSpinRef.current = false;
+    spinningRef.current = false;
     if (resultTimeoutRef.current) {
       window.clearTimeout(resultTimeoutRef.current);
       resultTimeoutRef.current = null;
+    }
+    if (spinAudioRef.current) {
+      spinAudioRef.current.pause();
+      spinAudioRef.current.src = '';
+      spinAudioRef.current = null;
     }
   }, []);
 
