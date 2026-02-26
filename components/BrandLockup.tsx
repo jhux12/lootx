@@ -20,7 +20,9 @@ export const BrandLockup: React.FC<BrandLockupProps> = ({
     <img
       src={pullzLogo}
       alt="PULLZ Logo"
-      className={logoClassName}
+      width={500}
+      height={250}
+      className={`${logoClassName} object-contain`}
     />
     {showText && (
       <span
