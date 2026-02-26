@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { attemptUpgrade, getUpgraderSettings, getUpgraderTargets } from '../services/upgraderService';
@@ -20,6 +20,8 @@ export const UpgraderPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [spinPhase, setSpinPhase] = useState<'idle' | 'loading' | 'settling'>('idle');
   const [wheelRotation, setWheelRotation] = useState(0);
+  const wheelRotationRef = useRef(0);
+  const spinFrameRef = useRef<number | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<null | { win: boolean; roll: number; chance: number; awardedItem?: { name: string; imageUrl: string } }>(null);
@@ -67,7 +69,7 @@ export const UpgraderPage: React.FC = () => {
         clientSeed: `${Date.now()}`
       });
 
-      const currentBase = ((wheelRotation % 360) + 360) % 360;
+      const currentBase = ((wheelRotationRef.current % 360) + 360) % 360;
       const settleAngle = currentBase + 1440 + payload.roll * 360;
 
       setSpinPhase('settling');
@@ -87,6 +89,39 @@ export const UpgraderPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    wheelRotationRef.current = wheelRotation;
+  }, [wheelRotation]);
+
+  useEffect(() => {
+    if (spinPhase !== 'loading') {
+      if (spinFrameRef.current != null) {
+        window.cancelAnimationFrame(spinFrameRef.current);
+        spinFrameRef.current = null;
+      }
+      return;
+    }
+
+    const spinSpeedDegPerMs = 0.48;
+    let previousTick = performance.now();
+
+    const tick = (nowMs: number) => {
+      const elapsedMs = nowMs - previousTick;
+      previousTick = nowMs;
+      setWheelRotation((current) => current + elapsedMs * spinSpeedDegPerMs);
+      spinFrameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    spinFrameRef.current = window.requestAnimationFrame(tick);
+
+    return () => {
+      if (spinFrameRef.current != null) {
+        window.cancelAnimationFrame(spinFrameRef.current);
+        spinFrameRef.current = null;
+      }
+    };
+  }, [spinPhase]);
 
   if (!isAuthenticated) {
     return <div className="mx-auto max-w-2xl p-6 text-center"><h1 className="text-2xl font-bold text-white">Upgrader</h1><p className="mt-2 text-gray-400">Sign in to use upgrades.</p><button onClick={() => openAuthModal('login')} className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white">Sign in</button></div>;

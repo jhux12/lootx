@@ -23,14 +23,12 @@ export const UpgradeSpinWheel: React.FC<Props> = ({ chance, phase, rotationDeg, 
         <div className="absolute inset-0 rounded-full bg-white/95 shadow-[0_8px_40px_rgba(0,0,0,0.38)]" />
 
         <div
-          className={`absolute inset-[8px] rounded-full ${phase === 'loading' ? 'animate-[spin_850ms_linear_infinite]' : ''}`}
-          style={phase === 'loading'
-            ? { background: `conic-gradient(from -90deg, #2ea43f 0deg ${chanceDegrees}deg, #e5e7eb ${chanceDegrees}deg 360deg)` }
-            : {
-                background: `conic-gradient(from -90deg, #2ea43f 0deg ${chanceDegrees}deg, #e5e7eb ${chanceDegrees}deg 360deg)`,
-                transform: `rotate(${rotationDeg}deg)`,
-                transition: phase === 'settling' ? 'transform 1700ms cubic-bezier(0.18,0.9,0.2,1)' : 'none'
-              }}
+          className="absolute inset-[8px] rounded-full"
+          style={{
+            background: `conic-gradient(from -90deg, #2ea43f 0deg ${chanceDegrees}deg, #e5e7eb ${chanceDegrees}deg 360deg)`,
+            transform: `rotate(${rotationDeg}deg)`,
+            transition: phase === 'settling' ? 'transform 1700ms cubic-bezier(0.18,0.9,0.2,1)' : 'none'
+          }}
         />
 
         <div className="absolute inset-[22px] rounded-full border-2 border-white/75 bg-gradient-to-b from-[#bdd8c3] via-[#c7d7cb] to-[#c8ccdc]" />
