@@ -16,6 +16,8 @@ interface UpgraderResultModalProps {
   awaitingConfirmation: boolean;
   isConfirming: boolean;
   onConfirmUpgrade: () => void;
+  winZoneOffset: number;
+  onWinZoneOffsetChange: (next: number) => void;
 }
 
 type DisplayStatus = 'settling-win' | 'settling-lose' | 'win' | 'lose';
@@ -30,7 +32,9 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   spinId,
   awaitingConfirmation,
   isConfirming,
-  onConfirmUpgrade
+  onConfirmUpgrade,
+  winZoneOffset,
+  onWinZoneOffsetChange
 }) => {
   const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('settling-lose');
   const [spinRunId, setSpinRunId] = useState(0);
@@ -78,7 +82,23 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
             </button>
 
             <div className="p-5 sm:p-8 flex flex-col items-center text-center py-8 sm:py-10 gap-4 sm:gap-6">
-              <UpgraderSpinner chance={chance} spinRunId={0} onFinish={() => undefined} />
+              <UpgraderSpinner chance={chance} spinRunId={0} onFinish={() => undefined} winZoneOffset={winZoneOffset} />
+              <div className="w-full max-w-sm space-y-2 rounded-xl border border-slate-800 bg-slate-950/70 p-3 sm:p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">Winning Zone Position</p>
+                  <p className="text-[11px] sm:text-xs font-semibold text-emerald-300">{Math.round(winZoneOffset)}°</p>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={359}
+                  step={1}
+                  value={winZoneOffset}
+                  onChange={(event) => onWinZoneOffsetChange(Number(event.target.value))}
+                  className="w-full accent-emerald-500"
+                />
+                <p className="text-[10px] sm:text-xs text-slate-500">Slide to move the winning zone around the wheel before you spin.</p>
+              </div>
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">Confirm Upgrade</h2>
                 <p className="text-slate-400 text-sm">Tap upgrade again to start the spin.</p>
@@ -117,6 +137,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                 spinRunId={spinRunId}
                 onFinish={(didWin) => setDisplayStatus(didWin ? 'win' : 'lose')}
                 forcedWin={displayStatus === 'settling-win' ? true : displayStatus === 'settling-lose' ? false : undefined}
+                winZoneOffset={winZoneOffset}
               />
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">Upgrading...</h2>
