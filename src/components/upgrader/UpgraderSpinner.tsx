@@ -92,14 +92,19 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     const phaseOne = totalRotationRef.current * 0.2;
     const phaseTwo = totalRotationRef.current * 0.8;
 
-    await controls.start({
-      rotate: [0, phaseOne, phaseTwo, totalRotationRef.current],
-      transition: {
-        duration: SPIN_DURATION_S,
-        times: [0, 0.18, 0.72, 1],
-        ease: ['easeIn', 'linear', 'easeOut']
-      }
-    });
+    try {
+      await controls.start({
+        rotate: [0, phaseOne, phaseTwo, totalRotationRef.current],
+        transition: {
+          duration: SPIN_DURATION_S,
+          times: [0, 0.18, 0.72, 1],
+          ease: [0.08, 0.94, 0.2, 1]
+        }
+      });
+    } catch {
+      inFlightRef.current = false;
+      return;
+    }
 
     if (!mountedRef.current || runId !== runIdRef.current) {
       inFlightRef.current = false;
