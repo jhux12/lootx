@@ -18,6 +18,14 @@ const LOSE_LANDING_OFFSETS = [0.18, 0.32, 0.46, 0.61, 0.78];
 
 const clampChance = (value: number) => Math.min(99.9999, Math.max(0.0001, value));
 
+const polarToCartesian = (center: number, radius: number, angleDeg: number) => {
+  const angleRad = ((angleDeg - 90) * Math.PI) / 180;
+  return {
+    x: center + radius * Math.cos(angleRad),
+    y: center + radius * Math.sin(angleRad)
+  };
+};
+
 const pickDeterministicIndex = (seed: number, length: number) => {
   if (!length) return 0;
   return Math.abs((seed * 37 + 17) % length);
@@ -64,6 +72,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const safeChance = clampChance(chance);
   const winZoneAngle = (safeChance / 100) * 360;
   const dashOffset = circumference - (safeChance / 100) * circumference;
+  const winEndPoint = polarToCartesian(size / 2, radius, winZoneAngle);
 
   useEffect(() => {
     onFinishRef.current = onFinish;
@@ -154,7 +163,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
           fill="transparent"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-slate-800"
+          className="text-slate-700"
         />
         <circle
           cx={size / 2}
@@ -166,7 +175,17 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
           strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
           strokeLinecap="round"
-          className="text-brand-purple drop-shadow-[0_0_16px_rgba(139,92,246,0.55)]"
+          className="text-brand-purple drop-shadow-[0_0_18px_rgba(139,92,246,0.65)]"
+        />
+        <line x1={size / 2} y1={7} x2={size / 2} y2={22} stroke="rgb(216 180 254)" strokeWidth="3" strokeLinecap="round" />
+        <line
+          x1={winEndPoint.x}
+          y1={winEndPoint.y}
+          x2={((winEndPoint.x - size / 2) * ((radius - 14) / radius)) + size / 2}
+          y2={((winEndPoint.y - size / 2) * ((radius - 14) / radius)) + size / 2}
+          stroke="rgb(226 232 240)"
+          strokeWidth="3"
+          strokeLinecap="round"
         />
       </svg>
 
@@ -175,6 +194,11 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
           <span className="text-2xl sm:text-3xl font-black text-white">{safeChance.toFixed(safeChance >= 1 ? 1 : 4)}%</span>
         </div>
         <span className="mt-2 text-[10px] font-bold text-brand-purple uppercase tracking-[0.22em]">Win Zone</span>
+      </div>
+
+      <div className="absolute -bottom-5 sm:-bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 rounded-full border border-white/10 bg-black/45 px-2.5 py-1 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-white/80">
+        <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-brand-purple inline-block" />Win</span>
+        <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-slate-500 inline-block" />Miss</span>
       </div>
 
       <motion.div
