@@ -25,12 +25,11 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const finishedRef = useRef(false);
   const rafRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
-  const totalRotationRef = useRef(0);
   const isWinRef = useRef(false);
   const onFinishRef = useRef(onFinish);
   const mountedRef = useRef(true);
 
-  const size = 260;
+  const size = 280;
   const strokeWidth = 16;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -56,7 +55,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     if (!mountedRef.current || runId !== runIdRef.current || finishedRef.current) return;
     finishedRef.current = true;
     inFlightRef.current = false;
-    console.log('[UpgraderSpinner] finish', runId);
     onFinishRef.current(isWinRef.current);
   };
 
@@ -84,15 +82,10 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
 
     isWinRef.current = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
     const baseRotations = SPIN_FULL_ROTATIONS * 360;
-    const finalAngle = isWinRef.current
-      ? winLandingAngle
-      : loseLandingAngle;
-    totalRotationRef.current = baseRotations + finalAngle;
-
-    console.log('[UpgraderSpinner] start', runId);
+    const finalAngle = isWinRef.current ? winLandingAngle : loseLandingAngle;
 
     await controls.start({
-      rotate: totalRotationRef.current,
+      rotate: baseRotations + finalAngle,
       transition: {
         duration: SPIN_SETTLE_DURATION_S,
         ease: [0.08, 0.86, 0.16, 1]
@@ -132,10 +125,18 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   }, []);
 
   return (
-    <div className="relative flex items-center justify-center w-[220px] h-[220px] sm:w-[260px] sm:h-[260px]">
-      <div className="absolute inset-[-18px] rounded-full bg-[radial-gradient(circle_at_50%_30%,rgba(20,184,166,0.2),transparent_55%),radial-gradient(circle_at_60%_80%,rgba(168,85,247,0.25),transparent_60%)] blur-xl" />
+    <div className="relative flex items-center justify-center w-[230px] h-[230px] sm:w-[280px] sm:h-[280px]">
+      <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_45%,rgba(88,101,242,0.28),rgba(9,12,31,0.96)_70%)]" />
+      <div className="absolute inset-[-18px] rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.22),transparent_65%)] blur-2xl" />
 
-      <svg width={size} height={size} className="transform -rotate-90">
+      <motion.svg
+        animate={controls}
+        initial={{ rotate: 0 }}
+        width={size}
+        height={size}
+        className="relative z-10 -rotate-90"
+        style={{ transformOrigin: '50% 50%' }}
+      >
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -143,43 +144,41 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
           fill="transparent"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-slate-900"
+          className="text-indigo-300/25"
         />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="transparent"
-          stroke="currentColor"
+          stroke="url(#upgraderSpinGradient)"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
           strokeLinecap="round"
-          className="text-teal-400 drop-shadow-[0_0_18px_rgba(45,212,191,0.7)]"
+          className="drop-shadow-[0_0_16px_rgba(168,85,247,0.75)]"
         />
-      </svg>
+        <defs>
+          <linearGradient id="upgraderSpinGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#8B5CF6" />
+            <stop offset="100%" stopColor="#C084FC" />
+          </linearGradient>
+        </defs>
+      </motion.svg>
 
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl sm:text-5xl font-black text-white">{safeChance.toFixed(safeChance >= 1 ? 2 : 4)}%</span>
-        <span className="text-[10px] sm:text-xs font-bold text-violet-200/80 uppercase tracking-[0.35em]">Win odds</span>
-        <span className="mt-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] sm:text-xs font-semibold text-cyan-100">
-          Landing: {safeChance.toFixed(4)}%
-        </span>
+      <div className="absolute z-20 left-[8px] sm:left-[10px] top-1/2 -translate-y-1/2 -translate-x-1/2">
+        <div className="h-0 w-0 border-y-[10px] border-y-transparent border-r-[16px] border-r-[#c4b5fd] drop-shadow-[0_0_10px_rgba(196,181,253,0.85)] sm:border-y-[12px] sm:border-r-[19px]" />
       </div>
 
-      <motion.div
-        animate={controls}
-        initial={{ rotate: 0 }}
-        className="absolute inset-0 flex items-start justify-center"
-        style={{ transformOrigin: 'center' }}
-      >
-        <div className="w-2 h-14 sm:h-16 bg-gradient-to-b from-yellow-200 via-amber-300 to-orange-500 rounded-full mt-[-5px] relative shadow-[0_0_14px_rgba(251,191,36,0.8)]">
-          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-yellow-200 rotate-45 rounded-sm border border-yellow-50/60" />
-        </div>
-      </motion.div>
+      <div className="absolute inset-[18px] sm:inset-[22px] z-10 rounded-full bg-[radial-gradient(circle_at_50%_40%,rgba(72,88,194,0.38),rgba(7,10,25,0.95)_72%)] border border-indigo-200/10" />
 
-      <div className="absolute inset-0 rounded-full border border-cyan-200/10 pointer-events-none" />
-      <div className="absolute inset-[-10px] rounded-full border border-violet-200/10 pointer-events-none" />
+      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center px-8 text-center">
+        <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">{safeChance.toFixed(safeChance >= 1 ? 2 : 4)}%</span>
+        <span className="mt-1 text-[10px] sm:text-xs font-bold uppercase tracking-[0.28em] text-violet-200/80">Upgrade odds</span>
+        <span className="mt-3 rounded-full border border-violet-200/25 bg-violet-300/10 px-3 py-1 text-[10px] sm:text-xs font-semibold text-violet-100">
+          Exact chance: {safeChance.toFixed(4)}%
+        </span>
+      </div>
     </div>
   );
 };
