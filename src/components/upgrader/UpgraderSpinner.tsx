@@ -1,26 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { motion } from 'motion/react';
+import React, { useEffect, useRef } from 'react';
+import { motion, useAnimationControls } from 'motion/react';
 
 interface UpgraderSpinnerProps {
   chance: number;
   onFinish: (isWin: boolean) => void;
-  isSpinning: boolean;
-  spinMode?: 'resolve' | 'indeterminate';
+  spinRunId: number;
   forcedWin?: boolean;
 }
 
 const SPIN_FULL_ROTATIONS = 10;
 const SPIN_SETTLE_DURATION_S = 5.8;
 const SPIN_RESULT_DELAY_MS = 180;
-
-type SpinnerAnimation = {
-  rotate: number | number[];
-  transition?: {
-    duration: number;
-    ease: 'linear' | number[];
-    repeat?: number;
-  };
-};
 
 const randomInRange = (min: number, max: number) => {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return 0;
@@ -31,14 +21,19 @@ const randomInRange = (min: number, max: number) => {
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   chance,
   onFinish,
-  isSpinning,
-  spinMode = 'resolve',
+  spinRunId,
   forcedWin
 }) => {
-  const [animation, setAnimation] = useState<SpinnerAnimation>({ rotate: 0 });
-  const spinRunIdRef = useRef(0);
-  const resultTimeoutRef = useRef<number | null>(null);
-  const hasActiveSpinRef = useRef(false);
+  const controls = useAnimationControls();
+  const runIdRef = useRef(0);
+  const inFlightRef = useRef(false);
+  const finishedRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
+  const timeoutRef = useRef<number | null>(null);
+  const totalRotationRef = useRef(0);
+  const isWinRef = useRef(false);
+  const onFinishRef = useRef(onFinish);
+  const mountedRef = useRef(true);
 
   const size = 200;
   const strokeWidth = 12;
@@ -50,85 +45,91 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const dashOffset = circumference - (safeChance / 100) * circumference;
 
   useEffect(() => {
-    if (!isSpinning) {
-      hasActiveSpinRef.current = false;
-      spinRunIdRef.current += 1;
-      if (resultTimeoutRef.current) {
-        window.clearTimeout(resultTimeoutRef.current);
-        resultTimeoutRef.current = null;
-      }
-      setAnimation({ rotate: 0 });
+    onFinishRef.current = onFinish;
+  }, [onFinish]);
+
+  const safeFinish = (runId: number) => {
+    if (!mountedRef.current || runId !== runIdRef.current || finishedRef.current) return;
+    finishedRef.current = true;
+    inFlightRef.current = false;
+    console.log('[UpgraderSpinner] finish', runId);
+    onFinishRef.current(isWinRef.current);
+  };
+
+  const startSpinOnce = async (runId: number) => {
+    if (inFlightRef.current) return;
+
+    inFlightRef.current = true;
+    finishedRef.current = false;
+
+    controls.stop();
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    await controls.set({ rotate: 0 });
+    if (!mountedRef.current || runId !== runIdRef.current) {
+      inFlightRef.current = false;
       return;
     }
 
-    if (hasActiveSpinRef.current) {
-      return;
-    }
-
-    hasActiveSpinRef.current = true;
-
-    if (spinMode === 'indeterminate') {
-      spinRunIdRef.current += 1;
-      if (resultTimeoutRef.current) {
-        window.clearTimeout(resultTimeoutRef.current);
-        resultTimeoutRef.current = null;
-      }
-      setAnimation({
-        rotate: [0, 360],
-        transition: {
-          duration: 1.4,
-          ease: 'linear',
-          repeat: Infinity
-        }
-      });
-      return;
-    }
-
-    const spinRunId = spinRunIdRef.current + 1;
-    spinRunIdRef.current = spinRunId;
-
-    const isWin = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
+    isWinRef.current = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
     const baseRotations = SPIN_FULL_ROTATIONS * 360;
-
     const edgePadding = 0.2;
     const winStart = edgePadding;
     const winEnd = Math.max(winStart + 0.01, winZoneAngle - edgePadding);
-
     const loseStart = Math.min(359.99, winZoneAngle + edgePadding);
     const loseEnd = 360 - edgePadding;
-
-    const finalAngle = isWin
+    const finalAngle = isWinRef.current
       ? randomInRange(winStart, winEnd)
       : randomInRange(loseStart, loseEnd);
+    totalRotationRef.current = baseRotations + finalAngle;
 
-    const totalRotation = baseRotations + finalAngle;
+    console.log('[UpgraderSpinner] start', runId);
 
-    setAnimation({
-      rotate: totalRotation,
+    await controls.start({
+      rotate: totalRotationRef.current,
       transition: {
         duration: SPIN_SETTLE_DURATION_S,
         ease: [0.08, 0.86, 0.16, 1]
       }
     });
 
-    if (resultTimeoutRef.current) {
-      window.clearTimeout(resultTimeoutRef.current);
+    if (!mountedRef.current || runId !== runIdRef.current) {
+      inFlightRef.current = false;
+      return;
     }
 
-    resultTimeoutRef.current = window.setTimeout(() => {
-      if (spinRunIdRef.current !== spinRunId) return;
-      resultTimeoutRef.current = null;
-      hasActiveSpinRef.current = false;
-      onFinish(isWin);
-    }, SPIN_SETTLE_DURATION_S * 1000 + SPIN_RESULT_DELAY_MS);
-  }, [isSpinning, spinMode, forcedWin, safeChance, onFinish, winZoneAngle]);
+    timeoutRef.current = window.setTimeout(() => {
+      rafRef.current = requestAnimationFrame(() => safeFinish(runId));
+    }, SPIN_RESULT_DELAY_MS);
+  };
+
+  useEffect(() => {
+    if (spinRunId === 0) return;
+    if (spinRunId === runIdRef.current) return;
+
+    runIdRef.current = spinRunId;
+    void startSpinOnce(spinRunId);
+  }, [spinRunId]);
 
   useEffect(() => () => {
-    hasActiveSpinRef.current = false;
-    if (resultTimeoutRef.current) {
-      window.clearTimeout(resultTimeoutRef.current);
-      resultTimeoutRef.current = null;
+    mountedRef.current = false;
+    inFlightRef.current = false;
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    controls.stop();
   }, []);
 
   return (
@@ -163,7 +164,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       </div>
 
       <motion.div
-        animate={animation}
+        animate={controls}
+        initial={{ rotate: 0 }}
         className="absolute inset-0 flex items-start justify-center"
         style={{ transformOrigin: 'center' }}
       >
