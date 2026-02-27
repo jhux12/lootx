@@ -6,6 +6,7 @@ interface UpgraderSpinnerProps {
   onFinish: (isWin: boolean) => void;
   spinRunId: number;
   forcedWin?: boolean;
+  winZoneOffset?: number;
 }
 
 const SPIN_FULL_ROTATIONS = 10;
@@ -22,7 +23,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   chance,
   onFinish,
   spinRunId,
-  forcedWin
+  forcedWin,
+  winZoneOffset = 0
 }) => {
   const controls = useAnimationControls();
   const runIdRef = useRef(0);
@@ -43,6 +45,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const safeChance = Math.min(99.9999, Math.max(0.0001, chance));
   const winZoneAngle = (safeChance / 100) * 360;
   const dashOffset = circumference - (safeChance / 100) * circumference;
+  const normalizedZoneOffset = ((winZoneOffset % 360) + 360) % 360;
 
   useEffect(() => {
     onFinishRef.current = onFinish;
@@ -80,11 +83,12 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
 
     isWinRef.current = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
     const baseRotations = SPIN_FULL_ROTATIONS * 360;
-    const edgePadding = 0.2;
-    const winStart = edgePadding;
-    const winEnd = Math.max(winStart + 0.01, winZoneAngle - edgePadding);
-    const loseStart = Math.min(359.99, winZoneAngle + edgePadding);
-    const loseEnd = 360 - edgePadding;
+    const edgePadding = Math.min(0.2, winZoneAngle / 4);
+    const winStart = normalizedZoneOffset + edgePadding;
+    const winEnd = normalizedZoneOffset + Math.max(edgePadding + 0.01, winZoneAngle - edgePadding);
+    const loseSpan = Math.max(0.01, 360 - winZoneAngle - edgePadding * 2);
+    const loseStart = normalizedZoneOffset + winZoneAngle + edgePadding;
+    const loseEnd = loseStart + loseSpan;
     const finalAngle = isWinRef.current
       ? randomInRange(winStart, winEnd)
       : randomInRange(loseStart, loseEnd);
@@ -116,7 +120,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
 
     runIdRef.current = spinRunId;
     void startSpinOnce(spinRunId);
-  }, [spinRunId]);
+  }, [normalizedZoneOffset, spinRunId]);
 
   useEffect(() => () => {
     mountedRef.current = false;
@@ -155,6 +159,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
           strokeDashoffset={dashOffset}
           strokeLinecap="round"
           className="text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+          style={{ transformOrigin: `${size / 2}px ${size / 2}px`, transform: `rotate(${normalizedZoneOffset}deg)` }}
         />
       </svg>
 

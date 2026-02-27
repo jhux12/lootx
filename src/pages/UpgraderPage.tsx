@@ -34,6 +34,7 @@ export default function UpgraderPage() {
   const [error, setError] = useState<string | null>(null);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [pendingUpgrade, setPendingUpgrade] = useState<{ sourceId: string; targetId: string } | null>(null);
+  const [winZoneOffset, setWinZoneOffset] = useState(0);
 
   useEffect(() => {
     void (async () => {
@@ -252,6 +253,8 @@ export default function UpgraderPage() {
         awaitingConfirmation={awaitingConfirmation}
         isConfirming={isSubmitting && awaitingConfirmation}
         onConfirmUpgrade={handleConfirmUpgrade}
+        winZoneOffset={winZoneOffset}
+        onWinZoneOffsetChange={setWinZoneOffset}
       />
     </div>
   );
