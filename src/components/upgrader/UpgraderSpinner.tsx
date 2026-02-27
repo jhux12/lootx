@@ -97,11 +97,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       transition: {
         duration: SPIN_DURATION_S,
         times: [0, 0.18, 0.72, 1],
-        ease: [
-          [0.33, 1, 0.68, 1],
-          'linear',
-          [0.16, 1, 0.3, 1]
-        ]
+        ease: ['easeIn', 'linear', 'easeOut']
       }
     });
 
