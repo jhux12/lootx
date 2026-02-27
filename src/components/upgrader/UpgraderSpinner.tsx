@@ -1,181 +1,143 @@
-import React, { useEffect, useRef } from 'react';
-import { motion, useAnimationControls } from 'motion/react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Item } from './upgraderTypes';
 
 interface UpgraderSpinnerProps {
   chance: number;
   onFinish: (isWin: boolean) => void;
   spinRunId: number;
   forcedWin?: boolean;
+  targetItem?: Item | null;
 }
 
-const SPIN_FULL_ROTATIONS = 10;
-const SPIN_SETTLE_DURATION_S = 5.8;
-const SPIN_RESULT_DELAY_MS = 180;
+interface UpgraderSpinnerTile {
+  id: string;
+  name: string;
+  rarity: string;
+  imageUrl?: string;
+  isMiss?: boolean;
+}
 
-const randomInRange = (min: number, max: number) => {
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return 0;
-  if (max <= min) return min;
-  return min + Math.random() * (max - min);
+const REEL_LENGTH = 40;
+const STOP_INDEX = 32;
+const CARD_WIDTH = 96;
+const CARD_GAP = 10;
+const STEP = CARD_WIDTH + CARD_GAP;
+const SPIN_DURATION_MS = 4200;
+
+const missTile: UpgraderSpinnerTile = {
+  id: 'upgrader-miss',
+  name: 'Miss',
+  rarity: 'miss',
+  isMiss: true
+};
+
+const buildTargetTile = (targetItem?: Item | null): UpgraderSpinnerTile => {
+  if (!targetItem) return missTile;
+  return {
+    id: targetItem.id,
+    name: targetItem.name,
+    rarity: targetItem.rarity,
+    imageUrl: targetItem.imageUrl,
+    isMiss: false
+  };
 };
 
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   chance,
   onFinish,
   spinRunId,
-  forcedWin
+  forcedWin,
+  targetItem
 }) => {
-  const controls = useAnimationControls();
-  const runIdRef = useRef(0);
-  const inFlightRef = useRef(false);
-  const finishedRef = useRef(false);
-  const rafRef = useRef<number | null>(null);
-  const timeoutRef = useRef<number | null>(null);
-  const totalRotationRef = useRef(0);
-  const isWinRef = useRef(false);
-  const onFinishRef = useRef(onFinish);
-  const mountedRef = useRef(true);
-
-  const size = 200;
-  const strokeWidth = 12;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
+  const [transitionEnabled, setTransitionEnabled] = useState(false);
+  const [translateX, setTranslateX] = useState(0);
+  const [runFinishedId, setRunFinishedId] = useState(0);
 
   const safeChance = Math.min(99.9999, Math.max(0.0001, chance));
-  const winZoneAngle = (safeChance / 100) * 360;
-  const dashOffset = circumference - (safeChance / 100) * circumference;
+  const centerOffset = useMemo(() => `calc(50% - ${CARD_WIDTH / 2}px)`, []);
+  const targetTranslateX = useMemo(() => -(STOP_INDEX * STEP), []);
+
+  const spinResult = useMemo(() => {
+    if (forcedWin !== undefined) return forcedWin;
+    return Math.random() * 100 <= safeChance;
+  }, [forcedWin, safeChance, spinRunId]);
+
+  const reelItems = useMemo(() => {
+    const tiles: UpgraderSpinnerTile[] = Array.from({ length: REEL_LENGTH }, (_, index) => ({
+      ...missTile,
+      id: `miss-${spinRunId}-${index}`
+    }));
+
+    tiles[STOP_INDEX] = spinResult ? buildTargetTile(targetItem) : { ...missTile, id: `miss-stop-${spinRunId}` };
+    return tiles;
+  }, [spinResult, spinRunId, targetItem]);
 
   useEffect(() => {
-    onFinishRef.current = onFinish;
-  }, [onFinish]);
-
-  const safeFinish = (runId: number) => {
-    if (!mountedRef.current || runId !== runIdRef.current || finishedRef.current) return;
-    finishedRef.current = true;
-    inFlightRef.current = false;
-    console.log('[UpgraderSpinner] finish', runId);
-    onFinishRef.current(isWinRef.current);
-  };
-
-  const startSpinOnce = async (runId: number) => {
-    if (inFlightRef.current) return;
-
-    inFlightRef.current = true;
-    finishedRef.current = false;
-
-    controls.stop();
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-
-    await controls.set({ rotate: 0 });
-    if (!mountedRef.current || runId !== runIdRef.current) {
-      inFlightRef.current = false;
+    if (!spinRunId) {
+      setTransitionEnabled(false);
+      setTranslateX(0);
+      setRunFinishedId(0);
       return;
     }
 
-    isWinRef.current = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
-    const baseRotations = SPIN_FULL_ROTATIONS * 360;
-    const edgePadding = 0.2;
-    const winStart = edgePadding;
-    const winEnd = Math.max(winStart + 0.01, winZoneAngle - edgePadding);
-    const loseStart = Math.min(359.99, winZoneAngle + edgePadding);
-    const loseEnd = 360 - edgePadding;
-    const finalAngle = isWinRef.current
-      ? randomInRange(winStart, winEnd)
-      : randomInRange(loseStart, loseEnd);
-    totalRotationRef.current = baseRotations + finalAngle;
+    setTransitionEnabled(false);
+    setTranslateX(0);
 
-    console.log('[UpgraderSpinner] start', runId);
-
-    await controls.start({
-      rotate: totalRotationRef.current,
-      transition: {
-        duration: SPIN_SETTLE_DURATION_S,
-        ease: [0.08, 0.86, 0.16, 1]
-      }
+    const frame = window.requestAnimationFrame(() => {
+      setTransitionEnabled(true);
+      setTranslateX(targetTranslateX);
     });
 
-    if (!mountedRef.current || runId !== runIdRef.current) {
-      inFlightRef.current = false;
-      return;
-    }
+    const timer = window.setTimeout(() => {
+      setTransitionEnabled(false);
+      setRunFinishedId(spinRunId);
+      onFinish(spinResult);
+    }, SPIN_DURATION_MS + 80);
 
-    timeoutRef.current = window.setTimeout(() => {
-      rafRef.current = requestAnimationFrame(() => safeFinish(runId));
-    }, SPIN_RESULT_DELAY_MS);
-  };
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [onFinish, spinResult, spinRunId, targetTranslateX]);
 
-  useEffect(() => {
-    if (spinRunId === 0) return;
-    if (spinRunId === runIdRef.current) return;
-
-    runIdRef.current = spinRunId;
-    void startSpinOnce(spinRunId);
-  }, [spinRunId]);
-
-  useEffect(() => () => {
-    mountedRef.current = false;
-    inFlightRef.current = false;
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    controls.stop();
-  }, []);
+  const isStopped = spinRunId > 0 && runFinishedId === spinRunId;
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="transform -rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="transparent"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          className="text-slate-800"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="transparent"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          strokeLinecap="round"
-          className="text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
-        />
-      </svg>
+    <div className="relative w-full overflow-hidden rounded-xl border border-slate-700/70 bg-[#0b0f18] h-[112px] sm:h-[124px]">
+      <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-indigo-400 to-transparent" />
 
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-black text-white">{safeChance.toFixed(safeChance >= 1 ? 1 : 4)}%</span>
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Chance</span>
+      <div className="absolute left-0 top-1/2 -translate-y-1/2" style={{ transform: `translate(${centerOffset}, -50%)` }}>
+        <div
+          className={`flex gap-[10px] ${spinRunId === 0 ? 'animate-reel-idle' : ''}`}
+          style={{
+            transform: spinRunId === 0 ? undefined : `translateX(${translateX}px)`,
+            transition: transitionEnabled ? `transform ${SPIN_DURATION_MS}ms cubic-bezier(0.08, 0.78, 0.22, 1)` : 'none'
+          }}
+        >
+          {reelItems.map((item, index) => {
+            const isWinner = index === STOP_INDEX;
+            const showWinState = isWinner && isStopped;
+
+            return (
+              <div
+                key={`${item.id}-${index}`}
+                className={`w-24 shrink-0 rounded-lg border p-2 transition-colors ${showWinState ? 'border-indigo-400 bg-indigo-500/15 shadow-[0_0_24px_rgba(129,140,248,0.45)]' : 'border-slate-700 bg-[#111827]'}`}
+              >
+                <div className="h-12 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
+                  {item.isMiss ? (
+                    <span className="text-3xl font-black leading-none text-red-400">X</span>
+                  ) : (
+                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" loading="lazy" />
+                  )}
+                </div>
+                <div className={`text-xs text-center truncate ${item.isMiss ? 'text-red-300' : 'text-slate-100'}`}>{item.isMiss ? 'Miss' : item.name}</div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <motion.div
-        animate={controls}
-        initial={{ rotate: 0 }}
-        className="absolute inset-0 flex items-start justify-center"
-        style={{ transformOrigin: 'center' }}
-      >
-        <div className="w-1 h-10 bg-white rounded-full mt-[-4px] relative shadow-[0_0_10px_rgba(255,255,255,0.8)]">
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 rounded-sm" />
-        </div>
-      </motion.div>
-
-      <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none" />
-      <div className="absolute inset-[-10px] rounded-full border border-white/5 pointer-events-none" />
+      <style>{`@keyframes reelIdle { 0% { transform: translateX(0); } 100% { transform: translateX(-212px); } } .animate-reel-idle { animation: reelIdle 7s linear infinite; }`}</style>
     </div>
   );
 };

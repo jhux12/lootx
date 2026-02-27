@@ -78,7 +78,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
             </button>
 
             <div className="p-5 sm:p-8 flex flex-col items-center text-center py-8 sm:py-10 gap-4 sm:gap-6">
-              <UpgraderSpinner chance={chance} spinRunId={0} onFinish={() => undefined} />
+              <UpgraderSpinner chance={chance} spinRunId={0} onFinish={() => undefined} targetItem={target} />
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">Confirm Upgrade</h2>
                 <p className="text-slate-400 text-sm">Tap upgrade again to start the spin.</p>
@@ -117,6 +117,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                 spinRunId={spinRunId}
                 onFinish={(didWin) => setDisplayStatus(didWin ? 'win' : 'lose')}
                 forcedWin={displayStatus === 'settling-win' ? true : displayStatus === 'settling-lose' ? false : undefined}
+                targetItem={target}
               />
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">Upgrading...</h2>
