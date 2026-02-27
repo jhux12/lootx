@@ -12,7 +12,7 @@ interface UpgraderResultModalProps {
   onRetry: () => void;
   chance: number;
   status: 'processing' | 'win' | 'lose';
-  spinId: number;
+  spinRunId: number;
   awaitingConfirmation: boolean;
   isConfirming: boolean;
   onConfirmUpgrade: () => void;
@@ -27,18 +27,15 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   onRetry,
   status,
   chance,
-  spinId,
+  spinRunId,
   awaitingConfirmation,
   isConfirming,
   onConfirmUpgrade
 }) => {
   const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('settling-lose');
-  const [spinRunId, setSpinRunId] = useState(0);
-
   useEffect(() => {
     if (!isOpen) {
       setDisplayStatus('settling-lose');
-      setSpinRunId(0);
       return;
     }
 
@@ -47,13 +44,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
     }
 
     setDisplayStatus(status === 'win' ? 'settling-win' : 'settling-lose');
-  }, [awaitingConfirmation, isOpen, status, spinId]);
-
-  useEffect(() => {
-    if (!isOpen || awaitingConfirmation) return;
-    if (displayStatus !== 'settling-win' && displayStatus !== 'settling-lose') return;
-    setSpinRunId((n) => n + 1);
-  }, [awaitingConfirmation, displayStatus, isOpen]);
+  }, [awaitingConfirmation, isOpen, spinRunId, status]);
 
   if (!isOpen) return null;
 

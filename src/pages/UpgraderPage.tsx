@@ -248,7 +248,7 @@ export default function UpgraderPage() {
         onRetry={handleRetry}
         chance={modalChance}
         status={resultState}
-        spinId={spinId}
+        spinRunId={spinId}
         awaitingConfirmation={awaitingConfirmation}
         isConfirming={isSubmitting && awaitingConfirmation}
         onConfirmUpgrade={handleConfirmUpgrade}
