@@ -114,7 +114,7 @@ export default function UpgraderPage() {
   };
 
   const handleUpgrade = () => {
-    if (!source || !target || !settings || isSubmitting) return;
+    if (!source || !target || !settings || isSubmitting || (isModalOpen && resultState === 'processing')) return;
 
     setError(null);
     setModalTarget(target);
@@ -236,7 +236,7 @@ export default function UpgraderPage() {
         source={source}
         target={target}
         onUpgrade={handleUpgrade}
-        disabled={realInventoryItems.length === 0 || !settings?.enabled || isSubmitting}
+        disabled={realInventoryItems.length === 0 || !settings?.enabled || isSubmitting || (isModalOpen && resultState === 'processing')}
         chanceOverride={chance}
         settings={settings}
       />

@@ -33,10 +33,12 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   onConfirmUpgrade
 }) => {
   const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('settling-lose');
+  const [spinRunId, setSpinRunId] = useState(0);
 
   useEffect(() => {
     if (!isOpen) {
       setDisplayStatus('settling-lose');
+      setSpinRunId(0);
       return;
     }
 
@@ -46,6 +48,12 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
 
     setDisplayStatus(status === 'win' ? 'settling-win' : 'settling-lose');
   }, [awaitingConfirmation, isOpen, status, spinId]);
+
+  useEffect(() => {
+    if (!isOpen || awaitingConfirmation) return;
+    if (displayStatus !== 'settling-win' && displayStatus !== 'settling-lose') return;
+    setSpinRunId((n) => n + 1);
+  }, [awaitingConfirmation, displayStatus, isOpen]);
 
   if (!isOpen) return null;
 
@@ -70,7 +78,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
             </button>
 
             <div className="p-5 sm:p-8 flex flex-col items-center text-center py-8 sm:py-10 gap-4 sm:gap-6">
-              <UpgraderSpinner chance={chance} isSpinning={false} onFinish={() => undefined} />
+              <UpgraderSpinner chance={chance} spinRunId={0} onFinish={() => undefined} />
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">Confirm Upgrade</h2>
                 <p className="text-slate-400 text-sm">Tap upgrade again to start the spin.</p>
@@ -105,9 +113,8 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
 
             <div className="p-5 sm:p-8 flex flex-col items-center text-center py-10 sm:py-12 gap-4 sm:gap-6">
               <UpgraderSpinner
-                key={spinId}
                 chance={chance}
-                isSpinning
+                spinRunId={spinRunId}
                 onFinish={(didWin) => setDisplayStatus(didWin ? 'win' : 'lose')}
                 forcedWin={displayStatus === 'settling-win' ? true : displayStatus === 'settling-lose' ? false : undefined}
               />

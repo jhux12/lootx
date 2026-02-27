@@ -14,6 +14,8 @@ type MotionDefinition = {
 type MotionControls = {
   __isMotionControls: true;
   start: (definition?: MotionDefinition) => Promise<void>;
+  set: (definition?: MotionDefinition) => Promise<void>;
+  stop: () => void;
   subscribe: (listener: (definition: MotionDefinition) => void) => () => void;
 };
 
@@ -141,8 +143,16 @@ export const useAnimation = (): MotionControls => {
         const durationMs = Math.max(0, (payload.transition?.duration ?? 0) * 1000);
         if (!durationMs) return;
         await new Promise((resolve) => setTimeout(resolve, durationMs));
+      },
+      set: async (definition) => {
+        listenersRef.current.forEach((listener) => listener(definition ?? {}));
+      },
+      stop: () => {
+        // No-op for shimmed motion runtime.
       }
     }),
     []
   );
 };
+
+export const useAnimationControls = useAnimation;
