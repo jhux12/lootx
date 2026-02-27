@@ -12,7 +12,7 @@ interface UpgraderResultModalProps {
   onRetry: () => void;
   chance: number;
   status: 'processing' | 'win' | 'lose';
-  spinId: number;
+  spinRunId: number;
   awaitingConfirmation: boolean;
   isConfirming: boolean;
   onConfirmUpgrade: () => void;
@@ -27,37 +27,30 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   onRetry,
   status,
   chance,
-  spinId,
+  spinRunId,
   awaitingConfirmation,
   isConfirming,
   onConfirmUpgrade
 }) => {
   const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('settling-lose');
-  const [spinRunId, setSpinRunId] = useState(0);
+  const [activeSpinRunId, setActiveSpinRunId] = useState(0);
 
   useEffect(() => {
     if (!isOpen) {
       setDisplayStatus('settling-lose');
-      setSpinRunId(0);
+      setActiveSpinRunId(0);
       return;
     }
 
-    if (awaitingConfirmation || status === 'processing') {
-      return;
-    }
+    if (awaitingConfirmation || status === 'processing' || spinRunId === 0) return;
 
+    setActiveSpinRunId(spinRunId);
     setDisplayStatus(status === 'win' ? 'settling-win' : 'settling-lose');
-  }, [awaitingConfirmation, isOpen, status, spinId]);
-
-  useEffect(() => {
-    if (!isOpen || awaitingConfirmation) return;
-    if (displayStatus !== 'settling-win' && displayStatus !== 'settling-lose') return;
-    setSpinRunId((n) => n + 1);
-  }, [awaitingConfirmation, displayStatus, isOpen]);
+  }, [awaitingConfirmation, isOpen, spinRunId, status]);
 
   if (!isOpen) return null;
 
-  const isSettling = displayStatus === 'settling-win' || displayStatus === 'settling-lose';
+  const isSettling = !awaitingConfirmation && activeSpinRunId > 0 && (displayStatus === 'settling-win' || displayStatus === 'settling-lose');
   const isWin = displayStatus === 'win';
   const isLose = displayStatus === 'lose';
 
@@ -97,7 +90,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
         </div>
       )}
 
-      {!awaitingConfirmation && isSettling && (
+      {isSettling && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm">
           <motion.div
             initial={{ scale: 0.92, opacity: 0 }}
@@ -114,7 +107,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
             <div className="p-5 sm:p-8 flex flex-col items-center text-center py-10 sm:py-12 gap-4 sm:gap-6">
               <UpgraderSpinner
                 chance={chance}
-                spinRunId={spinRunId}
+                spinRunId={activeSpinRunId}
                 onFinish={(didWin) => setDisplayStatus(didWin ? 'win' : 'lose')}
                 forcedWin={displayStatus === 'settling-win' ? true : displayStatus === 'settling-lose' ? false : undefined}
               />

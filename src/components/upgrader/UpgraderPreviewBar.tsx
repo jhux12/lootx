@@ -19,10 +19,9 @@ const toPercent = (value: number, fallback: number) => {
 };
 
 const formatChancePercent = (value: number) => {
-  const safeValue = Math.max(0, value);
-  if (safeValue >= 1) return `${safeValue.toFixed(2)}%`;
-  if (safeValue >= 0.01) return `${safeValue.toFixed(3)}%`;
-  return `${safeValue.toFixed(4)}%`;
+  const safeValue = Math.max(0.0001, value);
+  if (safeValue >= 1) return `${safeValue.toFixed(1)}%`;
+  return `${safeValue.toFixed(3)}%`;
 };
 
 export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
