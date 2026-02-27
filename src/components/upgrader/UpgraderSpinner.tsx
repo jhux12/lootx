@@ -11,12 +11,7 @@ interface UpgraderSpinnerProps {
 const SPIN_FULL_ROTATIONS = 10;
 const SPIN_SETTLE_DURATION_S = 5.8;
 const SPIN_RESULT_DELAY_MS = 180;
-
-const randomInRange = (min: number, max: number) => {
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return 0;
-  if (max <= min) return min;
-  return min + Math.random() * (max - min);
-};
+const LANDING_EDGE_PADDING_DEG = 0.2;
 
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   chance,
@@ -35,14 +30,23 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const onFinishRef = useRef(onFinish);
   const mountedRef = useRef(true);
 
-  const size = 200;
-  const strokeWidth = 12;
+  const size = 260;
+  const strokeWidth = 16;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
   const safeChance = Math.min(99.9999, Math.max(0.0001, chance));
   const winZoneAngle = (safeChance / 100) * 360;
   const dashOffset = circumference - (safeChance / 100) * circumference;
+  const loseZoneAngle = Math.max(0.0001, 360 - winZoneAngle);
+  const winLandingAngle = Math.max(
+    LANDING_EDGE_PADDING_DEG,
+    Math.min(359.99 - LANDING_EDGE_PADDING_DEG, winZoneAngle / 2)
+  );
+  const loseLandingAngle = Math.min(
+    359.99 - LANDING_EDGE_PADDING_DEG,
+    Math.max(winZoneAngle + LANDING_EDGE_PADDING_DEG, winZoneAngle + loseZoneAngle / 2)
+  );
 
   useEffect(() => {
     onFinishRef.current = onFinish;
@@ -80,14 +84,9 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
 
     isWinRef.current = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
     const baseRotations = SPIN_FULL_ROTATIONS * 360;
-    const edgePadding = 0.2;
-    const winStart = edgePadding;
-    const winEnd = Math.max(winStart + 0.01, winZoneAngle - edgePadding);
-    const loseStart = Math.min(359.99, winZoneAngle + edgePadding);
-    const loseEnd = 360 - edgePadding;
     const finalAngle = isWinRef.current
-      ? randomInRange(winStart, winEnd)
-      : randomInRange(loseStart, loseEnd);
+      ? winLandingAngle
+      : loseLandingAngle;
     totalRotationRef.current = baseRotations + finalAngle;
 
     console.log('[UpgraderSpinner] start', runId);
@@ -133,7 +132,9 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   }, []);
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+    <div className="relative flex items-center justify-center w-[220px] h-[220px] sm:w-[260px] sm:h-[260px]">
+      <div className="absolute inset-[-18px] rounded-full bg-[radial-gradient(circle_at_50%_30%,rgba(20,184,166,0.2),transparent_55%),radial-gradient(circle_at_60%_80%,rgba(168,85,247,0.25),transparent_60%)] blur-xl" />
+
       <svg width={size} height={size} className="transform -rotate-90">
         <circle
           cx={size / 2}
@@ -142,7 +143,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
           fill="transparent"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-slate-800"
+          className="text-slate-900"
         />
         <circle
           cx={size / 2}
@@ -154,13 +155,16 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
           strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
           strokeLinecap="round"
-          className="text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+          className="text-teal-400 drop-shadow-[0_0_18px_rgba(45,212,191,0.7)]"
         />
       </svg>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-black text-white">{safeChance.toFixed(safeChance >= 1 ? 1 : 4)}%</span>
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Chance</span>
+        <span className="text-4xl sm:text-5xl font-black text-white">{safeChance.toFixed(safeChance >= 1 ? 2 : 4)}%</span>
+        <span className="text-[10px] sm:text-xs font-bold text-violet-200/80 uppercase tracking-[0.35em]">Win odds</span>
+        <span className="mt-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] sm:text-xs font-semibold text-cyan-100">
+          Landing: {safeChance.toFixed(4)}%
+        </span>
       </div>
 
       <motion.div
@@ -169,13 +173,13 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
         className="absolute inset-0 flex items-start justify-center"
         style={{ transformOrigin: 'center' }}
       >
-        <div className="w-1 h-10 bg-white rounded-full mt-[-4px] relative shadow-[0_0_10px_rgba(255,255,255,0.8)]">
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 rounded-sm" />
+        <div className="w-2 h-14 sm:h-16 bg-gradient-to-b from-yellow-200 via-amber-300 to-orange-500 rounded-full mt-[-5px] relative shadow-[0_0_14px_rgba(251,191,36,0.8)]">
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-yellow-200 rotate-45 rounded-sm border border-yellow-50/60" />
         </div>
       </motion.div>
 
-      <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none" />
-      <div className="absolute inset-[-10px] rounded-full border border-white/5 pointer-events-none" />
+      <div className="absolute inset-0 rounded-full border border-cyan-200/10 pointer-events-none" />
+      <div className="absolute inset-[-10px] rounded-full border border-violet-200/10 pointer-events-none" />
     </div>
   );
 };
