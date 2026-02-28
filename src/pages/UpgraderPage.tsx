@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { UpgraderSourcePanel } from '../components/upgrader/UpgraderSourcePanel';
 import { UpgraderTargetPanel } from '../components/upgrader/UpgraderTargetPanel';
 import { UpgraderPreviewBar } from '../components/upgrader/UpgraderPreviewBar';
-import { UpgraderResultModal } from '../components/upgrader/UpgraderResultModal';
+import { UpgraderSpinPage } from '../components/upgrader/UpgraderSpinPage';
 import { InventoryItem, Item, Rarity } from '../components/upgrader/upgraderTypes';
 import { useGame } from '../../context/GameContext';
 import { attemptUpgrade, getUpgraderSettings, getUpgraderTargets } from '../../services/upgraderService';
@@ -22,18 +22,17 @@ export default function UpgraderPage() {
   const { inventory, isAuthenticated, openAuthModal } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showSpinPage, setShowSpinPage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [settings, setSettings] = useState<UpgraderSettings | null>(null);
   const [targets, setTargets] = useState<Item[]>([]);
-  const [resultState, setResultState] = useState<'processing' | 'win' | 'lose'>('processing');
-  const [modalTarget, setModalTarget] = useState<Item | null>(null);
+  const [resultState, setResultState] = useState<'win' | 'lose' | null>(null);
+  const [spinTarget, setSpinTarget] = useState<Item | null>(null);
+  const [pendingUpgrade, setPendingUpgrade] = useState<{ sourceId: string; targetId: string } | null>(null);
   const [modalChance, setModalChance] = useState(0);
   const [spinId, setSpinId] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
-  const [pendingUpgrade, setPendingUpgrade] = useState<{ sourceId: string; targetId: string } | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -106,27 +105,19 @@ export default function UpgraderPage() {
     }) * 100;
   }, [settings, source, target]);
 
-  const closeModal = () => {
-    if (isSubmitting) return;
-    setIsModalOpen(false);
-    setAwaitingConfirmation(false);
-    setPendingUpgrade(null);
-  };
-
   const handleUpgrade = () => {
-    if (!source || !target || !settings || isSubmitting || (isModalOpen && resultState === 'processing')) return;
+    if (!source || !target || !settings || isSubmitting) return;
 
     setError(null);
-    setModalTarget(target);
-    setModalChance(chance);
-    setResultState('processing');
-    setAwaitingConfirmation(true);
+    setShowSpinPage(true);
+    setSpinTarget(target);
     setPendingUpgrade({ sourceId: source.id, targetId: target.id });
-    setIsModalOpen(true);
+    setModalChance(chance);
+    setResultState(null);
   };
 
   const handleConfirmUpgrade = async () => {
-    if (!pendingUpgrade || !settings || isSubmitting) return;
+    if (!pendingUpgrade || isSubmitting) return;
 
     setIsSubmitting(true);
 
@@ -139,24 +130,24 @@ export default function UpgraderPage() {
 
       setResultState(response.win ? 'win' : 'lose');
       setSpinId((prev) => prev + 1);
-      setAwaitingConfirmation(false);
       setSource(null);
       setTarget(null);
       setPendingUpgrade(null);
     } catch (attemptError) {
       setError(attemptError instanceof Error ? attemptError.message : 'Upgrade failed.');
-      setIsModalOpen(false);
-      setAwaitingConfirmation(false);
+      setShowSpinPage(false);
+      setSpinTarget(null);
       setPendingUpgrade(null);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleRetry = () => {
+  const handleReturnFromSpinPage = () => {
     if (isSubmitting) return;
-    setIsModalOpen(false);
-    setAwaitingConfirmation(false);
+    setShowSpinPage(false);
+    setResultState(null);
+    setSpinTarget(null);
     setPendingUpgrade(null);
   };
 
@@ -173,6 +164,32 @@ export default function UpgraderPage() {
             Sign In
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (showSpinPage) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-200 pb-[calc(120px+env(safe-area-inset-bottom))] sm:pb-32">
+        <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-30">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-lg sm:text-xl font-black uppercase tracking-tighter text-white">Upgrader</h1>
+              <p className="hidden sm:block text-[10px] text-slate-500 font-bold uppercase tracking-widest">High Risk, High Reward</p>
+            </div>
+          </div>
+        </header>
+        <UpgraderSpinPage
+          target={spinTarget}
+          chance={modalChance}
+          spinId={spinId}
+          outcome={resultState}
+          hasPendingUpgrade={Boolean(pendingUpgrade)}
+          isDetermining={isSubmitting && !resultState}
+          onConfirmUpgrade={handleConfirmUpgrade}
+          isConfirming={isSubmitting && Boolean(pendingUpgrade)}
+          onReturn={handleReturnFromSpinPage}
+        />
       </div>
     );
   }
@@ -236,23 +253,11 @@ export default function UpgraderPage() {
         source={source}
         target={target}
         onUpgrade={handleUpgrade}
-        disabled={realInventoryItems.length === 0 || !settings?.enabled || isSubmitting || (isModalOpen && resultState === 'processing')}
+        disabled={realInventoryItems.length === 0 || !settings?.enabled || isSubmitting || showSpinPage}
         chanceOverride={chance}
         settings={settings}
       />
 
-      <UpgraderResultModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        target={modalTarget}
-        onRetry={handleRetry}
-        chance={modalChance}
-        status={resultState}
-        spinId={spinId}
-        awaitingConfirmation={awaitingConfirmation}
-        isConfirming={isSubmitting && awaitingConfirmation}
-        onConfirmUpgrade={handleConfirmUpgrade}
-      />
     </div>
   );
 }

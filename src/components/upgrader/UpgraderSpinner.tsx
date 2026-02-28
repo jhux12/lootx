@@ -6,6 +6,7 @@ interface UpgraderSpinnerProps {
   onFinish: (isWin: boolean) => void;
   spinRunId: number;
   forcedWin?: boolean;
+  size?: number;
 }
 
 const SPIN_FULL_ROTATIONS = 10;
@@ -22,7 +23,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   chance,
   onFinish,
   spinRunId,
-  forcedWin
+  forcedWin,
+  size = 200
 }) => {
   const controls = useAnimationControls();
   const runIdRef = useRef(0);
@@ -35,7 +37,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const onFinishRef = useRef(onFinish);
   const mountedRef = useRef(true);
 
-  const size = 200;
   const strokeWidth = 12;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -52,7 +53,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     if (!mountedRef.current || runId !== runIdRef.current || finishedRef.current) return;
     finishedRef.current = true;
     inFlightRef.current = false;
-    console.log('[UpgraderSpinner] finish', runId);
     onFinishRef.current(isWinRef.current);
   };
 
@@ -89,8 +89,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       ? randomInRange(winStart, winEnd)
       : randomInRange(loseStart, loseEnd);
     totalRotationRef.current = baseRotations + finalAngle;
-
-    console.log('[UpgraderSpinner] start', runId);
 
     await controls.start({
       rotate: totalRotationRef.current,
