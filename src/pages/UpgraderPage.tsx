@@ -64,6 +64,7 @@ export default function UpgraderPage() {
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
   const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const idleTimeoutRef = useRef<number | null>(null);
   const spinAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastPlayedSpinNonceRef = useRef<number>(0);
@@ -301,7 +302,7 @@ export default function UpgraderPage() {
           <div className="w-8 h-8 bg-violet-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.5)]">
             <LucideZap className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-lg sm:text-xl font-bold tracking-tighter text-white">ELITE <span className="text-violet-400">UPGRADER</span></h1>
+          <h1 className="text-lg sm:text-xl font-bold tracking-tighter text-white">Upgrader</h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -313,6 +314,15 @@ export default function UpgraderPage() {
             title={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}
           >
             {isMuted ? <LucideVolumeX className="w-5 h-5" /> : <LucideVolume2 className="w-5 h-5" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsHelpOpen(true)}
+            className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 transition flex items-center justify-center text-base font-black"
+            aria-label="How the upgrader works"
+            title="How the upgrader works"
+          >
+            ?
           </button>
           <LucideHistory className="w-5 h-5 text-slate-400" />
         </div>
@@ -461,6 +471,65 @@ export default function UpgraderPage() {
                 <div className="mt-2 flex justify-center">
                   <CoinAmount amount={Math.round(detailsItem.price)} className="text-sm font-bold text-amber-300" iconClassName="h-4 w-4" />
                 </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {isHelpOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Close upgrader help"
+            className="fixed inset-0 z-[70] bg-black/65"
+            onClick={() => setIsHelpOpen(false)}
+          />
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[71] flex justify-center px-3 pb-[max(env(safe-area-inset-bottom),12px)] sm:px-4 sm:pb-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="upgrader-help-title"
+              className="pointer-events-auto w-full max-w-xl rounded-2xl border border-white/15 bg-[#0f1524] p-4 shadow-[0_-12px_40px_rgba(0,0,0,0.65)] animate-[upgraderSheetIn_220ms_ease-out] sm:p-5"
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 id="upgrader-help-title" className="text-sm font-bold uppercase tracking-widest text-slate-300">How the Upgrader Works</h2>
+                <button
+                  type="button"
+                  onClick={() => setIsHelpOpen(false)}
+                  className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-slate-200 hover:bg-white/10"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-200">
+                <p className="text-slate-300">The Upgrader lets you risk one item for a chance at a higher-value item.</p>
+                <div>
+                  <p className="font-semibold text-white">1. Select Your Item</p>
+                  <p className="text-slate-300">Choose an item from your inventory to use for the upgrade.</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-white">2. Choose a Target</p>
+                  <p className="text-slate-300">Pick the item you want to upgrade to. Your win chance adjusts automatically based on value difference.</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-white">3. Upgrade</p>
+                  <p className="text-slate-300">Click Upgrade and the spinner will determine the result.</p>
+                </div>
+                <div className="space-y-1 text-slate-300">
+                  <p><span className="font-semibold text-emerald-300">Win:</span> You receive the upgraded item.</p>
+                  <p><span className="font-semibold text-rose-300">Loss:</span> Your selected item is removed.</p>
+                </div>
+                <div>
+                  <p className="text-slate-300">Your odds are calculated based on:</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-300">
+                    <li>The value of your item</li>
+                    <li>The value of the target item</li>
+                    <li>The platform edge</li>
+                  </ul>
+                </div>
+                <p className="font-semibold text-violet-300">Upgrade smart. Higher risk means higher reward.</p>
               </div>
             </div>
           </div>
