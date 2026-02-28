@@ -3,7 +3,6 @@ import {
   LucideArrowRight,
   LucideHistory,
   LucideInfo,
-  LucideWallet,
   LucideZap,
   LucideChevronLeft,
   LucideChevronRight
@@ -43,7 +42,7 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
 });
 
 export default function UpgraderPage() {
-  const { inventory, balance, isAuthenticated, openAuthModal } = useGame();
+  const { inventory, isAuthenticated, openAuthModal } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,7 +55,6 @@ export default function UpgraderPage() {
   const [spinResult, setSpinResult] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
-  const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
   const idleTimeoutRef = useRef<number | null>(null);
   const [spinnerSize, setSpinnerSize] = useState<number>(290);
 
@@ -233,37 +231,26 @@ export default function UpgraderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-slate-200 font-sans selection:bg-emerald-500/30 pb-32">
-      <header className="h-16 border-b border-white/5 bg-black/20 backdrop-blur-xl flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40">
+    <div className="min-h-screen bg-[#050811] text-slate-200 font-sans selection:bg-violet-500/30 pb-44 lg:pb-32">
+      <header className="h-16 border-b border-white/10 bg-[#0a1020]/85 backdrop-blur-xl flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
-            <LucideZap className="w-5 h-5 text-black" />
+          <div className="w-8 h-8 bg-violet-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.5)]">
+            <LucideZap className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-lg sm:text-xl font-bold tracking-tighter text-white">ELITE <span className="text-emerald-500">UPGRADER</span></h1>
+          <h1 className="text-lg sm:text-xl font-bold tracking-tighter text-white">ELITE <span className="text-violet-400">UPGRADER</span></h1>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
-            <LucideWallet className="w-4 h-4 text-emerald-400" />
-            <span className="text-sm font-mono font-bold">${balance.toFixed(2)}</span>
-          </div>
-          <LucideHistory className="w-5 h-5 text-slate-400" />
-        </div>
+        <LucideHistory className="w-5 h-5 text-slate-400" />
       </header>
 
       <main className="max-w-[1600px] mx-auto flex flex-col lg:grid lg:grid-cols-[340px_1fr_340px] gap-4 lg:gap-8 p-3 sm:p-4 lg:p-8">
         {error && <div className="lg:col-span-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{error}</div>}
 
-        <div className="flex lg:hidden bg-white/5 p-1 rounded-xl border border-white/10">
-          <button onClick={() => setActiveTab('inventory')} className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg ${activeTab === 'inventory' ? 'bg-emerald-500 text-black' : 'text-slate-400'}`}>Inventory</button>
-          <button onClick={() => setActiveTab('targets')} className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg ${activeTab === 'targets' ? 'bg-blue-500 text-black' : 'text-slate-400'}`}>Targets</button>
-        </div>
-
-        <section className={`flex flex-col gap-4 overflow-hidden ${activeTab === 'inventory' ? 'flex' : 'hidden lg:flex'}`}>
+        <section className="order-3 lg:order-1 flex flex-col gap-4 overflow-hidden">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Your Inventory <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{inventoryItems.length}</span></h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[280px] sm:max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
             {inventoryItems.map((item) => (
               <ItemCard
                 key={item.id}
@@ -279,16 +266,16 @@ export default function UpgraderPage() {
           </div>
         </section>
 
-        <section className="flex flex-col items-center justify-center bg-white/[0.02] rounded-[24px] border border-white/5 relative overflow-hidden p-4 sm:p-6">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] sm:w-[420px] sm:h-[420px] bg-emerald-500/20 blur-[80px] rounded-full pointer-events-none" />
+        <section className="order-2 lg:order-2 flex flex-col items-center justify-center bg-white/[0.02] rounded-[24px] border border-violet-400/10 relative overflow-hidden p-4 sm:p-6">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] sm:w-[420px] sm:h-[420px] bg-violet-500/20 blur-[80px] rounded-full pointer-events-none" />
 
           <div className="relative z-10 w-full max-w-md flex flex-col items-center">
             <div className="flex items-center gap-3 sm:gap-6 mb-4 sm:mb-8">
-              <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-xl border-2 flex items-center justify-center ${sourcePreview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 bg-white/[0.02]'}`}>
+              <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-xl border-2 flex items-center justify-center ${sourcePreview ? 'border-violet-400/50 bg-violet-500/10' : 'border-white/10 bg-white/[0.02]'}`}>
                 {sourcePreview ? <img src={sourcePreview.image} alt={sourcePreview.name} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" /> : <LucideChevronLeft className="text-white/15" />}
               </div>
-              <LucideArrowRight className={`w-4 h-4 sm:w-6 sm:h-6 ${sourcePreview && targetPreview ? 'text-emerald-500' : 'text-white/20'}`} />
-              <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-xl border-2 flex items-center justify-center ${targetPreview ? 'border-blue-500/50 bg-blue-500/5' : 'border-white/10 bg-white/[0.02]'}`}>
+              <LucideArrowRight className={`w-4 h-4 sm:w-6 sm:h-6 ${sourcePreview && targetPreview ? 'text-violet-400' : 'text-white/20'}`} />
+              <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-xl border-2 flex items-center justify-center ${targetPreview ? 'border-cyan-400/50 bg-cyan-500/10' : 'border-white/10 bg-white/[0.02]'}`}>
                 {targetPreview ? <img src={targetPreview.image} alt={targetPreview.name} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" /> : <LucideChevronRight className="text-white/15" />}
               </div>
             </div>
@@ -308,7 +295,7 @@ export default function UpgraderPage() {
               <button
                 onClick={handleUpgrade}
                 disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting}
-                className={`w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base uppercase tracking-widest transition-all duration-300 ${status === 'idle' && source && target && settings?.enabled ? 'bg-emerald-500 text-black shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-[0.98]' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
+                className={`w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base uppercase tracking-widest transition-all duration-300 ${status === 'idle' && source && target && settings?.enabled ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-[0_0_30px_rgba(34,211,238,0.3)] hover:scale-[1.02] active:scale-[0.98]' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
               >
                 {status === 'spinning' ? 'Upgrading...' : 'Upgrade Item'}
               </button>
@@ -321,11 +308,11 @@ export default function UpgraderPage() {
           </div>
         </section>
 
-        <section className={`flex flex-col gap-4 overflow-hidden ${activeTab === 'targets' ? 'flex' : 'hidden lg:flex'}`}>
+        <section className="order-1 lg:order-3 flex flex-col gap-4 overflow-hidden">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Target Items <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{targetItems.length}</span></h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[220px] sm:max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
             {targetItems.map((item) => (
               <ItemCard
                 key={item.id}
@@ -342,7 +329,7 @@ export default function UpgraderPage() {
         </section>
       </main>
 
-      <footer className="fixed bottom-0 left-0 w-full h-20 bg-black/40 backdrop-blur-md border-t border-white/5 px-3 lg:px-8 flex items-center gap-3 overflow-x-auto custom-scrollbar">
+      <footer className="fixed bottom-[calc(env(safe-area-inset-bottom)+62px)] lg:bottom-0 left-0 w-full h-20 bg-[#080b10]/90 backdrop-blur-md border-t border-white/10 px-3 lg:px-8 flex items-center gap-3 overflow-x-auto custom-scrollbar z-50">
         <div className="flex items-center gap-2 shrink-0 border-r border-white/10 pr-3">
           <LucideHistory className="w-4 h-4 text-slate-500" />
           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Live Feed</span>
