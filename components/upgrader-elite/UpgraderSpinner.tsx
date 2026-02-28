@@ -21,7 +21,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   spinSuccess,
   onSpinComplete,
   size = 280,
-  durationMs = 2500
+  durationMs = 4200
 }) => {
   const handledNonceRef = useRef<number>(-1);
 
@@ -90,10 +90,10 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
             handledNonceRef.current = spinNonce;
             onSpinComplete(Boolean(spinSuccess));
           }}
-          className="absolute top-0 left-1/2 -ml-[2px] w-[4px] h-1/2 origin-bottom z-20 pointer-events-none"
+          className="absolute top-0 left-1/2 -ml-[2px] w-[4px] h-1/2 origin-bottom z-20 pointer-events-none will-change-transform"
           style={{
             transform: `rotate(${spinRotation}deg)`,
-            transition: status === 'spinning' ? `transform ${durationMs}ms cubic-bezier(0.2, 0, 0.1, 1)` : 'none'
+            transition: status === 'spinning' ? `transform ${durationMs}ms cubic-bezier(0.16, 1, 0.3, 1)` : 'none'
           }}
         >
           <div className="w-full h-full relative">

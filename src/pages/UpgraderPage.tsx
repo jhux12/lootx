@@ -44,6 +44,8 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
   rarity: normalizeEliteRarity(String(item.rarity ?? 'common'))
 });
 
+const SPIN_DURATION_MS = 4200;
+
 export default function UpgraderPage() {
   const { inventory, isAuthenticated, openAuthModal } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
@@ -213,7 +215,7 @@ export default function UpgraderPage() {
 
     const currentModulo = ((currentRotation % 360) + 360) % 360;
     const moduloDelta = (desiredZoneAngle - currentModulo + 360) % 360;
-    return 6 * 360 + moduloDelta;
+    return 8 * 360 + moduloDelta;
   };
 
   const handleUpgrade = async () => {
@@ -349,7 +351,7 @@ export default function UpgraderPage() {
               spinSuccess={spinResult}
               onSpinComplete={handleSpinComplete}
               size={spinnerSize}
-              durationMs={2500}
+              durationMs={SPIN_DURATION_MS}
             />
 
             <div className="mt-4 w-full">
