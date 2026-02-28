@@ -11,12 +11,7 @@ interface UpgraderSpinnerProps {
 const SPIN_FULL_ROTATIONS = 10;
 const SPIN_SETTLE_DURATION_S = 5.8;
 const SPIN_RESULT_DELAY_MS = 180;
-
-const randomInRange = (min: number, max: number) => {
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return 0;
-  if (max <= min) return min;
-  return min + Math.random() * (max - min);
-};
+const LANDING_EDGE_PADDING_DEG = 0.2;
 
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   chance,
@@ -30,19 +25,27 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const finishedRef = useRef(false);
   const rafRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
-  const totalRotationRef = useRef(0);
   const isWinRef = useRef(false);
   const onFinishRef = useRef(onFinish);
   const mountedRef = useRef(true);
 
-  const size = 200;
-  const strokeWidth = 12;
+  const size = 280;
+  const strokeWidth = 16;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
   const safeChance = Math.min(99.9999, Math.max(0.0001, chance));
   const winZoneAngle = (safeChance / 100) * 360;
   const dashOffset = circumference - (safeChance / 100) * circumference;
+  const loseZoneAngle = Math.max(0.0001, 360 - winZoneAngle);
+  const winLandingAngle = Math.max(
+    LANDING_EDGE_PADDING_DEG,
+    Math.min(359.99 - LANDING_EDGE_PADDING_DEG, winZoneAngle / 2)
+  );
+  const loseLandingAngle = Math.min(
+    359.99 - LANDING_EDGE_PADDING_DEG,
+    Math.max(winZoneAngle + LANDING_EDGE_PADDING_DEG, winZoneAngle + loseZoneAngle / 2)
+  );
 
   useEffect(() => {
     onFinishRef.current = onFinish;
@@ -52,7 +55,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     if (!mountedRef.current || runId !== runIdRef.current || finishedRef.current) return;
     finishedRef.current = true;
     inFlightRef.current = false;
-    console.log('[UpgraderSpinner] finish', runId);
     onFinishRef.current(isWinRef.current);
   };
 
@@ -80,20 +82,10 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
 
     isWinRef.current = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
     const baseRotations = SPIN_FULL_ROTATIONS * 360;
-    const edgePadding = 0.2;
-    const winStart = edgePadding;
-    const winEnd = Math.max(winStart + 0.01, winZoneAngle - edgePadding);
-    const loseStart = Math.min(359.99, winZoneAngle + edgePadding);
-    const loseEnd = 360 - edgePadding;
-    const finalAngle = isWinRef.current
-      ? randomInRange(winStart, winEnd)
-      : randomInRange(loseStart, loseEnd);
-    totalRotationRef.current = baseRotations + finalAngle;
-
-    console.log('[UpgraderSpinner] start', runId);
+    const finalAngle = isWinRef.current ? winLandingAngle : loseLandingAngle;
 
     await controls.start({
-      rotate: totalRotationRef.current,
+      rotate: baseRotations + finalAngle,
       transition: {
         duration: SPIN_SETTLE_DURATION_S,
         ease: [0.08, 0.86, 0.16, 1]
@@ -133,8 +125,18 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   }, []);
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="transform -rotate-90">
+    <div className="relative flex items-center justify-center w-[230px] h-[230px] sm:w-[280px] sm:h-[280px]">
+      <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_45%,rgba(88,101,242,0.28),rgba(9,12,31,0.96)_70%)]" />
+      <div className="absolute inset-[-18px] rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.22),transparent_65%)] blur-2xl" />
+
+      <motion.svg
+        animate={controls}
+        initial={{ rotate: 0 }}
+        width={size}
+        height={size}
+        className="relative z-10 -rotate-90"
+        style={{ transformOrigin: '50% 50%' }}
+      >
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -142,40 +144,41 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
           fill="transparent"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-slate-800"
+          className="text-indigo-300/25"
         />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="transparent"
-          stroke="currentColor"
+          stroke="url(#upgraderSpinGradient)"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
           strokeLinecap="round"
-          className="text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+          className="drop-shadow-[0_0_16px_rgba(168,85,247,0.75)]"
         />
-      </svg>
+        <defs>
+          <linearGradient id="upgraderSpinGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#8B5CF6" />
+            <stop offset="100%" stopColor="#C084FC" />
+          </linearGradient>
+        </defs>
+      </motion.svg>
 
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-black text-white">{safeChance.toFixed(safeChance >= 1 ? 1 : 4)}%</span>
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Chance</span>
+      <div className="absolute z-20 left-[8px] sm:left-[10px] top-1/2 -translate-y-1/2 -translate-x-1/2">
+        <div className="h-0 w-0 border-y-[10px] border-y-transparent border-r-[16px] border-r-[#c4b5fd] drop-shadow-[0_0_10px_rgba(196,181,253,0.85)] sm:border-y-[12px] sm:border-r-[19px]" />
       </div>
 
-      <motion.div
-        animate={controls}
-        initial={{ rotate: 0 }}
-        className="absolute inset-0 flex items-start justify-center"
-        style={{ transformOrigin: 'center' }}
-      >
-        <div className="w-1 h-10 bg-white rounded-full mt-[-4px] relative shadow-[0_0_10px_rgba(255,255,255,0.8)]">
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 rounded-sm" />
-        </div>
-      </motion.div>
+      <div className="absolute inset-[18px] sm:inset-[22px] z-10 rounded-full bg-[radial-gradient(circle_at_50%_40%,rgba(72,88,194,0.38),rgba(7,10,25,0.95)_72%)] border border-indigo-200/10" />
 
-      <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none" />
-      <div className="absolute inset-[-10px] rounded-full border border-white/5 pointer-events-none" />
+      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center px-8 text-center">
+        <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">{safeChance.toFixed(safeChance >= 1 ? 2 : 4)}%</span>
+        <span className="mt-1 text-[10px] sm:text-xs font-bold uppercase tracking-[0.28em] text-violet-200/80">Upgrade odds</span>
+        <span className="mt-3 rounded-full border border-violet-200/25 bg-violet-300/10 px-3 py-1 text-[10px] sm:text-xs font-semibold text-violet-100">
+          Exact chance: {safeChance.toFixed(4)}%
+        </span>
+      </div>
     </div>
   );
 };
