@@ -6,6 +6,7 @@ interface UpgraderSpinnerProps {
   chance: number;
   status: UpgradeStatus;
   spinRotation: number;
+  winZoneRotation: number;
   spinNonce: number;
   spinSuccess: boolean | null;
   onSpinComplete: (success: boolean) => void;
@@ -17,6 +18,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   chance,
   status,
   spinRotation,
+  winZoneRotation,
   spinNonce,
   spinSuccess,
   onSpinComplete,
@@ -32,7 +34,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
     <div className="relative flex flex-col items-center justify-center py-4 sm:py-8">
       <div className="relative" style={{ width: size, height: size }}>
         <div className="absolute inset-0 rounded-full">
-          <svg width={size} height={size} className="-rotate-90">
+          <svg width={size} height={size} className="-rotate-90" style={{ transform: `rotate(${winZoneRotation}deg)` }}>
             <circle
               cx={size / 2}
               cy={size / 2}
