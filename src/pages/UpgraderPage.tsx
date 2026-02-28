@@ -55,6 +55,7 @@ export default function UpgraderPage() {
   const [spinResult, setSpinResult] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
+  const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
   const idleTimeoutRef = useRef<number | null>(null);
   const [spinnerSize, setSpinnerSize] = useState<number>(290);
 
@@ -246,7 +247,7 @@ export default function UpgraderPage() {
       <main className="max-w-[1600px] mx-auto flex flex-col lg:grid lg:grid-cols-[340px_1fr_340px] gap-4 lg:gap-8 p-3 sm:p-4 lg:p-8">
         {error && <div className="lg:col-span-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{error}</div>}
 
-        <section className="order-3 lg:order-1 flex flex-col gap-4 overflow-hidden">
+        <section className={`order-3 lg:order-1 flex-col gap-4 overflow-hidden ${activeTab === 'inventory' ? 'flex' : 'hidden lg:flex'}`}>
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Your Inventory <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{inventoryItems.length}</span></h2>
           </div>
@@ -266,7 +267,7 @@ export default function UpgraderPage() {
           </div>
         </section>
 
-        <section className="order-2 lg:order-2 flex flex-col items-center justify-center bg-white/[0.02] rounded-[24px] border border-violet-400/10 relative overflow-hidden p-4 sm:p-6">
+        <section className="order-1 lg:order-2 flex flex-col items-center justify-center bg-white/[0.02] rounded-[24px] border border-violet-400/10 relative overflow-hidden p-4 sm:p-6">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] sm:w-[420px] sm:h-[420px] bg-violet-500/20 blur-[80px] rounded-full pointer-events-none" />
 
           <div className="relative z-10 w-full max-w-md flex flex-col items-center">
@@ -308,7 +309,22 @@ export default function UpgraderPage() {
           </div>
         </section>
 
-        <section className="order-1 lg:order-3 flex flex-col gap-4 overflow-hidden">
+        <div className="order-2 flex lg:hidden bg-white/5 p-1 rounded-xl border border-white/10">
+          <button
+            onClick={() => setActiveTab('inventory')}
+            className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'inventory' ? 'bg-violet-500 text-white' : 'text-slate-400'}`}
+          >
+            Inventory
+          </button>
+          <button
+            onClick={() => setActiveTab('targets')}
+            className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'targets' ? 'bg-cyan-500 text-[#03111a]' : 'text-slate-400'}`}
+          >
+            Targets
+          </button>
+        </div>
+
+        <section className={`order-4 lg:order-3 flex-col gap-4 overflow-hidden ${activeTab === 'targets' ? 'flex' : 'hidden lg:flex'}`}>
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Target Items <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{targetItems.length}</span></h2>
           </div>
