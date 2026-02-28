@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { LucideCheckCircle2, LucideRefreshCw, LucideXCircle } from 'lucide-react';
 import { UpgradeStatus } from './types';
 
@@ -9,6 +9,9 @@ interface UpgraderSpinnerProps {
   spinNonce: number;
   spinSuccess: boolean | null;
   onSpinComplete: (success: boolean) => void;
+  winZoneRotation: number;
+  onWinZoneRotationChange: (rotation: number) => void;
+  canRotateWinZone: boolean;
   size?: number;
   durationMs?: number;
 }
@@ -20,17 +23,59 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   spinNonce,
   spinSuccess,
   onSpinComplete,
+  winZoneRotation,
+  onWinZoneRotationChange,
+  canRotateWinZone,
   size = 280,
   durationMs = 4200
 }) => {
   const handledNonceRef = useRef<number>(-1);
+  const wheelRef = useRef<HTMLDivElement | null>(null);
+  const isDraggingRef = useRef(false);
 
   const circumference = Math.PI * 2 * ((size - 20) / 2);
   const offset = circumference - (Math.max(0, Math.min(100, chance)) / 100) * circumference;
 
+  const wheelCenter = useMemo(() => ({ x: size / 2, y: size / 2 }), [size]);
+
+  const updateRotationFromEvent = (clientX: number, clientY: number) => {
+    const wheelElement = wheelRef.current;
+    if (!wheelElement) return;
+    const rect = wheelElement.getBoundingClientRect();
+    const localX = clientX - rect.left;
+    const localY = clientY - rect.top;
+    const angle = Math.atan2(localY - wheelCenter.y, localX - wheelCenter.x);
+    const normalized = ((angle * 180) / Math.PI + 90 + 360) % 360;
+    onWinZoneRotationChange(normalized);
+  };
+
   return (
     <div className="relative flex flex-col items-center justify-center py-4 sm:py-8">
-      <div className="relative" style={{ width: size, height: size }}>
+      <div
+        ref={wheelRef}
+        className={`relative touch-none ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        style={{ width: size, height: size }}
+        onPointerDown={(event) => {
+          if (!canRotateWinZone || status !== 'idle') return;
+          isDraggingRef.current = true;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          updateRotationFromEvent(event.clientX, event.clientY);
+        }}
+        onPointerMove={(event) => {
+          if (!isDraggingRef.current || !canRotateWinZone || status !== 'idle') return;
+          updateRotationFromEvent(event.clientX, event.clientY);
+        }}
+        onPointerUp={(event) => {
+          if (!isDraggingRef.current) return;
+          isDraggingRef.current = false;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={(event) => {
+          if (!isDraggingRef.current) return;
+          isDraggingRef.current = false;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+      >
         <div className="absolute inset-0 rounded-full">
           <svg width={size} height={size} className="-rotate-90">
             <circle
@@ -41,17 +86,24 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
               stroke="rgba(255,255,255,0.08)"
               strokeWidth={20}
             />
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={(size - 20) / 2}
-              fill="transparent"
-              stroke="url(#win-gradient)"
-              strokeWidth={20}
-              strokeDasharray={circumference}
-              strokeDashoffset={offset}
-              strokeLinecap="round"
-            />
+            <g
+              style={{
+                transformOrigin: `${size / 2}px ${size / 2}px`,
+                transform: `rotate(${winZoneRotation}deg)`
+              }}
+            >
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={(size - 20) / 2}
+                fill="transparent"
+                stroke="url(#win-gradient)"
+                strokeWidth={20}
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+              />
+            </g>
             <defs>
               <linearGradient id="win-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#10b981" />
@@ -108,6 +160,11 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           <div className="flex items-center gap-2 text-white/60 font-mono text-xs sm:text-sm">
             <LucideRefreshCw className="w-4 h-4 animate-spin" />
             <span>CALCULATING OUTCOME...</span>
+          </div>
+        )}
+        {status === 'idle' && canRotateWinZone && (
+          <div className="text-white/55 text-[10px] sm:text-xs uppercase tracking-[0.16em] font-semibold text-center px-4">
+            Drag the ring to rotate your winning zone
           </div>
         )}
       </div>

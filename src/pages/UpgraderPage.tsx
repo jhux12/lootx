@@ -56,6 +56,7 @@ export default function UpgraderPage() {
   const [targets, setTargets] = useState<Item[]>([]);
   const [status, setStatus] = useState<UpgradeStatus>('idle');
   const [spinRotation, setSpinRotation] = useState(0);
+  const [winZoneRotation, setWinZoneRotation] = useState(0);
   const [spinNonce, setSpinNonce] = useState(0);
   const [spinResult, setSpinResult] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -198,25 +199,34 @@ export default function UpgraderPage() {
   const sourcePreview = source ? mapToEliteItem(source) : null;
   const targetPreview = target ? mapToEliteItem(target) : null;
 
-  const computeSpinDelta = (baseChance: number, success: boolean, currentRotation: number) => {
+  const computeSpinDelta = (baseChance: number, success: boolean, currentRotation: number, zoneRotation: number) => {
     const clampedChance = Math.max(0.0001, Math.min(99.9999, baseChance));
     const successSpan = (clampedChance / 100) * 360;
     const minPad = 8;
+    const normalizedZoneRotation = ((zoneRotation % 360) + 360) % 360;
     let desiredZoneAngle = 0;
 
     if (success) {
       const maxAngle = Math.max(minPad + 1, successSpan - minPad);
-      desiredZoneAngle = minPad + Math.random() * (maxAngle - minPad);
+      const successStart = normalizedZoneRotation;
+      desiredZoneAngle = successStart + minPad + Math.random() * (maxAngle - minPad);
     } else {
-      const failStart = Math.min(359, successSpan + minPad);
-      const failEnd = 360 - minPad;
-      desiredZoneAngle = failStart + Math.random() * Math.max(1, failEnd - failStart);
+      const failStart = normalizedZoneRotation + successSpan + minPad;
+      const failSpan = 360 - successSpan - minPad * 2;
+      desiredZoneAngle = failStart + Math.random() * Math.max(1, failSpan);
     }
 
     const currentModulo = ((currentRotation % 360) + 360) % 360;
-    const moduloDelta = (desiredZoneAngle - currentModulo + 360) % 360;
+    const normalizedDesired = ((desiredZoneAngle % 360) + 360) % 360;
+    const moduloDelta = (normalizedDesired - currentModulo + 360) % 360;
     return 8 * 360 + moduloDelta;
   };
+
+  useEffect(() => {
+    if (!source || !target || status !== 'idle') {
+      setWinZoneRotation(0);
+    }
+  }, [source, target, status]);
 
   const handleUpgrade = async () => {
     if (!source || !target || !settings || isSubmitting || status === 'spinning') return;
@@ -234,7 +244,7 @@ export default function UpgraderPage() {
 
       const success = Boolean(response.win);
       setSpinResult(success);
-      setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous));
+      setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
       setSpinNonce((previous) => previous + 1);
     } catch (attemptError) {
       setStatus('idle');
@@ -350,6 +360,9 @@ export default function UpgraderPage() {
               spinNonce={spinNonce}
               spinSuccess={spinResult}
               onSpinComplete={handleSpinComplete}
+              winZoneRotation={winZoneRotation}
+              onWinZoneRotationChange={setWinZoneRotation}
+              canRotateWinZone={Boolean(source && target && status === 'idle')}
               size={spinnerSize}
               durationMs={SPIN_DURATION_MS}
             />
