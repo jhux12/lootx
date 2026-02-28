@@ -101,7 +101,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
                 strokeWidth={20}
                 strokeDasharray={circumference}
                 strokeDashoffset={offset}
-                strokeLinecap="round"
+                strokeLinecap="butt"
               />
             </g>
             <defs>
