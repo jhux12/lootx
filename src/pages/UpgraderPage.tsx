@@ -223,10 +223,10 @@ export default function UpgraderPage() {
   };
 
   useEffect(() => {
-    if (!source || !target || status !== 'idle') {
+    if (!source || !target) {
       setWinZoneRotation(0);
     }
-  }, [source, target, status]);
+  }, [source, target]);
 
   const handleUpgrade = async () => {
     if (!source || !target || !settings || isSubmitting || status === 'spinning') return;
