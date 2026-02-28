@@ -7,10 +7,11 @@ interface ItemCardProps {
   item: Item;
   isSelected?: boolean;
   onClick?: () => void;
+  onInfoClick?: () => void;
   disabled?: boolean;
 }
 
-export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, disabled }) => (
+export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, onInfoClick, disabled }) => (
   <button
     onClick={onClick}
     disabled={disabled}
@@ -30,6 +31,28 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, d
     </div>
 
     <div className="w-20 h-20 sm:w-24 sm:h-24 mb-2 relative overflow-hidden rounded-lg">
+      {onInfoClick && (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(event) => {
+            event.stopPropagation();
+            onInfoClick();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              event.stopPropagation();
+              onInfoClick();
+            }
+          }}
+          className="absolute left-1.5 top-1.5 z-10 inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-black/45 text-[10px] font-black text-white"
+          aria-label={`View info for ${item.name}`}
+          title={`View info for ${item.name}`}
+        >
+          i
+        </span>
+      )}
       <img
         src={item.image}
         alt={item.name}
