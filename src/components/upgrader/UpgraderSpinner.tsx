@@ -6,6 +6,7 @@ interface UpgraderSpinnerProps {
   onFinish: (isWin: boolean) => void;
   spinRunId: number;
   forcedWin?: boolean;
+  size?: number;
 }
 
 const SPIN_FULL_ROTATIONS = 10;
@@ -22,7 +23,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   chance,
   onFinish,
   spinRunId,
-  forcedWin
+  forcedWin,
+  size = 200
 }) => {
   const controls = useAnimationControls();
   const runIdRef = useRef(0);
@@ -35,7 +37,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const onFinishRef = useRef(onFinish);
   const mountedRef = useRef(true);
 
-  const size = 200;
   const strokeWidth = 12;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -52,7 +53,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     if (!mountedRef.current || runId !== runIdRef.current || finishedRef.current) return;
     finishedRef.current = true;
     inFlightRef.current = false;
-    console.log('[UpgraderSpinner] finish', runId);
     onFinishRef.current(isWinRef.current);
   };
 
@@ -72,42 +72,44 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       timeoutRef.current = null;
     }
 
-    await controls.set({ rotate: 0 });
-    if (!mountedRef.current || runId !== runIdRef.current) {
-      inFlightRef.current = false;
-      return;
-    }
-
-    isWinRef.current = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
-    const baseRotations = SPIN_FULL_ROTATIONS * 360;
-    const edgePadding = 0.2;
-    const winStart = edgePadding;
-    const winEnd = Math.max(winStart + 0.01, winZoneAngle - edgePadding);
-    const loseStart = Math.min(359.99, winZoneAngle + edgePadding);
-    const loseEnd = 360 - edgePadding;
-    const finalAngle = isWinRef.current
-      ? randomInRange(winStart, winEnd)
-      : randomInRange(loseStart, loseEnd);
-    totalRotationRef.current = baseRotations + finalAngle;
-
-    console.log('[UpgraderSpinner] start', runId);
-
-    await controls.start({
-      rotate: totalRotationRef.current,
-      transition: {
-        duration: SPIN_SETTLE_DURATION_S,
-        ease: [0.08, 0.86, 0.16, 1]
+    try {
+      await controls.set({ rotate: 0 });
+      if (!mountedRef.current || runId !== runIdRef.current) {
+        inFlightRef.current = false;
+        return;
       }
-    });
 
-    if (!mountedRef.current || runId !== runIdRef.current) {
+      isWinRef.current = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
+      const baseRotations = SPIN_FULL_ROTATIONS * 360;
+      const edgePadding = 0.2;
+      const winStart = edgePadding;
+      const winEnd = Math.max(winStart + 0.01, winZoneAngle - edgePadding);
+      const loseStart = Math.min(359.99, winZoneAngle + edgePadding);
+      const loseEnd = 360 - edgePadding;
+      const finalAngle = isWinRef.current
+        ? randomInRange(winStart, winEnd)
+        : randomInRange(loseStart, loseEnd);
+      totalRotationRef.current = baseRotations + finalAngle;
+
+      await controls.start({
+        rotate: totalRotationRef.current,
+        transition: {
+          duration: SPIN_SETTLE_DURATION_S,
+          ease: [0.08, 0.86, 0.16, 1]
+        }
+      });
+
+      if (!mountedRef.current || runId !== runIdRef.current) {
+        inFlightRef.current = false;
+        return;
+      }
+
+      timeoutRef.current = window.setTimeout(() => {
+        rafRef.current = requestAnimationFrame(() => safeFinish(runId));
+      }, SPIN_RESULT_DELAY_MS);
+    } catch {
       inFlightRef.current = false;
-      return;
     }
-
-    timeoutRef.current = window.setTimeout(() => {
-      rafRef.current = requestAnimationFrame(() => safeFinish(runId));
-    }, SPIN_RESULT_DELAY_MS);
   };
 
   useEffect(() => {
@@ -116,21 +118,25 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
 
     runIdRef.current = spinRunId;
     void startSpinOnce(spinRunId);
-  }, [spinRunId]);
+  }, [forcedWin, safeChance, spinRunId]);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
-    inFlightRef.current = false;
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    controls.stop();
-  }, []);
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+      inFlightRef.current = false;
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      controls.stop();
+    };
+  }, [controls]);
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
