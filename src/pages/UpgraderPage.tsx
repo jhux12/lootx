@@ -14,6 +14,7 @@ import { useGame } from '../../context/GameContext';
 import { attemptUpgrade, getUpgraderSettings, getUpgraderTargets } from '../../services/upgraderService';
 import { computeUpgradeChance, UpgraderSettings } from '../../utils/upgrader';
 import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
+import { CoinAmount } from '../../components/CoinAmount';
 import { ItemCard } from '../../components/upgrader-elite/ItemCard';
 import { UpgraderSpinner } from '../../components/upgrader-elite/UpgraderSpinner';
 import { Item as EliteItem, UpgradeStatus } from '../../components/upgrader-elite/types';
