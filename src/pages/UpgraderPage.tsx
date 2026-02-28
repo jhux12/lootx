@@ -1,13 +1,21 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { UpgraderSourcePanel } from '../components/upgrader/UpgraderSourcePanel';
-import { UpgraderTargetPanel } from '../components/upgrader/UpgraderTargetPanel';
-import { UpgraderPreviewBar } from '../components/upgrader/UpgraderPreviewBar';
-import { UpgraderResultModal } from '../components/upgrader/UpgraderResultModal';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  LucideArrowRight,
+  LucideHistory,
+  LucideInfo,
+  LucideWallet,
+  LucideZap,
+  LucideChevronLeft,
+  LucideChevronRight
+} from 'lucide-react';
 import { InventoryItem, Item, Rarity } from '../components/upgrader/upgraderTypes';
 import { useGame } from '../../context/GameContext';
 import { attemptUpgrade, getUpgraderSettings, getUpgraderTargets } from '../../services/upgraderService';
 import { computeUpgradeChance, UpgraderSettings } from '../../utils/upgrader';
 import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
+import { ItemCard } from '../../components/upgrader-elite/ItemCard';
+import { UpgraderSpinner } from '../../components/upgrader-elite/UpgraderSpinner';
+import { Item as EliteItem, UpgradeStatus } from '../../components/upgrader-elite/types';
 
 const rarityMap: Record<string, Rarity> = {
   common: 'Common',
@@ -18,22 +26,39 @@ const rarityMap: Record<string, Rarity> = {
   mythic: 'Mythic'
 };
 
+const normalizeEliteRarity = (rarity?: string): EliteItem['rarity'] => {
+  const value = String(rarity ?? '').toLowerCase();
+  if (value === 'uncommon' || value === 'rare' || value === 'epic' || value === 'legendary' || value === 'mythic') {
+    return value;
+  }
+  return 'common';
+};
+
+const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: string; coinValue?: number; image?: string }): EliteItem => ({
+  id: String(item.id ?? ''),
+  name: String(item.name ?? 'Unknown'),
+  price: Number(item.coinValue ?? 0),
+  image: String(item.image ?? item.imageUrl ?? ''),
+  rarity: normalizeEliteRarity(String(item.rarity ?? 'common'))
+});
+
 export default function UpgraderPage() {
-  const { inventory, isAuthenticated, openAuthModal } = useGame();
+  const { inventory, balance, isAuthenticated, openAuthModal } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [settings, setSettings] = useState<UpgraderSettings | null>(null);
   const [targets, setTargets] = useState<Item[]>([]);
-  const [resultState, setResultState] = useState<'processing' | 'win' | 'lose'>('processing');
-  const [modalTarget, setModalTarget] = useState<Item | null>(null);
-  const [modalChance, setModalChance] = useState(0);
-  const [spinId, setSpinId] = useState(0);
+  const [status, setStatus] = useState<UpgradeStatus>('idle');
+  const [spinRotation, setSpinRotation] = useState(0);
+  const [spinNonce, setSpinNonce] = useState(0);
+  const [spinResult, setSpinResult] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
-  const [pendingUpgrade, setPendingUpgrade] = useState<{ sourceId: string; targetId: string } | null>(null);
+  const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
+  const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
+  const idleTimeoutRef = useRef<number | null>(null);
+  const [spinnerSize, setSpinnerSize] = useState<number>(290);
 
   useEffect(() => {
     void (async () => {
@@ -58,6 +83,17 @@ export default function UpgraderPage() {
         setLoading(false);
       }
     })();
+
+    const handleResize = () => setSpinnerSize(window.innerWidth < 640 ? 230 : 290);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      if (idleTimeoutRef.current) {
+        window.clearTimeout(idleTimeoutRef.current);
+      }
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   const realInventoryItems = useMemo<InventoryItem[]>(() => {
@@ -106,58 +142,77 @@ export default function UpgraderPage() {
     }) * 100;
   }, [settings, source, target]);
 
-  const closeModal = () => {
-    if (isSubmitting) return;
-    setIsModalOpen(false);
-    setAwaitingConfirmation(false);
-    setPendingUpgrade(null);
+  const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
+  const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
+
+  const sourcePreview = source ? mapToEliteItem(source) : null;
+  const targetPreview = target ? mapToEliteItem(target) : null;
+
+  const computeSpinDelta = (baseChance: number, success: boolean, currentRotation: number) => {
+    const clampedChance = Math.max(0.0001, Math.min(99.9999, baseChance));
+    const successSpan = (clampedChance / 100) * 360;
+    const minPad = 8;
+    let desiredZoneAngle = 0;
+
+    if (success) {
+      const maxAngle = Math.max(minPad + 1, successSpan - minPad);
+      desiredZoneAngle = minPad + Math.random() * (maxAngle - minPad);
+    } else {
+      const failStart = Math.min(359, successSpan + minPad);
+      const failEnd = 360 - minPad;
+      desiredZoneAngle = failStart + Math.random() * Math.max(1, failEnd - failStart);
+    }
+
+    const currentModulo = ((currentRotation % 360) + 360) % 360;
+    const moduloDelta = (desiredZoneAngle - currentModulo + 360) % 360;
+    return 6 * 360 + moduloDelta;
   };
 
-  const handleUpgrade = () => {
-    if (!source || !target || !settings || isSubmitting || (isModalOpen && resultState === 'processing')) return;
+  const handleUpgrade = async () => {
+    if (!source || !target || !settings || isSubmitting || status === 'spinning') return;
 
     setError(null);
-    setModalTarget(target);
-    setModalChance(chance);
-    setResultState('processing');
-    setAwaitingConfirmation(true);
-    setPendingUpgrade({ sourceId: source.id, targetId: target.id });
-    setIsModalOpen(true);
-  };
-
-  const handleConfirmUpgrade = async () => {
-    if (!pendingUpgrade || !settings || isSubmitting) return;
-
     setIsSubmitting(true);
+    setStatus('spinning');
 
     try {
       const response = await attemptUpgrade({
-        sourceItemInstanceId: pendingUpgrade.sourceId,
-        targetItemId: pendingUpgrade.targetId,
+        sourceItemInstanceId: source.id,
+        targetItemId: target.id,
         clientSeed: `${Date.now()}`
       });
 
-      setResultState(response.win ? 'win' : 'lose');
-      setSpinId((prev) => prev + 1);
-      setAwaitingConfirmation(false);
-      setSource(null);
-      setTarget(null);
-      setPendingUpgrade(null);
+      const success = Boolean(response.win);
+      setSpinResult(success);
+      setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous));
+      setSpinNonce((previous) => previous + 1);
     } catch (attemptError) {
+      setStatus('idle');
       setError(attemptError instanceof Error ? attemptError.message : 'Upgrade failed.');
-      setIsModalOpen(false);
-      setAwaitingConfirmation(false);
-      setPendingUpgrade(null);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleRetry = () => {
-    if (isSubmitting) return;
-    setIsModalOpen(false);
-    setAwaitingConfirmation(false);
-    setPendingUpgrade(null);
+  const handleSpinComplete = (success: boolean) => {
+    setStatus(success ? 'success' : 'fail');
+
+    const historyItem = success ? targetPreview : sourcePreview;
+    if (historyItem) {
+      setHistory((previous) => [{ item: historyItem, success, date: Date.now() }, ...previous].slice(0, 20));
+    }
+
+    setSource(null);
+    setTarget(null);
+    setSpinResult(null);
+
+    if (idleTimeoutRef.current) {
+      window.clearTimeout(idleTimeoutRef.current);
+    }
+
+    idleTimeoutRef.current = window.setTimeout(() => {
+      setStatus('idle');
+    }, 1200);
   };
 
   if (!isAuthenticated) {
@@ -178,81 +233,131 @@ export default function UpgraderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 pb-[calc(120px+env(safe-area-inset-bottom))] sm:pb-32">
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center gap-2 sm:gap-3">
-          <div className="flex flex-col min-w-0">
-            <h1 className="text-lg sm:text-xl font-black uppercase tracking-tighter text-white">Upgrader</h1>
-            <p className="hidden sm:block text-[10px] text-slate-500 font-bold uppercase tracking-widest">High Risk, High Reward</p>
+    <div className="min-h-screen bg-[#0a0a0c] text-slate-200 font-sans selection:bg-emerald-500/30 pb-32">
+      <header className="h-16 border-b border-white/5 bg-black/20 backdrop-blur-xl flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+            <LucideZap className="w-5 h-5 text-black" />
           </div>
+          <h1 className="text-lg sm:text-xl font-bold tracking-tighter text-white">ELITE <span className="text-emerald-500">UPGRADER</span></h1>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
+            <LucideWallet className="w-4 h-4 text-emerald-400" />
+            <span className="text-sm font-mono font-bold">${balance.toFixed(2)}</span>
+          </div>
+          <LucideHistory className="w-5 h-5 text-slate-400" />
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
-        {error && (
-          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{error}</div>
-        )}
+      <main className="max-w-[1600px] mx-auto flex flex-col lg:grid lg:grid-cols-[340px_1fr_340px] gap-4 lg:gap-8 p-3 sm:p-4 lg:p-8">
+        {error && <div className="lg:col-span-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{error}</div>}
 
-        {realInventoryItems.length === 0 && !loading && (
-          <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-200 text-sm">
-            Your inventory has no available items to upgrade yet.
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
-          <div className="lg:col-span-5 space-y-6">
-            <div className="bg-slate-900/35 border border-slate-800/50 rounded-2xl p-3 sm:p-6">
-              <UpgraderSourcePanel
-                items={realInventoryItems}
-                selectedId={source?.id || null}
-                onSelect={setSource}
-                loading={loading}
-              />
-            </div>
-          </div>
-
-          <div className="hidden lg:flex lg:col-span-1 items-center justify-center">
-            <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 border border-slate-700">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="lg:col-span-6 space-y-6">
-            <div className="bg-slate-900/35 border border-slate-800/50 rounded-2xl p-3 sm:p-6">
-              <UpgraderTargetPanel
-                items={filteredTargets}
-                selectedId={target?.id || null}
-                onSelect={setTarget}
-                loading={loading}
-              />
-            </div>
-          </div>
+        <div className="flex lg:hidden bg-white/5 p-1 rounded-xl border border-white/10">
+          <button onClick={() => setActiveTab('inventory')} className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg ${activeTab === 'inventory' ? 'bg-emerald-500 text-black' : 'text-slate-400'}`}>Inventory</button>
+          <button onClick={() => setActiveTab('targets')} className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg ${activeTab === 'targets' ? 'bg-blue-500 text-black' : 'text-slate-400'}`}>Targets</button>
         </div>
+
+        <section className={`flex flex-col gap-4 overflow-hidden ${activeTab === 'inventory' ? 'flex' : 'hidden lg:flex'}`}>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Your Inventory <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{inventoryItems.length}</span></h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
+            {inventoryItems.map((item) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                isSelected={source?.id === item.id}
+                onClick={() => {
+                  const match = realInventoryItems.find((entry) => entry.id === item.id) ?? null;
+                  setSource(match);
+                }}
+                disabled={status === 'spinning' || loading}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section className="flex flex-col items-center justify-center bg-white/[0.02] rounded-[24px] border border-white/5 relative overflow-hidden p-4 sm:p-6">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] sm:w-[420px] sm:h-[420px] bg-emerald-500/20 blur-[80px] rounded-full pointer-events-none" />
+
+          <div className="relative z-10 w-full max-w-md flex flex-col items-center">
+            <div className="flex items-center gap-3 sm:gap-6 mb-4 sm:mb-8">
+              <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-xl border-2 flex items-center justify-center ${sourcePreview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 bg-white/[0.02]'}`}>
+                {sourcePreview ? <img src={sourcePreview.image} alt={sourcePreview.name} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" /> : <LucideChevronLeft className="text-white/15" />}
+              </div>
+              <LucideArrowRight className={`w-4 h-4 sm:w-6 sm:h-6 ${sourcePreview && targetPreview ? 'text-emerald-500' : 'text-white/20'}`} />
+              <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-xl border-2 flex items-center justify-center ${targetPreview ? 'border-blue-500/50 bg-blue-500/5' : 'border-white/10 bg-white/[0.02]'}`}>
+                {targetPreview ? <img src={targetPreview.image} alt={targetPreview.name} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" /> : <LucideChevronRight className="text-white/15" />}
+              </div>
+            </div>
+
+            <UpgraderSpinner
+              chance={chance}
+              status={status}
+              spinRotation={spinRotation}
+              spinNonce={spinNonce}
+              spinSuccess={spinResult}
+              onSpinComplete={handleSpinComplete}
+              size={spinnerSize}
+              durationMs={2500}
+            />
+
+            <div className="mt-4 w-full">
+              <button
+                onClick={handleUpgrade}
+                disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting}
+                className={`w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base uppercase tracking-widest transition-all duration-300 ${status === 'idle' && source && target && settings?.enabled ? 'bg-emerald-500 text-black shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-[0.98]' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
+              >
+                {status === 'spinning' ? 'Upgrading...' : 'Upgrade Item'}
+              </button>
+
+              <div className="mt-3 flex items-center justify-center gap-2 text-[10px] text-white/30 uppercase tracking-widest font-bold">
+                <LucideInfo className="w-3 h-3" />
+                <span>Provably Fair System</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={`flex flex-col gap-4 overflow-hidden ${activeTab === 'targets' ? 'flex' : 'hidden lg:flex'}`}>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Target Items <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{targetItems.length}</span></h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
+            {targetItems.map((item) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                isSelected={target?.id === item.id}
+                onClick={() => {
+                  const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
+                  setTarget(match);
+                }}
+                disabled={status === 'spinning' || loading}
+              />
+            ))}
+          </div>
+        </section>
       </main>
 
-      <UpgraderPreviewBar
-        source={source}
-        target={target}
-        onUpgrade={handleUpgrade}
-        disabled={realInventoryItems.length === 0 || !settings?.enabled || isSubmitting || (isModalOpen && resultState === 'processing')}
-        chanceOverride={chance}
-        settings={settings}
-      />
-
-      <UpgraderResultModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        target={modalTarget}
-        onRetry={handleRetry}
-        chance={modalChance}
-        status={resultState}
-        spinId={spinId}
-        awaitingConfirmation={awaitingConfirmation}
-        isConfirming={isSubmitting && awaitingConfirmation}
-        onConfirmUpgrade={handleConfirmUpgrade}
-      />
+      <footer className="fixed bottom-0 left-0 w-full h-20 bg-black/40 backdrop-blur-md border-t border-white/5 px-3 lg:px-8 flex items-center gap-3 overflow-x-auto custom-scrollbar">
+        <div className="flex items-center gap-2 shrink-0 border-r border-white/10 pr-3">
+          <LucideHistory className="w-4 h-4 text-slate-500" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Live Feed</span>
+        </div>
+        {history.map((entry) => (
+          <div key={entry.date} className={`flex items-center gap-2 px-3 py-2 rounded-xl border shrink-0 ${entry.success ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-rose-500/5 border-rose-500/20'}`}>
+            <img src={entry.item.image} alt={entry.item.name} className="w-8 h-8 rounded-lg object-cover" />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-white truncate w-24">{entry.item.name}</span>
+              <span className={`text-[9px] font-bold uppercase ${entry.success ? 'text-emerald-400' : 'text-rose-400'}`}>{entry.success ? 'Upgrade Success' : 'Upgrade Failed'}</span>
+            </div>
+          </div>
+        ))}
+        {history.length === 0 && <p className="text-xs text-slate-600 italic">No recent activity</p>}
+      </footer>
     </div>
   );
 }
