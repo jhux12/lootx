@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Zap } from 'lucide-react';
 import { UpgraderSpinner } from './UpgraderSpinner';
 import { Item } from './upgraderTypes';
 import { CoinAmount } from '../../../components/CoinAmount';
@@ -9,23 +9,34 @@ interface UpgraderSpinPageProps {
   chance: number;
   spinId: number;
   outcome: 'win' | 'lose' | null;
+  hasPendingUpgrade: boolean;
   isDetermining: boolean;
+  onConfirmUpgrade: () => void;
+  isConfirming: boolean;
   onReturn: () => void;
 }
 
-type SpinPhase = 'determining' | 'spinning' | 'result';
+type SpinPhase = 'confirm' | 'determining' | 'spinning' | 'result';
 
 export const UpgraderSpinPage: React.FC<UpgraderSpinPageProps> = ({
   target,
   chance,
   spinId,
   outcome,
+  hasPendingUpgrade,
   isDetermining,
+  onConfirmUpgrade,
+  isConfirming,
   onReturn
 }) => {
-  const [phase, setPhase] = useState<SpinPhase>('determining');
+  const [phase, setPhase] = useState<SpinPhase>('confirm');
 
   useEffect(() => {
+    if (hasPendingUpgrade && !isDetermining && !outcome) {
+      setPhase('confirm');
+      return;
+    }
+
     if (isDetermining) {
       setPhase('determining');
       return;
@@ -34,9 +45,10 @@ export const UpgraderSpinPage: React.FC<UpgraderSpinPageProps> = ({
     if (outcome) {
       setPhase('spinning');
     }
-  }, [isDetermining, outcome, spinId]);
+  }, [hasPendingUpgrade, isDetermining, outcome, spinId]);
 
   const subtitle = useMemo(() => {
+    if (phase === 'confirm') return 'Review your chance, then confirm to begin the upgrade spin.';
     if (phase === 'determining') return 'Locking in your provably fair result...';
     if (phase === 'spinning') return 'Wheel is spinning to reveal your outcome.';
     return outcome === 'win' ? 'Huge hit. Your upgrade landed.' : 'Missed this one. Better luck next spin.';
@@ -50,13 +62,31 @@ export const UpgraderSpinPage: React.FC<UpgraderSpinPageProps> = ({
         <div className="text-center space-y-2">
           <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500 font-bold">Upgrade Session</p>
           <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
-            {phase === 'result' ? (isWin ? 'Upgrade Success' : 'Upgrade Failed') : 'Upgrade in Progress'}
+            {phase === 'confirm'
+              ? 'Confirm Upgrade'
+              : phase === 'result'
+                ? (isWin ? 'Upgrade Success' : 'Upgrade Failed')
+                : 'Upgrade in Progress'}
           </h2>
           <p className="text-sm text-slate-300">{subtitle}</p>
         </div>
 
         <div className="mt-6 sm:mt-8 flex items-center justify-center">
-          {phase === 'determining' ? (
+          {phase === 'confirm' ? (
+            <div className="w-[280px] h-[280px] sm:w-[380px] sm:h-[380px] rounded-full border border-slate-700 bg-slate-950/80 flex flex-col items-center justify-center text-center px-6">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-bold">Chance</p>
+              <p className="text-5xl sm:text-6xl font-black text-white mt-2">{chance.toFixed(chance >= 1 ? 1 : 4)}%</p>
+              <p className="text-sm text-slate-300 mt-3">Press confirm to start. The wheel will spin once and reveal the server result.</p>
+              <button
+                type="button"
+                onClick={onConfirmUpgrade}
+                disabled={isConfirming}
+                className="mt-5 w-full max-w-[220px] rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 text-sm font-bold uppercase tracking-wide transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Zap className="w-4 h-4 fill-current" /> {isConfirming ? 'Confirming...' : 'Confirm Upgrade'}
+              </button>
+            </div>
+          ) : phase === 'determining' ? (
             <div className="w-[280px] h-[280px] sm:w-[380px] sm:h-[380px] rounded-full border border-indigo-500/25 bg-indigo-500/5 flex flex-col items-center justify-center text-center px-6">
               <div className="w-10 h-10 rounded-full border-2 border-indigo-300/30 border-t-indigo-400 animate-spin mb-4" />
               <p className="text-sm text-slate-200 font-semibold">Determining outcome</p>

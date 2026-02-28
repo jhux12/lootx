@@ -29,6 +29,7 @@ export default function UpgraderPage() {
   const [targets, setTargets] = useState<Item[]>([]);
   const [resultState, setResultState] = useState<'win' | 'lose' | null>(null);
   const [spinTarget, setSpinTarget] = useState<Item | null>(null);
+  const [pendingUpgrade, setPendingUpgrade] = useState<{ sourceId: string; targetId: string } | null>(null);
   const [modalChance, setModalChance] = useState(0);
   const [spinId, setSpinId] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -104,20 +105,26 @@ export default function UpgraderPage() {
     }) * 100;
   }, [settings, source, target]);
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = () => {
     if (!source || !target || !settings || isSubmitting) return;
 
     setError(null);
     setShowSpinPage(true);
     setSpinTarget(target);
+    setPendingUpgrade({ sourceId: source.id, targetId: target.id });
     setModalChance(chance);
     setResultState(null);
+  };
+
+  const handleConfirmUpgrade = async () => {
+    if (!pendingUpgrade || isSubmitting) return;
+
     setIsSubmitting(true);
 
     try {
       const response = await attemptUpgrade({
-        sourceItemInstanceId: source.id,
-        targetItemId: target.id,
+        sourceItemInstanceId: pendingUpgrade.sourceId,
+        targetItemId: pendingUpgrade.targetId,
         clientSeed: `${Date.now()}`
       });
 
@@ -125,10 +132,12 @@ export default function UpgraderPage() {
       setSpinId((prev) => prev + 1);
       setSource(null);
       setTarget(null);
+      setPendingUpgrade(null);
     } catch (attemptError) {
       setError(attemptError instanceof Error ? attemptError.message : 'Upgrade failed.');
       setShowSpinPage(false);
       setSpinTarget(null);
+      setPendingUpgrade(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -139,6 +148,7 @@ export default function UpgraderPage() {
     setShowSpinPage(false);
     setResultState(null);
     setSpinTarget(null);
+    setPendingUpgrade(null);
   };
 
   if (!isAuthenticated) {
@@ -174,7 +184,10 @@ export default function UpgraderPage() {
           chance={modalChance}
           spinId={spinId}
           outcome={resultState}
+          hasPendingUpgrade={Boolean(pendingUpgrade)}
           isDetermining={isSubmitting && !resultState}
+          onConfirmUpgrade={handleConfirmUpgrade}
+          isConfirming={isSubmitting && Boolean(pendingUpgrade)}
           onReturn={handleReturnFromSpinPage}
         />
       </div>
