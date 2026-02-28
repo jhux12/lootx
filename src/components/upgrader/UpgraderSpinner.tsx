@@ -111,12 +111,18 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   };
 
   useEffect(() => {
-    if (spinRunId === 0) return;
+    if (spinRunId === 0) {
+      runIdRef.current = 0;
+      finishedRef.current = false;
+      inFlightRef.current = false;
+      void controls.set({ rotate: 0 });
+      return;
+    }
     if (spinRunId === runIdRef.current) return;
 
     runIdRef.current = spinRunId;
     void startSpinOnce(spinRunId);
-  }, [spinRunId]);
+  }, [controls, spinRunId]);
 
   useEffect(() => () => {
     mountedRef.current = false;
