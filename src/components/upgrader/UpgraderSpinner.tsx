@@ -1,181 +1,231 @@
-import React, { useEffect, useRef } from 'react';
-import { motion, useAnimationControls } from 'motion/react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Item } from './upgraderTypes';
 
 interface UpgraderSpinnerProps {
   chance: number;
   onFinish: (isWin: boolean) => void;
   spinRunId: number;
+  shouldStop?: boolean;
   forcedWin?: boolean;
+  targetItem?: Item | null;
 }
 
-const SPIN_FULL_ROTATIONS = 10;
-const SPIN_SETTLE_DURATION_S = 5.8;
-const SPIN_RESULT_DELAY_MS = 180;
+interface UpgraderSpinnerTile {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  isMiss?: boolean;
+}
 
-const randomInRange = (min: number, max: number) => {
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return 0;
-  if (max <= min) return min;
-  return min + Math.random() * (max - min);
+const CARD_WIDTH = 96;
+const CARD_GAP = 10;
+const STEP = CARD_WIDTH + CARD_GAP;
+const STOP_INDEX = 16;
+const CYCLE_LENGTH = 28;
+const REEL_LENGTH = CYCLE_LENGTH * 3;
+const SPIN_SPEED_PX_PER_MS = 0.22;
+const STOP_DURATION_MS = 2500;
+
+const missTile: UpgraderSpinnerTile = {
+  id: 'upgrader-miss',
+  name: 'Miss',
+  isMiss: true
+};
+
+const buildTargetTile = (targetItem?: Item | null): UpgraderSpinnerTile => {
+  if (!targetItem) return missTile;
+  return {
+    id: targetItem.id,
+    name: targetItem.name,
+    imageUrl: targetItem.imageUrl,
+    isMiss: false
+  };
+};
+
+const countSpacing = (chance: number) => {
+  if (chance >= 65) return 2;
+  if (chance >= 40) return 3;
+  if (chance >= 20) return 4;
+  if (chance >= 10) return 6;
+  return 8;
 };
 
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   chance,
   onFinish,
   spinRunId,
-  forcedWin
+  shouldStop = false,
+  forcedWin,
+  targetItem
 }) => {
-  const controls = useAnimationControls();
-  const runIdRef = useRef(0);
-  const inFlightRef = useRef(false);
-  const finishedRef = useRef(false);
-  const rafRef = useRef<number | null>(null);
-  const timeoutRef = useRef<number | null>(null);
-  const totalRotationRef = useRef(0);
-  const isWinRef = useRef(false);
-  const onFinishRef = useRef(onFinish);
-  const mountedRef = useRef(true);
+  const [translateX, setTranslateX] = useState(0);
+  const [isStopping, setIsStopping] = useState(false);
+  const [isStopped, setIsStopped] = useState(false);
+  const [spinResult, setSpinResult] = useState(false);
+  const [spinStateToken, setSpinStateToken] = useState(0);
 
-  const size = 200;
-  const strokeWidth = 12;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
+  const translateRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
 
   const safeChance = Math.min(99.9999, Math.max(0.0001, chance));
-  const winZoneAngle = (safeChance / 100) * 360;
-  const dashOffset = circumference - (safeChance / 100) * circumference;
+  const centerOffset = useMemo(() => `calc(50% - ${CARD_WIDTH / 2}px)`, []);
+
+  const cycleTiles = useMemo(() => {
+    const target = buildTargetTile(targetItem);
+    const spacing = countSpacing(safeChance);
+
+    return Array.from({ length: CYCLE_LENGTH }, (_, idx) => {
+      if (!target.isMiss && idx % spacing === 0) {
+        return { ...target, id: `${target.id}-seed-${idx}` };
+      }
+      return { ...missTile, id: `miss-seed-${idx}` };
+    });
+  }, [safeChance, targetItem]);
+
+  const reelItems = useMemo(() => {
+    const target = buildTargetTile(targetItem);
+    const items = [...cycleTiles, ...cycleTiles, ...cycleTiles].map((tile, idx) => ({
+      ...tile,
+      id: `${tile.id}-${idx}`
+    }));
+
+    const stopAbsoluteIndex = CYCLE_LENGTH * 2 + STOP_INDEX;
+    items[stopAbsoluteIndex] = spinResult ? { ...target, id: `${target.id}-stop-${spinStateToken}` } : { ...missTile, id: `miss-stop-${spinStateToken}` };
+
+    return items;
+  }, [cycleTiles, spinResult, spinStateToken, targetItem]);
 
   useEffect(() => {
-    onFinishRef.current = onFinish;
-  }, [onFinish]);
-
-  const safeFinish = (runId: number) => {
-    if (!mountedRef.current || runId !== runIdRef.current || finishedRef.current) return;
-    finishedRef.current = true;
-    inFlightRef.current = false;
-    console.log('[UpgraderSpinner] finish', runId);
-    onFinishRef.current(isWinRef.current);
-  };
-
-  const startSpinOnce = async (runId: number) => {
-    if (inFlightRef.current) return;
-
-    inFlightRef.current = true;
-    finishedRef.current = false;
-
-    controls.stop();
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-
-    await controls.set({ rotate: 0 });
-    if (!mountedRef.current || runId !== runIdRef.current) {
-      inFlightRef.current = false;
+    if (!spinRunId) {
+      setIsStopping(false);
+      setIsStopped(false);
+      setTranslateX(0);
+      translateRef.current = 0;
       return;
     }
 
-    isWinRef.current = typeof forcedWin === 'boolean' ? forcedWin : Math.random() * 100 <= safeChance;
-    const baseRotations = SPIN_FULL_ROTATIONS * 360;
-    const edgePadding = 0.2;
-    const winStart = edgePadding;
-    const winEnd = Math.max(winStart + 0.01, winZoneAngle - edgePadding);
-    const loseStart = Math.min(359.99, winZoneAngle + edgePadding);
-    const loseEnd = 360 - edgePadding;
-    const finalAngle = isWinRef.current
-      ? randomInRange(winStart, winEnd)
-      : randomInRange(loseStart, loseEnd);
-    totalRotationRef.current = baseRotations + finalAngle;
+    const result = forcedWin ?? Math.random() * 100 <= safeChance;
+    setSpinResult(result);
+    setSpinStateToken(spinRunId);
+    setIsStopping(false);
+    setIsStopped(false);
+    setTranslateX(0);
+    translateRef.current = 0;
+  }, [forcedWin, safeChance, spinRunId]);
 
-    console.log('[UpgraderSpinner] start', runId);
-
-    await controls.start({
-      rotate: totalRotationRef.current,
-      transition: {
-        duration: SPIN_SETTLE_DURATION_S,
-        ease: [0.08, 0.86, 0.16, 1]
+  useEffect(() => {
+    if (!spinRunId || shouldStop || isStopping || isStopped) {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
       }
+      return;
+    }
+
+    let lastTs: number | null = null;
+    const loopWidth = CYCLE_LENGTH * STEP;
+
+    const tick = (ts: number) => {
+      if (lastTs === null) {
+        lastTs = ts;
+      }
+
+      const delta = ts - lastTs;
+      lastTs = ts;
+
+      let next = translateRef.current - delta * SPIN_SPEED_PX_PER_MS;
+      if (next <= -loopWidth) next += loopWidth;
+      translateRef.current = next;
+      setTranslateX(next);
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [isStopped, isStopping, shouldStop, spinRunId]);
+
+  useEffect(() => {
+    if (!spinRunId || !shouldStop || isStopping || isStopped) return;
+
+    setIsStopping(true);
+
+    const stopAbsoluteIndex = CYCLE_LENGTH * 2 + STOP_INDEX;
+    let finalTranslateX = -(stopAbsoluteIndex * STEP);
+
+    while (finalTranslateX >= translateRef.current - STEP * 6) {
+      finalTranslateX -= CYCLE_LENGTH * STEP;
+    }
+
+    finalTranslateX -= CYCLE_LENGTH * STEP;
+
+    const frame = requestAnimationFrame(() => {
+      setTranslateX(finalTranslateX);
     });
 
-    if (!mountedRef.current || runId !== runIdRef.current) {
-      inFlightRef.current = false;
-      return;
-    }
+    const timer = window.setTimeout(() => {
+      setIsStopping(false);
+      setIsStopped(true);
+      onFinish(spinResult);
+    }, STOP_DURATION_MS + 120);
 
-    timeoutRef.current = window.setTimeout(() => {
-      rafRef.current = requestAnimationFrame(() => safeFinish(runId));
-    }, SPIN_RESULT_DELAY_MS);
-  };
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [isStopped, isStopping, onFinish, shouldStop, spinResult, spinRunId]);
 
-  useEffect(() => {
-    if (spinRunId === 0) return;
-    if (spinRunId === runIdRef.current) return;
-
-    runIdRef.current = spinRunId;
-    void startSpinOnce(spinRunId);
-  }, [spinRunId]);
-
-  useEffect(() => () => {
-    mountedRef.current = false;
-    inFlightRef.current = false;
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    controls.stop();
-  }, []);
+  const showPreviewFx = spinRunId === 0;
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="transform -rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="transparent"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          className="text-slate-800"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="transparent"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          strokeLinecap="round"
-          className="text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
-        />
-      </svg>
+    <div className="relative w-full overflow-hidden rounded-xl border border-slate-700/70 bg-[#0b0f18] h-[112px] sm:h-[124px]">
+      <div className="pointer-events-none absolute inset-y-0 left-1/2 z-20 w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-indigo-400 to-transparent" />
+      {showPreviewFx && <div className="pointer-events-none absolute inset-0 z-10 animate-pulse bg-[radial-gradient(circle_at_center,rgba(129,140,248,0.2)_0%,transparent_65%)]" />}
 
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-black text-white">{safeChance.toFixed(safeChance >= 1 ? 1 : 4)}%</span>
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Chance</span>
+      <div className="absolute left-0 top-1/2 -translate-y-1/2" style={{ transform: `translate(${centerOffset}, -50%)` }}>
+        <div
+          className={`flex gap-[10px] ${showPreviewFx ? 'animate-reel-idle' : ''}`}
+          style={{
+            transform: showPreviewFx ? undefined : `translateX(${translateX}px)`,
+            transition: isStopping ? `transform ${STOP_DURATION_MS}ms cubic-bezier(0.08, 0.78, 0.22, 1)` : 'none'
+          }}
+        >
+          {reelItems.map((item, index) => {
+            const stopAbsoluteIndex = CYCLE_LENGTH * 2 + STOP_INDEX;
+            const showWinState = index === stopAbsoluteIndex && isStopped;
+
+            return (
+              <div
+                key={item.id}
+                className={`w-24 shrink-0 rounded-lg border p-2 transition-colors ${showWinState ? 'border-indigo-400 bg-indigo-500/15 shadow-[0_0_24px_rgba(129,140,248,0.45)]' : 'border-slate-700 bg-[#111827]'}`}
+              >
+                <div className="h-12 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
+                  {item.isMiss ? (
+                    <span className="text-3xl font-black leading-none text-red-400">X</span>
+                  ) : (
+                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" loading="lazy" />
+                  )}
+                </div>
+                <div className={`text-xs text-center truncate ${item.isMiss ? 'text-red-300' : 'text-slate-100'}`}>{item.isMiss ? 'Miss' : item.name}</div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <motion.div
-        animate={controls}
-        initial={{ rotate: 0 }}
-        className="absolute inset-0 flex items-start justify-center"
-        style={{ transformOrigin: 'center' }}
-      >
-        <div className="w-1 h-10 bg-white rounded-full mt-[-4px] relative shadow-[0_0_10px_rgba(255,255,255,0.8)]">
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 rounded-sm" />
+      {showPreviewFx && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-1 z-20 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-indigo-300/80">
+          Charged & Ready
         </div>
-      </motion.div>
+      )}
 
-      <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none" />
-      <div className="absolute inset-[-10px] rounded-full border border-white/5 pointer-events-none" />
+      <style>{`@keyframes reelIdle { 0% { transform: translateX(0); } 100% { transform: translateX(-212px); } } .animate-reel-idle { animation: reelIdle 3.8s linear infinite; }`}</style>
     </div>
   );
 };

@@ -34,11 +34,13 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
 }) => {
   const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('settling-lose');
   const [spinRunId, setSpinRunId] = useState(0);
+  const [stopRequested, setStopRequested] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
       setDisplayStatus('settling-lose');
       setSpinRunId(0);
+      setStopRequested(false);
       return;
     }
 
@@ -52,6 +54,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   useEffect(() => {
     if (!isOpen || awaitingConfirmation) return;
     if (displayStatus !== 'settling-win' && displayStatus !== 'settling-lose') return;
+    setStopRequested(false);
     setSpinRunId((n) => n + 1);
   }, [awaitingConfirmation, displayStatus, isOpen]);
 
@@ -78,7 +81,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
             </button>
 
             <div className="p-5 sm:p-8 flex flex-col items-center text-center py-8 sm:py-10 gap-4 sm:gap-6">
-              <UpgraderSpinner chance={chance} spinRunId={0} onFinish={() => undefined} />
+              <UpgraderSpinner chance={chance} spinRunId={0} onFinish={() => undefined} targetItem={target} />
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">Confirm Upgrade</h2>
                 <p className="text-slate-400 text-sm">Tap upgrade again to start the spin.</p>
@@ -117,11 +120,21 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                 spinRunId={spinRunId}
                 onFinish={(didWin) => setDisplayStatus(didWin ? 'win' : 'lose')}
                 forcedWin={displayStatus === 'settling-win' ? true : displayStatus === 'settling-lose' ? false : undefined}
+                shouldStop={stopRequested}
+                targetItem={target}
               />
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">Upgrading...</h2>
-                <p className="text-slate-400 text-sm">Finalizing spin</p>
+                <p className="text-slate-400 text-sm">Tap stop to settle the reel.</p>
               </div>
+              <button
+                type="button"
+                onClick={() => setStopRequested(true)}
+                disabled={stopRequested}
+                className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 text-sm font-bold uppercase tracking-wide transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {stopRequested ? 'Stopping…' : 'Stop'}
+              </button>
             </div>
           </motion.div>
         </div>
