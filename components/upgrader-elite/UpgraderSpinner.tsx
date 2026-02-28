@@ -163,8 +163,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           </div>
         )}
         {status === 'idle' && canRotateWinZone && (
-          <div className="text-white/55 text-[10px] sm:text-xs uppercase tracking-[0.16em] font-semibold text-center px-4">
-            Drag the ring to rotate your winning zone
+          <div className="text-white/60 text-[10px] sm:text-xs uppercase tracking-[0.18em] font-semibold text-center px-4">
+            Rotate winning zone
           </div>
         )}
       </div>
