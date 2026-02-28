@@ -1,6 +1,7 @@
 import React from 'react';
 import { RARITY_BG, RARITY_COLORS } from './constants';
 import { Item } from './types';
+import { CoinAmount } from '../CoinAmount';
 
 interface ItemCardProps {
   item: Item;
@@ -20,7 +21,13 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, d
       ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
     `}
   >
-    <div className="absolute top-2 right-2 text-[10px] font-mono opacity-70">${item.price.toFixed(2)}</div>
+    <div className="absolute right-2 top-2 max-w-[72%] sm:max-w-none">
+      <CoinAmount
+        amount={Math.round(item.price)}
+        className="max-w-full truncate text-[10px] font-mono opacity-70 sm:max-w-none"
+        iconClassName="h-3 w-3 shrink-0"
+      />
+    </div>
 
     <div className="w-20 h-20 sm:w-24 sm:h-24 mb-2 relative overflow-hidden rounded-lg">
       <img
