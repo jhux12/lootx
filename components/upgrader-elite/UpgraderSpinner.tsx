@@ -31,20 +31,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   return (
     <div className="relative flex flex-col items-center justify-center py-4 sm:py-8">
       <div className="relative" style={{ width: size, height: size }}>
-        <div
-          onTransitionEnd={(event) => {
-            if (event.propertyName !== 'transform') return;
-            if (status !== 'spinning') return;
-            if (handledNonceRef.current === spinNonce) return;
-            handledNonceRef.current = spinNonce;
-            onSpinComplete(Boolean(spinSuccess));
-          }}
-          className="absolute inset-0 rounded-full"
-          style={{
-            transform: `rotate(${spinRotation}deg)`,
-            transition: status === 'spinning' ? `transform ${durationMs}ms cubic-bezier(0.2, 0, 0.1, 1)` : 'none'
-          }}
-        >
+        <div className="absolute inset-0 rounded-full">
           <svg width={size} height={size} className="-rotate-90">
             <circle
               cx={size / 2}
@@ -95,7 +82,20 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           )}
         </div>
 
-        <div className="absolute top-0 left-1/2 -ml-[2px] w-[4px] h-1/2 origin-bottom z-20 pointer-events-none">
+        <div
+          onTransitionEnd={(event) => {
+            if (event.propertyName !== 'transform') return;
+            if (status !== 'spinning') return;
+            if (handledNonceRef.current === spinNonce) return;
+            handledNonceRef.current = spinNonce;
+            onSpinComplete(Boolean(spinSuccess));
+          }}
+          className="absolute top-0 left-1/2 -ml-[2px] w-[4px] h-1/2 origin-bottom z-20 pointer-events-none"
+          style={{
+            transform: `rotate(${spinRotation}deg)`,
+            transition: status === 'spinning' ? `transform ${durationMs}ms cubic-bezier(0.2, 0, 0.1, 1)` : 'none'
+          }}
+        >
           <div className="w-full h-full relative">
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 bg-white rounded-full shadow-[0_0_20px_rgba(255,255,255,0.8)] border-4 border-emerald-500" />
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-full bg-gradient-to-b from-white via-white/50 to-transparent" />
