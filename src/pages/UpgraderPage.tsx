@@ -56,6 +56,7 @@ export default function UpgraderPage() {
   const [targets, setTargets] = useState<Item[]>([]);
   const [status, setStatus] = useState<UpgradeStatus>('idle');
   const [spinRotation, setSpinRotation] = useState(0);
+  const [winZoneRotation, setWinZoneRotation] = useState(0);
   const [spinNonce, setSpinNonce] = useState(0);
   const [spinResult, setSpinResult] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -198,21 +199,22 @@ export default function UpgraderPage() {
   const sourcePreview = source ? mapToEliteItem(source) : null;
   const targetPreview = target ? mapToEliteItem(target) : null;
 
-  const computeSpinDelta = (baseChance: number, success: boolean, currentRotation: number) => {
+  const computeSpinDelta = (baseChance: number, success: boolean, currentRotation: number, zoneRotation: number) => {
     const clampedChance = Math.max(0.0001, Math.min(99.9999, baseChance));
     const successSpan = (clampedChance / 100) * 360;
     const minPad = 8;
-    let desiredZoneAngle = 0;
+    let desiredLocalZoneAngle = 0;
 
     if (success) {
       const maxAngle = Math.max(minPad + 1, successSpan - minPad);
-      desiredZoneAngle = minPad + Math.random() * (maxAngle - minPad);
+      desiredLocalZoneAngle = minPad + Math.random() * (maxAngle - minPad);
     } else {
       const failStart = Math.min(359, successSpan + minPad);
       const failEnd = 360 - minPad;
-      desiredZoneAngle = failStart + Math.random() * Math.max(1, failEnd - failStart);
+      desiredLocalZoneAngle = failStart + Math.random() * Math.max(1, failEnd - failStart);
     }
 
+    const desiredZoneAngle = (zoneRotation + desiredLocalZoneAngle + 360) % 360;
     const currentModulo = ((currentRotation % 360) + 360) % 360;
     const moduloDelta = (desiredZoneAngle - currentModulo + 360) % 360;
     return 8 * 360 + moduloDelta;
@@ -234,7 +236,7 @@ export default function UpgraderPage() {
 
       const success = Boolean(response.win);
       setSpinResult(success);
-      setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous));
+      setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
       setSpinNonce((previous) => previous + 1);
     } catch (attemptError) {
       setStatus('idle');
@@ -254,6 +256,7 @@ export default function UpgraderPage() {
 
     setSource(null);
     setTarget(null);
+    setWinZoneRotation(0);
     setSpinResult(null);
 
     if (idleTimeoutRef.current) {
@@ -347,12 +350,51 @@ export default function UpgraderPage() {
               chance={chance}
               status={status}
               spinRotation={spinRotation}
+              winZoneRotation={winZoneRotation}
               spinNonce={spinNonce}
               spinSuccess={spinResult}
               onSpinComplete={handleSpinComplete}
               size={spinnerSize}
               durationMs={SPIN_DURATION_MS}
             />
+
+            <div className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 p-3 sm:p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.18em] text-white/60">Winning Zone Rotation</span>
+                <span className="text-[11px] sm:text-xs font-mono text-violet-300">{Math.round(winZoneRotation)}°</span>
+              </div>
+              <div className="mt-2 flex items-center gap-2 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => setWinZoneRotation((previous) => (previous - 15 + 360) % 360)}
+                  disabled={!source || !target || status === 'spinning'}
+                  className="h-9 w-9 shrink-0 rounded-lg border border-white/15 bg-white/10 text-sm font-black text-white enabled:hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Rotate winning zone left"
+                >
+                  -
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={359}
+                  value={winZoneRotation}
+                  onChange={(event) => setWinZoneRotation(Number(event.target.value))}
+                  disabled={!source || !target || status === 'spinning'}
+                  className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/15 accent-violet-400 disabled:cursor-not-allowed"
+                  aria-label="Rotate winning zone"
+                />
+                <button
+                  type="button"
+                  onClick={() => setWinZoneRotation((previous) => (previous + 15) % 360)}
+                  disabled={!source || !target || status === 'spinning'}
+                  className="h-9 w-9 shrink-0 rounded-lg border border-white/15 bg-white/10 text-sm font-black text-white enabled:hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Rotate winning zone right"
+                >
+                  +
+                </button>
+              </div>
+              {!source || !target ? <p className="mt-2 text-[10px] sm:text-xs text-white/45">Select an inventory and target item to rotate the winning zone.</p> : null}
+            </div>
 
             <div className="mt-4 w-full">
               <button
