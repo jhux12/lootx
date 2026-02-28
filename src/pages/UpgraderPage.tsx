@@ -44,7 +44,7 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
   rarity: normalizeEliteRarity(String(item.rarity ?? 'common'))
 });
 
-const SPIN_DURATION_MS = 4200;
+const SPIN_DURATION_MS = 5200;
 
 export default function UpgraderPage() {
   const { inventory, isAuthenticated, openAuthModal } = useGame();
