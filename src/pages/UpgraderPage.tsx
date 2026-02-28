@@ -5,7 +5,9 @@ import {
   LucideInfo,
   LucideZap,
   LucideChevronLeft,
-  LucideChevronRight
+  LucideChevronRight,
+  LucideVolume2,
+  LucideVolumeX
 } from 'lucide-react';
 import { InventoryItem, Item, Rarity } from '../components/upgrader/upgraderTypes';
 import { useGame } from '../../context/GameContext';
@@ -15,6 +17,7 @@ import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
 import { ItemCard } from '../../components/upgrader-elite/ItemCard';
 import { UpgraderSpinner } from '../../components/upgrader-elite/UpgraderSpinner';
 import { Item as EliteItem, UpgradeStatus } from '../../components/upgrader-elite/types';
+import upgraderSoundUrl from '../../assets/upgrader.mp3';
 
 const rarityMap: Record<string, Rarity> = {
   common: 'Common',
@@ -57,7 +60,46 @@ export default function UpgraderPage() {
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
   const idleTimeoutRef = useRef<number | null>(null);
+  const spinAudioRef = useRef<HTMLAudioElement | null>(null);
   const [spinnerSize, setSpinnerSize] = useState<number>(290);
+  const [isMuted, setIsMuted] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('upgrader-audio-muted') === '1';
+  });
+
+  useEffect(() => {
+    const audio = new Audio(upgraderSoundUrl);
+    audio.preload = 'auto';
+    audio.volume = 0.45;
+    spinAudioRef.current = audio;
+
+    return () => {
+      if (spinAudioRef.current) {
+        spinAudioRef.current.pause();
+        spinAudioRef.current.currentTime = 0;
+      }
+      spinAudioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('upgrader-audio-muted', isMuted ? '1' : '0');
+  }, [isMuted]);
+
+  useEffect(() => {
+    const audio = spinAudioRef.current;
+    if (!audio) return;
+
+    if (status === 'spinning' && spinNonce > 0 && !isMuted) {
+      audio.currentTime = 0;
+      void audio.play().catch(() => undefined);
+      return;
+    }
+
+    audio.pause();
+    audio.currentTime = 0;
+  }, [isMuted, spinNonce, status]);
 
   useEffect(() => {
     void (async () => {
@@ -241,7 +283,18 @@ export default function UpgraderPage() {
           <h1 className="text-lg sm:text-xl font-bold tracking-tighter text-white">ELITE <span className="text-violet-400">UPGRADER</span></h1>
         </div>
 
-        <LucideHistory className="w-5 h-5 text-slate-400" />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsMuted((previous) => !previous)}
+            className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 transition flex items-center justify-center"
+            aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}
+            title={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}
+          >
+            {isMuted ? <LucideVolumeX className="w-5 h-5" /> : <LucideVolume2 className="w-5 h-5" />}
+          </button>
+          <LucideHistory className="w-5 h-5 text-slate-400" />
+        </div>
       </header>
 
       <main className="max-w-[1600px] mx-auto flex flex-col lg:grid lg:grid-cols-[340px_1fr_340px] gap-4 lg:gap-8 p-3 sm:p-4 lg:p-8">
