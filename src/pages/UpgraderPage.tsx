@@ -7,7 +7,8 @@ import {
   LucideChevronLeft,
   LucideChevronRight,
   LucideVolume2,
-  LucideVolumeX
+  LucideVolumeX,
+  LucideX
 } from 'lucide-react';
 import { InventoryItem, Item, Rarity } from '../components/upgrader/upgraderTypes';
 import { useGame } from '../../context/GameContext';
@@ -62,6 +63,7 @@ export default function UpgraderPage() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
+  const [infoItem, setInfoItem] = useState<{ item: EliteItem; origin: 'Inventory' | 'Target' } | null>(null);
   const idleTimeoutRef = useRef<number | null>(null);
   const spinAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastPlayedSpinNonceRef = useRef<number>(0);
@@ -333,6 +335,7 @@ export default function UpgraderPage() {
                   const match = realInventoryItems.find((entry) => entry.id === item.id) ?? null;
                   setSource(match);
                 }}
+                onInfoClick={() => setInfoItem({ item, origin: 'Inventory' })}
                 disabled={status === 'spinning' || loading}
               />
             ))}
@@ -413,12 +416,58 @@ export default function UpgraderPage() {
                   const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
                   setTarget(match);
                 }}
+                onInfoClick={() => setInfoItem({ item, origin: 'Target' })}
                 disabled={status === 'spinning' || loading}
               />
             ))}
           </div>
         </section>
       </main>
+
+
+      <div className={`fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${infoItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={() => setInfoItem(null)} />
+      <div className={`fixed bottom-0 left-0 right-0 z-[120] transform transition-transform duration-500 ${infoItem ? 'translate-y-0' : 'translate-y-full'}`}>
+        {infoItem && (
+          <div role="dialog" aria-modal="true" aria-labelledby="upgrader-item-details-title" className="mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)]">
+            <div className="relative flex h-56 items-center justify-center overflow-hidden" style={{ background: 'radial-gradient(circle at top, rgba(139,92,246,0.45) 0%, transparent 72%)' }}>
+              <button
+                type="button"
+                onClick={() => setInfoItem(null)}
+                className="absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white"
+                aria-label="Close item details"
+              >
+                <LucideX className="h-4 w-4" />
+              </button>
+              <img src={infoItem.item.image} alt={infoItem.item.name} className="relative z-10 h-40 w-40 object-contain drop-shadow-2xl" referrerPolicy="no-referrer" />
+            </div>
+            <div className="space-y-4 px-5 py-6 sm:px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+              <div className="text-center">
+                <h3 id="upgrader-item-details-title" className="text-xl font-bold text-white">{infoItem.item.name}</h3>
+                <div className="mt-2 inline-flex items-center rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase text-violet-200">
+                  {infoItem.item.rarity}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
+                  <span className="block text-[10px] font-bold uppercase tracking-wide text-gray-400">Value</span>
+                  <div className="mt-1 text-lg font-bold text-white">
+                    <CoinAmount amount={Math.round(infoItem.item.price)} iconClassName="h-4 w-4" />
+                  </div>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
+                  <span className="block text-[10px] font-bold uppercase tracking-wide text-gray-400">Type</span>
+                  <div className="mt-1 text-sm font-bold text-white">{infoItem.origin} Item</div>
+                </div>
+              </div>
+
+              <button type="button" onClick={() => setInfoItem(null)} className="h-11 w-full rounded-xl bg-white text-sm font-bold text-black transition hover:bg-gray-200">
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <footer className="fixed bottom-[calc(env(safe-area-inset-bottom)+62px)] lg:bottom-0 left-0 w-full h-20 bg-[#080b10]/90 backdrop-blur-md border-t border-white/10 px-3 lg:px-8 flex items-center gap-3 overflow-x-auto custom-scrollbar z-50">
         <div className="flex items-center gap-2 shrink-0 border-r border-white/10 pr-3">
