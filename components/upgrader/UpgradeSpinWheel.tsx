@@ -8,13 +8,21 @@ type Props = {
   phase: SpinPhase;
   rotationDeg: number;
   target?: UpgraderTarget;
+  canRotateWinZone?: boolean;
+  onManualRotate?: (nextRotation: number) => void;
 };
 
-export const UpgradeSpinWheel: React.FC<Props> = ({ chance, phase, rotationDeg, target }) => {
+export const UpgradeSpinWheel: React.FC<Props> = ({ chance, phase, rotationDeg, target, canRotateWinZone = false, onManualRotate }) => {
   const chancePercent = Math.max(0, Math.min(100, chance * 100));
   const chanceDegrees = chancePercent * 3.6;
   const targetName = (target?.name || 'Select target').toUpperCase();
   const targetPrice = Number(target?.coinValue ?? 0);
+  const normalizedRotation = ((rotationDeg % 360) + 360) % 360;
+
+  const nudgeRotation = (delta: number) => {
+    if (!canRotateWinZone || !onManualRotate) return;
+    onManualRotate(normalizedRotation + delta);
+  };
 
   return (
     <div className="rounded-2xl border border-white/10 bg-[#0d1426] p-4 sm:p-5">
@@ -44,6 +52,40 @@ export const UpgradeSpinWheel: React.FC<Props> = ({ chance, phase, rotationDeg, 
         </div>
       </div>
       <p className="mt-3 text-center text-xs text-gray-400">Chance: {chancePercent.toFixed(2)}% · Green segment is the win zone.</p>
+      <div className="mt-3 rounded-xl border border-white/10 bg-[#121a31] p-3">
+        <p className="text-center text-xs font-semibold uppercase tracking-wide text-gray-400">Winning zone rotation</p>
+        <div className="mt-2 flex items-center justify-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => nudgeRotation(-15)}
+            disabled={!canRotateWinZone}
+            className="min-h-10 rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            -15°
+          </button>
+          <button
+            type="button"
+            onClick={() => nudgeRotation(15)}
+            disabled={!canRotateWinZone}
+            className="min-h-10 rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            +15°
+          </button>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={359}
+          value={Math.round(normalizedRotation)}
+          onChange={(event) => onManualRotate?.(Number(event.target.value))}
+          disabled={!canRotateWinZone}
+          className="mt-3 h-8 w-full accent-emerald-400 disabled:cursor-not-allowed"
+          aria-label="Rotate winning zone"
+        />
+        <p className="mt-1 text-center text-xs text-gray-400">
+          {canRotateWinZone ? `Current angle: ${Math.round(normalizedRotation)}°` : 'Select inventory and target items to rotate the winning zone.'}
+        </p>
+      </div>
     </div>
   );
 };
