@@ -20,7 +20,9 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, d
       ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
     `}
   >
-    <div className="absolute top-2 right-2 text-[10px] font-mono opacity-70">${item.price.toFixed(2)}</div>
+    <div className="absolute right-2 top-2 max-w-[72%] truncate text-[10px] font-mono opacity-70 sm:max-w-none">
+      {item.price.toLocaleString()} coins
+    </div>
 
     <div className="w-20 h-20 sm:w-24 sm:h-24 mb-2 relative overflow-hidden rounded-lg">
       <img
