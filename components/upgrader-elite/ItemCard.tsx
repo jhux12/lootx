@@ -7,10 +7,11 @@ interface ItemCardProps {
   item: Item;
   isSelected?: boolean;
   onClick?: () => void;
+  onInfoClick?: (item: Item) => void;
   disabled?: boolean;
 }
 
-export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, disabled }) => (
+export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, onInfoClick, disabled }) => (
   <button
     onClick={onClick}
     disabled={disabled}
@@ -21,6 +22,30 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, d
       ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
     `}
   >
+    {onInfoClick && (
+      <span className="absolute left-2 top-2 z-20">
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label={`View ${item.name} details`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onInfoClick(item);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              event.stopPropagation();
+              onInfoClick(item);
+            }
+          }}
+          className="flex h-6 w-6 items-center justify-center rounded-full border border-white/25 bg-black/60 text-[11px] font-black text-white shadow-lg transition hover:bg-black/80"
+        >
+          i
+        </span>
+      </span>
+    )}
+
     <div className="absolute right-2 top-2 max-w-[72%] sm:max-w-none">
       <CoinAmount
         amount={Math.round(item.price)}

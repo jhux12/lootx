@@ -62,6 +62,7 @@ export default function UpgraderPage() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
+  const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
   const idleTimeoutRef = useRef<number | null>(null);
   const spinAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastPlayedSpinNonceRef = useRef<number>(0);
@@ -329,6 +330,7 @@ export default function UpgraderPage() {
                 key={item.id}
                 item={item}
                 isSelected={source?.id === item.id}
+                onInfoClick={setDetailsItem}
                 onClick={() => {
                   const match = realInventoryItems.find((entry) => entry.id === item.id) ?? null;
                   setSource(match);
@@ -409,6 +411,7 @@ export default function UpgraderPage() {
                 key={item.id}
                 item={item}
                 isSelected={target?.id === item.id}
+                onInfoClick={setDetailsItem}
                 onClick={() => {
                   const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
                   setTarget(match);
@@ -419,6 +422,42 @@ export default function UpgraderPage() {
           </div>
         </section>
       </main>
+
+      {detailsItem && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-3 sm:p-4" onClick={() => setDetailsItem(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upgrader-item-details-title"
+            className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0f1524] p-4 sm:p-5 shadow-[0_-12px_40px_rgba(0,0,0,0.65)] animate-[upgraderSheetIn_220ms_ease-out]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 id="upgrader-item-details-title" className="text-sm font-bold uppercase tracking-widest text-slate-300">Item Details</h2>
+              <button
+                type="button"
+                onClick={() => setDetailsItem(null)}
+                className="rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-slate-200 hover:bg-white/10"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <img
+                src={detailsItem.image}
+                alt={detailsItem.name}
+                className="mx-auto h-28 w-28 sm:h-32 sm:w-32 rounded-xl object-cover"
+                referrerPolicy="no-referrer"
+              />
+              <p className="mt-4 text-center text-base font-semibold text-white">{detailsItem.name}</p>
+              <div className="mt-2 flex justify-center">
+                <CoinAmount amount={Math.round(detailsItem.price)} className="text-sm font-bold text-amber-300" iconClassName="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="fixed bottom-[calc(env(safe-area-inset-bottom)+62px)] lg:bottom-0 left-0 w-full h-20 bg-[#080b10]/90 backdrop-blur-md border-t border-white/10 px-3 lg:px-8 flex items-center gap-3 overflow-x-auto custom-scrollbar z-50">
         <div className="flex items-center gap-2 shrink-0 border-r border-white/10 pr-3">
@@ -436,6 +475,19 @@ export default function UpgraderPage() {
         ))}
         {history.length === 0 && <p className="text-xs text-slate-600 italic">No recent activity</p>}
       </footer>
+
+      <style>{`
+        @keyframes upgraderSheetIn {
+          from {
+            opacity: 0;
+            transform: translateY(22px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
