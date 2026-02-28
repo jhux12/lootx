@@ -61,6 +61,7 @@ export default function UpgraderPage() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
   const idleTimeoutRef = useRef<number | null>(null);
   const spinAudioRef = useRef<HTMLAudioElement | null>(null);
+  const lastPlayedSpinNonceRef = useRef<number>(0);
   const [spinnerSize, setSpinnerSize] = useState<number>(290);
   const [isMuted, setIsMuted] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -89,17 +90,23 @@ export default function UpgraderPage() {
 
   useEffect(() => {
     const audio = spinAudioRef.current;
-    if (!audio) return;
+    if (!audio || isMuted) return;
+    if (status !== 'spinning' || spinNonce <= 0) return;
+    if (lastPlayedSpinNonceRef.current === spinNonce) return;
 
-    if (status === 'spinning' && spinNonce > 0 && !isMuted) {
-      audio.currentTime = 0;
-      void audio.play().catch(() => undefined);
-      return;
-    }
+    lastPlayedSpinNonceRef.current = spinNonce;
+    audio.currentTime = 0;
+    void audio.play().catch(() => undefined);
+  }, [isMuted, spinNonce, status]);
+
+  useEffect(() => {
+    if (!isMuted) return;
+    const audio = spinAudioRef.current;
+    if (!audio) return;
 
     audio.pause();
     audio.currentTime = 0;
-  }, [isMuted, spinNonce, status]);
+  }, [isMuted]);
 
   useEffect(() => {
     void (async () => {
