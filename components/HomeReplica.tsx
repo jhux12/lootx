@@ -25,7 +25,7 @@ const FAQ_ITEMS: FaqItem[] = [
       'Pullz is an online mystery box platform where every item is a real, physical product. You can open a box, then either ship your item or trade it for coins.'
   },
   {
-    question: 'What are Coina',
+    question: 'What are Coins?',
     answer:
       'Coins are your in-app balance used to open mystery boxes. You can add coins from the top-up section and use them instantly across categories.'
   },
