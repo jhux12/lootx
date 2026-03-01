@@ -1,17 +1,23 @@
-import { addDoc, collection, deleteDoc, deleteField, doc, getDocs, setDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, deleteField, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { DEFAULT_UPGRADER_SETTINGS, UpgraderSettings, UpgraderTarget, normalizeUpgraderSettings } from '../utils/upgrader';
 import { sanitizeForFirestore } from '../utils/firestoreSanitize';
 
 export const saveUpgraderSettings = async (settings: Partial<UpgraderSettings>) => {
+  const existingSnapshot = await getDoc(doc(db, 'settings', 'upgrader'));
+  const mergedSettings = normalizeUpgraderSettings({
+    ...(existingSnapshot.exists() ? existingSnapshot.data() : {}),
+    ...settings
+  });
+
   const payload: Record<string, unknown> = {
     ...DEFAULT_UPGRADER_SETTINGS,
-    ...settings,
+    ...mergedSettings,
     serverSeed: deleteField(),
     updatedAt: Date.now()
   };
 
-  if (typeof settings.serverSeedHash !== 'string') {
+  if (typeof mergedSettings.serverSeedHash !== 'string') {
     delete payload.serverSeedHash;
   }
 
