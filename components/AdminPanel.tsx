@@ -1974,22 +1974,7 @@ export const AdminPanel: React.FC = () => {
           });
       }
 
-      const box: MysteryBox = {
-          id: editingBoxId || '', // Empty ID tells createBox to addDoc
-          name: newBox.name!,
-          price: isXpBox ? 0 : Number(newBox.price),
-          priceXP: isXpBox ? Math.max(0, Math.floor(Number(newBox.priceXP ?? 0))) : undefined,
-          currencyType: isXpBox ? 'XP' : 'COIN',
-          image: newBox.image || 'https://picsum.photos/300',
-          accentColor: newBox.accentColor || '#3b82f6',
-          tag: newBox.tag,
-          tags: normalizeBoxTagList(newBox.tags ?? []),
-          isDaily: newBox.isDaily,
-          sellBackRate: newBox.sellBackRate ?? (newBox.isDaily ? 0.75 : 0.82),
-          items: boxItems,
-          targetEV: clampedTargetEV,
-          riskLevel: riskBalance
-      };
+      const box: MysteryBox = buildEditableBoxPayload(boxItems);
 
       if (editingBoxId) {
           updateBox(box);
@@ -2084,6 +2069,36 @@ export const AdminPanel: React.FC = () => {
       } else {
           setSelectedItems(prev => [...prev, { ...item }]);
       }
+  };
+
+  const buildEditableBoxPayload = (items: CaseItem[]): MysteryBox => ({
+      id: editingBoxId || '', // Empty ID tells createBox to addDoc
+      name: newBox.name || '',
+      price: isXpBox ? 0 : Number(newBox.price),
+      priceXP: isXpBox ? Math.max(0, Math.floor(Number(newBox.priceXP ?? 0))) : undefined,
+      currencyType: isXpBox ? 'XP' : 'COIN',
+      image: newBox.image || 'https://picsum.photos/300',
+      accentColor: newBox.accentColor || '#3b82f6',
+      tag: newBox.tag,
+      tags: normalizeBoxTagList(newBox.tags ?? []),
+      isDaily: newBox.isDaily,
+      sellBackRate: newBox.sellBackRate ?? (newBox.isDaily ? 0.75 : 0.82),
+      items,
+      targetEV: clampedTargetEV,
+      riskLevel: riskBalance
+  });
+
+  const handleSelectedItemRarityChange = (itemId: string, rarity: CaseItem['rarity']) => {
+      const normalizedRarity = rarityColorMap[rarity] ? rarity : 'common';
+      const nextItems = selectedItems.map((entry) => (
+          entry.id === itemId
+              ? { ...entry, rarity: normalizedRarity, color: rarityColorMap[normalizedRarity] }
+              : entry
+      ));
+      setSelectedItems(nextItems);
+
+      if (!editingBoxId) return;
+      updateBox(buildEditableBoxPayload(nextItems.map((entry) => ({ ...entry }))));
   };
 
   const handleSaveBonusSettings = () => {
@@ -3129,9 +3144,9 @@ export const AdminPanel: React.FC = () => {
                                      <h4 className="text-sm font-bold text-gray-400 uppercase mb-2">Box Contents ({selectedItems.length})</h4>
                                      <div className="space-y-1">
                                          {selectedItems.map((item, idx) => (
-                                             <div key={idx} className="flex items-center gap-2 text-xs bg-[#131720] p-1.5 rounded border border-gray-700">
+                                             <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700">
                                                  <img src={item.image} className="w-5 h-5 object-contain" />
-                                                 <span className="flex-1 text-gray-300 truncate">{item.name}</span>
+                                                 <span className="min-w-[120px] flex-1 text-gray-300 truncate">{item.name}</span>
                                                  <CoinAmount
                                                    amount={toCoins(item.price, PRICE_UNIT_MODE)}
                                                    formatOptions={{ maximumFractionDigits: 0 }}
@@ -3142,9 +3157,21 @@ export const AdminPanel: React.FC = () => {
                                                      <span className="text-gray-400">Chance:</span>
                                                      <span className="font-bold text-white">{item.chance}%</span>
                                                  </div>
-                                                 <div className="px-2 py-0.5 rounded font-bold uppercase text-[9px]" style={{ color: item.color, backgroundColor: `${item.color}15` }}>
-                                                     {item.rarity}
-                                                 </div>
+                                                 <label className="relative">
+                                                     <span className="sr-only">Item rarity for {item.name}</span>
+                                                     <select
+                                                         value={item.rarity}
+                                                         onChange={(event) => handleSelectedItemRarityChange(item.id, event.target.value as CaseItem['rarity'])}
+                                                         className="cursor-pointer rounded font-bold uppercase text-[10px] px-2 py-1 pr-6 border border-white/10 bg-black/30 focus:outline-none focus:ring-2 focus:ring-brand-purple"
+                                                         style={{ color: item.color, backgroundColor: `${item.color}20` }}
+                                                     >
+                                                         {rarityColorOptions.map((option) => (
+                                                             <option key={option.value} value={option.value}>
+                                                                 {option.label}
+                                                             </option>
+                                                         ))}
+                                                     </select>
+                                                 </label>
                                              </div>
                                          ))}
                                      </div>
