@@ -15,7 +15,9 @@ const getCoinValue = (item = {}) => Math.max(0, toNumber(item.coinValue ?? item.
 
 const computeChance = ({ sourceValue, targetValue, settings, sourceItem, targetItem, user }) => {
   const raw = sourceValue / targetValue;
-  let chance = raw * toNumber(settings.edgeMultiplier, 0.92);
+  const edgeRaw = toNumber(settings.edgeMultiplier, 0.92);
+  const edge = edgeRaw > 1 ? edgeRaw / 100 : edgeRaw;
+  let chance = raw * edge;
 
   if (settings.rarityBonusEnabled === true && sourceItem.rarity === targetItem.rarity) {
     chance += toNumber(settings.rarityBonusPercent, 0);

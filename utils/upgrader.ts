@@ -64,7 +64,10 @@ const toNumber = (value: unknown, fallback: number) => {
 
 export const normalizeUpgraderSettings = (value: Partial<UpgraderSettings> | null | undefined): UpgraderSettings => ({
   enabled: value?.enabled !== false,
-  edgeMultiplier: Math.max(0, toNumber(value?.edgeMultiplier, DEFAULT_UPGRADER_SETTINGS.edgeMultiplier)),
+  edgeMultiplier: (() => {
+    const edgeRaw = Math.max(0, toNumber(value?.edgeMultiplier, DEFAULT_UPGRADER_SETTINGS.edgeMultiplier));
+    return edgeRaw > 1 ? edgeRaw / 100 : edgeRaw;
+  })(),
   minChance: Math.max(0, Math.min(1, toNumber(value?.minChance, DEFAULT_UPGRADER_SETTINGS.minChance))),
   maxChance: Math.max(0, Math.min(1, toNumber(value?.maxChance, DEFAULT_UPGRADER_SETTINGS.maxChance))),
   minUpgradeRatio: Math.max(1, toNumber(value?.minUpgradeRatio, DEFAULT_UPGRADER_SETTINGS.minUpgradeRatio)),
@@ -106,7 +109,9 @@ export const computeUpgradeChance = ({
   }
 
   const raw = sourceValue / targetValue;
-  let chance = raw * settings.edgeMultiplier;
+  const edgeRaw = settings.edgeMultiplier ?? DEFAULT_UPGRADER_SETTINGS.edgeMultiplier;
+  const edge = edgeRaw > 1 ? edgeRaw / 100 : edgeRaw;
+  let chance = raw * edge;
 
   if (settings.rarityBonusEnabled && isSameRarity) {
     chance += settings.rarityBonusPercent ?? 0;
