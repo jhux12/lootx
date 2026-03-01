@@ -1,6 +1,7 @@
 import { admin, firestore } from '../_lib/firebaseAdmin.js';
 import { readJsonBody, sendJson } from '../_lib/http.js';
 import { BATTLE_STATES, assignTeam, battleSummary, parseAuth, withHttpError } from '../_lib/battles.js';
+import { consumeRateLimit, getRateLimitKey } from '../_utils/ratelimit.js';
 
 const TICK_MIN_INTERVAL_MS = 2000;
 const makeRunId = () => `run_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -12,7 +13,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    await parseAuth(req);
+    const decoded = await parseAuth(req);
+    const rateLimit = consumeRateLimit({
+      key: getRateLimitKey({ req, uid: decoded.uid, prefix: 'battle-tick' }),
+      limit: 30,
+      windowMs: 60_000
+    });
+    if (!rateLimit.ok) {
+      return sendJson(res, 429, { ok: false, error: 'Rate limit' });
+    }
+
     const body = await readJsonBody(req);
     const battleId = typeof body?.battleId === 'string' ? body.battleId : '';
     if (!battleId) {

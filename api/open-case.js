@@ -3,6 +3,7 @@ import { computeRoll, pickPrizeByWeight, randomSeed, sha256 } from './_lib/prova
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { normalizeEconomySettings, getXpCost } from './_lib/economy.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
+import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 
 const DEFAULT_CLIENT_SEED = 'lootx-player';
 const STARTER_COINS = 1000;
@@ -59,6 +60,15 @@ export default async function handler(req, res) {
 
     const decoded = await adminAuth.verifyIdToken(token);
     uid = decoded.uid;
+    const rateLimit = consumeRateLimit({
+      key: getRateLimitKey({ req, uid: decoded.uid, prefix: 'open-case' }),
+      limit: 30,
+      windowMs: 60_000
+    });
+    if (!rateLimit.ok) {
+      return sendJson(res, 429, { ok: false, error: 'Rate limit' });
+    }
+
     const body = await readJsonBody(req);
     const boxId = typeof body?.boxId === 'string' ? body.boxId : (typeof body?.caseId === 'string' ? body.caseId : null);
     const requestedPaymentMethod = body?.paymentMethod === 'xp' ? 'xp' : 'coins';
