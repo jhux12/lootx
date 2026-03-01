@@ -1468,6 +1468,21 @@ export const AdminPanel: React.FC = () => {
       : Number(newBox.price ?? 0);
   const hasExplicitBoxPrice = Number.isFinite(effectiveBoxPrice) && effectiveBoxPrice >= 0;
 
+  const applyRarityOverrides = (computedItems: CaseItem[], sourceItems: CaseItem[] = selectedItems) => {
+      const rarityLookup = new Map(
+          sourceItems.map((entry) => [
+              String(entry.id ?? entry.name),
+              { rarity: entry.rarity, color: entry.color }
+          ])
+      );
+      return computedItems.map((entry) => {
+          const override = rarityLookup.get(String(entry.id ?? entry.name));
+          return override
+              ? { ...entry, rarity: override.rarity, color: override.color }
+              : entry;
+      });
+  };
+
   const calculateBoxConfig = () => {
       if (selectedItems.length === 0) return;
       const baseSelection = selectedItems.map(item => ({ ...item, chance: 0 }));
@@ -1476,7 +1491,10 @@ export const AdminPanel: React.FC = () => {
       const calculatedPrice = hasExplicitBoxPrice
         ? effectiveBoxPrice
         : baseEv / clampedTargetEV;
-      const updatedItems = buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice);
+      const updatedItems = applyRarityOverrides(
+          buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice),
+          selectedItems
+      );
 
       // Apply updates
       setSelectedItems(updatedItems);
@@ -1496,7 +1514,10 @@ export const AdminPanel: React.FC = () => {
           const calculatedPrice = hasExplicitBoxPrice
             ? effectiveBoxPrice
             : baseEv / clampedTargetEV;
-          const updatedItems = buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice);
+          const updatedItems = applyRarityOverrides(
+              buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice),
+              prev
+          );
 
           if (!hasExplicitBoxPrice) {
               setNewBox((current) => ({
@@ -1937,11 +1958,14 @@ export const AdminPanel: React.FC = () => {
           return;
       }
       const baseSelection = selectedItems.map(item => ({ ...item, chance: 0 }));
-      const refreshedItems = buildOddsWithRiskAndTargetEV(
-          baseSelection,
-          riskBalance,
-          clampedTargetEV,
-          Number(effectiveBoxPrice)
+      const refreshedItems = applyRarityOverrides(
+          buildOddsWithRiskAndTargetEV(
+              baseSelection,
+              riskBalance,
+              clampedTargetEV,
+              Number(effectiveBoxPrice)
+          ),
+          selectedItems
       );
       const refreshedOddsTotal = calculateOddsTotal(refreshedItems);
       const refreshedEv = calculateExpectedValue(refreshedItems);
