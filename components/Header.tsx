@@ -209,7 +209,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
               className="inline-flex items-center"
               aria-label="Go home"
             >
-              <BrandLockup showText={false} logoClassName="h-16 w-16 sm:h-22 sm:w-22" />
+              <BrandLockup showText={false} logoClassName="h-12 w-12 sm:h-22 sm:w-22" />
             </button>
 
             <div className="hidden lg:flex lg:gap-x-3">
