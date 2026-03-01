@@ -22,17 +22,17 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     question: 'What is Pullz?',
     answer:
-      'Pullz is an online mystery box platform where every item is a real, physical product. You can open a box, then either ship your item or trade it for credits.'
+      'Pullz is an online mystery box platform where every item is a real, physical product. You can open a box, then either ship your item or trade it for coins.'
   },
   {
-    question: 'What are Credits?',
+    question: 'What are Coina',
     answer:
-      'Credits are your in-app balance used to open mystery boxes. You can add credits from the top-up section and use them instantly across categories.'
+      'Coins are your in-app balance used to open mystery boxes. You can add coins from the top-up section and use them instantly across categories.'
   },
   {
     question: 'How can I redeem my items?',
     answer:
-      'After opening a box, go to your inventory and choose ship to deliver the item, or trade to convert it back to credits for more openings.'
+      'After opening a box, go to your inventory and choose ship to deliver the item, or trade to convert it back to coins for more openings.'
   },
   {
     question: 'Can I get my items shipped?',
@@ -266,7 +266,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
           {[
             ['01', 'Pick a box', 'Choose a category you love'],
             ['02', 'Open it', 'Reveal your pull instantly'],
-            ['03', 'Keep or trade', 'Ship items or convert to credits']
+            ['03', 'Keep or trade', 'Ship items or convert to coins']
           ].map(([num, title, description], index) => {
             const stepImage = stripeSettings.howItWorksStepImageUrls[index]?.trim();
             return (
