@@ -31,7 +31,10 @@ export default function UpgraderSettingsPage() {
     const s = parseFloat(previewSource) || 0;
     const t = parseFloat(previewTarget) || 1;
     if (s <= 0 || t <= 0) return '0.0001';
-    const chance = (s / t) * settings.edgeMultiplier;
+    const raw = s / t;
+    const edgeRaw = settings.edgeMultiplier ?? 0.92;
+    const edge = edgeRaw > 1 ? edgeRaw / 100 : edgeRaw;
+    const chance = raw * edge;
     return (Math.min(Math.max(chance, settings.minChance), settings.maxChance) * 100).toFixed(4);
   };
 
@@ -130,8 +133,19 @@ export default function UpgraderSettingsPage() {
             </label>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase">Edge Multiplier</label>
-              <input type="number" step="0.01" value={settings.edgeMultiplier} onChange={(e) => setSettings({ ...settings, edgeMultiplier: Number(e.target.value || 0) })} className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-sm" />
+              <label className="text-xs font-bold text-slate-500 uppercase">Edge Multiplier (%)</label>
+              <input
+                type="number"
+                step="1"
+                value={((settings.edgeMultiplier ?? 0.92) * 100).toFixed(0)}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    edgeMultiplier: Number(e.target.value || 0) / 100
+                  })
+                }
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-sm"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

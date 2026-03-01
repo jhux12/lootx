@@ -62,7 +62,8 @@ export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
       return formatChancePercent(chanceOverride);
     }
 
-    const edge = settings?.edgeMultiplier ?? 0.95;
+    const edgeRaw = settings?.edgeMultiplier ?? 0.95;
+    const edge = edgeRaw > 1 ? edgeRaw / 100 : edgeRaw;
     const minChance = toPercent(settings?.minChance ?? 0.0001, 0.0001);
     const maxChance = toPercent(settings?.maxChance ?? 80, 80);
     const rawChance = ((source.coinValue / target.coinValue) * edge) * 100;
