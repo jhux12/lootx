@@ -195,6 +195,12 @@ export default function UpgraderPage() {
       isSameRarity: String(source.rarity).toLowerCase() === String(target.rarity).toLowerCase()
     }) * 100;
   }, [settings, source, target]);
+  const reactorGlowRgb = useMemo(() => {
+    if (chance < 30) return '190, 50, 70';
+    if (chance < 60) return '217, 119, 6';
+    return '16, 185, 129';
+  }, [chance]);
+
 
   const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
   const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
@@ -352,7 +358,10 @@ export default function UpgraderPage() {
           </div>
         </section>
 
-        <section className="order-1 lg:order-2 flex flex-col items-center justify-center bg-white/[0.02] rounded-[24px] border border-violet-400/10 relative overflow-hidden p-4 sm:p-6">
+        <section
+          className="order-1 lg:order-2 reactor-stage flex flex-col items-center justify-center bg-white/[0.02] rounded-[24px] border border-violet-400/10 relative overflow-hidden p-4 sm:p-6"
+          style={{ ['--reactor-glow-rgb' as string]: reactorGlowRgb }}
+        >
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] sm:w-[420px] sm:h-[420px] bg-violet-500/20 blur-[80px] rounded-full pointer-events-none" />
 
           <div className="relative z-10 w-full max-w-md flex flex-col items-center">
@@ -384,7 +393,7 @@ export default function UpgraderPage() {
               <button
                 onClick={handleUpgrade}
                 disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting}
-                className={`w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base uppercase tracking-widest transition-all duration-300 ${status === 'idle' && source && target && settings?.enabled ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-[0_0_30px_rgba(34,211,238,0.3)] hover:scale-[1.02] active:scale-[0.98]' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
+                className={`reactor-upgrade-btn w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base uppercase tracking-widest transition-all duration-300 ${status === 'idle' && source && target && settings?.enabled ? 'reactor-upgrade-btn-idle bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-[0_0_30px_rgba(34,211,238,0.2)] hover:scale-[1.02] active:scale-[0.98]' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
               >
                 {status === 'spinning' ? 'Upgrading...' : 'Upgrade Item'}
               </button>
@@ -562,6 +571,128 @@ export default function UpgraderPage() {
           to {
             opacity: 1;
             transform: translateY(0);
+          }
+        }
+
+        @keyframes reactorIdlePulse {
+          0%,
+          100% {
+            transform: scale(1);
+            opacity: 0.72;
+            box-shadow:
+              0 0 0 1px rgba(var(--reactor-glow-rgb), 0.18),
+              0 0 18px rgba(var(--reactor-glow-rgb), 0.18),
+              0 0 34px rgba(var(--reactor-glow-rgb), 0.08);
+          }
+          50% {
+            transform: scale(1.02);
+            opacity: 1;
+            box-shadow:
+              0 0 0 1px rgba(var(--reactor-glow-rgb), 0.24),
+              0 0 24px rgba(var(--reactor-glow-rgb), 0.24),
+              0 0 40px rgba(var(--reactor-glow-rgb), 0.12);
+          }
+        }
+
+        @keyframes rotateEnergy {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        @keyframes reactorBorderShimmer {
+          0% {
+            background-position: 0% 50%;
+          }
+          100% {
+            background-position: 200% 50%;
+          }
+        }
+
+        @keyframes reactorFloat {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-1px);
+          }
+        }
+
+        .reactor-spinner::before {
+          content: '';
+          position: absolute;
+          inset: -6px;
+          border-radius: 9999px;
+          pointer-events: none;
+          opacity: 0;
+          transform: scale(1);
+        }
+
+        .reactor-spinner.spinner-idle::before {
+          animation: reactorIdlePulse 3.6s ease-in-out infinite;
+        }
+
+        .reactor-energy-layer {
+          opacity: 0.2;
+          mix-blend-mode: screen;
+          background: conic-gradient(
+            from 0deg,
+            rgba(var(--reactor-glow-rgb), 0.14) 0deg,
+            rgba(255, 255, 255, 0) 90deg,
+            rgba(var(--reactor-glow-rgb), 0.08) 200deg,
+            rgba(255, 255, 255, 0) 320deg,
+            rgba(var(--reactor-glow-rgb), 0.12) 360deg
+          );
+          animation: rotateEnergy 14s linear infinite;
+        }
+
+        .reactor-spinner.reactor-flicker {
+          filter: brightness(1.06);
+        }
+
+        .reactor-spinner.reactor-flicker::before {
+          opacity: 1;
+          box-shadow:
+            0 0 0 1px rgba(var(--reactor-glow-rgb), 0.28),
+            0 0 28px rgba(var(--reactor-glow-rgb), 0.28),
+            0 0 46px rgba(var(--reactor-glow-rgb), 0.16);
+        }
+
+        .reactor-upgrade-btn {
+          position: relative;
+          overflow: hidden;
+        }
+
+        .reactor-upgrade-btn-idle {
+          border: 1px solid rgba(var(--reactor-glow-rgb), 0.45);
+          background-image:
+            linear-gradient(110deg, rgba(76, 29, 149, 0.95), rgba(6, 182, 212, 0.9)),
+            linear-gradient(120deg, rgba(var(--reactor-glow-rgb), 0.14), rgba(255, 255, 255, 0.06), rgba(var(--reactor-glow-rgb), 0.14));
+          background-origin: border-box;
+          background-clip: padding-box, border-box;
+          background-size: 100% 100%, 220% 100%;
+          animation:
+            reactorBorderShimmer 7s ease-in-out infinite,
+            reactorFloat 5s ease-in-out infinite;
+        }
+
+        .reactor-upgrade-btn-idle:hover {
+          box-shadow:
+            0 0 18px rgba(var(--reactor-glow-rgb), 0.28),
+            0 0 34px rgba(var(--reactor-glow-rgb), 0.18);
+        }
+
+        @media (max-width: 639px) {
+          .reactor-spinner::before {
+            inset: -4px;
+          }
+
+          .reactor-energy-layer {
+            opacity: 0.17;
           }
         }
       `}</style>

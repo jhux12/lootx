@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { LucideCheckCircle2, LucideRefreshCw, LucideXCircle } from 'lucide-react';
 import { UpgradeStatus } from './types';
 
@@ -32,11 +32,60 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   const handledNonceRef = useRef<number>(-1);
   const wheelRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
+  const flickerTimeoutRef = useRef<number | null>(null);
+  const flickerResetRef = useRef<number | null>(null);
+
+  const chanceGlowRgb = useMemo(() => {
+    if (chance < 30) return '190, 50, 70';
+    if (chance < 60) return '217, 119, 6';
+    return '16, 185, 129';
+  }, [chance]);
 
   const circumference = Math.PI * 2 * ((size - 20) / 2);
   const offset = circumference - (Math.max(0, Math.min(100, chance)) / 100) * circumference;
 
   const wheelCenter = useMemo(() => ({ x: size / 2, y: size / 2 }), [size]);
+
+  useEffect(() => {
+    const clearFlickerTimers = () => {
+      if (flickerTimeoutRef.current) {
+        window.clearTimeout(flickerTimeoutRef.current);
+        flickerTimeoutRef.current = null;
+      }
+      if (flickerResetRef.current) {
+        window.clearTimeout(flickerResetRef.current);
+        flickerResetRef.current = null;
+      }
+    };
+
+    clearFlickerTimers();
+    wheelRef.current?.classList.remove('reactor-flicker');
+
+    if (status !== 'idle') {
+      return clearFlickerTimers;
+    }
+
+    let isCancelled = false;
+    const runFlicker = () => {
+      if (isCancelled || !wheelRef.current) return;
+
+      wheelRef.current.classList.add('reactor-flicker');
+
+      flickerResetRef.current = window.setTimeout(() => {
+        wheelRef.current?.classList.remove('reactor-flicker');
+      }, 120 + Math.floor(Math.random() * 80));
+
+      flickerTimeoutRef.current = window.setTimeout(runFlicker, 2000 + Math.floor(Math.random() * 2000));
+    };
+
+    flickerTimeoutRef.current = window.setTimeout(runFlicker, 2000 + Math.floor(Math.random() * 2000));
+
+    return () => {
+      isCancelled = true;
+      clearFlickerTimers();
+      wheelRef.current?.classList.remove('reactor-flicker');
+    };
+  }, [status]);
 
   const updateRotationFromEvent = (clientX: number, clientY: number) => {
     const wheelElement = wheelRef.current;
@@ -53,8 +102,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
     <div className="relative flex flex-col items-center justify-center py-4 sm:py-8">
       <div
         ref={wheelRef}
-        className={`relative touch-none ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
-        style={{ width: size, height: size }}
+        className={`reactor-spinner relative touch-none ${status === 'idle' ? 'spinner-idle' : ''} ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        style={{ width: size, height: size, ['--reactor-glow-rgb' as string]: chanceGlowRgb }}
         onPointerDown={(event) => {
           if (!canRotateWinZone || status !== 'idle') return;
           isDraggingRef.current = true;
@@ -76,6 +125,11 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           event.currentTarget.releasePointerCapture(event.pointerId);
         }}
       >
+        <div
+          className="reactor-energy-layer absolute inset-[10%] rounded-full pointer-events-none"
+          style={{ animationPlayState: status === 'idle' ? 'running' : 'paused' }}
+        />
+
         <div className="absolute inset-0 rounded-full">
           <svg width={size} height={size} className="-rotate-90">
             <circle
