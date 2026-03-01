@@ -1,5 +1,6 @@
 import { admin, firestore } from '../_lib/firebaseAdmin.js';
 import { readJsonBody, sendJson } from '../_lib/http.js';
+import { consumeRateLimit, getRateLimitKey } from '../_utils/ratelimit.js';
 import {
   BATTLE_STATES,
   computeBattleRoll,
@@ -101,7 +102,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    await parseAuth(req);
+    const decoded = await parseAuth(req);
+    const rateLimit = consumeRateLimit({
+      key: getRateLimitKey({ req, uid: decoded.uid, prefix: 'battle-progress' }),
+      limit: 30,
+      windowMs: 60_000
+    });
+    if (!rateLimit.ok) {
+      return sendJson(res, 429, { ok: false, error: 'Rate limit' });
+    }
+
     const body = await readJsonBody(req);
     const battleId = typeof body?.battleId === 'string' ? body.battleId : '';
     if (!battleId) {

@@ -1,8 +1,19 @@
-import { adminAuth } from '../_lib/firebaseAdmin.js';
-import { getBearerToken, sendJson } from '../_lib/http.js';
+import { sendJson } from '../_lib/http.js';
+import { requireAdmin, requireUser } from '../_utils/auth.js';
 import { settleExpiredRewardsSeason } from '../_lib/rewards.js';
 
-const isCronInvocation = (req) => Boolean(req.headers['x-vercel-cron']);
+const hasAdminSecret = (req) => {
+  const adminSecret = process.env.ADMIN_SECRET;
+  const incoming = req.headers['x-admin-secret'];
+  return Boolean(adminSecret) && typeof incoming === 'string' && incoming === adminSecret;
+};
+
+const isValidCronInvocation = (req) => {
+  const cronSecret = process.env.CRON_SECRET;
+  return req.headers['x-vercel-cron'] === '1'
+    && Boolean(cronSecret)
+    && req.headers['x-cron-secret'] === cronSecret;
+};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'GET') {
@@ -13,12 +24,25 @@ export default async function handler(req, res) {
   try {
     const force = req.query?.force === '1';
 
-    if (!isCronInvocation(req)) {
-      const token = getBearerToken(req);
-      if (!token) {
-        return sendJson(res, 401, { error: 'AUTH_REQUIRED' });
+    const allowedBySecret = hasAdminSecret(req);
+    const allowedByCron = isValidCronInvocation(req);
+    let allowedByAdminClaim = false;
+
+    if (!allowedBySecret && !allowedByCron) {
+      try {
+        await requireAdmin(req);
+        allowedByAdminClaim = true;
+      } catch {
+        try {
+          await requireUser(req);
+        } catch {
+          return sendJson(res, 401, { ok: false, error: 'AUTH_REQUIRED' });
+        }
       }
-      await adminAuth.verifyIdToken(token);
+    }
+
+    if (!allowedBySecret && !allowedByCron && !allowedByAdminClaim) {
+      return sendJson(res, 403, { ok: false, error: 'FORBIDDEN' });
     }
 
     const result = await settleExpiredRewardsSeason({ force, maxUsers: 100 });

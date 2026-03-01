@@ -1,6 +1,7 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { randomSeed, sha256 } from './_lib/provablyFair.js';
+import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 
 const DEFAULT_CLIENT_SEED = 'lootx-player';
 
@@ -44,6 +45,15 @@ export default async function handler(req, res) {
     decoded = await adminAuth.verifyIdToken(token);
   } catch {
     return sendJson(res, 401, { error: 'UNAUTHENTICATED', message: 'Invalid authentication token.' });
+  }
+
+  const rateLimit = consumeRateLimit({
+    key: getRateLimitKey({ req, uid: decoded.uid, prefix: 'attempt-upgrade' }),
+    limit: 30,
+    windowMs: 60_000
+  });
+  if (!rateLimit.ok) {
+    return sendJson(res, 429, { ok: false, error: 'Rate limit' });
   }
 
   const body = await readJsonBody(req);

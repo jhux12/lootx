@@ -1,12 +1,10 @@
-import { admin, adminAuth, firestore } from '../_lib/firebaseAdmin.js';
-import { getBearerToken, readJsonBody, sendJson } from '../_lib/http.js';
-import { applyXpAwardInTransaction, computeXpAward, getXpSettings } from '../_lib/xp.js';
+import { admin, firestore } from '../_lib/firebaseAdmin.js';
+import { readJsonBody, sendJson } from '../_lib/http.js';
+import { requireUser } from '../_utils/auth.js';
 
-const INTERNAL_SECRET = process.env.XP_AWARD_INTERNAL_SECRET || '';
-
-const isInternalRequest = (req) => {
-  const incoming = req.headers['x-internal-award-secret'];
-  return Boolean(INTERNAL_SECRET) && typeof incoming === 'string' && incoming === INTERNAL_SECRET;
+const SAFE_ACTION_XP = {
+  DAILY_LOGIN: 25,
+  CLAIM_QUEST: 50
 };
 
 export default async function handler(req, res) {
@@ -16,95 +14,38 @@ export default async function handler(req, res) {
   }
 
   try {
-    const internal = isInternalRequest(req);
-    let uid;
+    const decoded = await requireUser(req);
+    const body = await readJsonBody(req);
+    const action = typeof body?.action === 'string' ? body.action.trim().toUpperCase() : '';
 
-    if (internal) {
-      const body = await readJsonBody(req);
-      uid = typeof body?.userId === 'string' ? body.userId : null;
-      if (!uid) return sendJson(res, 400, { error: 'Missing userId' });
-
-      const action = typeof body?.action === 'string' ? body.action : 'openCase';
-      const amountCoins = Number(body?.amountCoins ?? 0);
-      const requestId = typeof body?.requestId === 'string' ? body.requestId : null;
-
-      const userRef = firestore.collection('users').doc(uid);
-      const idempotencyRef = requestId ? firestore.collection('xpAwardRequests').doc(requestId) : null;
-
-      let responsePayload = { ok: true, awardedXp: 0 };
-      await firestore.runTransaction(async (transaction) => {
-        if (idempotencyRef) {
-          const existing = await transaction.get(idempotencyRef);
-          if (existing.exists) {
-            responsePayload = { ok: true, ...(existing.data() ?? {}), idempotent: true };
-            return;
-          }
-        }
-
-        const settings = await getXpSettings(transaction);
-        const rule = settings.earnRules?.[action] ?? null;
-
-        if (!rule?.enabled) {
-          responsePayload = { ok: true, awardedXp: 0, disabled: true };
-          return;
-        }
-
-        const xpAmount = computeXpAward({
-          rule,
-          amountCoins,
-          bonusRules: settings.bonusRules
-        });
-
-        const applied = await applyXpAwardInTransaction({ transaction, userRef, xpAmount, actionKey: action });
-
-        responsePayload = {
-          ok: true,
-          action,
-          awardedXp: applied.awardedXp,
-          xpBalance: applied.xpBalance
-        };
-
-        if (idempotencyRef) {
-          transaction.set(idempotencyRef, {
-            ...responsePayload,
-            uid,
-            requestId,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-          });
-        }
-      });
-
-      return sendJson(res, 200, responsePayload);
+    if (!action || !Object.prototype.hasOwnProperty.call(SAFE_ACTION_XP, action)) {
+      return sendJson(res, 400, { ok: false, error: 'Unsupported action' });
     }
 
-    const token = getBearerToken(req);
-    if (!token) return sendJson(res, 401, { error: 'Missing bearer token' });
+    if (body?.xpAmount != null || body?.coinsSpent != null) {
+      return sendJson(res, 400, { ok: false, error: 'Client-controlled XP amounts are not allowed' });
+    }
 
-    const decoded = await adminAuth.verifyIdToken(token);
-    uid = decoded.uid;
-
-    const body = await readJsonBody(req);
-    const action = typeof body?.action === 'string' ? body.action : null;
-    const manualAmount = Number(body?.xpAmount ?? 0);
-
-    if (!action) return sendJson(res, 400, { error: 'Missing action' });
-
-    const userRef = firestore.collection('users').doc(uid);
-    let responsePayload;
+    const awarded = SAFE_ACTION_XP[action];
+    const userRef = firestore.collection('users').doc(decoded.uid);
+    const dateKey = new Date().toISOString().slice(0, 10);
 
     await firestore.runTransaction(async (transaction) => {
-      const settings = await getXpSettings(transaction);
-      const rule = settings.earnRules?.[action] ?? null;
-      const xpAmount = manualAmount > 0 ? manualAmount : computeXpAward({ rule, bonusRules: settings.bonusRules });
-      const applied = await applyXpAwardInTransaction({ transaction, userRef, xpAmount, actionKey: action });
-      responsePayload = { ok: true, action, ...applied };
+      transaction.set(userRef, {
+        xpBalance: admin.firestore.FieldValue.increment(awarded),
+        xp: admin.firestore.FieldValue.increment(awarded),
+        xpEarnedLifetime: admin.firestore.FieldValue.increment(awarded),
+        [`xpDailyEarned.${dateKey}`]: admin.firestore.FieldValue.increment(awarded),
+        lastXpAwardAction: action,
+        lastXpAwardAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
     });
 
-    return sendJson(res, 200, responsePayload);
+    return sendJson(res, 200, { ok: true, action, awarded });
   } catch (error) {
     const status = error?.status;
-    if (status) return sendJson(res, status, { error: error.error || 'Unable to award XP' });
+    if (status) return sendJson(res, status, { ok: false, error: error.error || 'Unable to award XP' });
     console.error('xp/award error', error);
-    return sendJson(res, 500, { error: 'Unable to award XP' });
+    return sendJson(res, 500, { ok: false, error: 'Unable to award XP' });
   }
 }

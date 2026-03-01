@@ -1,16 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Loader2, Sparkles } from 'lucide-react';
-import { GoogleGenAI, Chat } from "@google/genai";
 import { Input } from './ui/Input';
 import { buildSiteSearchContext } from '../utils/siteSearch';
+import { auth } from '../firebase';
 
 interface Message {
   id: string;
   role: 'user' | 'model';
   text: string;
 }
-
-const GEMINI_API_KEY = "AIzaSyCB04Pk1auWCF-hU6Gnmm3gRDxhpZOylwU";
 
 const SITE_CONTEXT = `
 Pullz.gg is a mystery box and box battle experience. The site includes:
@@ -65,7 +63,6 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
   const [messages, setMessages] = useState<Message[]>(DEFAULT_MESSAGES);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [chatSession, setChatSession] = useState<Chat | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -106,24 +103,8 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
     }
   }, [messages, storageKey]);
 
-  useEffect(() => {
-      // Initialize Gemini Chat
-      try {
-        const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-        const chat = ai.chats.create({
-            model: 'gemini-2.0-flash',
-            config: {
-                systemInstruction: `You are the Pullz Assistant for Pullz.gg. Use ONLY the information in SITE_CONTEXT, CURRENT_PAGE_CONTENT, SITE_SEARCH_RESULTS, and the chat history. If the answer is not in those sources, say you don't have that information on Pullz.gg and suggest checking the site or support. Do not guess or use outside knowledge. Keep answers concise and professional, with a gamer-friendly tone.\n\nSITE_CONTEXT:\n${SITE_CONTEXT}`
-            }
-        });
-        setChatSession(chat);
-      } catch (error) {
-          console.error("Failed to init AI", error);
-      }
-  }, []);
-
   const handleSend = async () => {
-      if (!input.trim() || !chatSession) return;
+      if (!input.trim()) return;
 
       const userMsg: Message = { id: Date.now().toString(), role: 'user', text: input };
       setMessages(prev => [...prev, userMsg]);
@@ -139,8 +120,22 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
             `USER_QUESTION:\n${userMsg.text}`
           ];
           const prompt = promptParts.join('\n\n');
-          const result = await chatSession.sendMessage({ message: prompt });
-          const text = result.text; // Access .text property directly
+          const token = await auth.currentUser?.getIdToken();
+          const result = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({
+              mode: 'assistant',
+              prompt,
+              systemInstruction: `You are the Pullz Assistant for Pullz.gg. Use ONLY the information in SITE_CONTEXT, CURRENT_PAGE_CONTENT, SITE_SEARCH_RESULTS, and the chat history. If the answer is not in those sources, say you don't have that information on Pullz.gg and suggest checking the site or support. Do not guess or use outside knowledge. Keep answers concise and professional, with a gamer-friendly tone.\n\nSITE_CONTEXT:\n${SITE_CONTEXT}`
+            })
+          });
+          if (!result.ok) throw new Error('Assistant request failed');
+          const payload = await result.json();
+          const text = typeof payload?.text === 'string' ? payload.text : '';
           
           const aiMsg: Message = { 
               id: (Date.now() + 1).toString(), 
