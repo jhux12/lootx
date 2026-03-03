@@ -6,6 +6,9 @@ import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { TopDropsSlider } from './TopDropsSlider';
+import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
+import { BlurImage } from '../src/ui/images/BlurImage';
+import { prefetchBox } from '../src/lib/prefetch/prefetchBox';
 
 type BoxCatalogProps = {
   isChatCollapsed: boolean;
@@ -40,6 +43,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     () => boxes.filter((box) => !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
     [boxes]
   );
+
+  const isLoadingBoxes = boxes.length === 0;
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
@@ -169,7 +174,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 type="button"
               >
                 <div className="relative w-full h-[170px] sm:h-[180px] flex items-center justify-center">
-                  <img
+                  <BlurImage
                     src={box.image}
                     alt={box.name}
                     className="h-full w-full object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-300"
@@ -278,7 +283,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
       <div className="w-full max-w-6xl mx-auto px-4 py-8 min-h-[100dvh]">
         <div className="flex flex-col gap-12">
-          {groupedBoxes.map((group) => (
+          {isLoadingBoxes && (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {Array.from({ length: 10 }).map((_, idx) => <SkeletonTile key={`box-skeleton-${idx}`} />)}
+            </div>
+          )}
+
+          {!isLoadingBoxes && groupedBoxes.map((group) => (
             <div key={group.id} className="flex flex-col gap-4">
               {activeCategory === 'all' && (
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4">
@@ -299,9 +310,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                     }}
                     className="group flex flex-col items-center bg-[#131315] rounded-xl overflow-hidden border border-white/5 cursor-pointer hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
                     type="button"
+                    onMouseEnter={() => { void prefetchBox(box.id, async () => box, box.image); }}
+                    onTouchStart={() => { void prefetchBox(box.id, async () => box, box.image); }}
                   >
                     <div className="relative w-full h-[170px] sm:h-[180px] p-4 sm:p-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent">
-                      <img
+                      <BlurImage
                         src={box.image}
                         alt={box.name}
                         className="h-full w-full object-contain drop-shadow-xl group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300"

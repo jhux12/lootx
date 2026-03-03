@@ -33,6 +33,7 @@ import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
 import { useSiteChat } from './hooks/useSiteChat';
+import { ToastProvider } from './src/ui/toast/ToastProvider';
 import {
   ShowcaseRow,
   ShowcaseRowBoxes,
@@ -346,7 +347,9 @@ function App() {
     <SoundProvider>
       <GameProvider>
         <PreviewProvider>
-          <AppShell />
+          <ToastProvider>
+            <AppShell />
+          </ToastProvider>
         </PreviewProvider>
       </GameProvider>
     </SoundProvider>

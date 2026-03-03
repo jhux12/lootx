@@ -4,6 +4,8 @@ import { LiveDrop, User } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
+import { BlurImage } from '../src/ui/images/BlurImage';
 
 export const LiveTicker: React.FC = () => {
   const { items, users } = useGame();
@@ -67,7 +69,13 @@ export const LiveTicker: React.FC = () => {
       <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#0b0f17] to-transparent z-10 pointer-events-none"></div>
 
       <div className="flex gap-4 px-4 ticker-animation whitespace-nowrap">
-        {drops.map((drop, idx) => (
+        {drops.length === 0 ? (
+          Array.from({ length: 6 }).map((_, idx) => (
+            <div key={`recent-skeleton-${idx}`} className="w-40 h-12">
+              <SkeletonTile compact className="h-full" />
+            </div>
+          ))
+        ) : drops.map((drop, idx) => (
           <div 
             key={`${drop.id}-${idx}`} 
             className={`
@@ -76,7 +84,7 @@ export const LiveTicker: React.FC = () => {
               ${getRarityColor(drop.rarity)}
             `}
           >
-            <img src={drop.itemImage} alt={drop.itemName} className="w-9 h-9 object-contain rounded bg-gray-900/60" loading="lazy" />
+            <div className="h-9 w-9 rounded bg-gray-900/60"><BlurImage src={drop.itemImage} alt={drop.itemName} className="w-9 h-9 object-contain rounded" /></div>
             <div className="flex flex-col overflow-hidden min-w-0">
               <span className="text-[11px] font-semibold text-gray-300 truncate group-hover:text-white transition-colors">{drop.itemName}</span>
               <span className="text-[10px] text-gray-500 truncate group-hover:text-gray-300 transition-colors">{drop.user.name}</span>

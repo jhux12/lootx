@@ -10,6 +10,10 @@ import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, Alert
 import { auth } from '../firebase';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
+import { toast } from '../src/ui/toast/toast';
+import { BlurImage } from '../src/ui/images/BlurImage';
+import { SkeletonRow, SkeletonTile } from '../src/ui/skeleton/Skeleton';
+import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 const SHIPPING_BATCH_STORAGE_KEY = 'lootx_shipping_batch';
@@ -361,12 +365,12 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
   const handleSaveProfile = async () => {
       await updateUserInfo(profileForm.name, profileForm.avatar);
-      alert("Profile updated successfully!");
+      toast.success("Profile updated successfully!");
   };
 
   const handleSaveAddress = async () => {
       await updateAddress(addressForm);
-      alert("Shipping address saved!");
+      toast.success("Shipping address saved!");
   };
 
   const handleToggleShipment = (instanceId: string) => {
@@ -382,11 +386,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
   const handleConfirmShipping = async () => {
     if (!shippingCoinEnabled) {
-      alert('Coin shipping is currently unavailable.');
+      toast.error('Coin shipping is currently unavailable.');
       return;
     }
     if (!user.shippingAddress) {
-      alert('Please add a shipping address before requesting shipment.');
+      toast.info('Please add a shipping address before requesting shipment.');
       return;
     }
 
@@ -403,7 +407,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       setShowShippingReview(false);
     } catch (error) {
       console.error('Failed to request shipments', error);
-      alert('Unable to request shipment right now. Please try again.');
+      toast.error('Unable to request shipment right now. Please try again.');
     } finally {
       setIsSubmittingShipment(false);
     }
@@ -411,7 +415,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
   const handleCashShipping = async () => {
     if (!shippingCashEnabled) {
-      alert('Cash shipping is currently unavailable.');
+      toast.error('Cash shipping is currently unavailable.');
       return;
     }
 
@@ -421,7 +425,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
     }
 
     if (!user.shippingAddress) {
-      alert('Please add a shipping address before requesting shipment.');
+      toast.info('Please add a shipping address before requesting shipment.');
       return;
     }
 
@@ -465,7 +469,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       }
     } catch (error) {
       console.error('Failed to start cash shipping checkout', error);
-      alert('Unable to start cash checkout. Please try again.');
+      toast.error('Unable to start cash checkout. Please try again.');
     } finally {
       setIsSubmittingCashShipping(false);
     }
@@ -473,7 +477,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
   const handleConfirmFreeShipping = async () => {
     if (!user.shippingAddress) {
-      alert('Please add a shipping address before requesting shipment.');
+      toast.info('Please add a shipping address before requesting shipment.');
       return;
     }
 
@@ -490,7 +494,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       setShowShippingReview(false);
     } catch (error) {
       console.error('Failed to request free shipping shipments', error);
-      alert('Unable to request shipment right now. Please try again.');
+      toast.error('Unable to request shipment right now. Please try again.');
     } finally {
       setIsSubmittingShipment(false);
     }
@@ -498,28 +502,28 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
   const handleUpdatePassword = () => {
       if(passwordForm.new !== passwordForm.confirm) {
-          alert("New passwords do not match");
+          toast.error("New passwords do not match");
           return;
       }
       if(!passwordForm.current || !passwordForm.new) {
-        alert("Please fill in all password fields");
+        toast.error("Please fill in all password fields");
         return;
       }
       
-      alert("Password updated successfully!");
+      toast.success("Password updated successfully!");
       setPasswordForm({ current: '', new: '', confirm: '' });
   };
 
   const handleFollowClick = async () => {
       if (!profileUser || isFollowing) return;
       await followUser(profileUser.id);
-      alert("Now following this player!");
+      toast.success("Now following this player!");
   };
 
   const handleUnfollowClick = async () => {
       if (!profileUser || !isFollowing) return;
       await unfollowUser(profileUser.id);
-      alert("You unfollowed this player.");
+      toast.info("You unfollowed this player.");
   };
 
   if (selectedUserId && !profileUser) {
@@ -562,7 +566,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                 <div className="relative group self-center sm:self-auto">
                   <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUser.name} className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-[#131720] shadow-2xl object-cover bg-[#0b0e14]" />
                   <div className="absolute -bottom-3 -right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full border-4 border-[#131720]">
-                      XP {(displayUser.xpBalance ?? displayUser.xp ?? 0).toLocaleString()}
+                      XP <AnimatedNumber value={displayUser.xpBalance ?? displayUser.xp ?? 0} />
                   </div>
                 </div>
 
@@ -715,6 +719,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           <h3 className="text-xl font-bold text-white mb-2">Top Pulls Are Private</h3>
                           <p className="text-gray-500">This player has chosen to keep their top pulls private.</p>
                       </div>
+                  ) : (isOwnProfile && inventory.length === 0) ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {Array.from({ length: 6 }).map((_, idx) => <SkeletonTile key={`top-pull-skeleton-${idx}`} />)}
+                      </div>
                   ) : topPulls.length === 0 ? (
                       <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
                           <Sparkles className="w-12 h-12 text-gray-700 mx-auto mb-4" />
@@ -739,7 +747,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       <div className="absolute left-2 top-2 z-10 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide bg-black/70 text-white border border-white/10">
                                         #{index + 1}
                                       </div>
-                                      <img loading="lazy" decoding="async" src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                                      <BlurImage src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
                                       <div className={`absolute inset-0 opacity-15 bg-gradient-to-br ${
                                           item.rarity === 'legendary' ? 'from-yellow-500' :
                                           item.rarity === 'epic' ? 'from-purple-500' :
@@ -844,7 +852,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                       </div>
                   )}
 
-                  {filteredInventory.length === 0 ? (
+                  {inventory.length === 0 ? (
+                          <div className="space-y-3">
+                            {Array.from({ length: 6 }).map((_, idx) => <SkeletonRow key={`inv-skeleton-${idx}`} />)}
+                          </div>
+                        ) : filteredInventory.length === 0 ? (
                       <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
                           <Package className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                           <h3 className="text-xl font-bold text-white mb-2">
@@ -918,7 +930,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               isSelectable ? 'cursor-pointer' : 'cursor-default'
                                             }`}
                                           >
-                                            <img loading="lazy" decoding="async" src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                                            <BlurImage src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
                                             <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
                                                 item.rarity === 'legendary' ? 'from-yellow-500' :
                                                 item.rarity === 'epic' ? 'from-purple-500' :
@@ -1085,7 +1097,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               <div className="mt-4 space-y-3 max-h-48 overflow-y-auto pr-1">
                                   {selectedShipmentItems.map((item) => (
                                       <div key={item.instanceId} className="flex items-center gap-3 rounded-xl border border-gray-800 bg-[#131720] p-3">
-                                          <img loading="lazy" decoding="async" src={item.image} alt={item.name} className="h-10 w-10 rounded-lg object-contain bg-[#0b0e14]" />
+                                          <div className="h-10 w-10 rounded-lg bg-[#0b0e14]"><BlurImage src={item.image} alt={item.name} className="h-10 w-10 rounded-lg object-contain" /></div>
                                           <div className="flex-1">
                                               <div className="text-sm font-semibold text-white">{item.name}</div>
                                               <div className="text-xs text-gray-500">{item.rarity}</div>

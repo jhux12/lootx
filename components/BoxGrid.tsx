@@ -5,6 +5,7 @@ import { useSound } from '../context/SoundContext';
 import { BoxCard } from './BoxCard';
 import { MysteryBox } from '../types';
 import { RiskLegend } from './RiskLegend';
+import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
 
 type BoxGridQuery = {
   tags?: string[];
@@ -82,7 +83,9 @@ export const BoxGrid: React.FC<BoxGridProps> = ({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {visibleBoxes.map((box) => (
+        {displayBoxes.length === 0 ? (
+          Array.from({ length: 8 }).map((_, idx) => <SkeletonTile key={`box-grid-skeleton-${idx}`} />)
+        ) : visibleBoxes.map((box) => (
           <BoxCard key={box.id} box={box} onSelect={handleSelectBox} {...hoverProps} />
         ))}
       </div>
