@@ -214,9 +214,6 @@ export const settleExpiredRewardsSeason = async ({ force = false, maxUsers = 100
         rewardLastPayoutSeasonId: seasonId,
         rewardLastPayoutAt: admin.firestore.FieldValue.serverTimestamp()
       };
-      if (payout.coins > 0) {
-        userPatch.coins = admin.firestore.FieldValue.increment(payout.coins);
-      }
       if (payout.xp > 0) {
         userPatch.xpBalance = admin.firestore.FieldValue.increment(payout.xp);
         userPatch.xp = admin.firestore.FieldValue.increment(payout.xp);
@@ -229,6 +226,8 @@ export const settleExpiredRewardsSeason = async ({ force = false, maxUsers = 100
         rank,
         points,
         payoutCoins: payout.coins,
+        payoutCoinsClaimed: payout.coins <= 0,
+        payoutCoinsClaimedAt: null,
         payoutXP: payout.xp,
         payoutItemId: payout.itemId || null,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -257,6 +256,69 @@ export const settleExpiredRewardsSeason = async ({ force = false, maxUsers = 100
   }, { merge: true });
 
   return { settled: true, seasonId, awardedUsers, totalCoinsAwarded, totalXpAwarded };
+};
+
+export const claimRewardsCoinsForUser = async ({ uid, seasonId = null } = {}) => {
+  const safeUid = typeof uid === 'string' ? uid.trim() : '';
+  if (!safeUid) {
+    throw new Error('Missing uid');
+  }
+
+  const payoutQuery = firestore.collection('rewardsPayouts')
+    .where('uid', '==', safeUid)
+    .where('payoutCoins', '>', 0)
+    .where('payoutCoinsClaimed', '==', false)
+    .orderBy('createdAt', 'asc')
+    .limit(100);
+
+  const payoutsSnap = await payoutQuery.get();
+  if (payoutsSnap.empty) {
+    return { claimed: false, coinsClaimed: 0, payoutsClaimed: 0 };
+  }
+
+  const userRef = firestore.collection('users').doc(safeUid);
+  let coinsClaimed = 0;
+  let payoutsClaimed = 0;
+
+  for (const payoutDoc of payoutsSnap.docs) {
+    const data = payoutDoc.data() ?? {};
+    if (seasonId && String(data.seasonId ?? '') !== String(seasonId)) continue;
+    const payoutCoins = Math.max(0, Math.floor(toNumber(data.payoutCoins, 0)));
+    if (payoutCoins <= 0) continue;
+
+    const applied = await firestore.runTransaction(async (tx) => {
+      const freshSnap = await tx.get(payoutDoc.ref);
+      if (!freshSnap.exists) return 0;
+      const freshData = freshSnap.data() ?? {};
+      const alreadyClaimed = freshData.payoutCoinsClaimed === true;
+      const freshCoins = Math.max(0, Math.floor(toNumber(freshData.payoutCoins, 0)));
+      if (alreadyClaimed || freshCoins <= 0) return 0;
+
+      tx.set(userRef, {
+        coins: admin.firestore.FieldValue.increment(freshCoins),
+        rewardLastCoinClaimAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      tx.set(payoutDoc.ref, {
+        payoutCoinsClaimed: true,
+        payoutCoinsClaimedAt: admin.firestore.FieldValue.serverTimestamp(),
+        claimedByUid: safeUid
+      }, { merge: true });
+
+      return freshCoins;
+    });
+
+    if (applied > 0) {
+      coinsClaimed += applied;
+      payoutsClaimed += 1;
+    }
+  }
+
+  return {
+    claimed: coinsClaimed > 0,
+    coinsClaimed,
+    payoutsClaimed
+  };
 };
 
 export { DEFAULT_REWARDS_SETTINGS };
