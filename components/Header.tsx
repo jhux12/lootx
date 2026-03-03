@@ -13,6 +13,7 @@ import {
   PenTool,
   Plus,
   RefreshCw,
+  Clock3,
   Shield,
   ShieldCheck,
   Trophy,
@@ -23,9 +24,14 @@ import {
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { authedFetch } from '../utils/authedFetch';
 import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
 import { XP_ICON } from '../constants';
+import { useBalanceFeedback } from '../src/ui/feedback/useBalanceFeedback';
+import { ActivityDrawer } from '../src/ui/activity/ActivityDrawer';
+import { useActivity } from '../src/lib/activity/useActivity';
+import { ProvablyFairBadge } from '../src/ui/provably/ProvablyFairBadge';
 
 type HeaderProps = {
   onOpenInbox: () => void;
@@ -49,8 +55,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const { playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
+  const [provablyData, setProvablyData] = useState<{ serverSeedHash?: string; clientSeed?: string; nonce?: number }>({});
   const headerRef = useRef<HTMLElement | null>(null);
   const targetXp = Math.floor(user.xpBalance ?? user.xp ?? 0);
+  const balanceTone = useBalanceFeedback(balance);
+  const { unreadCount } = useActivity();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    authedFetch<{ serverSeedHash: string; clientSeed: string; nonce: number }>('/api/provably-fair')
+      .then((data) => setProvablyData(data))
+      .catch(() => undefined);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -144,6 +161,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   ), [openAuthModal, playSound]);
 
   return (
+    <>
     <div className="relative z-50">
       <header
         ref={headerRef}
@@ -212,7 +230,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" />
                     <span className="text-xs font-bold text-white"><AnimatedNumber value={targetXp} /></span>
                   </div>
-                  <div className="relative overflow-hidden rounded-lg p-[1px]">
+                  <div className={`relative overflow-hidden rounded-lg p-[1px] ${balanceTone === 'up' ? 'shadow-[0_0_20px_rgba(34,197,94,0.35)]' : balanceTone === 'down' ? 'shadow-[0_0_20px_rgba(239,68,68,0.35)]' : ''}`}>
                     <span
                       aria-hidden="true"
                       className="pointer-events-none absolute inset-0 rounded-lg bg-[conic-gradient(from_0deg,_#3b82f6,_#6366f1,_#8b5cf6,_#6366f1,_#3b82f6)] animate-[spin_10s_linear_infinite]"
@@ -235,6 +253,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                       </button>
                     </div>
                   </div>
+                </div>
+
+                <div className="hidden items-center gap-2 lg:flex">
+                  <ProvablyFairBadge data={provablyData} />
+                  <button
+                    type="button"
+                    onClick={() => setShowActivity(true)}
+                    className="relative rounded-lg border border-white/10 bg-zinc-900 p-2 text-gray-200 hover:text-white"
+                    aria-label="Open activity"
+                  >
+                    <Clock3 className="h-4 w-4" />
+                    {unreadCount > 0 ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-cyan-300" /> : null}
+                  </button>
                 </div>
 
                 <div className="hidden items-center gap-2 border-l border-white/10 pl-2 lg:flex">
@@ -391,5 +422,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
         </div>
       </div>
     </div>
+    <ActivityDrawer open={showActivity} onClose={() => setShowActivity(false)} />
+    <style>{`@media (prefers-reduced-motion: reduce){.ambient-pulse{animation:none!important;}}`}</style>
+    </>
   );
 };

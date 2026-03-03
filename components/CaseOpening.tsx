@@ -16,6 +16,9 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_ECONOMY_SETTINGS, getXpCost, normalizeEconomySettings } from '../utils/economy';
 import { toast } from '../src/ui/toast/toast';
 import { BlurImage } from '../src/ui/images/BlurImage';
+import { activityStore } from '../src/lib/activity/activityStore';
+import { createMicroConfetti, MicroConfettiParticle } from '../src/ui/feedback/microConfetti';
+import { ProvablyFairModal } from '../src/ui/provably/ProvablyFairModal';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -144,6 +147,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [selectedCaseItem, setSelectedCaseItem] = useState<CaseItem | null>(null);
   const [spinFeedbackMessage, setSpinFeedbackMessage] = useState<string | null>(null);
   const [showXpConfirmSheet, setShowXpConfirmSheet] = useState(false);
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
+  const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -158,6 +163,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
   const canFreeSpin = !user.lastFreeBoxClaim;
+  const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
   const currentCaseXpPrice = Math.max(0, Math.floor(Number(box?.priceXP ?? 0)));
@@ -176,6 +182,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return Math.max(0, Math.min(1, currentXpBalance / xpCostForCoinCase));
   }, [currentXpBalance, xpCostForCoinCase]);
   const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && (currentXpBalance > 0 || xpProgress > 0);
+  const canOpenMain = isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
   const xpRingRadius = 14;
   const xpRingCircumference = 2 * Math.PI * xpRingRadius;
@@ -695,6 +702,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         outcome: winner.name
       };
       setLastRoll(latestRoll);
+      activityStore.add({
+        type: 'open',
+        title: `Opened ${box.name} → ${winner.name}`,
+        value: toCoins(Number(winner.price ?? 0), PRICE_UNIT_MODE),
+        provablyFairData: {
+          serverSeedHash: rollServerHash,
+          clientSeed: rollClientSeed,
+          nonce: rollNonce,
+          winningItem: winner.name,
+          resultIndex: Math.floor(rollValue * 1000000)
+        },
+        meta: { boxId: box.id }
+      });
       if (typeof window !== 'undefined') {
         window.sessionStorage.setItem(LAST_ROLL_STORAGE_KEY, JSON.stringify(latestRoll));
       }
@@ -775,6 +795,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsBoxPreviewFading(false);
 
     setShowWinModal(true);
+    if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
+      const particles = createMicroConfetti(18);
+      setConfetti(particles);
+      window.setTimeout(() => setConfetti([]), 720);
+    }
     setWonItem(item);
     setRewardResolved(false);
   };
@@ -1084,7 +1109,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                  <button 
                     onClick={() => handleSpin()}
                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
-                    className={`w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
+                    className={`w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
                 >
                     <span>
                       {isSyncingFair ? (
@@ -1250,7 +1275,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         <div className={`fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
         <div className={`fixed bottom-0 left-0 right-0 z-[100] transform transition-transform duration-500 ${showWinModal && wonItem ? 'translate-y-0' : 'translate-y-full'}`}>
           {wonItem && (
-            <div className="mx-auto flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] sm:max-h-[86vh]">
+            <div className="mx-auto relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] sm:max-h-[86vh]">
+              {confetti.map((piece) => (
+                <span
+                  key={piece.id}
+                  className="pointer-events-none absolute rounded-full"
+                  style={{ left: `${piece.x}%`, top: `${piece.y}%`, width: piece.size, height: piece.size, background: piece.color, transform: `translate(${piece.dx}px, ${piece.dy}px)`, opacity: 0, animation: `fadeOut ${piece.life}ms ease-out forwards` }}
+                />
+              ))}
               <div className="flex items-center justify-between border-b border-white/10 bg-black/25 px-4 py-4 sm:px-6">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/15">
@@ -1277,6 +1309,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     className="relative z-10 mt-2 font-semibold text-gray-200"
                     iconClassName="w-4 h-4"
                   />
+                  <button type="button" onClick={() => setVerifyModalOpen(true)} className="relative z-10 mt-2 rounded-md border border-emerald-300/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-200">Verified ✓</button>
                 </div>
               </div>
 
@@ -1333,6 +1366,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
           )}
         </div>
+        <style>{`
+          .ambient-pulse { animation: ambientPulse 3s ease-in-out infinite; }
+          @keyframes ambientPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 rgba(34,211,238,0.2);} 50% { transform: scale(1.02); box-shadow: 0 0 22px rgba(34,211,238,0.32);} }
+          @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+          @media (prefers-reduced-motion: reduce){ .ambient-pulse { animation: none; } }
+        `}</style>
 
 
         {/* Box Contents */}
@@ -1398,7 +1437,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         {/* Slide Up Item Sheet */}
         <div className={`fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${selectedCaseItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={() => setSelectedCaseItem(null)} />
         <div className={`fixed bottom-0 left-0 right-0 z-[120] transform transition-transform duration-500 ${selectedCaseItem ? 'translate-y-0' : 'translate-y-full'}`}>
-          {selectedCaseItem && (
+          <ProvablyFairModal isOpen={verifyModalOpen} onClose={() => setVerifyModalOpen(false)} data={{ serverSeedHash: lastRoll?.serverSeedHash, clientSeed: lastRoll?.clientSeed, nonce: lastRoll?.nonce, winningItem: wonItem?.name, resultIndex: lastRoll ? Math.floor(lastRoll.rollValue * 1000000) : undefined }} />
+
+        {selectedCaseItem && (
             <div ref={itemModalRef} role="dialog" aria-modal="true" aria-labelledby="item-details-title" className="mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)]">
               <div className="relative flex h-64 items-center justify-center overflow-hidden" style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}99 0%, transparent 72%)` }}>
                 <button
