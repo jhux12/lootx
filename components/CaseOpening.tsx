@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2 } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -862,6 +862,40 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsSellingItem(false);
   };
 
+
+  const handleShareUnboxing = useCallback(async () => {
+    playSound('click');
+
+    if (typeof window === 'undefined' || !wonItem) return;
+
+    const caseName = box?.name ?? 'Mystery Box';
+    const shareText = `I just unboxed ${wonItem.name} from ${caseName} on LootX!`;
+    const shareUrl = window.location.href;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'LootX Unboxing',
+          text: shareText,
+          url: shareUrl
+        });
+        toast.success('Shared successfully.');
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+        toast.success('Share text copied to clipboard.');
+        return;
+      }
+
+      toast.info('Sharing is not supported on this device.');
+    } catch (error) {
+      if ((error as Error)?.name === 'AbortError') return;
+      toast.error('Unable to share right now. Please try again.');
+    }
+  }, [box?.name, playSound, wonItem]);
+
   const handleKeep = () => {
       playSound('click');
       if (sellOfferTimerRef.current) {
@@ -1322,7 +1356,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 {isDemoSpin ? (
                   <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
                 ) : (
-                  <div className="flex flex-col gap-3 sm:flex-row">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => void handleShareUnboxing()}
+                      className="h-12 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-4 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/20 sm:h-14 sm:min-w-[160px] sm:flex-none"
+                    >
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <Share2 className="h-4 w-4" />
+                        Share
+                      </span>
+                    </button>
                     {wonItem.redeemable !== false && (
                       <button
                         onClick={handleSell}
