@@ -20,7 +20,8 @@ import {
   Twitter,
   User as UserIcon,
   X,
-  Youtube
+  Youtube,
+  Download
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -37,12 +38,22 @@ type HeaderProps = {
   onOpenInbox: () => void;
   unreadChatCount?: number;
   isSticky?: boolean;
+  canInstall?: boolean;
+  isInstalled?: boolean;
+  onInstall?: () => void;
 };
 
 const drawerCardClass =
   'flex items-center gap-3 rounded-xl border border-white/5 bg-[#18181b] p-3 text-left transition-colors hover:bg-[#202023]';
 
-export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unreadChatCount: _unreadChatCount, isSticky = true }) => {
+export const Header: React.FC<HeaderProps> = ({
+  onOpenInbox: _onOpenInbox,
+  unreadChatCount: _unreadChatCount,
+  isSticky = true,
+  canInstall = false,
+  isInstalled = false,
+  onInstall
+}) => {
   const {
     user,
     balance,
@@ -137,6 +148,24 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     setIsGamesMenuOpen(false);
   };
 
+
+  const showInstallChip = canInstall && !isInstalled;
+
+  const installChip = showInstallChip ? (
+    <button
+      type="button"
+      onClick={() => {
+        playSound('click');
+        onInstall?.();
+      }}
+      className="inline-flex items-center gap-1 rounded-full border border-cyan-300/30 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-100 transition-colors hover:bg-cyan-500/20 sm:px-3 sm:text-xs"
+      aria-label="Install Pullz app"
+    >
+      <Download className="h-3.5 w-3.5" />
+      Install
+    </button>
+  ) : null;
+
   const authButtons = useMemo(() => (
     <>
       <button
@@ -223,6 +252,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {installChip}
             {isAuthenticated ? (
               <>
                 <div className="hidden items-center gap-2 lg:flex">

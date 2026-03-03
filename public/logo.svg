@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title>Pullz Logo</title>
+  <desc>Text-based Pullz.gg app icon</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="#0f0f14"/>
+  <rect x="12" y="12" width="232" height="232" rx="48" fill="none" stroke="url(#g)" stroke-width="8"/>
+  <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" fill="#e2e8f0" font-size="112" font-family="Inter, Segoe UI, Arial, sans-serif" font-weight="900">P</text>
+</svg>
