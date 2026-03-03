@@ -59,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const [provablyData, setProvablyData] = useState<{ serverSeedHash?: string; clientSeed?: string; nonce?: number }>({});
   const headerRef = useRef<HTMLElement | null>(null);
   const targetXp = Math.floor(user.xpBalance ?? user.xp ?? 0);
-  const balanceTone = useBalanceFeedback(balance);
+  const balanceTone = useBalanceFeedback(balance, isAuthenticated);
   const { unreadCount } = useActivity();
 
   useEffect(() => {
