@@ -1301,7 +1301,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               <div className="overflow-y-auto p-5 sm:p-6">
                 <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-white/10 bg-black/25 p-4 text-center">
                   <div className="absolute inset-0 rounded-2xl opacity-30" style={{ background: `radial-gradient(circle at top, ${wonItem.color}99 0%, transparent 70%)` }} />
-                  <BlurImage src={wonItem.image} alt={wonItem.name} className="relative z-10 mb-3 h-36 w-36 object-contain" />
+                  <BlurImage
+                    src={wonItem.image}
+                    alt={wonItem.name}
+                    ratioClassName="relative z-10 mb-3 mx-auto h-32 w-32 shrink-0 sm:h-36 sm:w-36"
+                    className="object-contain"
+                  />
                   <h4 className="relative z-10 text-lg font-bold text-white">{wonItem.name}</h4>
                   <CoinAmount
                     amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
