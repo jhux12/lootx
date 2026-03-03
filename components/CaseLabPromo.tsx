@@ -28,6 +28,10 @@ export const CaseLabPromo: React.FC = () => {
               alt="Box Lab preview"
               className="h-[140px] w-full object-contain md:h-[160px]"
               loading="lazy"
+              decoding="async"
+              width={640}
+              height={320}
+              style={{ aspectRatio: "2 / 1" }}
             />
           </div>
         </div>
