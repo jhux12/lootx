@@ -12,13 +12,7 @@ interface SoundContextType {
 const SoundContext = createContext<SoundContextType | undefined>(undefined);
 
 const SOUND_URLS: Partial<Record<SoundType, string>> = {
-  'spin-start': spinSoundUrl,
-  'spin-tick': spinSoundUrl,
-  'win-common': spinSoundUrl,
-  'win-rare': spinSoundUrl,
-  'win-gold': spinSoundUrl,
-  'gold-mode': spinSoundUrl,
-  coins: spinSoundUrl
+  'spin-start': spinSoundUrl
 };
 
 const SOUND_VOLUMES: Partial<Record<SoundType, number>> = {
@@ -63,8 +57,8 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const playSound = useCallback((type: SoundType) => {
     if (muted) return;
 
-    // Intentionally disable noisy UI click/hover sounds.
-    if (type === 'click' || type === 'hover') return;
+    // Only allow the unboxing spinner start sound.
+    if (type !== 'spin-start') return;
 
     initializeAudio();
 
