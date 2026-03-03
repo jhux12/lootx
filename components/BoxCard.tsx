@@ -1,10 +1,13 @@
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { CoinAmount } from './CoinAmount';
 import { MysteryBox } from '../types';
 import { RiskSliderIndicator } from './RiskSliderIndicator';
 import { resolveRiskValue } from '../utils/riskIndicator';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { XP_ICON } from '../constants';
+import { BlurImage } from '../src/ui/images/BlurImage';
+import { useIntentPrefetch } from '../src/lib/prefetch/useIntentPrefetch';
+import { useGame } from '../context/GameContext';
 
 type BoxCardProps = {
   box: MysteryBox;
@@ -14,10 +17,13 @@ type BoxCardProps = {
 };
 
 const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size = 'default' }) => {
+  const { boxes } = useGame();
   const [isDropping, setIsDropping] = useState(false);
   const clickTimeoutRef = useRef<number | null>(null);
   const isCompact = size === 'compact';
   const riskValue = resolveRiskValue(box.riskLevel ?? null);
+  const boxMap = useMemo(() => new Map(boxes.map((entry) => [entry.id, entry])), [boxes]);
+  const prefetchHandlers = useIntentPrefetch(box.id, async () => boxMap.get(box.id) ?? null, box.image);
 
   useEffect(() => {
     return () => {
@@ -38,7 +44,11 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
   return (
     <div
       onClick={handleSelect}
-      onMouseEnter={onHover}
+      onMouseEnter={() => {
+        prefetchHandlers.onMouseEnter();
+        onHover?.();
+      }}
+      onTouchStart={prefetchHandlers.onTouchStart}
       className={`group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0b101a] text-center shadow-[0_12px_32px_-28px_rgba(0,0,0,0.75)] transition-all duration-300 ${isCompact ? 'p-3 sm:p-5' : 'p-4 sm:p-6'} ${isDropping ? 'translate-y-2 scale-[0.98]' : 'hover:-translate-y-1 hover:border-white/20'}`}
       style={{ ['--risk-accent' as string]: box.accentColor }}
     >
@@ -53,11 +63,9 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
             background: `radial-gradient(circle, ${box.accentColor}66 0%, ${box.accentColor}00 68%)`
           }}
         />
-        <img
+        <BlurImage
           src={box.image}
           alt={box.name}
-          loading="lazy"
-          decoding="async"
           className={`relative z-10 object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105 ${isCompact ? 'h-28 w-28 sm:h-36 sm:w-36' : 'h-40 w-40 sm:h-44 sm:w-44'}`}
         />
       </div>

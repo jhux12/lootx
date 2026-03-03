@@ -14,6 +14,8 @@ import { ProvablyFairMiniModal } from './ProvablyFairMiniModal';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_ECONOMY_SETTINGS, getXpCost, normalizeEconomySettings } from '../utils/economy';
+import { toast } from '../src/ui/toast/toast';
+import { BlurImage } from '../src/ui/images/BlurImage';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -362,7 +364,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       return;
     }
     if (nextSeed.length < 1 || nextSeed.length > 64) {
-      alert('Client seed must be between 1 and 64 characters.');
+      toast.error('Client seed must be between 1 and 64 characters.');
       return;
     }
 
@@ -382,7 +384,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       setLastRoll(null);
     } catch (error) {
       console.error('Failed to update client seed', error);
-      alert('Unable to update client seed. Please try again.');
+      toast.error('Unable to update client seed. Please try again.');
     } finally {
       setIsUpdatingClientSeed(false);
     }
@@ -412,7 +414,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       setLastRoll(null);
     } catch (error) {
       console.error('Failed to rotate server seed', error);
-      alert('Unable to rotate server seed. Please try again.');
+      toast.error('Unable to rotate server seed. Please try again.');
     } finally {
       setIsRotatingSeed(false);
     }
@@ -527,7 +529,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return;
       }
       if (!canFreeSpin) {
-        alert("Free signup box already claimed.");
+        toast.info("Free signup box already claimed.");
         return;
       }
       claimFreeBox();
@@ -671,7 +673,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         setIsBoxPreviewVisible(true);
         setIsBoxPreviewFading(false);
         setSpinFeedbackMessage(readableMessage || 'Unable to open box.');
-        alert(readableMessage || 'Unable to open box.');
+        toast.error(readableMessage || 'Unable to open box.');
         return;
       }
     }
@@ -797,7 +799,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const handleSell = async () => {
     playSound('click');
     if (wonItem?.redeemable === false) {
-        alert('This item is not redeemable and cannot be sold back.');
+        toast.error('This item is not redeemable and cannot be sold back.');
         return;
     }
     if (isDemoSpin || isGeneratingSellOffer || isSellingItem) {
@@ -870,9 +872,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(proof);
-      alert('Provably fair proof copied to clipboard.');
+      toast.success('Provably fair proof copied to clipboard.');
     } else {
-      alert(proof);
+      toast.info(proof);
     }
   }, [lastReveal?.serverSeed, lastRoll, playSound]);
 
@@ -1267,7 +1269,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               <div className="overflow-y-auto p-5 sm:p-6">
                 <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-white/10 bg-black/25 p-4 text-center">
                   <div className="absolute inset-0 rounded-2xl opacity-30" style={{ background: `radial-gradient(circle at top, ${wonItem.color}99 0%, transparent 70%)` }} />
-                  <img loading="lazy" decoding="async" src={wonItem.image} alt={wonItem.name} className="relative z-10 mb-3 h-36 w-36 object-contain" />
+                  <BlurImage src={wonItem.image} alt={wonItem.name} className="relative z-10 mb-3 h-36 w-36 object-contain" />
                   <h4 className="relative z-10 text-lg font-bold text-white">{wonItem.name}</h4>
                   <CoinAmount
                     amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
@@ -1365,7 +1367,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     >
                         <div className="absolute inset-0 opacity-25" style={{ background: `radial-gradient(circle at top, ${item.color}88 0%, transparent 70%)` }} />
                         <div className="relative flex h-36 items-center justify-center p-3 sm:h-40">
-                            <img loading="lazy" decoding="async" src={item.image} alt={item.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
+                            <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
                             {item.redeemable === false && (
                               <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100" aria-label="Not redeemable for coins" title="Not redeemable for coins">
                                 i
