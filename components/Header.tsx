@@ -399,6 +399,25 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
 
           <section className="space-y-3">
             <h3 className="ml-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Info and Support</h3>
+            {isAuthenticated && (
+              <button
+                onClick={() => {
+                  playSound('click');
+                  setIsMobileMenuOpen(false);
+                  setShowActivity(true);
+                }}
+                className={`${drawerCardClass} w-full`}
+              >
+                <div className="relative">
+                  <Clock3 className="h-5 w-5 text-cyan-300" />
+                  {unreadCount > 0 ? <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-cyan-300" /> : null}
+                </div>
+                <div className="flex min-w-0 flex-col items-start">
+                  <span className="text-sm font-bold text-white">History</span>
+                  <span className="text-xs text-neutral-400">Recent opens, sells, and shipping</span>
+                </div>
+              </button>
+            )}
             <button onClick={() => navigate('CONTACT')} className={`${drawerCardClass} w-full`}><LifeBuoy className="h-5 w-5 text-white" /><span className="text-sm font-bold text-white">Support</span></button>
           </section>
 
