@@ -37,6 +37,10 @@ export const HomeBanners: React.FC = () => {
                 alt={banner.alt}
                 className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.01]"
                 loading="lazy"
+                decoding="async"
+                width={1200}
+                height={500}
+                style={{ aspectRatio: "12 / 5" }}
               />
               <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/10" />
             </div>

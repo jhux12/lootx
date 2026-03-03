@@ -68,6 +68,11 @@ export const Hero: React.FC = () => {
               className="relative z-10 h-full w-full object-contain object-top scale-110 sm:scale-100 -translate-y-4 sm:translate-y-0 animate-hero-float"
               alt="Pullz.gg hero"
               loading="eager"
+              decoding="async"
+              fetchPriority="high"
+              width={960}
+              height={960}
+              style={{ aspectRatio: '1 / 1' }}
             />
           </div>
         </div>

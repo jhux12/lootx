@@ -52,7 +52,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     if (!mountedRef.current || runId !== runIdRef.current || finishedRef.current) return;
     finishedRef.current = true;
     inFlightRef.current = false;
-    console.log('[UpgraderSpinner] finish', runId);
     onFinishRef.current(isWinRef.current);
   };
 
@@ -90,7 +89,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       : randomInRange(loseStart, loseEnd);
     totalRotationRef.current = baseRotations + finalAngle;
 
-    console.log('[UpgraderSpinner] start', runId);
 
     await controls.start({
       rotate: totalRotationRef.current,
@@ -166,7 +164,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       <motion.div
         animate={controls}
         initial={{ rotate: 0 }}
-        className="absolute inset-0 flex items-start justify-center"
+        className="absolute inset-0 flex items-start justify-center will-change-transform"
         style={{ transformOrigin: 'center' }}
       >
         <div className="w-1 h-10 bg-white rounded-full mt-[-4px] relative shadow-[0_0_10px_rgba(255,255,255,0.8)]">

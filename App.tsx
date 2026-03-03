@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { Header } from './components/Header';
 import { LiveTicker } from './components/LiveTicker';
 import { ChatSidebar } from './components/ChatSidebar';
@@ -8,15 +8,10 @@ import { BoxCard } from './components/BoxCard';
 import { BoxRow } from './components/BoxRow';
 import { CategoryRow } from './components/CategoryRow';
 import { BoxCatalog } from './components/BoxCatalog';
-import { CaseOpening } from './components/CaseOpening';
-import { Profile } from './components/Profile';
 import { Bonuses } from './components/Bonuses';
-import { AdminPanel } from './components/AdminPanel';
 import { LoginModal } from './components/LoginModal';
 import { EmailVerificationModal } from './components/EmailVerificationModal';
 import { EmailVerifiedModal } from './components/EmailVerifiedModal';
-import { CustomCaseCreator } from './components/CustomCaseCreator';
-import { Leaderboard } from './components/Leaderboard';
 import { TopUpModal } from './components/TopUpModal';
 import { LegalPage } from './components/LegalPage';
 import { GameProvider, useGame } from './context/GameContext';
@@ -37,9 +32,6 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
-import UpgraderPage from './src/pages/UpgraderPage';
-import UpgraderSettingsPage from './src/pages/admin/UpgraderSettingsPage';
-import UpgraderTargetsPage from './src/pages/admin/UpgraderTargetsPage';
 import { useSiteChat } from './hooks/useSiteChat';
 import {
   ShowcaseRow,
@@ -48,6 +40,22 @@ import {
   normalizeShowcaseRows,
   subscribeHomepageConfig
 } from './utils/homepageShowcase';
+
+
+const AdminPanel = lazy(() => import('./components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
+const CaseOpening = lazy(() => import('./components/CaseOpening').then((module) => ({ default: module.CaseOpening })));
+const UpgraderPage = lazy(() => import('./src/pages/UpgraderPage'));
+const UpgraderSettingsPage = lazy(() => import('./src/pages/admin/UpgraderSettingsPage'));
+const UpgraderTargetsPage = lazy(() => import('./src/pages/admin/UpgraderTargetsPage'));
+const Profile = lazy(() => import('./components/Profile').then((module) => ({ default: module.Profile })));
+const Leaderboard = lazy(() => import('./components/Leaderboard').then((module) => ({ default: module.Leaderboard })));
+const CustomCaseCreator = lazy(() => import('./components/CustomCaseCreator').then((module) => ({ default: module.CustomCaseCreator })));
+
+const LoadingSpinner = React.memo(() => (
+  <div className="flex min-h-[40vh] items-center justify-center" aria-live="polite" aria-busy="true">
+    <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-cyan-300 will-change-transform" />
+  </div>
+));
 
 type HomeRowConfig = {
   id: string;
@@ -172,7 +180,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
   return (
     <main className="flex-1 min-w-0 pb-[90px] sm:pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
-      <>
+      <Suspense fallback={<LoadingSpinner />}>
       {view.type === 'HOME' && (
         <HomeReplica
           boxes={baseHomeBoxes}
@@ -321,7 +329,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         </div>
       )}
 
-      </>
+      </Suspense>
 
       {/* Modals */}
       {showLoginModal && <LoginModal />}

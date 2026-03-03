@@ -13,5 +13,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, '.'),
       'motion/react': path.resolve(__dirname, 'src/shims_motion_react.tsx'),
     }
-  }
+  },
+  build: {
+    minify: 'esbuild',
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
 });

@@ -27,6 +27,9 @@ export const BrandLockup: React.FC<BrandLockupProps> = ({
       width={logoWidth}
       height={logoHeight}
       className={`${logoClassName} object-contain`}
+      loading="lazy"
+      decoding="async"
+      style={{ aspectRatio: "2 / 1" }}
     />
     {showText && (
       <span
