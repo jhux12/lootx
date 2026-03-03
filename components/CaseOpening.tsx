@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2 } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -71,6 +71,93 @@ const deriveRollValue = (hash: string) => {
 
 const LAST_ROLL_STORAGE_KEY = 'pullz:last-provably-fair-roll';
 const LAST_REVEAL_STORAGE_KEY = 'pullz:last-provably-fair-reveal';
+
+
+const loadImageElement = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+  const image = new Image();
+  image.onload = () => resolve(image);
+  image.onerror = () => reject(new Error('Failed to load share image.'));
+  image.src = src;
+});
+
+const createShareImageFile = async (item: CaseItem, caseName: string): Promise<File | null> => {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const response = await fetch(item.image, { mode: 'cors' });
+    if (!response.ok) return null;
+    const imageBlob = await response.blob();
+    const objectUrl = URL.createObjectURL(imageBlob);
+
+    try {
+      const itemImage = await loadImageElement(objectUrl);
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1350;
+      const context = canvas.getContext('2d');
+      if (!context) return null;
+
+      const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, '#0b0e14');
+      gradient.addColorStop(1, '#131722');
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      const glow = context.createRadialGradient(canvas.width / 2, 430, 120, canvas.width / 2, 430, 520);
+      glow.addColorStop(0, `${item.color}AA`);
+      glow.addColorStop(1, 'transparent');
+      context.fillStyle = glow;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      context.fillStyle = '#a5b4fc';
+      context.font = '700 42px Inter, system-ui, sans-serif';
+      context.textAlign = 'center';
+      context.fillText('LOOTX UNBOXING', canvas.width / 2, 105);
+
+      context.fillStyle = '#ffffff';
+      context.font = '800 62px Inter, system-ui, sans-serif';
+      context.fillText(item.name.slice(0, 36), canvas.width / 2, 188);
+
+      context.fillStyle = '#94a3b8';
+      context.font = '500 34px Inter, system-ui, sans-serif';
+      context.fillText(`From ${caseName}`, canvas.width / 2, 238);
+
+      const cardWidth = 780;
+      const cardHeight = 780;
+      const cardX = (canvas.width - cardWidth) / 2;
+      const cardY = 300;
+
+      context.fillStyle = 'rgba(10, 14, 22, 0.72)';
+      context.strokeStyle = 'rgba(255,255,255,0.16)';
+      context.lineWidth = 2;
+      context.beginPath();
+      context.roundRect(cardX, cardY, cardWidth, cardHeight, 42);
+      context.fill();
+      context.stroke();
+
+      const maxImageSize = 560;
+      const scale = Math.min(maxImageSize / itemImage.width, maxImageSize / itemImage.height, 1);
+      const drawWidth = itemImage.width * scale;
+      const drawHeight = itemImage.height * scale;
+      const drawX = canvas.width / 2 - drawWidth / 2;
+      const drawY = cardY + cardHeight / 2 - drawHeight / 2;
+      context.drawImage(itemImage, drawX, drawY, drawWidth, drawHeight);
+
+      context.fillStyle = '#e2e8f0';
+      context.font = '600 33px Inter, system-ui, sans-serif';
+      context.fillText('Open your own case at lootx.ca', canvas.width / 2, 1210);
+
+      const resultBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png', 0.92));
+      if (!resultBlob) return null;
+
+      return new File([resultBlob], 'lootx-unboxing.png', { type: 'image/png' });
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  } catch {
+    return null;
+  }
+};
 
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
@@ -494,8 +581,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         return;
       }
 
-      if (caseCurrencyType === 'XP') {
-        if (currentCaseXpPrice <= 0 || currentXpBalance < currentCaseXpPrice) {
+      const usesXpPayment = caseCurrencyType === 'XP' || paymentMethod === 'xp';
+      if (usesXpPayment) {
+        const requiredXp = caseCurrencyType === 'XP' ? currentCaseXpPrice : xpCostForCoinCase;
+        if (!Number.isFinite(requiredXp) || requiredXp <= 0 || currentXpBalance < requiredXp) {
           setSpinFeedbackMessage('Not enough XP to open this box.');
           return;
         }
@@ -861,6 +950,48 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsGeneratingSellOffer(false);
     setIsSellingItem(false);
   };
+
+
+  const handleShareUnboxing = useCallback(async () => {
+    playSound('click');
+
+    if (typeof window === 'undefined' || !wonItem) return;
+
+    const caseName = box?.name ?? 'Mystery Box';
+    const shareText = `I just unboxed ${wonItem.name} from ${caseName} on LootX!`;
+    const shareUrl = window.location.href;
+
+    try {
+      const shareImage = await createShareImageFile(wonItem, caseName);
+      const supportsFileShare = Boolean(
+        shareImage
+        && navigator.canShare
+        && navigator.canShare({ files: [shareImage] })
+      );
+
+      if (navigator.share) {
+        await navigator.share({
+          title: 'LootX Unboxing',
+          text: shareText,
+          url: shareUrl,
+          ...(supportsFileShare ? { files: [shareImage] } : {})
+        });
+        toast.success(supportsFileShare ? 'Shared with image.' : 'Shared successfully.');
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+        toast.success('Share text copied to clipboard.');
+        return;
+      }
+
+      toast.info('Sharing is not supported on this device.');
+    } catch (error) {
+      if ((error as Error)?.name === 'AbortError') return;
+      toast.error('Unable to share right now. Please try again.');
+    }
+  }, [box?.name, playSound, wonItem]);
 
   const handleKeep = () => {
       playSound('click');
@@ -1322,7 +1453,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 {isDemoSpin ? (
                   <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
                 ) : (
-                  <div className="flex flex-col gap-3 sm:flex-row">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => void handleShareUnboxing()}
+                      className="h-12 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-4 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/20 sm:h-14 sm:min-w-[160px] sm:flex-none"
+                    >
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <Share2 className="h-4 w-4" />
+                        Share
+                      </span>
+                    </button>
                     {wonItem.redeemable !== false && (
                       <button
                         onClick={handleSell}
