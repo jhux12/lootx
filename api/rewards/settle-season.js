@@ -9,10 +9,14 @@ const hasAdminSecret = (req) => {
 };
 
 const isValidCronInvocation = (req) => {
+  if (req.headers['x-vercel-cron'] !== '1') return false;
+
   const cronSecret = process.env.CRON_SECRET;
-  return req.headers['x-vercel-cron'] === '1'
-    && Boolean(cronSecret)
-    && req.headers['x-cron-secret'] === cronSecret;
+  if (!cronSecret) {
+    return true;
+  }
+
+  return req.headers['x-cron-secret'] === cronSecret;
 };
 
 export default async function handler(req, res) {
