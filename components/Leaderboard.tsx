@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Flame, Menu } from 'lucide-react';
 import { collection, doc, getCountFromServer, getDoc, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -105,6 +105,7 @@ export const Leaderboard: React.FC = () => {
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myPoints, setMyPoints] = useState(0);
   const [timeLeft, setTimeLeft] = useState(getTimeLeft(DEFAULT_SETTINGS.seasonEndsAt));
+  const settlementAttemptedSeasonRef = useRef<string | null>(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
@@ -124,8 +125,19 @@ export const Leaderboard: React.FC = () => {
 
 
   useEffect(() => {
-    if (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt) return;
+    const endsAt = settings.seasonEndsAt;
+    if (!endsAt) return;
+
+    const seasonSettledAlready = settlementAttemptedSeasonRef.current === settings.seasonId;
+    if (seasonSettledAlready) return;
+
+    const countdownFinished = Date.now() >= endsAt
+      || (timeLeft?.days === 0 && timeLeft?.hours === 0 && timeLeft?.minutes === 0 && timeLeft?.seconds === 0);
+    if (!countdownFinished) return;
+
+    settlementAttemptedSeasonRef.current = settings.seasonId;
     let cancelled = false;
+
     const settle = async () => {
       try {
         const token = await auth.currentUser?.getIdToken();
@@ -134,16 +146,18 @@ export const Leaderboard: React.FC = () => {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined
         });
       } catch (error) {
+        settlementAttemptedSeasonRef.current = null;
         if (!cancelled) {
           console.warn('Failed to settle rewards season from client trigger', error);
         }
       }
     };
+
     void settle();
     return () => {
       cancelled = true;
     };
-  }, [settings.seasonEndsAt]);
+  }, [settings.seasonEndsAt, settings.seasonId, timeLeft]);
 
   useEffect(() => {
     let mounted = true;

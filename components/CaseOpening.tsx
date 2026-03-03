@@ -988,18 +988,32 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const shareImage = await createShareImageFile(wonItem, caseName);
       const supportsFileShare = Boolean(
         shareImage
-        && navigator.canShare
-        && navigator.canShare({ files: [shareImage] })
+        && (!navigator.canShare || navigator.canShare({ files: [shareImage] }))
       );
 
       if (navigator.share) {
-        await navigator.share({
+        const basePayload = {
           title: 'pullz.gg Unboxing',
           text: shareText,
-          url: shareUrl,
-          ...(supportsFileShare ? { files: [shareImage] } : {})
-        });
-        toast.success(supportsFileShare ? 'Shared with image.' : 'Shared successfully.');
+          url: shareUrl
+        };
+
+        if (supportsFileShare && shareImage) {
+          try {
+            await navigator.share({
+              ...basePayload,
+              files: [shareImage]
+            });
+            toast.success('Shared with image.');
+            return;
+          } catch (fileShareError) {
+            const errorName = (fileShareError as Error)?.name;
+            if (errorName === 'AbortError') return;
+          }
+        }
+
+        await navigator.share(basePayload);
+        toast.success('Shared successfully.');
         return;
       }
 
