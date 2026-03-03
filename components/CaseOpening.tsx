@@ -132,8 +132,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isSellingItem, setIsSellingItem] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
   const [serverSeedHash, setServerSeedHash] = useState('');
-  const [clientSeed, setClientSeed] = useState('lootx-player');
-  const [clientSeedInput, setClientSeedInput] = useState('lootx-player');
+  const [clientSeed, setClientSeed] = useState('pullzgg-player');
+  const [clientSeedInput, setClientSeedInput] = useState('pullzgg-player');
   const [nonce, setNonce] = useState(0);
   const [lastRoll, setLastRoll] = useState<RollData | null>(null);
   const [lastReveal, setLastReveal] = useState<RevealData | null>(null);
@@ -869,13 +869,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (typeof window === 'undefined' || !wonItem) return;
 
     const caseName = box?.name ?? 'Mystery Box';
-    const shareText = `I just unboxed ${wonItem.name} from ${caseName} on LootX!`;
+    const shareText = `I just unboxed ${wonItem.name} from ${caseName} on pullz.gg!`;
     const shareUrl = window.location.href;
 
     try {
       if (navigator.share) {
         await navigator.share({
-          title: 'LootX Unboxing',
+          title: 'pullz.gg Unboxing',
           text: shareText,
           url: shareUrl
         });
@@ -1076,8 +1076,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
                     aria-live="polite"
                   >
-                    <div className={`lootx-box-preview relative w-full max-w-[280px] sm:max-w-[320px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
-                      <div className="lootx-box-preview__shimmer" aria-hidden="true"></div>
+                    <div className={`pullzgg-box-preview relative w-full max-w-[280px] sm:max-w-[320px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
+                      <div className="pullzgg-box-preview__shimmer" aria-hidden="true"></div>
                       <img
                         src={box!.image}
                         alt={`${box!.name} box`}
@@ -1533,11 +1533,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             0%, 100% { box-shadow: 0 0 0 rgba(34, 211, 238, 0.2), 0 0 18px rgba(34, 211, 238, 0.2); }
             50% { box-shadow: 0 0 0 rgba(34, 211, 238, 0.35), 0 0 30px rgba(34, 211, 238, 0.35); }
           }
-          .lootx-box-preview {
+          .pullzgg-box-preview {
             overflow: hidden;
             animation: box-glow 2.1s ease-in-out infinite;
           }
-          .lootx-box-preview__shimmer {
+          .pullzgg-box-preview__shimmer {
             position: absolute;
             inset: -20%;
             background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);

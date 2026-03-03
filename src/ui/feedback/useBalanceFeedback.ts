@@ -13,7 +13,7 @@ export const useBalanceFeedback = (balance: number, isAuthenticated: boolean) =>
     const signedInJustNow = isAuthenticated && !wasAuthenticated.current;
     wasAuthenticated.current = isAuthenticated;
 
-    if (signedInJustNow) {
+    if (!isAuthenticated || signedInJustNow) {
       prevBalance.current = balance;
       return;
     }
