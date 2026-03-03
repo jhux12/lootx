@@ -2,18 +2,36 @@ import { useEffect, useRef, useState } from 'react';
 import { getBalanceDeltaTone, shouldPlayBalancePing } from './balanceFeedback';
 import { useSound } from '../../../context/SoundContext';
 
-export const useBalanceFeedback = (balance: number) => {
+type BalanceFeedbackOptions = {
+  isAuthenticated?: boolean;
+  authSilenceMs?: number;
+};
+
+export const useBalanceFeedback = (balance: number, options: BalanceFeedbackOptions = {}) => {
   const { muted, playSound } = useSound();
+  const { isAuthenticated = false, authSilenceMs = 1600 } = options;
+
   const prevBalance = useRef(balance);
   const lastPlayAt = useRef(0);
+  const authSilencedUntilRef = useRef(0);
+  const prevAuthRef = useRef(isAuthenticated);
   const [tone, setTone] = useState<'up' | 'down' | 'none'>('none');
 
   useEffect(() => {
+    const justSignedIn = !prevAuthRef.current && isAuthenticated;
+    prevAuthRef.current = isAuthenticated;
+    if (justSignedIn) {
+      authSilencedUntilRef.current = Date.now() + authSilenceMs;
+      prevBalance.current = balance;
+      return;
+    }
+
     const delta = balance - prevBalance.current;
     const nextTone = getBalanceDeltaTone(delta);
     if (nextTone !== 'none') {
       setTone(nextTone);
-      if (shouldPlayBalancePing(muted, lastPlayAt.current)) {
+      const audioAllowed = Date.now() >= authSilencedUntilRef.current;
+      if (audioAllowed && shouldPlayBalancePing(muted, lastPlayAt.current)) {
         playSound('coins');
         lastPlayAt.current = Date.now();
       }
@@ -21,7 +39,7 @@ export const useBalanceFeedback = (balance: number) => {
       return () => window.clearTimeout(timer);
     }
     prevBalance.current = balance;
-  }, [balance, muted, playSound]);
+  }, [authSilenceMs, balance, isAuthenticated, muted, playSound]);
 
   useEffect(() => {
     prevBalance.current = balance;

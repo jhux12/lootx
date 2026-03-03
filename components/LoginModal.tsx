@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { X, Mail, Lock, User, AlertCircle, Facebook, Twitter, Twitch, Gamepad2 } from 'lucide-react';
 import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
-import { useSound } from '../context/SoundContext';
 import { BrandLockup } from './BrandLockup';
 import googleLogo from '../assets/google-logo.svg';
 import { Checkbox } from './ui/Checkbox';
@@ -11,7 +10,6 @@ import { getAuthErrorMessage } from '../utils/authErrors';
 
 export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
-  const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
   const fallbackAuthImage =
     'https://dlakysukfcsatvazxavf.supabase.co/storage/v1/object/public/cms-assets/boxes/lg/75992c3ad217db7e58ba5424025c8cb50fc0836a/iphone-17-series.webp';
@@ -40,7 +38,6 @@ export const LoginModal: React.FC = () => {
     setIsLoading(true);
     setUserError(null);
     setMessage(null);
-    playSound('click');
 
     try {
       if (mode === 'register') {
@@ -66,7 +63,6 @@ export const LoginModal: React.FC = () => {
     setIsLoading(true);
     setUserError(null);
     setMessage(null);
-    playSound('click');
 
     try {
       const result = await loginWithGoogle(rememberMe);
@@ -96,7 +92,6 @@ export const LoginModal: React.FC = () => {
     setIsLoading(true);
     setUserError(null);
     setMessage(null);
-    playSound('click');
 
     try {
       const result = await linkGoogleAccount(googleLinkEmail, googleLinkPassword, googleLinkCredential);
@@ -120,7 +115,6 @@ export const LoginModal: React.FC = () => {
     setIsLoading(true);
     setUserError(null);
     setMessage(null);
-    playSound('click');
 
     try {
       await resetPassword(email.trim());
@@ -145,7 +139,6 @@ export const LoginModal: React.FC = () => {
     setGoogleLinkPassword('');
     setGoogleLinkCredential(null);
     setRememberMe(true);
-    playSound('click');
   };
 
   useEffect(() => {

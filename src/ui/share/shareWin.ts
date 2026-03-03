@@ -34,14 +34,3 @@ export async function shareWin(payload: WinSharePayload): Promise<{ ok: boolean;
     return { ok: false, method: 'none', error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
-
-export function openXIntent(text: string): void {
-  if (typeof window === 'undefined') return;
-  const intentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`;
-  window.open(intentUrl, '_blank', 'noopener,noreferrer');
-}
-
-export async function downloadWinStory(payload: WinSharePayload): Promise<void> {
-  const blob = await generateWinStoryImage(payload);
-  downloadBlob(blob, 'pullz-win.png');
-}
