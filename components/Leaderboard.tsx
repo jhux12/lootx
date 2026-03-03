@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Flame, Menu } from 'lucide-react';
 import { collection, doc, getCountFromServer, getDoc, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { COIN_ICON } from '../constants';
+import { authedFetch } from '../utils/authedFetch';
+import { toast } from '../src/ui/toast/toast';
 
 interface RewardsSettings {
   enabled: boolean;
@@ -24,6 +26,11 @@ interface LeaderboardEntry {
   displayName: string;
   avatarUrl: string;
   points: number;
+}
+
+interface UnclaimedPayoutSummary {
+  hasUnclaimedCoins: boolean;
+  totalUnclaimedCoins: number;
 }
 
 const DEFAULT_SETTINGS: RewardsSettings = {
@@ -105,6 +112,13 @@ export const Leaderboard: React.FC = () => {
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myPoints, setMyPoints] = useState(0);
   const [timeLeft, setTimeLeft] = useState(getTimeLeft(DEFAULT_SETTINGS.seasonEndsAt));
+  const settlementAttemptedSeasonRef = useRef<string | null>(null);
+  const [unclaimedPayouts, setUnclaimedPayouts] = useState<UnclaimedPayoutSummary>({
+    hasUnclaimedCoins: false,
+    totalUnclaimedCoins: 0
+  });
+  const [loadingPayouts, setLoadingPayouts] = useState(false);
+  const [claimingPayouts, setClaimingPayouts] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
@@ -124,8 +138,19 @@ export const Leaderboard: React.FC = () => {
 
 
   useEffect(() => {
-    if (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt) return;
+    const endsAt = settings.seasonEndsAt;
+    if (!endsAt) return;
+
+    const seasonSettledAlready = settlementAttemptedSeasonRef.current === settings.seasonId;
+    if (seasonSettledAlready) return;
+
+    const countdownFinished = Date.now() >= endsAt
+      || (timeLeft?.days === 0 && timeLeft?.hours === 0 && timeLeft?.minutes === 0 && timeLeft?.seconds === 0);
+    if (!countdownFinished) return;
+
+    settlementAttemptedSeasonRef.current = settings.seasonId;
     let cancelled = false;
+
     const settle = async () => {
       try {
         const token = await auth.currentUser?.getIdToken();
@@ -134,16 +159,18 @@ export const Leaderboard: React.FC = () => {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined
         });
       } catch (error) {
+        settlementAttemptedSeasonRef.current = null;
         if (!cancelled) {
           console.warn('Failed to settle rewards season from client trigger', error);
         }
       }
     };
+
     void settle();
     return () => {
       cancelled = true;
     };
-  }, [settings.seasonEndsAt]);
+  }, [settings.seasonEndsAt, settings.seasonId, timeLeft]);
 
   useEffect(() => {
     let mounted = true;
@@ -189,6 +216,51 @@ export const Leaderboard: React.FC = () => {
       mounted = false;
     };
   }, [settings.seasonId, user.id]);
+
+  const loadUnclaimedPayouts = useCallback(async () => {
+    if (!user?.id) return;
+
+    setLoadingPayouts(true);
+    try {
+      const response = await authedFetch<{ hasUnclaimedCoins?: boolean; totalUnclaimedCoins?: number }>('/api/rewards/my-payouts', {
+        method: 'GET'
+      });
+      setUnclaimedPayouts({
+        hasUnclaimedCoins: Boolean(response?.hasUnclaimedCoins),
+        totalUnclaimedCoins: Math.max(0, Math.floor(Number(response?.totalUnclaimedCoins ?? 0)))
+      });
+    } catch {
+      setUnclaimedPayouts({ hasUnclaimedCoins: false, totalUnclaimedCoins: 0 });
+    } finally {
+      setLoadingPayouts(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    void loadUnclaimedPayouts();
+  }, [loadUnclaimedPayouts]);
+
+  const handleClaimLeaderboardCoins = useCallback(async () => {
+    if (!unclaimedPayouts.hasUnclaimedCoins || claimingPayouts) return;
+    playSound('click');
+    setClaimingPayouts(true);
+    try {
+      const response = await authedFetch<{ claimed?: boolean; coinsClaimed?: number }>('/api/rewards/claim-coins', {
+        method: 'POST'
+      });
+      const claimedCoins = Math.max(0, Math.floor(Number(response?.coinsClaimed ?? 0)));
+      if (response?.claimed && claimedCoins > 0) {
+        toast.success(`Claimed ${claimedCoins.toLocaleString()} leaderboard coins.`);
+      } else {
+        toast.info('No leaderboard coins available to claim right now.');
+      }
+      await loadUnclaimedPayouts();
+    } catch {
+      toast.error('Unable to claim leaderboard coins right now.');
+    } finally {
+      setClaimingPayouts(false);
+    }
+  }, [claimingPayouts, loadUnclaimedPayouts, playSound, unclaimedPayouts.hasUnclaimedCoins]);
 
   const myReward = useMemo(() => rewardByRule(settings, myRank, myPoints), [settings, myRank, myPoints]);
 
@@ -279,6 +351,24 @@ export const Leaderboard: React.FC = () => {
                 <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Rank: <span className="font-black">{myRank ? `#${myRank}` : 'Unranked'}</span></div>
                 <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Points: <span className="font-black text-[#8f7dff]">{myPoints.toLocaleString()} pts</span></div>
                 <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold flex items-center gap-2">Reward: <img src={COIN_ICON} alt="Coins" className="h-4 w-4 object-contain" /><span className="font-black">{myReward.label}</span></div>
+              </div>
+              <div className="mt-3 rounded-xl border border-[#7f74ff]/35 bg-[#141a2a] p-3 sm:mt-4 sm:p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-[#c5bfff] sm:text-base">Unclaimed leaderboard winnings</p>
+                    <p className="mt-1 flex items-center gap-2 text-xl font-black text-white sm:text-2xl">
+                      <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" />
+                      {loadingPayouts ? 'Loading…' : unclaimedPayouts.totalUnclaimedCoins.toLocaleString()}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => void handleClaimLeaderboardCoins()}
+                    disabled={!unclaimedPayouts.hasUnclaimedCoins || claimingPayouts || loadingPayouts}
+                    className="w-full rounded-xl bg-[#5a55ff] px-4 py-3 text-sm font-extrabold text-white transition enabled:hover:bg-[#6d68ff] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:px-6"
+                  >
+                    {claimingPayouts ? 'Claiming...' : 'Claim leaderboard coins'}
+                  </button>
+                </div>
               </div>
             </section>
 
