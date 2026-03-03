@@ -19,6 +19,7 @@ import { BlurImage } from '../src/ui/images/BlurImage';
 import { activityStore } from '../src/lib/activity/activityStore';
 import { createMicroConfetti, MicroConfettiParticle } from '../src/ui/feedback/microConfetti';
 import { ProvablyFairModal } from '../src/ui/provably/ProvablyFairModal';
+import { WinShareButtons } from '../src/ui/share/WinShareButtons';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -187,6 +188,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const xpRingRadius = 14;
   const xpRingCircumference = 2 * Math.PI * xpRingRadius;
   const xpRingOffset = xpRingCircumference * (1 - xpProgress);
+  const winSharePayload = useMemo(() => {
+    if (!wonItem) return null;
+    return {
+      itemName: wonItem.name,
+      itemImageUrl: wonItem.image,
+      itemValueText: `${toCoins(wonItem.price, PRICE_UNIT_MODE).toLocaleString()} coins`,
+      verifiedText: 'Verified ✓',
+      boxName: box?.name,
+      openedAtISO: new Date().toISOString()
+    };
+  }, [box?.name, wonItem]);
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -1322,50 +1334,53 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 {isDemoSpin ? (
                   <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
                 ) : (
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    {wonItem.redeemable !== false && (
-                      <button
-                        onClick={handleSell}
-                        disabled={isGeneratingSellOffer || isSellingItem}
-                        className={`h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 border px-4 text-sm font-semibold transition disabled:opacity-60 ${
-                          sellOfferGenerated
-                            ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30'
-                            : 'border-white/10 bg-white/5 text-gray-100 hover:bg-white/10'
-                        }`}
-                      >
-                        {isSellingItem ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Selling item...
-                          </span>
-                        ) : isGeneratingSellOffer ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Generating offer...
-                          </span>
-                        ) : sellOfferGenerated ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Trade for
-                            <CoinAmount
-                              amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
-                              formatOptions={{ maximumFractionDigits: 0 }}
-                              className="text-emerald-50"
-                              iconClassName="h-4 w-4"
-                            />
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Generate buy back offer
-                          </span>
-                        )}
+                  <>
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      {wonItem.redeemable !== false && (
+                        <button
+                          onClick={handleSell}
+                          disabled={isGeneratingSellOffer || isSellingItem}
+                          className={`h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 border px-4 text-sm font-semibold transition disabled:opacity-60 ${
+                            sellOfferGenerated
+                              ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30'
+                              : 'border-white/10 bg-white/5 text-gray-100 hover:bg-white/10'
+                          }`}
+                        >
+                          {isSellingItem ? (
+                            <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
+                              <Wallet className="h-4 w-4" />
+                              Selling item...
+                            </span>
+                          ) : isGeneratingSellOffer ? (
+                            <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
+                              <Wallet className="h-4 w-4" />
+                              Generating offer...
+                            </span>
+                          ) : sellOfferGenerated ? (
+                            <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
+                              <Wallet className="h-4 w-4" />
+                              Trade for
+                              <CoinAmount
+                                amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="text-emerald-50"
+                                iconClassName="h-4 w-4"
+                              />
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
+                              <Wallet className="h-4 w-4" />
+                              Generate buy back offer
+                            </span>
+                          )}
+                        </button>
+                      )}
+                      <button onClick={handleKeep} className="h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 btn-logo-gradient px-4 text-sm font-bold text-white"> 
+                        <span className="inline-flex items-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0"><PackageOpen className="h-4 w-4" />Keep Item</span>
                       </button>
-                    )}
-                    <button onClick={handleKeep} className="h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 btn-logo-gradient px-4 text-sm font-bold text-white"> 
-                      <span className="inline-flex items-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0"><PackageOpen className="h-4 w-4" />Keep Item</span>
-                    </button>
-                  </div>
+                    </div>
+                    {winSharePayload && <WinShareButtons payload={winSharePayload} />}
+                  </>
                 )}
               </div>
             </div>

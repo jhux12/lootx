@@ -34,6 +34,10 @@ import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
 import { useSiteChat } from './hooks/useSiteChat';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
+import { PullToRefreshLayer } from './src/ui/mobile/PullToRefreshLayer';
+import { isTouchDevice } from './src/pwa/isTouchDevice';
+import { refreshAll } from './src/lib/refresh/refreshAll';
+import { isCaseOpeningView } from './src/lib/navigation/isCaseOpeningView';
 import {
   ShowcaseRow,
   ShowcaseRowBoxes,
@@ -404,27 +408,39 @@ const AppLayout: React.FC<{
   hasStickyHeader: boolean;
 }> = ({ hasUnseenChatMessages, onChatViewed, hasStickyHeader }) => {
   const [isChatCollapsed, setIsChatCollapsed] = useState(true);
+  const { view, syncBalance } = useGame();
+
+  const pullToRefreshEnabled = isTouchDevice() && view.type !== 'CASE_OPENING' && !isCaseOpeningView();
+
+  const handlePullRefresh = useCallback(async () => {
+    await refreshAll({
+      syncBalance,
+      allowHardReload: view.type !== 'CASE_OPENING'
+    });
+  }, [syncBalance, view.type]);
 
   const chatWidth = isChatCollapsed ? '64px' : '380px';
 
   return (
-    <div
-      className={`flex flex-1 ${hasStickyHeader ? 'pt-[var(--pullz-header-height,72px)]' : ''}`}
-      style={{ '--chatw': chatWidth } as React.CSSProperties}
-      data-chat-collapsed={isChatCollapsed}
-    >
-      <MainContent isChatCollapsed={isChatCollapsed} />
+    <PullToRefreshLayer enabled={pullToRefreshEnabled} onRefresh={handlePullRefresh}>
       <div
-        className="relative hidden shrink-0 xl:flex transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
-        style={{ width: 'var(--chatw)' }}
+        className={`flex flex-1 ${hasStickyHeader ? 'pt-[var(--pullz-header-height,72px)]' : ''}`}
+        style={{ '--chatw': chatWidth } as React.CSSProperties}
+        data-chat-collapsed={isChatCollapsed}
       >
-        <ChatSidebar
-          isCollapsed={isChatCollapsed}
-          onToggle={setIsChatCollapsed}
-          hasUnseenMessages={hasUnseenChatMessages}
-          onChatViewed={onChatViewed}
-        />
+        <MainContent isChatCollapsed={isChatCollapsed} />
+        <div
+          className="relative hidden shrink-0 xl:flex transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+          style={{ width: 'var(--chatw)' }}
+        >
+          <ChatSidebar
+            isCollapsed={isChatCollapsed}
+            onToggle={setIsChatCollapsed}
+            hasUnseenMessages={hasUnseenChatMessages}
+            onChatViewed={onChatViewed}
+          />
+        </div>
       </div>
-    </div>
+    </PullToRefreshLayer>
   );
 };
