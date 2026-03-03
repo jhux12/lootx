@@ -1,6 +1,6 @@
 import { randomSeed, sha256 } from './provablyFair.js';
 
-const DEFAULT_CLIENT_SEED = 'lootx-player';
+const DEFAULT_CLIENT_SEED = 'pullz-player';
 
 export const ensureProvablyFairState = async (firestore, uid) => {
   const docRef = firestore.collection('provablyFair').doc(uid);

@@ -16,7 +16,7 @@ import { SkeletonRow, SkeletonTile } from '../src/ui/skeleton/Skeleton';
 import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-const SHIPPING_BATCH_STORAGE_KEY = 'lootx_shipping_batch';
+const SHIPPING_BATCH_STORAGE_KEY = 'pullzgg_shipping_batch';
 
 const AVATAR_PRESETS = [
     'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',

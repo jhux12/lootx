@@ -3,7 +3,7 @@ import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { randomSeed, sha256 } from './_lib/provablyFair.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 
-const DEFAULT_CLIENT_SEED = 'lootx-player';
+const DEFAULT_CLIENT_SEED = 'pullz-player';
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);

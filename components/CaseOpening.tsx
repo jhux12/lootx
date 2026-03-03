@@ -19,6 +19,7 @@ import { BlurImage } from '../src/ui/images/BlurImage';
 import { activityStore } from '../src/lib/activity/activityStore';
 import { createMicroConfetti, MicroConfettiParticle } from '../src/ui/feedback/microConfetti';
 import { ProvablyFairModal } from '../src/ui/provably/ProvablyFairModal';
+import pullzLogo from '../assets/pullz-p.PNG';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -84,9 +85,13 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
   if (typeof window === 'undefined') return null;
 
   try {
-    const response = await fetch(item.image, { mode: 'cors' });
-    if (!response.ok) return null;
-    const imageBlob = await response.blob();
+    const [itemResponse, logoImage] = await Promise.all([
+      fetch(item.image, { mode: 'cors' }),
+      loadImageElement(pullzLogo)
+    ]);
+    if (!itemResponse.ok) return null;
+
+    const imageBlob = await itemResponse.blob();
     const objectUrl = URL.createObjectURL(imageBlob);
 
     try {
@@ -97,45 +102,63 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
       const context = canvas.getContext('2d');
       if (!context) return null;
 
-      const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, '#0b0e14');
-      gradient.addColorStop(1, '#131722');
+      const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, '#070b12');
+      gradient.addColorStop(0.55, '#111827');
+      gradient.addColorStop(1, '#0f172a');
       context.fillStyle = gradient;
       context.fillRect(0, 0, canvas.width, canvas.height);
 
-      const glow = context.createRadialGradient(canvas.width / 2, 430, 120, canvas.width / 2, 430, 520);
-      glow.addColorStop(0, `${item.color}AA`);
+      context.strokeStyle = 'rgba(99, 102, 241, 0.2)';
+      context.lineWidth = 2;
+      const patternSize = 84;
+      for (let x = -patternSize; x < canvas.width + patternSize; x += patternSize) {
+        for (let y = -patternSize; y < canvas.height + patternSize; y += patternSize) {
+          context.beginPath();
+          context.arc(x + (y % (patternSize * 2) === 0 ? 16 : 42), y, 8, 0, Math.PI * 2);
+          context.stroke();
+        }
+      }
+
+      const glow = context.createRadialGradient(canvas.width / 2, 470, 140, canvas.width / 2, 470, 600);
+      glow.addColorStop(0, `${item.color}B0`);
       glow.addColorStop(1, 'transparent');
       context.fillStyle = glow;
       context.fillRect(0, 0, canvas.width, canvas.height);
 
+      const logoWidth = 200;
+      const logoHeight = 200;
+      context.globalAlpha = 0.95;
+      context.drawImage(logoImage, canvas.width / 2 - logoWidth / 2, 48, logoWidth, logoHeight);
+      context.globalAlpha = 1;
+
       context.fillStyle = '#a5b4fc';
-      context.font = '700 42px Inter, system-ui, sans-serif';
+      context.font = '700 36px Inter, system-ui, sans-serif';
       context.textAlign = 'center';
-      context.fillText('LOOTX UNBOXING', canvas.width / 2, 105);
+      context.fillText('PULLZ.GG UNBOXING', canvas.width / 2, 280);
 
       context.fillStyle = '#ffffff';
       context.font = '800 62px Inter, system-ui, sans-serif';
-      context.fillText(item.name.slice(0, 36), canvas.width / 2, 188);
+      context.fillText(item.name.slice(0, 36), canvas.width / 2, 360);
 
-      context.fillStyle = '#94a3b8';
-      context.font = '500 34px Inter, system-ui, sans-serif';
-      context.fillText(`From ${caseName}`, canvas.width / 2, 238);
+      context.fillStyle = '#cbd5e1';
+      context.font = '500 32px Inter, system-ui, sans-serif';
+      context.fillText(`From ${caseName}`, canvas.width / 2, 410);
 
-      const cardWidth = 780;
-      const cardHeight = 780;
+      const cardWidth = 820;
+      const cardHeight = 740;
       const cardX = (canvas.width - cardWidth) / 2;
-      const cardY = 300;
+      const cardY = 470;
 
-      context.fillStyle = 'rgba(10, 14, 22, 0.72)';
-      context.strokeStyle = 'rgba(255,255,255,0.16)';
-      context.lineWidth = 2;
+      context.fillStyle = 'rgba(10, 14, 22, 0.7)';
+      context.strokeStyle = 'rgba(99,102,241,0.45)';
+      context.lineWidth = 3;
       context.beginPath();
-      context.roundRect(cardX, cardY, cardWidth, cardHeight, 42);
+      context.roundRect(cardX, cardY, cardWidth, cardHeight, 44);
       context.fill();
       context.stroke();
 
-      const maxImageSize = 560;
+      const maxImageSize = 540;
       const scale = Math.min(maxImageSize / itemImage.width, maxImageSize / itemImage.height, 1);
       const drawWidth = itemImage.width * scale;
       const drawHeight = itemImage.height * scale;
@@ -144,13 +167,13 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
       context.drawImage(itemImage, drawX, drawY, drawWidth, drawHeight);
 
       context.fillStyle = '#e2e8f0';
-      context.font = '600 33px Inter, system-ui, sans-serif';
-      context.fillText('Open your own case at lootx.ca', canvas.width / 2, 1210);
+      context.font = '600 34px Inter, system-ui, sans-serif';
+      context.fillText('Open your own case at pullz.gg', canvas.width / 2, 1270);
 
       const resultBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png', 0.92));
       if (!resultBlob) return null;
 
-      return new File([resultBlob], 'lootx-unboxing.png', { type: 'image/png' });
+      return new File([resultBlob], 'pullzgg-unboxing.png', { type: 'image/png' });
     } finally {
       URL.revokeObjectURL(objectUrl);
     }
@@ -219,8 +242,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isSellingItem, setIsSellingItem] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
   const [serverSeedHash, setServerSeedHash] = useState('');
-  const [clientSeed, setClientSeed] = useState('lootx-player');
-  const [clientSeedInput, setClientSeedInput] = useState('lootx-player');
+  const [clientSeed, setClientSeed] = useState('pullz-player');
+  const [clientSeedInput, setClientSeedInput] = useState('pullz-player');
   const [nonce, setNonce] = useState(0);
   const [lastRoll, setLastRoll] = useState<RollData | null>(null);
   const [lastReveal, setLastReveal] = useState<RevealData | null>(null);
@@ -958,7 +981,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (typeof window === 'undefined' || !wonItem) return;
 
     const caseName = box?.name ?? 'Mystery Box';
-    const shareText = `I just unboxed ${wonItem.name} from ${caseName} on LootX!`;
+    const shareText = `I just unboxed ${wonItem.name} from ${caseName} on pullz.gg!`;
     const shareUrl = window.location.href;
 
     try {
@@ -971,7 +994,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
       if (navigator.share) {
         await navigator.share({
-          title: 'LootX Unboxing',
+          title: 'pullz.gg Unboxing',
           text: shareText,
           url: shareUrl,
           ...(supportsFileShare ? { files: [shareImage] } : {})
@@ -1173,8 +1196,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
                     aria-live="polite"
                   >
-                    <div className={`lootx-box-preview relative w-full max-w-[280px] sm:max-w-[320px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
-                      <div className="lootx-box-preview__shimmer" aria-hidden="true"></div>
+                    <div className={`pullz-box-preview relative w-full max-w-[280px] sm:max-w-[320px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
+                      <div className="pullz-box-preview__shimmer" aria-hidden="true"></div>
                       <img
                         src={box!.image}
                         alt={`${box!.name} box`}
@@ -1630,11 +1653,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             0%, 100% { box-shadow: 0 0 0 rgba(34, 211, 238, 0.2), 0 0 18px rgba(34, 211, 238, 0.2); }
             50% { box-shadow: 0 0 0 rgba(34, 211, 238, 0.35), 0 0 30px rgba(34, 211, 238, 0.35); }
           }
-          .lootx-box-preview {
+          .pullz-box-preview {
             overflow: hidden;
             animation: box-glow 2.1s ease-in-out infinite;
           }
-          .lootx-box-preview__shimmer {
+          .pullz-box-preview__shimmer {
             position: absolute;
             inset: -20%;
             background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
