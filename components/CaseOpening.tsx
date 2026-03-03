@@ -14,6 +14,8 @@ import { ProvablyFairMiniModal } from './ProvablyFairMiniModal';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_ECONOMY_SETTINGS, getXpCost, normalizeEconomySettings } from '../utils/economy';
+import { toast } from '../src/ui/toast/toast';
+import { BlurImage } from '../src/ui/images/BlurImage';
 
 interface CaseOpeningProps {
   boxId: string;
