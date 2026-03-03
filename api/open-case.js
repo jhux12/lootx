@@ -5,7 +5,7 @@ import { normalizeEconomySettings, getXpCost } from './_lib/economy.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 
-const DEFAULT_CLIENT_SEED = 'lootx-player';
+const DEFAULT_CLIENT_SEED = 'pullzgg-player';
 const STARTER_COINS = 1000;
 
 const normalizeSizes = (sizes = []) =>
