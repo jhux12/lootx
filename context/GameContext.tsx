@@ -44,6 +44,7 @@ import {
   where,
   writeBatch
 } from 'firebase/firestore';
+import { activityStore } from '../src/lib/activity/activityStore';
 
 const sanitizeData = <T extends Record<string, any>>(data: T): T => {
   return Object.fromEntries(
@@ -588,8 +589,8 @@ interface GameContextType {
   addInventoryItemFromServer: (item: InventoryItem) => void;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
-  sellItem: (instanceId: string) => Promise<void>;
-  shipItem: (instanceId: string) => Promise<void>;
+  sellItem: (instanceId: string) => Promise<{ creditCoins?: number } | void>;
+  shipItem: (instanceId: string) => Promise<{ shipmentId?: string } | void>;
   updateAddress: (address: ShippingAddress) => void;
   updateUserInfo: (name: string, avatar: string) => Promise<void>;
   addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>) => void;
@@ -2154,6 +2155,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         pendingBalanceRef.current = nextCoins;
         syncBalance(nextCoins);
       }
+      activityStore.add({
+        type: 'sell',
+        title: `Sold ${itemToSell?.name ?? 'item'}`,
+        value: Number(data?.creditCoins ?? 0),
+        meta: { inventoryId: instanceId }
+      });
+      return { creditCoins: Number(data?.creditCoins ?? 0) };
     } catch (error) {
       pendingSoldIdsRef.current.delete(instanceId);
       if (itemToSell) {
@@ -2214,6 +2222,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         message: `${itemToShip.name} is now shipping to your saved address.`,
         type: 'shipping'
       });
+      activityStore.add({
+        type: 'ship',
+        title: `Shipment requested for ${itemToShip.name}`,
+        meta: { shipmentId: (data as { shipmentId?: string }).shipmentId, trackingStatus: 'Processing' }
+      });
+      return { shipmentId: (data as { shipmentId?: string }).shipmentId };
     } catch (error) {
       console.error('Failed to request shipment', error);
       alert('Unable to request shipment right now. Please try again.');
