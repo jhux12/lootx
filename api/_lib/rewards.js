@@ -62,7 +62,8 @@ export const normalizeRewardsSettings = (rawSettings = {}) => {
 
   return {
     enabled: rawSettings?.enabled !== false,
-    pointsPerCoinSpent: Math.max(0, toNumber(rawSettings?.pointsPerCoinSpent, 1)),
+    // Leaderboard points are always a strict 1:1 mapping with spent coins.
+    pointsPerCoinSpent: 1,
     seasonEndsAt,
     seasonId: toSeasonId(seasonEndsAt),
     rewardRules: normalizeRewardRule(rawSettings?.rewardRules)
@@ -102,7 +103,7 @@ export const applySpendAndRewards = async ({
   }
   if (settings.enabled === false) return { pointsAdded: 0, seasonId: settings.seasonId };
 
-  const pointsAdded = Math.max(0, Math.round(spendAmount * settings.pointsPerCoinSpent));
+  const pointsAdded = spendAmount;
   if (pointsAdded <= 0) return { pointsAdded: 0, seasonId: settings.seasonId };
 
   const leaderboardUserRef = firestore
