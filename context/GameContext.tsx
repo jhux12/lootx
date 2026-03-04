@@ -1538,6 +1538,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    activityStore.setScope(isAuthenticated && user.id ? user.id : 'guest');
+  }, [isAuthenticated, user.id]);
+
 
   // Battles Realtime Sync
   useEffect(() => {
@@ -2156,6 +2160,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         syncBalance(nextCoins);
       }
       activityStore.add({
+        userId: auth.currentUser?.uid,
         type: 'sell',
         title: `Sold ${itemToSell?.name ?? 'item'}`,
         value: Number(data?.creditCoins ?? 0),
@@ -2223,6 +2228,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         type: 'shipping'
       });
       activityStore.add({
+        userId: auth.currentUser?.uid,
         type: 'ship',
         title: `Shipment requested for ${itemToShip.name}`,
         meta: { shipmentId: (data as { shipmentId?: string }).shipmentId, trackingStatus: 'Processing' }
