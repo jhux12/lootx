@@ -11,6 +11,7 @@ export interface ProvablyFairActivityData {
 
 export interface ActivityEntry {
   id: string;
+  userId?: string;
   type: ActivityType;
   title: string;
   value?: number;

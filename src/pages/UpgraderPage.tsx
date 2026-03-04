@@ -244,6 +244,12 @@ export default function UpgraderPage() {
     setIsSubmitting(true);
     setStatus('spinning');
 
+    if (!isMuted && spinAudioRef.current) {
+      lastPlayedSpinNonceRef.current = spinNonce + 1;
+      spinAudioRef.current.currentTime = 0;
+      void spinAudioRef.current.play().catch(() => undefined);
+    }
+
     try {
       const response = await attemptUpgrade({
         sourceItemInstanceId: source.id,

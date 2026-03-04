@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle } from 'lucide-react';
-import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
@@ -162,6 +162,15 @@ type EconomySettingsDraft = {
     xpPerDollar: number;
     coinsPerDollar: number;
     xpOpenEnabled: boolean;
+};
+
+type LeaderboardApprovalEntry = {
+    uid: string;
+    displayName: string;
+    points: number;
+    rank: number;
+    rewardCoins: number;
+    rewardApprovedAt?: number;
 };
 
 const DEFAULT_ECONOMY_SETTINGS: EconomySettingsDraft = {
@@ -394,6 +403,11 @@ export const AdminPanel: React.FC = () => {
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
   const [rewardsDraft, setRewardsDraft] = useState(DEFAULT_REWARDS_SETTINGS);
   const [rewardsSettingsNotice, setRewardsSettingsNotice] = useState(false);
+  const [leaderboardApprovals, setLeaderboardApprovals] = useState<LeaderboardApprovalEntry[]>([]);
+  const [selectedLeaderboardWinnerIds, setSelectedLeaderboardWinnerIds] = useState<string[]>([]);
+  const [leaderboardApprovalsLoading, setLeaderboardApprovalsLoading] = useState(false);
+  const [isApprovingLeaderboardWinners, setIsApprovingLeaderboardWinners] = useState(false);
+  const [leaderboardApprovalNotice, setLeaderboardApprovalNotice] = useState<string | null>(null);
   const [bonusSaveNotice, setBonusSaveNotice] = useState(false);
   const [economyDraft, setEconomyDraft] = useState<EconomySettingsDraft>(DEFAULT_ECONOMY_SETTINGS);
   const [economySaveNotice, setEconomySaveNotice] = useState(false);
@@ -848,6 +862,133 @@ export const AdminPanel: React.FC = () => {
           window.setTimeout(() => setRewardsSettingsNotice(false), 2200);
       } catch (error) {
           console.error('Failed to save rewards settings', error);
+      }
+  };
+
+  const getRewardsSeasonId = () => {
+      if (!rewardsDraft.seasonEndsAt) return null;
+      const seasonEnd = new Date(rewardsDraft.seasonEndsAt).getTime();
+      if (!Number.isFinite(seasonEnd)) return null;
+      return `season_${new Date(seasonEnd).toISOString().slice(0, 10)}`;
+  };
+
+  const getRewardCoinsForRank = (rank: number) => {
+      if (rewardsDraft.payoutType !== 'coins') return 0;
+      const baseRules = [
+          { minRank: 1, maxRank: 1, rewardAmountCoins: Math.max(0, Math.floor(Number(rewardsDraft.top1CoinReward) || 0)) },
+          { minRank: 2, maxRank: 2, rewardAmountCoins: Math.max(0, Math.floor(Number(rewardsDraft.top2CoinReward) || 0)) },
+          { minRank: 3, maxRank: 3, rewardAmountCoins: Math.max(0, Math.floor(Number(rewardsDraft.top3CoinReward) || 0)) }
+      ];
+      let parsedRankRules: Array<{ minRank: number; maxRank: number; rewardAmountCoins?: number }> = [];
+      try {
+          const parsed = JSON.parse(rewardsDraft.rankRulesText || '[]');
+          if (Array.isArray(parsed)) parsedRankRules = parsed;
+      } catch {
+          parsedRankRules = [];
+      }
+      const allRules = [...baseRules, ...parsedRankRules];
+      const matched = allRules.find((rule) => rank >= Number(rule.minRank) && rank <= Number(rule.maxRank));
+      return Math.max(0, Math.floor(Number(matched?.rewardAmountCoins ?? 0)));
+  };
+
+  useEffect(() => {
+      const seasonId = getRewardsSeasonId();
+      const seasonEndTs = rewardsDraft.seasonEndsAt ? new Date(rewardsDraft.seasonEndsAt).getTime() : null;
+      if (!seasonId || !seasonEndTs || Date.now() < seasonEndTs) {
+          setLeaderboardApprovals([]);
+          setSelectedLeaderboardWinnerIds([]);
+          return;
+      }
+
+      let cancelled = false;
+      const loadLeaderboardApprovals = async () => {
+          setLeaderboardApprovalsLoading(true);
+          try {
+              const leaderboardQuery = query(
+                  collection(db, 'leaderboards', `rewardsSeason_${seasonId}`, 'users'),
+                  orderBy('points', 'desc'),
+                  orderBy('updatedAt', 'asc'),
+                  limit(100)
+              );
+              const snapshot = await getDocs(leaderboardQuery);
+              if (cancelled) return;
+              const rows = snapshot.docs.map((docSnap, index) => {
+                  const data = docSnap.data() as Record<string, any>;
+                  const rank = index + 1;
+                  return {
+                      uid: docSnap.id,
+                      displayName: String(data.displayName ?? data.name ?? 'Player'),
+                      points: Number(data.points ?? 0),
+                      rank,
+                      rewardCoins: getRewardCoinsForRank(rank),
+                      rewardApprovedAt: data.rewardApprovedAt == null ? undefined : Number(data.rewardApprovedAt)
+                  } as LeaderboardApprovalEntry;
+              });
+              setLeaderboardApprovals(rows);
+              setSelectedLeaderboardWinnerIds((prev) => prev.filter((id) => rows.some((row) => row.uid === id && !row.rewardApprovedAt)));
+          } catch (error) {
+              console.error('Failed to load leaderboard approvals', error);
+              setLeaderboardApprovals([]);
+          } finally {
+              if (!cancelled) setLeaderboardApprovalsLoading(false);
+          }
+      };
+
+      void loadLeaderboardApprovals();
+      return () => {
+          cancelled = true;
+      };
+  }, [rewardsDraft.seasonEndsAt, rewardsDraft.payoutType, rewardsDraft.rankRulesText, rewardsDraft.top1CoinReward, rewardsDraft.top2CoinReward, rewardsDraft.top3CoinReward]);
+
+  const handleApproveLeaderboardWinners = async () => {
+      const seasonId = getRewardsSeasonId();
+      if (!seasonId || selectedLeaderboardWinnerIds.length === 0 || isApprovingLeaderboardWinners) return;
+
+      setIsApprovingLeaderboardWinners(true);
+      setLeaderboardApprovalNotice(null);
+      try {
+          let approvedCount = 0;
+          for (const uid of selectedLeaderboardWinnerIds) {
+              const winner = leaderboardApprovals.find((entry) => entry.uid === uid);
+              if (!winner || winner.rewardApprovedAt || winner.rewardCoins <= 0) continue;
+
+              await runTransaction(db, async (transaction) => {
+                  const userRef = doc(db, 'users', uid);
+                  const leaderboardRef = doc(db, 'leaderboards', `rewardsSeason_${seasonId}`, 'users', uid);
+                  const userSnap = await transaction.get(userRef);
+                  const leaderboardSnap = await transaction.get(leaderboardRef);
+                  const leaderboardData = leaderboardSnap.exists() ? (leaderboardSnap.data() as Record<string, any>) : {};
+                  if (leaderboardData.rewardApprovedAt) return;
+
+                  const currentBalance = Number(userSnap.data()?.balance ?? 0);
+                  const nextBalance = currentBalance + winner.rewardCoins;
+                  transaction.set(userRef, { balance: nextBalance }, { merge: true });
+                  transaction.set(leaderboardRef, {
+                      rewardApprovedAt: Date.now(),
+                      rewardApprovedBy: user.id,
+                      rewardApprovedCoins: winner.rewardCoins
+                  }, { merge: true });
+              });
+
+              appendLedgerEntry(uid, {
+                  id: makeId('ledger'),
+                  userId: uid,
+                  type: 'bonus',
+                  amount: winner.rewardCoins,
+                  createdAt: Date.now(),
+                  sourceId: `leaderboard-${seasonId}-${winner.rank}`,
+                  memo: `Leaderboard reward #${winner.rank}`
+              });
+              approvedCount += 1;
+          }
+
+          setLeaderboardApprovalNotice(approvedCount > 0 ? `Approved ${approvedCount} leaderboard payout${approvedCount === 1 ? '' : 's'}.` : 'No pending winners were approved.');
+          setSelectedLeaderboardWinnerIds([]);
+      } catch (error) {
+          console.error('Failed to approve leaderboard winners', error);
+          setLeaderboardApprovalNotice('Failed to approve leaderboard winners.');
+      } finally {
+          setIsApprovingLeaderboardWinners(false);
       }
   };
 
@@ -4675,6 +4816,81 @@ export const AdminPanel: React.FC = () => {
                         <div className="mt-4 flex items-center gap-3">
                             <button onClick={() => { void handleSaveRewardsSettings(); }} className="px-5 py-2 bg-cyan-500/15 text-cyan-200 border border-cyan-400/35 rounded-lg text-sm font-bold hover:bg-cyan-500/25 transition-colors">Save rewards settings</button>
                             {rewardsSettingsNotice && <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">Rewards settings saved.</div>}
+                        </div>
+
+                        <div className="mt-6 rounded-xl border border-gray-800 bg-[#0b0e14] p-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h4 className="text-sm font-bold text-white">Contest winners approval</h4>
+                                    <p className="text-xs text-gray-400">After the contest timer ends, approve winners and credit the configured coin payout.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => { void handleApproveLeaderboardWinners(); }}
+                                    disabled={selectedLeaderboardWinnerIds.length === 0 || isApprovingLeaderboardWinners}
+                                    className="w-full sm:w-auto rounded-lg border border-emerald-400/35 bg-emerald-500/15 px-4 py-2 text-xs font-bold text-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {isApprovingLeaderboardWinners ? 'Approving…' : `Approve selected (${selectedLeaderboardWinnerIds.length})`}
+                                </button>
+                            </div>
+
+                            {rewardsDraft.payoutType !== 'coins' && (
+                                <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                                    Set payout type to Coins to enable account credit approvals.
+                                </p>
+                            )}
+                            {leaderboardApprovalNotice && (
+                                <p className="mt-3 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-200">
+                                    {leaderboardApprovalNotice}
+                                </p>
+                            )}
+
+                            <div className="mt-3 overflow-x-auto rounded-lg border border-gray-800">
+                                <table className="min-w-full text-left text-xs sm:text-sm">
+                                    <thead className="bg-[#111827] text-gray-300">
+                                        <tr>
+                                            <th className="px-3 py-2">Select</th>
+                                            <th className="px-3 py-2">Rank</th>
+                                            <th className="px-3 py-2">User</th>
+                                            <th className="px-3 py-2">Points</th>
+                                            <th className="px-3 py-2">Reward</th>
+                                            <th className="px-3 py-2">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {leaderboardApprovalsLoading ? (
+                                            <tr><td colSpan={6} className="px-3 py-3 text-gray-400">Loading contest results…</td></tr>
+                                        ) : leaderboardApprovals.length === 0 ? (
+                                            <tr><td colSpan={6} className="px-3 py-3 text-gray-500">No ended contest results available yet.</td></tr>
+                                        ) : leaderboardApprovals.map((entry) => {
+                                            const isApproved = Boolean(entry.rewardApprovedAt);
+                                            const isDisabled = isApproved || entry.rewardCoins <= 0 || rewardsDraft.payoutType !== 'coins';
+                                            return (
+                                                <tr key={entry.uid} className="border-t border-gray-800 text-gray-200">
+                                                    <td className="px-3 py-2">
+                                                        <Checkbox
+                                                            checked={selectedLeaderboardWinnerIds.includes(entry.uid)}
+                                                            disabled={isDisabled}
+                                                            onChange={(event) => {
+                                                                setSelectedLeaderboardWinnerIds((prev) => event.target.checked
+                                                                    ? [...prev, entry.uid]
+                                                                    : prev.filter((id) => id !== entry.uid));
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td className="px-3 py-2 font-bold">#{entry.rank}</td>
+                                                    <td className="max-w-[140px] truncate px-3 py-2 sm:max-w-none">{entry.displayName}</td>
+                                                    <td className="px-3 py-2">{entry.points.toLocaleString()}</td>
+                                                    <td className="px-3 py-2">{entry.rewardCoins.toLocaleString()} coins</td>
+                                                    <td className="px-3 py-2 text-xs">
+                                                        {isApproved ? 'Approved' : entry.rewardCoins > 0 ? 'Pending' : 'No coin payout'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 

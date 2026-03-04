@@ -7,6 +7,8 @@ import { ProvablyFairModal } from '../provably/ProvablyFairModal';
 export const ActivityDrawer: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const { entries, markAllRead } = useActivity();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'buy' | 'open' | 'ship' | 'sell'>('all');
+  const filteredEntries = filter === 'all' ? entries : entries.filter((entry) => entry.type === filter);
   const selected = entries.find((entry) => entry.id === selectedId) ?? null;
 
   if (!open) return null;
@@ -19,8 +21,26 @@ export const ActivityDrawer: React.FC<{ open: boolean; onClose: () => void }> = 
           <h3 className="text-sm font-semibold text-white">Recent Activity</h3>
           <button type="button" onClick={() => { markAllRead(); onClose(); }} className="rounded-md border border-white/10 p-1"><X className="h-4 w-4" /></button>
         </div>
-        <div className="space-y-2 overflow-y-auto pb-6">
-          {entries.length === 0 ? <p className="text-sm text-gray-400">Your activity will appear here.</p> : entries.map((entry) => (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'buy', label: 'Top up' },
+            { id: 'open', label: 'Unboxing' },
+            { id: 'ship', label: 'Shipping' },
+            { id: 'sell', label: 'Sells' }
+          ].map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setFilter(option.id as typeof filter)}
+              className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${filter === option.id ? 'border-cyan-400/40 bg-cyan-500/20 text-cyan-100' : 'border-white/10 bg-white/5 text-gray-300'}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <div className="max-h-[calc(75vh-120px)] space-y-2 overflow-y-auto pb-6 sm:max-h-[calc(100vh-120px)]">
+          {filteredEntries.length === 0 ? <p className="text-sm text-gray-400">No entries for this filter yet.</p> : filteredEntries.map((entry) => (
             <ActivityItem key={entry.id} entry={entry} onClick={() => setSelectedId(entry.id)} />
           ))}
         </div>

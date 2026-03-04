@@ -815,6 +815,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       };
       setLastRoll(latestRoll);
       activityStore.add({
+        userId: user.id,
         type: 'open',
         title: `Opened ${box.name} → ${winner.name}`,
         value: toCoins(Number(winner.price ?? 0), PRICE_UNIT_MODE),
