@@ -74,6 +74,9 @@ export default function UpgraderPage() {
     return window.localStorage.getItem('upgrader-audio-muted') === '1';
   });
 
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [resultSheet, setResultSheet] = useState<{ item: EliteItem; success: boolean } | null>(null);
+
   useEffect(() => {
     const audio = new Audio(upgraderSoundUrl);
     audio.preload = 'auto';
@@ -93,6 +96,15 @@ export default function UpgraderPage() {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem('upgrader-audio-muted', isMuted ? '1' : '0');
   }, [isMuted]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReducedMotion(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     const audio = spinAudioRef.current;
@@ -201,7 +213,6 @@ export default function UpgraderPage() {
     return '16, 185, 129';
   }, [chance]);
 
-
   const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
   const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
 
@@ -275,6 +286,7 @@ export default function UpgraderPage() {
     const historyItem = success ? targetPreview : sourcePreview;
     if (historyItem) {
       setHistory((previous) => [{ item: historyItem, success, date: Date.now() }, ...previous].slice(0, 20));
+      setResultSheet({ item: historyItem, success });
     }
 
     setSource(null);
@@ -391,6 +403,7 @@ export default function UpgraderPage() {
               winZoneRotation={winZoneRotation}
               onWinZoneRotationChange={setWinZoneRotation}
               canRotateWinZone={Boolean(source && target && status === 'idle')}
+              reducedMotion={reducedMotion}
               size={spinnerSize}
               durationMs={SPIN_DURATION_MS}
             />
@@ -448,6 +461,43 @@ export default function UpgraderPage() {
           </div>
         </section>
       </main>
+
+
+      <div
+        className={`fixed inset-0 z-[72] bg-black/65 backdrop-blur-sm transition-opacity duration-300 ${resultSheet ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+        onClick={() => setResultSheet(null)}
+      />
+      <div className={`fixed inset-x-0 bottom-0 z-[73] transform transition-transform duration-300 ${resultSheet ? 'translate-y-0' : 'translate-y-full'} px-3 pb-[max(env(safe-area-inset-bottom),12px)] sm:px-4 sm:pb-4`}>
+        {resultSheet && (
+          <div className="mx-auto w-full max-w-md rounded-2xl border border-white/15 bg-[#0f1524] p-4 shadow-[0_-12px_40px_rgba(0,0,0,0.65)] sm:p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className={`text-sm font-bold uppercase tracking-widest ${resultSheet.success ? 'text-emerald-300' : 'text-rose-300'}`}>
+                {resultSheet.success ? 'Upgrade Success' : 'Upgrade Failed'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setResultSheet(null)}
+                className="rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-slate-200 hover:bg-white/10"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center">
+              <img
+                src={resultSheet.item.image}
+                alt={resultSheet.item.name}
+                className="mx-auto h-28 w-28 rounded-xl object-cover sm:h-32 sm:w-32"
+                referrerPolicy="no-referrer"
+              />
+              <p className="mt-3 text-base font-semibold text-white">{resultSheet.item.name}</p>
+              <div className="mt-2 flex justify-center">
+                <CoinAmount amount={Math.round(resultSheet.item.price)} className="text-sm font-bold text-amber-300" iconClassName="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {detailsItem && (
         <>
@@ -690,6 +740,49 @@ export default function UpgraderPage() {
           box-shadow:
             0 0 18px rgba(var(--reactor-glow-rgb), 0.28),
             0 0 34px rgba(var(--reactor-glow-rgb), 0.18);
+        }
+
+        .reactor-needle {
+          position: relative;
+        }
+
+        .reactor-needle::after {
+          content: '';
+          position: absolute;
+          top: 8px;
+          left: 50%;
+          width: 30px;
+          height: 8px;
+          transform: translateX(-50%);
+          opacity: 0;
+          filter: blur(7px);
+          background: linear-gradient(90deg, rgba(255,255,255,0), var(--reactor-risk-color), rgba(255,255,255,0));
+          transition: opacity 200ms ease;
+        }
+
+        .reactor-needle-trailing::after {
+          opacity: 0.72;
+        }
+
+        .reactor-needle-ghost {
+          opacity: 0;
+          transition: opacity 180ms ease;
+        }
+
+        .reactor-needle-ghost-active {
+          opacity: 1;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .reactor-spinner.spinner-idle::before,
+          .reactor-energy-layer {
+            animation: none !important;
+          }
+
+          .reactor-needle::after,
+          .reactor-needle-ghost {
+            display: none;
+          }
         }
 
         @media (max-width: 639px) {
