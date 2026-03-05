@@ -46,6 +46,22 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
 });
 
 const SPIN_DURATION_MS = 5200;
+const economy = { houseEdge: 0.08, minMult: 1.01, maxMult: 25 };
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const getRiskColor = (chancePercent: number) => {
+  if (chancePercent < 20) return '#ef4444';
+  if (chancePercent < 50) return '#a855f7';
+  if (chancePercent < 80) return '#22d3ee';
+  return '#22c55e';
+};
+
+function computeMultiplier(chancePercent: number) {
+  const p = clamp(chancePercent / 100, 0.0001, 0.9999);
+  const raw = (1 / p) * (1 - economy.houseEdge);
+  return clamp(raw, economy.minMult, economy.maxMult);
+}
 
 export default function UpgraderPage() {
   const { inventory, isAuthenticated, openAuthModal } = useGame();
@@ -74,6 +90,11 @@ export default function UpgraderPage() {
     return window.localStorage.getItem('upgrader-audio-muted') === '1';
   });
 
+  const [isPreSpinTension, setIsPreSpinTension] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [displayMultiplier, setDisplayMultiplier] = useState(economy.minMult);
+  const preSpinTimeoutRef = useRef<number | null>(null);
+
   useEffect(() => {
     const audio = new Audio(upgraderSoundUrl);
     audio.preload = 'auto';
@@ -93,6 +114,15 @@ export default function UpgraderPage() {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem('upgrader-audio-muted', isMuted ? '1' : '0');
   }, [isMuted]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReducedMotion(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     const audio = spinAudioRef.current;
@@ -145,6 +175,9 @@ export default function UpgraderPage() {
     return () => {
       if (idleTimeoutRef.current) {
         window.clearTimeout(idleTimeoutRef.current);
+      }
+      if (preSpinTimeoutRef.current) {
+        window.clearTimeout(preSpinTimeoutRef.current);
       }
       window.removeEventListener('resize', handleResize);
     };
@@ -201,6 +234,36 @@ export default function UpgraderPage() {
     return '16, 185, 129';
   }, [chance]);
 
+  const riskColor = useMemo(() => getRiskColor(chance), [chance]);
+
+  function renderMultiplier(mult: number) {
+    return `${mult.toFixed(2)}x`;
+  }
+
+  useEffect(() => {
+    const next = computeMultiplier(chance);
+    if (reducedMotion) {
+      setDisplayMultiplier(next);
+      return;
+    }
+
+    const start = performance.now();
+    const from = displayMultiplier;
+    const duration = 190;
+    let raf = 0;
+
+    const frame = (now: number) => {
+      const progress = clamp((now - start) / duration, 0, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayMultiplier(from + (next - from) * eased);
+      if (progress < 1) {
+        raf = window.requestAnimationFrame(frame);
+      }
+    };
+
+    raf = window.requestAnimationFrame(frame);
+    return () => window.cancelAnimationFrame(raf);
+  }, [chance, reducedMotion]);
 
   const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
   const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
@@ -237,32 +300,54 @@ export default function UpgraderPage() {
     }
   }, [source, target]);
 
+  async function preSpinTension({ riskColor: nextRiskColor }: { riskColor: string }) {
+    if (reducedMotion) return;
+
+    setIsPreSpinTension(true);
+    await new Promise<void>((resolve) => {
+      const duration = 520;
+      if (preSpinTimeoutRef.current) {
+        window.clearTimeout(preSpinTimeoutRef.current);
+      }
+      preSpinTimeoutRef.current = window.setTimeout(() => {
+        setIsPreSpinTension(false);
+        resolve();
+      }, duration);
+    });
+
+    void nextRiskColor;
+  }
+
   const handleUpgrade = async () => {
     if (!source || !target || !settings || isSubmitting || status === 'spinning') return;
 
     setError(null);
     setIsSubmitting(true);
-    setStatus('spinning');
-
-    if (!isMuted && spinAudioRef.current) {
-      lastPlayedSpinNonceRef.current = spinNonce + 1;
-      spinAudioRef.current.currentTime = 0;
-      void spinAudioRef.current.play().catch(() => undefined);
-    }
 
     try {
-      const response = await attemptUpgrade({
+      const attemptPromise = attemptUpgrade({
         sourceItemInstanceId: source.id,
         targetItemId: target.id,
         clientSeed: `${Date.now()}`
       });
 
+      await preSpinTension({ riskColor });
+      setStatus('spinning');
+
+      if (!isMuted && spinAudioRef.current) {
+        lastPlayedSpinNonceRef.current = spinNonce + 1;
+        spinAudioRef.current.currentTime = 0;
+        void spinAudioRef.current.play().catch(() => undefined);
+      }
+
+      const response = await attemptPromise;
       const success = Boolean(response.win);
       setSpinResult(success);
       setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
       setSpinNonce((previous) => previous + 1);
     } catch (attemptError) {
       setStatus('idle');
+      setIsPreSpinTension(false);
       setError(attemptError instanceof Error ? attemptError.message : 'Upgrade failed.');
     } finally {
       setIsSubmitting(false);
@@ -391,6 +476,9 @@ export default function UpgraderPage() {
               winZoneRotation={winZoneRotation}
               onWinZoneRotationChange={setWinZoneRotation}
               canRotateWinZone={Boolean(source && target && status === 'idle')}
+              multiplierLabel={renderMultiplier(displayMultiplier)}
+              isPreSpinTension={isPreSpinTension}
+              reducedMotion={reducedMotion}
               size={spinnerSize}
               durationMs={SPIN_DURATION_MS}
             />
@@ -690,6 +778,72 @@ export default function UpgraderPage() {
           box-shadow:
             0 0 18px rgba(var(--reactor-glow-rgb), 0.28),
             0 0 34px rgba(var(--reactor-glow-rgb), 0.18);
+        }
+
+        @keyframes reactorChargePulse {
+          0% { box-shadow: 0 0 0 1px rgba(var(--reactor-glow-rgb), 0.24), 0 0 20px rgba(var(--reactor-glow-rgb), 0.16); }
+          50% { box-shadow: 0 0 0 1px rgba(var(--reactor-glow-rgb), 0.45), 0 0 42px rgba(var(--reactor-glow-rgb), 0.36); }
+          100% { box-shadow: 0 0 0 1px rgba(var(--reactor-glow-rgb), 0.24), 0 0 20px rgba(var(--reactor-glow-rgb), 0.16); }
+        }
+
+        @keyframes reactorChargeText {
+          0%, 100% { transform: scale(1); filter: brightness(1); }
+          45% { transform: scale(1.05); filter: brightness(1.2); }
+        }
+
+        .reactor-pre-spin {
+          animation: reactorChargePulse 560ms ease-out;
+        }
+
+        .reactor-pre-spin .text-4xl,
+        .reactor-pre-spin .text-5xl {
+          animation: reactorChargeText 560ms ease-out;
+        }
+
+        .reactor-needle {
+          position: relative;
+        }
+
+        .reactor-needle::after {
+          content: '';
+          position: absolute;
+          top: 8px;
+          left: 50%;
+          width: 30px;
+          height: 8px;
+          transform: translateX(-50%);
+          opacity: 0;
+          filter: blur(7px);
+          background: linear-gradient(90deg, rgba(255,255,255,0), var(--reactor-risk-color), rgba(255,255,255,0));
+          transition: opacity 200ms ease;
+        }
+
+        .reactor-needle-trailing::after {
+          opacity: 0.72;
+        }
+
+        .reactor-needle-ghost {
+          opacity: 0;
+          transition: opacity 180ms ease;
+        }
+
+        .reactor-needle-ghost-active {
+          opacity: 1;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .reactor-pre-spin,
+          .reactor-pre-spin .text-4xl,
+          .reactor-pre-spin .text-5xl,
+          .reactor-spinner.spinner-idle::before,
+          .reactor-energy-layer {
+            animation: none !important;
+          }
+
+          .reactor-needle::after,
+          .reactor-needle-ghost {
+            display: none;
+          }
         }
 
         @media (max-width: 639px) {

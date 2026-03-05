@@ -1,6 +1,24 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LucideCheckCircle2, LucideRefreshCw, LucideXCircle } from 'lucide-react';
 import { UpgradeStatus } from './types';
+
+export const needlePhysics = { overshootDeg: 6, settleMs: 520, damping: 0.18, frequency: 14 };
+
+const TRAIL_GHOST_COUNT = 8;
+
+const getRiskColor = (chance: number) => {
+  if (chance < 20) return '#ef4444';
+  if (chance < 50) return '#a855f7';
+  if (chance < 80) return '#22d3ee';
+  return '#22c55e';
+};
+
+const angleFromTransform = (node: HTMLElement) => {
+  const transform = window.getComputedStyle(node).transform;
+  if (!transform || transform === 'none') return 0;
+  const matrix = new DOMMatrixReadOnly(transform);
+  return (Math.atan2(matrix.b, matrix.a) * 180) / Math.PI;
+};
 
 interface UpgraderSpinnerProps {
   chance: number;
@@ -12,6 +30,9 @@ interface UpgraderSpinnerProps {
   winZoneRotation: number;
   onWinZoneRotationChange: (rotation: number) => void;
   canRotateWinZone: boolean;
+  multiplierLabel: string;
+  isPreSpinTension: boolean;
+  reducedMotion: boolean;
   size?: number;
   durationMs?: number;
 }
@@ -26,14 +47,24 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   winZoneRotation,
   onWinZoneRotationChange,
   canRotateWinZone,
+  multiplierLabel,
+  isPreSpinTension,
+  reducedMotion,
   size = 280,
   durationMs = 4200
 }) => {
   const handledNonceRef = useRef<number>(-1);
   const wheelRef = useRef<HTMLDivElement | null>(null);
+  const needleRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
   const flickerTimeoutRef = useRef<number | null>(null);
   const flickerResetRef = useRef<number | null>(null);
+  const trailRafRef = useRef<number | null>(null);
+  const bounceRafRef = useRef<number | null>(null);
+  const ghostNeedleRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const historyRef = useRef<number[]>(Array(TRAIL_GHOST_COUNT).fill(0));
+  const [spinBounceOffset, setSpinBounceOffset] = useState(0);
+  const [isTrailing, setIsTrailing] = useState(false);
 
   const chanceGlowRgb = useMemo(() => {
     if (chance < 30) return '190, 50, 70';
@@ -43,6 +74,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
 
   const circumference = Math.PI * 2 * ((size - 20) / 2);
   const offset = circumference - (Math.max(0, Math.min(100, chance)) / 100) * circumference;
+  const riskColor = useMemo(() => getRiskColor(chance), [chance]);
 
   const wheelCenter = useMemo(() => ({ x: size / 2, y: size / 2 }), [size]);
 
@@ -98,12 +130,82 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
     onWinZoneRotationChange(normalized);
   };
 
+  useEffect(() => {
+    if (status !== 'spinning' || reducedMotion) {
+      setIsTrailing(false);
+      if (trailRafRef.current) {
+        window.cancelAnimationFrame(trailRafRef.current);
+        trailRafRef.current = null;
+      }
+      return;
+    }
+
+    setIsTrailing(true);
+
+    const frame = () => {
+      if (!needleRef.current) return;
+      const currentAngle = angleFromTransform(needleRef.current);
+      historyRef.current = [currentAngle, ...historyRef.current.slice(0, TRAIL_GHOST_COUNT - 1)];
+      ghostNeedleRefs.current.forEach((ghost, index) => {
+        if (!ghost) return;
+        const sampledAngle = historyRef.current[Math.min(TRAIL_GHOST_COUNT - 1, (index + 1) * 1)] ?? currentAngle;
+        ghost.style.transform = `rotate(${sampledAngle}deg)`;
+      });
+      trailRafRef.current = window.requestAnimationFrame(frame);
+    };
+
+    trailRafRef.current = window.requestAnimationFrame(frame);
+    return () => {
+      if (trailRafRef.current) {
+        window.cancelAnimationFrame(trailRafRef.current);
+        trailRafRef.current = null;
+      }
+      setIsTrailing(false);
+    };
+  }, [reducedMotion, status, spinNonce]);
+
+  const runNeedlePhysicsBounce = (onSettled: () => void) => {
+    if (reducedMotion) {
+      setSpinBounceOffset(0);
+      onSettled();
+      return;
+    }
+
+    const start = performance.now();
+    const initial = needlePhysics.overshootDeg;
+    const settleSeconds = needlePhysics.settleMs / 1000;
+
+    const frame = (now: number) => {
+      const elapsed = (now - start) / 1000;
+      const progress = Math.min(1, elapsed / settleSeconds);
+      const oscillation = Math.cos(needlePhysics.frequency * elapsed);
+      const envelope = Math.exp(-needlePhysics.damping * needlePhysics.frequency * elapsed * 2);
+      const offsetDeg = initial * envelope * oscillation;
+      setSpinBounceOffset(progress >= 1 ? 0 : offsetDeg);
+
+      if (progress >= 1) {
+        setSpinBounceOffset(0);
+        onSettled();
+        return;
+      }
+
+      bounceRafRef.current = window.requestAnimationFrame(frame);
+    };
+
+    bounceRafRef.current = window.requestAnimationFrame(frame);
+  };
+
+  useEffect(() => () => {
+    if (trailRafRef.current) window.cancelAnimationFrame(trailRafRef.current);
+    if (bounceRafRef.current) window.cancelAnimationFrame(bounceRafRef.current);
+  }, []);
+
   return (
     <div className="relative flex flex-col items-center justify-center py-4 sm:py-8">
       <div
         ref={wheelRef}
-        className={`reactor-spinner relative touch-none ${status === 'idle' ? 'spinner-idle' : ''} ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
-        style={{ width: size, height: size, ['--reactor-glow-rgb' as string]: chanceGlowRgb }}
+        className={`reactor-spinner relative touch-none ${status === 'idle' ? 'spinner-idle' : ''} ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''} ${isPreSpinTension ? 'reactor-pre-spin' : ''}`}
+        style={{ width: size, height: size, ['--reactor-glow-rgb' as string]: chanceGlowRgb, ['--reactor-risk-color' as string]: riskColor }}
         onPointerDown={(event) => {
           if (!canRotateWinZone || status !== 'idle') return;
           isDraggingRef.current = true;
@@ -188,25 +290,50 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           )}
         </div>
 
+        {Array.from({ length: TRAIL_GHOST_COUNT }).map((_, index) => (
+          <div
+            key={`ghost-${index}`}
+            ref={(node) => {
+              ghostNeedleRefs.current[index] = node;
+            }}
+            className={`absolute top-0 left-1/2 -ml-[2px] w-[4px] h-1/2 origin-bottom z-10 pointer-events-none will-change-transform reactor-needle-ghost ${isTrailing ? 'reactor-needle-ghost-active' : ''}`}
+            style={{ opacity: (TRAIL_GHOST_COUNT - index) / (TRAIL_GHOST_COUNT * 10), filter: `blur(${index * 0.5}px)` }}
+          >
+            <div className="w-full h-full relative">
+              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[var(--reactor-risk-color)]" />
+              <div
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-full"
+                style={{ background: 'linear-gradient(to bottom, var(--reactor-risk-color), rgba(255,255,255,0.25), transparent)' }}
+              />
+            </div>
+          </div>
+        ))}
+
         <div
+          ref={needleRef}
           onTransitionEnd={(event) => {
             if (event.propertyName !== 'transform') return;
             if (status !== 'spinning') return;
             if (handledNonceRef.current === spinNonce) return;
             handledNonceRef.current = spinNonce;
-            onSpinComplete(Boolean(spinSuccess));
+            runNeedlePhysicsBounce(() => onSpinComplete(Boolean(spinSuccess)));
           }}
           className="absolute top-0 left-1/2 -ml-[2px] w-[4px] h-1/2 origin-bottom z-20 pointer-events-none will-change-transform"
           style={{
-            transform: `rotate(${spinRotation}deg)`,
+            transform: `rotate(${spinRotation + spinBounceOffset}deg)`,
             transition: status === 'spinning' ? `transform ${durationMs}ms cubic-bezier(0.16, 1, 0.3, 1)` : 'none'
           }}
         >
-          <div className="w-full h-full relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 bg-white rounded-full shadow-[0_0_20px_rgba(255,255,255,0.8)] border-4 border-emerald-500" />
+          <div className={`w-full h-full relative reactor-needle ${isTrailing ? 'reactor-needle-trailing' : ''}`}>
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 bg-white rounded-full shadow-[0_0_20px_rgba(255,255,255,0.8)] border-4 border-[var(--reactor-risk-color)]" />
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-full bg-gradient-to-b from-white via-white/50 to-transparent" />
           </div>
         </div>
+      </div>
+
+      <div className="mt-2 flex flex-col items-center">
+        <p className="text-xs font-semibold tracking-wide" style={{ color: riskColor }}>Multiplier: {multiplierLabel}</p>
+        <div className="h-[2px] w-24 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, var(--reactor-risk-color), transparent)', opacity: 0.6 }} />
       </div>
 
       <div className="mt-5 h-8 flex items-center justify-center">
