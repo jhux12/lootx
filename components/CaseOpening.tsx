@@ -417,11 +417,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const itemId = selectedCaseItem.id;
 
     const previewLength = 15;
-    const midpoint = Math.floor(previewLength / 2);
-    const previewReel = Array.from({ length: previewLength }, (_, index) => {
-      if (index === midpoint) return selectedCaseItem;
-      return items[Math.floor(Math.random() * items.length)] ?? selectedCaseItem;
-    });
+    const previewReel = Array.from({ length: previewLength }, () => selectedCaseItem);
 
     setReelItems(previewReel);
     setIsBoxPreviewVisible(false);
@@ -429,7 +425,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     closeItemModal();
     spinnerSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     highlightSpinnerItem(itemId);
-  }, [closeItemModal, highlightSpinnerItem, items, selectedCaseItem]);
+  }, [closeItemModal, highlightSpinnerItem, selectedCaseItem]);
   
   useEffect(() => {
     // Fill the static view with random items from the specific box
