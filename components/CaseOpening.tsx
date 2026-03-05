@@ -416,9 +416,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (!selectedCaseItem) return;
     const itemId = selectedCaseItem.id;
     closeItemModal();
+    if (isBoxPreviewVisible) {
+      setIsBoxPreviewVisible(false);
+      setIsBoxPreviewFading(false);
+    }
     spinnerSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     highlightSpinnerItem(itemId);
-  }, [closeItemModal, highlightSpinnerItem, selectedCaseItem]);
+  }, [closeItemModal, highlightSpinnerItem, isBoxPreviewVisible, selectedCaseItem]);
   
   useEffect(() => {
     // Fill the static view with random items from the specific box
@@ -1683,7 +1687,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   <X className="h-4 w-4" />
                 </button>
                 <div className={`absolute inset-0 pointer-events-none ${selectedCaseItem.rarity === 'legendary' ? 'legendary-glow' : ''}`} />
-                <img src={selectedCaseItem.image} alt={selectedCaseItem.name} className="item-modal-image relative z-10 h-40 w-40 object-contain drop-shadow-2xl sm:h-44 sm:w-44" />
+                <img src={selectedCaseItem.image} alt={selectedCaseItem.name} className="item-modal-image relative z-10 h-52 w-52 object-contain drop-shadow-2xl sm:h-56 sm:w-56" />
               </div>
               <div className="space-y-5 px-5 py-6 sm:px-6">
                 <div className="text-center">
@@ -1691,9 +1695,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     <span>{selectedCaseItem.name}</span>
                     {String(selectedCaseItem.rarity).toLowerCase() === 'legendary' && <span className="legendary-badge">Legendary</span>}
                   </h3>
-                  <div className="mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase" style={{ color: selectedCaseItem.color, borderColor: `${selectedCaseItem.color}66`, backgroundColor: `${selectedCaseItem.color}1a` }}>
-                    {selectedCaseItem.rarity ?? 'Item'}
-                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
