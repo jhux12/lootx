@@ -255,6 +255,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [copyStatusMessage, setCopyStatusMessage] = useState<string | null>(null);
   const [rewardResolved, setRewardResolved] = useState(false);
   const [selectedCaseItem, setSelectedCaseItem] = useState<CaseItem | null>(null);
+  const [isItemModalActive, setIsItemModalActive] = useState(false);
+  const [animatedModalCoinValue, setAnimatedModalCoinValue] = useState(0);
+  const [highlightedSpinnerItemId, setHighlightedSpinnerItemId] = useState<string | null>(null);
+  const [isSpinnerSectionHighlighted, setIsSpinnerSectionHighlighted] = useState(false);
   const [spinFeedbackMessage, setSpinFeedbackMessage] = useState<string | null>(null);
   const [showXpConfirmSheet, setShowXpConfirmSheet] = useState(false);
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
@@ -268,9 +272,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
+  const spinnerSectionRef = useRef<HTMLDivElement>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const bodyOverflowRef = useRef<string>('');
   const sellOfferTimerRef = useRef<number | null>(null);
+  const spinnerHighlightTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
   const canFreeSpin = !user.lastFreeBoxClaim;
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -363,7 +369,63 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (sellOfferTimerRef.current) {
       window.clearTimeout(sellOfferTimerRef.current);
     }
+    if (spinnerHighlightTimerRef.current) {
+      window.clearTimeout(spinnerHighlightTimerRef.current);
+    }
   }, []);
+
+  const closeItemModal = useCallback(() => {
+    setSelectedCaseItem(null);
+    setIsItemModalActive(false);
+  }, []);
+
+  const animateCoinValue = useCallback((value: number) => {
+    let start = 0;
+    const duration = 700;
+    const safeValue = Math.max(0, Number(value) || 0);
+    if (safeValue <= 0) {
+      setAnimatedModalCoinValue(0);
+      return;
+    }
+    const step = safeValue / (duration / 16);
+    const counter = window.setInterval(() => {
+      start += step;
+      if (start >= safeValue) {
+        start = safeValue;
+        window.clearInterval(counter);
+      }
+      setAnimatedModalCoinValue(Math.floor(start));
+    }, 16);
+
+    return () => window.clearInterval(counter);
+  }, []);
+
+  const highlightSpinnerItem = useCallback((itemId: string) => {
+    setHighlightedSpinnerItemId(itemId);
+    setIsSpinnerSectionHighlighted(true);
+    if (spinnerHighlightTimerRef.current) {
+      window.clearTimeout(spinnerHighlightTimerRef.current);
+    }
+    spinnerHighlightTimerRef.current = window.setTimeout(() => {
+      setHighlightedSpinnerItemId(null);
+      setIsSpinnerSectionHighlighted(false);
+    }, 2000);
+  }, []);
+
+  const handleViewInSpinner = useCallback(() => {
+    if (!selectedCaseItem) return;
+    const itemId = selectedCaseItem.id;
+
+    const previewLength = 15;
+    const previewReel = Array.from({ length: previewLength }, () => selectedCaseItem);
+
+    setReelItems(previewReel);
+    setIsBoxPreviewVisible(false);
+    setIsBoxPreviewFading(false);
+    closeItemModal();
+    spinnerSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    highlightSpinnerItem(itemId);
+  }, [closeItemModal, highlightSpinnerItem, selectedCaseItem]);
   
   useEffect(() => {
     // Fill the static view with random items from the specific box
@@ -377,6 +439,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   useEffect(() => {
     if (!selectedCaseItem) return;
+
+    setIsItemModalActive(false);
+    const revealTimer = window.setTimeout(() => setIsItemModalActive(true), 20);
+    const stopCoinAnimation = animateCoinValue(toCoins(selectedCaseItem.price, PRICE_UNIT_MODE));
 
     lastFocusedElementRef.current = document.activeElement as HTMLElement | null;
     bodyOverflowRef.current = document.body.style.overflow;
@@ -400,7 +466,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        setSelectedCaseItem(null);
+        closeItemModal();
         return;
       }
 
@@ -426,11 +492,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     return () => {
       window.clearTimeout(focusTimer);
+      window.clearTimeout(revealTimer);
+      if (stopCoinAnimation) stopCoinAnimation();
       document.body.style.overflow = bodyOverflowRef.current;
       document.removeEventListener('keydown', handleKeyDown);
       lastFocusedElementRef.current?.focus();
     };
-  }, [selectedCaseItem]);
+  }, [animateCoinValue, closeItemModal, selectedCaseItem]);
 
   const getWinningItem = (randomValue: number) => {
     // Weighted Randomness
@@ -1191,7 +1259,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Spinner Window */}
-            <div className="relative h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+            <div id="spinnerSection" ref={spinnerSectionRef} className={`relative h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] ${isSpinnerSectionHighlighted ? 'spinner-section-highlight' : ''}`}>
                 {isBoxPreviewVisible && (
                   <div
                     className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
@@ -1231,7 +1299,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     {reelItems.map((item, idx) => (
                         <div 
                             key={`${item.id}-${idx}`}
-                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}`}
+                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3 flex flex-col items-center justify-center group transition-all duration-300 ${item.id === highlightedSpinnerItemId ? 'border-violet-300 shadow-[0_0_22px_rgba(167,139,250,0.65)]' : ''} ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}`}
                             style={{ 
                                 width: `${CARD_WIDTH}px`, 
                                 height: `${CARD_WIDTH}px`,
@@ -1605,27 +1673,31 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
         </div>
         {/* Slide Up Item Sheet */}
-        <div className={`fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${selectedCaseItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={() => setSelectedCaseItem(null)} />
+        <div className={`fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm item-modal-overlay ${selectedCaseItem && isItemModalActive ? 'active' : 'pointer-events-none'}`} onClick={closeItemModal} />
         <div className={`fixed bottom-0 left-0 right-0 z-[120] transform transition-transform duration-500 ${selectedCaseItem ? 'translate-y-0' : 'translate-y-full'}`}>
           <ProvablyFairModal isOpen={verifyModalOpen} onClose={() => setVerifyModalOpen(false)} data={{ serverSeedHash: lastRoll?.serverSeedHash, clientSeed: lastRoll?.clientSeed, nonce: lastRoll?.nonce, winningItem: wonItem?.name, resultIndex: lastRoll ? Math.floor(lastRoll.rollValue * 1000000) : undefined }} />
 
         {selectedCaseItem && (
-            <div ref={itemModalRef} role="dialog" aria-modal="true" aria-labelledby="item-details-title" className="mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)]">
-              <div className="relative flex h-64 items-center justify-center overflow-hidden" style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}99 0%, transparent 72%)` }}>
+            <div ref={itemModalRef} role="dialog" aria-modal="true" aria-labelledby="item-details-title" className={`item-modal-container mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] ${selectedCaseItem && isItemModalActive ? 'active' : ''}`}>
+              <div className={`relative flex h-64 items-center justify-center overflow-hidden ${selectedCaseItem.rarity === 'legendary' ? 'legendary-bg' : selectedCaseItem.rarity === 'rare' ? 'rare-bg' : 'common-bg'}`} style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}99 0%, transparent 72%)` }}>
                 <button
                   ref={itemModalCloseRef}
                   type="button"
-                  onClick={() => setSelectedCaseItem(null)}
+                  onClick={closeItemModal}
                   className="absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white"
                   aria-label="Close item details"
                 >
                   <X className="h-4 w-4" />
                 </button>
-                <img src={selectedCaseItem.image} alt={selectedCaseItem.name} className="relative z-10 h-44 w-44 object-contain drop-shadow-2xl" />
+                <div className={`absolute inset-0 pointer-events-none ${selectedCaseItem.rarity === 'legendary' ? 'legendary-glow' : ''}`} />
+                <img src={selectedCaseItem.image} alt={selectedCaseItem.name} className="item-modal-image relative z-10 h-40 w-40 object-contain drop-shadow-2xl sm:h-44 sm:w-44" />
               </div>
               <div className="space-y-5 px-5 py-6 sm:px-6">
                 <div className="text-center">
-                  <h3 id="item-details-title" className="text-2xl font-bold text-white">{selectedCaseItem.name}</h3>
+                  <h3 id="item-details-title" className="flex flex-wrap items-center justify-center gap-2 text-2xl font-bold text-white">
+                    <span>{selectedCaseItem.name}</span>
+                    {String(selectedCaseItem.rarity).toLowerCase() === 'legendary' && <span className="legendary-badge">Legendary</span>}
+                  </h3>
                   <div className="mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase" style={{ color: selectedCaseItem.color, borderColor: `${selectedCaseItem.color}66`, backgroundColor: `${selectedCaseItem.color}1a` }}>
                     {selectedCaseItem.rarity ?? 'Item'}
                   </div>
@@ -1633,19 +1705,106 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
                     <span className="block text-[10px] font-bold uppercase tracking-wide text-gray-400">Value</span>
-                    <CoinAmount amount={toCoins(selectedCaseItem.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-2 justify-center text-lg font-bold text-white" iconClassName="h-4 w-4" />
+                    <CoinAmount amount={animatedModalCoinValue} formatOptions={{ maximumFractionDigits: 0 }} className="mt-2 justify-center text-lg font-bold text-white" iconClassName="h-4 w-4" />
                   </div>
                   <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
                     <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Drop Chance</span>
                     <div className="mt-1 text-lg font-bold text-white">{typeof selectedCaseItem.chance === 'number' ? `${selectedCaseItem.chance}%` : '—'}</div>
                   </div>
                 </div>
-                <button type="button" onClick={() => setSelectedCaseItem(null)} className="h-12 w-full rounded-xl bg-white text-sm font-bold text-black transition hover:bg-gray-200">Close</button>
+                <button id="viewInSpinnerBtn" type="button" onClick={handleViewInSpinner} className="h-11 w-full rounded-xl border border-violet-300/30 bg-violet-500/10 text-sm font-semibold text-violet-100 transition hover:-translate-y-0.5 hover:bg-violet-500/20">View in Spinner</button>
+                <button type="button" onClick={closeItemModal} className="back-btn h-12 w-full text-sm text-gray-100">Back to Box</button>
               </div>
             </div>
           )}
         </div>
         <style>{`
+          .item-modal-overlay {
+            opacity: 0;
+            transition: opacity 150ms ease;
+          }
+          .item-modal-overlay.active {
+            opacity: 1;
+          }
+          .item-modal-container {
+            transform: translateY(20px);
+            opacity: 0;
+            transition: transform 250ms ease, opacity 250ms ease;
+          }
+          .item-modal-container.active {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          .item-modal-image {
+            transform: scale(0.9);
+            transition: transform 300ms ease;
+          }
+          .item-modal-container.active .item-modal-image {
+            transform: scale(1);
+          }
+          .common-bg::after,
+          .rare-bg::after,
+          .legendary-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+          }
+          .common-bg::after {
+            background: radial-gradient(circle at center, rgba(148, 163, 184, 0.22), transparent 70%);
+          }
+          .rare-bg::after {
+            background: radial-gradient(circle at center, rgba(168, 85, 247, 0.28), transparent 70%);
+          }
+          .legendary-bg::after {
+            background: radial-gradient(circle at center, rgba(255, 215, 0, 0.35), transparent 70%);
+            animation: legendaryPulse 2s ease-in-out infinite;
+          }
+          .legendary-glow {
+            animation: rarityGlowPulse 500ms ease-out 1;
+          }
+          .legendary-badge {
+            background: linear-gradient(90deg, #ffd700, #ffb300, #ffd700);
+            background-size: 200% 100%;
+            color: black;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 999px;
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+            animation: badgeShimmer 3s linear infinite;
+          }
+          .back-btn {
+            background: #1f2937;
+            border-radius: 12px;
+            padding: 14px;
+            font-weight: 600;
+            transition: all .2s ease;
+          }
+          .back-btn:hover {
+            transform: translateY(-2px);
+            background: #2d3748;
+          }
+          .spinner-section-highlight {
+            animation: spinnerFocusPulse 1s ease-in-out 2;
+          }
+          @keyframes spinnerFocusPulse {
+            0%, 100% { box-shadow: inset 0 0 0 rgba(139, 92, 246, 0); }
+            50% { box-shadow: inset 0 0 0 2px rgba(139, 92, 246, 0.65); }
+          }
+          @keyframes rarityGlowPulse {
+            0% { opacity: .4; }
+            50% { opacity: 1; }
+            100% { opacity: .5; }
+          }
+          @keyframes legendaryPulse {
+            0% { opacity: .5; }
+            50% { opacity: 1; }
+            100% { opacity: .5; }
+          }
+          @keyframes badgeShimmer {
+            0% { background-position: -200px 0; }
+            100% { background-position: 200px 0; }
+          }
           @keyframes box-shimmer {
             0% { transform: translateX(-150%); }
             100% { transform: translateX(150%); }
@@ -1663,6 +1822,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             inset: -20%;
             background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
             animation: box-shimmer 2s ease-in-out infinite;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .item-modal-overlay,
+            .item-modal-container,
+            .item-modal-image,
+            .legendary-bg::after,
+            .legendary-glow,
+            .legendary-badge,
+            .spinner-section-highlight {
+              animation: none !important;
+              transition: none !important;
+            }
           }
         `}</style>
         </>
