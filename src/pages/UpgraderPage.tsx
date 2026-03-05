@@ -46,22 +46,6 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
 });
 
 const SPIN_DURATION_MS = 5200;
-const economy = { houseEdge: 0.08, minMult: 1.01, maxMult: 25 };
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-
-const getRiskColor = (chancePercent: number) => {
-  if (chancePercent < 20) return '#ef4444';
-  if (chancePercent < 50) return '#a855f7';
-  if (chancePercent < 80) return '#22d3ee';
-  return '#22c55e';
-};
-
-function computeMultiplier(chancePercent: number) {
-  const p = clamp(chancePercent / 100, 0.0001, 0.9999);
-  const raw = (1 / p) * (1 - economy.houseEdge);
-  return clamp(raw, economy.minMult, economy.maxMult);
-}
 
 export default function UpgraderPage() {
   const { inventory, isAuthenticated, openAuthModal } = useGame();
@@ -90,10 +74,8 @@ export default function UpgraderPage() {
     return window.localStorage.getItem('upgrader-audio-muted') === '1';
   });
 
-  const [isPreSpinTension, setIsPreSpinTension] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [displayMultiplier, setDisplayMultiplier] = useState(economy.minMult);
-  const preSpinTimeoutRef = useRef<number | null>(null);
+  const [resultSheet, setResultSheet] = useState<{ item: EliteItem; success: boolean } | null>(null);
 
   useEffect(() => {
     const audio = new Audio(upgraderSoundUrl);
@@ -176,9 +158,6 @@ export default function UpgraderPage() {
       if (idleTimeoutRef.current) {
         window.clearTimeout(idleTimeoutRef.current);
       }
-      if (preSpinTimeoutRef.current) {
-        window.clearTimeout(preSpinTimeoutRef.current);
-      }
       window.removeEventListener('resize', handleResize);
     };
   }, []);
@@ -234,37 +213,6 @@ export default function UpgraderPage() {
     return '16, 185, 129';
   }, [chance]);
 
-  const riskColor = useMemo(() => getRiskColor(chance), [chance]);
-
-  function renderMultiplier(mult: number) {
-    return `${mult.toFixed(2)}x`;
-  }
-
-  useEffect(() => {
-    const next = computeMultiplier(chance);
-    if (reducedMotion) {
-      setDisplayMultiplier(next);
-      return;
-    }
-
-    const start = performance.now();
-    const from = displayMultiplier;
-    const duration = 190;
-    let raf = 0;
-
-    const frame = (now: number) => {
-      const progress = clamp((now - start) / duration, 0, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplayMultiplier(from + (next - from) * eased);
-      if (progress < 1) {
-        raf = window.requestAnimationFrame(frame);
-      }
-    };
-
-    raf = window.requestAnimationFrame(frame);
-    return () => window.cancelAnimationFrame(raf);
-  }, [chance, reducedMotion]);
-
   const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
   const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
 
@@ -300,54 +248,32 @@ export default function UpgraderPage() {
     }
   }, [source, target]);
 
-  async function preSpinTension({ riskColor: nextRiskColor }: { riskColor: string }) {
-    if (reducedMotion) return;
-
-    setIsPreSpinTension(true);
-    await new Promise<void>((resolve) => {
-      const duration = 520;
-      if (preSpinTimeoutRef.current) {
-        window.clearTimeout(preSpinTimeoutRef.current);
-      }
-      preSpinTimeoutRef.current = window.setTimeout(() => {
-        setIsPreSpinTension(false);
-        resolve();
-      }, duration);
-    });
-
-    void nextRiskColor;
-  }
-
   const handleUpgrade = async () => {
     if (!source || !target || !settings || isSubmitting || status === 'spinning') return;
 
     setError(null);
     setIsSubmitting(true);
+    setStatus('spinning');
+
+    if (!isMuted && spinAudioRef.current) {
+      lastPlayedSpinNonceRef.current = spinNonce + 1;
+      spinAudioRef.current.currentTime = 0;
+      void spinAudioRef.current.play().catch(() => undefined);
+    }
 
     try {
-      const attemptPromise = attemptUpgrade({
+      const response = await attemptUpgrade({
         sourceItemInstanceId: source.id,
         targetItemId: target.id,
         clientSeed: `${Date.now()}`
       });
 
-      await preSpinTension({ riskColor });
-      setStatus('spinning');
-
-      if (!isMuted && spinAudioRef.current) {
-        lastPlayedSpinNonceRef.current = spinNonce + 1;
-        spinAudioRef.current.currentTime = 0;
-        void spinAudioRef.current.play().catch(() => undefined);
-      }
-
-      const response = await attemptPromise;
       const success = Boolean(response.win);
       setSpinResult(success);
       setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
       setSpinNonce((previous) => previous + 1);
     } catch (attemptError) {
       setStatus('idle');
-      setIsPreSpinTension(false);
       setError(attemptError instanceof Error ? attemptError.message : 'Upgrade failed.');
     } finally {
       setIsSubmitting(false);
@@ -360,6 +286,7 @@ export default function UpgraderPage() {
     const historyItem = success ? targetPreview : sourcePreview;
     if (historyItem) {
       setHistory((previous) => [{ item: historyItem, success, date: Date.now() }, ...previous].slice(0, 20));
+      setResultSheet({ item: historyItem, success });
     }
 
     setSource(null);
@@ -476,8 +403,6 @@ export default function UpgraderPage() {
               winZoneRotation={winZoneRotation}
               onWinZoneRotationChange={setWinZoneRotation}
               canRotateWinZone={Boolean(source && target && status === 'idle')}
-              multiplierLabel={renderMultiplier(displayMultiplier)}
-              isPreSpinTension={isPreSpinTension}
               reducedMotion={reducedMotion}
               size={spinnerSize}
               durationMs={SPIN_DURATION_MS}
@@ -536,6 +461,43 @@ export default function UpgraderPage() {
           </div>
         </section>
       </main>
+
+
+      <div
+        className={`fixed inset-0 z-[72] bg-black/65 backdrop-blur-sm transition-opacity duration-300 ${resultSheet ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+        onClick={() => setResultSheet(null)}
+      />
+      <div className={`fixed inset-x-0 bottom-0 z-[73] transform transition-transform duration-300 ${resultSheet ? 'translate-y-0' : 'translate-y-full'} px-3 pb-[max(env(safe-area-inset-bottom),12px)] sm:px-4 sm:pb-4`}>
+        {resultSheet && (
+          <div className="mx-auto w-full max-w-md rounded-2xl border border-white/15 bg-[#0f1524] p-4 shadow-[0_-12px_40px_rgba(0,0,0,0.65)] sm:p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className={`text-sm font-bold uppercase tracking-widest ${resultSheet.success ? 'text-emerald-300' : 'text-rose-300'}`}>
+                {resultSheet.success ? 'Upgrade Success' : 'Upgrade Failed'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setResultSheet(null)}
+                className="rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-slate-200 hover:bg-white/10"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center">
+              <img
+                src={resultSheet.item.image}
+                alt={resultSheet.item.name}
+                className="mx-auto h-28 w-28 rounded-xl object-cover sm:h-32 sm:w-32"
+                referrerPolicy="no-referrer"
+              />
+              <p className="mt-3 text-base font-semibold text-white">{resultSheet.item.name}</p>
+              <div className="mt-2 flex justify-center">
+                <CoinAmount amount={Math.round(resultSheet.item.price)} className="text-sm font-bold text-amber-300" iconClassName="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {detailsItem && (
         <>
@@ -780,26 +742,6 @@ export default function UpgraderPage() {
             0 0 34px rgba(var(--reactor-glow-rgb), 0.18);
         }
 
-        @keyframes reactorChargePulse {
-          0% { box-shadow: 0 0 0 1px rgba(var(--reactor-glow-rgb), 0.24), 0 0 20px rgba(var(--reactor-glow-rgb), 0.16); }
-          50% { box-shadow: 0 0 0 1px rgba(var(--reactor-glow-rgb), 0.45), 0 0 42px rgba(var(--reactor-glow-rgb), 0.36); }
-          100% { box-shadow: 0 0 0 1px rgba(var(--reactor-glow-rgb), 0.24), 0 0 20px rgba(var(--reactor-glow-rgb), 0.16); }
-        }
-
-        @keyframes reactorChargeText {
-          0%, 100% { transform: scale(1); filter: brightness(1); }
-          45% { transform: scale(1.05); filter: brightness(1.2); }
-        }
-
-        .reactor-pre-spin {
-          animation: reactorChargePulse 560ms ease-out;
-        }
-
-        .reactor-pre-spin .text-4xl,
-        .reactor-pre-spin .text-5xl {
-          animation: reactorChargeText 560ms ease-out;
-        }
-
         .reactor-needle {
           position: relative;
         }
@@ -832,9 +774,6 @@ export default function UpgraderPage() {
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .reactor-pre-spin,
-          .reactor-pre-spin .text-4xl,
-          .reactor-pre-spin .text-5xl,
           .reactor-spinner.spinner-idle::before,
           .reactor-energy-layer {
             animation: none !important;

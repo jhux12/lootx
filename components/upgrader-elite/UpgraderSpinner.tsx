@@ -30,8 +30,6 @@ interface UpgraderSpinnerProps {
   winZoneRotation: number;
   onWinZoneRotationChange: (rotation: number) => void;
   canRotateWinZone: boolean;
-  multiplierLabel: string;
-  isPreSpinTension: boolean;
   reducedMotion: boolean;
   size?: number;
   durationMs?: number;
@@ -47,8 +45,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   winZoneRotation,
   onWinZoneRotationChange,
   canRotateWinZone,
-  multiplierLabel,
-  isPreSpinTension,
   reducedMotion,
   size = 280,
   durationMs = 4200
@@ -204,7 +200,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
     <div className="relative flex flex-col items-center justify-center py-4 sm:py-8">
       <div
         ref={wheelRef}
-        className={`reactor-spinner relative touch-none ${status === 'idle' ? 'spinner-idle' : ''} ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''} ${isPreSpinTension ? 'reactor-pre-spin' : ''}`}
+        className={`reactor-spinner relative touch-none ${status === 'idle' ? 'spinner-idle' : ''} ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
         style={{ width: size, height: size, ['--reactor-glow-rgb' as string]: chanceGlowRgb, ['--reactor-risk-color' as string]: riskColor }}
         onPointerDown={(event) => {
           if (!canRotateWinZone || status !== 'idle') return;
@@ -329,11 +325,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-full bg-gradient-to-b from-white via-white/50 to-transparent" />
           </div>
         </div>
-      </div>
-
-      <div className="mt-2 flex flex-col items-center">
-        <p className="text-xs font-semibold tracking-wide" style={{ color: riskColor }}>Multiplier: {multiplierLabel}</p>
-        <div className="h-[2px] w-24 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, var(--reactor-risk-color), transparent)', opacity: 0.6 }} />
       </div>
 
       <div className="mt-5 h-8 flex items-center justify-center">
