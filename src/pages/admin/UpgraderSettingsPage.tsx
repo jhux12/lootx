@@ -43,7 +43,9 @@ export default function UpgraderSettingsPage() {
     setSaving(true);
     try {
       await saveUpgraderSettings(settings);
-      setMessage('Settings saved.');
+      const refreshed = await getUpgraderSettings();
+      setSettings(refreshed);
+      setMessage('Settings saved and reloaded.');
     } finally {
       setSaving(false);
     }
@@ -95,18 +97,18 @@ export default function UpgraderSettingsPage() {
             <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">Upgrader Settings</h1>
             <p className="text-slate-400 text-sm sm:text-base">Configure live parameters and source-item availability for the upgrader.</p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
             <button
               onClick={handleRotateSeed}
               disabled={saving}
-              className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="w-full bg-slate-800 px-4 py-2 text-white rounded-lg flex items-center justify-center gap-2 transition-colors hover:bg-slate-700 disabled:opacity-50 sm:w-auto"
             >
               <RefreshCw className="w-4 h-4" /> Rotate Seed
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg flex items-center gap-2 font-bold transition-colors disabled:opacity-50"
+              className="w-full bg-indigo-600 px-6 py-2 text-white rounded-lg flex items-center justify-center gap-2 font-bold transition-colors hover:bg-indigo-500 disabled:opacity-50 sm:w-auto"
             >
               <Save className="w-4 h-4" /> Save Settings
             </button>
