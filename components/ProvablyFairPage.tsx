@@ -207,6 +207,13 @@ export const ProvablyFairPage: React.FC = () => {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 px-4 pb-12 pt-8 sm:px-6 lg:px-8">
+      <header className="space-y-2">
+        <h1 className="text-2xl font-bold text-white sm:text-3xl">Provably Fair Overview</h1>
+        <p className="text-sm text-gray-300 sm:text-base">
+          Verify how server seeds, client seeds, and nonces create transparent outcomes.
+        </p>
+      </header>
+
       <section className="grid gap-4 rounded-2xl border border-gray-800 bg-[#0b0e14] p-5 sm:grid-cols-3 sm:gap-5 sm:p-6">
         <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-purple-200">1. Server Seed</h2>

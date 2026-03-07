@@ -313,7 +313,7 @@ export const CustomCaseCreator: React.FC = () => {
                                     onClick={() => setExpandedItemId(prev => prev === item.id ? null : item.id)}
                                     className={`relative rounded-lg border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isExpanded ? 'p-3 bg-[#101520] border-brand-purple/60 shadow-[0_10px_30px_rgba(15,23,42,0.45)]' : 'p-2 bg-[#0b0e14] border-gray-800 hover:border-gray-600'} ${isSelected ? 'ring-1 ring-brand-purple/40' : ''}`}
                                 >
-                                    <img src={item.image} className="w-12 h-12 object-contain" />
+                                    <img src={item.image} alt={item.name} className="w-12 h-12 object-contain" />
                                     <div className="w-full">
                                         <div className={`text-[10px] text-gray-300 font-medium ${isExpanded ? 'line-clamp-2 text-[11px]' : 'truncate'}`}>{item.name}</div>
                                         <CoinAmount

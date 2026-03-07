@@ -34,6 +34,7 @@ import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
 import { useSiteChat } from './hooks/useSiteChat';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
+import { SeoHead } from './components/SeoHead';
 import {
   ShowcaseRow,
   ShowcaseRowBoxes,
@@ -374,6 +375,7 @@ const AppShell = () => {
 
   return (
     <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+      <SeoHead view={view} />
       <Header
         onOpenInbox={() => setShowInbox(true)}
         unreadChatCount={hasUnseenChatMessages ? 1 : 0}

@@ -2927,7 +2927,7 @@ export const AdminPanel: React.FC = () => {
                                         <tr key={i}>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2">
-                                                    <img src={item.image} className="w-8 h-8 object-contain" />
+                                                    <img src={item.image} alt={item.name} className="w-8 h-8 object-contain" />
                                                     <div>
                                                         <div className="text-white">{item.name}</div>
                                                         {(item.brand || item.category) && (
@@ -3287,7 +3287,7 @@ export const AdminPanel: React.FC = () => {
                                             onClick={() => toggleItemSelection(item)}
                                             className={`p-2 rounded border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isSelected ? 'bg-blue-600/10 border-blue-500' : 'bg-[#131720] border-gray-800 hover:border-gray-600'}`}
                                         >
-                                            <img src={item.image} className="w-8 h-8 object-contain" />
+                                            <img src={item.image} alt={item.name} className="w-8 h-8 object-contain" />
                                             <div className="w-full">
                                                 <div className="text-[10px] text-gray-300 truncate font-medium">{item.name}</div>
                                                 <CoinAmount
@@ -3310,7 +3310,7 @@ export const AdminPanel: React.FC = () => {
                                      <div className="space-y-1">
                                          {selectedItems.map((item, idx) => (
                                              <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700">
-                                                 <img src={item.image} className="w-5 h-5 object-contain" />
+                                                 <img src={item.image} alt={item.name} className="w-5 h-5 object-contain" />
                                                  <span className="min-w-[120px] flex-1 text-gray-300 truncate">{item.name}</span>
                                                  <CoinAmount
                                                    amount={toCoins(item.price, PRICE_UNIT_MODE)}
@@ -3368,7 +3368,7 @@ export const AdminPanel: React.FC = () => {
                                 {boxes.map((box, i) => (
                                     <tr key={i}>
                                         <td className="px-4 py-3 flex items-center gap-2">
-                                            <img src={box.image} className="w-8 h-8 object-contain" />
+                                            <img src={box.image} alt={box.name} className="w-8 h-8 object-contain" />
                                             <div>
                                                 <div className="text-white flex items-center gap-2">
                                                     {box.name}
@@ -3559,7 +3559,7 @@ export const AdminPanel: React.FC = () => {
                                             return (
                                                 <tr key={profile.id} className="hover:bg-[#1a2130] transition-colors">
                                                     <td className="px-6 py-4 flex items-center gap-3">
-                                                        <img src={profile.avatar} className="w-8 h-8 rounded-full" />
+                                                        <img src={profile.avatar} alt={`${profile.name} avatar`} className="w-8 h-8 rounded-full" />
                                                         <span className="font-bold text-white">{profile.name}</span>
                                                     </td>
                                                     <td className="px-6 py-4 text-gray-400">XP {(profile.xpBalance ?? profile.xp ?? 0).toLocaleString()}</td>
@@ -3652,7 +3652,7 @@ export const AdminPanel: React.FC = () => {
                                     return (
                                         <div key={profile.id} className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4 space-y-3">
                                             <div className="flex items-center gap-3">
-                                                <img src={profile.avatar} className="w-10 h-10 rounded-full" />
+                                                <img src={profile.avatar} alt={`${profile.name} avatar`} className="w-10 h-10 rounded-full" />
                                                 <div className="flex-1">
                                                     <div className="text-white font-bold">{profile.name}</div>
                                                     <div className="text-xs text-gray-400">XP {(profile.xpBalance ?? profile.xp ?? 0).toLocaleString()}</div>
@@ -3730,7 +3730,7 @@ export const AdminPanel: React.FC = () => {
                             <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                     <div className="flex items-center gap-4">
-                                        <img src={selectedUser.avatar} className="w-12 h-12 rounded-full" />
+                                        <img src={selectedUser.avatar} alt={`${selectedUser.name} avatar`} className="w-12 h-12 rounded-full" />
                                         <div>
                                             <div className="text-white text-lg font-bold">{selectedUser.name}</div>
                                             <div className="text-xs text-gray-400">{selectedUser.email || 'No email on file'}</div>
