@@ -1684,7 +1684,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         {selectedCaseItem && (
             <div ref={itemModalRef} role="dialog" aria-modal="true" aria-labelledby="item-details-title" className={`modal-container mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] ${itemModalActive ? 'active' : ''}`}>
-              <div className="item-modal-hero relative flex h-56 sm:h-64 items-center justify-center overflow-hidden px-3" style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}80 0%, transparent 72%)` }}>
+              <div className="item-modal-hero relative flex h-64 sm:h-72 items-center justify-center overflow-hidden px-3" style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}80 0%, transparent 72%)` }}>
                 <div className={`item-modal-rarity-bg item-modal-rarity-bg--${String(selectedCaseItem.rarity ?? 'common').toLowerCase().replace(/\s+/g, '-')} ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" />
                 <div className={`item-modal-rarity-glow ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" style={{ background: `radial-gradient(circle at center, ${selectedCaseItem.color}55 0%, transparent 70%)` }} />
                 <button
@@ -1696,18 +1696,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 >
                   <X className="h-4 w-4" />
                 </button>
-                <img src={selectedCaseItem.image} alt={selectedCaseItem.name} className="item-modal-image relative z-10 h-40 w-40 object-contain drop-shadow-2xl sm:h-44 sm:w-44" />
+                <img src={selectedCaseItem.image} alt={selectedCaseItem.name} className="item-modal-image relative z-10 h-48 w-48 object-contain drop-shadow-2xl sm:h-56 sm:w-56" />
               </div>
               <div className="space-y-5 px-5 py-6 sm:px-6">
                 <div className="text-center">
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <h3 id="item-details-title" className="text-balance text-xl font-bold text-white sm:text-2xl">{selectedCaseItem.name}</h3>
-                    {String(selectedCaseItem.rarity ?? '').toLowerCase() === 'legendary' && (
-                      <span className="legendary-badge">Legendary</span>
-                    )}
-                  </div>
-                  <div className="mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase" style={{ color: selectedCaseItem.color, borderColor: `${selectedCaseItem.color}66`, backgroundColor: `${selectedCaseItem.color}1a` }}>
-                    {selectedCaseItem.rarity ?? 'Item'}
+                  <h3 id="item-details-title" className="text-balance text-xl font-bold text-white sm:text-2xl">{selectedCaseItem.name}</h3>
+                  <div className="mt-2">
+                    <span className={`rarity-badge ${String(selectedCaseItem.rarity ?? '').toLowerCase() === 'legendary' ? 'legendary-badge' : ''}`} style={String(selectedCaseItem.rarity ?? '').toLowerCase() === 'legendary' ? undefined : { color: selectedCaseItem.color, borderColor: `${selectedCaseItem.color}66`, backgroundColor: `${selectedCaseItem.color}1a` }}>
+                      {selectedCaseItem.rarity ?? 'Item'}
+                    </span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -1802,6 +1799,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           .item-modal-rarity-glow.is-active {
             animation: raritySinglePulse 600ms ease-out 1;
           }
+          .rarity-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            border: 1px solid;
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            line-height: 1;
+          }
           .legendary-badge {
             background: linear-gradient(90deg, #ffd700, #ffb300, #ffd700);
             background-size: 220% 100%;
@@ -1830,6 +1840,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             100% { background-position: 200px 0; }
           }
           @media (max-width: 640px) {
+            .rarity-badge,
             .legendary-badge {
               padding: 5px 12px;
               font-size: 10px;
