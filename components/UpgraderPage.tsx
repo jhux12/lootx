@@ -21,6 +21,7 @@ export const UpgraderPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [spinPhase, setSpinPhase] = useState<'idle' | 'settling'>('idle');
   const [wheelRotation, setWheelRotation] = useState(0);
+  const [winZoneRotation, setWinZoneRotation] = useState(0);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<null | { win: boolean; roll: number; chance: number; awardedItem?: { name: string; imageUrl: string } }>(null);
@@ -105,7 +106,14 @@ export const UpgraderPage: React.FC = () => {
         <TargetPicker targets={targets} selectedId={selectedTargetId} onSelect={setSelectedTargetId} filters={filters} onFilterChange={setFilters} />
       </div>
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <UpgradeSpinWheel chance={chance} phase={spinPhase} rotationDeg={wheelRotation} target={targetItem} />
+        <UpgradeSpinWheel
+          chance={chance}
+          phase={spinPhase}
+          rotationDeg={wheelRotation}
+          winZoneRotationDeg={winZoneRotation}
+          onWinZoneRotationChange={setWinZoneRotation}
+          target={targetItem}
+        />
         <ChancePreview chance={chance} sourceName={sourceItem?.name} targetName={targetItem?.name} />
         <button disabled={isDisabled} onClick={onAttempt} title={isCooldown ? 'Cooldown active' : ''} className="h-14 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 px-8 text-lg font-black text-white disabled:cursor-not-allowed disabled:opacity-50 xl:col-span-2">
           {isSubmitting ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Calculating result…</span> : 'Upgrade Now'}

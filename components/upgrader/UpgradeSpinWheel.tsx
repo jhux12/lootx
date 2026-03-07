@@ -7,10 +7,12 @@ type Props = {
   chance: number;
   phase: SpinPhase;
   rotationDeg: number;
+  winZoneRotationDeg: number;
+  onWinZoneRotationChange: (nextRotation: number) => void;
   target?: UpgraderTarget;
 };
 
-export const UpgradeSpinWheel: React.FC<Props> = ({ chance, phase, rotationDeg, target }) => {
+export const UpgradeSpinWheel: React.FC<Props> = ({ chance, phase, rotationDeg, winZoneRotationDeg, onWinZoneRotationChange, target }) => {
   const chancePercent = Math.max(0, Math.min(100, chance * 100));
   const chanceDegrees = chancePercent * 3.6;
   const targetName = (target?.name || 'Select target').toUpperCase();
@@ -25,7 +27,7 @@ export const UpgradeSpinWheel: React.FC<Props> = ({ chance, phase, rotationDeg, 
         <div
           className="absolute inset-[8px] rounded-full"
           style={{
-            background: `conic-gradient(from -90deg, #2ea43f 0deg ${chanceDegrees}deg, #e5e7eb ${chanceDegrees}deg 360deg)`,
+            background: `conic-gradient(from ${-90 + winZoneRotationDeg}deg, #2ea43f 0deg ${chanceDegrees}deg, #e5e7eb ${chanceDegrees}deg 360deg)`,
             transform: `rotate(${rotationDeg}deg)`,
             transition: phase === 'settling' ? 'transform 1700ms cubic-bezier(0.18,0.9,0.2,1)' : 'none'
           }}
@@ -43,7 +45,23 @@ export const UpgradeSpinWheel: React.FC<Props> = ({ chance, phase, rotationDeg, 
           <div className="rounded-sm bg-white px-3 py-1 text-xl font-black text-black sm:text-3xl">${targetPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
       </div>
-      <p className="mt-3 text-center text-xs text-gray-400">Chance: {chancePercent.toFixed(2)}% · Green segment is the win zone.</p>
+
+      <div className="mx-auto mt-3 w-full max-w-[340px]">
+        <p className="text-center text-[11px] text-gray-400">adjust winning zone</p>
+        <input
+          type="range"
+          min={0}
+          max={359}
+          step={1}
+          value={Math.round(winZoneRotationDeg)}
+          onChange={(event) => onWinZoneRotationChange(Number(event.target.value))}
+          disabled={phase !== 'idle'}
+          className="mt-1 w-full accent-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Adjust winning zone"
+        />
+      </div>
+
+      <p className="mt-2 text-center text-xs text-gray-400">Chance: {chancePercent.toFixed(2)}% · Green segment is the win zone.</p>
     </div>
   );
 };
