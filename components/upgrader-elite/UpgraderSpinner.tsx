@@ -327,7 +327,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
         </div>
       </div>
 
-      <div className="mt-5 h-8 flex items-center justify-center">
+      <div className="mt-5 min-h-8 flex items-center justify-center px-3">
         {status === 'spinning' && (
           <div className="flex items-center gap-2 text-white/60 font-mono text-xs sm:text-sm">
             <LucideRefreshCw className="w-4 h-4 animate-spin" />
@@ -335,8 +335,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           </div>
         )}
         {status === 'idle' && canRotateWinZone && (
-          <div className="text-white/55 text-[10px] sm:text-xs uppercase tracking-[0.16em] font-semibold text-center px-4">
-            Drag the ring to rotate your winning zone
+          <div className="text-white/55 text-[10px] sm:text-xs uppercase tracking-[0.16em] font-semibold text-center leading-relaxed">
+            Rotate winning zone
           </div>
         )}
       </div>
