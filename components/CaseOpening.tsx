@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2 } from 'lucide-react';
-import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
+import { COIN_ICON, GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
 import { useGame } from '../context/GameContext';
@@ -258,6 +258,34 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [spinFeedbackMessage, setSpinFeedbackMessage] = useState<string | null>(null);
   const [showXpConfirmSheet, setShowXpConfirmSheet] = useState(false);
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
+  const itemModalValueRef = useRef<HTMLSpanElement | null>(null);
+
+  const animateCoinValue = useCallback((element: HTMLElement, value: number) => {
+    let start = 0;
+    const duration = 700;
+    const step = value / (duration / 16);
+
+    const counter = window.setInterval(() => {
+      start += step;
+
+      if (start >= value) {
+        start = value;
+        window.clearInterval(counter);
+      }
+
+      element.innerText = Math.floor(start).toLocaleString();
+    }, 16);
+
+    return () => window.clearInterval(counter);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedCaseItem || !itemModalValueRef.current) return;
+    const value = toCoins(selectedCaseItem.price, PRICE_UNIT_MODE);
+    itemModalValueRef.current.innerText = '0';
+    const cleanup = animateCoinValue(itemModalValueRef.current, value);
+    return cleanup;
+  }, [animateCoinValue, selectedCaseItem]);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   
   // Gold Spin State
@@ -1605,12 +1633,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
         </div>
         {/* Slide Up Item Sheet */}
-        <div className={`fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${selectedCaseItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={() => setSelectedCaseItem(null)} />
-        <div className={`fixed bottom-0 left-0 right-0 z-[120] transform transition-transform duration-500 ${selectedCaseItem ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className={`pullz-item-modal-overlay fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm ${selectedCaseItem ? 'active' : 'pointer-events-none'}`} onClick={() => setSelectedCaseItem(null)} />
+        <div className={`fixed bottom-0 left-0 right-0 z-[120] ${selectedCaseItem ? 'pointer-events-auto' : 'pointer-events-none'}`}>
           <ProvablyFairModal isOpen={verifyModalOpen} onClose={() => setVerifyModalOpen(false)} data={{ serverSeedHash: lastRoll?.serverSeedHash, clientSeed: lastRoll?.clientSeed, nonce: lastRoll?.nonce, winningItem: wonItem?.name, resultIndex: lastRoll ? Math.floor(lastRoll.rollValue * 1000000) : undefined }} />
 
         {selectedCaseItem && (
-            <div ref={itemModalRef} role="dialog" aria-modal="true" aria-labelledby="item-details-title" className="mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)]">
+            <div ref={itemModalRef} role="dialog" aria-modal="true" aria-labelledby="item-details-title" className="pullz-item-modal-container active mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)]">
+              <div className={`pullz-item-rarity-bg ${selectedCaseItem.rarity === 'legendary' ? 'pullz-item-rarity-bg--legendary' : selectedCaseItem.rarity === 'rare' ? 'pullz-item-rarity-bg--rare' : 'pullz-item-rarity-bg--common'}`} />
               <div className="relative flex h-64 items-center justify-center overflow-hidden" style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}99 0%, transparent 72%)` }}>
                 <button
                   ref={itemModalCloseRef}
@@ -1621,11 +1650,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 >
                   <X className="h-4 w-4" />
                 </button>
-                <img src={selectedCaseItem.image} alt={selectedCaseItem.name} className="relative z-10 h-44 w-44 object-contain drop-shadow-2xl" />
+                <div className="pullz-item-rarity-open-glow" aria-hidden="true" />
+                <img src={selectedCaseItem.image} alt={selectedCaseItem.name} className="pullz-item-image relative z-10 h-44 w-44 object-contain drop-shadow-2xl" />
               </div>
               <div className="space-y-5 px-5 py-6 sm:px-6">
                 <div className="text-center">
-                  <h3 id="item-details-title" className="text-2xl font-bold text-white">{selectedCaseItem.name}</h3>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <h3 id="item-details-title" className="text-2xl font-bold text-white">{selectedCaseItem.name}</h3>
+                    {selectedCaseItem.rarity === 'legendary' && <span className="pullz-legendary-badge">Legendary</span>}
+                  </div>
                   <div className="mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase" style={{ color: selectedCaseItem.color, borderColor: `${selectedCaseItem.color}66`, backgroundColor: `${selectedCaseItem.color}1a` }}>
                     {selectedCaseItem.rarity ?? 'Item'}
                   </div>
@@ -1633,7 +1666,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
                     <span className="block text-[10px] font-bold uppercase tracking-wide text-gray-400">Value</span>
-                    <CoinAmount amount={toCoins(selectedCaseItem.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-2 justify-center text-lg font-bold text-white" iconClassName="h-4 w-4" />
+                    <div className="mt-2 flex items-center justify-center gap-1.5 text-lg font-bold text-white">
+                      <img src={COIN_ICON} alt="Coin" className="h-4 w-4 object-contain" />
+                      <span ref={itemModalValueRef}>0</span>
+                    </div>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
                     <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Drop Chance</span>
@@ -1663,6 +1699,113 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             inset: -20%;
             background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
             animation: box-shimmer 2s ease-in-out infinite;
+          }
+          .pullz-item-modal-overlay {
+            opacity: 0;
+            transition: opacity 150ms ease;
+          }
+          .pullz-item-modal-overlay.active {
+            opacity: 1;
+          }
+          .pullz-item-modal-container {
+            position: relative;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: transform 250ms ease, opacity 250ms ease;
+            will-change: transform, opacity;
+          }
+          .pullz-item-modal-container.active {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          .pullz-item-image {
+            transform: scale(0.9);
+            transition: transform 300ms ease;
+            will-change: transform;
+          }
+          .pullz-item-modal-container.active .pullz-item-image {
+            transform: scale(1);
+          }
+          .pullz-item-rarity-bg {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+          }
+          .pullz-item-rarity-bg--legendary {
+            background: radial-gradient(circle at center, rgba(255, 215, 0, 0.33), transparent 70%);
+            animation: pullz-legendary-pulse 2s ease-in-out infinite, pullz-legendary-shimmer 4.5s linear infinite;
+          }
+          .pullz-item-rarity-bg--rare {
+            background: radial-gradient(circle at center, rgba(168, 85, 247, 0.28), transparent 68%);
+            animation: pullz-rare-pulse 2.4s ease-in-out infinite;
+          }
+          .pullz-item-rarity-bg--common {
+            background: radial-gradient(circle at center, rgba(148, 163, 184, 0.16), transparent 66%);
+          }
+          .pullz-item-rarity-open-glow {
+            position: absolute;
+            inset: 14% 24%;
+            border-radius: 9999px;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.42), transparent 72%);
+            opacity: 0;
+            animation: pullz-rarity-open-glow 600ms ease-out 1;
+            z-index: 1;
+            pointer-events: none;
+          }
+          .pullz-legendary-badge {
+            background: linear-gradient(90deg, #ffd700, #ffb300, #ffd700);
+            background-size: 220px 100%;
+            color: #050505;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 999px;
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+            animation: pullz-badge-shimmer 3s linear infinite;
+            font-size: 11px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            line-height: 1;
+          }
+          @keyframes pullz-legendary-pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+          }
+          @keyframes pullz-legendary-shimmer {
+            0% { filter: brightness(0.95); }
+            50% { filter: brightness(1.08); }
+            100% { filter: brightness(0.95); }
+          }
+          @keyframes pullz-rare-pulse {
+            0%, 100% { opacity: 0.55; }
+            50% { opacity: 0.95; }
+          }
+          @keyframes pullz-rarity-open-glow {
+            0% { opacity: 0; transform: scale(0.9); }
+            35% { opacity: 0.85; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1.08); }
+          }
+          @keyframes pullz-badge-shimmer {
+            0% { background-position: -200px 0; }
+            100% { background-position: 200px 0; }
+          }
+          @media (max-width: 640px) {
+            .pullz-item-rarity-open-glow {
+              inset: 18% 18%;
+            }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .pullz-item-modal-overlay,
+            .pullz-item-modal-container,
+            .pullz-item-image {
+              transition: none;
+            }
+            .pullz-item-rarity-bg--legendary,
+            .pullz-item-rarity-bg--rare,
+            .pullz-item-rarity-open-glow,
+            .pullz-legendary-badge {
+              animation: none;
+            }
           }
         `}</style>
         </>
