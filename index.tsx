@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { registerSW } from 'virtual:pwa-register';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -13,3 +14,12 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+registerSW({
+  onNeedRefresh() {
+    const shouldRefresh = window.confirm('A new version of Pullz is available. Reload now?');
+    if (shouldRefresh) {
+      window.location.reload();
+    }
+  }
+});

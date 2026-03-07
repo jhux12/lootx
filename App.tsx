@@ -34,6 +34,8 @@ import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
 import { useSiteChat } from './hooks/useSiteChat';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
+import { usePWAInstall } from './src/pwa/usePWAInstall';
+import { OfflineFallback } from './src/pwa/OfflineFallback';
 import {
   ShowcaseRow,
   ShowcaseRowBoxes,
@@ -360,12 +362,30 @@ export default App;
 
 const AppShell = () => {
   const [showInbox, setShowInbox] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
   const { view } = useGame();
   const shouldUseStickyHeader = view.type !== 'BOXES';
   const { messages } = useSiteChat();
   const latestMessageAt = messages[messages.length - 1]?.createdAt ?? 0;
   const [lastSeenAt, setLastSeenAt] = useState(0);
   const hasUnseenChatMessages = latestMessageAt > lastSeenAt;
+
+  const { canInstall, install, isInstalled } = usePWAInstall();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const markChatSeen = useCallback(() => {
     if (!latestMessageAt) return;
@@ -378,6 +398,11 @@ const AppShell = () => {
         onOpenInbox={() => setShowInbox(true)}
         unreadChatCount={hasUnseenChatMessages ? 1 : 0}
         isSticky={shouldUseStickyHeader}
+        canInstall={canInstall}
+        onInstall={() => {
+          void install();
+        }}
+        isInstalled={isInstalled}
       />
       <AppLayout
         hasUnseenChatMessages={hasUnseenChatMessages}
@@ -394,6 +419,7 @@ const AppShell = () => {
         onChatViewed={markChatSeen}
       />
       <ResetPasswordModal />
+      {!isOnline && <OfflineFallback />}
     </div>
   );
 };
