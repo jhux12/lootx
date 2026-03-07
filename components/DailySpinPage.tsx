@@ -206,7 +206,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
                 <>
                   <span className="text-xs md:text-sm font-bold text-neutral-400 uppercase tracking-widest">YOU WON</span>
                   <div className="flex items-center gap-1 md:gap-2 mt-1">
-                    <img src={COIN_ICON} className="w-5 h-5 md:w-6 md:h-6 object-contain" />
+                    <img src={COIN_ICON} alt="Coin" className="w-5 h-5 md:w-6 md:h-6 object-contain" />
                     <span className="text-xl md:text-3xl font-black text-white">{lastPrize}</span>
                   </div>
                   <span className="text-[10px] md:text-xs text-neutral-500 mt-2">Come back tomorrow!</span>

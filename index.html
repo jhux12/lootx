@@ -2,11 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimum-scale=1.0"
-    />
-    <title>Pullz.gg - Mystery Boxes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pullz.gg Mystery Boxes</title>
+    <meta name="description" content="Open premium mystery boxes on Pullz.gg with provably fair outcomes, live drops, and instant rewards." />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://pullz.gg/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Pullz.gg" />
+    <meta property="og:title" content="Pullz.gg Mystery Boxes" />
+    <meta property="og:description" content="Open premium mystery boxes with provably fair results and live drop action." />
+    <meta property="og:url" content="https://pullz.gg/" />
+    <meta property="og:image" content="https://pullz.gg/home-banners/banner.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Pullz.gg Mystery Boxes" />
+    <meta name="twitter:description" content="Open premium mystery boxes with provably fair results and live drop action." />
+    <meta name="twitter:image" content="https://pullz.gg/home-banners/banner.png" />
     <script src="https://cdn.tailwindcss.com" defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://firebasestorage.googleapis.com">
@@ -38,7 +48,6 @@
     </script>
     <style>
       html, body {
-        touch-action: manipulation;
         overflow-x: hidden;
       }
       body {
@@ -121,34 +130,6 @@
         100% { transform: translateX(100%); }
       }
     </style>
-    <script>
-      // Prevent pinch and double-tap zooming on mobile
-      const disableZoom = () => {
-        let lastTouchEnd = 0;
-
-        const preventDefault = (e) => e.preventDefault();
-
-        document.addEventListener('gesturestart', preventDefault);
-        document.addEventListener('gesturechange', preventDefault);
-        document.addEventListener('gestureend', preventDefault);
-
-        document.addEventListener('touchmove', (e) => {
-          if (e.touches.length > 1) e.preventDefault();
-        }, { passive: false });
-
-        document.addEventListener('touchend', (e) => {
-          const now = Date.now();
-          if (now - lastTouchEnd <= 300) {
-            e.preventDefault();
-          }
-          lastTouchEnd = now;
-        }, { passive: false });
-      };
-
-      if (typeof window !== 'undefined') {
-        disableZoom();
-      }
-    </script>
   <script type="importmap">
 {
   "imports": {
