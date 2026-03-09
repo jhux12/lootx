@@ -153,7 +153,10 @@ export default async function handler(req, res) {
         }, { merge: true });
       }
 
-      transaction.set(userRef, { lastUpgradeAt: Date.now() }, { merge: true });
+      transaction.set(userRef, {
+        lastUpgradeAt: Date.now(),
+        'challengeStats.upgraderUses': admin.firestore.FieldValue.increment(1)
+      }, { merge: true });
       transaction.set(provablyRef, {
         serverSeed,
         serverSeedHash,

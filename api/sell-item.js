@@ -169,7 +169,11 @@ export default async function handler(req, res) {
         }, { merge: true });
       }
 
-      const userPatch = { coins: newCoins };
+      const userPatch = {
+        coins: newCoins,
+        'challengeStats.sellBackItems': admin.firestore.FieldValue.increment(1),
+        'challengeStats.sellBackCoins': admin.firestore.FieldValue.increment(creditCoins)
+      };
       if (xpAmount > 0) {
         const currentXp = Math.max(0, Math.floor(toFiniteNumber(userData.xpBalance ?? userData.xp, 0)));
         const nextXp = currentXp + xpAmount;

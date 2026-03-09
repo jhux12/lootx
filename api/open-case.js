@@ -252,6 +252,10 @@ export default async function handler(req, res) {
         : { coins: newCoins };
 
       transaction.set(userRef, nextUserPatch, { merge: true });
+      transaction.set(userRef, {
+        'challengeStats.boxesOpened': admin.firestore.FieldValue.increment(1),
+        [`challengeStats.rarityUnboxed.${String(prize.rarity ?? 'common').toLowerCase()}`]: admin.firestore.FieldValue.increment(1)
+      }, { merge: true });
 
       if (coinCost > 0) {
         await applySpendAndRewards({
