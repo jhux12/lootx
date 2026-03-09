@@ -52,6 +52,7 @@ const UpgraderTargetsPage = lazy(() => import('./src/pages/admin/UpgraderTargets
 const Profile = lazy(() => import('./components/Profile').then((module) => ({ default: module.Profile })));
 const Leaderboard = lazy(() => import('./components/Leaderboard').then((module) => ({ default: module.Leaderboard })));
 const CustomCaseCreator = lazy(() => import('./components/CustomCaseCreator').then((module) => ({ default: module.CustomCaseCreator })));
+const Quests = lazy(() => import('./components/Quests').then((module) => ({ default: module.Quests })));
 
 const LoadingSpinner = React.memo(() => (
   <div className="flex min-h-[40vh] items-center justify-center" aria-live="polite" aria-busy="true">
@@ -219,6 +220,26 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-white mb-2">Sign in to access bonuses</h2>
               <p className="text-gray-400 mb-6">Bonuses, rakeback, and affiliate rewards are available to registered players only.</p>
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="px-6 py-3 btn-logo-gradient text-white font-bold rounded-lg transition-colors"
+              >
+                Sign in
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {view.type === 'QUESTS' && (
+        <div className="w-full">
+          {isAuthenticated ? (
+            <Quests />
+          ) : (
+            <div className="max-w-xl mx-auto bg-[#0b0e14] border border-gray-800 rounded-2xl p-10 text-center mt-10">
+              <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-2">Sign in to access quests</h2>
+              <p className="text-gray-400 mb-6">Complete daily actions and claim rewards once you're signed in.</p>
               <button
                 onClick={() => setShowLoginModal(true)}
                 className="px-6 py-3 btn-logo-gradient text-white font-bold rounded-lg transition-colors"

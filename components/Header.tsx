@@ -3,7 +3,6 @@ import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 import {
   Facebook,
   ChevronDown,
-  Flame,
   Gamepad2,
   HelpCircle,
   Instagram,
@@ -13,6 +12,7 @@ import {
   PenTool,
   Plus,
   RefreshCw,
+  Sparkles,
   Clock3,
   Shield,
   ShieldCheck,
@@ -32,6 +32,9 @@ import { useBalanceFeedback } from '../src/ui/feedback/useBalanceFeedback';
 import { ActivityDrawer } from '../src/ui/activity/ActivityDrawer';
 import { useActivity } from '../src/lib/activity/useActivity';
 import { ProvablyFairBadge } from '../src/ui/provably/ProvablyFairBadge';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { getClaimReadyQuestCount, getQuestClaimToken, isQuestCycleExpired, normalizeQuestRules } from '../src/lib/quests';
 
 type HeaderProps = {
   onOpenInbox: () => void;
@@ -55,6 +58,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const { playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(false);
+  const [isRewardsMenuOpen, setIsRewardsMenuOpen] = useState(false);
+  const [questReadyCount, setQuestReadyCount] = useState(0);
   const [showActivity, setShowActivity] = useState(false);
   const [provablyData, setProvablyData] = useState<{ serverSeedHash?: string; clientSeed?: string; nonce?: number }>({});
   const headerRef = useRef<HTMLElement | null>(null);
@@ -126,7 +131,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     };
   }, []);
 
-  const navigate = (type: 'HOME' | 'BOXES' | 'PLINKO' | 'BONUSES' | 'LEADERBOARD' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'bonus-settings'), (snap) => {
+      const data = snap.data() as Record<string, unknown> | undefined;
+      const claims = user.questClaims ?? {};
+      const cycleMeta = { lastDailyClaim: user.lastDailyClaim, questCycleStartedAt: user.questCycleStartedAt };
+      const stats = isQuestCycleExpired(cycleMeta) ? {} : (user.challengeStats ?? {});
+      const count = getClaimReadyQuestCount(normalizeQuestRules(data?.questRules), stats, claims, getQuestClaimToken(cycleMeta));
+      setQuestReadyCount(count);
+    });
+    return () => unsub();
+  }, [user.challengeStats, user.questClaims]);
+
+  const navigate = (type: 'HOME' | 'BOXES' | 'PLINKO' | 'BONUSES' | 'LEADERBOARD' | 'QUESTS' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
     playSound('click');
     if ((type === 'BONUSES' || type === 'INVENTORY' || type === 'PROFILE') && !isAuthenticated) {
       openAuthModal('login');
@@ -135,6 +152,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     setView({ type } as any);
     setIsMobileMenuOpen(false);
     setIsGamesMenuOpen(false);
+    setIsRewardsMenuOpen(false);
   };
 
   const authButtons = useMemo(() => (
@@ -211,14 +229,23 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   </button>
                 </div>
               </div>
-              <button onClick={() => navigate('BONUSES')} className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-purple-400 transition-colors hover:border-white/5 hover:bg-neutral-800">
-                <Flame className="h-4 w-4" />
-                Rewards
-              </button>
               <button onClick={() => navigate('LEADERBOARD')} className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-neutral-400 transition-colors hover:border-white/5 hover:bg-neutral-800 hover:text-white">
                 <Trophy className="h-4 w-4" />
                 Leaderboard
               </button>
+              <div className="relative" onMouseEnter={() => setIsRewardsMenuOpen(true)} onMouseLeave={() => setIsRewardsMenuOpen(false)}>
+                <button type="button" onClick={() => setIsRewardsMenuOpen((prev) => !prev)} className="relative flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-purple-400 transition-colors hover:border-white/5 hover:bg-neutral-800" aria-expanded={isRewardsMenuOpen}>
+                  <Sparkles className="h-4 w-4" />
+                  Rewards
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isRewardsMenuOpen ? 'rotate-180' : ''}`} />
+                  {questReadyCount > 0 ? <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}
+                </button>
+                <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
+                  <button type="button" onClick={() => navigate('BONUSES')} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><RefreshCw className="h-4 w-4 text-blue-500" />Daily Spin</button>
+                  <button type="button" onClick={() => navigate('LEADERBOARD')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Trophy className="h-4 w-4 text-yellow-500" />Leaderboard</button>
+                  <button type="button" onClick={() => navigate('QUESTS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Sparkles className="h-4 w-4 text-violet-300" />Mini Challenges {questReadyCount > 0 ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -385,6 +412,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => navigate('BONUSES')} className={drawerCardClass}><RefreshCw className="h-5 w-5 text-blue-500" /><span className="text-sm font-bold text-white">Daily Spin</span></button>
               <button onClick={() => navigate('LEADERBOARD')} className={drawerCardClass}><Trophy className="h-5 w-5 text-yellow-500" /><span className="text-sm font-bold text-white">Leaderboard</span></button>
+              <button onClick={() => navigate('QUESTS')} className={`${drawerCardClass} relative`}><Sparkles className="h-5 w-5 text-violet-300" /><span className="text-sm font-bold text-white">Mini Challenges</span>{questReadyCount > 0 ? <span className="absolute right-2 top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}</button>
             </div>
           </section>
 

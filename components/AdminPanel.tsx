@@ -404,6 +404,7 @@ export const AdminPanel: React.FC = () => {
   const [timelineFilter, setTimelineFilter] = useState<'all' | 'ledger' | 'inventory' | 'admin'>('all');
   const [timelineSearch, setTimelineSearch] = useState('');
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
+  const [questRulesText, setQuestRulesText] = useState<string>('[]');
   const [rewardsDraft, setRewardsDraft] = useState(DEFAULT_REWARDS_SETTINGS);
   const [rewardsSettingsNotice, setRewardsSettingsNotice] = useState(false);
   const [leaderboardApprovals, setLeaderboardApprovals] = useState<LeaderboardApprovalEntry[]>([]);
@@ -813,6 +814,7 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       setBonusDraft(bonusSettings);
+      setQuestRulesText(JSON.stringify((bonusSettings as any).questRules ?? [], null, 2));
   }, [bonusSettings]);
 
   useEffect(() => {
@@ -2316,7 +2318,14 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleSaveBonusSettings = () => {
-      updateBonusSettings(bonusDraft);
+      let parsedQuestRules: unknown[] = [];
+      try {
+          const parsed = JSON.parse(questRulesText || '[]');
+          parsedQuestRules = Array.isArray(parsed) ? parsed : [];
+      } catch {
+          parsedQuestRules = [];
+      }
+      updateBonusSettings({ ...(bonusDraft as any), questRules: parsedQuestRules } as any);
       setBonusSaveNotice(true);
       window.setTimeout(() => setBonusSaveNotice(false), 3000);
   };
@@ -4720,6 +4729,17 @@ export const AdminPanel: React.FC = () => {
                                         <span>Cap preview:</span>
                                         <span className="text-gray-200 font-semibold">{bonusDraft.rakebackDailyCapCoins.toLocaleString()} coins</span>
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Mini challenges JSON</label>
+                                    <Textarea
+                                        rows={8}
+                                        value={questRulesText}
+                                        onChange={(event) => setQuestRulesText(event.target.value)}
+                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-2">Mission types: unboxing_count, sell_back_count, sell_back_value, upgrader_uses, unbox_rarity.</p>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Daily spin odds weights</label>
