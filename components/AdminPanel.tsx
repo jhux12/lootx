@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle } from 'lucide-react';
 import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
-import { db } from '../firebase';
+import { db, storage } from '../firebase';
 import { HomepageShowcaseEditor } from './admin/HomepageShowcaseEditor';
 import { BoxesPageConfigEditor } from './admin/BoxesPageConfigEditor';
 import { LegalEditor } from './admin/LegalEditor';
@@ -290,6 +291,7 @@ export const AdminPanel: React.FC = () => {
   const [itemCategoryFilter, setItemCategoryFilter] = useState('');
   const [itemTagFilters, setItemTagFilters] = useState<string[]>([]);
   const [deletingBoxId, setDeletingBoxId] = useState<string | null>(null);
+  const [isUploadingSpinnerBackground, setIsUploadingSpinnerBackground] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userXpInput, setUserXpInput] = useState<number>(0);
   const [isSavingUser, setIsSavingUser] = useState(false);
@@ -2191,6 +2193,49 @@ export const AdminPanel: React.FC = () => {
       }
   };
 
+  const handleSpinnerBackgroundUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!adminUser?.isAdmin) {
+          alert('Only admins can upload spinner backgrounds.');
+          event.target.value = '';
+          return;
+      }
+
+      const maxSizeBytes = 5 * 1024 * 1024;
+      if (file.size > maxSizeBytes) {
+          alert('Please choose an image smaller than 5MB.');
+          event.target.value = '';
+          return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+          alert('Please choose a valid image file.');
+          event.target.value = '';
+          return;
+      }
+
+      setIsUploadingSpinnerBackground(true);
+      try {
+          const extension = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const safeExtension = extension || 'png';
+          const path = `spinner-backgrounds/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExtension}`;
+          const storageRef = ref(storage, path);
+          const uploadResult = await uploadBytes(storageRef, file, {
+              contentType: file.type
+          });
+          const downloadUrl = await getDownloadURL(uploadResult.ref);
+          setNewBox((prev) => ({ ...prev, spinnerBackgroundImage: downloadUrl }));
+      } catch (error) {
+          console.error('Failed to upload spinner background image', error);
+          alert('Unable to upload image. Please try again.');
+      } finally {
+          setIsUploadingSpinnerBackground(false);
+          event.target.value = '';
+      }
+  };
+
   const resetBoxForm = () => {
       setEditingBoxId(null);
       setNewBox({
@@ -3008,6 +3053,21 @@ export const AdminPanel: React.FC = () => {
                                 <Input type="text" placeholder="Box Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.name} onChange={e => setNewBox({...newBox, name: e.target.value})} />
                                 <Input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.image} onChange={e => setNewBox({...newBox, image: e.target.value})} />
                                 <Input type="text" placeholder="Spinner Background URL (optional)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.spinnerBackgroundImage ?? ''} onChange={e => setNewBox({...newBox, spinnerBackgroundImage: e.target.value})} />
+                                <div className="rounded-lg border border-gray-700 bg-[#0b0e14] p-3">
+                                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-gray-400">Upload spinner background image</label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleSpinnerBackgroundUpload}
+                                        disabled={isUploadingSpinnerBackground}
+                                        className="block w-full cursor-pointer text-xs text-gray-300 file:mr-3 file:rounded file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                    />
+                                    <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
+                                        {isUploadingSpinnerBackground
+                                            ? 'Uploading to Firebase Storage…'
+                                            : 'Recommended size: 1920×1080 (desktop-safe) with key visuals centered for mobile crop.'}
+                                    </p>
+                                </div>
                                 <Input type="text" placeholder="Accent Color (Hex)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.accentColor} onChange={e => setNewBox({...newBox, accentColor: e.target.value})} />
                                 <div>
                                     <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Box Tags</label>
