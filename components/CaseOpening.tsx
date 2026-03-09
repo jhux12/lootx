@@ -232,7 +232,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const displayItems = [...items].sort(
     (a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)
   );
-  
+
   const [isSpinning, setIsSpinning] = useState(false);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
@@ -306,14 +306,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
 
-    const url = window.location.href;
+    const copyValue = serverSeedHash || window.location.href;
+    const copiedLabel = serverSeedHash ? 'Server seed hash copied.' : 'Page link copied.';
 
     try {
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(copyValue);
       } else {
         const textArea = document.createElement('textarea');
-        textArea.value = url;
+        textArea.value = copyValue;
         textArea.style.position = 'fixed';
         textArea.style.opacity = '0';
         document.body.appendChild(textArea);
@@ -322,14 +323,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         document.body.removeChild(textArea);
       }
 
-      setCopyStatusMessage('Page link copied.');
+      setCopyStatusMessage(copiedLabel);
     } catch (error) {
-      console.error('Failed to copy box link', error);
-      setCopyStatusMessage('Could not copy link.');
+      console.error('Failed to copy seed or box link', error);
+      setCopyStatusMessage('Could not copy right now.');
     }
 
     window.setTimeout(() => setCopyStatusMessage(null), 2500);
-  }, [playSound]);
+  }, [serverSeedHash]);
 
   const loadProvablyFairState = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -1203,104 +1204,110 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
-            <div className="relative z-20 flex items-start justify-between gap-2 px-2 pt-2 sm:px-3 sm:pt-3">
-              <div className="min-h-9">
-                {showXpOpenUi && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click');
-                      setShowXpConfirmSheet(true);
-                    }}
-                    className={`group inline-flex items-center gap-2 rounded-xl border bg-black/55 px-2 py-1 shadow-xl backdrop-blur-sm transition-all ${canOpenWithXp ? 'border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,0.3)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)]' : 'border-white/20 hover:border-cyan-300/45'}`}
-                    aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
-                    title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
-                  >
-                    <div className="relative h-8 w-8 shrink-0">
-                      <svg className="absolute inset-0 -rotate-90" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
-                        <circle cx="16" cy="16" r={xpRingRadius} fill="none" stroke="rgba(148,163,184,0.28)" strokeWidth="2.5" />
-                        <circle
-                          cx="16"
-                          cy="16"
-                          r={xpRingRadius}
-                          fill="none"
-                          stroke="rgba(34,211,238,0.95)"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeDasharray={xpRingCircumference}
-                          strokeDashoffset={xpRingOffset}
-                          className="transition-all duration-300 ease-out"
-                        />
-                      </svg>
-                      <div className="absolute inset-[5px] rounded-full bg-[#111827] border border-cyan-300/25 flex items-center justify-center">
-                        <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-3.5 w-3.5 object-contain" />
+            <div className="relative z-20 px-2 pt-2 pb-3 sm:px-3 sm:pt-3 sm:pb-3">
+              <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-black/50 p-1.5 shadow-[0_0_24px_rgba(45,212,191,0.12)] backdrop-blur-md sm:gap-2 sm:p-2">
+                <div className="flex min-w-0 flex-1 items-center">
+                  {showXpOpenUi && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setShowXpConfirmSheet(true);
+                      }}
+                      className={`group inline-flex items-center gap-2 rounded-lg border bg-black/55 px-2 py-1 shadow-xl backdrop-blur-sm transition-all ${canOpenWithXp ? 'border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,0.3)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)]' : 'border-white/20 hover:border-cyan-300/45'}`}
+                      aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
+                      title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
+                    >
+                      <div className="relative h-7 w-7 shrink-0 sm:h-8 sm:w-8">
+                        <svg className="absolute inset-0 -rotate-90" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+                          <circle cx="16" cy="16" r={xpRingRadius} fill="none" stroke="rgba(148,163,184,0.28)" strokeWidth="2.5" />
+                          <circle
+                            cx="16"
+                            cy="16"
+                            r={xpRingRadius}
+                            fill="none"
+                            stroke="rgba(34,211,238,0.95)"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeDasharray={xpRingCircumference}
+                            strokeDashoffset={xpRingOffset}
+                            className="transition-all duration-300 ease-out"
+                          />
+                        </svg>
+                        <div className="absolute inset-[4px] rounded-full bg-[#111827] border border-cyan-300/25 flex items-center justify-center">
+                          <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-3 w-3 object-contain sm:h-3.5 sm:w-3.5" />
+                        </div>
                       </div>
-                    </div>
-                    <span className="text-[10px] text-cyan-100/85 whitespace-nowrap">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span>
-                  </button>
-                )}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-1 rounded-xl border border-white/20 bg-black/55 p-1 shadow-xl backdrop-blur-sm">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click');
-                      setShowFairModal(true);
-                    }}
-                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition hover:border-emerald-300/60 hover:text-emerald-200 sm:h-9 sm:w-9"
-                    aria-label="Open provably fair details"
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click');
-                      void handleCopyPageLink();
-                    }}
-                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition hover:border-cyan-300/60 hover:text-cyan-200 sm:h-9 sm:w-9"
-                    aria-label="Copy page link"
-                  >
-                    <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click');
-                      setShowInfoModal(true);
-                    }}
-                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition hover:border-amber-300/60 hover:text-amber-200 sm:h-9 sm:w-9"
-                    aria-label="Open item availability disclaimer"
-                  >
-                    <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click');
-                      toggleMute();
-                    }}
-                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition hover:border-violet-300/60 hover:text-violet-200 sm:h-9 sm:w-9"
-                    aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
-                  >
-                    {muted ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-                  </button>
+                      <span className="text-[9px] text-cyan-100/85 whitespace-nowrap sm:text-[10px]">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span>
+                    </button>
+                  )}
                 </div>
-                {copyStatusMessage && (
-                  <p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
-                    {copyStatusMessage}
-                  </p>
-                )}
+
+                <div className="ml-auto">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setShowFairModal(true);
+                      }}
+                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)] sm:h-9 sm:w-9"
+                      aria-label="Open provably fair details"
+                      title="View fairness verification"
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        void handleCopyPageLink();
+                      }}
+                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)] sm:h-9 sm:w-9"
+                      aria-label="Copy server seed"
+                      title="Copy server seed"
+                    >
+                      <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setShowInfoModal(true);
+                      }}
+                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)] sm:h-9 sm:w-9"
+                      aria-label="Open item availability disclaimer"
+                      title="View case details"
+                    >
+                      <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        toggleMute();
+                      }}
+                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)] sm:h-9 sm:w-9"
+                      aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
+                      title="Toggle sound effects"
+                    >
+                      {muted ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                    </button>
+                  </div>
+                  {copyStatusMessage && (
+                    <p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
+                      {copyStatusMessage}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Spinner Window */}
-            <div className="relative h-56 sm:h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+            <div className="relative h-[15.5rem] sm:h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
                 {spinnerBackgroundImage && (
                   <>
                     <img
@@ -1314,19 +1321,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 )}
                 {isBoxPreviewVisible && (
                   <div
-                    className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
+                    className={`absolute inset-0 z-30 flex items-start justify-center px-3 pt-3 transition-opacity duration-500 sm:items-center sm:px-6 sm:pt-0 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
                     aria-live="polite"
                   >
-                    <div className={`pullz-box-preview relative w-full max-w-[280px] sm:max-w-[320px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
+                    <div className={`pullz-box-preview relative w-full max-w-[320px] sm:max-w-[380px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
                       <div className="pullz-box-preview__shimmer" aria-hidden="true"></div>
-                      <img
-                        src={box!.image}
-                        alt={`${box!.name} box`}
-                        className="relative z-10 mx-auto h-28 w-auto max-w-full object-contain sm:h-32"
-                      />
-                      <p className="relative z-10 mt-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-200 sm:text-sm">
-                        Ready to open
-                      </p>
+                      <div className="pullz-box-preview__image-wrap relative z-10 mx-auto w-full max-w-[240px] sm:max-w-[280px]">
+                        <span className="pullz-box-spark pullz-box-spark--one" aria-hidden="true" />
+                        <span className="pullz-box-spark pullz-box-spark--two" aria-hidden="true" />
+                        <span className="pullz-box-spark pullz-box-spark--three" aria-hidden="true" />
+                        <span className="pullz-box-spark pullz-box-spark--four" aria-hidden="true" />
+                        <img
+                          src={box!.image}
+                          alt={`${box!.name} box`}
+                          className="pullz-box-preview__image mx-auto h-40 w-auto max-w-full object-contain sm:h-44"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1351,7 +1361,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     {reelItems.map((item, idx) => (
                         <div 
                             key={`${item.id}-${idx}`}
-                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}`}
+                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3.5 sm:p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}`}
                             style={{ 
                                 width: `${CARD_WIDTH}px`, 
                                 height: `${CARD_WIDTH}px`,
@@ -1368,7 +1378,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
-                                className={`relative z-10 w-24 h-24 object-contain mb-2 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
+                                className={`relative z-10 h-[6.5rem] w-[6.5rem] object-contain mb-2 sm:h-24 sm:w-24 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
                             />
                             <div 
                                 className="absolute bottom-0 left-0 right-0 h-1 opacity-50 rounded-b-xl"
@@ -1380,7 +1390,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="bg-[#0b0e14] p-4 flex flex-col items-center justify-center gap-3 border-t border-gray-800 relative z-20">
+            <div className="bg-[#0b0e14] px-3 pb-4 pt-3 sm:p-4 flex flex-col items-center justify-center gap-2.5 border-t border-gray-800 relative z-20">
                  <button 
                     onClick={() => handleSpin()}
                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
@@ -1469,7 +1479,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <button
                   type="button"
                   onClick={() => setShowXpConfirmSheet(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/50 text-gray-200"
+                  className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/50 text-gray-200"
                   aria-label="Close XP confirmation"
                 >
                   <X className="h-4 w-4" />
@@ -1738,7 +1748,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   ref={itemModalCloseRef}
                   type="button"
                   onClick={() => setSelectedCaseItem(null)}
-                  className="absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white"
+                  className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white"
                   aria-label="Close item details"
                 >
                   <X className="h-4 w-4" />
@@ -1781,12 +1791,55 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           .pullz-box-preview {
             overflow: hidden;
             animation: box-glow 2.1s ease-in-out infinite;
+            transition: transform 260ms ease, box-shadow 260ms ease;
+          }
+          .pullz-box-preview::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 26px;
+            width: 70%;
+            height: 26px;
+            transform: translateX(-50%);
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.44) 0%, rgba(56, 189, 248, 0.08) 55%, transparent 85%);
+            filter: blur(8px);
+            pointer-events: none;
+          }
+          .pullz-box-preview:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 0 0 rgba(34, 211, 238, 0.35), 0 0 36px rgba(34, 211, 238, 0.38);
           }
           .pullz-box-preview__shimmer {
             position: absolute;
             inset: -20%;
             background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
             animation: box-shimmer 2s ease-in-out infinite;
+          }
+          .pullz-box-preview__image {
+            transition: transform 260ms ease;
+            will-change: transform;
+          }
+          .pullz-box-preview:hover .pullz-box-preview__image {
+            transform: translateY(-4px);
+          }
+          .pullz-box-spark {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(56,189,248,0.55) 55%, rgba(56,189,248,0) 100%);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+            animation: boxSparkFloat 2.4s ease-in-out infinite;
+            pointer-events: none;
+          }
+          .pullz-box-spark--one { top: 16%; left: 14%; animation-delay: 0s; }
+          .pullz-box-spark--two { top: 30%; right: 12%; animation-delay: 0.45s; }
+          .pullz-box-spark--three { bottom: 20%; left: 20%; animation-delay: 0.9s; }
+          .pullz-box-spark--four { bottom: 14%; right: 18%; animation-delay: 1.2s; }
+          @keyframes boxSparkFloat {
+            0%, 100% { transform: translateY(0) scale(0.85); opacity: 0.45; }
+            50% { transform: translateY(-10px) scale(1.1); opacity: 1; }
           }
           .item-modal-overlay {
             opacity: 0;
@@ -1892,6 +1945,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               padding: 5px 12px;
               font-size: 10px;
             }
+            .pullz-box-preview::after {
+              width: 78%;
+              bottom: 22px;
+            }
           }
           @media (prefers-reduced-motion: reduce) {
             .item-modal-overlay,
@@ -1900,9 +1957,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             .item-modal-image,
             .item-modal-rarity-bg--legendary,
             .item-modal-rarity-glow,
-            .legendary-badge {
+            .legendary-badge,
+            .pullz-box-preview,
+            .pullz-box-preview__image,
+            .pullz-box-spark {
               animation: none !important;
               transition: none !important;
+            }
+            .pullz-box-preview:hover,
+            .pullz-box-preview:hover .pullz-box-preview__image {
+              transform: none !important;
             }
           }
         `}</style>
