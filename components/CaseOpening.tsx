@@ -236,6 +236,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isSpinning, setIsSpinning] = useState(false);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
+  const sellOfferCoins = useMemo(() => (
+    wonItem ? getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate) : 0
+  ), [sellBackRate, wonItem]);
+  const canClaimSellCoins = Boolean(wonItem?.redeemable !== false && sellOfferCoins > 0);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
   const [sellOfferGenerated, setSellOfferGenerated] = useState(false);
@@ -1099,18 +1103,32 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const shareImage = await createShareImageFile(wonItem, caseName);
       const supportsFileShare = Boolean(
         shareImage
-        && navigator.canShare
-        && navigator.canShare({ files: [shareImage] })
+        && (!navigator.canShare || navigator.canShare({ files: [shareImage] }))
       );
 
       if (navigator.share) {
-        await navigator.share({
+        const basePayload = {
           title: 'pullz.gg Unboxing',
           text: shareText,
-          url: shareUrl,
-          ...(supportsFileShare ? { files: [shareImage] } : {})
-        });
-        toast.success(supportsFileShare ? 'Shared with image.' : 'Shared successfully.');
+          url: shareUrl
+        };
+
+        if (supportsFileShare && shareImage) {
+          try {
+            await navigator.share({
+              ...basePayload,
+              files: [shareImage]
+            });
+            toast.success('Shared with image.');
+            return;
+          } catch (fileShareError) {
+            const errorName = (fileShareError as Error)?.name;
+            if (errorName === 'AbortError') return;
+          }
+        }
+
+        await navigator.share(basePayload);
+        toast.success('Shared successfully.');
         return;
       }
 
@@ -1618,7 +1636,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         Share
                       </span>
                     </button>
-                    {wonItem.redeemable !== false && (
+                    {canClaimSellCoins && (
                       <button
                         onClick={handleSell}
                         disabled={isGeneratingSellOffer || isSellingItem}
@@ -1643,7 +1661,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             <Wallet className="h-4 w-4" />
                             Trade for
                             <CoinAmount
-                              amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
+                              amount={sellOfferCoins}
                               formatOptions={{ maximumFractionDigits: 0 }}
                               className="text-emerald-50"
                               iconClassName="h-4 w-4"
