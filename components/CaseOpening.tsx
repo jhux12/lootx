@@ -47,6 +47,15 @@ const CARD_WIDTH = 160;
 const GAP_WIDTH = 16;
 const ITEM_WIDTH = CARD_WIDTH + GAP_WIDTH;
 const BUFFER_COUNT = 45; // Items before winner
+
+const getPreviewRarityTier = (rarity?: string) => {
+  const normalized = String(rarity ?? 'common').toLowerCase();
+  if (normalized === 'legendary') return 'legendary';
+  if (normalized === 'epic') return 'ultra-rare';
+  if (normalized === 'rare') return 'rare';
+  return 'common';
+};
+
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -232,6 +241,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const displayItems = [...items].sort(
     (a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)
   );
+  const previewCarouselItems = useMemo(() => {
+    if (items.length === 0) return [];
+    return [...items, ...items];
+  }, [items]);
   
   const [isSpinning, setIsSpinning] = useState(false);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
@@ -306,14 +319,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
 
-    const url = window.location.href;
+    const copyValue = serverSeedHash || window.location.href;
+    const copiedLabel = serverSeedHash ? 'Server seed hash copied.' : 'Page link copied.';
 
     try {
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(copyValue);
       } else {
         const textArea = document.createElement('textarea');
-        textArea.value = url;
+        textArea.value = copyValue;
         textArea.style.position = 'fixed';
         textArea.style.opacity = '0';
         document.body.appendChild(textArea);
@@ -322,14 +336,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         document.body.removeChild(textArea);
       }
 
-      setCopyStatusMessage('Page link copied.');
+      setCopyStatusMessage(copiedLabel);
     } catch (error) {
-      console.error('Failed to copy box link', error);
-      setCopyStatusMessage('Could not copy link.');
+      console.error('Failed to copy seed or box link', error);
+      setCopyStatusMessage('Could not copy right now.');
     }
 
     window.setTimeout(() => setCopyStatusMessage(null), 2500);
-  }, [playSound]);
+  }, [serverSeedHash]);
 
   const loadProvablyFairState = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -1203,99 +1217,105 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
-            <div className="relative z-20 flex items-start justify-between gap-2 px-2 pt-2 sm:px-3 sm:pt-3">
-              <div className="min-h-9">
-                {showXpOpenUi && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click');
-                      setShowXpConfirmSheet(true);
-                    }}
-                    className={`group inline-flex items-center gap-2 rounded-xl border bg-black/55 px-2 py-1 shadow-xl backdrop-blur-sm transition-all ${canOpenWithXp ? 'border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,0.3)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)]' : 'border-white/20 hover:border-cyan-300/45'}`}
-                    aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
-                    title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
-                  >
-                    <div className="relative h-8 w-8 shrink-0">
-                      <svg className="absolute inset-0 -rotate-90" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
-                        <circle cx="16" cy="16" r={xpRingRadius} fill="none" stroke="rgba(148,163,184,0.28)" strokeWidth="2.5" />
-                        <circle
-                          cx="16"
-                          cy="16"
-                          r={xpRingRadius}
-                          fill="none"
-                          stroke="rgba(34,211,238,0.95)"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeDasharray={xpRingCircumference}
-                          strokeDashoffset={xpRingOffset}
-                          className="transition-all duration-300 ease-out"
-                        />
-                      </svg>
-                      <div className="absolute inset-[5px] rounded-full bg-[#111827] border border-cyan-300/25 flex items-center justify-center">
-                        <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-3.5 w-3.5 object-contain" />
+            <div className="relative z-20 px-2 pt-2 sm:px-3 sm:pt-3">
+              <div className="flex flex-col gap-2 rounded-2xl border border-white/15 bg-black/45 p-2 shadow-xl backdrop-blur-md sm:flex-row sm:items-start sm:justify-between sm:gap-3 sm:p-2.5">
+                <div className="min-h-9">
+                  {showXpOpenUi && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setShowXpConfirmSheet(true);
+                      }}
+                      className={`group inline-flex items-center gap-2 rounded-xl border bg-black/55 px-2 py-1 shadow-xl backdrop-blur-sm transition-all ${canOpenWithXp ? 'border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,0.3)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)]' : 'border-white/20 hover:border-cyan-300/45'}`}
+                      aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
+                      title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
+                    >
+                      <div className="relative h-8 w-8 shrink-0">
+                        <svg className="absolute inset-0 -rotate-90" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                          <circle cx="16" cy="16" r={xpRingRadius} fill="none" stroke="rgba(148,163,184,0.28)" strokeWidth="2.5" />
+                          <circle
+                            cx="16"
+                            cy="16"
+                            r={xpRingRadius}
+                            fill="none"
+                            stroke="rgba(34,211,238,0.95)"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeDasharray={xpRingCircumference}
+                            strokeDashoffset={xpRingOffset}
+                            className="transition-all duration-300 ease-out"
+                          />
+                        </svg>
+                        <div className="absolute inset-[5px] rounded-full bg-[#111827] border border-cyan-300/25 flex items-center justify-center">
+                          <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-3.5 w-3.5 object-contain" />
+                        </div>
                       </div>
-                    </div>
-                    <span className="text-[10px] text-cyan-100/85 whitespace-nowrap">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span>
-                  </button>
-                )}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-1 rounded-xl border border-white/20 bg-black/55 p-1 shadow-xl backdrop-blur-sm">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click');
-                      setShowFairModal(true);
-                    }}
-                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition hover:border-emerald-300/60 hover:text-emerald-200 sm:h-9 sm:w-9"
-                    aria-label="Open provably fair details"
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click');
-                      void handleCopyPageLink();
-                    }}
-                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition hover:border-cyan-300/60 hover:text-cyan-200 sm:h-9 sm:w-9"
-                    aria-label="Copy page link"
-                  >
-                    <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click');
-                      setShowInfoModal(true);
-                    }}
-                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition hover:border-amber-300/60 hover:text-amber-200 sm:h-9 sm:w-9"
-                    aria-label="Open item availability disclaimer"
-                  >
-                    <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click');
-                      toggleMute();
-                    }}
-                    className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition hover:border-violet-300/60 hover:text-violet-200 sm:h-9 sm:w-9"
-                    aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
-                  >
-                    {muted ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-                  </button>
+                      <span className="text-[10px] text-cyan-100/85 whitespace-nowrap">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span>
+                    </button>
+                  )}
                 </div>
-                {copyStatusMessage && (
-                  <p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
-                    {copyStatusMessage}
-                  </p>
-                )}
+
+                <div className="sm:ml-auto">
+                  <div className="flex items-center justify-end gap-1 rounded-xl border border-white/20 bg-black/55 p-1 shadow-xl backdrop-blur-sm">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setShowFairModal(true);
+                      }}
+                      className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)] sm:h-9 sm:w-9"
+                      aria-label="Open provably fair details"
+                      title="View fairness verification"
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        void handleCopyPageLink();
+                      }}
+                      className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)] sm:h-9 sm:w-9"
+                      aria-label="Copy server seed"
+                      title="Copy server seed"
+                    >
+                      <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setShowInfoModal(true);
+                      }}
+                      className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)] sm:h-9 sm:w-9"
+                      aria-label="Open item availability disclaimer"
+                      title="View case details"
+                    >
+                      <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        toggleMute();
+                      }}
+                      className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)] sm:h-9 sm:w-9"
+                      aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
+                      title="Toggle sound effects"
+                    >
+                      {muted ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                    </button>
+                  </div>
+                  {copyStatusMessage && (
+                    <p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
+                      {copyStatusMessage}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1317,16 +1337,39 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
                     aria-live="polite"
                   >
-                    <div className={`pullz-box-preview relative w-full max-w-[280px] sm:max-w-[320px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
+                    <div className={`pullz-box-preview relative w-full max-w-[320px] sm:max-w-[380px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
                       <div className="pullz-box-preview__shimmer" aria-hidden="true"></div>
-                      <img
-                        src={box!.image}
-                        alt={`${box!.name} box`}
-                        className="relative z-10 mx-auto h-28 w-auto max-w-full object-contain sm:h-32"
-                      />
+                      <div className="pullz-box-preview__image-wrap relative z-10 mx-auto w-full max-w-[230px] sm:max-w-[270px]">
+                        <img
+                          src={box!.image}
+                          alt={`${box!.name} box`}
+                          className="pullz-box-preview__image mx-auto h-32 w-auto max-w-full object-contain sm:h-40"
+                        />
+                      </div>
                       <p className="relative z-10 mt-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-200 sm:text-sm">
                         Ready to open
                       </p>
+                      {previewCarouselItems.length > 0 && (
+                        <div className="case-item-carousel relative z-10 mt-3 overflow-hidden rounded-xl border border-white/12 bg-[#0c121d]/90 p-2 shadow-[0_0_18px_rgba(56,189,248,0.14)]">
+                          <div className="case-item-carousel__track">
+                            {previewCarouselItems.map((item, idx) => {
+                              const rarityTier = getPreviewRarityTier(item.rarity);
+                              return (
+                                <div
+                                  key={`${item.id}-${idx}-preview`}
+                                  className={`case-item-carousel__card case-item-carousel__card--${rarityTier}`}
+                                  title={`${item.name} · ${item.rarity}`}
+                                >
+                                  <img src={item.image} alt={item.name} className="h-10 w-10 object-contain sm:h-11 sm:w-11" loading="lazy" decoding="async" />
+                                  <span className="case-item-carousel__value">
+                                    <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="text-[9px] sm:text-[10px]" iconClassName="h-2.5 w-2.5" />
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1781,12 +1824,121 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           .pullz-box-preview {
             overflow: hidden;
             animation: box-glow 2.1s ease-in-out infinite;
+            transition: transform 260ms ease, box-shadow 260ms ease;
+          }
+          .pullz-box-preview::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 26px;
+            width: 70%;
+            height: 26px;
+            transform: translateX(-50%);
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.44) 0%, rgba(56, 189, 248, 0.08) 55%, transparent 85%);
+            filter: blur(8px);
+            pointer-events: none;
+          }
+          .pullz-box-preview:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 0 0 rgba(34, 211, 238, 0.35), 0 0 36px rgba(34, 211, 238, 0.38);
           }
           .pullz-box-preview__shimmer {
             position: absolute;
             inset: -20%;
             background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
             animation: box-shimmer 2s ease-in-out infinite;
+          }
+          .pullz-box-preview__image {
+            transition: transform 260ms ease;
+            will-change: transform;
+          }
+          .pullz-box-preview:hover .pullz-box-preview__image {
+            transform: translateY(-4px);
+          }
+          .case-item-carousel {
+            position: relative;
+            isolation: isolate;
+          }
+          .case-item-carousel::before,
+          .case-item-carousel::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 26px;
+            z-index: 2;
+            pointer-events: none;
+          }
+          .case-item-carousel::before {
+            left: 0;
+            background: linear-gradient(to right, rgba(12, 18, 29, 0.96), transparent);
+          }
+          .case-item-carousel::after {
+            right: 0;
+            background: linear-gradient(to left, rgba(12, 18, 29, 0.96), transparent);
+          }
+          .case-item-carousel__track {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: max-content;
+            animation: caseItemScroll 32s linear infinite;
+            will-change: transform;
+          }
+          .case-item-carousel__card {
+            width: 64px;
+            min-width: 64px;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(15, 23, 42, 0.78);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 4px;
+            transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+          }
+          .case-item-carousel__card:hover {
+            transform: scale(1.06);
+          }
+          .case-item-carousel__value {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(2, 6, 23, 0.9);
+            padding: 2px 6px;
+            line-height: 1;
+          }
+          .case-item-carousel__card--common {
+            box-shadow: 0 0 10px rgba(148, 163, 184, 0.16);
+          }
+          .case-item-carousel__card--rare {
+            border-color: rgba(59, 130, 246, 0.65);
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.32);
+          }
+          .case-item-carousel__card--ultra-rare {
+            border-color: rgba(192, 132, 252, 0.75);
+            box-shadow: 0 0 14px rgba(192, 132, 252, 0.38);
+          }
+          .case-item-carousel__card--legendary {
+            border-color: rgba(250, 204, 21, 0.8);
+            box-shadow: 0 0 16px rgba(250, 204, 21, 0.45);
+          }
+          .case-item-carousel__card--rare:hover {
+            box-shadow: 0 0 18px rgba(59, 130, 246, 0.5);
+          }
+          .case-item-carousel__card--ultra-rare:hover {
+            box-shadow: 0 0 20px rgba(192, 132, 252, 0.56);
+          }
+          .case-item-carousel__card--legendary:hover {
+            box-shadow: 0 0 22px rgba(250, 204, 21, 0.65);
+          }
+          @keyframes caseItemScroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(calc(-50% - 4px)); }
           }
           .item-modal-overlay {
             opacity: 0;
@@ -1892,6 +2044,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               padding: 5px 12px;
               font-size: 10px;
             }
+            .pullz-box-preview::after {
+              width: 78%;
+              bottom: 22px;
+            }
+            .case-item-carousel__card {
+              width: 58px;
+              min-width: 58px;
+              border-radius: 10px;
+              gap: 4px;
+              padding: 6px 3px;
+            }
           }
           @media (prefers-reduced-motion: reduce) {
             .item-modal-overlay,
@@ -1900,9 +2063,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             .item-modal-image,
             .item-modal-rarity-bg--legendary,
             .item-modal-rarity-glow,
-            .legendary-badge {
+            .legendary-badge,
+            .pullz-box-preview,
+            .pullz-box-preview__image,
+            .case-item-carousel__track,
+            .case-item-carousel__card {
               animation: none !important;
               transition: none !important;
+            }
+            .pullz-box-preview:hover,
+            .pullz-box-preview:hover .pullz-box-preview__image,
+            .case-item-carousel__card:hover {
+              transform: none !important;
             }
           }
         `}</style>
