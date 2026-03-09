@@ -1217,9 +1217,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
-            <div className="relative z-20 px-2 pt-2 sm:px-3 sm:pt-3">
-              <div className="flex flex-col gap-2 rounded-2xl border border-white/15 bg-black/45 p-2 shadow-xl backdrop-blur-md sm:flex-row sm:items-start sm:justify-between sm:gap-3 sm:p-2.5">
-                <div className="min-h-9">
+            <div className="relative z-20 px-2 pt-2 pb-3 sm:px-3 sm:pt-3 sm:pb-3">
+              <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-black/50 p-1.5 shadow-[0_0_24px_rgba(45,212,191,0.12)] backdrop-blur-md sm:gap-2 sm:p-2">
+                <div className="flex min-w-0 flex-1 items-center">
                   {showXpOpenUi && (
                     <button
                       type="button"
@@ -1227,12 +1227,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         playSound('click');
                         setShowXpConfirmSheet(true);
                       }}
-                      className={`group inline-flex items-center gap-2 rounded-xl border bg-black/55 px-2 py-1 shadow-xl backdrop-blur-sm transition-all ${canOpenWithXp ? 'border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,0.3)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)]' : 'border-white/20 hover:border-cyan-300/45'}`}
+                      className={`group inline-flex items-center gap-2 rounded-lg border bg-black/55 px-2 py-1 shadow-xl backdrop-blur-sm transition-all ${canOpenWithXp ? 'border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,0.3)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)]' : 'border-white/20 hover:border-cyan-300/45'}`}
                       aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
                       title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
                     >
-                      <div className="relative h-8 w-8 shrink-0">
-                        <svg className="absolute inset-0 -rotate-90" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                      <div className="relative h-7 w-7 shrink-0 sm:h-8 sm:w-8">
+                        <svg className="absolute inset-0 -rotate-90" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
                           <circle cx="16" cy="16" r={xpRingRadius} fill="none" stroke="rgba(148,163,184,0.28)" strokeWidth="2.5" />
                           <circle
                             cx="16"
@@ -1247,24 +1247,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             className="transition-all duration-300 ease-out"
                           />
                         </svg>
-                        <div className="absolute inset-[5px] rounded-full bg-[#111827] border border-cyan-300/25 flex items-center justify-center">
-                          <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-3.5 w-3.5 object-contain" />
+                        <div className="absolute inset-[4px] rounded-full bg-[#111827] border border-cyan-300/25 flex items-center justify-center">
+                          <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-3 w-3 object-contain sm:h-3.5 sm:w-3.5" />
                         </div>
                       </div>
-                      <span className="text-[10px] text-cyan-100/85 whitespace-nowrap">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span>
+                      <span className="text-[9px] text-cyan-100/85 whitespace-nowrap sm:text-[10px]">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span>
                     </button>
                   )}
                 </div>
 
-                <div className="sm:ml-auto">
-                  <div className="flex items-center justify-end gap-1 rounded-xl border border-white/20 bg-black/55 p-1 shadow-xl backdrop-blur-sm">
+                <div className="ml-auto">
+                  <div className="flex items-center justify-end gap-1">
                     <button
                       type="button"
                       onClick={() => {
                         playSound('click');
                         setShowFairModal(true);
                       }}
-                      className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)] sm:h-9 sm:w-9"
+                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)] sm:h-9 sm:w-9"
                       aria-label="Open provably fair details"
                       title="View fairness verification"
                     >
@@ -1277,7 +1277,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         playSound('click');
                         void handleCopyPageLink();
                       }}
-                      className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)] sm:h-9 sm:w-9"
+                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)] sm:h-9 sm:w-9"
                       aria-label="Copy server seed"
                       title="Copy server seed"
                     >
@@ -1290,7 +1290,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         playSound('click');
                         setShowInfoModal(true);
                       }}
-                      className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)] sm:h-9 sm:w-9"
+                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)] sm:h-9 sm:w-9"
                       aria-label="Open item availability disclaimer"
                       title="View case details"
                     >
@@ -1303,7 +1303,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         playSound('click');
                         toggleMute();
                       }}
-                      className="group flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)] sm:h-9 sm:w-9"
+                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)] sm:h-9 sm:w-9"
                       aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
                       title="Toggle sound effects"
                     >
@@ -1320,7 +1320,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Spinner Window */}
-            <div className="relative h-56 sm:h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+            <div className="relative h-[15.5rem] sm:h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
                 {spinnerBackgroundImage && (
                   <>
                     <img
@@ -1334,7 +1334,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 )}
                 {isBoxPreviewVisible && (
                   <div
-                    className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
+                    className={`absolute inset-0 z-30 flex items-start justify-center px-3 pt-3 transition-opacity duration-500 sm:items-center sm:px-6 sm:pt-0 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
                     aria-live="polite"
                   >
                     <div className={`pullz-box-preview relative w-full max-w-[320px] sm:max-w-[380px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
@@ -1343,14 +1343,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <img
                           src={box!.image}
                           alt={`${box!.name} box`}
-                          className="pullz-box-preview__image mx-auto h-32 w-auto max-w-full object-contain sm:h-40"
+                          className="pullz-box-preview__image mx-auto h-36 w-auto max-w-full object-contain sm:h-40"
                         />
                       </div>
-                      <p className="relative z-10 mt-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-200 sm:text-sm">
-                        Ready to open
-                      </p>
                       {previewCarouselItems.length > 0 && (
-                        <div className="case-item-carousel relative z-10 mt-3 overflow-hidden rounded-xl border border-white/12 bg-[#0c121d]/90 p-2 shadow-[0_0_18px_rgba(56,189,248,0.14)]">
+                        <div className="case-item-carousel relative z-10 mt-2 overflow-hidden rounded-xl border border-white/12 bg-[#0c121d]/90 p-2 shadow-[0_0_18px_rgba(56,189,248,0.14)]">
                           <div className="case-item-carousel__track">
                             {previewCarouselItems.map((item, idx) => {
                               const rarityTier = getPreviewRarityTier(item.rarity);
@@ -1394,7 +1391,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     {reelItems.map((item, idx) => (
                         <div 
                             key={`${item.id}-${idx}`}
-                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}`}
+                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3.5 sm:p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}`}
                             style={{ 
                                 width: `${CARD_WIDTH}px`, 
                                 height: `${CARD_WIDTH}px`,
@@ -1411,7 +1408,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
-                                className={`relative z-10 w-24 h-24 object-contain mb-2 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
+                                className={`relative z-10 h-[6.5rem] w-[6.5rem] object-contain mb-2 sm:h-24 sm:w-24 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
                             />
                             <div 
                                 className="absolute bottom-0 left-0 right-0 h-1 opacity-50 rounded-b-xl"
@@ -1423,7 +1420,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="bg-[#0b0e14] p-4 flex flex-col items-center justify-center gap-3 border-t border-gray-800 relative z-20">
+            <div className="bg-[#0b0e14] px-3 pb-4 pt-3 sm:p-4 flex flex-col items-center justify-center gap-2.5 border-t border-gray-800 relative z-20">
                  <button 
                     onClick={() => handleSpin()}
                     disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
@@ -1512,7 +1509,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <button
                   type="button"
                   onClick={() => setShowXpConfirmSheet(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-black/50 text-gray-200"
+                  className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/50 text-gray-200"
                   aria-label="Close XP confirmation"
                 >
                   <X className="h-4 w-4" />
@@ -1781,7 +1778,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   ref={itemModalCloseRef}
                   type="button"
                   onClick={() => setSelectedCaseItem(null)}
-                  className="absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white"
+                  className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white"
                   aria-label="Close item details"
                 >
                   <X className="h-4 w-4" />
@@ -2049,8 +2046,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               bottom: 22px;
             }
             .case-item-carousel__card {
-              width: 58px;
-              min-width: 58px;
+              width: 62px;
+              min-width: 62px;
               border-radius: 10px;
               gap: 4px;
               padding: 6px 3px;
