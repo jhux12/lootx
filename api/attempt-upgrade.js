@@ -153,7 +153,22 @@ export default async function handler(req, res) {
         }, { merge: true });
       }
 
-      transaction.set(userRef, { lastUpgradeAt: Date.now() }, { merge: true });
+      const today = new Date().toISOString().slice(0, 10);
+      const priorDay = typeof userData.challengeStatsDay === 'string' ? userData.challengeStatsDay : '';
+      const priorStats = priorDay === today && userData.challengeStats && typeof userData.challengeStats === 'object'
+        ? userData.challengeStats
+        : {};
+      transaction.set(userRef, {
+        lastUpgradeAt: Date.now(),
+        challengeStatsDay: today,
+        challengeStats: {
+          boxesOpened: Math.max(0, Number(priorStats.boxesOpened ?? 0)),
+          sellBackItems: Math.max(0, Number(priorStats.sellBackItems ?? 0)),
+          sellBackCoins: Math.max(0, Number(priorStats.sellBackCoins ?? 0)),
+          upgraderUses: Math.max(0, Number(priorStats.upgraderUses ?? 0)) + 1,
+          rarityUnboxed: priorStats.rarityUnboxed ?? {}
+        }
+      }, { merge: true });
       transaction.set(provablyRef, {
         serverSeed,
         serverSeedHash,
