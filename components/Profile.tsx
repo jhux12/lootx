@@ -243,13 +243,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
     return item.status === 'available';
   });
 
-  const inventoryStats = useMemo(() => {
-    const totalItems = normalizedInventory.length;
-    const totalValue = normalizedInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
-    const sellableItems = normalizedInventory.filter((item) => (item.status ?? 'available') === 'available' && item.redeemable !== false).length;
-    return { totalItems, totalValue, sellableItems };
-  }, [normalizedInventory]);
-
   const shippingCoinEnabled = stripeSettings.shippingCoinEnabled;
   const shippingCoinCostCoins = Math.max(0, stripeSettings.shippingCoinCostCoins);
   const shippingCashEnabled = stripeSettings.shippingCashEnabled && stripeSettings.shippingFlatRateCents > 0;
@@ -271,6 +264,25 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
     || item.acquisitionCurrencyType === 'XP'
     || item.openCurrencyType === 'XP'
     || (item.provenance?.sourceType === 'case_open' && typeof item.provenance.sourceId === 'string' && xpBoxIds.has(item.provenance.sourceId));
+
+  const inventoryStats = useMemo(() => {
+    const totalItems = normalizedInventory.length;
+    const visibleItems = filteredInventory.length;
+    const currentValue = filteredInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
+    const sellableItems = normalizedInventory.filter((item) => {
+      const isAvailable = (item.status ?? 'available') === 'available';
+      const isLocked = !!item.locked;
+      const isXpItem = item.source === 'xpShop'
+        || Boolean(item.sourceItemId)
+        || Boolean(item.sourceRedemptionId)
+        || item.acquisitionCurrencyType === 'XP'
+        || item.openCurrencyType === 'XP'
+        || (item.provenance?.sourceType === 'case_open' && typeof item.provenance.sourceId === 'string' && xpBoxIds.has(item.provenance.sourceId));
+      return isAvailable && !isLocked && item.redeemable !== false && !isXpItem;
+    }).length;
+    return { totalItems, visibleItems, currentValue, sellableItems };
+  }, [filteredInventory, normalizedInventory, xpBoxIds]);
+
 
   const selectedShipmentItems = normalizedInventory.filter((item) =>
     selectedShipments.includes(item.instanceId)
@@ -820,14 +832,15 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                       <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-[#131c29] to-[#111521] px-3 py-2.5">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">Total items</p>
                           <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.totalItems}</p>
+                          <p className="mt-1 text-[10px] text-cyan-100/60">{inventoryStats.sellableItems} sellable</p>
                       </div>
                       <div className="rounded-xl border border-purple-500/25 bg-gradient-to-br from-[#1b1728] to-[#121320] px-3 py-2.5">
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-purple-300/70">Inventory value</p>
-                          <CoinAmount amount={inventoryStats.totalValue} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 text-base font-black text-purple-100" iconClassName="w-4 h-4" />
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-purple-300/70">Current value</p>
+                          <CoinAmount amount={inventoryStats.currentValue} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 text-base font-black text-purple-100" iconClassName="w-4 h-4" />
                       </div>
                       <div className="col-span-2 sm:col-span-1 rounded-xl border border-blue-500/20 bg-gradient-to-br from-[#141a27] to-[#10131d] px-3 py-2.5">
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-blue-200/70">Sellable now</p>
-                          <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.sellableItems}</p>
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-blue-200/70">Showing now</p>
+                          <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.visibleItems}</p>
                       </div>
                   </div>
 
