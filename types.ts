@@ -50,6 +50,15 @@ export interface User {
   topPulls?: InventoryItem[];
   createdAt?: number;
   lastChatAt?: number;
+  challengeStatsDay?: string;
+  challengeStats?: {
+    boxesOpened?: number;
+    sellBackItems?: number;
+    sellBackCoins?: number;
+    upgraderUses?: number;
+    rarityUnboxed?: Record<string, number>;
+  };
+  questClaims?: Record<string, string>;
 }
 
 export interface ChatMessage {
@@ -291,6 +300,7 @@ export type ViewState =
   | { type: 'PROFILE'; userId?: string }
   | { type: 'INVENTORY' }
   | { type: 'BONUSES' }
+  | { type: 'QUESTS' }
   | { type: 'CONTACT' }
   | { type: 'TERMS' }
   | { type: 'PRIVACY' }

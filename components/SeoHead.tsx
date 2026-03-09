@@ -78,6 +78,7 @@ const getSeoConfigForView = (view: ViewState): SeoConfig => {
     case 'PROFILE':
     case 'INVENTORY':
     case 'BONUSES':
+    case 'QUESTS':
     case 'ADMIN':
     case 'ADMIN_UPGRADER_SETTINGS':
     case 'ADMIN_UPGRADER_TARGETS':

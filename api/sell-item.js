@@ -169,7 +169,22 @@ export default async function handler(req, res) {
         }, { merge: true });
       }
 
-      const userPatch = { coins: newCoins };
+      const today = new Date().toISOString().slice(0, 10);
+      const priorDay = typeof userData.challengeStatsDay === 'string' ? userData.challengeStatsDay : '';
+      const priorStats = priorDay === today && userData.challengeStats && typeof userData.challengeStats === 'object'
+        ? userData.challengeStats
+        : {};
+      const userPatch = {
+        coins: newCoins,
+        challengeStatsDay: today,
+        challengeStats: {
+          boxesOpened: Math.max(0, Number(priorStats.boxesOpened ?? 0)),
+          sellBackItems: Math.max(0, Number(priorStats.sellBackItems ?? 0)) + 1,
+          sellBackCoins: Math.max(0, Number(priorStats.sellBackCoins ?? 0)) + creditCoins,
+          upgraderUses: Math.max(0, Number(priorStats.upgraderUses ?? 0)),
+          rarityUnboxed: priorStats.rarityUnboxed ?? {}
+        }
+      };
       if (xpAmount > 0) {
         const currentXp = Math.max(0, Math.floor(toFiniteNumber(userData.xpBalance ?? userData.xp, 0)));
         const nextXp = currentXp + xpAmount;

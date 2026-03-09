@@ -416,6 +416,10 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'BONUSES' };
   }
 
+  if (primary === 'quests') {
+    return { type: 'QUESTS' };
+  }
+
   if (primary === 'contact') {
     return { type: 'CONTACT' };
   }
@@ -469,6 +473,8 @@ const getPathFromView = (view: ViewState): string => {
       return '/inventory';
     case 'BONUSES':
       return '/bonuses';
+    case 'QUESTS':
+      return '/quests';
     case 'CONTACT':
       return '/contact';
     case 'TERMS':
@@ -776,7 +782,10 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     ledger: Array.isArray(data.ledger) ? data.ledger : undefined,
     adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
     topPullsPublic: data.topPullsPublic ?? false,
-    topPulls: normalizeInventoryItems(data.topPulls)
+    topPulls: normalizeInventoryItems(data.topPulls),
+    challengeStatsDay: typeof data.challengeStatsDay === 'string' ? data.challengeStatsDay : undefined,
+    challengeStats: data.challengeStats ?? undefined,
+    questClaims: data.questClaims ?? undefined
   } as User;
 };
 

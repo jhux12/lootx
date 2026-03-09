@@ -89,7 +89,8 @@ const DEFAULT_REWARDS_SETTINGS = {
     top1CoinReward: 5000,
     top2CoinReward: 3000,
     top3CoinReward: 2000,
-    heroImageUrl: ''
+    heroImageUrl: '',
+    questRulesText: '[{"id":"open-3-boxes","title":"Unboxing mission","description":"Open 3 boxes today","type":"unboxing_count","target":3,"rewardCoins":50,"enabled":true},{"id":"sell-2-items","title":"Sell back mission","description":"Sell back 2 items today","type":"sell_back_count","target":2,"rewardCoins":40,"enabled":true},{"id":"sell-200-coins","title":"Sell back value mission","description":"Sell back 200 coins worth today","type":"sell_back_value","target":200,"rewardCoins":60,"enabled":true},{"id":"upgrade-3-times","title":"Upgrader mission","description":"Use upgrader 3 times today","type":"upgrader_uses","target":3,"rewardCoins":70,"enabled":true},{"id":"unbox-rare","title":"Rarity mission","description":"Unbox 1 rare item today","type":"unbox_rarity","target":1,"rarity":"rare","rewardCoins":80,"enabled":true}]'
 };
 
 const DEFAULT_LOCKS: UserLocks = {
@@ -836,6 +837,7 @@ export const AdminPanel: React.FC = () => {
               top2CoinReward: getTopReward(2, DEFAULT_REWARDS_SETTINGS.top2CoinReward),
               top3CoinReward: getTopReward(3, DEFAULT_REWARDS_SETTINGS.top3CoinReward),
               heroImageUrl: typeof data?.heroImageUrl === 'string' ? data.heroImageUrl : ''
+              ,questRulesText: JSON.stringify(data?.questRules ?? JSON.parse(DEFAULT_REWARDS_SETTINGS.questRulesText), null, 2)
           });
       });
       return () => unsubscribe();
@@ -845,6 +847,7 @@ export const AdminPanel: React.FC = () => {
       try {
           const parsedRank = JSON.parse(rewardsDraft.rankRulesText || '[]');
           const parsedPoints = JSON.parse(rewardsDraft.pointsRulesText || '[]');
+          const parsedQuests = JSON.parse(rewardsDraft.questRulesText || '[]');
           const topRankRules = [
               { minRank: 1, maxRank: 1, rewardAmountCoins: Math.max(0, Math.floor(Number(rewardsDraft.top1CoinReward) || 0)) },
               { minRank: 2, maxRank: 2, rewardAmountCoins: Math.max(0, Math.floor(Number(rewardsDraft.top2CoinReward) || 0)) },
@@ -859,7 +862,8 @@ export const AdminPanel: React.FC = () => {
                   payoutType: rewardsDraft.payoutType,
                   payoutsByRank: rewardsDraft.rewardRulesMode === 'rank' ? [...topRankRules, ...parsedRank] : topRankRules,
                   payoutsByPoints: rewardsDraft.rewardRulesMode === 'points' ? parsedPoints : []
-              }
+              },
+              questRules: Array.isArray(parsedQuests) ? parsedQuests : []
           }, { merge: true });
           setRewardsSettingsNotice(true);
           window.setTimeout(() => setRewardsSettingsNotice(false), 2200);
@@ -4877,6 +4881,11 @@ export const AdminPanel: React.FC = () => {
                         <div className="mt-4">
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rules JSON (rank rules should start at rank 4+)</label>
                             <Textarea rows={6} value={rewardsDraft.rewardRulesMode === 'rank' ? rewardsDraft.rankRulesText : rewardsDraft.pointsRulesText} onChange={(e) => setRewardsDraft((prev) => prev.rewardRulesMode === 'rank' ? { ...prev, rankRulesText: e.target.value } : { ...prev, pointsRulesText: e.target.value })} className="w-full" />
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Mini challenges JSON</label>
+                            <Textarea rows={8} value={rewardsDraft.questRulesText} onChange={(e) => setRewardsDraft((prev) => ({ ...prev, questRulesText: e.target.value }))} className="w-full" />
+                            <p className="mt-2 text-xs text-gray-500">Mission types: unboxing_count, sell_back_count, sell_back_value, upgrader_uses, unbox_rarity.</p>
                         </div>
                         <div className="mt-4 flex items-center gap-3">
                             <button onClick={() => { void handleSaveRewardsSettings(); }} className="px-5 py-2 bg-cyan-500/15 text-cyan-200 border border-cyan-400/35 rounded-lg text-sm font-bold hover:bg-cyan-500/25 transition-colors">Save rewards settings</button>
