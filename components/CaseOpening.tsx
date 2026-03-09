@@ -613,20 +613,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const preloadReelImages = useCallback(async (nextReelItems: CaseItem[]) => {
     const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter(Boolean)));
-    await Promise.all(uniqueSources.map((src) => new Promise<void>((resolve) => {
+
+    await Promise.all(uniqueSources.map(async (src) => {
       const img = new Image();
       img.decoding = 'async';
-      img.onload = () => resolve();
-      img.onerror = () => resolve();
+      img.loading = 'eager';
       img.src = src;
-      if (img.complete) resolve();
-    })));
+
+      if (!img.complete) {
+        await new Promise<void>((resolve) => {
+          const settle = () => resolve();
+          img.onload = settle;
+          img.onerror = settle;
+        });
+      }
+
+      if (typeof img.decode === 'function') {
+        await img.decode().catch(() => undefined);
+      }
+    }));
   }, []);
 
+  const waitForNextPaint = () => new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  });
+
   const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[]) => {
-    setReelItems(nextReelItems);
     await preloadReelImages(nextReelItems);
-    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    setReelItems(nextReelItems);
+    await waitForNextPaint();
   }, [preloadReelImages]);
 
   const animateSpin = (duration: number, onComplete: () => void, options?: { playStartSound?: boolean }) => {
@@ -1348,7 +1365,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
                                 }}
                             ></div>
-                            <img loading="lazy" decoding="async" 
+                            <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
                                 className={`relative z-10 w-24 h-24 object-contain mb-2 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
