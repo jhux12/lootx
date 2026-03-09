@@ -1314,15 +1314,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 )}
                 {isBoxPreviewVisible && (
                   <div
-                    className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
+                    className={`absolute inset-0 z-30 flex items-center justify-center px-2 sm:px-4 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
                     aria-live="polite"
                   >
-                    <div className={`pullz-box-preview relative w-full max-w-[92vw] sm:max-w-[520px] rounded-2xl border p-4 sm:p-6 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
+                    <div className="pullz-box-preview relative flex w-full items-center justify-center">
                       <div className="pullz-box-preview__shimmer" aria-hidden="true"></div>
                       <img
                         src={box!.image}
                         alt={`${box!.name} box`}
-                        className="relative z-10 mx-auto h-44 w-auto max-w-full object-contain sm:h-56 md:h-64"
+                        className="relative z-10 mx-auto h-52 w-auto max-w-[96vw] object-contain sm:h-72 md:h-80 lg:h-[22rem]"
                       />
                     </div>
                   </div>
