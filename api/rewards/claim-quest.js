@@ -2,6 +2,10 @@ import { admin, adminAuth, firestore } from '../_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from '../_lib/http.js';
 
 const dayKey = () => new Date().toISOString().slice(0, 10);
+const toClaimDocId = (today, questId) => {
+  const encodedQuestId = encodeURIComponent(String(questId).trim());
+  return `${today}__${encodedQuestId}`;
+};
 
 const getProgress = (rule, stats = {}) => {
   if (rule.type === 'unboxing_count') return Number(stats.boxesOpened ?? 0);
@@ -25,7 +29,7 @@ export default async function handler(req, res) {
   }
 
   const body = await readJsonBody(req);
-  const questId = typeof body?.questId === 'string' ? body.questId : '';
+  const questId = typeof body?.questId === 'string' ? body.questId.trim() : '';
   if (!questId) return sendJson(res, 400, { error: 'INVALID_QUEST' });
 
   try {
@@ -33,15 +37,17 @@ export default async function handler(req, res) {
     await firestore.runTransaction(async (tx) => {
       const userRef = firestore.collection('users').doc(decoded.uid);
       const settingsRef = firestore.collection('settings').doc('rewards');
-      const [userSnap, settingsSnap] = await Promise.all([tx.get(userRef), tx.get(settingsRef)]);
+      const today = dayKey();
+      const claimRef = userRef.collection('questClaims').doc(toClaimDocId(today, questId));
+      const [userSnap, settingsSnap, claimSnap] = await Promise.all([tx.get(userRef), tx.get(settingsRef), tx.get(claimRef)]);
       if (!userSnap.exists) throw new Error('User not found');
+      if (claimSnap.exists) throw new Error('Already claimed');
       const userData = userSnap.data() ?? {};
       const settings = settingsSnap.exists ? settingsSnap.data() ?? {} : {};
       const rules = Array.isArray(settings.questRules) ? settings.questRules : [];
       const quest = rules.find((entry) => entry && String(entry.id) === questId && entry.enabled !== false);
       if (!quest) throw new Error('Quest unavailable');
 
-      const today = dayKey();
       if (userData.challengeStatsDay !== today) throw new Error('Quest not completed');
       const progress = getProgress(quest, userData.challengeStats ?? {});
       if (progress < Number(quest.target ?? 1)) throw new Error('Quest not completed');
@@ -57,6 +63,12 @@ export default async function handler(req, res) {
         coins: newCoins,
         [`questClaims.${questId}`]: today,
         lastQuestClaimAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      tx.set(claimRef, {
+        questId,
+        day: today,
+        rewardCoins,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
 
       payload = { ok: true, rewardCoins, newCoins };
