@@ -11,6 +11,7 @@ interface UpgraderSpinnerProps {
 const SPIN_FULL_ROTATIONS = 10;
 const SPIN_SETTLE_DURATION_S = 5.8;
 const SPIN_RESULT_DELAY_MS = 180;
+const MIN_FORWARD_DEGREES = 120;
 
 const randomInRange = (min: number, max: number) => {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return 0;
@@ -31,6 +32,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const rafRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
   const totalRotationRef = useRef(0);
+  const currentRotationRef = useRef(0);
   const isWinRef = useRef(false);
   const onFinishRef = useRef(onFinish);
   const mountedRef = useRef(true);
@@ -71,7 +73,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       timeoutRef.current = null;
     }
 
-    await controls.set({ rotate: 0 });
+    await controls.set({ rotate: currentRotationRef.current });
     if (!mountedRef.current || runId !== runIdRef.current) {
       inFlightRef.current = false;
       return;
@@ -87,16 +89,26 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     const finalAngle = isWinRef.current
       ? randomInRange(winStart, winEnd)
       : randomInRange(loseStart, loseEnd);
-    totalRotationRef.current = baseRotations + finalAngle;
+    const currentNormalized = ((currentRotationRef.current % 360) + 360) % 360;
+    let deltaToFinal = ((finalAngle - currentNormalized) + 360) % 360;
+    if (deltaToFinal < MIN_FORWARD_DEGREES) {
+      deltaToFinal += 360;
+    }
 
+    totalRotationRef.current = currentRotationRef.current + baseRotations + deltaToFinal;
+
+    const cruiseRotation = totalRotationRef.current - 220;
 
     await controls.start({
-      rotate: totalRotationRef.current,
+      rotate: [currentRotationRef.current, cruiseRotation, totalRotationRef.current],
       transition: {
         duration: SPIN_SETTLE_DURATION_S,
-        ease: [0.08, 0.86, 0.16, 1]
+        times: [0, 0.72, 1],
+        ease: ['linear', [0.11, 0.88, 0.2, 1]]
       }
     });
+
+    currentRotationRef.current = totalRotationRef.current;
 
     if (!mountedRef.current || runId !== runIdRef.current) {
       inFlightRef.current = false;
