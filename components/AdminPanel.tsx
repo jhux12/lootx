@@ -263,6 +263,7 @@ export const AdminPanel: React.FC = () => {
       name: '',
       price: 0,
       image: 'https://picsum.photos/300',
+      spinnerBackgroundImage: '',
       accentColor: '#3b82f6',
       isDaily: false,
       tags: [],
@@ -2160,6 +2161,7 @@ export const AdminPanel: React.FC = () => {
           priceXP: box.priceXP ?? 0,
           currencyType: box.currencyType ?? 'COIN',
           image: box.image,
+          spinnerBackgroundImage: box.spinnerBackgroundImage ?? '',
           accentColor: box.accentColor,
           tag: box.tag,
           tags: normalizeBoxTagList(box.tags ?? (box.tag ? [box.tag] : [])),
@@ -2197,6 +2199,7 @@ export const AdminPanel: React.FC = () => {
         priceXP: 0,
         currencyType: 'COIN',
         image: 'https://picsum.photos/300',
+        spinnerBackgroundImage: '',
         accentColor: '#3b82f6',
         isDaily: false,
         tags: [],
@@ -2243,6 +2246,7 @@ export const AdminPanel: React.FC = () => {
       priceXP: isXpBox ? Math.max(0, Math.floor(Number(newBox.priceXP ?? 0))) : undefined,
       currencyType: isXpBox ? 'XP' : 'COIN',
       image: newBox.image || 'https://picsum.photos/300',
+      spinnerBackgroundImage: (newBox.spinnerBackgroundImage ?? '').trim(),
       accentColor: newBox.accentColor || '#3b82f6',
       tag: newBox.tag,
       tags: normalizeBoxTagList(newBox.tags ?? []),
@@ -3003,6 +3007,7 @@ export const AdminPanel: React.FC = () => {
                             <div className="space-y-3">
                                 <Input type="text" placeholder="Box Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.name} onChange={e => setNewBox({...newBox, name: e.target.value})} />
                                 <Input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.image} onChange={e => setNewBox({...newBox, image: e.target.value})} />
+                                <Input type="text" placeholder="Spinner Background URL (optional)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.spinnerBackgroundImage ?? ''} onChange={e => setNewBox({...newBox, spinnerBackgroundImage: e.target.value})} />
                                 <Input type="text" placeholder="Accent Color (Hex)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.accentColor} onChange={e => setNewBox({...newBox, accentColor: e.target.value})} />
                                 <div>
                                     <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Box Tags</label>
