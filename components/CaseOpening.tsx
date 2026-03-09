@@ -226,6 +226,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       : 0.82);
   const isReady = Boolean(box) && hasItems;
   const isAdmin = Boolean(user?.isAdmin);
+  const spinnerBackgroundImage = (box?.spinnerBackgroundImage ?? '').trim();
 
   // Sort items high to low for display purposes
   const displayItems = [...items].sort(
@@ -610,6 +611,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
   }, [isAuthenticated, openAuthModal]);
 
+  const preloadReelImages = useCallback(async (nextReelItems: CaseItem[]) => {
+    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter(Boolean)));
+    await Promise.all(uniqueSources.map((src) => new Promise<void>((resolve) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+      img.src = src;
+      if (img.complete) resolve();
+    })));
+  }, []);
+
+  const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[]) => {
+    setReelItems(nextReelItems);
+    await preloadReelImages(nextReelItems);
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+  }, [preloadReelImages]);
+
   const animateSpin = (duration: number, onComplete: () => void, options?: { playStartSound?: boolean }) => {
     const shouldPlayStartSound = options?.playStartSound ?? true;
     if (shouldPlayStartSound) {
@@ -921,8 +940,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         // Note: We use global items pool for buffer if box items are too few, or just box items. 
         // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
         const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items, true);
-        setReelItems(ticketReel);
-        
+        await prepareReelForSpin(ticketReel);
+
         animateSpin(4500, () => {
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
@@ -933,20 +952,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 // Stage 2: Spin to Actual Winner (using only legendary items in reel)
                 const pool = legendaryPool.length > 0 ? legendaryPool : items;
                 const goldReel = generateReel(winner, pool, true);
-                setReelItems(goldReel);
-                
-                animateSpin(4000, () => {
+                void prepareReelForSpin(goldReel).then(() => {
+                  animateSpin(4000, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
-                }, { playStartSound: false });
+                  }, { playStartSound: false });
+                });
             }, 1000);
         });
 
     } else {
         // --- NORMAL SPIN FLOW ---
         const normalReel = generateReel(winner, items, true);
-        setReelItems(normalReel);
-        
+        await prepareReelForSpin(normalReel);
+
         animateSpin(5000, () => {
             finishSpin(winner);
         });
@@ -1264,7 +1283,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Spinner Window */}
-            <div className="relative h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+            <div className="relative h-56 sm:h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+                {spinnerBackgroundImage && (
+                  <>
+                    <img
+                      src={spinnerBackgroundImage}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/45" aria-hidden="true" />
+                  </>
+                )}
                 {isBoxPreviewVisible && (
                   <div
                     className={`absolute inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
