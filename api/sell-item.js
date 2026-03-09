@@ -14,6 +14,14 @@ const toFiniteNumber = (value, fallback = 0) => {
 };
 
 const DEFAULT_SELL_BACK_RATE = 0.8;
+const QUEST_RESET_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+const getQuestCycleAnchor = (userData = {}) => {
+  const daily = Number(userData.lastDailyClaim ?? 0);
+  if (Number.isFinite(daily) && daily > 0) return daily;
+  const cycle = Number(userData.questCycleStartedAt ?? 0);
+  return Number.isFinite(cycle) && cycle > 0 ? cycle : 0;
+};
 
 const buildError = (status, error, message, details = {}) => ({
   status,
@@ -169,11 +177,27 @@ export default async function handler(req, res) {
         }, { merge: true });
       }
 
-      const userPatch = {
-        coins: newCoins,
-        'challengeStats.sellBackItems': admin.firestore.FieldValue.increment(1),
-        'challengeStats.sellBackCoins': admin.firestore.FieldValue.increment(creditCoins)
-      };
+      const questAnchor = getQuestCycleAnchor(userData);
+      const cycleExpired = questAnchor > 0 && Date.now() - questAnchor >= QUEST_RESET_COOLDOWN_MS;
+      const userPatch = cycleExpired
+        ? {
+            coins: newCoins,
+            challengeStats: {
+              boxesOpened: 0,
+              sellBackItems: 1,
+              sellBackCoins: creditCoins,
+              upgraderUses: 0,
+              rarityUnboxed: {}
+            },
+            questClaims: {},
+            questCycleStartedAt: Date.now()
+          }
+        : {
+            coins: newCoins,
+            'challengeStats.sellBackItems': admin.firestore.FieldValue.increment(1),
+            'challengeStats.sellBackCoins': admin.firestore.FieldValue.increment(creditCoins),
+            questCycleStartedAt: questAnchor || Date.now()
+          };
       if (xpAmount > 0) {
         const currentXp = Math.max(0, Math.floor(toFiniteNumber(userData.xpBalance ?? userData.xp, 0)));
         const nextXp = currentXp + xpAmount;

@@ -7,6 +7,14 @@ import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 
 const DEFAULT_CLIENT_SEED = 'pullz-player';
 const STARTER_COINS = 1000;
+const QUEST_RESET_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+const getQuestCycleAnchor = (userData = {}) => {
+  const daily = Number(userData.lastDailyClaim ?? 0);
+  if (Number.isFinite(daily) && daily > 0) return daily;
+  const cycle = Number(userData.questCycleStartedAt ?? 0);
+  return Number.isFinite(cycle) && cycle > 0 ? cycle : 0;
+};
 
 const normalizeSizes = (sizes = []) =>
   sizes
@@ -252,10 +260,26 @@ export default async function handler(req, res) {
         : { coins: newCoins };
 
       transaction.set(userRef, nextUserPatch, { merge: true });
-      transaction.set(userRef, {
-        'challengeStats.boxesOpened': admin.firestore.FieldValue.increment(1),
-        [`challengeStats.rarityUnboxed.${String(prize.rarity ?? 'common').toLowerCase()}`]: admin.firestore.FieldValue.increment(1)
-      }, { merge: true });
+      const questAnchor = getQuestCycleAnchor(userData);
+      const cycleExpired = questAnchor > 0 && Date.now() - questAnchor >= QUEST_RESET_COOLDOWN_MS;
+      const questPatch = cycleExpired
+        ? {
+            challengeStats: {
+              boxesOpened: 1,
+              sellBackItems: 0,
+              sellBackCoins: 0,
+              upgraderUses: 0,
+              rarityUnboxed: { [String(prize.rarity ?? 'common').toLowerCase()]: 1 }
+            },
+            questClaims: {},
+            questCycleStartedAt: Date.now()
+          }
+        : {
+            'challengeStats.boxesOpened': admin.firestore.FieldValue.increment(1),
+            [`challengeStats.rarityUnboxed.${String(prize.rarity ?? 'common').toLowerCase()}`]: admin.firestore.FieldValue.increment(1),
+            questCycleStartedAt: questAnchor || Date.now()
+          };
+      transaction.set(userRef, questPatch, { merge: true });
 
       if (coinCost > 0) {
         await applySpendAndRewards({

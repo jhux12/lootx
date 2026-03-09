@@ -4,9 +4,8 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { authedFetch } from '../utils/authedFetch';
-import { getQuestProgressValue, normalizeQuestRules, QuestProgressStats, QuestRule } from '../src/lib/quests';
+import { getQuestClaimToken, getQuestProgressValue, isQuestCycleExpired, normalizeQuestRules, QuestProgressStats, QuestRule } from '../src/lib/quests';
 
-const dayKey = () => new Date().toISOString().slice(0, 10);
 
 export const Quests: React.FC = () => {
   const { user, isAuthenticated, openAuthModal, syncBalance } = useGame();
@@ -14,7 +13,7 @@ export const Quests: React.FC = () => {
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
+    const unsub = onSnapshot(doc(db, 'settings', 'bonus-settings'), (snap) => {
       const data = snap.data() as Record<string, unknown> | undefined;
       setRules(normalizeQuestRules(data?.questRules));
     });
@@ -23,12 +22,18 @@ export const Quests: React.FC = () => {
 
   const stats = (user as any).challengeStats as QuestProgressStats | undefined;
   const claims = ((user as any).questClaims ?? {}) as Record<string, string>;
+  const cycleMeta = {
+    lastDailyClaim: Number((user as any).lastDailyClaim ?? 0),
+    questCycleStartedAt: Number((user as any).questCycleStartedAt ?? 0)
+  };
+  const cycleExpired = isQuestCycleExpired(cycleMeta);
+  const claimToken = getQuestClaimToken(cycleMeta);
 
   const rows = useMemo(() => rules.filter((rule) => rule.enabled !== false).map((rule) => {
-    const value = getQuestProgressValue(rule, stats ?? {});
+    const value = cycleExpired ? 0 : getQuestProgressValue(rule, stats ?? {});
     const target = Math.max(1, rule.target);
     const completed = value >= target;
-    const alreadyClaimed = claims?.[rule.id] === dayKey();
+    const alreadyClaimed = !cycleExpired && claims?.[rule.id] === claimToken;
     return { rule, value, target, completed, alreadyClaimed };
   }), [claims, rules, stats]);
 

@@ -58,6 +58,7 @@ export interface User {
     rarityUnboxed?: Record<string, number>;
   };
   questClaims?: Record<string, string>;
+  questCycleStartedAt?: number;
 }
 
 export interface ChatMessage {

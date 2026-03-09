@@ -45,6 +45,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { activityStore } from '../src/lib/activity/activityStore';
+import { DEFAULT_QUEST_RULES } from '../src/lib/quests';
 
 const sanitizeData = <T extends Record<string, any>>(data: T): T => {
   return Object.fromEntries(
@@ -196,6 +197,7 @@ interface BonusSettings {
   rakebackBonusCoins: number;
   rakebackDailyCapCoins: number;
   dailySpinOdds: Record<string, number>;
+  questRules?: Array<Record<string, unknown>>;
 }
 
 const DEFAULT_BONUS_SETTINGS: BonusSettings = {
@@ -218,7 +220,8 @@ const DEFAULT_BONUS_SETTINGS: BonusSettings = {
     '500': 12,
     '1000': 9,
     '2500': 6
-  }
+  },
+  questRules: DEFAULT_QUEST_RULES as unknown as Array<Record<string, unknown>>
 };
 
 const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
@@ -316,7 +319,8 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
 
     const next = Object.fromEntries(normalizedEntries);
     return Object.keys(next).length > 0 ? next : { ...DEFAULT_BONUS_SETTINGS.dailySpinOdds };
-  })()
+  })(),
+  questRules: Array.isArray(settings.questRules) ? settings.questRules : DEFAULT_BONUS_SETTINGS.questRules
 });
 
 const BONUS_SETTINGS_DOC = 'bonus-settings';
@@ -784,7 +788,8 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     topPullsPublic: data.topPullsPublic ?? false,
     topPulls: normalizeInventoryItems(data.topPulls),
     challengeStats: data.challengeStats ?? undefined,
-    questClaims: data.questClaims ?? undefined
+    questClaims: data.questClaims ?? undefined,
+    questCycleStartedAt: data.questCycleStartedAt == null ? undefined : Number(data.questCycleStartedAt)
   } as User;
 };
 
@@ -844,6 +849,9 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
     topPullsPublic: data.topPullsPublic ?? false,
     topPulls: normalizeInventoryItems(data.topPulls),
+    challengeStats: data.challengeStats ?? undefined,
+    questClaims: data.questClaims ?? undefined,
+    questCycleStartedAt: data.questCycleStartedAt == null ? undefined : Number(data.questCycleStartedAt),
     inventory: normalizeInventoryItems(data.inventory)
   } as User;
 };

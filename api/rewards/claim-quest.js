@@ -2,6 +2,14 @@ import { admin, adminAuth, firestore } from '../_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from '../_lib/http.js';
 
 const dayKey = () => new Date().toISOString().slice(0, 10);
+const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+const getCycleAnchor = (userData = {}) => {
+  const lastDailyClaim = Number(userData.lastDailyClaim ?? 0);
+  if (Number.isFinite(lastDailyClaim) && lastDailyClaim > 0) return lastDailyClaim;
+  const questCycleStartedAt = Number(userData.questCycleStartedAt ?? 0);
+  return Number.isFinite(questCycleStartedAt) && questCycleStartedAt > 0 ? questCycleStartedAt : 0;
+};
 
 const getProgress = (rule, stats = {}) => {
   if (rule.type === 'unboxing_count') return Number(stats.boxesOpened ?? 0);
@@ -32,21 +40,30 @@ export default async function handler(req, res) {
     let payload = null;
     await firestore.runTransaction(async (tx) => {
       const userRef = firestore.collection('users').doc(decoded.uid);
-      const settingsRef = firestore.collection('settings').doc('rewards');
-      const [userSnap, settingsSnap] = await Promise.all([tx.get(userRef), tx.get(settingsRef)]);
+      const settingsRef = firestore.collection('settings').doc('bonus-settings');
+      const legacyRewardsRef = firestore.collection('settings').doc('rewards');
+      const [userSnap, settingsSnap, legacyRewardsSnap] = await Promise.all([tx.get(userRef), tx.get(settingsRef), tx.get(legacyRewardsRef)]);
       if (!userSnap.exists) throw new Error('User not found');
       const userData = userSnap.data() ?? {};
       const settings = settingsSnap.exists ? settingsSnap.data() ?? {} : {};
-      const rules = Array.isArray(settings.questRules) ? settings.questRules : [];
+      const legacyRewards = legacyRewardsSnap.exists ? legacyRewardsSnap.data() ?? {} : {};
+      const rules = Array.isArray(settings.questRules)
+        ? settings.questRules
+        : (Array.isArray(legacyRewards.questRules) ? legacyRewards.questRules : []);
       const quest = rules.find((entry) => entry && String(entry.id) === questId && entry.enabled !== false);
       if (!quest) throw new Error('Quest unavailable');
 
-      const progress = getProgress(quest, userData.challengeStats ?? {});
+      const now = Date.now();
+      const anchor = getCycleAnchor(userData);
+      const cycleExpired = anchor > 0 && now - anchor >= COOLDOWN_MS;
+      const stats = cycleExpired ? {} : (userData.challengeStats ?? {});
+
+      const progress = getProgress(quest, stats);
       if (progress < Number(quest.target ?? 1)) throw new Error('Quest not completed');
 
-      const today = dayKey();
-      const claimMap = userData.questClaims ?? {};
-      if (claimMap?.[questId] === today) throw new Error('Already claimed');
+      const claimToken = String(anchor || now || dayKey());
+      const claimMap = cycleExpired ? {} : (userData.questClaims ?? {});
+      if (claimMap?.[questId] === claimToken) throw new Error('Already claimed');
 
       const rewardCoins = Math.max(0, Math.floor(Number(quest.rewardCoins ?? 0)));
       const currentCoins = Number(userData.coins ?? userData.balance ?? 0);
@@ -54,7 +71,8 @@ export default async function handler(req, res) {
 
       tx.set(userRef, {
         coins: newCoins,
-        [`questClaims.${questId}`]: today,
+        [`questClaims.${questId}`]: claimToken,
+        questCycleStartedAt: anchor || now,
         lastQuestClaimAt: admin.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
 

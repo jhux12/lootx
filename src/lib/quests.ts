@@ -19,6 +19,27 @@ export type QuestProgressStats = {
   rarityUnboxed?: Record<string, number>;
 };
 
+export const QUEST_RESET_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+export const getQuestCycleAnchor = (input: { lastDailyClaim?: number; questCycleStartedAt?: number }): number => {
+  const daily = Number(input.lastDailyClaim ?? 0);
+  if (Number.isFinite(daily) && daily > 0) return daily;
+  const cycle = Number(input.questCycleStartedAt ?? 0);
+  return Number.isFinite(cycle) && cycle > 0 ? cycle : 0;
+};
+
+export const isQuestCycleExpired = (input: { lastDailyClaim?: number; questCycleStartedAt?: number }, now = Date.now()): boolean => {
+  const anchor = getQuestCycleAnchor(input);
+  if (!anchor) return false;
+  return now - anchor >= QUEST_RESET_COOLDOWN_MS;
+};
+
+export const getQuestClaimToken = (input: { lastDailyClaim?: number; questCycleStartedAt?: number }): string => {
+  const anchor = getQuestCycleAnchor(input);
+  if (anchor > 0) return String(anchor);
+  return new Date().toISOString().slice(0, 10);
+};
+
 export const DEFAULT_QUEST_RULES: QuestRule[] = [
   { id: 'open-3-boxes', title: 'Unboxing mission', description: 'Open 3 boxes today.', type: 'unboxing_count', target: 3, rewardCoins: 50, enabled: true },
   { id: 'sell-2-items', title: 'Sell back mission', description: 'Sell back 2 items today.', type: 'sell_back_count', target: 2, rewardCoins: 40, enabled: true },

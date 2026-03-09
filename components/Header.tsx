@@ -34,7 +34,7 @@ import { useActivity } from '../src/lib/activity/useActivity';
 import { ProvablyFairBadge } from '../src/ui/provably/ProvablyFairBadge';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { getClaimReadyQuestCount, normalizeQuestRules } from '../src/lib/quests';
+import { getClaimReadyQuestCount, getQuestClaimToken, isQuestCycleExpired, normalizeQuestRules } from '../src/lib/quests';
 
 type HeaderProps = {
   onOpenInbox: () => void;
@@ -132,11 +132,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   }, []);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
+    const unsub = onSnapshot(doc(db, 'settings', 'bonus-settings'), (snap) => {
       const data = snap.data() as Record<string, unknown> | undefined;
       const claims = user.questClaims ?? {};
-      const stats = user.challengeStats ?? {};
-      const count = getClaimReadyQuestCount(normalizeQuestRules(data?.questRules), stats, claims, new Date().toISOString().slice(0, 10));
+      const cycleMeta = { lastDailyClaim: user.lastDailyClaim, questCycleStartedAt: user.questCycleStartedAt };
+      const stats = isQuestCycleExpired(cycleMeta) ? {} : (user.challengeStats ?? {});
+      const count = getClaimReadyQuestCount(normalizeQuestRules(data?.questRules), stats, claims, getQuestClaimToken(cycleMeta));
       setQuestReadyCount(count);
     });
     return () => unsub();
