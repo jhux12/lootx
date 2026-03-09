@@ -71,6 +71,14 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
     return nextReel;
   }, [pool, spinKey, winningItem]);
 
+  useEffect(() => {
+    const uniqueImageUrls = Array.from(new Set(reelItems.map((item) => item.imageUrl).filter((imageUrl): imageUrl is string => !!imageUrl)));
+    uniqueImageUrls.forEach((imageUrl) => {
+      const image = new Image();
+      image.src = imageUrl;
+    });
+  }, [reelItems]);
+
   const centerOffset = useMemo(() => `calc(50% - ${CARD_WIDTH / 2}px)`, []);
   const targetTranslateX = useMemo(() => -(STOP_INDEX * STEP), []);
 
@@ -128,7 +136,14 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
               >
                 <div className="h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
                   {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.itemName} className="w-full h-full object-contain" loading="lazy" />
+                    <img
+                      src={item.imageUrl}
+                      alt={item.itemName}
+                      className="w-full h-full object-contain"
+                      loading="eager"
+                      decoding="sync"
+                      draggable={false}
+                    />
                   ) : (
                     <div className="text-[10px] text-gray-500">No image</div>
                   )}
