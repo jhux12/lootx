@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Gift, Target } from 'lucide-react';
+import { CheckCircle2, Clock3, Gift, Target } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
@@ -8,10 +8,22 @@ import { getQuestProgressValue, normalizeQuestRules, QuestProgressStats, QuestRu
 
 const dayKey = () => new Date().toISOString().slice(0, 10);
 
+const getTimeUntilResetLabel = (nowTs: number) => {
+  const nextReset = new Date();
+  nextReset.setUTCHours(24, 0, 0, 0);
+  const diffMs = Math.max(0, nextReset.getTime() - nowTs);
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
+
 export const Quests: React.FC = () => {
   const { user, isAuthenticated, openAuthModal, syncBalance } = useGame();
   const [rules, setRules] = useState<QuestRule[]>([]);
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [nowTs, setNowTs] = useState(() => Date.now());
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
@@ -21,17 +33,24 @@ export const Quests: React.FC = () => {
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowTs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const today = dayKey();
   const rawStats = (user as any).challengeStats as QuestProgressStats | undefined;
   const claims = ((user as any).questClaims ?? {}) as Record<string, string>;
-  const stats = (user as any).challengeStatsDay === dayKey() ? rawStats : undefined;
+  const stats = (user as any).challengeStatsDay === today ? rawStats : undefined;
+  const resetLabel = useMemo(() => getTimeUntilResetLabel(nowTs), [nowTs]);
 
   const rows = useMemo(() => rules.filter((rule) => rule.enabled !== false).map((rule) => {
     const value = getQuestProgressValue(rule, stats ?? {});
     const target = Math.max(1, rule.target);
     const completed = value >= target;
-    const alreadyClaimed = claims?.[rule.id] === dayKey();
+    const alreadyClaimed = claims?.[rule.id] === today;
     return { rule, value, target, completed, alreadyClaimed };
-  }), [claims, rules, stats]);
+  }), [claims, rules, stats, today]);
 
   const claim = async (questId: string) => {
     if (!isAuthenticated) {
@@ -59,12 +78,17 @@ export const Quests: React.FC = () => {
     <section className="mx-auto w-full max-w-5xl px-4 pb-8 pt-6 sm:px-6 lg:px-8">
       <div className="mb-5 rounded-2xl border border-white/10 bg-[#0f1117] p-4 sm:p-6">
         <h1 className="text-xl font-extrabold text-white sm:text-2xl">Mini Challenges / Quests</h1>
-        <p className="mt-2 text-sm text-gray-300">Complete 3 actions today for bonus rewards. Missions reset daily.</p>
+        <p className="mt-2 text-sm text-gray-300">Complete 3 actions today for bonus rewards.</p>
+        <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 sm:text-sm">
+          <Clock3 className="h-3.5 w-3.5" />
+          Missions reset in <span className="font-extrabold tracking-wide">{resetLabel}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:gap-4">
         {rows.map(({ rule, value, target, completed, alreadyClaimed }) => {
           const progress = Math.min(100, Math.round((value / target) * 100));
+          const disabled = !completed || alreadyClaimed || claimingId === rule.id;
           return (
             <article key={rule.id} className="rounded-2xl border border-white/10 bg-[#10131b] p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3">
@@ -87,12 +111,13 @@ export const Quests: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
+                {alreadyClaimed ? <p className="text-xs font-semibold text-emerald-300">Claimed — resets in {resetLabel}</p> : null}
                 <button
                   type="button"
-                  disabled={!completed || alreadyClaimed || claimingId === rule.id}
+                  disabled={disabled}
                   onClick={() => claim(rule.id)}
-                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60 bg-indigo-600 hover:bg-indigo-500"
+                  className={`inline-flex min-w-[132px] items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors ${disabled ? 'cursor-not-allowed border border-white/10 bg-white/5 text-gray-400' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}
                 >
                   {alreadyClaimed ? <CheckCircle2 className="h-4 w-4 text-emerald-300" /> : null}
                   {alreadyClaimed ? 'Claimed' : claimingId === rule.id ? 'Claiming…' : 'Claim reward'}
