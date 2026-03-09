@@ -47,15 +47,6 @@ const CARD_WIDTH = 160;
 const GAP_WIDTH = 16;
 const ITEM_WIDTH = CARD_WIDTH + GAP_WIDTH;
 const BUFFER_COUNT = 45; // Items before winner
-
-const getPreviewRarityTier = (rarity?: string) => {
-  const normalized = String(rarity ?? 'common').toLowerCase();
-  if (normalized === 'legendary') return 'legendary';
-  if (normalized === 'epic') return 'ultra-rare';
-  if (normalized === 'rare') return 'rare';
-  return 'common';
-};
-
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -241,11 +232,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const displayItems = [...items].sort(
     (a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)
   );
-  const previewCarouselItems = useMemo(() => {
-    if (items.length === 0) return [];
-    return [...items, ...items];
-  }, [items]);
-  
+
   const [isSpinning, setIsSpinning] = useState(false);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
@@ -1339,34 +1326,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   >
                     <div className={`pullz-box-preview relative w-full max-w-[320px] sm:max-w-[380px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
                       <div className="pullz-box-preview__shimmer" aria-hidden="true"></div>
-                      <div className="pullz-box-preview__image-wrap relative z-10 mx-auto w-full max-w-[230px] sm:max-w-[270px]">
+                      <div className="pullz-box-preview__image-wrap relative z-10 mx-auto w-full max-w-[240px] sm:max-w-[280px]">
+                        <span className="pullz-box-spark pullz-box-spark--one" aria-hidden="true" />
+                        <span className="pullz-box-spark pullz-box-spark--two" aria-hidden="true" />
+                        <span className="pullz-box-spark pullz-box-spark--three" aria-hidden="true" />
+                        <span className="pullz-box-spark pullz-box-spark--four" aria-hidden="true" />
                         <img
                           src={box!.image}
                           alt={`${box!.name} box`}
-                          className="pullz-box-preview__image mx-auto h-36 w-auto max-w-full object-contain sm:h-40"
+                          className="pullz-box-preview__image mx-auto h-40 w-auto max-w-full object-contain sm:h-44"
                         />
                       </div>
-                      {previewCarouselItems.length > 0 && (
-                        <div className="case-item-carousel relative z-10 mt-2 overflow-hidden rounded-xl border border-white/12 bg-[#0c121d]/90 p-2 shadow-[0_0_18px_rgba(56,189,248,0.14)]">
-                          <div className="case-item-carousel__track">
-                            {previewCarouselItems.map((item, idx) => {
-                              const rarityTier = getPreviewRarityTier(item.rarity);
-                              return (
-                                <div
-                                  key={`${item.id}-${idx}-preview`}
-                                  className={`case-item-carousel__card case-item-carousel__card--${rarityTier}`}
-                                  title={`${item.name} · ${item.rarity}`}
-                                >
-                                  <img src={item.image} alt={item.name} className="h-10 w-10 object-contain sm:h-11 sm:w-11" loading="lazy" decoding="async" />
-                                  <span className="case-item-carousel__value">
-                                    <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="text-[9px] sm:text-[10px]" iconClassName="h-2.5 w-2.5" />
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
@@ -1853,89 +1823,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           .pullz-box-preview:hover .pullz-box-preview__image {
             transform: translateY(-4px);
           }
-          .case-item-carousel {
-            position: relative;
-            isolation: isolate;
-          }
-          .case-item-carousel::before,
-          .case-item-carousel::after {
-            content: '';
+          .pullz-box-spark {
             position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 26px;
-            z-index: 2;
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(56,189,248,0.55) 55%, rgba(56,189,248,0) 100%);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+            animation: boxSparkFloat 2.4s ease-in-out infinite;
             pointer-events: none;
           }
-          .case-item-carousel::before {
-            left: 0;
-            background: linear-gradient(to right, rgba(12, 18, 29, 0.96), transparent);
-          }
-          .case-item-carousel::after {
-            right: 0;
-            background: linear-gradient(to left, rgba(12, 18, 29, 0.96), transparent);
-          }
-          .case-item-carousel__track {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            width: max-content;
-            animation: caseItemScroll 32s linear infinite;
-            will-change: transform;
-          }
-          .case-item-carousel__card {
-            width: 64px;
-            min-width: 64px;
-            border-radius: 12px;
-            border: 1px solid rgba(148, 163, 184, 0.35);
-            background: rgba(15, 23, 42, 0.78);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 7px 4px;
-            transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
-          }
-          .case-item-carousel__card:hover {
-            transform: scale(1.06);
-          }
-          .case-item-carousel__value {
-            display: inline-flex;
-            align-items: center;
-            border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background: rgba(2, 6, 23, 0.9);
-            padding: 2px 6px;
-            line-height: 1;
-          }
-          .case-item-carousel__card--common {
-            box-shadow: 0 0 10px rgba(148, 163, 184, 0.16);
-          }
-          .case-item-carousel__card--rare {
-            border-color: rgba(59, 130, 246, 0.65);
-            box-shadow: 0 0 12px rgba(59, 130, 246, 0.32);
-          }
-          .case-item-carousel__card--ultra-rare {
-            border-color: rgba(192, 132, 252, 0.75);
-            box-shadow: 0 0 14px rgba(192, 132, 252, 0.38);
-          }
-          .case-item-carousel__card--legendary {
-            border-color: rgba(250, 204, 21, 0.8);
-            box-shadow: 0 0 16px rgba(250, 204, 21, 0.45);
-          }
-          .case-item-carousel__card--rare:hover {
-            box-shadow: 0 0 18px rgba(59, 130, 246, 0.5);
-          }
-          .case-item-carousel__card--ultra-rare:hover {
-            box-shadow: 0 0 20px rgba(192, 132, 252, 0.56);
-          }
-          .case-item-carousel__card--legendary:hover {
-            box-shadow: 0 0 22px rgba(250, 204, 21, 0.65);
-          }
-          @keyframes caseItemScroll {
-            from { transform: translateX(0); }
-            to { transform: translateX(calc(-50% - 4px)); }
+          .pullz-box-spark--one { top: 16%; left: 14%; animation-delay: 0s; }
+          .pullz-box-spark--two { top: 30%; right: 12%; animation-delay: 0.45s; }
+          .pullz-box-spark--three { bottom: 20%; left: 20%; animation-delay: 0.9s; }
+          .pullz-box-spark--four { bottom: 14%; right: 18%; animation-delay: 1.2s; }
+          @keyframes boxSparkFloat {
+            0%, 100% { transform: translateY(0) scale(0.85); opacity: 0.45; }
+            50% { transform: translateY(-10px) scale(1.1); opacity: 1; }
           }
           .item-modal-overlay {
             opacity: 0;
@@ -2045,13 +1949,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               width: 78%;
               bottom: 22px;
             }
-            .case-item-carousel__card {
-              width: 62px;
-              min-width: 62px;
-              border-radius: 10px;
-              gap: 4px;
-              padding: 6px 3px;
-            }
           }
           @media (prefers-reduced-motion: reduce) {
             .item-modal-overlay,
@@ -2063,14 +1960,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             .legendary-badge,
             .pullz-box-preview,
             .pullz-box-preview__image,
-            .case-item-carousel__track,
-            .case-item-carousel__card {
+            .pullz-box-spark {
               animation: none !important;
               transition: none !important;
             }
             .pullz-box-preview:hover,
-            .pullz-box-preview:hover .pullz-box-preview__image,
-            .case-item-carousel__card:hover {
+            .pullz-box-preview:hover .pullz-box-preview__image {
               transform: none !important;
             }
           }
