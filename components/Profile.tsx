@@ -243,6 +243,13 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
     return item.status === 'available';
   });
 
+  const inventoryStats = useMemo(() => {
+    const totalItems = normalizedInventory.length;
+    const totalValue = normalizedInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
+    const sellableItems = normalizedInventory.filter((item) => (item.status ?? 'available') === 'available' && item.redeemable !== false).length;
+    return { totalItems, totalValue, sellableItems };
+  }, [normalizedInventory]);
+
   const shippingCoinEnabled = stripeSettings.shippingCoinEnabled;
   const shippingCoinCostCoins = Math.max(0, stripeSettings.shippingCoinCostCoins);
   const shippingCashEnabled = stripeSettings.shippingCashEnabled && stripeSettings.shippingFlatRateCents > 0;
@@ -809,23 +816,38 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                       </div>
                   </div>
 
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-[#131c29] to-[#111521] px-3 py-2.5">
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">Total items</p>
+                          <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.totalItems}</p>
+                      </div>
+                      <div className="rounded-xl border border-purple-500/25 bg-gradient-to-br from-[#1b1728] to-[#121320] px-3 py-2.5">
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-purple-300/70">Inventory value</p>
+                          <CoinAmount amount={inventoryStats.totalValue} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 text-base font-black text-purple-100" iconClassName="w-4 h-4" />
+                      </div>
+                      <div className="col-span-2 sm:col-span-1 rounded-xl border border-blue-500/20 bg-gradient-to-br from-[#141a27] to-[#10131d] px-3 py-2.5">
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-blue-200/70">Sellable now</p>
+                          <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.sellableItems}</p>
+                      </div>
+                  </div>
+
                   {inventoryFilter === 'inventory' && (
-                      <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="bg-gradient-to-br from-[#161d2c] to-[#11151f] border border-blue-500/20 rounded-2xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
                           <div>
-                              <p className="text-sm font-bold text-white">Ship multiple items</p>
-                              <p className="text-xs text-gray-500">Select items below to ship together.</p>
+                              <p className="text-sm font-black uppercase tracking-[0.12em] text-white">Ship multiple items</p>
+                              <p className="text-xs text-blue-100/70">Select rewards below for a single premium checkout.</p>
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                              <div className="flex items-center gap-2 text-xs text-gray-400">
-                                  <span>{selectedShipments.length} selected</span>
+                              <div className="flex items-center gap-2 text-xs text-blue-100/80 rounded-full border border-blue-400/20 bg-[#0b0f17]/70 px-3 py-1.5">
+                                  <span className="font-semibold">{selectedShipments.length} selected</span>
                                   {shippingCoinEnabled && (
                                     <>
-                                      <span className="text-gray-600">•</span>
+                                      <span className="text-blue-300/40">•</span>
                                       <span>Per item</span>
                                       <CoinAmount
                                         amount={shippingCoinCostCoins}
                                         formatOptions={{ maximumFractionDigits: 0 }}
-                                        className="text-blue-200 font-semibold"
+                                        className="text-blue-100 font-bold"
                                         iconClassName="w-3 h-3"
                                       />
                                     </>
@@ -842,7 +864,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   disabled={!user.shippingAddress || selectedShipments.length === 0}
                                   className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wide border transition-colors ${
                                     user.shippingAddress && selectedShipments.length > 0
-                                      ? 'bg-blue-600/20 text-blue-200 border-blue-500/40 hover:bg-blue-600/30'
+                                      ? 'bg-blue-500/25 text-blue-100 border-blue-300/45 hover:bg-blue-500/35 shadow-[0_0_18px_rgba(56,189,248,0.25)]'
                                       : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
                                   }`}
                               >
@@ -894,7 +916,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   ? 'Shipped'
                                   : isLocked
                                     ? 'Locked'
-                                    : 'Available';
+                                    : canShip
+                                      ? 'Ready to ship'
+                                      : 'In inventory';
                               const statusTone = item.status === 'shipping' || item.status === 'shipping_requested'
                                 ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
                                 : item.status === 'shipped'
@@ -904,15 +928,33 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                     : 'bg-gray-700/40 text-gray-300 border-gray-600';
 
                               const isSelectable = inventoryFilter === 'inventory' && canShip;
+                              const isSelected = selectedShipments.includes(item.instanceId);
+                              const rarityTone = item.rarity === 'legendary'
+                                ? 'border-yellow-400/45 shadow-[0_0_0_1px_rgba(250,204,21,0.18),0_0_20px_rgba(250,204,21,0.15)]'
+                                : item.rarity === 'epic' || item.rarity === 'ultra-rare'
+                                  ? 'border-purple-400/45 shadow-[0_0_0_1px_rgba(168,85,247,0.18),0_0_18px_rgba(168,85,247,0.16)]'
+                                  : item.rarity === 'rare'
+                                    ? 'border-blue-400/45 shadow-[0_0_0_1px_rgba(59,130,246,0.15),0_0_18px_rgba(59,130,246,0.14)]'
+                                    : 'border-slate-600/70 shadow-[0_0_0_1px_rgba(148,163,184,0.1)]';
+                              const imageGlow = item.rarity === 'legendary'
+                                ? 'from-yellow-400/30 via-yellow-200/10 to-transparent'
+                                : item.rarity === 'epic' || item.rarity === 'ultra-rare'
+                                  ? 'from-purple-400/30 via-fuchsia-300/10 to-transparent'
+                                  : item.rarity === 'rare'
+                                    ? 'from-blue-400/30 via-cyan-300/10 to-transparent'
+                                    : 'from-slate-300/20 via-slate-200/10 to-transparent';
                               return (
-                                  <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-4 group hover:border-brand-purple/50 transition-all flex flex-col">
-                                      <div className="relative aspect-square mb-4 bg-[#0b0e14] rounded-lg p-4 flex items-center justify-center overflow-hidden">
+                                  <div key={item.instanceId} className={`relative bg-gradient-to-b from-[#171c2a] to-[#121622] border rounded-2xl p-3 group transition-all duration-300 flex flex-col hover:-translate-y-0.5 active:scale-[0.99] ${rarityTone} ${isSelected ? 'ring-2 ring-cyan-300/50 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_0_22px_rgba(34,211,238,0.22)]' : ''}`}>
+                                      <div className="relative aspect-square mb-3 bg-[#0b0f17] rounded-xl p-3 flex items-center justify-center overflow-hidden border border-white/5 shadow-inner">
+                                          <div className={`pointer-events-none absolute -inset-4 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.22)_0%,rgba(56,189,248,0.08)_35%,transparent_70%)] opacity-80`} />
+                                          <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${imageGlow}`} />
+                                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/5" />
                                           {isSelectable && (
-                                              <label className="absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 border border-white/20">
+                                              <label className={`absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border backdrop-blur-sm ${isSelected ? 'bg-cyan-500/25 border-cyan-200/60 shadow-[0_0_12px_rgba(34,211,238,0.45)]' : 'bg-black/65 border-white/25'}`}>
                                                   <Checkbox
                                                       checked={selectedShipments.includes(item.instanceId)}
                                                       onChange={() => handleToggleShipment(item.instanceId)}
-                                                      className="h-3 w-3 accent-brand-purple"
+                                                      className="h-3.5 w-3.5 accent-brand-purple"
                                                       aria-label={`Select ${item.name} for shipping`}
                                                   />
                                               </label>
@@ -930,24 +972,27 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               isSelectable ? 'cursor-pointer' : 'cursor-default'
                                             }`}
                                           >
-                                            <BlurImage src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                                            <BlurImage src={item.image} alt={item.name} className="w-full h-full object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.45)] group-hover:scale-105 transition-transform duration-500" />
                                             <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
                                                 item.rarity === 'legendary' ? 'from-yellow-500' :
                                                 item.rarity === 'epic' ? 'from-purple-500' :
                                                 item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
                                             }`} />
+                                            {(item.rarity === 'rare' || item.rarity === 'epic' || item.rarity === 'legendary') && (
+                                              <div className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/15 to-transparent opacity-0 group-hover:opacity-100 group-hover:left-full transition-all duration-1000" />
+                                            )}
                                           </button>
                                       </div>
-                                      <div className="flex items-start justify-between gap-2">
-                                          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">{item.rarity}</div>
-                                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${statusTone}`}>{statusLabel}</span>
+                                      <div className="flex items-center justify-between gap-1.5">
+                                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.16em]">{item.rarity}</div>
+                                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border leading-none ${statusTone}`}>{statusLabel}</span>
                                       </div>
                                       {item.redeemable === false && (
                                         <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
                                           Not redeemable for coins
                                         </div>
                                       )}
-                                      <h4 className="text-white font-bold text-sm mt-2 mb-2 line-clamp-2 min-h-[2.5rem]">{item.name}</h4>
+                                      <h4 className="text-white font-bold text-sm mt-2 mb-1.5 line-clamp-2 min-h-[2.5rem] leading-snug">{item.name}</h4>
                                       {isXpItem ? (
                                         <div className="inline-flex items-center rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-300">
                                           XP reward
@@ -956,11 +1001,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                         <CoinAmount
                                           amount={toCoins(item.price, PRICE_UNIT_MODE)}
                                           formatOptions={{ maximumFractionDigits: 0 }}
-                                          className="text-green-500 font-black"
-                                          iconClassName="w-3.5 h-3.5"
+                                          className="text-green-300 font-black text-base drop-shadow-[0_0_10px_rgba(74,222,128,0.32)]"
+                                          iconClassName="w-4 h-4"
                                         />
                                       )}
-                                      <div className="text-[11px] text-gray-500 mt-2">
+                                      <div className="text-[11px] text-gray-500 mt-1.5">
                                         Obtained {new Date(item.obtainedAt).toLocaleDateString()}
                                       </div>
                                       {inventoryFilter === 'shipped' && item.trackingNumber && (
@@ -969,7 +1014,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           </div>
                                       )}
 
-                                      <div className="mt-4 flex flex-col gap-2">
+                                      <div className="mt-3.5 flex flex-col gap-2">
                                           {inventoryFilter !== 'shipped' && (
                                             <button
                                               onClick={() => handleOpenShippingReview([item.instanceId])}
@@ -1027,10 +1072,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                       : isGeneratingSellOffers[item.instanceId]
                                                         ? 'Generating offer...'
                                                         : sellOffers[item.instanceId]
-                                                          ? 'Accept buy back offer'
+                                                          ? 'Instant sell now'
                                                           : item.redeemable === false
                                                             ? 'Not redeemable'
-                                                            : 'Generate buy back offer'}
+                                                            : `Get ${Math.round(getSellBackValue(toCoins(item.price, PRICE_UNIT_MODE), getSellBackRate(item)))} coins`}
                                                   </span>
                                                   {sellOffers[item.instanceId] && !isGeneratingSellOffers[item.instanceId] && !isSellingItems[item.instanceId] && item.redeemable !== false && (
                                                     <CoinAmount
