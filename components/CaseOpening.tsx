@@ -45,8 +45,36 @@ interface RevealData {
 
 const CARD_WIDTH = 160;
 const GAP_WIDTH = 16;
-const ITEM_WIDTH = CARD_WIDTH + GAP_WIDTH;
-const BUFFER_COUNT = 45; // Items before winner
+
+// Spinner tuning constants (kept centralized so motion can be adjusted safely).
+const SPINNER_MOTION = {
+  preWinnerItems: 68,
+  postWinnerItems: 14,
+  spinDurationMs: 4600,
+  goldTicketDurationMs: 4200,
+  goldFinalDurationMs: 3800,
+  settleDurationMs: 360,
+  overshootPx: 14,
+  landingOffsetMaxPx: 6
+} as const;
+
+const createSeededRng = (seed: string) => {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+
+  return () => {
+    h += 0x6D2B79F5;
+    let t = h;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const pickFromPool = <T,>(pool: T[], rng: () => number): T => pool[Math.floor(rng() * pool.length)];
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -262,13 +290,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [itemModalActive, setItemModalActive] = useState(false);
   const [animatedModalCoins, setAnimatedModalCoins] = useState(0);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
+  const [isReelInFastMotion, setIsReelInFastMotion] = useState(false);
+  const [isReelDecelerating, setIsReelDecelerating] = useState(false);
+  const [isLandingFlashActive, setIsLandingFlashActive] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
   const [isBoxPreviewVisible, setIsBoxPreviewVisible] = useState(true);
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
   
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const winningCardRef = useRef<HTMLDivElement>(null);
+  const spinnerAnimationRef = useRef<Animation | null>(null);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const itemModalRevealFrameRef = useRef<number | null>(null);
@@ -519,35 +553,162 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return items[items.length - 1];
   };
 
-  const generateReel = (target: CaseItem, pool: CaseItem[], sprinkleGold: boolean) => {
-    const endBuffer = 5; 
-    const newReel: CaseItem[] = [];
-    
-    // Add buffer items
-    for (let i = 0; i < BUFFER_COUNT; i++) {
-        newReel.push(pool[Math.floor(Math.random() * pool.length)]);
+  const getSpinSeedBase = useCallback((rollData?: { rollHash: string; rollValue: number; nonce: number }, stageTag = 'main') => {
+    if (rollData?.rollHash) {
+      return `${rollData.rollHash}:${rollData.nonce}:${stageTag}`;
     }
-    
-    // Add winner at exactly BUFFER_COUNT index
-    newReel.push(target);
-    
-    // Add end buffer
-    for (let i = 0; i < endBuffer; i++) {
-        newReel.push(pool[Math.floor(Math.random() * pool.length)]);
+    return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
+  }, [nonce]);
+
+  const getLandingOffset = useCallback((rng: () => number) => {
+    const max = SPINNER_MOTION.landingOffsetMaxPx;
+    return Math.round((rng() * (max * 2)) - max);
+  }, []);
+
+  const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
+    const { sprinkleGold, seed } = options;
+    const rng = createSeededRng(seed);
+    const winnerIndex = SPINNER_MOTION.preWinnerItems;
+    const reelLength = SPINNER_MOTION.preWinnerItems + 1 + SPINNER_MOTION.postWinnerItems;
+    const newReel: CaseItem[] = [];
+
+    // Deterministic filler generation preserves visual variety while remaining reproducible.
+    for (let i = 0; i < reelLength; i += 1) {
+      if (i === winnerIndex) {
+        newReel.push(target);
+        continue;
+      }
+
+      const previous = newReel[newReel.length - 1];
+      let next = pickFromPool(pool, rng);
+      if (pool.length > 2 && previous && next.id === previous.id) {
+        next = pickFromPool(pool, rng);
+      }
+      newReel.push(next);
     }
 
     if (sprinkleGold) {
-      const goldInterval = 9;
-      const goldOffset = Math.floor(Math.random() * goldInterval);
-      for (let i = goldOffset; i < newReel.length; i += goldInterval) {
-        if (i !== BUFFER_COUNT) {
-          newReel[i] = GOLDEN_TICKET_ITEM;
+      // Sparse deterministic gold inserts keep readability and premium spacing.
+      const minSpacing = 14;
+      const maxGoldInsertions = Math.max(1, Math.floor(reelLength / 26));
+      let insertions = 0;
+      let nextGold = Math.floor(rng() * minSpacing) + 8;
+
+      while (nextGold < reelLength && insertions < maxGoldInsertions) {
+        if (nextGold !== winnerIndex && newReel[nextGold]?.id !== target.id && newReel[nextGold]?.rarity !== 'legendary') {
+          newReel[nextGold] = GOLDEN_TICKET_ITEM;
+          insertions += 1;
         }
+        nextGold += minSpacing + Math.floor(rng() * 8);
       }
     }
-    
-    return newReel;
-  };
+
+    return { items: newReel, winnerIndex };
+  }, []);
+
+  const getCenteredTranslate = useCallback((landingOffset = 0) => {
+    const viewport = scrollViewportRef.current;
+    const container = scrollContainerRef.current;
+    const winnerCard = winningCardRef.current;
+
+    if (!viewport || !container || !winnerCard) {
+      return null;
+    }
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const cardRect = winnerCard.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    const viewportCenterX = viewportRect.left + (viewportRect.width / 2);
+    const winnerCenterX = cardRect.left + (cardRect.width / 2);
+    const delta = viewportCenterX - winnerCenterX;
+
+    return containerRect.left + delta - viewportRect.left + landingOffset;
+  }, []);
+
+  const resetSpinnerAnimation = useCallback(() => {
+    if (spinnerAnimationRef.current) {
+      spinnerAnimationRef.current.cancel();
+      spinnerAnimationRef.current = null;
+    }
+  }, []);
+
+  const animateSpin = useCallback(async (
+    winnerIndex: number,
+    duration: number,
+    onComplete: () => void,
+    options?: { playStartSound?: boolean; seed?: string }
+  ) => {
+    const container = scrollContainerRef.current;
+    if (!container) {
+      onComplete();
+      return;
+    }
+
+    const shouldPlayStartSound = options?.playStartSound ?? true;
+    const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
+    const landingOffset = getLandingOffset(rng);
+
+    if (shouldPlayStartSound) {
+      playSound('spin-start');
+    }
+
+    resetSpinnerAnimation();
+
+    container.style.transition = 'none';
+    container.style.transform = 'translate3d(0px, 0, 0)';
+    container.style.backfaceVisibility = 'hidden';
+
+    await waitForNextPaint();
+
+    const finalTranslate = getCenteredTranslate(landingOffset);
+    if (finalTranslate === null) {
+      onComplete();
+      return;
+    }
+
+    const overshootTarget = finalTranslate - SPINNER_MOTION.overshootPx;
+
+    setIsReelInFastMotion(true);
+    setIsReelDecelerating(false);
+
+    const animation = container.animate(
+      [
+        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.15, 0.8, 0.3, 1)' },
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.9, easing: 'cubic-bezier(0.18, 0.92, 0.22, 1)' },
+        { transform: `translate3d(${finalTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.2, 1, 0.25, 1)' }
+      ],
+      {
+        duration,
+        fill: 'forwards',
+        composite: 'replace'
+      }
+    );
+
+    spinnerAnimationRef.current = animation;
+
+    const decelerationTimer = window.setTimeout(() => {
+      setIsReelDecelerating(true);
+    }, Math.max(0, duration - 1300));
+
+    animation.onfinish = () => {
+      window.clearTimeout(decelerationTimer);
+      container.style.transform = `translate3d(${finalTranslate}px, 0, 0)`;
+      setIsReelInFastMotion(false);
+      setIsReelDecelerating(false);
+      setIsLandingFlashActive(true);
+      window.setTimeout(() => setIsLandingFlashActive(false), SPINNER_MOTION.settleDurationMs);
+      spinnerAnimationRef.current = null;
+      onComplete();
+    };
+
+    animation.oncancel = () => {
+      window.clearTimeout(decelerationTimer);
+      setIsReelInFastMotion(false);
+      setIsReelDecelerating(false);
+      spinnerAnimationRef.current = null;
+    };
+  }, [getCenteredTranslate, getLandingOffset, playSound, resetSpinnerAnimation]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -642,49 +803,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   });
 
   const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[]) => {
+    resetSpinnerAnimation();
+    setIsReelInFastMotion(false);
+    setIsReelDecelerating(false);
+    setIsLandingFlashActive(false);
+    winningCardRef.current = null;
+
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
+      scrollContainerRef.current.style.transition = 'none';
+    }
+
     await preloadReelImages(nextReelItems);
     setReelItems(nextReelItems);
     await waitForNextPaint();
-  }, [preloadReelImages]);
-
-  const animateSpin = (duration: number, onComplete: () => void, options?: { playStartSound?: boolean }) => {
-    const shouldPlayStartSound = options?.playStartSound ?? true;
-    if (shouldPlayStartSound) {
-      playSound('spin-start');
-    }
-
-    // Reset scroll position immediately
-    if (scrollContainerRef.current) {
-        scrollContainerRef.current.style.transition = 'none';
-        scrollContainerRef.current.style.transform = 'translateX(0)';
-    }
-
-    // Trigger animation next tick
-    // We use a slight delay to ensure React has painted the new items to the DOM
-    setTimeout(() => {
-        if (scrollContainerRef.current) {
-            // Exact center position of the winning item
-            const winnerLeft = BUFFER_COUNT * ITEM_WIDTH;
-            
-            // ORGANIC JITTER
-            // Card width is 160px.
-            // Center is 0 relative to the calculation logic.
-            // +/- 80px hits the border.
-            // +/- 65px is the "safe zone" that stays on the card but looks random.
-            // We want it to land ANYWHERE in this safe zone, not just near the center.
-            const maxOffset = 65;
-            const jitter = Math.floor(Math.random() * (maxOffset * 2)) - maxOffset; // -65 to +65
-            
-            const finalTranslate = -(winnerLeft) + jitter;
-
-            scrollContainerRef.current.style.transition = `transform ${duration/1000}s cubic-bezier(0.15, 0.85, 0.35, 1.0)`;
-            scrollContainerRef.current.style.transform = `translateX(${finalTranslate}px)`;
-        }
-    }, 50);
-
-    // Completion callback
-    setTimeout(onComplete, duration + 200);
-  };
+  }, [preloadReelImages, resetSpinnerAnimation]);
 
 
 
@@ -957,34 +1090,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         // Stage 1: Spin to Golden Ticket
         // Note: We use global items pool for buffer if box items are too few, or just box items. 
         // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
-        const ticketReel = generateReel(GOLDEN_TICKET_ITEM, items, true);
-        await prepareReelForSpin(ticketReel);
+        const ticketSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-ticket');
+        const ticketReelResult = generateReel(GOLDEN_TICKET_ITEM, items, { sprinkleGold: true, seed: ticketSeed });
+        await prepareReelForSpin(ticketReelResult.items);
 
-        animateSpin(4500, () => {
+        animateSpin(ticketReelResult.winnerIndex, SPINNER_MOTION.goldTicketDurationMs, () => {
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
             setIsGoldMode(true);
             
             // Wait a moment to see the ticket
-            setTimeout(() => {
+            window.setTimeout(() => {
                 // Stage 2: Spin to Actual Winner (using only legendary items in reel)
                 const pool = legendaryPool.length > 0 ? legendaryPool : items;
-                const goldReel = generateReel(winner, pool, true);
-                void prepareReelForSpin(goldReel).then(() => {
-                  animateSpin(4000, () => {
+                const goldSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-final');
+                const goldReelResult = generateReel(winner, pool, { sprinkleGold: true, seed: goldSeed });
+                void prepareReelForSpin(goldReelResult.items).then(() => {
+                  animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
                   }, { playStartSound: false });
                 });
-            }, 1000);
+            }, 700);
         });
 
     } else {
         // --- NORMAL SPIN FLOW ---
-        const normalReel = generateReel(winner, items, true);
-        await prepareReelForSpin(normalReel);
+        const mainSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'main');
+        const normalReelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
+        await prepareReelForSpin(normalReelResult.items);
 
-        animateSpin(5000, () => {
+        animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs, () => {
             finishSpin(winner);
         });
     }
@@ -1011,6 +1147,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       setShowXpConfirmSheet(false);
     }
   }, [showXpOpenUi]);
+
+  useEffect(() => {
+    return () => {
+      resetSpinnerAnimation();
+    };
+  }, [resetSpinnerAnimation]);
 
   const finishSpin = (item: CaseItem) => {
     setIsSpinning(false);
@@ -1313,7 +1455,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Spinner Window */}
-            <div className="relative h-[15.5rem] sm:h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+            <div ref={scrollViewportRef} className="relative h-[15.5rem] sm:h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
                 {spinnerBackgroundImage && (
                   <>
                     <img
@@ -1348,30 +1490,55 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 )}
 
                 {isSpinning && (
-                  <div
-                    className={`absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 z-[26] pointer-events-none ${isGoldMode ? 'bg-yellow-400/50' : 'bg-cyan-400/35'}`}
-                    aria-hidden="true"
-                  ></div>
+                  <>
+                    <div
+                      className={`absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 z-[26] pointer-events-none ${isGoldMode ? 'bg-yellow-400/55' : 'bg-cyan-400/40'}`}
+                      aria-hidden="true"
+                    ></div>
+                    <div
+                      className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-16 sm:w-20 pointer-events-none z-[24] transition-opacity duration-500 ${isReelDecelerating ? 'opacity-80' : 'opacity-45'}`}
+                      style={{
+                        background: isGoldMode
+                          ? 'radial-gradient(ellipse at center, rgba(250,204,21,0.24) 0%, rgba(250,204,21,0.08) 42%, rgba(250,204,21,0) 75%)'
+                          : 'radial-gradient(ellipse at center, rgba(34,211,238,0.24) 0%, rgba(34,211,238,0.08) 42%, rgba(34,211,238,0) 75%)'
+                      }}
+                      aria-hidden="true"
+                    />
+                  </>
                 )}
                 
                 {/* Fade Gradients */}
                 <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
                 <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
 
+                <div
+                  className={`absolute inset-0 z-[21] pointer-events-none transition-opacity duration-300 ${isReelInFastMotion ? 'opacity-100' : 'opacity-0'}`}
+                  style={{
+                    background: isGoldMode
+                      ? 'linear-gradient(100deg, rgba(0,0,0,0) 0%, rgba(250,204,21,0.08) 35%, rgba(255,255,255,0.14) 50%, rgba(250,204,21,0.08) 65%, rgba(0,0,0,0) 100%)'
+                      : 'linear-gradient(100deg, rgba(0,0,0,0) 0%, rgba(34,211,238,0.06) 35%, rgba(255,255,255,0.12) 50%, rgba(34,211,238,0.06) 65%, rgba(0,0,0,0) 100%)',
+                    backdropFilter: 'blur(1.5px)'
+                  }}
+                  aria-hidden="true"
+                />
+
                 {/* The Moving Reel */}
                 <div 
                     ref={scrollContainerRef}
-                    className={`flex px-[50%] will-change-transform ml-[-80px] transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`} 
-                    style={{ gap: `${GAP_WIDTH}px` }}
+                    className={`flex will-change-transform transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`} 
+                    style={{ gap: `${GAP_WIDTH}px`, transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}
                 >
                     {reelItems.map((item, idx) => (
                         <div 
                             key={`${item.id}-${idx}`}
-                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3.5 sm:p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}`}
+                            ref={idx === SPINNER_MOTION.preWinnerItems ? winningCardRef : null}
+                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3.5 sm:p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? 'ring-2 ring-white/50' : ''}`}
                             style={{ 
                                 width: `${CARD_WIDTH}px`, 
                                 height: `${CARD_WIDTH}px`,
-                                boxShadow: item.id === 'golden-ticket' ? undefined : `0 4px 0 0 ${item.color}20` 
+                                boxShadow: item.id === 'golden-ticket'
+                                  ? undefined
+                                  : `${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? `0 0 26px ${item.color}88, ` : ''}0 4px 0 0 ${item.color}20`
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
