@@ -845,6 +845,9 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
     topPullsPublic: data.topPullsPublic ?? false,
     topPulls: normalizeInventoryItems(data.topPulls),
+    challengeStatsDay: typeof data.challengeStatsDay === 'string' ? data.challengeStatsDay : undefined,
+    challengeStats: data.challengeStats ?? undefined,
+    questClaims: data.questClaims ?? undefined,
     inventory: normalizeInventoryItems(data.inventory)
   } as User;
 };
