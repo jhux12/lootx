@@ -23,6 +23,7 @@ export const Quests: React.FC = () => {
   const { user, isAuthenticated, openAuthModal, syncBalance } = useGame();
   const [rules, setRules] = useState<QuestRule[]>([]);
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [locallyClaimedIds, setLocallyClaimedIds] = useState<Record<string, string>>({});
   const [nowTs, setNowTs] = useState(() => Date.now());
 
   useEffect(() => {
@@ -48,9 +49,9 @@ export const Quests: React.FC = () => {
     const value = getQuestProgressValue(rule, stats ?? {});
     const target = Math.max(1, rule.target);
     const completed = value >= target;
-    const alreadyClaimed = claims?.[rule.id] === today;
+    const alreadyClaimed = claims?.[rule.id] === today || locallyClaimedIds?.[rule.id] === today;
     return { rule, value, target, completed, alreadyClaimed };
-  }), [claims, rules, stats, today]);
+  }), [claims, locallyClaimedIds, rules, stats, today]);
 
   const claim = async (questId: string) => {
     if (!isAuthenticated) {
@@ -65,6 +66,10 @@ export const Quests: React.FC = () => {
       });
       if (typeof result?.newCoins === 'number') {
         syncBalance(result.newCoins);
+      }
+      setLocallyClaimedIds((prev) => ({ ...prev, [questId]: today }));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pullz:quest-claimed', { detail: { questId, day: today } }));
       }
     } catch (error) {
       console.error('Failed to claim quest reward', error);
