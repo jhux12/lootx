@@ -1461,6 +1461,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               price: data.price
             }),
             image: data.image ?? 'https://picsum.photos/300',
+            spinnerBackgroundImage:
+              typeof data.spinnerBackgroundImage === 'string' ? data.spinnerBackgroundImage : undefined,
             accentColor: data.accentColor ?? '#3b82f6',
             tag: data.tag as MysteryBox['tag'],
             tags: Array.isArray(data.tags) ? (data.tags as MysteryBox['tags']) : undefined,

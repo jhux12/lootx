@@ -1322,7 +1322,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       aria-hidden="true"
                       className="absolute inset-0 h-full w-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/45" aria-hidden="true" />
+                    <div className="absolute inset-0 bg-black/35" aria-hidden="true" />
                   </>
                 )}
                 {isBoxPreviewVisible && (
@@ -1809,7 +1809,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             transform: translateX(-50%);
             border-radius: 999px;
             background: radial-gradient(circle, rgba(56, 189, 248, 0.44) 0%, rgba(56, 189, 248, 0.08) 55%, transparent 85%);
-            filter: blur(8px);
+            filter: blur(6px);
             pointer-events: none;
           }
           .pullz-box-preview:hover {
