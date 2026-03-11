@@ -55,7 +55,8 @@ const SPINNER_MOTION = {
   goldFinalDurationMs: 3800,
   settleDurationMs: 360,
   overshootPx: 14,
-  landingOffsetMaxPx: 6
+  landingOffsetMaxPx: 6,
+  initialBlurDurationMs: 260
 } as const;
 
 const createSeededRng = (seed: string) => {
@@ -291,6 +292,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [animatedModalCoins, setAnimatedModalCoins] = useState(0);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   const [isReelInFastMotion, setIsReelInFastMotion] = useState(false);
+  const [isInitialMotionBlurActive, setIsInitialMotionBlurActive] = useState(false);
   const [isReelDecelerating, setIsReelDecelerating] = useState(false);
   const [isLandingFlashActive, setIsLandingFlashActive] = useState(false);
   
@@ -303,6 +305,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const winningCardRef = useRef<HTMLDivElement>(null);
   const spinnerAnimationRef = useRef<Animation | null>(null);
+  const initialBlurTimerRef = useRef<number | null>(null);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const itemModalRevealFrameRef = useRef<number | null>(null);
@@ -631,6 +634,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current.cancel();
       spinnerAnimationRef.current = null;
     }
+    if (initialBlurTimerRef.current) {
+      window.clearTimeout(initialBlurTimerRef.current);
+      initialBlurTimerRef.current = null;
+    }
+    setIsInitialMotionBlurActive(false);
   }, []);
 
   const animateSpin = useCallback(async (
@@ -670,7 +678,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const overshootTarget = finalTranslate - SPINNER_MOTION.overshootPx;
 
     setIsReelInFastMotion(true);
+    setIsInitialMotionBlurActive(true);
     setIsReelDecelerating(false);
+
+    initialBlurTimerRef.current = window.setTimeout(() => {
+      setIsInitialMotionBlurActive(false);
+      initialBlurTimerRef.current = null;
+    }, SPINNER_MOTION.initialBlurDurationMs);
 
     const animation = container.animate(
       [
@@ -693,6 +707,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     animation.onfinish = () => {
       window.clearTimeout(decelerationTimer);
+      if (initialBlurTimerRef.current) {
+        window.clearTimeout(initialBlurTimerRef.current);
+        initialBlurTimerRef.current = null;
+      }
+      setIsInitialMotionBlurActive(false);
       container.style.transform = `translate3d(${finalTranslate}px, 0, 0)`;
       setIsReelInFastMotion(false);
       setIsReelDecelerating(false);
@@ -704,6 +723,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     animation.oncancel = () => {
       window.clearTimeout(decelerationTimer);
+      if (initialBlurTimerRef.current) {
+        window.clearTimeout(initialBlurTimerRef.current);
+        initialBlurTimerRef.current = null;
+      }
+      setIsInitialMotionBlurActive(false);
       setIsReelInFastMotion(false);
       setIsReelDecelerating(false);
       spinnerAnimationRef.current = null;
@@ -1512,7 +1536,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
 
                 <div
-                  className={`absolute inset-0 z-[21] pointer-events-none transition-opacity duration-300 ${isReelInFastMotion ? 'opacity-100' : 'opacity-0'}`}
+                  className={`absolute inset-0 z-[21] pointer-events-none transition-opacity duration-200 ${isInitialMotionBlurActive ? 'opacity-100' : 'opacity-0'}`}
                   style={{
                     background: isGoldMode
                       ? 'linear-gradient(100deg, rgba(0,0,0,0) 0%, rgba(250,204,21,0.08) 35%, rgba(255,255,255,0.14) 50%, rgba(250,204,21,0.08) 65%, rgba(0,0,0,0) 100%)'
