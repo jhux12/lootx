@@ -60,6 +60,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(false);
   const [isRewardsMenuOpen, setIsRewardsMenuOpen] = useState(false);
   const [questReadyCount, setQuestReadyCount] = useState(0);
+  const [claimedTodayCount, setClaimedTodayCount] = useState(0);
+  const [locallyClaimedQuestIds, setLocallyClaimedQuestIds] = useState<Record<string, string>>({});
   const [showActivity, setShowActivity] = useState(false);
   const [provablyData, setProvablyData] = useState<{ serverSeedHash?: string; clientSeed?: string; nonce?: number }>({});
   const headerRef = useRef<HTMLElement | null>(null);
@@ -135,13 +137,33 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
       const data = snap.data() as Record<string, unknown> | undefined;
       const today = new Date().toISOString().slice(0, 10);
-      const claims = user.questClaims ?? {};
+      const claims = { ...(user.questClaims ?? {}), ...locallyClaimedQuestIds };
       const stats = user.challengeStatsDay === today ? (user.challengeStats ?? {}) : {};
       const count = getClaimReadyQuestCount(normalizeQuestRules(data?.questRules), stats, claims, today);
+      const rules = normalizeQuestRules(data?.questRules).filter((rule) => rule.enabled !== false);
+      const claimedCount = rules.filter((rule) => claims?.[rule.id] === today).length;
       setQuestReadyCount(count);
+      setClaimedTodayCount(claimedCount);
     });
     return () => unsub();
-  }, [user.challengeStats, user.questClaims]);
+  }, [locallyClaimedQuestIds, user.challengeStats, user.questClaims]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleQuestClaimed = (event: Event) => {
+      const customEvent = event as CustomEvent<{ questId?: string; day?: string }>;
+      const questId = customEvent.detail?.questId;
+      const day = customEvent.detail?.day;
+      if (!questId || !day) return;
+      setLocallyClaimedQuestIds((prev) => ({ ...prev, [questId]: day }));
+    };
+
+    window.addEventListener('pullz:quest-claimed', handleQuestClaimed as EventListener);
+    return () => {
+      window.removeEventListener('pullz:quest-claimed', handleQuestClaimed as EventListener);
+    };
+  }, []);
 
   const navigate = (type: 'HOME' | 'BOXES' | 'PLINKO' | 'BONUSES' | 'LEADERBOARD' | 'QUESTS' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
     playSound('click');
@@ -243,7 +265,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
                   <button type="button" onClick={() => navigate('BONUSES')} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><RefreshCw className="h-4 w-4 text-blue-500" />Daily Spin</button>
                   <button type="button" onClick={() => navigate('LEADERBOARD')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Trophy className="h-4 w-4 text-yellow-500" />Leaderboard</button>
-                  <button type="button" onClick={() => navigate('QUESTS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Sparkles className="h-4 w-4 text-violet-300" />Mini Challenges {questReadyCount > 0 ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}</button>
+                  <button type="button" onClick={() => navigate('QUESTS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Sparkles className="h-4 w-4 text-violet-300" />Mini Challenges {questReadyCount > 0 ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : claimedTodayCount > 0 ? <span className="ml-auto rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
                 </div>
               </div>
             </div>
@@ -412,7 +434,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => navigate('BONUSES')} className={drawerCardClass}><RefreshCw className="h-5 w-5 text-blue-500" /><span className="text-sm font-bold text-white">Daily Spin</span></button>
               <button onClick={() => navigate('LEADERBOARD')} className={drawerCardClass}><Trophy className="h-5 w-5 text-yellow-500" /><span className="text-sm font-bold text-white">Leaderboard</span></button>
-              <button onClick={() => navigate('QUESTS')} className={`${drawerCardClass} relative`}><Sparkles className="h-5 w-5 text-violet-300" /><span className="text-sm font-bold text-white">Mini Challenges</span>{questReadyCount > 0 ? <span className="absolute right-2 top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}</button>
+              <button onClick={() => navigate('QUESTS')} className={`${drawerCardClass} relative`}><Sparkles className="h-5 w-5 text-violet-300" /><span className="text-sm font-bold text-white">Mini Challenges</span>{questReadyCount > 0 ? <span className="absolute right-2 top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : claimedTodayCount > 0 ? <span className="absolute right-2 top-2 inline-flex items-center justify-center rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
             </div>
           </section>
 

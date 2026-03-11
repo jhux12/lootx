@@ -1234,8 +1234,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             className="transition-all duration-300 ease-out"
                           />
                         </svg>
-                        <div className="absolute inset-[4px] rounded-full bg-[#111827] border border-cyan-300/25 flex items-center justify-center">
-                          <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-3 w-3 object-contain sm:h-3.5 sm:w-3.5" />
+                        <div className="absolute inset-[4px] grid place-items-center rounded-full border border-cyan-300/25 bg-[#111827]">
+                          <img
+                            loading="lazy"
+                            decoding="async"
+                            src={XP_ICON}
+                            alt="XP"
+                            className="block h-3.5 w-3.5 object-contain object-center sm:h-4 sm:w-4"
+                          />
                         </div>
                       </div>
                       <span className="text-[9px] text-cyan-100/85 whitespace-nowrap sm:text-[10px]">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span>
