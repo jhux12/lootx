@@ -45,6 +45,14 @@ interface RevealData {
 
 const CARD_WIDTH = 160;
 const GAP_WIDTH = 16;
+const TRACK_STEP = CARD_WIDTH + GAP_WIDTH;
+
+const MIN_SPIN_DURATION = 3600;
+const MAX_SPIN_DURATION = 5000;
+const DECEL_PORTION = 0.24;
+const OVERSHOOT_MIN = 10;
+const OVERSHOOT_MAX = 18;
+const PRE_WIN_TRAVEL_VARIANCE = 8;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -54,8 +62,6 @@ const SPINNER_MOTION = {
   goldTicketDurationMs: 4200,
   goldFinalDurationMs: 3800,
   settleDurationMs: 360,
-  overshootPx: 14,
-  landingOffsetMaxPx: 6,
   initialBlurDurationMs: 260
 } as const;
 
@@ -563,16 +569,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
   }, [nonce]);
 
-  const getLandingOffset = useCallback((rng: () => number) => {
-    const max = SPINNER_MOTION.landingOffsetMaxPx;
-    return Math.round((rng() * (max * 2)) - max);
-  }, []);
-
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
-    const winnerIndex = SPINNER_MOTION.preWinnerItems;
-    const reelLength = SPINNER_MOTION.preWinnerItems + 1 + SPINNER_MOTION.postWinnerItems;
+    const travelVarianceItems = Math.floor(rng() * (PRE_WIN_TRAVEL_VARIANCE + 1));
+    const winnerIndex = SPINNER_MOTION.preWinnerItems + travelVarianceItems;
+    const tailVariance = Math.floor(rng() * 4);
+    const reelLength = winnerIndex + 1 + SPINNER_MOTION.postWinnerItems + tailVariance;
     const newReel: CaseItem[] = [];
 
     // Deterministic filler generation preserves visual variety while remaining reproducible.
@@ -609,7 +612,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return { items: newReel, winnerIndex };
   }, []);
 
-  const getCenteredTranslate = useCallback((landingOffset = 0) => {
+  const getCenteredTranslate = useCallback(() => {
     const viewport = scrollViewportRef.current;
     const container = scrollContainerRef.current;
     const winnerCard = winningCardRef.current;
@@ -626,7 +629,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const winnerCenterX = cardRect.left + (cardRect.width / 2);
     const delta = viewportCenterX - winnerCenterX;
 
-    return containerRect.left + delta - viewportRect.left + landingOffset;
+    return containerRect.left + delta - viewportRect.left;
   }, []);
 
   const resetSpinnerAnimation = useCallback(() => {
@@ -665,7 +668,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const shouldPlayStartSound = options?.playStartSound ?? true;
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const landingOffset = getLandingOffset(rng);
+    const clampedBaseDuration = Math.max(MIN_SPIN_DURATION, Math.min(MAX_SPIN_DURATION, duration));
+    const durationVarianceCap = Math.min(190, Math.floor((MAX_SPIN_DURATION - MIN_SPIN_DURATION) / 3));
+    const durationVariance = (rng() * 2 - 1) * durationVarianceCap;
+    const adjustedDuration = Math.round(
+      Math.max(MIN_SPIN_DURATION, Math.min(MAX_SPIN_DURATION, clampedBaseDuration + durationVariance))
+    );
 
     if (shouldPlayStartSound) {
       playSound('spin-start');
@@ -679,13 +687,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     await waitForNextPaint();
 
-    const finalTranslate = getCenteredTranslate(landingOffset);
+    const finalTranslate = getCenteredTranslate();
     if (finalTranslate === null) {
       onComplete();
       return;
     }
 
-    const overshootTarget = finalTranslate - SPINNER_MOTION.overshootPx;
+    const direction = finalTranslate < 0 ? -1 : 1;
+    const overshootPx = OVERSHOOT_MIN + (rng() * (OVERSHOOT_MAX - OVERSHOOT_MIN));
+    const overshootTarget = finalTranslate + (direction * overshootPx);
+    const preDecelItems = 8 + Math.floor(rng() * 6);
+    const preDecelDistance = (preDecelItems * TRACK_STEP) + Math.round(rng() * (TRACK_STEP * 0.45));
+    const extraTravelItems = 1 + Math.floor(rng() * (PRE_WIN_TRAVEL_VARIANCE + 1));
+    const extraTravelDistance = (extraTravelItems * TRACK_STEP) + Math.round(rng() * (TRACK_STEP * 0.35));
+    const decelStartTarget = finalTranslate + (direction * preDecelDistance);
+    const mainGlideTarget = decelStartTarget + (direction * extraTravelDistance);
+
+    const launchPortion = 0.12;
+    const decelStartOffset = Math.max(0.62, 1 - DECEL_PORTION - (rng() * 0.04));
+    const overshootOffset = 0.972;
 
     setIsReelInFastMotion(true);
     setIsInitialMotionBlurActive(true);
@@ -699,11 +719,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const animation = container.animate(
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.15, 0.8, 0.3, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.9, easing: 'cubic-bezier(0.18, 0.92, 0.22, 1)' },
-        { transform: `translate3d(${finalTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.2, 1, 0.25, 1)' }
+        { transform: `translate3d(${mainGlideTarget}px, 0, 0)`, offset: launchPortion, easing: 'cubic-bezier(0.16, 0.88, 0.25, 1)' },
+        { transform: `translate3d(${decelStartTarget}px, 0, 0)`, offset: decelStartOffset, easing: 'cubic-bezier(0.18, 0.97, 0.2, 1)' },
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.14, 1, 0.3, 1)' },
+        { transform: `translate3d(${finalTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.22, 1, 0.3, 1)' }
       ],
       {
-        duration,
+        duration: adjustedDuration,
         fill: 'forwards',
         composite: 'replace'
       }
@@ -713,7 +735,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const decelerationTimer = window.setTimeout(() => {
       setIsReelDecelerating(true);
-    }, Math.max(0, duration - 1300));
+    }, Math.max(0, adjustedDuration * (1 - DECEL_PORTION)));
 
     animation.onfinish = () => {
       window.clearTimeout(decelerationTimer);
@@ -749,7 +771,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       setIsReelDecelerating(false);
       spinnerAnimationRef.current = null;
     };
-  }, [getCenteredTranslate, getLandingOffset, playSound, resetSpinnerAnimation]);
+  }, [getCenteredTranslate, playSound, resetSpinnerAnimation]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
