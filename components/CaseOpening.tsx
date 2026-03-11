@@ -54,8 +54,9 @@ const SPINNER_MOTION = {
   goldTicketDurationMs: 4200,
   goldFinalDurationMs: 3800,
   settleDurationMs: 360,
-  overshootPx: 14,
-  landingOffsetMaxPx: 6,
+  overshootPx: 18,
+  approachOffsetMaxPx: 18,
+  durationVarianceMs: 420,
   initialBlurDurationMs: 260
 } as const;
 
@@ -314,6 +315,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const bodyOverflowRef = useRef<string>('');
   const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
+  const spinRequestLockRef = useRef(false);
   const canFreeSpin = !user.lastFreeBoxClaim;
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
@@ -563,8 +565,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
   }, [nonce]);
 
-  const getLandingOffset = useCallback((rng: () => number) => {
-    const max = SPINNER_MOTION.landingOffsetMaxPx;
+  const getApproachOffset = useCallback((rng: () => number) => {
+    const max = SPINNER_MOTION.approachOffsetMaxPx;
     return Math.round((rng() * (max * 2)) - max);
   }, []);
 
@@ -649,6 +651,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsInitialMotionBlurActive(false);
     setIsReelInFastMotion(false);
     setIsReelDecelerating(false);
+    spinRequestLockRef.current = false;
   }, []);
 
   const animateSpin = useCallback(async (
@@ -665,7 +668,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const shouldPlayStartSound = options?.playStartSound ?? true;
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const landingOffset = getLandingOffset(rng);
+    const approachOffset = getApproachOffset(rng);
+    const durationVariance = Math.round((rng() - 0.5) * SPINNER_MOTION.durationVarianceMs * 2);
+    const resolvedDuration = Math.max(3000, duration + durationVariance);
 
     if (shouldPlayStartSound) {
       playSound('spin-start');
@@ -679,13 +684,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     await waitForNextPaint();
 
-    const finalTranslate = getCenteredTranslate(landingOffset);
-    if (finalTranslate === null) {
+    const centeredTranslate = getCenteredTranslate(0);
+    const approachTranslate = centeredTranslate === null ? null : centeredTranslate + approachOffset;
+    if (centeredTranslate === null || approachTranslate === null) {
+      spinRequestLockRef.current = false;
+      setIsSpinning(false);
       onComplete();
       return;
     }
 
-    const overshootTarget = finalTranslate - SPINNER_MOTION.overshootPx;
+    const overshootDirection = approachOffset >= 0 ? -1 : 1;
+    const overshootTarget = approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection);
 
     setIsReelInFastMotion(true);
     setIsInitialMotionBlurActive(true);
@@ -698,12 +707,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const animation = container.animate(
       [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.15, 0.8, 0.3, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.9, easing: 'cubic-bezier(0.18, 0.92, 0.22, 1)' },
-        { transform: `translate3d(${finalTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.2, 1, 0.25, 1)' }
+        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.1, 0.9, 0.25, 1)' },
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.84, easing: 'cubic-bezier(0.2, 1, 0.18, 1)' },
+        { transform: `translate3d(${approachTranslate}px, 0, 0)`, offset: 0.95, easing: 'cubic-bezier(0.17, 0.84, 0.34, 1)' },
+        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.14, 0.9, 0.22, 1)' }
       ],
       {
-        duration,
+        duration: resolvedDuration,
         fill: 'forwards',
         composite: 'replace'
       }
@@ -713,7 +723,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const decelerationTimer = window.setTimeout(() => {
       setIsReelDecelerating(true);
-    }, Math.max(0, duration - 1300));
+    }, Math.max(0, resolvedDuration - 1500));
 
     animation.onfinish = () => {
       window.clearTimeout(decelerationTimer);
@@ -728,13 +738,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       animation.cancel();
       container.style.transition = 'none';
-      container.style.transform = `translate3d(${finalTranslate}px, 0, 0)`;
+      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
 
       setIsReelInFastMotion(false);
       setIsReelDecelerating(false);
       setIsLandingFlashActive(true);
       window.setTimeout(() => setIsLandingFlashActive(false), SPINNER_MOTION.settleDurationMs);
       spinnerAnimationRef.current = null;
+      spinRequestLockRef.current = false;
       onComplete();
     };
 
@@ -748,8 +759,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       setIsReelInFastMotion(false);
       setIsReelDecelerating(false);
       spinnerAnimationRef.current = null;
+      spinRequestLockRef.current = false;
     };
-  }, [getCenteredTranslate, getLandingOffset, playSound, resetSpinnerAnimation]);
+  }, [getApproachOffset, getCenteredTranslate, playSound, resetSpinnerAnimation]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -863,9 +875,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
   const handleSpin = async ({ isDemo = false, forceGold = false, paymentMethod = 'coins' }: { isDemo?: boolean; forceGold?: boolean; paymentMethod?: 'coins' | 'xp' } = {}) => {
-    if (isSpinning) return;
+    if (isSpinning || spinRequestLockRef.current) return;
     if (!box || items.length === 0) return;
 
+    spinRequestLockRef.current = true;
     setSpinFeedbackMessage(null);
 
     if (forceGold) {
@@ -879,12 +892,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     if (!isDemo && !isAuthenticated) {
+      spinRequestLockRef.current = false;
       openAuthModal('login');
       return;
     }
 
     if (!isDemo && !isFree) {
       if (isBalanceLoading) {
+        spinRequestLockRef.current = false;
         return;
       }
 
@@ -892,20 +907,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (usesXpPayment) {
         const requiredXp = caseCurrencyType === 'XP' ? currentCaseXpPrice : xpCostForCoinCase;
         if (!Number.isFinite(requiredXp) || requiredXp <= 0 || currentXpBalance < requiredXp) {
+          spinRequestLockRef.current = false;
           setSpinFeedbackMessage('Not enough XP to open this box.');
           return;
         }
       } else {
         if (!Number.isFinite(currentCasePrice) || currentCasePrice <= 0) {
+          spinRequestLockRef.current = false;
           return;
         }
 
         const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
         if (!Number.isFinite(availableCoins)) {
+          spinRequestLockRef.current = false;
           return;
         }
 
         if (availableCoins < currentCasePrice) {
+          spinRequestLockRef.current = false;
           setSpinFeedbackMessage('Not enough coins — top up to open this box.');
 
           if (!showTopUpModal && !topUpTriggerLockRef.current) {
@@ -928,10 +947,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     if (!isDemo && isFree) {
       if (!isAuthenticated) {
+        spinRequestLockRef.current = false;
         openAuthModal('login');
         return;
       }
       if (!canFreeSpin) {
+        spinRequestLockRef.current = false;
         toast.info("Free signup box already claimed.");
         return;
       }
@@ -1077,6 +1098,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         setIsBoxPreviewFading(false);
         setSpinFeedbackMessage(readableMessage || 'Unable to open box.');
         toast.error(readableMessage || 'Unable to open box.');
+        spinRequestLockRef.current = false;
         return;
       }
     }
@@ -1196,6 +1218,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [resetSpinnerAnimation]);
 
   const finishSpin = (item: CaseItem) => {
+    spinRequestLockRef.current = false;
     setIsSpinning(false);
     setIsBoxPreviewVisible(true);
     setIsBoxPreviewFading(false);
@@ -1402,10 +1425,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     <button
                       type="button"
                       onClick={() => {
+                        if (isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading) return;
                         playSound('click');
                         setShowXpConfirmSheet(true);
                       }}
-                      className={`group inline-flex items-center gap-2 rounded-lg border bg-black/55 px-2 py-1 shadow-xl backdrop-blur-sm transition-all ${canOpenWithXp ? 'border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,0.3)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)]' : 'border-white/20 hover:border-cyan-300/45'}`}
+                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
+                      className={`group inline-flex items-center gap-2 rounded-lg border bg-black/55 px-2 py-1 shadow-xl backdrop-blur-sm transition-all disabled:cursor-not-allowed disabled:opacity-60 ${canOpenWithXp ? 'border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,0.3)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)]' : 'border-white/20 hover:border-cyan-300/45'}`}
                       aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
                       title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
                     >
@@ -1615,7 +1640,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="bg-[#0b0e14] px-3 pb-4 pt-3 sm:p-4 flex flex-col items-center justify-center gap-2.5 border-t border-gray-800 relative z-20">
                  <button 
                     onClick={() => handleSpin()}
-                    disabled={isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
+                    disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
                     className={`w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
                 >
                     <span>
@@ -1657,7 +1682,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                  {!isFree && (
                    <button
                      onClick={handleTryFree}
-                     disabled={isSpinning || isSyncingFair || isRotatingSeed}
+                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed}
                      className="w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Demo Spin</span>
@@ -1666,7 +1691,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                  {isAdmin && (
                    <button
                      onClick={() => handleSpin({ isDemo: true, forceGold: true })}
-                     disabled={isSpinning || isSyncingFair || isRotatingSeed}
+                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed}
                      className="w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
                    >
                      <span>Test Gold Spin</span>
@@ -1725,7 +1750,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     setShowXpConfirmSheet(false);
                     void handleSpin({ paymentMethod: 'xp' });
                   }}
-                  disabled={!canOpenWithXp || isSpinning || isSyncingFair || isRotatingSeed || isBalanceLoading}
+                  disabled={!canOpenWithXp || isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
                   className="rounded-lg border border-cyan-300/35 bg-cyan-400/15 px-3 py-2 text-sm font-semibold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Use XP
