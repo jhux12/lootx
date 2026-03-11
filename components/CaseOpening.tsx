@@ -55,7 +55,10 @@ const SPINNER_MOTION = {
   goldFinalDurationMs: 3800,
   settleDurationMs: 360,
   overshootPx: 18,
-  approachOffsetMaxPx: 18,
+  approachOffsetSoftMaxPx: 16,
+  approachOffsetNearMissMinPx: 34,
+  approachOffsetNearMissMaxPx: 58,
+  nearMissChance: 0.42,
   durationVarianceMs: 420,
   initialBlurDurationMs: 260
 } as const;
@@ -566,8 +569,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [nonce]);
 
   const getApproachOffset = useCallback((rng: () => number) => {
-    const max = SPINNER_MOTION.approachOffsetMaxPx;
-    return Math.round((rng() * (max * 2)) - max);
+    const direction = rng() < 0.5 ? -1 : 1;
+
+    if (rng() < SPINNER_MOTION.nearMissChance) {
+      const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
+      const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
+      const magnitude = min + Math.round(rng() * (max - min));
+      return direction * magnitude;
+    }
+
+    const softMagnitude = Math.round(rng() * SPINNER_MOTION.approachOffsetSoftMaxPx);
+    return direction * softMagnitude;
   }, []);
 
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
@@ -651,7 +663,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsInitialMotionBlurActive(false);
     setIsReelInFastMotion(false);
     setIsReelDecelerating(false);
-    spinRequestLockRef.current = false;
   }, []);
 
   const animateSpin = useCallback(async (
