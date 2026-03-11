@@ -623,13 +623,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return { items: newReel, winnerIndex };
   }, []);
 
-  const getCenteredTranslate = useCallback((landingOffset = 0) => {
+  const getCenteredTranslate = useCallback((winnerIndex: number, landingOffset = 0) => {
     const viewport = scrollViewportRef.current;
     const container = scrollContainerRef.current;
     const winnerCard = winningCardRef.current;
 
-    if (!viewport || !container || !winnerCard) {
+    if (!viewport || !container) {
       return null;
+    }
+
+    // Fallback for first-frame races: compute center using known card geometry.
+    if (!winnerCard) {
+      const viewportCenterX = viewport.clientWidth / 2;
+      const winnerCenterX = (winnerIndex * (CARD_WIDTH + GAP_WIDTH)) + (CARD_WIDTH / 2);
+      return viewportCenterX - winnerCenterX + landingOffset;
     }
 
     const viewportRect = viewport.getBoundingClientRect();
@@ -642,6 +649,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     return containerRect.left + delta - viewportRect.left + landingOffset;
   }, []);
+
+  const resolveCenteredTranslate = useCallback(async (winnerIndex: number, landingOffset = 0) => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const next = getCenteredTranslate(winnerIndex, landingOffset);
+      if (next !== null) return next;
+      await waitForNextPaint();
+    }
+    return null;
+  }, [getCenteredTranslate]);
 
   const resetSpinnerAnimation = useCallback(() => {
     if (spinnerAnimationRef.current) {
@@ -695,12 +711,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     await waitForNextPaint();
 
-    const centeredTranslate = getCenteredTranslate(0);
+    const centeredTranslate = await resolveCenteredTranslate(winnerIndex, 0);
     const approachTranslate = centeredTranslate === null ? null : centeredTranslate + approachOffset;
     if (centeredTranslate === null || approachTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
-      onComplete();
       return;
     }
 
@@ -719,8 +734,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const animation = container.animate(
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.1, 0.9, 0.25, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.84, easing: 'cubic-bezier(0.2, 1, 0.18, 1)' },
-        { transform: `translate3d(${approachTranslate}px, 0, 0)`, offset: 0.95, easing: 'cubic-bezier(0.17, 0.84, 0.34, 1)' },
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.8, easing: 'cubic-bezier(0.2, 1, 0.18, 1)' },
         { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.14, 0.9, 0.22, 1)' }
       ],
       {
@@ -772,7 +786,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [getApproachOffset, getCenteredTranslate, playSound, resetSpinnerAnimation]);
+  }, [getApproachOffset, playSound, resetSpinnerAnimation, resolveCenteredTranslate]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
