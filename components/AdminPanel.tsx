@@ -602,7 +602,6 @@ export const AdminPanel: React.FC = () => {
   };
   const MAX_BOX_TAGS = 10;
   const MAX_BOX_TAG_LENGTH = 24;
-  const baseBoxTagOptions = ['tech boxes', 'pokemon', 'digital codes', 'hot', 'deals'];
   const sortedPackages = useMemo(() => {
       return [...coinPackages].sort((a, b) => a.sortOrder - b.sortOrder);
   }, [coinPackages]);
@@ -621,13 +620,22 @@ export const AdminPanel: React.FC = () => {
   );
 
 
-  const boxTagOptions = useMemo(() => {
-      const tags = new Set<string>(baseBoxTagOptions);
-      boxes.forEach((box) => {
-          getBoxTags(box).forEach((tag) => tags.add(tag));
-      });
-      return Array.from(tags).sort((a, b) => a.localeCompare(b));
+  const boxTagStats = useMemo(() => {
+      const usage = new Map<string, number>();
+      boxes
+          .filter((box) => !box.isUserCreated)
+          .forEach((box) => {
+              getBoxTags(box).forEach((tag) => {
+                  usage.set(tag, (usage.get(tag) ?? 0) + 1);
+              });
+          });
+
+      return Array.from(usage.entries())
+          .map(([tag, count]) => ({ tag, count }))
+          .sort((a, b) => a.tag.localeCompare(b.tag));
   }, [boxes]);
+
+  const boxTagOptions = useMemo(() => boxTagStats.map((entry) => entry.tag), [boxTagStats]);
 
   const [boxTagIconsDraft, setBoxTagIconsDraft] = useState<Record<string, string>>(stripeSettings.boxTagIcons);
   const [boxTagIconsNotice, setBoxTagIconsNotice] = useState(false);
@@ -3171,7 +3179,7 @@ export const AdminPanel: React.FC = () => {
                                     <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <div>
                                             <h4 className="text-sm font-semibold text-white">Tag Icon Editor</h4>
-                                            <p className="text-[11px] text-gray-400">Assign a Font Awesome class to each tag. Example: <span className="font-mono">fa-regular fa-gem</span></p>
+                                            <p className="text-[11px] text-gray-400">Assign a Font Awesome icon to each current tag. Paste either <span className="font-mono">fa-regular fa-gem</span> or <span className="font-mono">&lt;i class="fa-regular fa-gem"&gt;&lt;/i&gt;</span></p>
                                         </div>
                                         <button
                                             type="button"
@@ -3182,26 +3190,31 @@ export const AdminPanel: React.FC = () => {
                                         </button>
                                     </div>
                                     {boxTagIconsNotice && <p className="mb-3 text-xs text-green-400">Tag icons saved.</p>}
-                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                        {boxTagOptions.map((tag) => {
-                                            const iconClass = boxTagIconsDraft[tag] ?? '';
-                                            return (
-                                                <div key={`tag-icon-${tag}`} className="rounded-lg border border-white/10 p-2">
-                                                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-200">
-                                                        <span className="truncate uppercase tracking-wide">{tag}</span>
-                                                        {iconClass ? <i aria-hidden="true" className={`${sanitizeFontAwesomeClass(iconClass)} text-sm text-indigo-300`} /> : <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />}
+                                    {boxTagStats.length === 0 ? (
+                                        <p className="text-xs text-gray-400">No tags found on current site boxes yet.</p>
+                                    ) : (
+                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                            {boxTagStats.map(({ tag, count }) => {
+                                                const iconClass = boxTagIconsDraft[tag] ?? '';
+                                                return (
+                                                    <div key={`tag-icon-${tag}`} className="rounded-lg border border-white/10 p-2">
+                                                        <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-200">
+                                                            <span className="truncate uppercase tracking-wide">{tag}</span>
+                                                            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-gray-300">{count} box{count === 1 ? '' : 'es'}</span>
+                                                            {iconClass ? <i aria-hidden="true" className={`${sanitizeFontAwesomeClass(iconClass)} text-sm text-indigo-300`} /> : <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />}
+                                                        </div>
+                                                        <Input
+                                                            type="text"
+                                                            placeholder="fa-regular fa-gem or <i class=&quot;fa-regular fa-gem&quot;></i>"
+                                                            className="w-full bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
+                                                            value={iconClass}
+                                                            onChange={(event) => setBoxTagIconsDraft((prev) => ({ ...prev, [tag]: event.target.value }))}
+                                                        />
                                                     </div>
-                                                    <Input
-                                                        type="text"
-                                                        placeholder="fa-regular fa-gem"
-                                                        className="w-full bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
-                                                        value={iconClass}
-                                                        onChange={(event) => setBoxTagIconsDraft((prev) => ({ ...prev, [tag]: event.target.value }))}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
