@@ -18,7 +18,6 @@ import {
   Trophy,
   Twitter,
   User as UserIcon,
-  X,
   Youtube
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
@@ -388,53 +387,28 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       <button
         type="button"
         onClick={() => setIsMobileMenuOpen(false)}
-        className={`fixed inset-0 z-40 bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${isMobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
+        className={`fixed inset-x-0 bottom-0 z-40 bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
+          isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
+        } ${isMobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
         aria-label="Close menu overlay"
       />
 
       <div
-        className={`fixed inset-0 z-50 w-full overflow-y-auto bg-[#09090b] px-4 py-4 transition-all duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-50 w-full overflow-y-auto bg-[#09090b] px-4 py-4 transition-all duration-300 ease-out lg:hidden ${
+          isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
+        } ${
           isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
         }`}
       >
-        <div className="mb-6 flex items-center justify-between">
-          <button type="button" onClick={() => navigate('HOME')} className="inline-flex items-center"><BrandLockup /></button>
-          <button type="button" className="rounded-md p-2 text-gray-300" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu"><X className="h-6 w-6" /></button>
-        </div>
-
         <div className="flex flex-col gap-6 pb-20">
-          <div className="grid grid-cols-2 gap-3">
-            {isAuthenticated ? (
+          {isAuthenticated ? (
+            <div className="grid grid-cols-2 gap-3">
               <>
                 <button onClick={() => navigate('PROFILE')} className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3.5 font-bold text-white"><UserIcon className="h-5 w-5" />Account</button>
                 <button onClick={() => { playSound('click'); setIsMobileMenuOpen(false); logout(); }} className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3.5 font-bold text-white"><LogOut className="h-5 w-5 text-neutral-400" />Log out</button>
               </>
-            ) : (
-              <>
-               <button
-  onClick={() => {
-    playSound('click');
-    setIsMobileMenuOpen(false);
-    openAuthModal('login');
-  }}
-  className="rounded-s bg-indigo-600 px-3 py-2 text-sm font-bold text-white"
->
-  Log In
-</button>
-
-<button
-  onClick={() => {
-    playSound('click');
-    setIsMobileMenuOpen(false);
-    openAuthModal('register');
-  }}
-  className="rounded-s border border-white/5 bg-[#18181b] px-3 py-2 text-sm font-bold text-white"
->
-  Register
-</button>
-              </>
-            )}
-          </div>
+            </div>
+          ) : null}
 
           {user.isAdmin && (
             <button onClick={() => navigate('ADMIN')} className="flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-900/40 py-3 font-bold text-indigo-400">
