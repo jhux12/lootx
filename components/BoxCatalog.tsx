@@ -317,7 +317,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       <BlurImage
                         src={box.image}
                         alt={box.name}
-                        className="h-[170px] w-[150px] max-w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 sm:h-[180px] sm:w-[165px] md:w-[180px]"
+                        className="h-[160px] w-[140px] max-w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 sm:h-[170px] sm:w-[155px] md:w-[170px]"
                       />
                     </div>
 
