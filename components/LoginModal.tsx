@@ -59,6 +59,11 @@ export const LoginModal: React.FC = () => {
   };
 
   const handleGoogleSignIn = async () => {
+    if (mode === 'register' && (!confirmAdult || !acceptTerms)) {
+      setUserError('Please confirm you are 18+ and accept the terms to continue.');
+      return;
+    }
+
     setIsLoading(true);
     setUserError(null);
     setMessage(null);
@@ -185,7 +190,7 @@ export const LoginModal: React.FC = () => {
                 className={`flex-1 rounded-lg py-2.5 text-sm font-bold transition-all ${mode === 'login' ? 'bg-[#27272a] text-white shadow-sm ring-1 ring-white/5' : 'text-neutral-500 hover:text-neutral-300'}`}
                 type="button"
               >
-                Sign In
+                Login
               </button>
               <button
                 onClick={() => mode !== 'register' && toggleMode()}
@@ -199,15 +204,15 @@ export const LoginModal: React.FC = () => {
 
           <div className="mb-4 text-left">
             <h2 className="text-2xl font-black text-white">
-              {isLinkingGoogle ? 'Link Google Account' : mode === 'login' ? 'Welcome Back' : 'Create Account'}
+              {isLinkingGoogle ? 'Link Google Account' : mode === 'login' ? 'Welcome Back' : 'Register'}
             </h2>
-            <p className="mt-1 text-sm text-neutral-500">
-              {isLinkingGoogle
-                ? 'Confirm your password to link Google with your existing account.'
-                : mode === 'login'
-                  ? 'Sign in to access your account.'
-                  : 'Create your account and start winning today.'}
-            </p>
+            {(isLinkingGoogle || mode === 'login') && (
+              <p className="mt-1 text-sm text-neutral-500">
+                {isLinkingGoogle
+                  ? 'Confirm your password to link Google with your existing account.'
+                  : 'Login to access your account.'}
+              </p>
+            )}
           </div>
 
           {mode === 'register' && !isLinkingGoogle && (
@@ -218,7 +223,7 @@ export const LoginModal: React.FC = () => {
                 className="mx-auto h-28 w-auto object-contain sm:h-32"
               />
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-indigo-300">Free signup bonus</p>
-              <p className="mt-1 text-sm text-neutral-300">Create an account to claim your free box.</p>
+              <p className="mt-1 text-sm text-neutral-300">Register to claim your free box.</p>
             </div>
           )}
 
@@ -249,6 +254,31 @@ export const LoginModal: React.FC = () => {
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">
               <AlertCircle className="h-4 w-4" /> {message}
             </div>
+          )}
+
+          {!isLinkingGoogle && (
+            <>
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading || (mode === 'register' && (!acceptTerms || !confirmAdult))}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <img src={googleLogo} alt="Google" className="h-5 w-5" />
+                  Continue with Google
+                </button>
+              </div>
+
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/10" />
+                </div>
+                <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
+                  <span className="bg-[#0F0F11] px-3 text-neutral-500">Or continue with email</span>
+                </div>
+              </div>
+            </>
           )}
 
           {isLinkingGoogle ? (
@@ -294,7 +324,7 @@ export const LoginModal: React.FC = () => {
                 onClick={clearGoogleLinkState}
                 className="text-center text-xs text-neutral-400 hover:text-neutral-200"
               >
-                Back to sign in
+                Back to login
               </button>
             </form>
           ) : (
@@ -399,45 +429,22 @@ export const LoginModal: React.FC = () => {
                 disabled={isLoading}
                 className="mt-2 w-full rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isLoading ? 'Please wait...' : mode === 'login' ? 'Sign In with Password' : 'Create Account with Password'}
+                {isLoading ? 'Please wait...' : mode === 'login' ? 'Login with Password' : 'Register with Password'}
               </button>
             </form>
           )}
 
           {!isLinkingGoogle && (
-            <>
-              <div className="relative py-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-white/10" />
-                </div>
-                <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
-                  <span className="bg-[#0F0F11] px-3 text-neutral-500">Or continue with Google</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3">
-                <button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  disabled={isLoading}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <img src={googleLogo} alt="Google" className="h-5 w-5" />
-                  Google
-                </button>
-              </div>
-
-              <div className="mt-auto pt-5 text-center text-xs text-neutral-500">
-                {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
-                <button
-                  type="button"
-                  onClick={toggleMode}
-                  className="ml-1 font-bold text-indigo-400 hover:underline"
-                >
-                  {mode === 'login' ? 'Register' : 'Sign In'}
-                </button>
-              </div>
-            </>
+            <div className="mt-auto pt-5 text-center text-xs text-neutral-500">
+              {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
+              <button
+                type="button"
+                onClick={toggleMode}
+                className="ml-1 font-bold text-indigo-400 hover:underline"
+              >
+                {mode === 'login' ? 'Register' : 'Login'}
+              </button>
+            </div>
           )}
         </div>
       </div>
