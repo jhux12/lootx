@@ -27,6 +27,7 @@ export const LoginModal: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
   const errorBannerRef = React.useRef<HTMLDivElement | null>(null);
 
   const isLinkingGoogle = Boolean(googleLinkCredential);
@@ -60,7 +61,7 @@ export const LoginModal: React.FC = () => {
 
   const handleGoogleSignIn = async () => {
     if (mode === 'register' && (!confirmAdult || !acceptTerms)) {
-      setUserError('Please confirm you are 18+ and accept the terms to continue.');
+      setShowGoogleRequirementsTooltip(true);
       return;
     }
 
@@ -167,6 +168,22 @@ export const LoginModal: React.FC = () => {
     }
   }, [userError]);
 
+  useEffect(() => {
+    if (!showGoogleRequirementsTooltip) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setShowGoogleRequirementsTooltip(false);
+    }, 2200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [showGoogleRequirementsTooltip]);
+
+  useEffect(() => {
+    if (mode === 'register' && acceptTerms && confirmAdult) {
+      setShowGoogleRequirementsTooltip(false);
+    }
+  }, [mode, acceptTerms, confirmAdult]);
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
       <div
@@ -258,16 +275,22 @@ export const LoginModal: React.FC = () => {
 
           {!isLinkingGoogle && (
             <>
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 gap-2">
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
-                  disabled={isLoading || (mode === 'register' && (!acceptTerms || !confirmAdult))}
+                  disabled={isLoading}
                   className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <img src={googleLogo} alt="Google" className="h-5 w-5" />
                   Continue with Google
                 </button>
+
+                {mode === 'register' && showGoogleRequirementsTooltip && (
+                  <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-200">
+                    Check both boxes to continue with Google.
+                  </div>
+                )}
               </div>
 
               <div className="relative py-4">
