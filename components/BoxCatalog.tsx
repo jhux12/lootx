@@ -308,7 +308,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       playSound('click');
                       setView({ type: 'CASE_OPENING', boxId: box.id });
                     }}
-                    className="group flex flex-col items-center bg-[#131315] rounded-xl overflow-hidden border border-white/5 cursor-pointer hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
+                    className="group flex flex-col items-center rounded-xl overflow-hidden border border-white/15 bg-white/5 backdrop-blur-md cursor-pointer hover:border-indigo-400/60 hover:bg-white/10 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
                     type="button"
                     onMouseEnter={() => { void prefetchBox(box.id, async () => box, box.image); }}
                     onTouchStart={() => { void prefetchBox(box.id, async () => box, box.image); }}
@@ -317,7 +317,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       <BlurImage
                         src={box.image}
                         alt={box.name}
-                        className="h-[160px] w-[140px] max-w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 sm:h-[170px] sm:w-[155px] md:w-[170px]"
+                        className="h-[150px] w-[130px] max-w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 sm:h-[160px] sm:w-[145px] md:w-[160px]"
                       />
                     </div>
 
