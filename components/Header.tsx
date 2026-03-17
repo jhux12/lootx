@@ -18,7 +18,6 @@ import {
   Trophy,
   Twitter,
   User as UserIcon,
-  X,
   Youtube
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
@@ -401,10 +400,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
         }`}
       >
-        <div className="mb-6 flex items-center justify-end">
-          <button type="button" className="rounded-md p-2 text-gray-300" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu"><X className="h-6 w-6" /></button>
-        </div>
-
         <div className="flex flex-col gap-6 pb-20">
           {isAuthenticated ? (
             <div className="grid grid-cols-2 gap-3">
