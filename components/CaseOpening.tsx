@@ -1682,7 +1682,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       style={{
                         background: isGoldMode
                           ? 'radial-gradient(ellipse at center, rgba(250,204,21,0.24) 0%, rgba(250,204,21,0.08) 42%, rgba(250,204,21,0) 75%)'
-                          : 'radial-gradient(ellipse at center, rgba(34,211,238,0.24) 0%, rgba(34,211,238,0.08) 42%, rgba(34,211,238,0) 75%)'
+                          : 'radial-gradient(ellipse at center, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 42%, rgba(255,255,255,0) 75%)'
                       }}
                       aria-hidden="true"
                     />
@@ -1714,33 +1714,36 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         const isCenteredItem = idx === centeredReelIndex;
                         const isWinnerCard = idx === activeWinnerIndex;
                         const isHighlighted = isCenteredItem || (isLandingFlashActive && isWinnerCard);
-                        const rarityGlowStrength = item.rarity === 'legendary'
-                          ? (isHighlighted ? 'A8' : '70')
+                        const rarityGlowOpacity = item.rarity === 'legendary'
+                          ? (isHighlighted ? 0.42 : 0.12)
                           : item.rarity === 'ultra rare'
-                            ? (isHighlighted ? '96' : '5C')
+                            ? (isHighlighted ? 0.34 : 0.1)
                             : item.rarity === 'rare'
-                              ? (isHighlighted ? '8A' : '4D')
-                              : (isHighlighted ? '78' : '33');
+                              ? (isHighlighted ? 0.28 : 0.08)
+                              : (isHighlighted ? 0.2 : 0.06);
 
                         return (
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={isWinnerCard ? winningCardRef : null}
-                            className={`relative flex-shrink-0 rounded-xl p-2.5 sm:p-3 flex items-center justify-center group transition-all duration-150 ${isHighlighted ? 'ring-2 ring-white/65 border border-white/45 scale-[1.01]' : 'border border-transparent'}`}
+                            className="relative flex-shrink-0 flex items-center justify-center"
                             style={{ 
                                 width: `${CARD_WIDTH}px`, 
-                                height: `${CARD_WIDTH}px`,
-                                background: `radial-gradient(circle at 50% 50%, ${item.color}${rarityGlowStrength} 0%, ${item.color}3A 42%, rgba(7,11,18,0.9) 85%)`,
-                                boxShadow: isHighlighted
-                                  ? `0 0 28px ${item.color}88, 0 0 0 1px ${item.color}52 inset`
-                                  : `0 0 18px ${item.color}40, 0 0 0 1px ${item.color}1f inset`
+                                height: `${CARD_WIDTH}px`
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
+                            <div
+                              className="pointer-events-none absolute inset-[18%] rounded-full blur-2xl transition-opacity duration-200"
+                              style={{
+                                opacity: rarityGlowOpacity,
+                                background: `radial-gradient(circle, ${item.color} 0%, ${item.color}00 72%)`
+                              }}
+                            />
                             <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
-                                className={`relative z-10 h-[6.2rem] w-[6.2rem] object-contain sm:h-24 sm:w-24 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
+                                className={`relative z-10 h-[5.6rem] w-[5.6rem] object-contain transition-all duration-200 sm:h-24 sm:w-24 ${item.id === 'golden-ticket' ? 'animate-pulse' : ''} ${isHighlighted ? 'opacity-100 brightness-110 saturate-110 scale-105 drop-shadow-[0_0_16px_rgba(255,255,255,0.28)]' : 'opacity-35 grayscale brightness-75 saturate-0 scale-90'}`} 
                             />
                         </div>
                     );
