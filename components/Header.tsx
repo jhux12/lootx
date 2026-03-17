@@ -268,7 +268,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
                   <button type="button" onClick={() => navigate('BONUSES')} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><RefreshCw className="h-4 w-4 text-blue-500" />Daily Spin</button>
                   <button type="button" onClick={() => navigate('LEADERBOARD')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Trophy className="h-4 w-4 text-yellow-500" />Leaderboard</button>
-                  <button type="button" onClick={() => navigate('QUESTS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Sparkles className="h-4 w-4 text-violet-300" />Mini Challenges {questReadyCount > 0 ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : claimedTodayCount > 0 ? <span className="ml-auto rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
+                  <button type="button" onClick={() => navigate('QUESTS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Sparkles className="h-4 w-4 text-violet-300" />Quests {questReadyCount > 0 ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : claimedTodayCount > 0 ? <span className="ml-auto rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
                 </div>
               </div>
             </div>
@@ -411,8 +411,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
               </>
             ) : (
               <>
-                <button onClick={() => { playSound('click'); setIsMobileMenuOpen(false); openAuthModal('login'); }} className="rounded-xl bg-indigo-600 py-3.5 font-bold text-white">Log In</button>
-                <button onClick={() => { playSound('click'); setIsMobileMenuOpen(false); openAuthModal('register'); }} className="rounded-xl border border-white/5 bg-[#18181b] py-3.5 font-bold text-white">Register</button>
+                <button onClick={() => { playSound('click'); setIsMobileMenuOpen(false); openAuthModal('login'); }} className="rounded-s bg-indigo-600 py-3.5 font-bold text-white">Log In</button>
+                <button onClick={() => { playSound('click'); setIsMobileMenuOpen(false); openAuthModal('register'); }} className="rounded-s border border-white/5 bg-[#18181b] py-3.5 font-bold text-white">Register</button>
               </>
             )}
           </div>
