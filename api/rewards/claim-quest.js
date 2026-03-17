@@ -61,7 +61,9 @@ export default async function handler(req, res) {
 
       tx.set(userRef, {
         coins: newCoins,
-        [`questClaims.${questId}`]: today,
+        questClaims: {
+          [questId]: today
+        },
         lastQuestClaimAt: admin.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       tx.set(claimRef, {
