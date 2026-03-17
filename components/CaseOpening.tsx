@@ -305,6 +305,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isReelDecelerating, setIsReelDecelerating] = useState(false);
   const [isLandingFlashActive, setIsLandingFlashActive] = useState(false);
   const [activeWinnerIndex, setActiveWinnerIndex] = useState(SPINNER_MOTION.preWinnerItems);
+  const [centeredReelIndex, setCenteredReelIndex] = useState<number | null>(null);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -316,6 +317,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const winningCardRef = useRef<HTMLDivElement>(null);
   const spinnerAnimationRef = useRef<Animation | null>(null);
   const initialBlurTimerRef = useRef<number | null>(null);
+  const centerTrackerRafRef = useRef<number | null>(null);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const itemModalRevealFrameRef = useRef<number | null>(null);
@@ -696,6 +698,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       initialBlurTimerRef.current = null;
     }
 
+    if (centerTrackerRafRef.current) {
+      window.cancelAnimationFrame(centerTrackerRafRef.current);
+      centerTrackerRafRef.current = null;
+    }
+
     setIsInitialMotionBlurActive(false);
     setIsReelInFastMotion(false);
     setIsReelDecelerating(false);
@@ -902,6 +909,62 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       window.requestAnimationFrame(() => resolve());
     });
   });
+
+  const getTranslateX = (node: HTMLElement) => {
+    const computedTransform = window.getComputedStyle(node).transform;
+    if (!computedTransform || computedTransform === 'none') {
+      return 0;
+    }
+
+    const matrix = new DOMMatrixReadOnly(computedTransform);
+    return matrix.m41;
+  };
+
+  const getCenteredCardIndex = useCallback(() => {
+    const viewport = scrollViewportRef.current;
+    const container = scrollContainerRef.current;
+    if (!viewport || !container || reelItems.length === 0) {
+      return null;
+    }
+
+    const translateX = getTranslateX(container);
+    const centerXInTrack = (viewport.clientWidth / 2) - translateX;
+    const rawIndex = Math.round((centerXInTrack - (CARD_WIDTH / 2)) / (CARD_WIDTH + GAP_WIDTH));
+
+    return Math.max(0, Math.min(reelItems.length - 1, rawIndex));
+  }, [reelItems.length]);
+
+  useEffect(() => {
+    const stopTracking = () => {
+      if (centerTrackerRafRef.current) {
+        window.cancelAnimationFrame(centerTrackerRafRef.current);
+        centerTrackerRafRef.current = null;
+      }
+    };
+
+    if (reelItems.length === 0) {
+      setCenteredReelIndex(null);
+      stopTracking();
+      return;
+    }
+
+    const updateCentered = () => {
+      const next = getCenteredCardIndex();
+      setCenteredReelIndex((prev) => (prev === next ? prev : next));
+
+      if (isSpinning || spinnerAnimationRef.current) {
+        centerTrackerRafRef.current = window.requestAnimationFrame(updateCentered);
+      } else {
+        centerTrackerRafRef.current = null;
+      }
+    };
+
+    updateCentered();
+
+    return () => {
+      stopTracking();
+    };
+  }, [getCenteredCardIndex, isSpinning, reelItems.length]);
 
   const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[], winnerIndex: number) => {
     resetSpinnerAnimation();
@@ -1615,10 +1678,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 {isSpinning && (
                   <>
                     <div
-                      className={`absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 z-[26] pointer-events-none ${isGoldMode ? 'bg-yellow-400/55' : 'bg-cyan-400/40'}`}
-                      aria-hidden="true"
-                    ></div>
-                    <div
                       className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-16 sm:w-20 pointer-events-none z-[24] transition-opacity duration-500 ${isReelDecelerating ? 'opacity-80' : 'opacity-45'}`}
                       style={{
                         background: isGoldMode
@@ -1651,37 +1710,41 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     className={`flex will-change-transform transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`} 
                     style={{ gap: `${GAP_WIDTH}px`, transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}
                 >
-                    {reelItems.map((item, idx) => (
+                    {reelItems.map((item, idx) => {
+                        const isCenteredItem = idx === centeredReelIndex;
+                        const isWinnerCard = idx === activeWinnerIndex;
+                        const isHighlighted = isCenteredItem || (isLandingFlashActive && isWinnerCard);
+                        const rarityGlowStrength = item.rarity === 'legendary'
+                          ? (isHighlighted ? 'A8' : '70')
+                          : item.rarity === 'ultra rare'
+                            ? (isHighlighted ? '96' : '5C')
+                            : item.rarity === 'rare'
+                              ? (isHighlighted ? '8A' : '4D')
+                              : (isHighlighted ? '78' : '33');
+
+                        return (
                         <div 
                             key={`${item.id}-${idx}`}
-                            ref={idx === activeWinnerIndex ? winningCardRef : null}
-                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3.5 sm:p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''} ${isLandingFlashActive && idx === activeWinnerIndex ? 'ring-2 ring-white/50' : ''}`}
+                            ref={isWinnerCard ? winningCardRef : null}
+                            className={`relative flex-shrink-0 rounded-xl p-2.5 sm:p-3 flex items-center justify-center group transition-all duration-150 ${isHighlighted ? 'ring-2 ring-white/65 border border-white/45 scale-[1.01]' : 'border border-transparent'}`}
                             style={{ 
                                 width: `${CARD_WIDTH}px`, 
                                 height: `${CARD_WIDTH}px`,
-                                boxShadow: item.id === 'golden-ticket'
-                                  ? undefined
-                                  : `${isLandingFlashActive && idx === activeWinnerIndex ? `0 0 26px ${item.color}88, ` : ''}0 4px 0 0 ${item.color}20`
+                                background: `radial-gradient(circle at 50% 50%, ${item.color}${rarityGlowStrength} 0%, ${item.color}3A 42%, rgba(7,11,18,0.9) 85%)`,
+                                boxShadow: isHighlighted
+                                  ? `0 0 28px ${item.color}88, 0 0 0 1px ${item.color}52 inset`
+                                  : `0 0 18px ${item.color}40, 0 0 0 1px ${item.color}1f inset`
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
-                            <div
-                                className="absolute inset-4 rounded-full opacity-90"
-                                style={{
-                                  background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
-                                }}
-                            ></div>
                             <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
-                                className={`relative z-10 h-[6.5rem] w-[6.5rem] object-contain mb-2 sm:h-24 sm:w-24 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
+                                className={`relative z-10 h-[6.2rem] w-[6.2rem] object-contain sm:h-24 sm:w-24 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
                             />
-                            <div 
-                                className="absolute bottom-0 left-0 right-0 h-1 opacity-50 rounded-b-xl"
-                                style={{ backgroundColor: item.color }}
-                            ></div>
                         </div>
-                    ))}
+                    );
+                    })}
                 </div>
             </div>
 
