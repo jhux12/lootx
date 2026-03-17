@@ -17,7 +17,7 @@ import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
-import { getBoxTagIconClass, getBoxTagLabel, getBoxTags } from '../utils/boxTags';
+import { getBoxTags, sanitizeFontAwesomeClass } from '../utils/boxTags';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -602,7 +602,7 @@ export const AdminPanel: React.FC = () => {
   };
   const MAX_BOX_TAGS = 10;
   const MAX_BOX_TAG_LENGTH = 24;
-  const boxTagOptions = ['tech boxes', 'pokemon', 'digital codes', 'hot', 'deals'];
+  const baseBoxTagOptions = ['tech boxes', 'pokemon', 'digital codes', 'hot', 'deals'];
   const sortedPackages = useMemo(() => {
       return [...coinPackages].sort((a, b) => a.sortOrder - b.sortOrder);
   }, [coinPackages]);
@@ -619,6 +619,22 @@ export const AdminPanel: React.FC = () => {
       () => boxes.filter((box) => (box.currencyType ?? 'COIN') === 'XP'),
       [boxes]
   );
+
+
+  const boxTagOptions = useMemo(() => {
+      const tags = new Set<string>(baseBoxTagOptions);
+      boxes.forEach((box) => {
+          getBoxTags(box).forEach((tag) => tags.add(tag));
+      });
+      return Array.from(tags).sort((a, b) => a.localeCompare(b));
+  }, [boxes]);
+
+  const [boxTagIconsDraft, setBoxTagIconsDraft] = useState<Record<string, string>>(stripeSettings.boxTagIcons);
+  const [boxTagIconsNotice, setBoxTagIconsNotice] = useState(false);
+
+  useEffect(() => {
+      setBoxTagIconsDraft(stripeSettings.boxTagIcons);
+  }, [stripeSettings.boxTagIcons]);
 
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
@@ -1058,13 +1074,9 @@ export const AdminPanel: React.FC = () => {
 
   const normalizeBoxTagList = (tags: string[]) => {
       const normalized = tags
-          .map((tag) => tag.trim())
+          .map((tag) => tag.trim().toLowerCase())
           .filter(Boolean)
-          .map((tag) => {
-              const iconClass = getBoxTagIconClass(tag);
-              if (iconClass) return `<i class="${iconClass}"></i>`;
-              return tag.toLowerCase().slice(0, MAX_BOX_TAG_LENGTH);
-          });
+          .map((tag) => tag.slice(0, MAX_BOX_TAG_LENGTH));
 
       return Array.from(new Set(normalized)).slice(0, MAX_BOX_TAGS);
   };
@@ -1109,10 +1121,10 @@ export const AdminPanel: React.FC = () => {
   };
 
   const removeBoxTag = (tag: string) => {
-      const normalized = normalizeBoxTagList([tag])[0] ?? '';
+      const normalized = tag.trim().toLowerCase();
       setNewBox((prev) => ({
           ...prev,
-          tags: (prev.tags ?? []).filter((existing) => existing !== normalized)
+          tags: (prev.tags ?? []).filter((existing) => existing.toLowerCase() !== normalized)
       }));
   };
 
@@ -1160,6 +1172,21 @@ export const AdminPanel: React.FC = () => {
       });
       return Array.from(tags).sort((a, b) => a.localeCompare(b));
   }, [items]);
+
+  const handleSaveBoxTagIcons = () => {
+      const normalized = Object.fromEntries(
+          Object.entries(boxTagIconsDraft)
+              .map(([tag, iconClass]) => [tag.trim().toLowerCase(), sanitizeFontAwesomeClass(iconClass)] as const)
+              .filter(([tag, iconClass]) => tag.length > 0 && iconClass.length > 0)
+      );
+
+      updateStripeSettings({
+          ...stripeSettings,
+          boxTagIcons: normalized
+      });
+      setBoxTagIconsNotice(true);
+      window.setTimeout(() => setBoxTagIconsNotice(false), 3000);
+  };
 
   const filteredItemsForBox = useMemo(() => {
       const normalizedBrand = itemBrandFilter.trim().toLowerCase();
@@ -2479,7 +2506,8 @@ export const AdminPanel: React.FC = () => {
           shippingCoinCostCoins: Math.max(0, Math.round(Number(stripeSettingsDraft.shippingCoinCostCoins) || 0)),
           caseLabPublishFeeCoins: Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabPublishFeeCoins) || 0)),
           caseLabSellBackPercent: Math.min(100, Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabSellBackPercent) || 0))),
-          caseLabVisibleBoxIds: Array.from(new Set(stripeSettingsDraft.caseLabVisibleBoxIds))
+          caseLabVisibleBoxIds: Array.from(new Set(stripeSettingsDraft.caseLabVisibleBoxIds)),
+          boxTagIcons: stripeSettings.boxTagIcons
       });
       setStripeSettingsNotice(true);
       window.setTimeout(() => setStripeSettingsNotice(false), 3000);
@@ -3098,27 +3126,19 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                     <div className="mt-3 space-y-2">
                                         <div className="flex flex-wrap gap-2">
-                                            {(newBox.tags ?? []).map((tag) => {
-                                                const iconClass = getBoxTagIconClass(tag);
-                                                const tagLabel = getBoxTagLabel(tag);
-                                                return (
-                                                <span key={tag} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-gray-300">
-                                                    {iconClass ? (
-                                                        <i aria-hidden="true" className={`${iconClass} text-[11px]`} />
-                                                    ) : (
-                                                        <span className="uppercase">{tag}</span>
-                                                    )}
-                                                    <span className="text-[10px] text-gray-400">{tagLabel}</span>
+                                            {(newBox.tags ?? []).map((tag) => (
+                                                <span key={tag} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-300">
+                                                    {tag}
                                                     <button
                                                         type="button"
                                                         onClick={() => removeBoxTag(tag)}
                                                         className="text-gray-500 hover:text-white"
-                                                        aria-label={`Remove ${tagLabel}`}
+                                                        aria-label={`Remove ${tag}`}
                                                     >
                                                         <X className="h-3 w-3" />
                                                     </button>
                                                 </span>
-                                            );})}
+                                            ))}
                                         </div>
                                         <Input
                                             type="text"
@@ -3144,8 +3164,44 @@ export const AdminPanel: React.FC = () => {
                                         />
                                     </div>
                                     <p className="mt-2 text-[10px] text-gray-500">
-                                      Tags power homepage filters. Paste text tags or Font Awesome snippets (for example: &lt;i class="fa-regular fa-gem"&gt;&lt;/i&gt;). Max {MAX_BOX_TAGS} tags; text tags are capped at {MAX_BOX_TAG_LENGTH} characters.
+                                      Tags power homepage filters. Max {MAX_BOX_TAGS} tags, {MAX_BOX_TAG_LENGTH} characters each.
                                     </p>
+                                </div>
+                                <div className="mt-5 rounded-xl border border-white/10 bg-[#0b0e14] p-3 sm:p-4">
+                                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-white">Tag Icon Editor</h4>
+                                            <p className="text-[11px] text-gray-400">Assign a Font Awesome class to each tag. Example: <span className="font-mono">fa-regular fa-gem</span></p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveBoxTagIcons}
+                                            className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-500 sm:w-auto"
+                                        >
+                                            Save tag icons
+                                        </button>
+                                    </div>
+                                    {boxTagIconsNotice && <p className="mb-3 text-xs text-green-400">Tag icons saved.</p>}
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                        {boxTagOptions.map((tag) => {
+                                            const iconClass = boxTagIconsDraft[tag] ?? '';
+                                            return (
+                                                <div key={`tag-icon-${tag}`} className="rounded-lg border border-white/10 p-2">
+                                                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-200">
+                                                        <span className="truncate uppercase tracking-wide">{tag}</span>
+                                                        {iconClass ? <i aria-hidden="true" className={`${sanitizeFontAwesomeClass(iconClass)} text-sm text-indigo-300`} /> : <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />}
+                                                    </div>
+                                                    <Input
+                                                        type="text"
+                                                        placeholder="fa-regular fa-gem"
+                                                        className="w-full bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
+                                                        value={iconClass}
+                                                        onChange={(event) => setBoxTagIconsDraft((prev) => ({ ...prev, [tag]: event.target.value }))}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
 

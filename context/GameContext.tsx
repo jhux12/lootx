@@ -236,7 +236,8 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   stripeShippingProductId: '',
   caseLabPublishFeeCoins: 0,
   caseLabSellBackPercent: 75,
-  caseLabVisibleBoxIds: []
+  caseLabVisibleBoxIds: [],
+  boxTagIcons: {}
 };
 
 const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSettings => {
@@ -287,7 +288,15 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
     caseLabSellBackPercent: Math.min(100, Math.max(0, Math.round(Number(settings.caseLabSellBackPercent) || 0))),
     caseLabVisibleBoxIds: Array.isArray(settings.caseLabVisibleBoxIds)
       ? settings.caseLabVisibleBoxIds.filter((boxId): boxId is string => typeof boxId === 'string' && boxId.trim().length > 0)
-      : []
+      : [],
+    boxTagIcons: settings.boxTagIcons && typeof settings.boxTagIcons === 'object'
+      ? Object.fromEntries(
+          Object.entries(settings.boxTagIcons)
+            .filter(([tag, iconClass]) => typeof tag === 'string' && typeof iconClass === 'string')
+            .map(([tag, iconClass]) => [tag.trim().toLowerCase(), iconClass.trim().replace(/\s+/g, ' ')])
+            .filter(([tag, iconClass]) => tag.length > 0 && iconClass.length > 0)
+        )
+      : {}
   };
 };
 

@@ -3,29 +3,26 @@ import { MysteryBox } from '../types';
 export const normalizeBoxTag = (tag: string) => tag.trim().toLowerCase();
 
 const BOX_TAG_ICON_PATTERN = /^<i\s+class=(['"])([^'"]+)\1\s*><\/i>$/i;
+const FONT_AWESOME_STYLE_TOKENS = new Set(['fa', 'fa-solid', 'fa-regular', 'fa-brands', 'fa-light', 'fa-thin', 'fa-duotone']);
 
-export const getBoxTagIconClass = (tag: string) => {
-  const raw = tag.trim();
-  const match = raw.match(BOX_TAG_ICON_PATTERN);
-  if (!match) return null;
+export const sanitizeFontAwesomeClass = (value: string) => {
+  const trimmed = value.trim();
+  const fromHtml = trimmed.match(BOX_TAG_ICON_PATTERN)?.[2] ?? trimmed;
+  const className = fromHtml.replace(/\s+/g, ' ').trim();
+  if (!className) return '';
 
-  const className = match[2].trim().replace(/\s+/g, ' ');
   const tokens = className.split(' ').filter(Boolean);
-  const hasFontAwesomeToken = tokens.some((token) => token.startsWith('fa-') || token === 'fa');
-  if (!hasFontAwesomeToken) return null;
+  const hasStyleToken = tokens.some((token) => FONT_AWESOME_STYLE_TOKENS.has(token));
+  const hasIconToken = tokens.some((token) => token.startsWith('fa-') && !FONT_AWESOME_STYLE_TOKENS.has(token));
+  if (!hasStyleToken || !hasIconToken) return '';
 
-  return className;
+  return tokens.join(' ');
 };
 
-export const isBoxTagIcon = (tag: string) => getBoxTagIconClass(tag) !== null;
-
-export const getBoxTagLabel = (tag: string) => {
-  const iconClass = getBoxTagIconClass(tag);
-  if (!iconClass) return tag;
-
+export const getTagIconLabelFromClass = (iconClass: string) => {
   const iconToken = iconClass
     .split(' ')
-    .find((token) => token.startsWith('fa-') && !['fa', 'fa-solid', 'fa-regular', 'fa-brands', 'fa-light', 'fa-thin', 'fa-duotone'].includes(token));
+    .find((token) => token.startsWith('fa-') && !FONT_AWESOME_STYLE_TOKENS.has(token));
 
   if (!iconToken) return 'Icon';
 
