@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { CaseItem, MysteryBox } from '../types';
 import { TopDropsSlider } from './TopDropsSlider';
@@ -68,43 +68,67 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
     return featuredBoxes[0];
   }, [boxes, demoBoxId, featuredBoxes]);
 
-  const [demoSpinIndex, setDemoSpinIndex] = useState(10);
+  const [demoSpinIndex, setDemoSpinIndex] = useState(0);
   const [isSpinAnimating, setIsSpinAnimating] = useState(false);
+  const [demoReelItems, setDemoReelItems] = useState<CaseItem[]>([]);
+  const spinStopTimeoutRef = useRef<number | null>(null);
 
-  const spinnerItems = useMemo<CaseItem[]>(() => {
-    if (!showcaseBox?.items?.length) return [];
-    return Array.from({ length: 160 }, (_, index) => showcaseBox.items[index % showcaseBox.items.length]);
-  }, [showcaseBox]);
+  const SPINNER_CARD_WIDTH = 132;
+  const SPINNER_CARD_GAP = 12;
+  const SPINNER_PRE_WINNER_ITEMS = 14;
+  const SPINNER_POST_WINNER_ITEMS = 30;
+  const SPINNER_DURATION_MS = 5200;
+
+  const spinnerItems = useMemo<CaseItem[]>(() => showcaseBox?.items ?? [], [showcaseBox]);
 
   useEffect(() => {
-    setDemoSpinIndex(10);
-  }, [showcaseBox?.id]);
+    if (spinStopTimeoutRef.current) {
+      window.clearTimeout(spinStopTimeoutRef.current);
+      spinStopTimeoutRef.current = null;
+    }
 
-  useEffect(() => {
-    if (spinnerItems.length <= 1) return undefined;
+    if (spinnerItems.length === 0) {
+      setDemoReelItems([]);
+      setDemoSpinIndex(0);
+      setIsSpinAnimating(false);
+      return undefined;
+    }
 
     const runDemoSpin = () => {
-      const travel = 12 + Math.floor(Math.random() * 9);
-      setIsSpinAnimating(true);
-      setDemoSpinIndex((current) => {
-        const safeCurrent = current > spinnerItems.length - 28 ? 10 : current;
-        return Math.min(safeCurrent + travel, spinnerItems.length - 1);
+      const legendaryPool = spinnerItems.filter((item) => String(item.rarity ?? '').toLowerCase() === 'legendary');
+      const winnerPool = legendaryPool.length > 0 ? legendaryPool : spinnerItems;
+      const winner = winnerPool[Math.floor(Math.random() * winnerPool.length)];
+      const reelLength = SPINNER_PRE_WINNER_ITEMS + 1 + SPINNER_POST_WINNER_ITEMS;
+      const nextReel = Array.from({ length: reelLength }, (_, index) => {
+        if (index === SPINNER_PRE_WINNER_ITEMS) return winner;
+        return spinnerItems[Math.floor(Math.random() * spinnerItems.length)];
       });
-      window.setTimeout(() => {
+
+      setDemoReelItems(nextReel);
+      setIsSpinAnimating(false);
+      setDemoSpinIndex(0);
+
+      window.requestAnimationFrame(() => {
+        setIsSpinAnimating(true);
+        setDemoSpinIndex(SPINNER_PRE_WINNER_ITEMS);
+      });
+
+      spinStopTimeoutRef.current = window.setTimeout(() => {
         setIsSpinAnimating(false);
-      }, 2300);
+      }, SPINNER_DURATION_MS);
     };
 
     runDemoSpin();
-    const intervalId = window.setInterval(runDemoSpin, 5200);
+    const intervalId = window.setInterval(runDemoSpin, 6200);
 
     return () => {
       window.clearInterval(intervalId);
+      if (spinStopTimeoutRef.current) {
+        window.clearTimeout(spinStopTimeoutRef.current);
+        spinStopTimeoutRef.current = null;
+      }
     };
-  }, [spinnerItems.length]);
-
-  const spinnerCardWidth = 118;
-  const spinnerGap = 11;
+  }, [spinnerItems]);
 
   const handleCategoryCardClick = (index: number) => {
     const slug = stripeSettings.homeCategorySlugs[index]?.trim();
@@ -169,40 +193,50 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
               <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#090c13] to-transparent sm:w-20" />
 
               <div
-                className={`flex px-[50%] py-6 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[2300ms] ease-[cubic-bezier(0.1,0.92,0.23,1)]' : 'duration-300 ease-linear'}`}
+                className={`flex px-[50%] py-6 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[5200ms] ease-[cubic-bezier(0.08,0.9,0.15,1)]' : 'duration-150 ease-linear'}`}
                 style={{
-                  gap: `${spinnerGap}px`,
-                  marginLeft: `-${spinnerCardWidth / 2}px`,
-                  transform: `translateX(-${demoSpinIndex * (spinnerCardWidth + spinnerGap)}px)`
+                  gap: `${SPINNER_CARD_GAP}px`,
+                  marginLeft: `-${SPINNER_CARD_WIDTH / 2}px`,
+                  transform: `translateX(-${demoSpinIndex * (SPINNER_CARD_WIDTH + SPINNER_CARD_GAP)}px)`
                 }}
               >
-                {spinnerItems.map((item, idx) => {
-                  const isCenter = idx === demoSpinIndex;
-                  const borderTone = idx % 2 === 0 ? '#f28b2f' : '#9b47ff';
+                {demoReelItems.map((item, idx) => {
+                  const isCenter = idx === SPINNER_PRE_WINNER_ITEMS;
+                  const isLegendary = String(item.rarity ?? '').toLowerCase() === 'legendary';
                   return (
                     <div
                       key={`${item.id}-${idx}`}
-                      className={`relative flex h-[118px] w-[118px] flex-shrink-0 flex-col items-center justify-center rounded-2xl border bg-[#111827] p-2 transition ${
+                      className={`relative flex h-[132px] w-[132px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition ${
                         isCenter
-                          ? 'border-white/80 shadow-[0_0_20px_rgba(255,255,255,0.35)]'
-                          : 'border-[#2a3040]'
+                          ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
+                          : 'border-gray-800'
                       }`}
                       style={{
-                        boxShadow: isCenter ? undefined : `inset 0 0 0 1px ${borderTone}66`
+                        boxShadow: isLegendary ? '0 0 18px rgba(251,191,36,0.28)' : undefined
                       }}
                     >
+                      <div
+                        className="absolute inset-4 rounded-full opacity-90"
+                        style={{
+                          background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
+                        }}
+                      ></div>
                       <img
                         loading="lazy"
                         decoding="async"
                         src={item.image}
                         alt={item.name}
-                        className="h-12 w-12 object-contain sm:h-14 sm:w-14"
+                        className="relative z-10 h-20 w-20 object-contain"
                       />
-                      <p className="mt-2 line-clamp-2 text-center text-sm font-semibold leading-tight text-white">{item.name}</p>
+                      <p className="relative z-10 mt-2 line-clamp-2 text-center text-xs font-semibold leading-tight text-white">{item.name}</p>
+                      <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl opacity-60" style={{ backgroundColor: item.color }}></div>
                     </div>
                   );
                 })}
               </div>
+
+              <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-cyan-300/50" />
+              <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-14 -translate-x-1/2 bg-gradient-to-r from-cyan-400/0 via-cyan-300/20 to-cyan-400/0 sm:w-20" />
             </div>
           </div>
 
