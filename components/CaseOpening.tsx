@@ -50,16 +50,21 @@ const GAP_WIDTH = 16;
 const SPINNER_MOTION = {
   preWinnerItems: 68,
   postWinnerItems: 14,
+  winnerIndexJitterSlots: 5,
+  winnerIndexEdgeBufferSlots: 8,
   spinDurationMs: 4600,
   goldTicketDurationMs: 4200,
   goldFinalDurationMs: 3800,
   settleDurationMs: 360,
-  overshootPx: 18,
+  overshootPxMin: 12,
+  overshootPxMax: 28,
+  settleDistancePxMin: 3,
+  settleDistancePxMax: 10,
   approachOffsetSoftMaxPx: 16,
   approachOffsetNearMissMinPx: 34,
-  approachOffsetNearMissMaxPx: 58,
-  nearMissChance: 0.42,
-  durationVarianceMs: 420,
+  approachOffsetNearMissMaxPx: 66,
+  nearMissChance: 0.52,
+  durationVarianceMs: 520,
   initialBlurDurationMs: 260
 } as const;
 
@@ -299,6 +304,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isInitialMotionBlurActive, setIsInitialMotionBlurActive] = useState(false);
   const [isReelDecelerating, setIsReelDecelerating] = useState(false);
   const [isLandingFlashActive, setIsLandingFlashActive] = useState(false);
+  const [activeWinnerIndex, setActiveWinnerIndex] = useState(SPINNER_MOTION.preWinnerItems);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -569,23 +575,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [nonce]);
 
   const getApproachOffset = useCallback((rng: () => number) => {
-    const direction = rng() < 0.5 ? -1 : 1;
-
     if (rng() < SPINNER_MOTION.nearMissChance) {
       const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
       const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
       const magnitude = min + Math.round(rng() * (max - min));
-      return direction * magnitude;
+      return magnitude;
     }
 
     const softMagnitude = Math.round(rng() * SPINNER_MOTION.approachOffsetSoftMaxPx);
-    return direction * softMagnitude;
+    return softMagnitude;
+  }, []);
+
+  const getDynamicWinnerIndex = useCallback((rng: () => number) => {
+    const baseIndex = SPINNER_MOTION.preWinnerItems;
+    const reelLength = SPINNER_MOTION.preWinnerItems + 1 + SPINNER_MOTION.postWinnerItems;
+    const minIndex = Math.max(
+      SPINNER_MOTION.winnerIndexEdgeBufferSlots,
+      baseIndex - SPINNER_MOTION.winnerIndexJitterSlots
+    );
+    const maxIndex = Math.min(
+      reelLength - 1 - SPINNER_MOTION.winnerIndexEdgeBufferSlots,
+      baseIndex + SPINNER_MOTION.winnerIndexJitterSlots
+    );
+    const span = Math.max(0, maxIndex - minIndex);
+
+    return minIndex + Math.round(rng() * span);
   }, []);
 
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
-    const winnerIndex = SPINNER_MOTION.preWinnerItems;
+    const winnerIndex = getDynamicWinnerIndex(rng);
     const reelLength = SPINNER_MOTION.preWinnerItems + 1 + SPINNER_MOTION.postWinnerItems;
     const newReel: CaseItem[] = [];
 
@@ -621,7 +641,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     return { items: newReel, winnerIndex };
-  }, []);
+  }, [getDynamicWinnerIndex]);
 
   const getCenteredTranslate = useCallback((winnerIndex: number, landingOffset = 0) => {
     const viewport = scrollViewportRef.current;
@@ -696,6 +716,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const shouldPlayStartSound = options?.playStartSound ?? true;
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const approachOffset = getApproachOffset(rng);
+    const overshootPx = SPINNER_MOTION.overshootPxMin + Math.round(rng() * (SPINNER_MOTION.overshootPxMax - SPINNER_MOTION.overshootPxMin));
+    const settleDistancePx = SPINNER_MOTION.settleDistancePxMin + Math.round(rng() * (SPINNER_MOTION.settleDistancePxMax - SPINNER_MOTION.settleDistancePxMin));
     const durationVariance = Math.round((rng() - 0.5) * SPINNER_MOTION.durationVarianceMs * 2);
     const resolvedDuration = Math.max(3000, duration + durationVariance);
 
@@ -712,15 +734,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     await waitForNextPaint();
 
     const centeredTranslate = await resolveCenteredTranslate(winnerIndex, 0);
-    const approachTranslate = centeredTranslate === null ? null : centeredTranslate + approachOffset;
-    if (centeredTranslate === null || approachTranslate === null) {
+    if (centeredTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
     }
 
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection);
+    const spinDirection = centeredTranslate >= 0 ? 1 : -1;
+    const approachTranslate = centeredTranslate - (spinDirection * (approachOffset + settleDistancePx));
+    const overshootTarget = centeredTranslate + (spinDirection * overshootPx);
 
     setIsReelInFastMotion(true);
     setIsInitialMotionBlurActive(true);
@@ -734,7 +756,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const animation = container.animate(
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.1, 0.9, 0.25, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.8, easing: 'cubic-bezier(0.2, 1, 0.18, 1)' },
+        { transform: `translate3d(${approachTranslate}px, 0, 0)`, offset: 0.74, easing: 'cubic-bezier(0.2, 1, 0.18, 1)' },
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.9, easing: 'cubic-bezier(0.24, 0.92, 0.22, 1)' },
         { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.14, 0.9, 0.22, 1)' }
       ],
       {
@@ -880,11 +903,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     });
   });
 
-  const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[]) => {
+  const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[], winnerIndex: number) => {
     resetSpinnerAnimation();
     setIsReelInFastMotion(false);
     setIsReelDecelerating(false);
     setIsLandingFlashActive(false);
+    setActiveWinnerIndex(winnerIndex);
     winningCardRef.current = null;
 
     if (scrollContainerRef.current) {
@@ -1180,7 +1204,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
         const ticketSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-ticket');
         const ticketReelResult = generateReel(GOLDEN_TICKET_ITEM, items, { sprinkleGold: true, seed: ticketSeed });
-        await prepareReelForSpin(ticketReelResult.items);
+        await prepareReelForSpin(ticketReelResult.items, ticketReelResult.winnerIndex);
 
         animateSpin(ticketReelResult.winnerIndex, SPINNER_MOTION.goldTicketDurationMs, () => {
             // Stage 1 Complete: Activate Gold Mode
@@ -1193,7 +1217,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 const pool = legendaryPool.length > 0 ? legendaryPool : items;
                 const goldSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-final');
                 const goldReelResult = generateReel(winner, pool, { sprinkleGold: true, seed: goldSeed });
-                void prepareReelForSpin(goldReelResult.items).then(() => {
+                void prepareReelForSpin(goldReelResult.items, goldReelResult.winnerIndex).then(() => {
                   animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
@@ -1206,7 +1230,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         // --- NORMAL SPIN FLOW ---
         const mainSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'main');
         const normalReelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
-        await prepareReelForSpin(normalReelResult.items);
+        await prepareReelForSpin(normalReelResult.items, normalReelResult.winnerIndex);
 
         animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs, () => {
             finishSpin(winner);
@@ -1630,14 +1654,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     {reelItems.map((item, idx) => (
                         <div 
                             key={`${item.id}-${idx}`}
-                            ref={idx === SPINNER_MOTION.preWinnerItems ? winningCardRef : null}
-                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3.5 sm:p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? 'ring-2 ring-white/50' : ''}`}
+                            ref={idx === activeWinnerIndex ? winningCardRef : null}
+                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3.5 sm:p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''} ${isLandingFlashActive && idx === activeWinnerIndex ? 'ring-2 ring-white/50' : ''}`}
                             style={{ 
                                 width: `${CARD_WIDTH}px`, 
                                 height: `${CARD_WIDTH}px`,
                                 boxShadow: item.id === 'golden-ticket'
                                   ? undefined
-                                  : `${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? `0 0 26px ${item.color}88, ` : ''}0 4px 0 0 ${item.color}20`
+                                  : `${isLandingFlashActive && idx === activeWinnerIndex ? `0 0 26px ${item.color}88, ` : ''}0 4px 0 0 ${item.color}20`
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
