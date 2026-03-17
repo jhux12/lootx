@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { CaseItem, MysteryBox } from '../types';
 import { TopDropsSlider } from './TopDropsSlider';
+import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
 
 type HomeReplicaProps = {
@@ -68,43 +69,100 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
     return featuredBoxes[0];
   }, [boxes, demoBoxId, featuredBoxes]);
 
-  const [demoSpinIndex, setDemoSpinIndex] = useState(10);
+  const [demoSpinIndex, setDemoSpinIndex] = useState(14);
   const [isSpinAnimating, setIsSpinAnimating] = useState(false);
+  const [demoReelItems, setDemoReelItems] = useState<CaseItem[]>([]);
+  const [landedIndex, setLandedIndex] = useState<number | null>(null);
+  const spinStartTimeoutRef = useRef<number | null>(null);
+  const spinStopTimeoutRef = useRef<number | null>(null);
+  const spinReplayTimeoutRef = useRef<number | null>(null);
+  const demoSpinIndexRef = useRef(14);
 
-  const spinnerItems = useMemo<CaseItem[]>(() => {
-    if (!showcaseBox?.items?.length) return [];
-    return Array.from({ length: 160 }, (_, index) => showcaseBox.items[index % showcaseBox.items.length]);
-  }, [showcaseBox]);
+  const SPINNER_CARD_WIDTH = 136;
+  const SPINNER_CARD_GAP = 12;
+  const SPINNER_DURATION_MS = 5200;
+  const SPINNER_REPLAY_DELAY_MS = 800;
+  const SPINNER_TRAVEL_MIN = 18;
+  const SPINNER_TRAVEL_MAX = 26;
+  const INITIAL_REEL_LENGTH = 140;
+
+  const spinnerItems = useMemo<CaseItem[]>(() => showcaseBox?.items ?? [], [showcaseBox]);
 
   useEffect(() => {
-    setDemoSpinIndex(10);
-  }, [showcaseBox?.id]);
+    const clearSpinTimers = () => {
+      if (spinStartTimeoutRef.current) {
+        window.clearTimeout(spinStartTimeoutRef.current);
+        spinStartTimeoutRef.current = null;
+      }
+      if (spinStopTimeoutRef.current) {
+        window.clearTimeout(spinStopTimeoutRef.current);
+        spinStopTimeoutRef.current = null;
+      }
+      if (spinReplayTimeoutRef.current) {
+        window.clearTimeout(spinReplayTimeoutRef.current);
+        spinReplayTimeoutRef.current = null;
+      }
+    };
 
-  useEffect(() => {
-    if (spinnerItems.length <= 1) return undefined;
+    clearSpinTimers();
+
+    if (spinnerItems.length === 0) {
+      setDemoReelItems([]);
+      setDemoSpinIndex(0);
+      demoSpinIndexRef.current = 0;
+      setLandedIndex(null);
+      setIsSpinAnimating(false);
+      return undefined;
+    }
+
+    const pickRandomItem = () => spinnerItems[Math.floor(Math.random() * spinnerItems.length)];
 
     const runDemoSpin = () => {
-      const travel = 12 + Math.floor(Math.random() * 9);
-      setIsSpinAnimating(true);
-      setDemoSpinIndex((current) => {
-        const safeCurrent = current > spinnerItems.length - 28 ? 10 : current;
-        return Math.min(safeCurrent + travel, spinnerItems.length - 1);
+      const legendaryPool = spinnerItems.filter((item) => String(item.rarity ?? '').toLowerCase() === 'legendary');
+      const winnerPool = legendaryPool.length > 0 ? legendaryPool : spinnerItems;
+      const winner = winnerPool[Math.floor(Math.random() * winnerPool.length)];
+      const travel = SPINNER_TRAVEL_MIN + Math.floor(Math.random() * (SPINNER_TRAVEL_MAX - SPINNER_TRAVEL_MIN + 1));
+      const targetIndex = demoSpinIndexRef.current + travel;
+
+      setDemoReelItems((previous) => {
+        const next = previous.length > 0 ? [...previous] : Array.from({ length: INITIAL_REEL_LENGTH }, pickRandomItem);
+
+        while (next.length <= targetIndex + 12) {
+          next.push(pickRandomItem());
+        }
+
+        next[targetIndex] = winner;
+        return next;
       });
-      window.setTimeout(() => {
+
+      setIsSpinAnimating(false);
+      setLandedIndex(null);
+
+      spinStartTimeoutRef.current = window.setTimeout(() => {
+        setIsSpinAnimating(true);
+        setDemoSpinIndex(targetIndex);
+        demoSpinIndexRef.current = targetIndex;
+      }, 90);
+
+      spinStopTimeoutRef.current = window.setTimeout(() => {
         setIsSpinAnimating(false);
-      }, 2300);
+        setLandedIndex(targetIndex);
+        spinReplayTimeoutRef.current = window.setTimeout(runDemoSpin, SPINNER_REPLAY_DELAY_MS);
+      }, SPINNER_DURATION_MS + 90);
     };
 
-    runDemoSpin();
-    const intervalId = window.setInterval(runDemoSpin, 5200);
+    const initialReel = Array.from({ length: INITIAL_REEL_LENGTH }, pickRandomItem);
+    setDemoReelItems(initialReel);
+    setDemoSpinIndex(14);
+    demoSpinIndexRef.current = 14;
+    setLandedIndex(null);
+
+    spinReplayTimeoutRef.current = window.setTimeout(runDemoSpin, 250);
 
     return () => {
-      window.clearInterval(intervalId);
+      clearSpinTimers();
     };
-  }, [spinnerItems.length]);
-
-  const spinnerCardWidth = 118;
-  const spinnerGap = 11;
+  }, [spinnerItems]);
 
   const handleCategoryCardClick = (index: number) => {
     const slug = stripeSettings.homeCategorySlugs[index]?.trim();
@@ -169,40 +227,60 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
               <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#090c13] to-transparent sm:w-20" />
 
               <div
-                className={`flex px-[50%] py-6 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[2300ms] ease-[cubic-bezier(0.1,0.92,0.23,1)]' : 'duration-300 ease-linear'}`}
+                className={`flex px-[50%] py-6 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[5200ms] ease-[cubic-bezier(0.08,0.9,0.15,1)]' : 'duration-200 ease-out'}`}
                 style={{
-                  gap: `${spinnerGap}px`,
-                  marginLeft: `-${spinnerCardWidth / 2}px`,
-                  transform: `translateX(-${demoSpinIndex * (spinnerCardWidth + spinnerGap)}px)`
+                  gap: `${SPINNER_CARD_GAP}px`,
+                  marginLeft: `-${SPINNER_CARD_WIDTH / 2}px`,
+                  transform: `translateX(-${demoSpinIndex * (SPINNER_CARD_WIDTH + SPINNER_CARD_GAP)}px)`
                 }}
               >
-                {spinnerItems.map((item, idx) => {
+                {demoReelItems.map((item, idx) => {
                   const isCenter = idx === demoSpinIndex;
-                  const borderTone = idx % 2 === 0 ? '#f28b2f' : '#9b47ff';
+                  const isLandedWinner = landedIndex === idx && !isSpinAnimating;
+                  const isLegendary = String(item.rarity ?? '').toLowerCase() === 'legendary';
                   return (
                     <div
                       key={`${item.id}-${idx}`}
-                      className={`relative flex h-[118px] w-[118px] flex-shrink-0 flex-col items-center justify-center rounded-2xl border bg-[#111827] p-2 transition ${
-                        isCenter
-                          ? 'border-white/80 shadow-[0_0_20px_rgba(255,255,255,0.35)]'
-                          : 'border-[#2a3040]'
+                      className={`relative flex h-[136px] w-[136px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition ${
+                        isLandedWinner
+                          ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
+                          : 'border-gray-800'
                       }`}
                       style={{
-                        boxShadow: isCenter ? undefined : `inset 0 0 0 1px ${borderTone}66`
+                        boxShadow: isLandedWinner
+                          ? `${isLegendary ? '0 0 18px rgba(251,191,36,0.28), ' : ''}0 0 24px rgba(34,211,238,0.34)`
+                          : (isLegendary ? '0 0 18px rgba(251,191,36,0.28)' : undefined)
                       }}
                     >
+                      <div
+                        className="absolute inset-4 rounded-full opacity-90"
+                        style={{
+                          background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
+                        }}
+                      ></div>
                       <img
                         loading="lazy"
                         decoding="async"
                         src={item.image}
                         alt={item.name}
-                        className="h-12 w-12 object-contain sm:h-14 sm:w-14"
+                        className="relative z-10 h-[90px] w-[90px] object-contain"
                       />
-                      <p className="mt-2 line-clamp-2 text-center text-sm font-semibold leading-tight text-white">{item.name}</p>
+                      <div className="relative z-10 mt-2 flex items-center justify-center px-1 text-xs font-semibold text-emerald-100 sm:text-sm">
+                        <CoinAmount
+                          amount={item.price}
+                          formatOptions={{ maximumFractionDigits: 0 }}
+                          className="text-emerald-100"
+                          iconClassName="h-4 w-4"
+                        />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl opacity-60" style={{ backgroundColor: item.color }}></div>
                     </div>
                   );
                 })}
               </div>
+
+              <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-cyan-300/50" />
+              <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-14 -translate-x-1/2 bg-gradient-to-r from-cyan-400/0 via-cyan-300/20 to-cyan-400/0 sm:w-20" />
             </div>
           </div>
 
