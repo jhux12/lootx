@@ -17,7 +17,7 @@ import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
-import { getBoxTags } from '../utils/boxTags';
+import { getBoxTagIconClass, getBoxTagLabel, getBoxTags } from '../utils/boxTags';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -1058,9 +1058,14 @@ export const AdminPanel: React.FC = () => {
 
   const normalizeBoxTagList = (tags: string[]) => {
       const normalized = tags
-          .map((tag) => tag.trim().toLowerCase())
+          .map((tag) => tag.trim())
           .filter(Boolean)
-          .map((tag) => tag.slice(0, MAX_BOX_TAG_LENGTH));
+          .map((tag) => {
+              const iconClass = getBoxTagIconClass(tag);
+              if (iconClass) return `<i class="${iconClass}"></i>`;
+              return tag.toLowerCase().slice(0, MAX_BOX_TAG_LENGTH);
+          });
+
       return Array.from(new Set(normalized)).slice(0, MAX_BOX_TAGS);
   };
 
@@ -1095,7 +1100,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   const addBoxTag = (tag: string) => {
-      const normalized = tag.trim().toLowerCase();
+      const normalized = tag.trim();
       if (!normalized) return;
       setNewBox((prev) => ({
           ...prev,
@@ -1104,10 +1109,10 @@ export const AdminPanel: React.FC = () => {
   };
 
   const removeBoxTag = (tag: string) => {
-      const normalized = tag.trim().toLowerCase();
+      const normalized = normalizeBoxTagList([tag])[0] ?? '';
       setNewBox((prev) => ({
           ...prev,
-          tags: (prev.tags ?? []).filter((existing) => existing.toLowerCase() !== normalized)
+          tags: (prev.tags ?? []).filter((existing) => existing !== normalized)
       }));
   };
 
@@ -3093,19 +3098,27 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                     <div className="mt-3 space-y-2">
                                         <div className="flex flex-wrap gap-2">
-                                            {(newBox.tags ?? []).map((tag) => (
-                                                <span key={tag} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-300">
-                                                    {tag}
+                                            {(newBox.tags ?? []).map((tag) => {
+                                                const iconClass = getBoxTagIconClass(tag);
+                                                const tagLabel = getBoxTagLabel(tag);
+                                                return (
+                                                <span key={tag} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-gray-300">
+                                                    {iconClass ? (
+                                                        <i aria-hidden="true" className={`${iconClass} text-[11px]`} />
+                                                    ) : (
+                                                        <span className="uppercase">{tag}</span>
+                                                    )}
+                                                    <span className="text-[10px] text-gray-400">{tagLabel}</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => removeBoxTag(tag)}
                                                         className="text-gray-500 hover:text-white"
-                                                        aria-label={`Remove ${tag}`}
+                                                        aria-label={`Remove ${tagLabel}`}
                                                     >
                                                         <X className="h-3 w-3" />
                                                     </button>
                                                 </span>
-                                            ))}
+                                            );})}
                                         </div>
                                         <Input
                                             type="text"
@@ -3131,7 +3144,7 @@ export const AdminPanel: React.FC = () => {
                                         />
                                     </div>
                                     <p className="mt-2 text-[10px] text-gray-500">
-                                      Tags power homepage filters. Max {MAX_BOX_TAGS} tags, {MAX_BOX_TAG_LENGTH} characters each.
+                                      Tags power homepage filters. Paste text tags or Font Awesome snippets (for example: &lt;i class="fa-regular fa-gem"&gt;&lt;/i&gt;). Max {MAX_BOX_TAGS} tags; text tags are capped at {MAX_BOX_TAG_LENGTH} characters.
                                     </p>
                                 </div>
                             </div>

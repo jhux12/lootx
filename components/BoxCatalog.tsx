@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Filter, ChevronDown } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
-import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
+import { getBoxTagIconClass, getBoxTagLabel, getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { TopDropsSlider } from './TopDropsSlider';
@@ -12,6 +12,22 @@ import { prefetchBox } from '../src/lib/prefetch/prefetchBox';
 
 type BoxCatalogProps = {
   isChatCollapsed: boolean;
+};
+
+
+const CategoryTag: React.FC<{ title: string; className?: string }> = ({ title, className }) => {
+  const iconClass = getBoxTagIconClass(title);
+  if (iconClass) {
+    const label = getBoxTagLabel(title);
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <i aria-hidden="true" className={`${iconClass} ${className ?? ''}`.trim()} />
+        <span>{label}</span>
+      </span>
+    );
+  }
+
+  return <>{title}</>;
 };
 
 const toCategoryKey = (value: string) =>
@@ -59,10 +75,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     return Array.from(counts.entries())
       .map(([id, count]) => ({
         id,
-        title: id
-          .split(/[-_\s]+/)
-          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(' '),
+        title: getBoxTagIconClass(id)
+          ? id
+          : id
+              .split(/[-_\s]+/)
+              .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+              .join(' '),
         count
       }))
       .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title));
@@ -213,7 +231,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${activeCategory === cat.id ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
               >
                 <div className="w-4 h-4 rounded-full bg-indigo-500" />
-                {cat.title}
+                <CategoryTag title={cat.title} className="text-sm" />
               </button>
             ))}
           </div>
@@ -272,7 +290,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       activeCategory === cat.id ? 'bg-indigo-500/30 text-white' : 'bg-white/5 text-neutral-300'
                     }`}
                   >
-                    {cat.title}
+                    <CategoryTag title={cat.title} className="text-sm" />
                   </button>
                 ))}
               </div>
@@ -296,7 +314,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5">
                     <div className="w-4 h-4 rounded-full bg-indigo-500" />
                   </div>
-                  <h2 className="text-xl font-bold text-white">{group.title}</h2>
+                  <h2 className="text-xl font-bold text-white"><CategoryTag title={group.title} className="text-base" /></h2>
                 </div>
               )}
 
