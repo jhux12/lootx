@@ -72,12 +72,13 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const [demoSpinIndex, setDemoSpinIndex] = useState(14);
   const [isSpinAnimating, setIsSpinAnimating] = useState(false);
   const [demoReelItems, setDemoReelItems] = useState<CaseItem[]>([]);
+  const [landedIndex, setLandedIndex] = useState<number | null>(null);
   const spinStartTimeoutRef = useRef<number | null>(null);
   const spinStopTimeoutRef = useRef<number | null>(null);
   const spinReplayTimeoutRef = useRef<number | null>(null);
   const demoSpinIndexRef = useRef(14);
 
-  const SPINNER_CARD_WIDTH = 144;
+  const SPINNER_CARD_WIDTH = 136;
   const SPINNER_CARD_GAP = 12;
   const SPINNER_DURATION_MS = 5200;
   const SPINNER_REPLAY_DELAY_MS = 800;
@@ -109,6 +110,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       setDemoReelItems([]);
       setDemoSpinIndex(0);
       demoSpinIndexRef.current = 0;
+      setLandedIndex(null);
       setIsSpinAnimating(false);
       return undefined;
     }
@@ -134,6 +136,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       });
 
       setIsSpinAnimating(false);
+      setLandedIndex(null);
 
       spinStartTimeoutRef.current = window.setTimeout(() => {
         setIsSpinAnimating(true);
@@ -143,6 +146,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 
       spinStopTimeoutRef.current = window.setTimeout(() => {
         setIsSpinAnimating(false);
+        setLandedIndex(targetIndex);
         spinReplayTimeoutRef.current = window.setTimeout(runDemoSpin, SPINNER_REPLAY_DELAY_MS);
       }, SPINNER_DURATION_MS + 90);
     };
@@ -151,6 +155,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
     setDemoReelItems(initialReel);
     setDemoSpinIndex(14);
     demoSpinIndexRef.current = 14;
+    setLandedIndex(null);
 
     spinReplayTimeoutRef.current = window.setTimeout(runDemoSpin, 250);
 
@@ -231,17 +236,18 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
               >
                 {demoReelItems.map((item, idx) => {
                   const isCenter = idx === demoSpinIndex;
+                  const isLandedWinner = landedIndex === idx && !isSpinAnimating;
                   const isLegendary = String(item.rarity ?? '').toLowerCase() === 'legendary';
                   return (
                     <div
                       key={`${item.id}-${idx}`}
-                      className={`relative flex h-[136px] w-[136px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition sm:h-[148px] sm:w-[148px] ${
-                        isCenter
+                      className={`relative flex h-[136px] w-[136px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition ${
+                        isLandedWinner
                           ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
                           : 'border-gray-800'
                       }`}
                       style={{
-                        boxShadow: isCenter
+                        boxShadow: isLandedWinner
                           ? `${isLegendary ? '0 0 18px rgba(251,191,36,0.28), ' : ''}0 0 24px rgba(34,211,238,0.34)`
                           : (isLegendary ? '0 0 18px rgba(251,191,36,0.28)' : undefined)
                       }}
@@ -257,7 +263,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                         decoding="async"
                         src={item.image}
                         alt={item.name}
-                        className="relative z-10 h-[90px] w-[90px] object-contain sm:h-[96px] sm:w-[96px]"
+                        className="relative z-10 h-[90px] w-[90px] object-contain"
                       />
                       <div className="relative z-10 mt-2 flex items-center justify-center px-1 text-xs font-semibold text-emerald-100 sm:text-sm">
                         <CoinAmount
