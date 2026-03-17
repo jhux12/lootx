@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Backpack, Box, Crown, Gamepad2 } from 'lucide-react';
+import { Backpack, Box, Crown } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
@@ -7,13 +7,18 @@ type NavItem = {
   id: 'MENU' | 'BOXES' | 'PLINKO' | 'INVENTORY' | 'LEADERBOARD';
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
+  iconClassName?: string;
   requiresAuth?: boolean;
 };
+
+const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <i className={`fa-brands fa-superpowers ${className ?? ''}`.trim()} aria-hidden="true" />
+);
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'MENU', label: 'Menu' },
   { id: 'BOXES', label: 'Boxes', icon: Box },
-  { id: 'PLINKO', label: 'Upgrader', icon: Gamepad2 },
+  { id: 'PLINKO', label: 'Upgrader', icon: UpgraderIcon, iconClassName: 'text-[18px]' },
   { id: 'INVENTORY', label: 'Inventory', icon: Backpack, requiresAuth: true },
   { id: 'LEADERBOARD', label: 'Ladder', icon: Crown }
 ];
@@ -100,7 +105,7 @@ export const MobileBottomNav: React.FC = () => {
                 </span>
               ) : Icon ? (
                 <span className="relative">
-                  <Icon className={iconClassName} />
+                  <Icon className={item.iconClassName ?? iconClassName} />
                   {item.id === 'INVENTORY' && hasFreeSignupBox && (
                     <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#080b10]" aria-hidden="true" />
                   )}

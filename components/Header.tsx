@@ -3,7 +3,6 @@ import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 import {
   Facebook,
   ChevronDown,
-  Gamepad2,
   HelpCircle,
   Instagram,
   LifeBuoy,
@@ -41,6 +40,10 @@ type HeaderProps = {
   unreadChatCount?: number;
   isSticky?: boolean;
 };
+
+const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <i className={`fa-brands fa-superpowers ${className ?? ''}`.trim()} aria-hidden="true" />
+);
 
 const drawerCardClass =
   'flex items-center gap-3 rounded-xl border border-white/5 bg-[#18181b] p-3 text-left transition-colors hover:bg-[#202023]';
@@ -232,7 +235,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   aria-expanded={isGamesMenuOpen}
                   aria-haspopup="menu"
                 >
-                  <Gamepad2 className="h-4 w-4 text-emerald-300" />
+                  <UpgraderIcon className="h-4 w-4 text-emerald-300" />
                   Games
                   <ChevronDown className={`h-4 w-4 transition-transform ${isGamesMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -246,7 +249,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     Boxes
                   </button>
                   <button type="button" onClick={() => navigate('PLINKO')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5">
-                    <Gamepad2 className="h-4 w-4 text-emerald-300" />
+                    <UpgraderIcon className="h-4 w-4 text-emerald-300" />
                     Upgrader
                   </button>
                 </div>
@@ -425,7 +428,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             <h3 className="ml-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Games</h3>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => navigate('BOXES')} className={drawerCardClass}><Package className="h-5 w-5 text-orange-500" /><span className="text-sm font-bold text-white">Boxes</span></button>
-              <button onClick={() => navigate('PLINKO')} className={drawerCardClass}><Gamepad2 className="h-5 w-5 text-emerald-400" /><span className="text-sm font-bold text-white">Arcade · Upgrader</span></button>
+              <button onClick={() => navigate('PLINKO')} className={drawerCardClass}><UpgraderIcon className="h-5 w-5 text-emerald-400" /><span className="text-sm font-bold text-white">Arcade · Upgrader</span></button>
             </div>
           </section>
 
