@@ -86,6 +86,7 @@ export interface CaseItem {
   tags?: string[];
   sizes?: string[];
   redeemable?: boolean;
+  forceFullSellBack?: boolean;
 }
 
 export interface MysteryBox {

@@ -249,7 +249,8 @@ export const AdminPanel: React.FC = () => {
       category: '',
       tags: [],
       sizes: [],
-      redeemable: true
+      redeemable: true,
+      forceFullSellBack: false
   });
   const [itemTagInput, setItemTagInput] = useState('');
   const [itemSizeInput, setItemSizeInput] = useState('');
@@ -1231,7 +1232,8 @@ export const AdminPanel: React.FC = () => {
           category,
           tags,
           sizes: sizes.length ? sizes : undefined,
-          redeemable: newItem.redeemable ?? true
+          redeemable: newItem.redeemable ?? true,
+          forceFullSellBack: newItem.forceFullSellBack ?? false
       };
 
       if (editingItemId) {
@@ -1257,7 +1259,8 @@ export const AdminPanel: React.FC = () => {
           category: item.category ?? '',
           tags: item.tags ?? [],
           sizes: item.sizes ?? [],
-          redeemable: item.redeemable ?? true
+          redeemable: item.redeemable ?? true,
+          forceFullSellBack: item.forceFullSellBack ?? false
       });
       setItemTagInput('');
       setItemSizeInput('');
@@ -1285,7 +1288,8 @@ export const AdminPanel: React.FC = () => {
           category: '',
           tags: [],
           sizes: [],
-          redeemable: true
+          redeemable: true,
+          forceFullSellBack: false
       });
       setItemTagInput('');
       setItemSizeInput('');
@@ -2877,6 +2881,19 @@ export const AdminPanel: React.FC = () => {
                                   className="h-4 w-4 rounded border-gray-600 bg-transparent text-emerald-500 focus:ring-emerald-400"
                                 />
                                 Redeemable (allow sell back)
+                            </label>
+                            <label className="col-span-1 md:col-span-2 flex items-start gap-3 rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300">
+                                <Checkbox
+                                  checked={newItem.forceFullSellBack ?? false}
+                                  onChange={(event) => setNewItem({ ...newItem, forceFullSellBack: event.target.checked })}
+                                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-600 bg-transparent text-emerald-500 focus:ring-emerald-400"
+                                />
+                                <span className="leading-tight">
+                                  Force 100% sell back for this item
+                                  <span className="mt-1 block text-[10px] text-gray-500">
+                                    Overrides the box sell back percentage when this item is won.
+                                  </span>
+                                </span>
                             </label>
                         </div>
                         <div className="mb-4">
