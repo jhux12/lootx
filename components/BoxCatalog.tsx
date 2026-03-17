@@ -313,11 +313,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                     onMouseEnter={() => { void prefetchBox(box.id, async () => box, box.image); }}
                     onTouchStart={() => { void prefetchBox(box.id, async () => box, box.image); }}
                   >
-                    <div className="relative w-full h-[170px] sm:h-[180px] p-4 sm:p-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent">
+                    <div className="relative flex h-[170px] w-full items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent sm:h-[180px]">
                       <BlurImage
                         src={box.image}
                         alt={box.name}
-                        className="h-full w-full object-contain drop-shadow-xl group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300"
+                        className="h-[170px] w-[150px] max-w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 sm:h-[180px] sm:w-[165px] md:w-[180px]"
                       />
                     </div>
 
