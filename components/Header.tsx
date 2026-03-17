@@ -411,8 +411,27 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
               </>
             ) : (
               <>
-                <button onClick={() => { playSound('click'); setIsMobileMenuOpen(false); openAuthModal('login'); }} className="rounded-s bg-indigo-600 py-3.5 font-bold text-white">Log In</button>
-                <button onClick={() => { playSound('click'); setIsMobileMenuOpen(false); openAuthModal('register'); }} className="rounded-s border border-white/5 bg-[#18181b] py-3.5 font-bold text-white">Register</button>
+               <button
+  onClick={() => {
+    playSound('click');
+    setIsMobileMenuOpen(false);
+    openAuthModal('login');
+  }}
+  className="rounded-s bg-indigo-600 px-3 py-2 text-sm font-bold text-white"
+>
+  Log In
+</button>
+
+<button
+  onClick={() => {
+    playSound('click');
+    setIsMobileMenuOpen(false);
+    openAuthModal('register');
+  }}
+  className="rounded-s border border-white/5 bg-[#18181b] px-3 py-2 text-sm font-bold text-white"
+>
+  Register
+</button>
               </>
             )}
           </div>
