@@ -180,6 +180,28 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     setIsRewardsMenuOpen(false);
   };
 
+  const authButtons = useMemo(() => (
+    <>
+      <button
+        onClick={() => {
+          playSound('click');
+          openAuthModal('login');
+        }}
+        className="rounded-xl border border-white/10 bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800"
+      >
+        Sign in
+      </button>
+      <button
+        onClick={() => {
+          playSound('click');
+          openAuthModal('register');
+        }}
+        className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
+      >
+        Sign up
+      </button>
+    </>
+  ), [openAuthModal, playSound]);
 
   return (
     <>
