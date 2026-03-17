@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { CaseItem, MysteryBox } from '../types';
 import { TopDropsSlider } from './TopDropsSlider';
+import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
 
 type HomeReplicaProps = {
@@ -76,7 +77,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const spinReplayTimeoutRef = useRef<number | null>(null);
   const demoSpinIndexRef = useRef(14);
 
-  const SPINNER_CARD_WIDTH = 118;
+  const SPINNER_CARD_WIDTH = 132;
   const SPINNER_CARD_GAP = 12;
   const SPINNER_DURATION_MS = 5200;
   const SPINNER_REPLAY_DELAY_MS = 800;
@@ -234,7 +235,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                   return (
                     <div
                       key={`${item.id}-${idx}`}
-                      className={`relative flex h-[118px] w-[118px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-2.5 transition ${
+                      className={`relative flex h-[132px] w-[132px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition ${
                         isCenter
                           ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
                           : 'border-gray-800'
@@ -256,9 +257,16 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                         decoding="async"
                         src={item.image}
                         alt={item.name}
-                        className="relative z-10 h-16 w-16 object-contain"
+                        className="relative z-10 h-[84px] w-[84px] object-contain"
                       />
-                      <p className="relative z-10 mt-2 line-clamp-2 text-center text-xs font-semibold leading-tight text-white">{item.name}</p>
+                      <div className="relative z-10 mt-2 flex items-center justify-center rounded-full border border-emerald-300/40 bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-100">
+                        <CoinAmount
+                          amount={item.price}
+                          formatOptions={{ maximumFractionDigits: 0 }}
+                          className="text-emerald-100"
+                          iconClassName="h-3.5 w-3.5"
+                        />
+                      </div>
                       <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl opacity-60" style={{ backgroundColor: item.color }}></div>
                     </div>
                   );
