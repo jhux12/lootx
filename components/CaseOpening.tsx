@@ -1248,14 +1248,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsBoxPreviewVisible(true);
     setIsBoxPreviewFading(false);
 
-    // Reset reel track after each completed spin so follow-up spins start from a clean base.
-    window.requestAnimationFrame(() => {
-      if (!scrollContainerRef.current) return;
-      scrollContainerRef.current.style.transition = 'none';
-      scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
-      scrollContainerRef.current.getAnimations().forEach((animation) => animation.cancel());
-    });
-
     setShowWinModal(true);
     if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
       const particles = createMicroConfetti(18);
@@ -1265,6 +1257,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setWonItem(item);
     setRewardResolved(false);
   };
+
+  const resetReelTrackPosition = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      if (!scrollContainerRef.current) return;
+      scrollContainerRef.current.style.transition = 'none';
+      scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
+      scrollContainerRef.current.getAnimations().forEach((animation) => animation.cancel());
+    });
+  }, []);
 
 
 
@@ -1279,6 +1280,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       setRewardResolved(true);
     }
     setShowWinModal(false);
+    resetReelTrackPosition();
     setWonInventoryItem(null);
     setSellOfferGenerated(false);
   };
@@ -1291,7 +1293,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
     if (isDemoSpin || isGeneratingSellOffer || isSellingItem) {
         if (isDemoSpin) {
-          setShowWinModal(false);
+          closeWinModal();
         }
         return;
     }
@@ -1317,9 +1319,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       window.clearTimeout(sellOfferTimerRef.current);
       sellOfferTimerRef.current = null;
     }
-    setShowWinModal(false);
-    setWonInventoryItem(null);
-    setSellOfferGenerated(false);
+    closeWinModal();
     setIsGeneratingSellOffer(false);
     setIsSellingItem(false);
   };
