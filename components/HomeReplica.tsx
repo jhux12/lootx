@@ -71,21 +71,37 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const [demoSpinIndex, setDemoSpinIndex] = useState(0);
   const [isSpinAnimating, setIsSpinAnimating] = useState(false);
   const [demoReelItems, setDemoReelItems] = useState<CaseItem[]>([]);
+  const [spinCycle, setSpinCycle] = useState(0);
+  const spinStartTimeoutRef = useRef<number | null>(null);
   const spinStopTimeoutRef = useRef<number | null>(null);
+  const spinReplayTimeoutRef = useRef<number | null>(null);
 
-  const SPINNER_CARD_WIDTH = 132;
+  const SPINNER_CARD_WIDTH = 118;
   const SPINNER_CARD_GAP = 12;
   const SPINNER_PRE_WINNER_ITEMS = 14;
   const SPINNER_POST_WINNER_ITEMS = 30;
   const SPINNER_DURATION_MS = 5200;
+  const SPINNER_REPLAY_DELAY_MS = 800;
 
   const spinnerItems = useMemo<CaseItem[]>(() => showcaseBox?.items ?? [], [showcaseBox]);
 
   useEffect(() => {
-    if (spinStopTimeoutRef.current) {
-      window.clearTimeout(spinStopTimeoutRef.current);
-      spinStopTimeoutRef.current = null;
-    }
+    const clearSpinTimers = () => {
+      if (spinStartTimeoutRef.current) {
+        window.clearTimeout(spinStartTimeoutRef.current);
+        spinStartTimeoutRef.current = null;
+      }
+      if (spinStopTimeoutRef.current) {
+        window.clearTimeout(spinStopTimeoutRef.current);
+        spinStopTimeoutRef.current = null;
+      }
+      if (spinReplayTimeoutRef.current) {
+        window.clearTimeout(spinReplayTimeoutRef.current);
+        spinReplayTimeoutRef.current = null;
+      }
+    };
+
+    clearSpinTimers();
 
     if (spinnerItems.length === 0) {
       setDemoReelItems([]);
@@ -105,28 +121,25 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       });
 
       setDemoReelItems(nextReel);
+      setSpinCycle((value) => value + 1);
       setIsSpinAnimating(false);
       setDemoSpinIndex(0);
 
-      window.requestAnimationFrame(() => {
+      spinStartTimeoutRef.current = window.setTimeout(() => {
         setIsSpinAnimating(true);
         setDemoSpinIndex(SPINNER_PRE_WINNER_ITEMS);
-      });
+      }, 90);
 
       spinStopTimeoutRef.current = window.setTimeout(() => {
         setIsSpinAnimating(false);
-      }, SPINNER_DURATION_MS);
+        spinReplayTimeoutRef.current = window.setTimeout(runDemoSpin, SPINNER_REPLAY_DELAY_MS);
+      }, SPINNER_DURATION_MS + 90);
     };
 
     runDemoSpin();
-    const intervalId = window.setInterval(runDemoSpin, 6200);
 
     return () => {
-      window.clearInterval(intervalId);
-      if (spinStopTimeoutRef.current) {
-        window.clearTimeout(spinStopTimeoutRef.current);
-        spinStopTimeoutRef.current = null;
-      }
+      clearSpinTimers();
     };
   }, [spinnerItems]);
 
@@ -193,7 +206,8 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
               <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#090c13] to-transparent sm:w-20" />
 
               <div
-                className={`flex px-[50%] py-6 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[5200ms] ease-[cubic-bezier(0.08,0.9,0.15,1)]' : 'duration-150 ease-linear'}`}
+                key={`demo-spin-${spinCycle}`}
+                className={`flex px-[50%] py-6 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[5200ms] ease-[cubic-bezier(0.08,0.9,0.15,1)]' : 'duration-200 ease-out'}`}
                 style={{
                   gap: `${SPINNER_CARD_GAP}px`,
                   marginLeft: `-${SPINNER_CARD_WIDTH / 2}px`,
@@ -206,7 +220,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                   return (
                     <div
                       key={`${item.id}-${idx}`}
-                      className={`relative flex h-[132px] w-[132px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition ${
+                      className={`relative flex h-[118px] w-[118px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-2.5 transition sm:h-[132px] sm:w-[132px] sm:p-3 ${
                         isCenter
                           ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
                           : 'border-gray-800'
@@ -226,7 +240,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                         decoding="async"
                         src={item.image}
                         alt={item.name}
-                        className="relative z-10 h-20 w-20 object-contain"
+                        className="relative z-10 h-16 w-16 object-contain sm:h-20 sm:w-20"
                       />
                       <p className="relative z-10 mt-2 line-clamp-2 text-center text-xs font-semibold leading-tight text-white">{item.name}</p>
                       <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl opacity-60" style={{ backgroundColor: item.color }}></div>
