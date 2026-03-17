@@ -77,7 +77,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const spinReplayTimeoutRef = useRef<number | null>(null);
   const demoSpinIndexRef = useRef(14);
 
-  const SPINNER_CARD_WIDTH = 132;
+  const SPINNER_CARD_WIDTH = 144;
   const SPINNER_CARD_GAP = 12;
   const SPINNER_DURATION_MS = 5200;
   const SPINNER_REPLAY_DELAY_MS = 800;
@@ -235,7 +235,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                   return (
                     <div
                       key={`${item.id}-${idx}`}
-                      className={`relative flex h-[132px] w-[132px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition ${
+                      className={`relative flex h-[136px] w-[136px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition sm:h-[148px] sm:w-[148px] ${
                         isCenter
                           ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
                           : 'border-gray-800'
@@ -257,14 +257,14 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                         decoding="async"
                         src={item.image}
                         alt={item.name}
-                        className="relative z-10 h-[84px] w-[84px] object-contain"
+                        className="relative z-10 h-[90px] w-[90px] object-contain sm:h-[96px] sm:w-[96px]"
                       />
-                      <div className="relative z-10 mt-2 flex items-center justify-center rounded-full border border-emerald-300/40 bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-100">
+                      <div className="relative z-10 mt-2 flex items-center justify-center px-1 text-xs font-semibold text-emerald-100 sm:text-sm">
                         <CoinAmount
                           amount={item.price}
                           formatOptions={{ maximumFractionDigits: 0 }}
                           className="text-emerald-100"
-                          iconClassName="h-3.5 w-3.5"
+                          iconClassName="h-4 w-4"
                         />
                       </div>
                       <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl opacity-60" style={{ backgroundColor: item.color }}></div>
