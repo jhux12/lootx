@@ -12,6 +12,7 @@ export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
+  const registerBonusImage = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
 
   // Form State
   const [email, setEmail] = useState('');
@@ -208,6 +209,18 @@ export const LoginModal: React.FC = () => {
                   : 'Create your account and start winning today.'}
             </p>
           </div>
+
+          {mode === 'register' && !isLinkingGoogle && (
+            <div className="mb-4 rounded-2xl border border-indigo-400/20 bg-gradient-to-b from-indigo-500/10 via-[#18181b] to-[#101014] p-4 text-center">
+              <img
+                src={registerBonusImage}
+                alt="Free signup box"
+                className="mx-auto h-28 w-auto object-contain sm:h-32"
+              />
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-indigo-300">Free signup bonus</p>
+              <p className="mt-1 text-sm text-neutral-300">Create an account to claim your free box.</p>
+            </div>
+          )}
 
           {userError && (
             <div
