@@ -428,7 +428,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             <h3 className="ml-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Games</h3>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => navigate('BOXES')} className={drawerCardClass}><Package className="h-5 w-5 text-orange-500" /><span className="text-sm font-bold text-white">Boxes</span></button>
-              <button onClick={() => navigate('PLINKO')} className={drawerCardClass}><UpgraderIcon className="h-5 w-5 text-emerald-400" /><span className="text-sm font-bold text-white">Arcade · Upgrader</span></button>
+              <button onClick={() => navigate('PLINKO')} className={drawerCardClass}><UpgraderIcon className="h-5 w-5 text-emerald-400" /><span className="text-sm font-bold text-white">Upgrader</span></button>
             </div>
           </section>
 
