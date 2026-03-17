@@ -14,6 +14,7 @@ type BoxCatalogProps = {
   isChatCollapsed: boolean;
 };
 
+
 const toCategoryKey = (value: string) =>
   value
     .toLowerCase()
@@ -33,7 +34,7 @@ const toCategoryVariants = (value: string) => {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
-  const { boxes, setView } = useGame();
+  const { boxes, setView, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,10 +64,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           .split(/[-_\s]+/)
           .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
           .join(' '),
+        iconClass: stripeSettings.boxTagIcons[id] ?? '',
         count
       }))
       .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title));
-  }, [displayBoxes]);
+  }, [displayBoxes, stripeSettings.boxTagIcons]);
 
   const filteredBoxes = useMemo(() => {
     return displayBoxes.filter((box) => {
@@ -85,6 +87,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         {
           id: activeCategory,
           title: selected?.title ?? 'Boxes',
+          iconClass: selected?.iconClass ?? '',
           boxes: filteredBoxes
         }
       ];
@@ -94,6 +97,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       .map((category) => ({
         id: category.id,
         title: category.title,
+        iconClass: category.iconClass,
         boxes: filteredBoxes.filter((box) => getBoxTags(box).includes(category.id))
       }))
       .filter((group) => group.boxes.length > 0);
@@ -212,8 +216,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 onClick={() => setActiveCategory(cat.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${activeCategory === cat.id ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
               >
-                <div className="w-4 h-4 rounded-full bg-indigo-500" />
-                {cat.title}
+                {cat.iconClass ? (
+                  <i aria-hidden="true" className={`${cat.iconClass} text-sm`} />
+                ) : (
+                  <div className="h-4 w-4 rounded-full bg-indigo-500" />
+                )}
+                <span>{cat.title}</span>
               </button>
             ))}
           </div>
@@ -272,7 +280,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       activeCategory === cat.id ? 'bg-indigo-500/30 text-white' : 'bg-white/5 text-neutral-300'
                     }`}
                   >
-                    {cat.title}
+                    <span className="inline-flex items-center gap-1.5">
+                      {cat.iconClass ? <i aria-hidden="true" className={`${cat.iconClass} text-xs`} /> : null}
+                      <span>{cat.title}</span>
+                    </span>
                   </button>
                 ))}
               </div>
@@ -293,8 +304,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             <div key={group.id} className="flex flex-col gap-4">
               {activeCategory === 'all' && (
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5">
-                    <div className="w-4 h-4 rounded-full bg-indigo-500" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5">
+                    {group.iconClass ? <i aria-hidden="true" className={`${group.iconClass} text-sm text-indigo-300`} /> : <div className="h-4 w-4 rounded-full bg-indigo-500" />}
                   </div>
                   <h2 className="text-xl font-bold text-white">{group.title}</h2>
                 </div>

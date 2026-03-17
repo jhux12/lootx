@@ -137,6 +137,7 @@ export interface StripeSettings {
   caseLabPublishFeeCoins: number;
   caseLabSellBackPercent: number;
   caseLabVisibleBoxIds: string[];
+  boxTagIcons: Record<string, string>;
 }
 
 export interface InventoryItem extends CaseItem {

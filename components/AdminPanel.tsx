@@ -17,7 +17,7 @@ import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
-import { getBoxTags } from '../utils/boxTags';
+import { getBoxTags, sanitizeFontAwesomeClass } from '../utils/boxTags';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -602,7 +602,6 @@ export const AdminPanel: React.FC = () => {
   };
   const MAX_BOX_TAGS = 10;
   const MAX_BOX_TAG_LENGTH = 24;
-  const boxTagOptions = ['tech boxes', 'pokemon', 'digital codes', 'hot', 'deals'];
   const sortedPackages = useMemo(() => {
       return [...coinPackages].sort((a, b) => a.sortOrder - b.sortOrder);
   }, [coinPackages]);
@@ -619,6 +618,31 @@ export const AdminPanel: React.FC = () => {
       () => boxes.filter((box) => (box.currencyType ?? 'COIN') === 'XP'),
       [boxes]
   );
+
+
+  const boxTagStats = useMemo(() => {
+      const usage = new Map<string, number>();
+      boxes
+          .filter((box) => !box.isUserCreated)
+          .forEach((box) => {
+              getBoxTags(box).forEach((tag) => {
+                  usage.set(tag, (usage.get(tag) ?? 0) + 1);
+              });
+          });
+
+      return Array.from(usage.entries())
+          .map(([tag, count]) => ({ tag, count }))
+          .sort((a, b) => a.tag.localeCompare(b.tag));
+  }, [boxes]);
+
+  const boxTagOptions = useMemo(() => boxTagStats.map((entry) => entry.tag), [boxTagStats]);
+
+  const [boxTagIconsDraft, setBoxTagIconsDraft] = useState<Record<string, string>>(stripeSettings.boxTagIcons);
+  const [boxTagIconsNotice, setBoxTagIconsNotice] = useState(false);
+
+  useEffect(() => {
+      setBoxTagIconsDraft(stripeSettings.boxTagIcons);
+  }, [stripeSettings.boxTagIcons]);
 
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
@@ -1061,6 +1085,7 @@ export const AdminPanel: React.FC = () => {
           .map((tag) => tag.trim().toLowerCase())
           .filter(Boolean)
           .map((tag) => tag.slice(0, MAX_BOX_TAG_LENGTH));
+
       return Array.from(new Set(normalized)).slice(0, MAX_BOX_TAGS);
   };
 
@@ -1095,7 +1120,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   const addBoxTag = (tag: string) => {
-      const normalized = tag.trim().toLowerCase();
+      const normalized = tag.trim();
       if (!normalized) return;
       setNewBox((prev) => ({
           ...prev,
@@ -1155,6 +1180,21 @@ export const AdminPanel: React.FC = () => {
       });
       return Array.from(tags).sort((a, b) => a.localeCompare(b));
   }, [items]);
+
+  const handleSaveBoxTagIcons = () => {
+      const normalized = Object.fromEntries(
+          Object.entries(boxTagIconsDraft)
+              .map(([tag, iconClass]) => [tag.trim().toLowerCase(), sanitizeFontAwesomeClass(iconClass)] as const)
+              .filter(([tag, iconClass]) => tag.length > 0 && iconClass.length > 0)
+      );
+
+      updateStripeSettings({
+          ...stripeSettings,
+          boxTagIcons: normalized
+      });
+      setBoxTagIconsNotice(true);
+      window.setTimeout(() => setBoxTagIconsNotice(false), 3000);
+  };
 
   const filteredItemsForBox = useMemo(() => {
       const normalizedBrand = itemBrandFilter.trim().toLowerCase();
@@ -2474,7 +2514,8 @@ export const AdminPanel: React.FC = () => {
           shippingCoinCostCoins: Math.max(0, Math.round(Number(stripeSettingsDraft.shippingCoinCostCoins) || 0)),
           caseLabPublishFeeCoins: Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabPublishFeeCoins) || 0)),
           caseLabSellBackPercent: Math.min(100, Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabSellBackPercent) || 0))),
-          caseLabVisibleBoxIds: Array.from(new Set(stripeSettingsDraft.caseLabVisibleBoxIds))
+          caseLabVisibleBoxIds: Array.from(new Set(stripeSettingsDraft.caseLabVisibleBoxIds)),
+          boxTagIcons: stripeSettings.boxTagIcons
       });
       setStripeSettingsNotice(true);
       window.setTimeout(() => setStripeSettingsNotice(false), 3000);
@@ -3133,6 +3174,47 @@ export const AdminPanel: React.FC = () => {
                                     <p className="mt-2 text-[10px] text-gray-500">
                                       Tags power homepage filters. Max {MAX_BOX_TAGS} tags, {MAX_BOX_TAG_LENGTH} characters each.
                                     </p>
+                                </div>
+                                <div className="mt-5 rounded-xl border border-white/10 bg-[#0b0e14] p-3 sm:p-4">
+                                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-white">Tag Icon Editor</h4>
+                                            <p className="text-[11px] text-gray-400">Assign a Font Awesome icon to each current tag. Paste either <span className="font-mono">fa-regular fa-gem</span> or <span className="font-mono">&lt;i class="fa-regular fa-gem"&gt;&lt;/i&gt;</span></p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveBoxTagIcons}
+                                            className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-500 sm:w-auto"
+                                        >
+                                            Save tag icons
+                                        </button>
+                                    </div>
+                                    {boxTagIconsNotice && <p className="mb-3 text-xs text-green-400">Tag icons saved.</p>}
+                                    {boxTagStats.length === 0 ? (
+                                        <p className="text-xs text-gray-400">No tags found on current site boxes yet.</p>
+                                    ) : (
+                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                            {boxTagStats.map(({ tag, count }) => {
+                                                const iconClass = boxTagIconsDraft[tag] ?? '';
+                                                return (
+                                                    <div key={`tag-icon-${tag}`} className="rounded-lg border border-white/10 p-2">
+                                                        <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-200">
+                                                            <span className="truncate uppercase tracking-wide">{tag}</span>
+                                                            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-gray-300">{count} box{count === 1 ? '' : 'es'}</span>
+                                                            {iconClass ? <i aria-hidden="true" className={`${sanitizeFontAwesomeClass(iconClass)} text-sm text-indigo-300`} /> : <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />}
+                                                        </div>
+                                                        <Input
+                                                            type="text"
+                                                            placeholder="fa-regular fa-gem or <i class=&quot;fa-regular fa-gem&quot;></i>"
+                                                            className="w-full bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
+                                                            value={iconClass}
+                                                            onChange={(event) => setBoxTagIconsDraft((prev) => ({ ...prev, [tag]: event.target.value }))}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
