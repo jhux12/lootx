@@ -95,6 +95,7 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
       size: typeof typed.size === 'string' ? typed.size : undefined,
       trackingNumber: typeof typed.trackingNumber === 'string' ? typed.trackingNumber : undefined,
       redeemable: typed.redeemable ?? true,
+      forceFullSellBack: typed.forceFullSellBack === true,
       sellBackRate: Number(typed.sellBackRate ?? 0),
       source: typeof typed.source === 'string' ? typed.source : undefined,
       sourceItemId: typeof typed.sourceItemId === 'string' ? typed.sourceItemId : undefined,
@@ -884,6 +885,7 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     trackingNumber: typeof data.trackingNumber === 'string' ? data.trackingNumber : undefined,
     provenance: data.provenance ?? (data.boxId ? { sourceType: 'case_open', sourceId: data.boxId } : undefined),
     redeemable: data.redeemable ?? true,
+    forceFullSellBack: data.forceFullSellBack === true,
     sellBackRate: Number(data.sellBackRate ?? 0),
     locked: data.locked ?? false,
     history,
@@ -1406,7 +1408,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             category: typeof data.category === 'string' ? data.category : '',
             tags: Array.isArray(data.tags) ? (data.tags as CaseItem['tags']) : [],
             sizes: Array.isArray(data.sizes) ? data.sizes.filter((size: unknown) => typeof size === 'string') : [],
-            redeemable: data.redeemable ?? true
+            redeemable: data.redeemable ?? true,
+            forceFullSellBack: data.forceFullSellBack === true
           } as CaseItem;
         })
         .sort((a, b) => a.price - b.price);
@@ -1450,7 +1453,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               category: typeof item.category === 'string' ? item.category : '',
               tags: Array.isArray(item.tags) ? (item.tags as CaseItem['tags']) : [],
               sizes: Array.isArray(item.sizes) ? item.sizes.filter((size: unknown) => typeof size === 'string') : [],
-              redeemable: item.redeemable ?? true
+              redeemable: item.redeemable ?? true,
+              forceFullSellBack: item.forceFullSellBack === true
             };
           }) : [];
           const createdAt = data.createdAt ? normalizeTimestamp(data.createdAt, Date.now()) : undefined;

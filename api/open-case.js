@@ -136,7 +136,6 @@ export default async function handler(req, res) {
       const sellBackRate = Number.isFinite(rawSellBackRate)
         ? Math.min(1, Math.max(0, rawSellBackRate))
         : 0.8;
-      const appliedSellBackRate = isFree ? 1 : sellBackRate;
       const prizes = Array.isArray(boxData.items) ? boxData.items : (Array.isArray(boxData.prizes) ? boxData.prizes : []);
       if (!prizes.length) {
         fail(400, 'INVALID_REQUEST', 'This case has no configured prizes.', { caseId: boxId });
@@ -237,6 +236,8 @@ export default async function handler(req, res) {
 
       const { roll, rollHash, message } = computeRoll(serverSeed, clientSeed, nonce, boxId);
       const prize = pickPrizeByWeight(prizes, roll);
+      const prizeForcesFullSellBack = prize?.forceFullSellBack === true;
+      const appliedSellBackRate = isFree || prizeForcesFullSellBack ? 1 : sellBackRate;
       const sizeOptions = normalizeSizes(prize.sizes ?? []);
       const selectedSize = sizeOptions.length ? pickRandomSize(sizeOptions) : null;
       const prizeValue = Number(prize.value ?? prize.price ?? 0);
@@ -318,7 +319,8 @@ export default async function handler(req, res) {
         status: 'available',
         obtainedAt,
         sellBackRate: appliedSellBackRate,
-        redeemable: prize.redeemable ?? true
+        redeemable: prize.redeemable ?? true,
+        forceFullSellBack: prizeForcesFullSellBack
       };
       if (selectedSize) {
         inventoryPayload.size = selectedSize;
@@ -340,6 +342,7 @@ export default async function handler(req, res) {
           rarity: prize.rarity ?? 'common',
           weight: Number(prize.weight ?? prize.chance ?? 0),
           redeemable: prize.redeemable ?? true,
+          forceFullSellBack: prizeForcesFullSellBack,
           size: selectedSize || null
         },
         createdAt: obtainedAt,
@@ -386,6 +389,7 @@ export default async function handler(req, res) {
           price: prizeValue,
           value: prizeValue,
           redeemable: prize.redeemable ?? true,
+          forceFullSellBack: prizeForcesFullSellBack,
           size: selectedSize || undefined
         },
         sellBackRate: appliedSellBackRate,
