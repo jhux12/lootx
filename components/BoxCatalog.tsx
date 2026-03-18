@@ -319,16 +319,16 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       playSound('click');
                       setView({ type: 'CASE_OPENING', boxId: box.id });
                     }}
-                    className="group flex flex-col items-center bg-[#131315] rounded-xl overflow-hidden border border-white/5 cursor-pointer hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
+                    className="group flex flex-col items-center rounded-xl overflow-hidden border border-white/15 bg-white/5 backdrop-blur-md cursor-pointer hover:border-indigo-400/60 hover:bg-white/10 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
                     type="button"
                     onMouseEnter={() => { void prefetchBox(box.id, async () => box, box.image); }}
                     onTouchStart={() => { void prefetchBox(box.id, async () => box, box.image); }}
                   >
-                    <div className="relative w-full h-[170px] sm:h-[180px] p-4 sm:p-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent">
+                    <div className="relative flex h-[170px] w-full items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent sm:h-[180px]">
                       <BlurImage
                         src={box.image}
                         alt={box.name}
-                        className="h-full w-full object-contain drop-shadow-xl group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300"
+                        className="h-[150px] w-[130px] max-w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 sm:h-[160px] sm:w-[145px] md:w-[160px]"
                       />
                     </div>
 
