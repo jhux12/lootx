@@ -9,7 +9,7 @@ type SeoConfig = {
 };
 
 const SITE_URL = 'https://pullz.gg';
-const FALLBACK_IMAGE = `${SITE_URL}/home-banners/banner.png`;
+const FALLBACK_IMAGE = `${SITE_URL}/home-banners/homepage-preview.svg`;
 
 const ensureMeta = (selector: string, attributes: Record<string, string>) => {
   let node = document.head.querySelector<HTMLMetaElement>(selector);
@@ -115,11 +115,15 @@ export const SeoHead = ({ view }: { view: ViewState }) => {
     ensureMeta('meta[property="og:description"]', { property: 'og:description', content: seo.description });
     ensureMeta('meta[property="og:url"]', { property: 'og:url', content: canonicalUrl });
     ensureMeta('meta[property="og:image"]', { property: 'og:image', content: FALLBACK_IMAGE });
+    ensureMeta('meta[property="og:image:type"]', { property: 'og:image:type', content: 'image/svg+xml' });
+    ensureMeta('meta[property="og:image:width"]', { property: 'og:image:width', content: '1200' });
+    ensureMeta('meta[property="og:image:height"]', { property: 'og:image:height', content: '630' });
 
     ensureMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' });
     ensureMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: seo.title });
     ensureMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: seo.description });
     ensureMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: FALLBACK_IMAGE });
+    ensureMeta('meta[name="twitter:image:alt"]', { name: 'twitter:image:alt', content: 'Pullz.gg homepage social preview' });
   }, [view]);
 
   return null;
