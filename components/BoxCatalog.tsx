@@ -361,17 +361,15 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                           return (
                             <div
                               key={`${box.id}-${item.id}-${side}`}
-                              className={`pointer-events-none absolute top-1/2 z-20 flex w-[4.5rem] -translate-y-1/2 flex-col items-center gap-1 rounded-2xl border border-white/10 bg-[#0a1020]/95 p-2 text-center shadow-[0_16px_28px_-20px_rgba(0,0,0,0.85)] backdrop-blur-sm transition-all duration-300 ease-out sm:w-[5.25rem] ${side === 'left' ? 'left-1 sm:left-2' : 'right-1 sm:right-2'} ${isVisible ? 'translate-x-0 opacity-100' : side === 'left' ? '-translate-x-3 opacity-0' : 'translate-x-3 opacity-0'}`}
+                              className={`pointer-events-none absolute top-1/2 z-0 -translate-y-1/2 transition-all duration-300 ease-out ${side === 'left' ? 'left-2 sm:left-3' : 'right-2 sm:right-3'} ${isVisible ? 'translate-x-0 opacity-100' : side === 'left' ? '-translate-x-3 opacity-0' : 'translate-x-3 opacity-0'}`}
                             >
-                              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white/5 sm:h-11 sm:w-11">
-                                <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-contain" />
-                              </div>
-                              <span className="line-clamp-2 text-[10px] font-semibold leading-tight text-white/90 sm:text-[11px]">{item.name}</span>
-                              <CoinAmount
-                                amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                                formatOptions={{ maximumFractionDigits: 0 }}
-                                className="justify-center text-[10px] font-bold text-emerald-300 sm:text-[11px]"
-                                iconClassName="h-3 w-3"
+                              <img
+                                src={item.image}
+                                alt=""
+                                aria-hidden="true"
+                                loading="lazy"
+                                decoding="async"
+                                className="h-14 w-14 object-contain opacity-90 drop-shadow-[0_12px_20px_rgba(0,0,0,0.45)] sm:h-20 sm:w-20"
                               />
                             </div>
                           );
@@ -379,7 +377,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       <BlurImage
                         src={box.image}
                         alt={box.name}
-                        className="h-full w-full object-contain drop-shadow-xl group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300"
+                        className="relative z-10 h-full w-full object-contain drop-shadow-xl group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300"
                       />
                     </div>
 
