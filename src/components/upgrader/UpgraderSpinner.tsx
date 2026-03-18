@@ -11,6 +11,7 @@ interface UpgraderSpinnerProps {
 const SPIN_FULL_ROTATIONS = 10;
 const SPIN_SETTLE_DURATION_S = 5.8;
 const SPIN_RESULT_DELAY_MS = 180;
+const SPIN_RAMP_PORTION = 0.72;
 
 const randomInRange = (min: number, max: number) => {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return 0;
@@ -31,6 +32,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
   const rafRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
   const totalRotationRef = useRef(0);
+  const currentRotationRef = useRef(0);
   const isWinRef = useRef(false);
   const onFinishRef = useRef(onFinish);
   const mountedRef = useRef(true);
@@ -71,7 +73,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       timeoutRef.current = null;
     }
 
-    await controls.set({ rotate: 0 });
+    const startRotation = ((currentRotationRef.current % 360) + 360) % 360;
+    await controls.set({ rotate: startRotation });
     if (!mountedRef.current || runId !== runIdRef.current) {
       inFlightRef.current = false;
       return;
@@ -87,14 +90,16 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
     const finalAngle = isWinRef.current
       ? randomInRange(winStart, winEnd)
       : randomInRange(loseStart, loseEnd);
-    totalRotationRef.current = baseRotations + finalAngle;
+    totalRotationRef.current = startRotation + baseRotations + finalAngle;
 
+    const glideRotation = startRotation + baseRotations * SPIN_RAMP_PORTION;
 
     await controls.start({
-      rotate: totalRotationRef.current,
+      rotate: [startRotation, glideRotation, totalRotationRef.current],
       transition: {
         duration: SPIN_SETTLE_DURATION_S,
-        ease: [0.08, 0.86, 0.16, 1]
+        ease: ['linear', [0.12, 0.84, 0.18, 1]],
+        times: [0, SPIN_RAMP_PORTION, 1]
       }
     });
 
@@ -102,6 +107,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = ({
       inFlightRef.current = false;
       return;
     }
+
+    currentRotationRef.current = totalRotationRef.current;
 
     timeoutRef.current = window.setTimeout(() => {
       rafRef.current = requestAnimationFrame(() => safeFinish(runId));
