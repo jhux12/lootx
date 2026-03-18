@@ -39,6 +39,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [previewBoxId, setPreviewBoxId] = useState<string | null>(null);
 
   const displayBoxes = useMemo(
     () => boxes.filter((box) => !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
@@ -137,6 +138,20 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       setActiveCategory(matchedCategory.id);
     }
   }, [categories]);
+
+  useEffect(() => {
+    if (previewBoxId === null || typeof window === 'undefined') return undefined;
+
+    if (!window.matchMedia('(hover: none)').matches) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setPreviewBoxId((current) => (current === previewBoxId ? null : current));
+    }, 1800);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [previewBoxId]);
 
 
 
@@ -316,15 +331,51 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   <button
                     key={box.id}
                     onClick={() => {
+                      if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches && previewBoxId !== box.id) {
+                        setPreviewBoxId(box.id);
+                        return;
+                      }
                       playSound('click');
                       setView({ type: 'CASE_OPENING', boxId: box.id });
                     }}
                     className="group flex flex-col items-center bg-[#131315] rounded-xl overflow-hidden border border-white/5 cursor-pointer hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
                     type="button"
-                    onMouseEnter={() => { void prefetchBox(box.id, async () => box, box.image); }}
-                    onTouchStart={() => { void prefetchBox(box.id, async () => box, box.image); }}
+                    onMouseEnter={() => {
+                      void prefetchBox(box.id, async () => box, box.image);
+                      setPreviewBoxId(box.id);
+                    }}
+                    onMouseLeave={() => setPreviewBoxId((current) => (current === box.id ? null : current))}
+                    onTouchStart={() => {
+                      void prefetchBox(box.id, async () => box, box.image);
+                      setPreviewBoxId(box.id);
+                    }}
                   >
                     <div className="relative w-full h-[170px] sm:h-[180px] p-4 sm:p-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent">
+                      {[...box.items]
+                        .sort((left, right) => right.price - left.price)
+                        .slice(0, 2)
+                        .map((item, itemIndex) => {
+                          const side = itemIndex === 0 ? 'left' : 'right';
+                          const isVisible = previewBoxId === box.id;
+
+                          return (
+                            <div
+                              key={`${box.id}-${item.id}-${side}`}
+                              className={`pointer-events-none absolute top-1/2 z-20 flex w-[4.5rem] -translate-y-1/2 flex-col items-center gap-1 rounded-2xl border border-white/10 bg-[#0a1020]/95 p-2 text-center shadow-[0_16px_28px_-20px_rgba(0,0,0,0.85)] backdrop-blur-sm transition-all duration-300 ease-out sm:w-[5.25rem] ${side === 'left' ? 'left-1 sm:left-2' : 'right-1 sm:right-2'} ${isVisible ? 'translate-x-0 opacity-100' : side === 'left' ? '-translate-x-3 opacity-0' : 'translate-x-3 opacity-0'}`}
+                            >
+                              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white/5 sm:h-11 sm:w-11">
+                                <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-contain" />
+                              </div>
+                              <span className="line-clamp-2 text-[10px] font-semibold leading-tight text-white/90 sm:text-[11px]">{item.name}</span>
+                              <CoinAmount
+                                amount={toCoins(item.price, PRICE_UNIT_MODE)}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="justify-center text-[10px] font-bold text-emerald-300 sm:text-[11px]"
+                                iconClassName="h-3 w-3"
+                              />
+                            </div>
+                          );
+                        })}
                       <BlurImage
                         src={box.image}
                         alt={box.name}
