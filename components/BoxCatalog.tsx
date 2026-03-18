@@ -39,6 +39,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [previewBoxId, setPreviewBoxId] = useState<string | null>(null);
 
   const displayBoxes = useMemo(
     () => boxes.filter((box) => !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
@@ -137,6 +138,20 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       setActiveCategory(matchedCategory.id);
     }
   }, [categories]);
+
+  useEffect(() => {
+    if (previewBoxId === null || typeof window === 'undefined') return undefined;
+
+    if (!window.matchMedia('(hover: none)').matches) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setPreviewBoxId((current) => (current === previewBoxId ? null : current));
+    }, 1800);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [previewBoxId]);
 
 
 
@@ -316,19 +331,53 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   <button
                     key={box.id}
                     onClick={() => {
+                      if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches && previewBoxId !== box.id) {
+                        setPreviewBoxId(box.id);
+                        return;
+                      }
                       playSound('click');
                       setView({ type: 'CASE_OPENING', boxId: box.id });
                     }}
                     className="group flex flex-col items-center bg-[#131315] rounded-xl overflow-hidden border border-white/5 cursor-pointer hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
                     type="button"
-                    onMouseEnter={() => { void prefetchBox(box.id, async () => box, box.image); }}
-                    onTouchStart={() => { void prefetchBox(box.id, async () => box, box.image); }}
+                    onMouseEnter={() => {
+                      void prefetchBox(box.id, async () => box, box.image);
+                      setPreviewBoxId(box.id);
+                    }}
+                    onMouseLeave={() => setPreviewBoxId((current) => (current === box.id ? null : current))}
+                    onTouchStart={() => {
+                      void prefetchBox(box.id, async () => box, box.image);
+                      setPreviewBoxId(box.id);
+                    }}
                   >
                     <div className="relative w-full h-[170px] sm:h-[180px] p-4 sm:p-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent">
+                      {[...box.items]
+                        .sort((left, right) => right.price - left.price)
+                        .slice(0, 2)
+                        .map((item, itemIndex) => {
+                          const side = itemIndex === 0 ? 'left' : 'right';
+                          const isVisible = previewBoxId === box.id;
+
+                          return (
+                            <div
+                              key={`${box.id}-${item.id}-${side}`}
+                              className={`pointer-events-none absolute top-1/2 z-0 -translate-y-1/2 transition-all duration-300 ease-out ${side === 'left' ? 'left-2 sm:left-3' : 'right-2 sm:right-3'} ${isVisible ? 'translate-x-0 opacity-100' : side === 'left' ? '-translate-x-3 opacity-0' : 'translate-x-3 opacity-0'}`}
+                            >
+                              <img
+                                src={item.image}
+                                alt=""
+                                aria-hidden="true"
+                                loading="lazy"
+                                decoding="async"
+                                className="h-14 w-14 object-contain opacity-90 drop-shadow-[0_12px_20px_rgba(0,0,0,0.45)] sm:h-20 sm:w-20"
+                              />
+                            </div>
+                          );
+                        })}
                       <BlurImage
                         src={box.image}
                         alt={box.name}
-                        className="h-full w-full object-contain drop-shadow-xl group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300"
+                        className="relative z-10 h-full w-full object-contain drop-shadow-xl group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300"
                       />
                     </div>
 
