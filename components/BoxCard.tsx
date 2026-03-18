@@ -21,6 +21,7 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
   const [isDropping, setIsDropping] = useState(false);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const clickTimeoutRef = useRef<number | null>(null);
+  const previewTimeoutRef = useRef<number | null>(null);
   const isCompact = size === 'compact';
   const riskValue = resolveRiskValue(box.riskLevel ?? null);
   const boxMap = useMemo(() => new Map(boxes.map((entry) => [entry.id, entry])), [boxes]);
@@ -35,11 +36,26 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
       if (clickTimeoutRef.current) {
         window.clearTimeout(clickTimeoutRef.current);
       }
+      if (previewTimeoutRef.current) {
+        window.clearTimeout(previewTimeoutRef.current);
+      }
     };
   }, []);
 
   const handleSelect = () => {
     if (isDropping) return;
+
+    if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches && !isPreviewVisible) {
+      setIsPreviewVisible(true);
+      if (previewTimeoutRef.current) {
+        window.clearTimeout(previewTimeoutRef.current);
+      }
+      previewTimeoutRef.current = window.setTimeout(() => {
+        setIsPreviewVisible(false);
+      }, 1800);
+      return;
+    }
+
     setIsDropping(true);
     clickTimeoutRef.current = window.setTimeout(() => {
       onSelect(box.id);
@@ -82,8 +98,18 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
         setIsPreviewVisible(true);
       }}
       onMouseLeave={() => setIsPreviewVisible(false)}
-      onTouchStart={prefetchHandlers.onTouchStart}
-      onTouchEnd={() => setIsPreviewVisible(false)}
+      onTouchStart={() => {
+        prefetchHandlers.onTouchStart();
+        setIsPreviewVisible(true);
+      }}
+      onTouchEnd={() => {
+        if (previewTimeoutRef.current) {
+          window.clearTimeout(previewTimeoutRef.current);
+        }
+        previewTimeoutRef.current = window.setTimeout(() => {
+          setIsPreviewVisible(false);
+        }, 1800);
+      }}
       onTouchCancel={() => setIsPreviewVisible(false)}
       onFocus={() => setIsPreviewVisible(true)}
       onBlur={() => setIsPreviewVisible(false)}
