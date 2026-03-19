@@ -1104,6 +1104,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsAuthenticated(true);
     void syncAdminClaim(firebaseUser);
 
+    const userPath = `users/${firebaseUser.uid}`;
+    console.log('READING FIRESTORE PATH', userPath);
     const userRef = getUserRef(firebaseUser.uid);
     userUnsubscribeRef.current = onSnapshot(userRef, (snapshot) => {
       if (!snapshot.exists()) {
@@ -1141,9 +1143,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
       }
     }, (error) => {
-      console.error('Failed to load user profile from Firebase', error);
+      console.error(`Firestore read failed | path=${userPath} | code=${error?.code} | message=${error?.message}`);
     });
 
+    const inventoryPath = `users/${firebaseUser.uid}/inventory`;
+    console.log('READING FIRESTORE PATH', inventoryPath);
     const inventoryRef = collection(db, 'users', firebaseUser.uid, 'inventory');
     inventoryUnsubscribeRef.current = onSnapshot(inventoryRef, (snapshot) => {
       hasInventorySubcollectionRef.current = snapshot.size > 0;
@@ -1165,7 +1169,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const nextTopPulls = rankTopPullsByValue(filtered);
       setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
     }, (error) => {
-      console.error('Failed to load inventory from Firebase', error);
+      console.error(`Firestore read failed | path=${inventoryPath} | code=${error?.code} | message=${error?.message}`);
     });
   };
 
@@ -1269,7 +1273,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const normalized = normalizeBonusSettings(snapshot.data() as Partial<BonusSettings>);
       setBonusSettings(normalized);
     }, (error) => {
-      console.error('Failed to load bonus settings from Firebase', { path: bonusSettingsPath, code: error?.code, message: error?.message, error });
+      console.error(`Firestore read failed | path=${bonusSettingsPath} | code=${error?.code} | message=${error?.message}`);
     });
 
     return () => unsubscribe();
@@ -1285,7 +1289,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const data = snapshot.data() ?? {};
       setStripeSettings(normalizeStripeSettings(data));
     }, (error) => {
-      console.error('Failed to load stripe settings from Firebase', { path: stripeSettingsPath, code: error?.code, message: error?.message, error });
+      console.error(`Firestore read failed | path=${stripeSettingsPath} | code=${error?.code} | message=${error?.message}`);
     });
 
     return () => unsubscribe();
@@ -1386,12 +1390,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    const usersPath = 'users';
+    console.log('READING FIRESTORE PATH', usersPath);
     const usersRef = collection(db, 'users');
     const unsubscribe = onSnapshot(usersRef, (snapshot) => {
       const loaded = snapshot.docs.map((docSnap) => buildUserProfileFromDoc(docSnap.id, docSnap.data()));
       setUsers(loaded.length ? loaded : [user]);
     }, (error) => {
-      console.error('Failed to load users from Firebase', error);
+      console.error(`Firestore read failed | path=${usersPath} | code=${error?.code} | message=${error?.message}`);
       setUsers([user]);
     });
 
@@ -1404,6 +1410,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    const shipmentsPath = 'shipments';
+    console.log('READING FIRESTORE PATH', shipmentsPath);
     const shipmentsRef = collection(db, 'shipments');
     const unsubscribe = onSnapshot(shipmentsRef, (snapshot) => {
       const loaded = snapshot.docs
@@ -1411,7 +1419,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
       setShipments(loaded);
     }, (error) => {
-      console.error('Failed to load shipments from Firebase', error);
+      console.error(`Firestore read failed | path=${shipmentsPath} | code=${error?.code} | message=${error?.message}`);
       setShipments([]);
     });
 
@@ -1439,6 +1447,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic]);
 
   useEffect(() => {
+    const itemsPath = 'items';
+    console.log('READING FIRESTORE PATH', itemsPath);
     const itemsRef = collection(db, 'items');
     const unsubscribe = onSnapshot(itemsRef, (snapshot) => {
       const loaded: CaseItem[] = snapshot.docs
@@ -1472,7 +1482,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }));
       setItems(loaded.length ? loaded : fallbackItems);
     }, (error) => {
-      console.error('Failed to load items from Firebase', error);
+      console.error(`Firestore read failed | path=${itemsPath} | code=${error?.code} | message=${error?.message}`);
     });
 
     return () => unsubscribe();
@@ -1481,6 +1491,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const expiredUserBoxDeletesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    const boxesPath = 'boxes';
+    console.log('READING FIRESTORE PATH', boxesPath);
     const boxesRef = collection(db, 'boxes');
     const unsubscribe = onSnapshot(boxesRef, (snapshot) => {
       const expiredUserBoxIds: string[] = [];
@@ -1563,7 +1575,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return [...pendingUserCreated, ...firebaseBoxes].sort((a, b) => getBoxSortPrice(a) - getBoxSortPrice(b));
       });
     }, (error) => {
-      console.error('Failed to load boxes from Firebase', error);
+      console.error(`Firestore read failed | path=${boxesPath} | code=${error?.code} | message=${error?.message}`);
     });
 
     return () => unsubscribe();
@@ -1611,7 +1623,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       setCoinPackages(loaded);
     }, (error) => {
-      console.error('Failed to load coin packages from Firebase', { path: coinPackagesPath, code: error?.code, message: error?.message, error });
+      console.error(`Firestore read failed | path=${coinPackagesPath} | code=${error?.code} | message=${error?.message}`);
     });
 
     return () => unsubscribe();
@@ -1624,6 +1636,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Battles Realtime Sync
   useEffect(() => {
+    const battlesPath = 'battles';
+    console.log('READING FIRESTORE PATH', battlesPath);
     const battlesRef = query(collection(db, 'battles'), orderBy('createdAt', 'desc'), limit(50));
     const unsubscribe = onSnapshot(battlesRef, (snapshot) => {
       const firebaseBattles = snapshot.docs
@@ -1668,7 +1682,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setBattles(firebaseBattles);
     }, (error) => {
-      console.error('Failed to load battles from Firebase', error);
+      console.error(`Firestore read failed | path=${battlesPath} | code=${error?.code} | message=${error?.message}`);
     });
 
     return () => unsubscribe();
