@@ -1,12 +1,73 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAdmin() {
+    function isAdminByClaim() {
       return request.auth != null && request.auth.token.admin == true;
+    }
+
+    function isAdmin() {
+      // Admin is claim-only. Never trust Firestore profile fields for authorization.
+      return isAdminByClaim();
     }
 
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    function userCreateKeysAreSafe() {
+      return request.resource.data.keys().hasOnly([
+        'uid',
+        'email',
+        'username',
+        'usernameLower',
+        'createdAt',
+        'updatedAt',
+        'photoURL',
+        'displayName',
+        'lastLogin'
+      ]);
+    }
+
+    function userUpdateKeysAreSafe() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'username',
+        'photoURL',
+        'updatedAt',
+        'lastLogin',
+        'displayName',
+        'email',
+        'usernameLower'
+      ]);
+    }
+
+    function userProfileCreateIsValid(uid) {
+      return request.auth.uid == uid
+        && userCreateKeysAreSafe()
+        && request.resource.data.uid == uid
+        && (!('email' in request.resource.data) || request.resource.data.email == request.auth.token.email)
+        && (!('username' in request.resource.data) || request.resource.data.username is string)
+        && (!('usernameLower' in request.resource.data) || request.resource.data.usernameLower is string)
+        && (!('displayName' in request.resource.data) || request.resource.data.displayName is string)
+        && (!('photoURL' in request.resource.data) || request.resource.data.photoURL is string)
+        && (!('createdAt' in request.resource.data) || request.resource.data.createdAt is int)
+        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is int)
+        && (!('lastLogin' in request.resource.data) || request.resource.data.lastLogin is int);
+    }
+
+    function userProfileUpdateIsValid(uid) {
+      return request.auth.uid == uid
+        && userUpdateKeysAreSafe()
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.diff(resource.data).removedKeys().hasOnly([])
+        && request.resource.data.diff(resource.data).addedKeys().hasOnly([])
+        && request.resource.data.keys().hasOnly(resource.data.keys())
+        && (!('email' in request.resource.data) || request.resource.data.email == request.auth.token.email)
+        && (!('username' in request.resource.data) || request.resource.data.username is string)
+        && (!('usernameLower' in request.resource.data) || request.resource.data.usernameLower is string)
+        && (!('displayName' in request.resource.data) || request.resource.data.displayName is string)
+        && (!('photoURL' in request.resource.data) || request.resource.data.photoURL is string)
+        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is int)
+        && (!('lastLogin' in request.resource.data) || request.resource.data.lastLogin is int);
     }
 
     match /boxes/{boxId} {
@@ -21,15 +82,8 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isSignedIn()
-        && ((request.auth.uid == uid && !('coins' in request.resource.data) && !('rewardPointsBalance' in request.resource.data) && !('rewardPointsSeason' in request.resource.data)) || isAdmin());
-      allow update: if isSignedIn()
-        && ((request.auth.uid == uid
-          && request.resource.data.coins == resource.data.coins
-          && request.resource.data.rewardPointsBalance == resource.data.rewardPointsBalance
-          && request.resource.data.rewardPointsSeason == resource.data.rewardPointsSeason
-          && request.resource.data.rewardPointsSeasonId == resource.data.rewardPointsSeasonId)
-          || isAdmin());
+      allow create: if isSignedIn() && (userProfileCreateIsValid(uid) || isAdmin());
+      allow update: if isSignedIn() && (userProfileUpdateIsValid(uid) || isAdmin());
       allow delete: if false;
     }
 
