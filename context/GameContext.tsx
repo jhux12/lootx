@@ -675,8 +675,6 @@ const GUEST_USER: User = {
   termsFlagged: false
 };
 
-const ADMIN_EMAIL = 'jhuxf12@outlook.com';
-
 const getUserRef = (uid: string) => doc(db, 'users', uid);
 
 const normalizeTimestamp = (value: unknown, fallback: number) => {
@@ -782,7 +780,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     referredBy: data.referredBy,
     followers: followerIds,
     shippingAddress: data.shippingAddress,
-    isAdmin: data.isAdmin ?? false,
+    isAdmin: false,
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
     chatDisabledAt: data.chatDisabledAt,
@@ -844,7 +842,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     referredBy: data.referredBy,
     followers: followerIds,
     shippingAddress: data.shippingAddress,
-    isAdmin: data.isAdmin ?? false,
+    isAdmin: false,
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
     chatDisabledAt: data.chatDisabledAt,
@@ -1048,11 +1046,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const startAuthenticatedSession = (firebaseUser: FirebaseUser) => {
+  const startAuthenticatedSession = async (firebaseUser: FirebaseUser) => {
     if (activeUserIdRef.current === firebaseUser.uid) return;
     clearUserSubscriptions();
     activeUserIdRef.current = firebaseUser.uid;
     setIsAuthenticated(true);
+
+    void firebaseUser.getIdTokenResult(true).then((tokenResult) => {
+      // Admin is claim-only. Never trust Firestore profile fields for authorization.
+      const isAdmin = tokenResult.claims.admin === true;
+      setUser((prev) => ({ ...prev, isAdmin }));
+    }).catch((error) => {
+      console.error('Failed to load admin claim', error);
+      setUser((prev) => ({ ...prev, isAdmin: false }));
+    });
 
     const userRef = getUserRef(firebaseUser.uid);
     userUnsubscribeRef.current = onSnapshot(userRef, (snapshot) => {
@@ -1065,13 +1072,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const data = snapshot.data();
       const profile = buildUserProfile(firebaseUser, data);
-      const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
-      if (shouldBeAdmin && !profile.isAdmin) {
-        void setDoc(userRef, { isAdmin: true }, { merge: true }).catch((error) => {
-          console.error('Failed to backfill admin flag', error);
-        });
-        profile.isAdmin = true;
-      }
 
       const incomingBalance = profile.balance ?? 0;
       const pendingBalance = pendingBalanceRef.current;
@@ -1086,6 +1086,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser((prev) => ({
         ...prev,
         ...profile,
+        isAdmin: prev.isAdmin === true,
         balance: resolvedBalance,
         topPulls: hasInventorySubcollectionRef.current ? prev.topPulls : profile.topPulls
       }));
@@ -1170,7 +1171,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setShowEmailVerifiedModal(false);
       resolveEmailRedirect(getPendingEmailRedirect());
       if (firebaseUser) {
-        startAuthenticatedSession(firebaseUser);
+        void startAuthenticatedSession(firebaseUser);
       }
       return;
     }
@@ -1307,7 +1308,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      startAuthenticatedSession(firebaseUser);
+      void startAuthenticatedSession(firebaseUser);
     });
 
     return () => {
@@ -1659,39 +1660,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const baseUsername = buildBaseUsername(displayName, email);
       const username = await ensureUniqueUsername(baseUsername);
       const createdAt = Date.now();
-      const avatarName = displayName || username;
-      const avatar = photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&background=111827&color=10b981`;
-      const newUser: User = {
-        id: firebaseUser.uid,
-        createdAt,
-        name: username,
-        username,
-        displayName: displayName || undefined,
+      await setDoc(userRef, {
+        uid: firebaseUser.uid,
         email,
-        avatar,
+        username,
+        usernameLower: username.toLowerCase(),
+        createdAt,
+        updatedAt: createdAt,
         photoURL,
-        provider: 'google',
-        level: 1,
-        xp: 0,
-        xpBalance: 0,
-        lastDailyClaim: undefined,
-        lastFreeBoxClaim: undefined,
-        totalSpent: 0,
-        rakebackBalance: 0,
-        rakebackEarnedToday: 0,
-        rakebackEarnedAt: getDayStart(),
-        rakebackUnlocked: false,
-        rakebackPercent: undefined,
-        rakebackTier: null,
-        followers: [],
-        shippingAddress: undefined,
-        isAdmin: email.toLowerCase() === ADMIN_EMAIL,
-        chatWarnings: 0,
-        chatDisabled: false,
-        termsFlagged: false
-      };
-
-      await setDoc(userRef, { ...buildUserDocument(newUser), coins: SIGNUP_CREDIT_COINS });
+        displayName: displayName || undefined,
+        lastLogin: createdAt
+      });
       return;
     }
 
@@ -1701,11 +1680,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!data.email && email) updates.email = email;
     if (!data.displayName && displayName) updates.displayName = displayName;
     if (!data.photoURL && photoURL) updates.photoURL = photoURL;
-    if (!data.avatar && photoURL) updates.avatar = photoURL;
-    if (!data.provider) updates.provider = 'google';
-    if (!Number.isFinite(Number(data.xpBalance))) {
-      updates.xpBalance = Math.max(0, Number(data.xp ?? 0) || 0);
-    }
 
     if (Object.keys(updates).length > 0) {
       await setDoc(userRef, updates, { merge: true });
@@ -1817,7 +1791,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         level: 1,
         xp: 0,
         xpBalance: 0,
-        balance: SIGNUP_CREDIT_COINS,
+        balance: 0,
         lastDailyClaim: undefined,
         lastFreeBoxClaim: undefined,
         totalSpent: 0,
@@ -1829,13 +1803,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         rakebackTier: null,
         followers: [],
         shippingAddress: undefined,
-        isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+        isAdmin: false,
         chatWarnings: 0,
         chatDisabled: false,
         termsFlagged: false
       };
 
-      await setDoc(doc(db, 'users', newUser.id), { ...buildUserDocument(newUser), coins: SIGNUP_CREDIT_COINS });
+      await setDoc(doc(db, 'users', newUser.id), {
+        uid: newUser.id,
+        email,
+        username: name,
+        usernameLower: normalizeUsername(name),
+        createdAt,
+        updatedAt: createdAt,
+        displayName: name,
+        lastLogin: createdAt
+      });
       setShowLoginModal(false);
       setEmailVerificationStatus('pending');
       setShowEmailVerificationModal(true);

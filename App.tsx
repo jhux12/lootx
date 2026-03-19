@@ -18,6 +18,7 @@ import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert } from 'lucide-react';
+import { AdminGate } from './components/AdminGate';
 import { InboxModal } from './components/InboxModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { HowItWorksSection } from './components/HowItWorksSection';
@@ -276,28 +277,30 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       )}
 
       {view.type === 'ADMIN' && (
-        user.isAdmin ? (
-          <div className="w-full">
-            <AdminPanel />
-          </div>
-        ) : (
-          <div className="w-full h-[60vh] flex flex-col items-center justify-center text-center p-4">
-             <div className="bg-red-500/10 p-8 rounded-2xl border border-red-500/30 max-w-md animate-in zoom-in-95">
+        <AdminGate
+          fallback={(
+            <div className="w-full h-[60vh] flex flex-col items-center justify-center text-center p-4">
+              <div className="bg-red-500/10 p-8 rounded-2xl border border-red-500/30 max-w-md animate-in zoom-in-95">
                 <ShieldAlert className="w-16 h-16 text-red-500 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
                 <p className="text-gray-400 text-sm mb-6">
-                    This area is restricted to authorized personnel only. 
-                    Verification via Admin SDK failed.
+                  This area is restricted to authorized personnel only.
+                  Verification via Admin SDK failed.
                 </p>
-                <button 
-                    onClick={() => setView({ type: 'HOME' })}
-                    className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-white font-bold transition-colors border border-gray-700"
+                <button
+                  onClick={() => setView({ type: 'HOME' })}
+                  className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-white font-bold transition-colors border border-gray-700"
                 >
-                    Return Home
+                  Return Home
                 </button>
-             </div>
+              </div>
+            </div>
+          )}
+        >
+          <div className="w-full">
+            <AdminPanel />
           </div>
-        )
+        </AdminGate>
       )}
 
 
