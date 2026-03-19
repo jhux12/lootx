@@ -100,6 +100,7 @@ export const Leaderboard: React.FC = () => {
   const { user, setView } = useGame();
   const { playSound } = useSound();
   const [settings, setSettings] = useState<RewardsSettings>(DEFAULT_SETTINGS);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [myRank, setMyRank] = useState<number | null>(null);
@@ -109,6 +110,7 @@ export const Leaderboard: React.FC = () => {
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
       setSettings(normalizeSettings(snap.data() as Record<string, any>));
+      setSettingsLoaded(true);
     });
     return () => unsub();
   }, []);
@@ -148,6 +150,17 @@ export const Leaderboard: React.FC = () => {
   useEffect(() => {
     let mounted = true;
     const run = async () => {
+      const hasActiveLeaderboard = settings.enabled && (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt);
+      if (!hasActiveLeaderboard) {
+        if (mounted) {
+          setLeaders([]);
+          setMyPoints(0);
+          setMyRank(null);
+          setLoading(false);
+        }
+        return;
+      }
+
       setLoading(true);
       const topQuery = query(
         collection(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users'),
@@ -188,9 +201,10 @@ export const Leaderboard: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [settings.seasonId, user.id]);
+  }, [settings.enabled, settings.seasonEndsAt, settings.seasonId, user.id]);
 
   const myReward = useMemo(() => rewardByRule(settings, myRank, myPoints), [settings, myRank, myPoints]);
+  const hasActiveLeaderboard = settings.enabled && (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt);
 
   const topThree = useMemo(() => {
     const picks = leaders.slice(0, 3);
@@ -253,8 +267,18 @@ export const Leaderboard: React.FC = () => {
             )}
           </div>
         </section>
-        {!settings.enabled ? (
-          <div className="rounded-2xl border border-white/10 bg-[#101217] p-6 text-center text-gray-300">Rewards are currently disabled.</div>
+        {settingsLoaded && !hasActiveLeaderboard ? (
+          <section className="mx-auto max-w-3xl rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,23,37,0.96)_0%,rgba(13,17,27,0.96)_100%)] px-5 py-10 text-center shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:px-8 sm:py-14">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#7f74ff]/35 bg-[#7f74ff]/12 text-[#b9b2ff] sm:h-20 sm:w-20">
+              <Flame className="h-8 w-8 sm:h-10 sm:w-10" />
+            </div>
+            <h2 className="mt-5 text-3xl font-black uppercase tracking-[0.16em] text-white sm:text-4xl">
+              Starting Soon
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#cdd3f5] sm:text-base">
+              There isn’t a leaderboard running right now. Check back soon for the next competition and rewards drop.
+            </p>
+          </section>
         ) : (
           <div className="space-y-8">
             {timeLeft && (
