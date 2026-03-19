@@ -276,6 +276,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       )}
 
       {view.type === 'ADMIN' && (
+        // Admin view access is driven by claim-derived auth state only.
         user.isAdmin ? (
           <div className="w-full">
             <AdminPanel />
