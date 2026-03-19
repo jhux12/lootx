@@ -1,17 +1,110 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
-    }
 
     function isSignedIn() {
       return request.auth != null;
     }
 
-    match /boxes/{boxId} {
+    function isOwnUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdminByClaim() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isAdmin() {
+      return isAdminByClaim();
+    }
+
+    function validUsernameLower(value) {
+      return value is string && value.matches('^[a-z0-9_]{3,16}$');
+    }
+
+    function hasOnlyKeys(data, allowedKeys) {
+      return data.keys().hasOnly(allowedKeys);
+    }
+
+    function userProfileCreateKeys() {
+      return [
+        'uid',
+        'email',
+        'username',
+        'usernameLower',
+        'createdAt',
+        'updatedAt',
+        'photoURL',
+        'displayName',
+        'lastLogin',
+        'shippingAddress'
+      ];
+    }
+
+    function userProfileUpdateKeys() {
+      return [
+        'email',
+        'username',
+        'usernameLower',
+        'updatedAt',
+        'photoURL',
+        'displayName',
+        'lastLogin',
+        'shippingAddress'
+      ];
+    }
+
+    match /usernames/{usernameLower} {
       allow read: if true;
+      allow create: if isSignedIn()
+        && !exists(/databases/$(database)/documents/usernames/$(usernameLower))
+        && validUsernameLower(usernameLower)
+        && hasOnlyKeys(request.resource.data, ['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwnUser(uid) || isAdmin();
+
+      allow create: if isAdmin()
+        || (
+          isOwnUser(uid)
+          && request.resource.data.uid == request.auth.uid
+          && hasOnlyKeys(request.resource.data, userProfileCreateKeys())
+          && request.resource.data.username is string
+          && validUsernameLower(request.resource.data.usernameLower)
+          && request.resource.data.email is string
+        );
+
+      allow update: if isAdmin()
+        || (
+          isOwnUser(uid)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(userProfileUpdateKeys())
+          && request.resource.data.username is string
+          && validUsernameLower(request.resource.data.usernameLower)
+          && request.resource.data.email is string
+        );
+
+      allow delete: if false;
+    }
+
+    match /users/{uid}/notifications/{notificationId} {
+      allow read: if isOwnUser(uid) || isAdmin();
+      allow create, update, delete: if isOwnUser(uid);
+    }
+
+    match /users/{uid}/inventory/{inventoryId} {
+      allow read: if isOwnUser(uid) || isAdmin();
       allow write: if isAdmin();
+    }
+
+    match /users/{uid}/activity/{activityId} {
+      allow read: if isOwnUser(uid) || isAdmin();
+      allow create, update: if isOwnUser(uid) || isAdmin();
+      allow delete: if false;
     }
 
     match /items/{itemId} {
@@ -19,105 +112,24 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /users/{uid} {
-      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isSignedIn()
-        && ((request.auth.uid == uid && !('coins' in request.resource.data) && !('rewardPointsBalance' in request.resource.data) && !('rewardPointsSeason' in request.resource.data)) || isAdmin());
-      allow update: if isSignedIn()
-        && ((request.auth.uid == uid
-          && request.resource.data.coins == resource.data.coins
-          && request.resource.data.rewardPointsBalance == resource.data.rewardPointsBalance
-          && request.resource.data.rewardPointsSeason == resource.data.rewardPointsSeason
-          && request.resource.data.rewardPointsSeasonId == resource.data.rewardPointsSeasonId)
-          || isAdmin());
-      allow delete: if false;
-    }
-
-
-
-    match /users/{uid}/notifications/{notificationId} {
-      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
-    }
-
-    match /users/{uid}/inventory/{inventoryId} {
-      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow write: if isAdmin();
-    }
-
-    match /users/{uid}/activity/{activityId} {
-      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create, update: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow delete: if false;
-    }
-
-    match /shipments/{shipmentId} {
-      allow read, write: if isAdmin();
-    }
-
-    match /settings/{docId} {
-      allow read: if docId != 'plinko' || isAdmin();
-      allow write: if isAdmin();
-    }
-
-    match /plinkoBoards/{boardId} {
-      allow read: if (resource.data == null || resource.data.enabled != false) || isAdmin();
-      allow write: if isAdmin();
-    }
-
-    match /plinkoPools/{poolId} {
+    match /boxes/{boxId} {
       allow read: if true;
       allow write: if isAdmin();
 
-      match /items/{itemId} {
-        allow read: if (resource.data.enabled == true) || isAdmin();
+      match /versions/{versionId} {
+        allow read: if isAdmin();
         allow write: if isAdmin();
       }
     }
 
-    match /plinkoDrops/{dropId} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
-      allow write: if false;
-    }
-
-    match /upgraderTargets/{targetId} {
-      allow read: if (resource.data.enabled == true) || isAdmin();
-      allow write: if isAdmin();
-    }
-
-    match /upgradeAttempts/{attemptId} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
-      allow write: if false;
-    }
-
-    match /site/{docId} {
+    match /battles/{battleId} {
       allow read: if true;
       allow write: if isAdmin();
-
-      match /settings/{settingId} {
-        allow read: if true;
-        allow write: if isAdmin();
-
-        match /xp/{xpDocId} {
-          allow read: if true;
-          allow write: if isAdmin();
-        }
-      }
     }
 
-    match /xpShopItems/{itemId} {
-      allow read: if resource.data.enabled == true || isAdmin();
+    match /coinPackages/{packageId} {
+      allow read: if true;
       allow write: if isAdmin();
-    }
-
-    match /xpRedemptions/{redemptionId} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow write: if isAdmin();
-    }
-
-
-    match /adminNotifications/{notificationId} {
-      allow read, write: if isAdmin();
     }
 
     match /coin_packages/{packageId} {
@@ -125,55 +137,36 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-
-    match /leaderboards/{boardId} {
-      allow read: if true;
-      allow write: if false;
-
-      match /users/{uid} {
-        allow read: if true;
-        allow write: if false;
-      }
+    match /orders/{orderId} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.uid);
+      allow write: if isAdmin();
     }
 
-    match /battles/{battleId} {
-      allow read: if isSignedIn();
-      allow write: if false;
-
-      match /rounds/{roundId} {
-        allow read: if isSignedIn();
-        allow write: if false;
-      }
+    match /supportTickets/{ticketId} {
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.uid);
+      allow update, delete: if isAdmin();
     }
 
-    match /opens/{openId} {
+    match /settings/{docId} {
+      allow read: if isAdmin() || docId == 'bonus' || docId == 'stripe' || docId == 'economy';
+      allow write: if isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /shipments/{shipmentId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /admin/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /{document=**} {
       allow read, write: if false;
-    }
-
-    match /provablyFair/{uid} {
-      allow read, write: if false;
-    }
-
-    match /provablyFairReveals/{uid}/reveals/{revealId} {
-      allow read, write: if false;
-    }
-
-    match /supportCases/{caseId} {
-      allow create: if isSignedIn()
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.email == request.auth.token.email;
-      allow read: if isSignedIn()
-        && (resource.data.uid == request.auth.uid || isAdmin());
-      allow update: if isSignedIn()
-        && (
-          isAdmin()
-          || (
-            resource.data.uid == request.auth.uid
-            && request.resource.data.uid == resource.data.uid
-            && request.resource.data.email == resource.data.email
-          )
-        );
-      allow delete: if isAdmin();
     }
   }
 }

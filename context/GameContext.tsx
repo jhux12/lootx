@@ -12,7 +12,6 @@ import {
   browserLocalPersistence,
   browserSessionPersistence,
   applyActionCode,
-  onAuthStateChanged,
   setPersistence,
   signInWithCredential,
   signInWithEmailAndPassword,
@@ -22,7 +21,9 @@ import {
   linkWithCredential,
   sendEmailVerification,
   sendPasswordResetEmail,
-  signOut
+  signOut,
+  getIdTokenResult,
+  onIdTokenChanged
 } from 'firebase/auth';
 import { 
   addDoc,
@@ -675,8 +676,6 @@ const GUEST_USER: User = {
   termsFlagged: false
 };
 
-const ADMIN_EMAIL = 'jhuxf12@outlook.com';
-
 const getUserRef = (uid: string) => doc(db, 'users', uid);
 
 const normalizeTimestamp = (value: unknown, fallback: number) => {
@@ -692,16 +691,46 @@ const normalizeTimestamp = (value: unknown, fallback: number) => {
   return fallback;
 };
 
-const buildUserDocument = (user: User) => {
-  const payload: Record<string, unknown> = { ...user };
-  delete payload.balance;
-  delete payload.inventory;
+const USER_PROFILE_SAFE_KEYS = [
+  'uid',
+  'email',
+  'username',
+  'usernameLower',
+  'createdAt',
+  'updatedAt',
+  'photoURL',
+  'displayName',
+  'lastLogin',
+  'shippingAddress'
+] as const;
 
-  if (payload.shippingAddress === undefined) {
-    delete payload.shippingAddress;
+const filterSafeUserProfileFields = (payload: Record<string, unknown>) => {
+  const filtered = Object.fromEntries(
+    Object.entries(payload).filter(([key]) => USER_PROFILE_SAFE_KEYS.includes(key as typeof USER_PROFILE_SAFE_KEYS[number]))
+  );
+
+  if (filtered.shippingAddress === undefined) {
+    delete filtered.shippingAddress;
   }
 
-  return sanitizeDeep(payload);
+  return sanitizeDeep(filtered);
+};
+
+const buildUserDocument = (user: User) => {
+  const payload: Record<string, unknown> = {
+    uid: user.id,
+    email: user.email ?? '',
+    username: user.username ?? user.name ?? '',
+    usernameLower: normalizeUsername(user.username ?? user.name ?? ''),
+    createdAt: user.createdAt ?? Date.now(),
+    updatedAt: Date.now(),
+    photoURL: user.photoURL,
+    displayName: user.displayName ?? user.name ?? '',
+    lastLogin: Date.now(),
+    shippingAddress: user.shippingAddress
+  };
+
+  return filterSafeUserProfileFields(payload);
 };
 
 const normalizeUsername = (value: string) =>
@@ -782,7 +811,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     referredBy: data.referredBy,
     followers: followerIds,
     shippingAddress: data.shippingAddress,
-    isAdmin: data.isAdmin ?? false,
+    isAdmin: false,
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
     chatDisabledAt: data.chatDisabledAt,
@@ -844,7 +873,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     referredBy: data.referredBy,
     followers: followerIds,
     shippingAddress: data.shippingAddress,
-    isAdmin: data.isAdmin ?? false,
+    isAdmin: false,
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
     chatDisabledAt: data.chatDisabledAt,
@@ -937,11 +966,8 @@ const persistUserData = async (payload: PersistUserData) => {
   const currentUser = auth.currentUser;
   if (!currentUser) return;
   const userRef = getUserRef(currentUser.uid);
-  const sanitized = sanitizeDeep(payload);
-  delete sanitized.balance;
-  delete sanitized.inventory;
-  delete sanitized.coins;
-  await setDoc(userRef, sanitized, { merge: true });
+  const sanitized = filterSafeUserProfileFields(sanitizeDeep(payload));
+  await setDoc(userRef, { ...sanitized, updatedAt: Date.now(), lastLogin: Date.now() }, { merge: true });
 };
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -959,6 +985,29 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const activeUserIdRef = useRef<string | null>(null);
   const userUnsubscribeRef = useRef<(() => void) | null>(null);
   const inventoryUnsubscribeRef = useRef<(() => void) | null>(null);
+  const syncAdminClaim = async (firebaseUser: FirebaseUser | null) => {
+    if (!firebaseUser) {
+      setUser((prev) => ({ ...prev, isAdmin: false }));
+      return false;
+    }
+
+    try {
+      const tokenResult = await getIdTokenResult(firebaseUser);
+      const isAdmin = tokenResult.claims.admin === true;
+      setUser((prev) => ({ ...prev, isAdmin }));
+      setUsers((prev) => prev.map((entry) => entry.id === firebaseUser.uid ? { ...entry, isAdmin } : entry));
+      return isAdmin;
+    } catch (error) {
+      console.error('Failed to resolve admin custom claim from Firebase Auth', {
+        uid: firebaseUser.uid,
+        code: (error as { code?: string })?.code,
+        message: (error as { message?: string })?.message,
+        error
+      });
+      setUser((prev) => ({ ...prev, isAdmin: false }));
+      return false;
+    }
+  };
 
   const setAuthPersistence = async (remember: boolean) => {
     const persistence = remember ? browserLocalPersistence : browserSessionPersistence;
@@ -1053,25 +1102,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     clearUserSubscriptions();
     activeUserIdRef.current = firebaseUser.uid;
     setIsAuthenticated(true);
+    void syncAdminClaim(firebaseUser);
 
     const userRef = getUserRef(firebaseUser.uid);
     userUnsubscribeRef.current = onSnapshot(userRef, (snapshot) => {
       if (!snapshot.exists()) {
         const profile = buildUserProfile(firebaseUser);
-        setUser(profile);
+        setUser((prev) => ({ ...prev, ...profile, isAdmin: prev.isAdmin }));
         setBalance(0);
         return;
       }
 
       const data = snapshot.data();
       const profile = buildUserProfile(firebaseUser, data);
-      const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
-      if (shouldBeAdmin && !profile.isAdmin) {
-        void setDoc(userRef, { isAdmin: true }, { merge: true }).catch((error) => {
-          console.error('Failed to backfill admin flag', error);
-        });
-        profile.isAdmin = true;
-      }
 
       const incomingBalance = profile.balance ?? 0;
       const pendingBalance = pendingBalanceRef.current;
@@ -1086,6 +1129,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser((prev) => ({
         ...prev,
         ...profile,
+        isAdmin: prev.isAdmin,
         balance: resolvedBalance,
         topPulls: hasInventorySubcollectionRef.current ? prev.topPulls : profile.topPulls
       }));
@@ -1170,7 +1214,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setShowEmailVerifiedModal(false);
       resolveEmailRedirect(getPendingEmailRedirect());
       if (firebaseUser) {
-        startAuthenticatedSession(firebaseUser);
+        void syncAdminClaim(firebaseUser);
+      startAuthenticatedSession(firebaseUser);
       }
       return;
     }
@@ -1216,13 +1261,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [bonusSettings, setBonusSettings] = useState<BonusSettings>(() => getStoredBonusSettings());
 
   useEffect(() => {
+    const bonusSettingsPath = `settings/${BONUS_SETTINGS_DOC}`;
+    console.log('READING FIRESTORE PATH', bonusSettingsPath);
     const bonusSettingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC);
     const unsubscribe = onSnapshot(bonusSettingsRef, (snapshot) => {
       if (!snapshot.exists()) return;
       const normalized = normalizeBonusSettings(snapshot.data() as Partial<BonusSettings>);
       setBonusSettings(normalized);
     }, (error) => {
-      console.error('Failed to load bonus settings from Firebase', error);
+      console.error('Failed to load bonus settings from Firebase', { path: bonusSettingsPath, code: error?.code, message: error?.message, error });
     });
 
     return () => unsubscribe();
@@ -1231,12 +1278,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [stripeSettings, setStripeSettings] = useState<StripeSettings>(() => DEFAULT_STRIPE_SETTINGS);
 
   useEffect(() => {
+    const stripeSettingsPath = `settings/${STRIPE_SETTINGS_DOC}`;
+    console.log('READING FIRESTORE PATH', stripeSettingsPath);
     const stripeSettingsRef = doc(db, 'settings', STRIPE_SETTINGS_DOC);
     const unsubscribe = onSnapshot(stripeSettingsRef, (snapshot) => {
       const data = snapshot.data() ?? {};
       setStripeSettings(normalizeStripeSettings(data));
     }, (error) => {
-      console.error('Failed to load stripe settings from Firebase', error);
+      console.error('Failed to load stripe settings from Firebase', { path: stripeSettingsPath, code: error?.code, message: error?.message, error });
     });
 
     return () => unsubscribe();
@@ -1274,7 +1323,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onIdTokenChanged(auth, (firebaseUser) => {
       setAuthInitialized(true);
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
       const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified);
@@ -1307,6 +1356,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
+      void syncAdminClaim(firebaseUser);
       startAuthenticatedSession(firebaseUser);
     });
 
@@ -1536,6 +1586,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
+    const coinPackagesPath = 'coin_packages';
+    console.log('READING FIRESTORE PATH', coinPackagesPath);
     const packagesRef = query(collection(db, 'coin_packages'), orderBy('sortOrder', 'asc'));
     const unsubscribe = onSnapshot(packagesRef, (snapshot) => {
       const loaded = snapshot.docs.map((docSnap) => {
@@ -1559,7 +1611,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       setCoinPackages(loaded);
     }, (error) => {
-      console.error('Failed to load coin packages from Firebase', error);
+      console.error('Failed to load coin packages from Firebase', { path: coinPackagesPath, code: error?.code, message: error?.message, error });
     });
 
     return () => unsubscribe();
@@ -1685,13 +1737,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         rakebackTier: null,
         followers: [],
         shippingAddress: undefined,
-        isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+        isAdmin: false,
         chatWarnings: 0,
         chatDisabled: false,
         termsFlagged: false
       };
 
-      await setDoc(userRef, { ...buildUserDocument(newUser), coins: SIGNUP_CREDIT_COINS });
+      await setDoc(userRef, buildUserDocument(newUser), { merge: true });
       return;
     }
 
@@ -1701,14 +1753,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!data.email && email) updates.email = email;
     if (!data.displayName && displayName) updates.displayName = displayName;
     if (!data.photoURL && photoURL) updates.photoURL = photoURL;
-    if (!data.avatar && photoURL) updates.avatar = photoURL;
-    if (!data.provider) updates.provider = 'google';
-    if (!Number.isFinite(Number(data.xpBalance))) {
-      updates.xpBalance = Math.max(0, Number(data.xp ?? 0) || 0);
-    }
 
     if (Object.keys(updates).length > 0) {
-      await setDoc(userRef, updates, { merge: true });
+      await setDoc(userRef, filterSafeUserProfileFields(updates), { merge: true });
     }
   };
 
@@ -1805,11 +1852,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         handleCodeInApp: true
       });
       const createdAt = Date.now();
+      const username = await ensureUniqueUsername(buildBaseUsername(name, email));
       const newUser: User = {
         id: credential.user.uid,
         createdAt,
         name,
-        username: name,
+        username,
         displayName: name,
         email,
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
@@ -1817,7 +1865,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         level: 1,
         xp: 0,
         xpBalance: 0,
-        balance: SIGNUP_CREDIT_COINS,
+        balance: 0,
         lastDailyClaim: undefined,
         lastFreeBoxClaim: undefined,
         totalSpent: 0,
@@ -1829,13 +1877,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         rakebackTier: null,
         followers: [],
         shippingAddress: undefined,
-        isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+        isAdmin: false,
         chatWarnings: 0,
         chatDisabled: false,
         termsFlagged: false
       };
 
-      await setDoc(doc(db, 'users', newUser.id), { ...buildUserDocument(newUser), coins: SIGNUP_CREDIT_COINS });
+      await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser), { merge: true });
       setShowLoginModal(false);
       setEmailVerificationStatus('pending');
       setShowEmailVerificationModal(true);
@@ -2276,12 +2324,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateUserInfo = async (name: string, avatar: string) => {
-      const updates = { name, avatar };
+      const updates = {
+        name,
+        avatar,
+        displayName: name,
+        photoURL: avatar
+      };
       setUser(prev => ({ ...prev, ...updates }));
       setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, ...updates } : u));
 
       try {
-        await persistUserData(updates);
+        await persistUserData({ displayName: name, photoURL: avatar });
       } catch (error) {
         console.error('Failed to persist profile changes', error);
       }
@@ -2289,10 +2342,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateUserFlags = async (updates: Partial<User>) => {
       if (!isAuthenticated || !auth.currentUser) return;
-      const sanitizedUpdates = sanitizeData(updates);
+      const sanitizedUpdates = filterSafeUserProfileFields(sanitizeData(updates as Record<string, unknown>));
+      if (Object.keys(sanitizedUpdates).length === 0) return;
 
       try {
-          await setDoc(getUserRef(auth.currentUser.uid), sanitizedUpdates, { merge: true });
+          await setDoc(getUserRef(auth.currentUser.uid), { ...sanitizedUpdates, updatedAt: Date.now() }, { merge: true });
       } catch (error) {
           console.error('Failed to update user flags in Firebase', error);
       }
@@ -2303,14 +2357,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateUserAdminData = async (userId: string, updates: Partial<User>) => {
       if (!isAuthenticated || !auth.currentUser) return;
-      const sanitizedUpdates = sanitizeDeep(updates);
-      delete sanitizedUpdates.balance;
-      delete sanitizedUpdates.coins;
+      const sanitizedUpdates = filterSafeUserProfileFields(sanitizeDeep(updates as Record<string, unknown>));
 
-      try {
-        await setDoc(getUserRef(userId), sanitizedUpdates, { merge: true });
-      } catch (error) {
-        console.error('Failed to update user admin data in Firebase', error);
+      if (Object.keys(sanitizedUpdates).length > 0) {
+        try {
+          await setDoc(getUserRef(userId), { ...sanitizedUpdates, updatedAt: Date.now() }, { merge: true });
+        } catch (error) {
+          console.error('Failed to update user admin data in Firebase', error);
+        }
       }
 
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
@@ -2320,11 +2374,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateUserBalance = async (userId: string, nextBalance: number) => {
       if (!isAuthenticated || !auth.currentUser) return;
       const balanceValue = Number.isFinite(nextBalance) ? Math.max(0, nextBalance) : 0;
-      try {
-        await setDoc(getUserRef(userId), { coins: balanceValue }, { merge: true });
-      } catch (error) {
-        console.error('Failed to update user balance in Firebase', error);
-      }
+
+      console.warn('Blocked client-side balance write to /users/{uid}; balance must be updated server-side.', {
+        userId,
+        attemptedBalance: balanceValue
+      });
 
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, balance: balanceValue } : u));
       setUser(prev => prev.id === userId ? { ...prev, balance: balanceValue } : prev);
@@ -2718,11 +2772,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateUserProgress = async (userId: string, xp: number) => {
     const numericXp = Number.isFinite(xp) ? xp : 0;
     const sanitizedXp = Math.max(0, Math.floor(numericXp));
-    try {
-      await setDoc(getUserRef(userId), { xp: sanitizedXp, xpBalance: sanitizedXp }, { merge: true });
-    } catch (error) {
-      console.error('Failed to update user progress in Firebase', error);
-    }
+
+    console.warn('Blocked client-side XP write to /users/{uid}; XP must be updated server-side.', {
+      userId,
+      attemptedXp: sanitizedXp
+    });
 
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, xp: sanitizedXp, xpBalance: sanitizedXp } : u));
     setUser(prev => prev.id === userId ? { ...prev, xp: sanitizedXp, xpBalance: sanitizedXp } : prev);
