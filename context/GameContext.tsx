@@ -22,7 +22,8 @@ import {
   linkWithCredential,
   sendEmailVerification,
   sendPasswordResetEmail,
-  signOut
+  signOut,
+  getIdTokenResult
 } from 'firebase/auth';
 import { 
   addDoc,
@@ -675,7 +676,6 @@ const GUEST_USER: User = {
   termsFlagged: false
 };
 
-const ADMIN_EMAIL = 'jhuxf12@outlook.com';
 
 const getUserRef = (uid: string) => doc(db, 'users', uid);
 
@@ -719,6 +719,30 @@ const buildBaseUsername = (displayName: string | null | undefined, email: string
   return fromEmail || 'player';
 };
 
+const buildSafeUserProfileDocument = (
+  firebaseUser: FirebaseUser,
+  profile: {
+    email?: string | null;
+    username?: string | null;
+    usernameLower?: string | null;
+    displayName?: string | null;
+    photoURL?: string | null;
+    createdAt?: number;
+    updatedAt?: number;
+    lastLogin?: number;
+  }
+) => sanitizeDeep({
+  uid: firebaseUser.uid,
+  email: profile.email ?? firebaseUser.email ?? '',
+  username: profile.username ?? profile.displayName ?? firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'Player',
+  usernameLower: profile.usernameLower ?? normalizeUsername(profile.username ?? profile.displayName ?? firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'player'),
+  createdAt: profile.createdAt ?? Date.now(),
+  updatedAt: profile.updatedAt ?? Date.now(),
+  photoURL: profile.photoURL ?? firebaseUser.photoURL ?? undefined,
+  displayName: profile.displayName ?? firebaseUser.displayName ?? undefined,
+  lastLogin: profile.lastLogin ?? Date.now()
+});
+
 const ensureUniqueUsername = async (base: string) => {
   const usersRef = collection(db, 'users');
   let attempt = 1;
@@ -736,7 +760,7 @@ const ensureUniqueUsername = async (base: string) => {
   }
 };
 
-const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> = {}) => {
+const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> = {}, claimsAdmin = false) => {
   const now = Date.now();
   const metadataCreatedAt = firebaseUser.metadata.creationTime ? Date.parse(firebaseUser.metadata.creationTime) : NaN;
   const fallbackCreatedAt = Number.isFinite(metadataCreatedAt) ? metadataCreatedAt : now;
@@ -782,7 +806,8 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     referredBy: data.referredBy,
     followers: followerIds,
     shippingAddress: data.shippingAddress,
-    isAdmin: data.isAdmin ?? false,
+    // Admin is claim-only; never trust Firestore profile fields for authorization.
+    isAdmin: claimsAdmin,
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
     chatDisabledAt: data.chatDisabledAt,
@@ -844,7 +869,8 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     referredBy: data.referredBy,
     followers: followerIds,
     shippingAddress: data.shippingAddress,
-    isAdmin: data.isAdmin ?? false,
+    // Admin is claim-only; never trust Firestore profile fields for authorization.
+    isAdmin: false,
     chatWarnings: data.chatWarnings ?? 0,
     chatDisabled: data.chatDisabled ?? false,
     chatDisabledAt: data.chatDisabledAt,
@@ -1048,7 +1074,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const startAuthenticatedSession = (firebaseUser: FirebaseUser) => {
+  const startAuthenticatedSession = (firebaseUser: FirebaseUser, claimsAdmin: boolean) => {
     if (activeUserIdRef.current === firebaseUser.uid) return;
     clearUserSubscriptions();
     activeUserIdRef.current = firebaseUser.uid;
@@ -1057,21 +1083,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const userRef = getUserRef(firebaseUser.uid);
     userUnsubscribeRef.current = onSnapshot(userRef, (snapshot) => {
       if (!snapshot.exists()) {
-        const profile = buildUserProfile(firebaseUser);
+        const profile = buildUserProfile(firebaseUser, {}, claimsAdmin);
         setUser(profile);
         setBalance(0);
         return;
       }
 
       const data = snapshot.data();
-      const profile = buildUserProfile(firebaseUser, data);
-      const shouldBeAdmin = profile.email?.toLowerCase() === ADMIN_EMAIL;
-      if (shouldBeAdmin && !profile.isAdmin) {
-        void setDoc(userRef, { isAdmin: true }, { merge: true }).catch((error) => {
-          console.error('Failed to backfill admin flag', error);
-        });
-        profile.isAdmin = true;
-      }
+      const profile = buildUserProfile(firebaseUser, data, claimsAdmin);
 
       const incomingBalance = profile.balance ?? 0;
       const pendingBalance = pendingBalanceRef.current;
@@ -1170,7 +1189,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setShowEmailVerifiedModal(false);
       resolveEmailRedirect(getPendingEmailRedirect());
       if (firebaseUser) {
-        startAuthenticatedSession(firebaseUser);
+        const tokenResult = await getIdTokenResult(firebaseUser);
+        // Admin is claim-only; never trust Firestore profile fields for authorization.
+        const isAdmin = tokenResult.claims.admin === true;
+        startAuthenticatedSession(firebaseUser, isAdmin);
       }
       return;
     }
@@ -1274,7 +1296,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setAuthInitialized(true);
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
       const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified);
@@ -1307,7 +1329,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      startAuthenticatedSession(firebaseUser);
+      const tokenResult = await getIdTokenResult(firebaseUser);
+      // Admin is claim-only; never trust Firestore profile fields for authorization.
+      const isAdmin = tokenResult.claims.admin === true;
+      startAuthenticatedSession(firebaseUser, isAdmin);
     });
 
     return () => {
@@ -1685,13 +1710,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         rakebackTier: null,
         followers: [],
         shippingAddress: undefined,
-        isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+        isAdmin: false,
         chatWarnings: 0,
         chatDisabled: false,
         termsFlagged: false
       };
 
-      await setDoc(userRef, { ...buildUserDocument(newUser), coins: SIGNUP_CREDIT_COINS });
+      await setDoc(userRef, buildSafeUserProfileDocument(firebaseUser, {
+        email,
+        username,
+        usernameLower: normalizeUsername(username),
+        displayName: displayName || undefined,
+        photoURL,
+        createdAt,
+        updatedAt: createdAt,
+        lastLogin: createdAt
+      }));
       return;
     }
 
@@ -1701,11 +1735,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!data.email && email) updates.email = email;
     if (!data.displayName && displayName) updates.displayName = displayName;
     if (!data.photoURL && photoURL) updates.photoURL = photoURL;
-    if (!data.avatar && photoURL) updates.avatar = photoURL;
-    if (!data.provider) updates.provider = 'google';
-    if (!Number.isFinite(Number(data.xpBalance))) {
-      updates.xpBalance = Math.max(0, Number(data.xp ?? 0) || 0);
+    if (!data.username) {
+      const username = await ensureUniqueUsername(buildBaseUsername(displayName, email));
+      updates.username = username;
+      updates.usernameLower = normalizeUsername(username);
     }
+    if (!data.lastLogin) updates.lastLogin = Date.now();
+    updates.updatedAt = Date.now();
 
     if (Object.keys(updates).length > 0) {
       await setDoc(userRef, updates, { merge: true });
@@ -1829,13 +1865,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         rakebackTier: null,
         followers: [],
         shippingAddress: undefined,
-        isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+        isAdmin: false,
         chatWarnings: 0,
         chatDisabled: false,
         termsFlagged: false
       };
 
-      await setDoc(doc(db, 'users', newUser.id), { ...buildUserDocument(newUser), coins: SIGNUP_CREDIT_COINS });
+      await setDoc(doc(db, 'users', newUser.id), buildSafeUserProfileDocument(credential.user, {
+        email,
+        username: name,
+        usernameLower: normalizeUsername(name),
+        displayName: name,
+        createdAt,
+        updatedAt: createdAt,
+        lastLogin: createdAt
+      }));
       setShowLoginModal(false);
       setEmailVerificationStatus('pending');
       setShowEmailVerificationModal(true);
@@ -2276,9 +2320,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateUserInfo = async (name: string, avatar: string) => {
-      const updates = { name, avatar };
-      setUser(prev => ({ ...prev, ...updates }));
-      setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, ...updates } : u));
+      const normalizedUsername = normalizeUsername(name) || normalizeUsername(user.username || user.name || 'player');
+      const updates = {
+        displayName: name,
+        username: name,
+        usernameLower: normalizedUsername,
+        photoURL: avatar || undefined,
+        updatedAt: Date.now()
+      };
+      setUser(prev => ({ ...prev, ...updates, name, avatar }));
+      setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, ...updates, name, avatar } : u));
 
       try {
         await persistUserData(updates);
