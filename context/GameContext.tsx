@@ -2420,11 +2420,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateAddress = async (address: ShippingAddress) => {
-      setUser(prev => {
-        const updated = { ...prev, shippingAddress: address };
-        persistUserData({ shippingAddress: address });
-        return updated;
-      });
+      try {
+        await persistUserData({ shippingAddress: address });
+        setUser(prev => ({ ...prev, shippingAddress: address }));
+        setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, shippingAddress: address } : u));
+      } catch (error) {
+        console.error('Failed to save shipping address', error);
+        throw error;
+      }
   };
 
   const updateUserInfo = async (name: string, avatar: string) => {
