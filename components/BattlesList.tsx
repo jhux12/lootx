@@ -44,8 +44,14 @@ export const BattlesList: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const pathLabel = 'battles';
+    console.log('READING FIRESTORE PATH', pathLabel);
     const battlesRef = query(collection(db, 'battles'), orderBy('createdAt', 'desc'), limit(10));
     return onSnapshot(battlesRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: pathLabel,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const mapped = snapshot.docs.map((docSnap) => {
         const data = docSnap.data();
         const players = Array.isArray(data.players) ? data.players : [];
@@ -64,6 +70,13 @@ export const BattlesList: React.FC = () => {
         };
       });
       setRows(mapped);
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: pathLabel,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
   }, []);
 

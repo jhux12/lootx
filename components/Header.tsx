@@ -136,7 +136,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   }, []);
 
   useEffect(() => {
+    const pathLabel = 'settings/rewards';
+    console.log('READING FIRESTORE PATH', pathLabel);
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
+      console.log('SNAPSHOT OK', {
+        path: pathLabel,
+        size: 'size' in snap ? snap.size : undefined
+      });
       const data = snap.data() as Record<string, unknown> | undefined;
       const today = new Date().toISOString().slice(0, 10);
       const claims = { ...(user.questClaims ?? {}), ...locallyClaimedQuestIds };
@@ -146,6 +152,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       const claimedCount = rules.filter((rule) => claims?.[rule.id] === today).length;
       setQuestReadyCount(count);
       setClaimedTodayCount(claimedCount);
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: pathLabel,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
     return () => unsub();
   }, [locallyClaimedQuestIds, user.challengeStats, user.questClaims]);

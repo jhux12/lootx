@@ -64,16 +64,42 @@ export const useNotifications = (uid?: string | null) => {
     const listQuery = query(notificationsRef);
     const unreadQuery = query(notificationsRef, where('readAt', '==', null), limit(UNREAD_COUNT_LIMIT));
 
+    const listPathLabel = `users/${uid}/notifications`;
+    console.log('READING FIRESTORE PATH', listPathLabel);
     const unsubList = onSnapshot(listQuery, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: listPathLabel,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const next = snapshot.docs
         .map((docSnap) => toNotification(docSnap.id, docSnap.data()))
         .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0))
         .slice(0, NOTIFICATION_LIST_LIMIT);
       setNotifications(next);
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: listPathLabel,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
+    const unreadPathLabel = `users/${uid}/notifications?readAt=null&limit=${UNREAD_COUNT_LIMIT}`;
+    console.log('READING FIRESTORE PATH', unreadPathLabel);
     const unsubUnread = onSnapshot(unreadQuery, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: unreadPathLabel,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       setUnreadCount(snapshot.size);
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: unreadPathLabel,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
     return () => {

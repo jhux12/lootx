@@ -107,10 +107,23 @@ export const useFreeRain = () => {
   }, []);
 
   useEffect(() => {
+    const pathLabel = 'site/freeRain/current';
+    console.log('READING FIRESTORE PATH', pathLabel);
     const unsubscribe = onSnapshot(rainRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: pathLabel,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const currentNow = Date.now();
       const normalized = normalizeRainState(snapshot.data(), currentNow);
       setRainState(normalized);
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: pathLabel,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
     return () => unsubscribe();

@@ -111,10 +111,17 @@ export const loadHomepageConfig = async () => {
 export const subscribeHomepageConfig = (
   onData: (config: HomepageConfig | null) => void,
   onError?: (error: Error) => void
-) =>
-  onSnapshot(
+) => {
+  const pathLabel = 'site/homepage';
+  console.log('READING FIRESTORE PATH', pathLabel);
+
+  return onSnapshot(
     HOMEPAGE_DOC_REF,
     (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: pathLabel,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       if (!snapshot.exists()) {
         onData(null);
         return;
@@ -126,9 +133,16 @@ export const subscribeHomepageConfig = (
       });
     },
     (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: pathLabel,
+        code: (error as { code?: string })?.code,
+        message: (error as { message?: string })?.message,
+        error
+      });
       if (onError) onError(error as Error);
     }
   );
+};
 
 export const saveHomepageConfig = async (configOrRows: HomepageConfig | ShowcaseRow[]) => {
   const config = Array.isArray(configOrRows)

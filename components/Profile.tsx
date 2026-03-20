@@ -52,6 +52,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const [showShippingReview, setShowShippingReview] = useState(false);
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [addressSaveMessage, setAddressSaveMessage] = useState<string | null>(null);
+  const [addressSaveError, setAddressSaveError] = useState<string | null>(null);
   const sellOfferTimersRef = useRef<Record<string, number>>({});
   const tabScrollRef = useRef<HTMLDivElement>(null);
   const [tabScrollState, setTabScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
@@ -388,8 +391,20 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   };
 
   const handleSaveAddress = async () => {
-      await updateAddress(addressForm);
-      toast.success("Shipping address saved!");
+      setIsSavingAddress(true);
+      setAddressSaveMessage(null);
+      setAddressSaveError(null);
+      try {
+        await updateAddress(addressForm);
+        setAddressSaveMessage('Shipping address saved!');
+        toast.success("Shipping address saved!");
+      } catch (error) {
+        console.error('Failed to save shipping address from profile form', error);
+        setAddressSaveError('Could not save your shipping address. Please try again.');
+        toast.error("Could not save your shipping address.");
+      } finally {
+        setIsSavingAddress(false);
+      }
   };
 
   const handleToggleShipment = (instanceId: string) => {
@@ -1547,10 +1562,17 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           
                           <button 
                               onClick={handleSaveAddress}
-                              className="w-full mt-8 py-3 bg-[#1a2130] text-white rounded-xl font-bold hover:bg-gray-800 transition-all border border-gray-700 flex items-center justify-center gap-2"
+                              disabled={isSavingAddress}
+                              className="w-full mt-8 py-3 bg-[#1a2130] text-white rounded-xl font-bold hover:bg-gray-800 transition-all border border-gray-700 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                              <Save className="w-5 h-5" /> Save Shipping Address
+                              <Save className="w-5 h-5" /> {isSavingAddress ? 'Saving Address…' : 'Save Shipping Address'}
                           </button>
+                          {addressSaveMessage && (
+                            <p className="mt-3 text-sm font-medium text-emerald-400">{addressSaveMessage}</p>
+                          )}
+                          {addressSaveError && (
+                            <p className="mt-3 text-sm font-medium text-red-400">{addressSaveError}</p>
+                          )}
                       </div>
                   </div>
 

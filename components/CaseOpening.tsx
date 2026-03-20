@@ -395,12 +395,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [loadProvablyFairState]);
 
   useEffect(() => {
+    const pathLabel = 'settings/economy';
+    console.log('READING FIRESTORE PATH', pathLabel);
     const economyRef = doc(db, 'settings', 'economy');
     const unsubscribe = onSnapshot(economyRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: pathLabel,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const data = snapshot.exists() ? snapshot.data() : {};
       setEconomySettings(normalizeEconomySettings(data));
     }, (error) => {
-      console.error('Failed to load economy settings', error);
+      console.error('SNAPSHOT FAILED', {
+        path: pathLabel,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
       setEconomySettings(DEFAULT_ECONOMY_SETTINGS);
     });
 
