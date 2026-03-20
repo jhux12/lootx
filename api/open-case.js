@@ -145,6 +145,21 @@ export default async function handler(req, res) {
         fail(400, 'INVALID_REQUEST', 'This case does not have a valid coin price.', { caseId: boxId });
       }
 
+      const userData = userSnap.exists ? userSnap.data() ?? {} : {};
+      const existingFreeBoxClaim = toFiniteNumber(userData.lastFreeBoxClaim, Number.NaN);
+
+      if (isFree) {
+        if (boxData.isDaily !== true) {
+          fail(400, 'INVALID_REQUEST', 'Only the signup free box can be opened for free.', { caseId: boxId });
+        }
+        if (Number.isFinite(existingFreeBoxClaim) && existingFreeBoxClaim > 0) {
+          fail(409, 'FREE_BOX_ALREADY_CLAIMED', 'Free signup box already claimed.', {
+            caseId: boxId,
+            claimedAt: existingFreeBoxClaim
+          });
+        }
+      }
+
       const provablyData = provablySnap.data() ?? {};
       let serverSeed = provablyData.serverSeed;
       if (!serverSeed) serverSeed = randomSeed();
@@ -154,7 +169,6 @@ export default async function handler(req, res) {
         : DEFAULT_CLIENT_SEED;
       const nonce = Number.isFinite(provablyData.nonce) ? Number(provablyData.nonce) : 0;
 
-      const userData = userSnap.exists ? userSnap.data() ?? {} : {};
       const rawCoins = userSnap.exists ? (userData.coins ?? userData.balance) : undefined;
       const hasCoins = Number.isFinite(toFiniteNumber(rawCoins, Number.NaN));
       const currentCoins = hasCoins ? toFiniteNumber(rawCoins, 0) : (userSnap.exists ? 0 : STARTER_COINS);
@@ -248,9 +262,13 @@ export default async function handler(req, res) {
       const newXpBalance = Math.max(0, Math.floor(spentXpBalance + totalXpAward));
       const updatedXpBalance = Math.max(0, Math.floor(currentXp + totalXpAward));
 
-      const nextUserPatch = paidWithXp
-        ? { xpBalance: newXpBalance, xp: newXpBalance }
-        : { coins: newCoins };
+      const freeBoxClaimedAt = isFree ? Date.now() : null;
+      const nextUserPatch = sanitizeForFirestore({
+        ...(paidWithXp
+          ? { xpBalance: newXpBalance, xp: newXpBalance }
+          : { coins: newCoins }),
+        ...(isFree ? { lastFreeBoxClaim: freeBoxClaimedAt } : {})
+      });
 
       transaction.set(userRef, nextUserPatch, { merge: true });
       const today = new Date().toISOString().slice(0, 10);
@@ -392,6 +410,7 @@ export default async function handler(req, res) {
           forceFullSellBack: prizeForcesFullSellBack,
           size: selectedSize || undefined
         },
+        freeBoxClaimedAt: freeBoxClaimedAt ?? undefined,
         sellBackRate: appliedSellBackRate,
         newCoinBalance: newCoins,
         newCoins,
