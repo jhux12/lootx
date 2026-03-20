@@ -6,7 +6,7 @@ import { XP_ICON } from '../constants';
 import { getSellBackValue } from '../utils/sellBack';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
-import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight, CalendarDays, Gem, Boxes } from 'lucide-react';
 import { auth } from '../firebase';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
@@ -358,6 +358,34 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
     })
     .slice(0, 6);
 
+  const xpTotal = displayUser.xpBalance ?? displayUser.xp ?? 0;
+  const inventoryCount = normalizedInventory.length;
+  const joinedTimestamp = (() => {
+    const candidates = [
+      (displayUser as User & { joinedAt?: unknown }).joinedAt,
+      displayUser.createdAt
+    ];
+
+    for (const value of candidates) {
+      if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
+      if (typeof value === 'string' && value.trim()) {
+        const numeric = Number(value);
+        if (Number.isFinite(numeric) && numeric > 0) return numeric;
+        const parsed = Date.parse(value);
+        if (Number.isFinite(parsed)) return parsed;
+      }
+      if (value && typeof value === 'object' && 'toMillis' in value && typeof (value as { toMillis: () => number }).toMillis === 'function') {
+        const millis = (value as { toMillis: () => number }).toMillis();
+        if (Number.isFinite(millis) && millis > 0) return millis;
+      }
+    }
+
+    return undefined;
+  })();
+  const joinedDateLabel = joinedTimestamp
+    ? new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(joinedTimestamp)
+    : 'Joined Recently';
+
   const trimmedSearch = communitySearch.trim().toLowerCase();
   const communitySearchResults = trimmedSearch
     ? users.filter((u) => u.name.toLowerCase().includes(trimmedSearch))
@@ -600,98 +628,170 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Profile Header */}
-      <div className="bg-[#131720] border border-gray-800 rounded-2xl overflow-hidden mb-8">
-        <div className="relative h-36 sm:h-44 md:h-48 bg-gradient-to-r from-[#1d2333] via-[#1a2130] to-[#0b0e14]">
-          <div className="absolute inset-0 opacity-60 bg-[radial-gradient(circle_at_top,_rgba(120,87,255,0.45),_transparent_60%)]" />
-        </div>
+      <div className="relative mb-5 overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(160deg,rgba(19,23,32,0.98),rgba(11,14,20,0.94))] shadow-[0_28px_70px_rgba(0,0,0,0.42)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(108,92,255,0.22),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.14),transparent_34%)]" />
+        <div className="pointer-events-none absolute inset-[1px] rounded-[27px] border border-white/5" />
 
-        <div className="px-4 pb-6 sm:px-6 md:px-8">
-          <div className="flex flex-col gap-6 -mt-12 sm:-mt-14">
-            <div className="flex flex-col lg:flex-row lg:items-end gap-6">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-4 w-full">
-                <div className="relative group self-center sm:self-auto">
-                  <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUser.name} className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-[#131720] shadow-2xl object-cover bg-[#0b0e14]" />
-                  <div className="absolute -bottom-3 -right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full border-4 border-[#131720]">
-                      XP <AnimatedNumber value={displayUser.xpBalance ?? displayUser.xp ?? 0} />
-                  </div>
-                </div>
-
-                <div className="flex-1 text-center sm:text-left">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">Player profile</p>
-                      <h2 className="text-3xl sm:text-4xl font-black text-white mt-2">{displayUser.name}</h2>
-                      <div className="flex flex-wrap justify-center sm:justify-start gap-3 text-sm text-gray-400 mt-3">
-                        <span className="flex items-center gap-1.5 bg-[#0b0e14] px-3 py-1 rounded-full border border-gray-800">
-                          <UsersIcon className="w-4 h-4" /> {viewedFollowerIds.length} Followers
-                        </span>
-                        <span className="flex items-center gap-1.5 bg-[#0b0e14] px-3 py-1 rounded-full border border-gray-800">
-                          <UserPlus className="w-4 h-4" /> {viewedFollowing.length} Following
-                        </span>
-                        <span className="flex items-center gap-1.5 bg-[#0b0e14] px-3 py-1 rounded-full border border-gray-800">
-                          <Clock className="w-4 h-4" /> Joined {new Date(displayUser.joinedAt).toLocaleDateString()}
-                        </span>
-                      </div>
+        <div className="relative px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
+          <div className="flex flex-col gap-4">
+            <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm sm:p-5">
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
+                  <div className="relative shrink-0">
+                    <div className="absolute inset-1 rounded-full bg-[radial-gradient(circle,rgba(110,92,255,0.5),rgba(56,189,248,0.18)_55%,transparent_75%)] blur-xl" />
+                    <div className="relative rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-[5px] shadow-[0_18px_40px_rgba(12,17,29,0.48)]">
+                      <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUser.name} className="h-24 w-24 rounded-[22px] border border-white/10 object-cover bg-[#0b0e14] sm:h-28 sm:w-28" />
                     </div>
+                  </div>
 
-                    <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.36em] text-[#8d95ab] sm:text-xs">Player Profile</p>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <h2 className="truncate text-2xl font-black tracking-tight text-white sm:text-[2rem]">{displayUser.name}</h2>
+                        <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-cyan-400/15 bg-cyan-400/8 px-3 py-1.5 text-sm font-medium text-gray-200">
+                          <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+                          <span className="text-[#9ba3ba]">XP Points:</span>
+                          <span className="font-bold text-white"><AnimatedNumber value={xpTotal} /></span>
+                        </div>
+                      </div>
+
                       {!isOwnProfile && (
-                        <>
+                        <div className="flex w-full sm:w-auto">
                           {isFollowing ? (
                             <button
                               onClick={handleUnfollowClick}
-                              className="flex items-center gap-2 bg-[#0b0e14] text-gray-200 px-4 py-2 rounded-lg font-bold text-sm border border-gray-700 hover:border-red-500 hover:text-white transition-colors"
+                              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.04] px-5 text-sm font-bold text-gray-100 transition-colors hover:border-red-400/50 hover:text-white sm:w-auto"
                             >
-                              <UserCheck className="w-4 h-4" /> Following
+                              <UserCheck className="h-4 w-4" /> Following
                             </button>
                           ) : (
                             <button
                               onClick={handleFollowClick}
-                              className="flex items-center gap-2 bg-brand-purple text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/20"
+                              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#7c3aed,#2563eb)] px-5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(99,102,241,0.35)] transition-transform hover:-translate-y-0.5 sm:w-auto"
                             >
-                              <UserPlus className="w-4 h-4" /> Follow
+                              <UserPlus className="h-4 w-4" /> Follow
                             </button>
                           )}
-                        </>
-                      )}
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => setActiveTab('settings')}
-                          className="flex items-center gap-2 bg-[#0b0e14] text-gray-200 px-4 py-2 rounded-lg font-bold text-sm border border-gray-700 hover:border-brand-purple/60 transition-colors"
-                        >
-                          <Settings className="w-4 h-4" /> Edit Profile
-                        </button>
-                      )}
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => setView({ type: 'BOXES' })}
-                          className="flex items-center gap-2 bg-brand-purple text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/20"
-                        >
-                          <Sparkles className="w-4 h-4" /> Open Boxes
-                        </button>
+                        </div>
                       )}
                     </div>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+                  {[
+                    { icon: UsersIcon, label: 'Followers', value: viewedFollowerIds.length.toLocaleString() },
+                    { icon: UserPlus, label: 'Following', value: viewedFollowing.length.toLocaleString() },
+                    { icon: CalendarDays, label: 'Joined', value: joinedDateLabel }
+                  ].map(({ icon: Icon, label, value }) => (
+                    <div
+                      key={label}
+                      className="rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                    >
+                      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7d859d]">
+                        <Icon className="h-3.5 w-3.5 text-cyan-300/80" />
+                        <span className="truncate">{label}</span>
+                      </div>
+                      <div className="mt-2 truncate text-sm font-bold text-white sm:text-base">{value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {isOwnProfile && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setActiveTab('settings')}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white transition-colors hover:border-brand-purple/55 hover:bg-white/[0.07]"
+                    >
+                      <Settings className="h-4 w-4" /> Edit Profile
+                    </button>
+                    <button
+                      onClick={() => setView({ type: 'BOXES' })}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#7c3aed,#2563eb)] px-4 text-sm font-bold text-white shadow-[0_14px_30px_rgba(99,102,241,0.35)] transition-transform hover:-translate-y-0.5"
+                    >
+                      <Sparkles className="h-4 w-4" /> Open Boxes
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="overflow-hidden rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#7d859d]">Top Pulls</p>
+                    <h3 className="mt-2 text-lg font-black text-white">{canViewTopPulls ? `${topPulls.length} Highlight${topPulls.length === 1 ? '' : 's'}` : 'Private'}</h3>
+                    <p className="mt-1 text-xs text-gray-400">A compact look at your highest-value drops.</p>
+                  </div>
+                  <div className="rounded-xl border border-fuchsia-400/15 bg-fuchsia-400/10 p-2 text-fuchsia-200">
+                    <Gem className="h-4 w-4" />
+                  </div>
+                </div>
+
+                {canViewTopPulls && topPulls.length > 0 ? (
+                  <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto px-1 pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    {topPulls.slice(0, 4).map((item, index) => (
+                      <div
+                        key={item.instanceId}
+                        className="min-w-[112px] flex-1 rounded-2xl border border-white/8 bg-[#0d1119] p-2.5 shadow-[0_10px_24px_rgba(4,8,17,0.4)]"
+                      >
+                        <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.24),transparent_60%),#121826] p-2">
+                          <span className="absolute left-2 top-2 rounded-full border border-white/10 bg-black/45 px-2 py-0.5 text-[10px] font-black text-white">#{index + 1}</span>
+                          <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain" />
+                          <div className={`pointer-events-none absolute inset-0 opacity-30 bg-gradient-to-br ${
+                            item.rarity === 'legendary' ? 'from-yellow-400/50 via-transparent to-transparent' :
+                            item.rarity === 'epic' ? 'from-purple-400/50 via-transparent to-transparent' :
+                            item.rarity === 'rare' ? 'from-blue-400/50 via-transparent to-transparent' :
+                            item.rarity === 'uncommon' ? 'from-emerald-400/45 via-transparent to-transparent' :
+                            'from-white/10 via-transparent to-transparent'
+                          }`} />
+                        </div>
+                        <div className="mt-2 space-y-1">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#7d859d]">{item.rarity}</div>
+                          <div className="truncate text-xs font-semibold text-white">{item.name}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/15 px-4 py-5 text-sm text-gray-400">
+                    {canViewTopPulls ? 'Your best pulls will show here once you open more boxes.' : 'This player keeps their best pulls private.'}
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full lg:max-w-md">
-                <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
-                  <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Top Pulls</div>
-                  <div className="text-xl font-black text-white">
-                    {canViewTopPulls ? `${topPulls.length} Items` : 'Private'}
+              <div className="rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#7d859d]">XP Points</p>
+                    <h3 className="mt-2 text-2xl font-black text-white">{xpTotal.toLocaleString()}</h3>
+                    <p className="mt-1 text-xs text-gray-400">Display-only XP total with no rank or progression.</p>
+                  </div>
+                  <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/10 p-2">
+                    <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-6 w-6 object-contain" />
                   </div>
                 </div>
-                <div className="bg-[#0b0e14] p-4 rounded-xl border border-gray-800/50">
-                  <div className="flex items-center justify-between gap-3 mb-2">
-                    <div className="text-gray-500 text-xs font-bold uppercase tracking-wider">XP Points</div>
-                    <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="w-7 h-7 object-contain drop-shadow" />
-                  </div>
-                  <div className="text-xl font-black text-blue-500 flex items-center gap-2">
-                    <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="w-8 h-8 object-contain" />
-                    <span>{displayUser.xp.toLocaleString()}</span>
-                  </div>
+                <div className="mt-4 rounded-2xl border border-white/8 bg-[#0c1119] px-4 py-3 text-sm text-[#a8b0c7]">
+                  XP remains a simple stat in your profile summary.
                 </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2.5 rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:gap-3 lg:grid-cols-1 lg:grid-rows-3">
+                {[
+                  { icon: Sparkles, label: 'Top Pulls', value: topPulls.length.toLocaleString() },
+                  { icon: Boxes, label: 'Inventory', value: inventoryCount.toLocaleString() },
+                  { icon: CalendarDays, label: 'Member Since', value: joinedDateLabel }
+                ].map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="rounded-2xl border border-white/8 bg-[#0c1119] px-3 py-3">
+                    <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#7d859d]">
+                      <Icon className="h-3.5 w-3.5 text-brand-purple" />
+                      <span className="truncate">{label}</span>
+                    </div>
+                    <div className="mt-2 truncate text-sm font-bold text-white">{value}</div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -699,7 +799,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
             <div className="relative w-full max-w-full">
               <div
                 ref={tabScrollRef}
-                className="flex items-center gap-2 bg-[#0b0e14] p-1 rounded-xl border border-gray-800 w-full max-w-full overflow-x-auto whitespace-nowrap scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
+                className="flex items-center gap-2 rounded-2xl border border-white/8 bg-[#0b0e14]/95 p-1.5 w-full max-w-full overflow-x-auto whitespace-nowrap scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {visibleProfileTabs.map((tab) => {
@@ -708,7 +808,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 px-5 md:px-6 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all snap-start ${activeTab === tab.id ? 'bg-[#1a2130] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                      className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-all snap-start ${activeTab === tab.id ? 'bg-[linear-gradient(135deg,rgba(124,58,237,0.35),rgba(37,99,235,0.28))] text-white shadow-[0_10px_24px_rgba(12,18,30,0.35)] border border-white/10' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                       <Icon className="w-4 h-4" /> {tab.label}
                     </button>
