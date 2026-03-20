@@ -630,7 +630,7 @@ interface GameContextType {
   createUserBox: (box: MysteryBox) => Promise<string>; // User Custom
   updateBox: (box: MysteryBox) => void;
   deleteBox: (boxId: string) => Promise<void>;
-  claimFreeBox: () => void;
+  claimFreeBox: (claimedAt?: number) => void;
   claimRakeback: () => Promise<void>;
   updateBonusSettings: (settings: BonusSettings) => void;
   updateStripeSettings: (settings: StripeSettings) => void;
@@ -2854,10 +2854,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       removeAdminBox(boxId);
   };
 
-  const claimFreeBox = async () => {
-    const timestamp = Date.now();
+  const claimFreeBox = async (claimedAt?: number) => {
+    const timestamp = Number.isFinite(claimedAt) ? Number(claimedAt) : Date.now();
     setUser(prev => ({ ...prev, lastFreeBoxClaim: timestamp }));
-    persistUserData({ lastFreeBoxClaim: timestamp });
+    await persistUserData({ lastFreeBoxClaim: timestamp });
   };
 
   const claimRakeback = async () => {

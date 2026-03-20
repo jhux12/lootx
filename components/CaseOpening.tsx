@@ -992,7 +992,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         toast.info("Free signup box already claimed.");
         return;
       }
-      claimFreeBox();
     }
 
     if (isBoxPreviewVisible) {
@@ -1032,6 +1031,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           ok: boolean;
           price: number;
           prize: CaseItem & { price?: number; size?: string };
+          freeBoxClaimedAt?: number;
           xpAwarded?: number;
           xpSettingsUsed?: {
             xpPer100?: number;
@@ -1087,6 +1087,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         };
 
         addInventoryItemFromServer(inventoryItem);
+        if (isFree && Number.isFinite(data.freeBoxClaimedAt)) {
+          await claimFreeBox(data.freeBoxClaimedAt);
+        }
         if ((data.currencyType ?? 'COIN') === 'COIN') {
           syncBalance(Number(data.newCoinBalance ?? data.newCoins ?? 0));
           if (!isFree) {
