@@ -184,14 +184,43 @@ export const LoginModal: React.FC = () => {
     }
   }, [mode, acceptTerms, confirmAdult]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const scrollY = window.scrollY;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyWidth = document.body.style.width;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousHtmlOverscrollBehavior = document.documentElement.style.overscrollBehavior;
+
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.overscrollBehavior = 'none';
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscrollBehavior;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.width = previousBodyWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden overscroll-none p-2 sm:p-4">
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={() => setShowLoginModal(false)}
       />
 
-      <div className="relative flex w-full max-w-md max-h-[95vh] flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0F0F11] shadow-2xl">
+      <div className="relative flex max-h-[95dvh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0F0F11] shadow-2xl">
         <button
           onClick={() => setShowLoginModal(false)}
           className="absolute right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
@@ -199,7 +228,7 @@ export const LoginModal: React.FC = () => {
           <X className="h-5 w-5" />
         </button>
 
-        <div className="flex w-full flex-1 flex-col overflow-y-auto bg-[#0F0F11] p-4 sm:p-6">
+        <div className="flex w-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[#0F0F11] p-4 pr-3 sm:p-6 sm:pr-5">
           {!isLinkingGoogle && (
             <div className="mb-5 flex w-full rounded-xl border border-white/5 bg-[#18181b] p-1">
               <button
