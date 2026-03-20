@@ -733,6 +733,41 @@ const buildUserDocument = (user: User) => {
   return filterSafeUserProfileFields(payload);
 };
 
+const buildLegacyUserProfileBackfill = (firebaseUser: FirebaseUser, data: Record<string, unknown> = {}) => {
+  const metadataCreatedAt = firebaseUser.metadata.creationTime ? Date.parse(firebaseUser.metadata.creationTime) : NaN;
+  const fallbackCreatedAt = Number.isFinite(metadataCreatedAt) ? metadataCreatedAt : Date.now();
+  const username =
+    typeof data.username === 'string' && data.username.trim()
+      ? data.username.trim()
+      : buildBaseUsername(
+          typeof data.displayName === 'string' ? data.displayName : firebaseUser.displayName,
+          typeof data.email === 'string' ? data.email : firebaseUser.email
+        );
+  const usernameLower =
+    typeof data.usernameLower === 'string' && data.usernameLower.trim()
+      ? normalizeUsername(data.usernameLower)
+      : normalizeUsername(username);
+
+  const patch: Record<string, unknown> = {};
+
+  if (data.uid !== firebaseUser.uid) patch.uid = firebaseUser.uid;
+  if (typeof data.email !== 'string' && firebaseUser.email) patch.email = firebaseUser.email;
+  if (!(typeof data.username === 'string' && data.username.trim())) patch.username = username;
+  if (!(typeof data.usernameLower === 'string' && data.usernameLower.trim())) patch.usernameLower = usernameLower || 'player';
+  if (data.createdAt === undefined) patch.createdAt = fallbackCreatedAt;
+  if (data.updatedAt === undefined) patch.updatedAt = Date.now();
+  if (data.lastLogin === undefined) patch.lastLogin = Date.now();
+  if (data.photoURL === undefined && firebaseUser.photoURL) patch.photoURL = firebaseUser.photoURL;
+  if (data.displayName === undefined && (firebaseUser.displayName || typeof data.username === 'string')) {
+    patch.displayName =
+      firebaseUser.displayName
+      || (typeof data.username === 'string' ? data.username : username);
+  }
+  if (data.shippingAddress !== undefined) patch.shippingAddress = data.shippingAddress;
+
+  return filterSafeUserProfileFields(patch);
+};
+
 const normalizeUsername = (value: string) =>
   value
     .toLowerCase()
@@ -1120,6 +1155,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       const data = snapshot.data();
+      const legacyProfileBackfill = buildLegacyUserProfileBackfill(firebaseUser, data);
+      if (Object.keys(legacyProfileBackfill).length > 0) {
+        void setDoc(userRef, legacyProfileBackfill, { merge: true }).catch((error) => {
+          console.error('Failed to backfill legacy user profile fields', error);
+        });
+      }
       const profile = buildUserProfile(firebaseUser, data);
 
       const incomingBalance = profile.balance ?? 0;
@@ -1852,7 +1893,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     const data = userSnapshot.data() as Record<string, any>;
-    const updates: Record<string, unknown> = {};
+    const updates: Record<string, unknown> = buildLegacyUserProfileBackfill(firebaseUser, data);
 
     if (!data.email && email) updates.email = email;
     if (!data.displayName && displayName) updates.displayName = displayName;
