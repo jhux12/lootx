@@ -48,6 +48,7 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
 const SPIN_DURATION_MS = 5200;
 
 const DEMO_INVENTORY_SIZE = 6;
+const DEMO_TARGET_SIZE = 12;
 
 const shuffle = <T,>(items: T[]) => {
   const next = [...items];
@@ -58,8 +59,10 @@ const shuffle = <T,>(items: T[]) => {
   return next;
 };
 
-const buildDemoInventory = (boxes: Array<{ id: string; name: string; items: Array<{ id: string; name: string; image: string; price: number; rarity: string; category?: string }> }>): InventoryItem[] => {
-  const candidates = shuffle(
+type DemoBoxShape = { id: string; name: string; items: Array<{ id: string; name: string; image: string; price: number; rarity: string; category?: string }> };
+
+const buildDemoItemPool = (boxes: DemoBoxShape[]) =>
+  shuffle(
     boxes.flatMap((box) =>
       (box.items ?? []).map((item, itemIndex) => ({
         id: `demo-${box.id}-${item.id}-${itemIndex}`,
@@ -74,7 +77,21 @@ const buildDemoInventory = (boxes: Array<{ id: string; name: string; items: Arra
     )
   );
 
-  return candidates.slice(0, DEMO_INVENTORY_SIZE);
+const buildDemoLoadout = (boxes: DemoBoxShape[]) => {
+  const pool = buildDemoItemPool(boxes);
+  const inventory = pool.slice(0, DEMO_INVENTORY_SIZE);
+  const targets = pool
+    .slice(DEMO_INVENTORY_SIZE, DEMO_INVENTORY_SIZE + DEMO_TARGET_SIZE)
+    .map(({ locked: _locked, shipping: _shipping, ...item }, itemIndex) => ({
+      ...item,
+      id: `demo-target-${item.id}-${itemIndex}`,
+      enabled: true
+    }));
+
+  return {
+    inventory,
+    targets
+  };
 };
 
 export default function UpgraderPage() {
@@ -107,6 +124,7 @@ export default function UpgraderPage() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [resultSheet, setResultSheet] = useState<{ item: EliteItem; success: boolean } | null>(null);
   const [demoInventory, setDemoInventory] = useState<InventoryItem[]>([]);
+  const [demoTargets, setDemoTargets] = useState<Item[]>([]);
 
   useEffect(() => {
     const audio = new Audio(upgraderSoundUrl);
@@ -175,7 +193,11 @@ export default function UpgraderPage() {
           }))
         );
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load upgrader data.');
+        if (isAuthenticated) {
+          setError(loadError instanceof Error ? loadError.message : 'Failed to load upgrader data.');
+        } else {
+          setError(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -191,14 +213,16 @@ export default function UpgraderPage() {
       }
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (isAuthenticated) return;
-    if (demoInventory.length > 0) return;
+    if (demoInventory.length > 0 && demoTargets.length > 0) return;
     if (boxes.length === 0) return;
-    setDemoInventory(buildDemoInventory(boxes));
-  }, [boxes, demoInventory.length, isAuthenticated]);
+    const demoLoadout = buildDemoLoadout(boxes);
+    setDemoInventory(demoLoadout.inventory);
+    setDemoTargets(demoLoadout.targets);
+  }, [boxes, demoInventory.length, demoTargets.length, isAuthenticated]);
 
   const realInventoryItems = useMemo<InventoryItem[]>(() => {
     const allowedIds = settings?.sourceItemIdsEnabled ?? [];
@@ -252,9 +276,11 @@ export default function UpgraderPage() {
   }, [chance]);
 
   const availableInventoryItems = useMemo(() => (isAuthenticated ? realInventoryItems : demoInventory), [demoInventory, isAuthenticated, realInventoryItems]);
+  const availableTargetItems = useMemo(() => (isAuthenticated ? filteredTargets : demoTargets), [demoTargets, filteredTargets, isAuthenticated]);
   const inventoryLabel = isAuthenticated ? 'Your Inventory' : 'Demo Inventory';
+  const targetLabel = isAuthenticated ? 'Target Items' : 'Demo Targets';
   const inventoryItems = useMemo(() => availableInventoryItems.map((item) => mapToEliteItem(item)), [availableInventoryItems]);
-  const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
+  const targetItems = useMemo(() => availableTargetItems.map((item) => mapToEliteItem(item)), [availableTargetItems]);
 
   const sourcePreview = source ? mapToEliteItem(source) : null;
   const targetPreview = target ? mapToEliteItem(target) : null;
@@ -406,28 +432,31 @@ export default function UpgraderPage() {
       </header>
 
       <main className="max-w-[1600px] mx-auto flex flex-col lg:grid lg:grid-cols-[340px_1fr_340px] gap-4 lg:gap-8 p-3 sm:p-4 lg:p-8">
-        {error && <div className="lg:col-span-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{error}</div>}
+        {isAuthenticated && error && <div className="lg:col-span-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{error}</div>}
         {!isAuthenticated && (
           <section className="order-0 lg:col-span-3 rounded-2xl border border-cyan-400/20 bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-slate-900/70 p-4 sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
                 <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-300">Demo Mode</p>
                 <h2 className="text-lg font-black text-white sm:text-xl">Try the upgrader before you sign in.</h2>
-                <p className="max-w-2xl text-sm text-slate-300">We filled this demo inventory with random drops from random boxes so guests can test the flow on mobile or desktop before using real items.</p>
+                <p className="max-w-2xl text-sm text-slate-300">We filled this demo inventory and demo target list with random drops from random boxes so guests can test the full flow on mobile or desktop before using real items.</p>
               </div>
               <div className="flex flex-col gap-2 sm:w-auto sm:min-w-[220px]">
                 <button
                   type="button"
                   onClick={() => {
-                    setDemoInventory(buildDemoInventory(boxes));
+                    const demoLoadout = buildDemoLoadout(boxes);
+                    setDemoInventory(demoLoadout.inventory);
+                    setDemoTargets(demoLoadout.targets);
                     setSource(null);
                     setTarget(null);
                     setStatus('idle');
                     setSpinResult(null);
+                    setError(null);
                   }}
                   className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/10"
                 >
-                  Refresh Demo Inventory
+                  Refresh Demo Loadout
                 </button>
                 <button
                   type="button"
@@ -523,13 +552,13 @@ export default function UpgraderPage() {
             onClick={() => setActiveTab('targets')}
             className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'targets' ? 'bg-cyan-500 text-[#03111a]' : 'text-slate-400'}`}
           >
-            Targets
+            {isAuthenticated ? 'Targets' : 'Demo Targets'}
           </button>
         </div>
 
         <section className={`order-4 lg:order-3 flex-col gap-4 overflow-hidden ${activeTab === 'targets' ? 'flex' : 'hidden lg:flex'}`}>
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Target Items <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{targetItems.length}</span></h2>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">{targetLabel} <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{targetItems.length}</span></h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[220px] sm:max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
             {targetItems.map((item) => (
@@ -539,7 +568,7 @@ export default function UpgraderPage() {
                 isSelected={target?.id === item.id}
                 onInfoClick={setDetailsItem}
                 onClick={() => {
-                  const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
+                  const match = availableTargetItems.find((entry) => entry.id === item.id) ?? null;
                   setTarget(match);
                 }}
                 disabled={status === 'spinning' || loading}
