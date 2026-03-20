@@ -536,6 +536,11 @@ type PersistUserData = Partial<{
   shippingAddress: ShippingAddress;
   name: string;
   avatar: string;
+  username: string;
+  usernameLower: string;
+  displayName: string;
+  photoURL: string;
+  topPullsPublic: boolean;
   lastDailyClaim: number;
   lastFreeBoxClaim: number;
   isAdmin: boolean;
@@ -701,7 +706,8 @@ const USER_PROFILE_SAFE_KEYS = [
   'photoURL',
   'displayName',
   'lastLogin',
-  'shippingAddress'
+  'shippingAddress',
+  'topPullsPublic'
 ] as const;
 
 const filterSafeUserProfileFields = (payload: Record<string, unknown>) => {
@@ -816,15 +822,18 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
       : [];
   const balance = Number(data.coins ?? data.balance ?? 0);
 
+  const fallbackName = data.displayName || data.username || data.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Player';
+  const fallbackAvatar = data.photoURL || data.avatar || firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName)}&background=111827&color=10b981`;
+
   return {
     id: firebaseUser.uid,
     createdAt,
     lastChatAt,
-    name: data.name || firebaseUser.email?.split('@')[0] || 'Player',
-    username: data.username ?? data.name,
+    name: fallbackName,
+    username: data.username ?? data.name ?? fallbackName,
     displayName: data.displayName ?? firebaseUser.displayName ?? undefined,
     email: data.email || firebaseUser.email || '',
-    avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.email || 'Player')}&background=111827&color=10b981`,
+    avatar: fallbackAvatar,
     photoURL: data.photoURL ?? firebaseUser.photoURL ?? undefined,
     provider: data.provider,
     balance,
@@ -876,17 +885,18 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
       ? data.friends
       : [];
   const balance = Number(data.coins ?? data.balance ?? 0);
-  const name = data.name || (data.email ? data.email.split('@')[0] : 'Player');
+  const name = data.displayName || data.username || data.name || (data.email ? data.email.split('@')[0] : 'Player');
+  const avatar = data.photoURL || data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`;
 
   return {
     id: userId,
     createdAt,
     lastChatAt,
     name,
-    username: data.username ?? name,
+    username: data.username ?? data.name ?? name,
     displayName: data.displayName,
     email: data.email || '',
-    avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
+    avatar,
     photoURL: data.photoURL,
     provider: data.provider,
     balance,
@@ -2472,19 +2482,47 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateUserInfo = async (name: string, avatar: string) => {
+      if (!isAuthenticated || !auth.currentUser) return;
+
+      const trimmedName = name.trim();
+      const nextName = trimmedName || user.name || 'Player';
+      const nextAvatar = avatar.trim() || user.avatar;
+      const nextUsernameLower = normalizeUsername(nextName);
+
+      if (!nextUsernameLower || nextUsernameLower.length < 3 || nextUsernameLower.length > 16) {
+        throw new Error('Username must be 3-16 characters and use only letters, numbers, or underscores.');
+      }
+
+      const currentUsernameLower = normalizeUsername(user.username ?? user.name ?? '');
+      if (nextUsernameLower !== currentUsernameLower) {
+        const usersRef = collection(db, 'users');
+        const existingUsers = await getDocs(query(usersRef, where('usernameLower', '==', nextUsernameLower), limit(2)));
+        const usernameTaken = existingUsers.docs.some((docSnap) => docSnap.id !== auth.currentUser?.uid);
+        if (usernameTaken) {
+          throw new Error('That username is already taken. Please choose another one.');
+        }
+      }
+
       const updates = {
-        name,
-        avatar,
-        displayName: name,
-        photoURL: avatar
+        name: nextName,
+        username: nextName,
+        avatar: nextAvatar,
+        displayName: nextName,
+        photoURL: nextAvatar
       };
       setUser(prev => ({ ...prev, ...updates }));
       setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, ...updates } : u));
 
       try {
-        await persistUserData({ displayName: name, photoURL: avatar });
+        await persistUserData({
+          username: nextName,
+          usernameLower: nextUsernameLower,
+          displayName: nextName,
+          photoURL: nextAvatar
+        });
       } catch (error) {
         console.error('Failed to persist profile changes', error);
+        throw error;
       }
   };
 
