@@ -679,7 +679,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+                <div className="grid grid-cols-1 gap-2.5 min-[380px]:grid-cols-3 sm:gap-3">
                   {[
                     { icon: UsersIcon, label: 'Followers', value: viewedFollowerIds.length.toLocaleString() },
                     { icon: UserPlus, label: 'Following', value: viewedFollowing.length.toLocaleString() },
@@ -687,13 +687,13 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   ].map(({ icon: Icon, label, value }) => (
                     <div
                       key={label}
-                      className="rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                      className="rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] min-[380px]:min-w-0"
                     >
-                      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7d859d]">
+                      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7d859d] sm:text-[11px] sm:tracking-[0.18em]">
                         <Icon className="h-3.5 w-3.5 text-cyan-300/80" />
-                        <span className="truncate">{label}</span>
+                        <span className="leading-tight">{label}</span>
                       </div>
-                      <div className="mt-2 truncate text-sm font-bold text-white sm:text-base">{value}</div>
+                      <div className="mt-2 text-sm font-bold leading-tight text-white break-words sm:text-base">{value}</div>
                     </div>
                   ))}
                 </div>
@@ -717,7 +717,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.9fr)]">
               <div className="overflow-hidden rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -762,34 +762,18 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#7d859d]">XP Points</p>
-                    <h3 className="mt-2 text-2xl font-black text-white">{xpTotal.toLocaleString()}</h3>
-                    <p className="mt-1 text-xs text-gray-400">Display-only XP total with no rank or progression.</p>
-                  </div>
-                  <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/10 p-2">
-                    <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-6 w-6 object-contain" />
-                  </div>
-                </div>
-                <div className="mt-4 rounded-2xl border border-white/8 bg-[#0c1119] px-4 py-3 text-sm text-[#a8b0c7]">
-                  XP remains a simple stat in your profile summary.
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2.5 rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:gap-3 lg:grid-cols-1 lg:grid-rows-3">
+              <div className="grid grid-cols-1 gap-2.5 rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] min-[420px]:grid-cols-3 lg:grid-cols-1">
                 {[
                   { icon: Sparkles, label: 'Top Pulls', value: topPulls.length.toLocaleString() },
                   { icon: Boxes, label: 'Inventory', value: inventoryCount.toLocaleString() },
                   { icon: CalendarDays, label: 'Member Since', value: joinedDateLabel }
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="rounded-2xl border border-white/8 bg-[#0c1119] px-3 py-3">
-                    <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#7d859d]">
+                    <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7d859d] sm:tracking-[0.22em]">
                       <Icon className="h-3.5 w-3.5 text-brand-purple" />
-                      <span className="truncate">{label}</span>
+                      <span className="leading-tight">{label}</span>
                     </div>
-                    <div className="mt-2 truncate text-sm font-bold text-white">{value}</div>
+                    <div className="mt-2 text-sm font-bold leading-tight text-white break-words">{value}</div>
                   </div>
                 ))}
               </div>
