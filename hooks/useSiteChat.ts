@@ -111,7 +111,13 @@ export const useSiteChat = () => {
 
   useEffect(() => {
     const messagesRef = collection(db, 'chatMessages');
+    const pathLabel = 'chatMessages';
+    console.log('READING FIRESTORE PATH', pathLabel);
     const subscription = onSnapshot(query(messagesRef, orderBy('createdAt', 'asc')), (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: pathLabel,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const formatted: LiveChatMessage[] = snapshot.docs.map((docSnap) => {
         const data = docSnap.data() as {
           user?: User;
@@ -139,6 +145,13 @@ export const useSiteChat = () => {
       });
 
       setRawMessages(formatted);
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: pathLabel,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
     return () => subscription();

@@ -316,8 +316,14 @@ export const AdminPanel: React.FC = () => {
   );
 
   useEffect(() => {
+      const pathLabel = 'adminNotifications';
+      console.log('READING FIRESTORE PATH', pathLabel);
       const noticesQuery = query(collection(db, 'adminNotifications'), orderBy('createdAt', 'desc'), limit(30));
       const unsubscribe = onSnapshot(noticesQuery, (snapshot) => {
+          console.log('SNAPSHOT OK', {
+              path: pathLabel,
+              size: 'size' in snapshot ? snapshot.size : undefined
+          });
           const next = snapshot.docs.map((docSnap) => {
               const data = docSnap.data() as Record<string, any>;
               return {
@@ -330,6 +336,13 @@ export const AdminPanel: React.FC = () => {
               } as AdminSentNotification;
           });
           setAdminSentNotifications(next);
+      }, (error) => {
+          console.error('SNAPSHOT FAILED', {
+              path: pathLabel,
+              code: error?.code,
+              message: error?.message,
+              error
+          });
       });
 
       return () => unsubscribe();
@@ -488,11 +501,17 @@ export const AdminPanel: React.FC = () => {
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
 
   useEffect(() => {
+      const supportPathLabel = 'supportCases';
+      console.log('READING FIRESTORE PATH', supportPathLabel);
       const supportQuery = query(
           collection(db, 'supportCases'),
           orderBy('lastUpdatedAt', 'desc')
       );
       const unsubscribe = onSnapshot(supportQuery, (snapshot) => {
+          console.log('SNAPSHOT OK', {
+              path: supportPathLabel,
+              size: 'size' in snapshot ? snapshot.size : undefined
+          });
           const nextCases = snapshot.docs.map((docSnapshot) => {
               const data = docSnapshot.data() as Omit<SupportCase, 'id'>;
               return {
@@ -501,14 +520,27 @@ export const AdminPanel: React.FC = () => {
               };
           });
           setSupportCases(nextCases);
+      }, (error) => {
+          console.error('SNAPSHOT FAILED', {
+              path: supportPathLabel,
+              code: error?.code,
+              message: error?.message,
+              error
+          });
       });
 
       return () => unsubscribe();
   }, []);
 
   useEffect(() => {
+      const itemsPathLabel = 'xpShopItems';
+      console.log('READING FIRESTORE PATH', itemsPathLabel);
       const itemsQuery = query(collection(db, 'xpShopItems'), orderBy('sortOrder', 'asc'));
       const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
+          console.log('SNAPSHOT OK', {
+              path: itemsPathLabel,
+              size: 'size' in snapshot ? snapshot.size : undefined
+          });
           const nextItems = snapshot.docs.map((docSnapshot) => {
               const data = docSnapshot.data() as Record<string, any>;
               return {
@@ -533,14 +565,27 @@ export const AdminPanel: React.FC = () => {
               } as AdminXpShopItem;
           });
           setXpShopItems(nextItems);
+      }, (error) => {
+          console.error('SNAPSHOT FAILED', {
+              path: itemsPathLabel,
+              code: error?.code,
+              message: error?.message,
+              error
+          });
       });
 
       return () => unsubscribe();
   }, []);
 
   useEffect(() => {
+      const redemptionsPathLabel = 'xpRedemptions';
+      console.log('READING FIRESTORE PATH', redemptionsPathLabel);
       const redemptionsQuery = query(collection(db, 'xpRedemptions'), orderBy('createdAt', 'desc'));
       const unsubscribe = onSnapshot(redemptionsQuery, (snapshot) => {
+          console.log('SNAPSHOT OK', {
+              path: redemptionsPathLabel,
+              size: 'size' in snapshot ? snapshot.size : undefined
+          });
           const nextRedemptions = snapshot.docs.map((docSnapshot) => {
               const data = docSnapshot.data() as Record<string, any>;
               return {
@@ -554,6 +599,13 @@ export const AdminPanel: React.FC = () => {
               } as AdminXpRedemption;
           });
           setXpRedemptions(nextRedemptions);
+      }, (error) => {
+          console.error('SNAPSHOT FAILED', {
+              path: redemptionsPathLabel,
+              code: error?.code,
+              message: error?.message,
+              error
+          });
       });
 
       return () => unsubscribe();
@@ -842,8 +894,14 @@ export const AdminPanel: React.FC = () => {
   }, [bonusSettings]);
 
   useEffect(() => {
+      const rewardsPathLabel = 'settings/rewards';
+      console.log('READING FIRESTORE PATH', rewardsPathLabel);
       const rewardsRef = doc(db, 'settings', 'rewards');
       const unsubscribe = onSnapshot(rewardsRef, (snapshot) => {
+          console.log('SNAPSHOT OK', {
+              path: rewardsPathLabel,
+              size: 'size' in snapshot ? snapshot.size : undefined
+          });
           const data = snapshot.data() as Record<string, any> | undefined;
           const rankRules = Array.isArray(data?.rewardRules?.payoutsByRank) ? data.rewardRules.payoutsByRank : [];
           const getTopReward = (rank: number, fallback: number) => {
@@ -863,6 +921,13 @@ export const AdminPanel: React.FC = () => {
               top3CoinReward: getTopReward(3, DEFAULT_REWARDS_SETTINGS.top3CoinReward),
               heroImageUrl: typeof data?.heroImageUrl === 'string' ? data.heroImageUrl : ''
               ,questRulesText: JSON.stringify(data?.questRules ?? JSON.parse(DEFAULT_REWARDS_SETTINGS.questRulesText), null, 2)
+          });
+      }, (error) => {
+          console.error('SNAPSHOT FAILED', {
+              path: rewardsPathLabel,
+              code: error?.code,
+              message: error?.message,
+              error
           });
       });
       return () => unsubscribe();
@@ -1025,8 +1090,14 @@ export const AdminPanel: React.FC = () => {
   };
 
   useEffect(() => {
+      const economyPathLabel = 'settings/economy';
+      console.log('READING FIRESTORE PATH', economyPathLabel);
       const economyRef = doc(db, 'settings', 'economy');
       const unsubscribe = onSnapshot(economyRef, (snapshot) => {
+          console.log('SNAPSHOT OK', {
+              path: economyPathLabel,
+              size: 'size' in snapshot ? snapshot.size : undefined
+          });
           const data = snapshot.exists() ? snapshot.data() ?? {} : {};
           const nextDraft: EconomySettingsDraft = {
               xpPerDollar: Math.max(1, Number(data.xpPerDollar ?? DEFAULT_ECONOMY_SETTINGS.xpPerDollar) || DEFAULT_ECONOMY_SETTINGS.xpPerDollar),
@@ -1035,7 +1106,12 @@ export const AdminPanel: React.FC = () => {
           };
           setEconomyDraft(nextDraft);
       }, (error) => {
-          console.error('Failed to load economy settings', error);
+          console.error('SNAPSHOT FAILED', {
+              path: economyPathLabel,
+              code: error?.code,
+              message: error?.message,
+              error
+          });
           setEconomyDraft(DEFAULT_ECONOMY_SETTINGS);
       });
 
@@ -1044,14 +1120,25 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       if (!selectedUserId) return;
+      const inventoryPathLabel = `users/${selectedUserId}/inventory`;
+      console.log('READING FIRESTORE PATH', inventoryPathLabel);
       const inventoryRef = collection(db, 'users', selectedUserId, 'inventory');
       const unsubscribe = onSnapshot(inventoryRef, (snapshot) => {
+          console.log('SNAPSHOT OK', {
+              path: inventoryPathLabel,
+              size: 'size' in snapshot ? snapshot.size : undefined
+          });
           const loaded = snapshot.docs
               .map((docSnap) => mapAdminInventoryDoc(docSnap.id, docSnap.data()))
               .sort((a, b) => b.obtainedAt - a.obtainedAt);
           setInventoryState((prev) => ({ ...prev, [selectedUserId]: loaded }));
       }, (error) => {
-          console.error('Failed to load user inventory from Firebase', error);
+          console.error('SNAPSHOT FAILED', {
+              path: inventoryPathLabel,
+              code: error?.code,
+              message: error?.message,
+              error
+          });
       });
 
       return () => unsubscribe();

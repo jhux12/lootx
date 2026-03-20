@@ -41,14 +41,40 @@ export const ProvablyFairPage: React.FC = () => {
 
   useEffect(() => {
     if (!battleId) return;
+    const battlePathLabel = `battles/${battleId}`;
+    console.log('READING FIRESTORE PATH', battlePathLabel);
     const battleRef = doc(db, 'battles', battleId);
     const unsubBattle = onSnapshot(battleRef, (snap) => {
+      console.log('SNAPSHOT OK', {
+        path: battlePathLabel,
+        size: 'size' in snap ? snap.size : undefined
+      });
       setBattleVerify((prev) => ({ ...prev, battle: snap.exists() ? { id: snap.id, ...snap.data() } : null }));
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: battlePathLabel,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
+    const roundsPathLabel = `battles/${battleId}/rounds`;
+    console.log('READING FIRESTORE PATH', roundsPathLabel);
     const roundsRef = query(collection(db, 'battles', battleId, 'rounds'), orderBy('index', 'asc'));
     const unsubRounds = onSnapshot(roundsRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: roundsPathLabel,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       setBattleVerify((prev) => ({ ...prev, rounds: snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })) }));
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: roundsPathLabel,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
     return () => {

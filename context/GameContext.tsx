@@ -1108,6 +1108,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('READING FIRESTORE PATH', userPath);
     const userRef = getUserRef(firebaseUser.uid);
     userUnsubscribeRef.current = onSnapshot(userRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: userPath,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       if (!snapshot.exists()) {
         const profile = buildUserProfile(firebaseUser);
         setUser((prev) => ({ ...prev, ...profile, isAdmin: prev.isAdmin }));
@@ -1143,13 +1147,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
       }
     }, (error) => {
-      console.error(`Firestore read failed | path=${userPath} | code=${error?.code} | message=${error?.message}`);
+      console.error('SNAPSHOT FAILED', {
+        path: userPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
     const inventoryPath = `users/${firebaseUser.uid}/inventory`;
     console.log('READING FIRESTORE PATH', inventoryPath);
     const inventoryRef = collection(db, 'users', firebaseUser.uid, 'inventory');
     inventoryUnsubscribeRef.current = onSnapshot(inventoryRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: inventoryPath,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       hasInventorySubcollectionRef.current = snapshot.size > 0;
       const loaded = snapshot.docs
         .map(mapInventoryDoc)
@@ -1169,7 +1182,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const nextTopPulls = rankTopPullsByValue(filtered);
       setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
     }, (error) => {
-      console.error(`Firestore read failed | path=${inventoryPath} | code=${error?.code} | message=${error?.message}`);
+      console.error('SNAPSHOT FAILED', {
+        path: inventoryPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
   };
 
@@ -1269,11 +1287,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('READING FIRESTORE PATH', bonusSettingsPath);
     const bonusSettingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC);
     const unsubscribe = onSnapshot(bonusSettingsRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: bonusSettingsPath,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       if (!snapshot.exists()) return;
       const normalized = normalizeBonusSettings(snapshot.data() as Partial<BonusSettings>);
       setBonusSettings(normalized);
     }, (error) => {
-      console.error(`Firestore read failed | path=${bonusSettingsPath} | code=${error?.code} | message=${error?.message}`);
+      console.error('SNAPSHOT FAILED', {
+        path: bonusSettingsPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
     return () => unsubscribe();
@@ -1286,10 +1313,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('READING FIRESTORE PATH', stripeSettingsPath);
     const stripeSettingsRef = doc(db, 'settings', STRIPE_SETTINGS_DOC);
     const unsubscribe = onSnapshot(stripeSettingsRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: stripeSettingsPath,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const data = snapshot.data() ?? {};
       setStripeSettings(normalizeStripeSettings(data));
     }, (error) => {
-      console.error(`Firestore read failed | path=${stripeSettingsPath} | code=${error?.code} | message=${error?.message}`);
+      console.error('SNAPSHOT FAILED', {
+        path: stripeSettingsPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
     return () => unsubscribe();
@@ -1394,10 +1430,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('READING FIRESTORE PATH', usersPath);
     const usersRef = collection(db, 'users');
     const unsubscribe = onSnapshot(usersRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: usersPath,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const loaded = snapshot.docs.map((docSnap) => buildUserProfileFromDoc(docSnap.id, docSnap.data()));
       setUsers(loaded.length ? loaded : [user]);
     }, (error) => {
-      console.error(`Firestore read failed | path=${usersPath} | code=${error?.code} | message=${error?.message}`);
+      console.error('SNAPSHOT FAILED', {
+        path: usersPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
       setUsers([user]);
     });
 
@@ -1414,12 +1459,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('READING FIRESTORE PATH', shipmentsPath);
     const shipmentsRef = collection(db, 'shipments');
     const unsubscribe = onSnapshot(shipmentsRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: shipmentsPath,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const loaded = snapshot.docs
         .map(mapShipmentDoc)
         .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
       setShipments(loaded);
     }, (error) => {
-      console.error(`Firestore read failed | path=${shipmentsPath} | code=${error?.code} | message=${error?.message}`);
+      console.error('SNAPSHOT FAILED', {
+        path: shipmentsPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
       setShipments([]);
     });
 
@@ -1451,6 +1505,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('READING FIRESTORE PATH', itemsPath);
     const itemsRef = collection(db, 'items');
     const unsubscribe = onSnapshot(itemsRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: itemsPath,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const loaded: CaseItem[] = snapshot.docs
         .map((docSnap, index) => {
           const data = docSnap.data();
@@ -1482,7 +1540,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }));
       setItems(loaded.length ? loaded : fallbackItems);
     }, (error) => {
-      console.error(`Firestore read failed | path=${itemsPath} | code=${error?.code} | message=${error?.message}`);
+      console.error('SNAPSHOT FAILED', {
+        path: itemsPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
     return () => unsubscribe();
@@ -1495,6 +1558,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('READING FIRESTORE PATH', boxesPath);
     const boxesRef = collection(db, 'boxes');
     const unsubscribe = onSnapshot(boxesRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: boxesPath,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const expiredUserBoxIds: string[] = [];
       const firebaseBoxes = snapshot.docs
         .map((docSnap) => {
@@ -1575,7 +1642,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return [...pendingUserCreated, ...firebaseBoxes].sort((a, b) => getBoxSortPrice(a) - getBoxSortPrice(b));
       });
     }, (error) => {
-      console.error(`Firestore read failed | path=${boxesPath} | code=${error?.code} | message=${error?.message}`);
+      console.error('SNAPSHOT FAILED', {
+        path: boxesPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
     return () => unsubscribe();
@@ -1602,6 +1674,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('READING FIRESTORE PATH', coinPackagesPath);
     const packagesRef = query(collection(db, 'coin_packages'), orderBy('sortOrder', 'asc'));
     const unsubscribe = onSnapshot(packagesRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: coinPackagesPath,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const loaded = snapshot.docs.map((docSnap) => {
         const data = docSnap.data();
         const coins = Number(data.coins ?? 0);
@@ -1623,7 +1699,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       setCoinPackages(loaded);
     }, (error) => {
-      console.error(`Firestore read failed | path=${coinPackagesPath} | code=${error?.code} | message=${error?.message}`);
+      console.error('SNAPSHOT FAILED', {
+        path: coinPackagesPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
     return () => unsubscribe();
@@ -1640,6 +1721,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('READING FIRESTORE PATH', battlesPath);
     const battlesRef = query(collection(db, 'battles'), orderBy('createdAt', 'desc'), limit(50));
     const unsubscribe = onSnapshot(battlesRef, (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: battlesPath,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       const firebaseBattles = snapshot.docs
         .map((docSnap) => {
           const data = docSnap.data();
@@ -1682,7 +1767,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setBattles(firebaseBattles);
     }, (error) => {
-      console.error(`Firestore read failed | path=${battlesPath} | code=${error?.code} | message=${error?.message}`);
+      console.error('SNAPSHOT FAILED', {
+        path: battlesPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
 
     return () => unsubscribe();

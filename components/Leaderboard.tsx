@@ -108,9 +108,22 @@ export const Leaderboard: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(getTimeLeft(DEFAULT_SETTINGS.seasonEndsAt));
 
   useEffect(() => {
+    const pathLabel = 'settings/rewards';
+    console.log('READING FIRESTORE PATH', pathLabel);
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
+      console.log('SNAPSHOT OK', {
+        path: pathLabel,
+        size: 'size' in snap ? snap.size : undefined
+      });
       setSettings(normalizeSettings(snap.data() as Record<string, any>));
       setSettingsLoaded(true);
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: pathLabel,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
     return () => unsub();
   }, []);

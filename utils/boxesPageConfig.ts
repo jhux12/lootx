@@ -247,10 +247,17 @@ export const prepareBoxesPageConfigForSave = (config: BoxesPageConfig) => {
 export const subscribeBoxesPageConfig = (
   onData: (config: BoxesPageConfig) => void,
   onError?: (error: Error) => void
-) =>
-  onSnapshot(
+) => {
+  const pathLabel = 'site/boxesPage';
+  console.log('READING FIRESTORE PATH', pathLabel);
+
+  return onSnapshot(
     BOXES_PAGE_DOC_REF,
     (snapshot) => {
+      console.log('SNAPSHOT OK', {
+        path: pathLabel,
+        size: 'size' in snapshot ? snapshot.size : undefined
+      });
       if (!snapshot.exists()) {
         onData(getDefaultBoxesPageConfig());
         return;
@@ -259,9 +266,16 @@ export const subscribeBoxesPageConfig = (
       onData(normalizeBoxesPageConfig(data));
     },
     (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: pathLabel,
+        code: (error as { code?: string })?.code,
+        message: (error as { message?: string })?.message,
+        error
+      });
       if (onError) onError(error as Error);
     }
   );
+};
 
 export const saveBoxesPageConfig = async (config: BoxesPageConfig) => {
   const payload = prepareBoxesPageConfigForSave(config);

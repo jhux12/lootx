@@ -27,9 +27,22 @@ export const Quests: React.FC = () => {
   const [nowTs, setNowTs] = useState(() => Date.now());
 
   useEffect(() => {
+    const pathLabel = 'settings/rewards';
+    console.log('READING FIRESTORE PATH', pathLabel);
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
+      console.log('SNAPSHOT OK', {
+        path: pathLabel,
+        size: 'size' in snap ? snap.size : undefined
+      });
       const data = snap.data() as Record<string, unknown> | undefined;
       setRules(normalizeQuestRules(data?.questRules));
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: pathLabel,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
     });
     return () => unsub();
   }, []);
