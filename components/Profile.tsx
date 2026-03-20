@@ -381,13 +381,25 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   };
 
   const handleTopPullsVisibility = async (isPublic: boolean) => {
+      const previousValue = topPullsPublic;
       setTopPullsPublic(isPublic);
-      await updateUserFlags({ topPullsPublic: isPublic });
+      try {
+        await updateUserFlags({ topPullsPublic: isPublic });
+      } catch (error) {
+        console.error('Failed to update top pulls visibility', error);
+        setTopPullsPublic(previousValue);
+        toast.error('Could not update top pulls visibility. Please try again.');
+      }
   };
 
   const handleSaveProfile = async () => {
-      await updateUserInfo(profileForm.name, profileForm.avatar);
-      toast.success("Profile updated successfully!");
+      try {
+        await updateUserInfo(profileForm.name, profileForm.avatar);
+        toast.success("Profile updated successfully!");
+      } catch (error) {
+        console.error('Failed to save profile changes', error);
+        toast.error(error instanceof Error ? error.message : 'Could not update your profile.');
+      }
   };
 
   const handleSaveAddress = async () => {
@@ -1430,7 +1442,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           
                           <div className="space-y-6">
                               <div>
-                                  <label className="block text-sm font-bold text-gray-400 mb-2">Display Name</label>
+                                  <label className="block text-sm font-bold text-gray-400 mb-2">Username</label>
                                   <Input 
                                       type="text" 
                                       value={profileForm.name}
@@ -1440,8 +1452,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               </div>
                               
                               <div>
-                                  <label className="block text-sm font-bold text-gray-400 mb-4">Choose Avatar</label>
-                                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 mb-4">
+                                  <label className="block text-sm font-bold text-gray-400 mb-4">Choose Profile Picture</label>
+                                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
                                       {AVATAR_PRESETS.map((url, idx) => (
                                           <button 
                                               key={idx}

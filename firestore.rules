@@ -37,7 +37,8 @@ service cloud.firestore {
         'photoURL',
         'displayName',
         'lastLogin',
-        'shippingAddress'
+        'shippingAddress',
+        'topPullsPublic'
       ];
     }
 
@@ -50,7 +51,8 @@ service cloud.firestore {
         'photoURL',
         'displayName',
         'lastLogin',
-        'shippingAddress'
+        'shippingAddress',
+        'topPullsPublic'
       ];
     }
 
