@@ -649,7 +649,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                     <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <h2 className="truncate text-[1.7rem] font-black tracking-[-0.02em] text-white sm:text-[1.9rem]">{displayUser.name}</h2>
-                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-cyan-400/12 bg-[linear-gradient(135deg,rgba(56,189,248,0.12),rgba(124,58,237,0.08))] px-2.5 py-1 text-[13px] font-medium text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-cyan-400/14 bg-[linear-gradient(135deg,rgba(56,189,248,0.12),rgba(124,58,237,0.08))] px-2.5 py-1 text-[13px] font-medium text-gray-200 shadow-[inset_0_1px_0_rgba(64,212,255,0.05)]">
                           <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
                           <span className="text-[#9ba3ba]">XP Points:</span>
                           <span className="font-bold text-white"><AnimatedNumber value={xpTotal} /></span>
@@ -687,7 +687,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   ].map(({ icon: Icon, label, value }) => (
                     <div
                       key={label}
-                      className="rounded-2xl border border-[#5b6cff]/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.018))] px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_8px_18px_rgba(7,10,19,0.18)] min-[380px]:min-w-0"
+                      className="rounded-2xl border border-[#5b6cff]/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.018))] px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(64,212,255,0.04),0_8px_18px_rgba(7,10,19,0.18)] min-[380px]:min-w-0"
                     >
                       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#7f88a1] sm:text-[11px] sm:tracking-[0.14em]">
                         <Icon className="h-3.5 w-3.5 text-cyan-300/80" />
@@ -725,7 +725,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                     <h3 className="mt-1.5 text-[1.05rem] font-black text-white">{canViewTopPulls ? `${topPulls.length} Highlight${topPulls.length === 1 ? '' : 's'}` : 'Private'}</h3>
                     <p className="mt-1 text-[12px] leading-relaxed text-gray-400">A compact look at your highest-value drops.</p>
                   </div>
-                  <div className="rounded-xl border border-[#7c3aed]/16 bg-[linear-gradient(180deg,rgba(232,121,249,0.12),rgba(168,85,247,0.08))] p-2 text-fuchsia-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                  <div className="rounded-xl border border-[#7c3aed]/16 bg-[linear-gradient(180deg,rgba(232,121,249,0.12),rgba(168,85,247,0.08))] p-2 text-fuchsia-200 shadow-[inset_0_1px_0_rgba(124,58,237,0.06)]">
                     <Gem className="h-4 w-4" />
                   </div>
                 </div>
@@ -738,14 +738,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                         className="min-w-[110px] flex-1 rounded-2xl border border-[#5b6cff]/12 bg-[linear-gradient(180deg,rgba(13,17,25,0.98),rgba(10,13,21,0.94))] p-2.5 shadow-[0_12px_26px_rgba(4,8,17,0.34)]"
                       >
                         <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.22),transparent_58%),linear-gradient(180deg,#141a28,#101522)] p-2">
-                          <span className="absolute left-2 top-2 rounded-full border border-white/10 bg-black/45 px-2 py-0.5 text-[10px] font-black text-white">#{index + 1}</span>
+                          <span className="absolute left-2 top-2 rounded-full border border-cyan-400/12 bg-black/45 px-2 py-0.5 text-[10px] font-black text-white">#{index + 1}</span>
                           <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain" />
                           <div className={`pointer-events-none absolute inset-0 opacity-30 bg-gradient-to-br ${
                             item.rarity === 'legendary' ? 'from-yellow-400/50 via-transparent to-transparent' :
                             item.rarity === 'epic' ? 'from-purple-400/50 via-transparent to-transparent' :
                             item.rarity === 'rare' ? 'from-blue-400/50 via-transparent to-transparent' :
                             item.rarity === 'uncommon' ? 'from-emerald-400/45 via-transparent to-transparent' :
-                            'from-white/10 via-transparent to-transparent'
+                            'from-cyan-400/10 via-transparent to-transparent'
                           }`} />
                         </div>
                         <div className="mt-2 space-y-0.5">
@@ -783,7 +783,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
             <div className="relative w-full max-w-full">
               <div
                 ref={tabScrollRef}
-                className="flex items-center gap-2 rounded-2xl border border-[#5b6cff]/12 bg-[#0b0e14]/95 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] w-full max-w-full overflow-x-auto whitespace-nowrap scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
+                className="flex items-center gap-2 rounded-2xl border border-[#5b6cff]/12 bg-[#0b0e14]/95 p-1.5 shadow-[inset_0_1px_0_rgba(64,212,255,0.04)] w-full max-w-full overflow-x-auto whitespace-nowrap scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {visibleProfileTabs.map((tab) => {
@@ -874,7 +874,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           {topPulls.map((item, index) => (
                               <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-3 sm:p-4 group hover:border-brand-purple/50 transition-all">
                                   <div className="relative aspect-square mb-3 sm:mb-4 bg-[#0b0e14] rounded-lg p-3 sm:p-4 flex items-center justify-center overflow-hidden">
-                                      <div className="absolute left-2 top-2 z-10 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide bg-black/70 text-white border border-white/10">
+                                      <div className="absolute left-2 top-2 z-10 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide bg-black/70 text-white border border-cyan-400/12">
                                         #{index + 1}
                                       </div>
                                       <BlurImage src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
@@ -1069,12 +1069,12 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                     : 'from-slate-300/20 via-slate-200/10 to-transparent';
                               return (
                                   <div key={item.instanceId} className={`relative bg-gradient-to-b from-[#171c2a] to-[#121622] border rounded-2xl p-3 group transition-all duration-300 flex flex-col hover:-translate-y-0.5 active:scale-[0.99] ${rarityTone} ${isSelected ? 'ring-2 ring-cyan-300/50 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_0_22px_rgba(34,211,238,0.22)]' : ''}`}>
-                                      <div className="relative aspect-square mb-3 bg-[#0b0f17] rounded-xl p-3 flex items-center justify-center overflow-hidden border border-white/5 shadow-inner">
+                                      <div className="relative aspect-square mb-3 bg-[#0b0f17] rounded-xl p-3 flex items-center justify-center overflow-hidden border border-[#5b6cff]/10 shadow-inner">
                                           <div className={`pointer-events-none absolute -inset-4 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.22)_0%,rgba(56,189,248,0.08)_35%,transparent_70%)] opacity-80`} />
                                           <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${imageGlow}`} />
-                                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/5" />
+                                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-cyan-400/5" />
                                           {isSelectable && (
-                                              <label className={`absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border backdrop-blur-sm ${isSelected ? 'bg-cyan-500/25 border-cyan-200/60 shadow-[0_0_12px_rgba(34,211,238,0.45)]' : 'bg-black/65 border-white/25'}`}>
+                                              <label className={`absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border backdrop-blur-sm ${isSelected ? 'bg-cyan-500/25 border-cyan-200/60 shadow-[0_0_12px_rgba(34,211,238,0.45)]' : 'bg-black/65 border-[#5b6cff]/30'}`}>
                                                   <Checkbox
                                                       checked={selectedShipments.includes(item.instanceId)}
                                                       onChange={() => handleToggleShipment(item.instanceId)}
