@@ -4,6 +4,8 @@ import { getBearerToken } from './_utils/auth.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 
 const DEFAULT_VERIFY_CONTINUE_URL = 'https://pullz.gg';
+const EXPECTED_EMAIL_FROM = 'Pullz.gg <verify@pullz.gg>';
+const DISALLOWED_SENDER_DOMAINS = ['verify@mail.pullz.gg', 'mail.pullz.gg'];
 const REQUIRED_ENV_VARS = ['RESEND_API_KEY', 'EMAIL_FROM'];
 
 const getMissingVerificationEnvVars = () => REQUIRED_ENV_VARS.filter((envVar) => {
@@ -22,9 +24,19 @@ const getVerificationSenderConfig = () => {
     };
   }
 
+  const emailFrom = process.env.EMAIL_FROM.trim();
+  const normalizedEmailFrom = emailFrom.toLowerCase();
+  if (DISALLOWED_SENDER_DOMAINS.some((value) => normalizedEmailFrom.includes(value))) {
+    throw {
+      status: 500,
+      error: 'VERIFICATION_EMAIL_FROM_INVALID',
+      message: `Verification email sender must use the root domain sender ${EXPECTED_EMAIL_FROM}.`
+    };
+  }
+
   return {
     resendApiKey: process.env.RESEND_API_KEY.trim(),
-    emailFrom: process.env.EMAIL_FROM.trim(),
+    emailFrom,
     continueUrl: process.env.VERIFY_CONTINUE_URL || DEFAULT_VERIFY_CONTINUE_URL
   };
 };
