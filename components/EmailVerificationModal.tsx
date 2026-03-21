@@ -28,7 +28,12 @@ export const EmailVerificationModal: React.FC = () => {
       setMessage('Verification email sent. Check your inbox.');
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || 'Unable to resend verification email.');
+      const errorMessage = typeof err?.message === 'string' ? err.message : '';
+      if (errorMessage.includes('VERIFICATION_EMAIL_CONFIG_MISSING')) {
+        setError('Verification email is unavailable right now. Please check the sender env vars.');
+      } else {
+        setError(errorMessage || 'Unable to resend verification email.');
+      }
     } finally {
       setIsResending(false);
     }

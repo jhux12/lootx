@@ -19,7 +19,6 @@ import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   linkWithCredential,
-  sendEmailVerification,
   sendPasswordResetEmail,
   signOut,
   getIdTokenResult,
@@ -116,6 +115,18 @@ const RARITY_COLORS: Record<InventoryItem['rarity'], string> = {
   rare: '#3b82f6',
   epic: '#a855f7',
   legendary: '#fbbf24'
+};
+
+const resendVerificationEmailRequest = async (firebaseUser: FirebaseUser) => {
+  const email = firebaseUser.email?.trim();
+  if (!email) {
+    throw new Error('Your account is missing an email address. Please contact support.');
+  }
+
+  await authedFetch<{ ok: boolean }>('/api/resend-email-verification', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
 };
 
 const inventorySignature = (items: InventoryItem[]) =>
@@ -1918,10 +1929,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!auth.currentUser) {
       throw new Error('Please sign in to resend the verification email.');
     }
-    await sendEmailVerification(auth.currentUser, {
-      url: window.location.origin,
-      handleCodeInApp: true
-    });
+    await resendVerificationEmailRequest(auth.currentUser);
   };
 
   const refreshEmailVerification = async () => {
@@ -1934,10 +1942,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!credential.user.emailVerified) {
         const redirectPath = getCurrentPath();
         setPendingEmailVerification(redirectPath);
-        await sendEmailVerification(credential.user, {
-          url: window.location.origin,
-          handleCodeInApp: true
-        });
+        await resendVerificationEmailRequest(credential.user);
         setEmailVerificationStatus('pending');
         setShowEmailVerificationModal(true);
         setShowLoginModal(false);
@@ -2002,10 +2007,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const credential = await createUserWithEmailAndPassword(auth, email, pass);
       const redirectPath = getCurrentPath();
       setPendingEmailVerification(redirectPath);
-      await sendEmailVerification(credential.user, {
-        url: window.location.origin,
-        handleCodeInApp: true
-      });
+      await resendVerificationEmailRequest(credential.user);
       const createdAt = Date.now();
       const username = await ensureUniqueUsername(buildBaseUsername(name, email));
       const newUser: User = {
@@ -2049,10 +2051,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (!signInCredential.user.emailVerified) {
             const redirectPath = getCurrentPath();
             setPendingEmailVerification(redirectPath);
-            await sendEmailVerification(signInCredential.user, {
-              url: window.location.origin,
-              handleCodeInApp: true
-            });
+            await resendVerificationEmailRequest(signInCredential.user);
             setEmailVerificationStatus('pending');
             setShowEmailVerificationModal(true);
             setShowLoginModal(false);
