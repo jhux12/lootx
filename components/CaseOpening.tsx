@@ -1088,7 +1088,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         addInventoryItemFromServer(inventoryItem);
         if (isFree && Number.isFinite(data.freeBoxClaimedAt)) {
-          await claimFreeBox(data.freeBoxClaimedAt);
+          await claimFreeBox(data.freeBoxClaimedAt, { persist: false });
         }
         if ((data.currencyType ?? 'COIN') === 'COIN') {
           syncBalance(Number(data.newCoinBalance ?? data.newCoins ?? 0));
