@@ -626,30 +626,30 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 px-4 pb-10 pt-4 md:gap-8 md:px-6 md:pb-14 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Profile Header */}
-      <div className="relative mb-4 overflow-hidden rounded-[28px] bg-[linear-gradient(160deg,rgba(11,14,20,0.86),rgba(9,12,18,0.74))] shadow-[0_26px_64px_rgba(0,0,0,0.42),0_0_28px_rgba(64,212,255,0.06)] backdrop-blur-[20px]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(108,92,255,0.2),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.14),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.01))]" />
-        <div className="relative px-4 pb-3.5 pt-3.5 sm:px-5 sm:pb-4 sm:pt-4">
-          <div className="flex flex-col gap-3">
-            <div className="rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.02),0_18px_36px_rgba(5,10,20,0.22)] backdrop-blur-xl sm:p-4">
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:text-left">
+      <div className="relative overflow-hidden rounded-[32px] bg-[linear-gradient(180deg,rgba(8,12,22,0.96),rgba(7,10,18,0.88))] shadow-[0_30px_80px_rgba(0,0,0,0.42)] backdrop-blur-[28px]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.2),transparent_34%),radial-gradient(circle_at_85%_20%,rgba(59,130,246,0.14),transparent_28%),radial-gradient(circle_at_bottom,rgba(14,165,233,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0))]" />
+        <div className="relative px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+          <div className="flex flex-col gap-5 md:gap-6">
+            <div className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(17,24,39,0.72),rgba(10,14,24,0.42))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_24px_56px_rgba(3,8,18,0.4)] backdrop-blur-xl sm:p-5 lg:p-6">
+              <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.8fr)] lg:items-start">
+                <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left lg:gap-5">
                   <div className="relative shrink-0">
                     <div className="absolute inset-1 rounded-full bg-[radial-gradient(circle,rgba(110,92,255,0.42),rgba(56,189,248,0.14)_55%,transparent_74%)] blur-xl" />
                     <div className="relative rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.04))] p-1 shadow-[0_16px_34px_rgba(12,17,29,0.34),inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-lg">
-                      <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUser.name} className="h-24 w-24 rounded-[20px] object-cover bg-[#0b0e14]/90 sm:h-[104px] sm:w-[104px]" />
+                      <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUser.name} className="h-24 w-24 rounded-[22px] object-cover bg-[#0b0e14]/90 sm:h-[110px] sm:w-[110px] lg:h-[124px] lg:w-[124px]" />
                     </div>
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#9099b2] sm:text-[11px]">Player Profile</p>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[#8f9ab4] sm:text-[11px]">Profile overview</p>
                     <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <h2 className="truncate text-[1.7rem] font-black tracking-[-0.02em] text-white sm:text-[1.9rem]">{displayUser.name}</h2>
-                        <div className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,rgba(56,189,248,0.16),rgba(124,58,237,0.12))] px-2.5 py-1 text-[13px] font-medium text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_10px_24px_rgba(7,12,22,0.16)] backdrop-blur-md">
+                        <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full bg-[linear-gradient(135deg,rgba(99,102,241,0.18),rgba(59,130,246,0.1))] px-3 py-1.5 text-[13px] font-medium text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
                           <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                          <span className="text-[#9ba3ba]">XP Points:</span>
+                          <span className="text-[#94a3b8]">XP balance</span>
                           <span className="font-bold text-white"><AnimatedNumber value={xpTotal} /></span>
                         </div>
                       </div>
@@ -677,15 +677,16 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-3 sm:gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5 rounded-[24px] bg-white/[0.03] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] min-[420px]:grid-cols-4 lg:col-start-1 lg:row-start-2">
                   {[
                     { icon: UsersIcon, label: 'Followers', value: viewedFollowerIds.length.toLocaleString() },
                     { icon: UserPlus, label: 'Following', value: viewedFollowing.length.toLocaleString() },
-                    { icon: CalendarDays, label: 'Joined', value: joinedDateLabel }
+                    { icon: CalendarDays, label: 'Joined', value: joinedDateLabel },
+                    { icon: Boxes, label: 'Inventory', value: inventoryCount.toLocaleString() }
                   ].map(({ icon: Icon, label, value }) => (
                     <div
                       key={label}
-                      className="rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_8px_18px_rgba(7,10,19,0.16)] backdrop-blur-md min-[380px]:min-w-0"
+                      className="rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md"
                     >
                       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#7f88a1] sm:text-[11px] sm:tracking-[0.14em]">
                         <Icon className="h-3.5 w-3.5 text-cyan-300/80" />
@@ -697,16 +698,16 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                 </div>
 
                 {isOwnProfile && (
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:col-start-2 lg:row-span-2 lg:self-stretch lg:content-end">
                     <button
                       onClick={() => setActiveTab('settings')}
-                      className="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.05))] px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_22px_rgba(7,12,22,0.18)] backdrop-blur-md transition-colors hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0.07))]"
+                      className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white/[0.06] px-5 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all hover:bg-white/[0.1] hover:text-white"
                     >
                       <Settings className="h-4 w-4" /> Edit Profile
                     </button>
                     <button
                       onClick={() => setView({ type: 'BOXES' })}
-                      className="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#7c3aed,#2563eb)] px-4 text-sm font-bold text-white shadow-[0_16px_32px_rgba(79,70,229,0.34)] transition-transform hover:-translate-y-0.5"
+                      className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#6d5efc,#2f7bf6)] px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(79,70,229,0.28)] transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_48px_rgba(79,70,229,0.36)]"
                     >
                       <Sparkles className="h-4 w-4" /> Open Boxes
                     </button>
@@ -715,8 +716,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.9fr)]">
-              <div className="overflow-hidden rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_34px_rgba(5,10,20,0.18)] backdrop-blur-xl">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.75fr)]">
+              <div className="overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_20px_46px_rgba(3,8,18,0.28)] backdrop-blur-xl sm:p-5">
                 <div className="flex items-start justify-between gap-2.5">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7f88a1]">Top Pulls</p>
@@ -760,7 +761,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-2 rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_34px_rgba(5,10,20,0.18)] backdrop-blur-xl min-[420px]:grid-cols-3 lg:grid-cols-1">
+              <div className="grid grid-cols-1 gap-2 rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl min-[420px]:grid-cols-3 lg:grid-cols-1">
                 {[
                   { icon: Sparkles, label: 'Top Pulls', value: topPulls.length.toLocaleString() },
                   { icon: Boxes, label: 'Inventory', value: inventoryCount.toLocaleString() },
@@ -778,10 +779,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
             </div>
 
             {/* Main Tabs */}
-            <div className="relative w-full max-w-full">
+            <div className="relative w-full max-w-full overflow-hidden rounded-[24px] bg-white/[0.03] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div
                 ref={tabScrollRef}
-                className="flex items-center gap-2 rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-xl w-full max-w-full overflow-x-auto whitespace-nowrap scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
+                className="flex w-full max-w-full items-center gap-2 overflow-x-auto whitespace-nowrap rounded-[20px] bg-transparent p-1 scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {visibleProfileTabs.map((tab) => {
@@ -790,7 +791,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold whitespace-nowrap transition-all snap-start ${activeTab === tab.id ? 'bg-[linear-gradient(135deg,rgba(124,58,237,0.32),rgba(37,99,235,0.24))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_24px_rgba(12,18,30,0.22)] backdrop-blur-md' : 'text-gray-400 hover:bg-white/[0.05] hover:text-gray-200'}`}
+                      className={`flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold whitespace-nowrap transition-all snap-start ${activeTab === tab.id ? 'bg-[linear-gradient(135deg,rgba(99,102,241,0.28),rgba(37,99,235,0.22))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_12px_30px_rgba(7,12,22,0.28)] backdrop-blur-md' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-100'}`}
                     >
                       <Icon className="w-4 h-4" /> {tab.label}
                     </button>
@@ -823,10 +824,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       </div>
 
       {/* Tab Content */}
-      <div className="min-h-[400px]">
+      <div className="min-h-[400px] space-y-6">
           {activeTab === 'topPulls' && (
-              <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-800 pb-4">
+              <div className="space-y-5 md:space-y-6">
+                  <div className="flex flex-col gap-4 rounded-[28px] bg-white/[0.03] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:flex-row sm:items-center sm:justify-between sm:p-5">
                       <div>
                           <h3 className="text-lg font-bold text-white">Top Pulls</h3>
                           <p className="text-sm text-gray-500">Your most valuable items, ranked by rarity and value.</p>
@@ -848,7 +849,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           <p className="text-gray-500">This player has chosen to keep their top pulls private.</p>
                       </div>
                   ) : (isOwnProfile && inventory.length === 0) ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                         {Array.from({ length: 6 }).map((_, idx) => <SkeletonTile key={`top-pull-skeleton-${idx}`} />)}
                       </div>
                   ) : topPulls.length === 0 ? (
@@ -868,7 +869,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           )}
                       </div>
                   ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                           {topPulls.map((item, index) => (
                               <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-3 sm:p-4 group hover:border-brand-purple/50 transition-all">
                                   <div className="relative aspect-square mb-3 sm:mb-4 bg-[#0b0e14] rounded-lg p-3 sm:p-4 flex items-center justify-center overflow-hidden">
@@ -900,9 +901,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
           )}
 
           {activeTab === 'inventory' && isOwnProfile && (
-              <div className="space-y-6">
+              <div className="space-y-5 md:space-y-6">
                   {dailyBox && canClaimDaily && (
-                      <div className="bg-gradient-to-br from-[#1a2130] to-[#131720] border border-yellow-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="rounded-[28px] bg-[linear-gradient(135deg,rgba(245,158,11,0.12),rgba(15,23,42,0.9))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                               <div className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-400/80 mb-1">Free Signup Box Available</div>
                               <h4 className="text-lg font-bold text-white">Open your free signup box</h4>
@@ -915,20 +916,20 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </button>
                       </div>
                   )}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-800 pb-4">
+                  <div className="flex flex-col gap-4 rounded-[28px] bg-white/[0.03] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:flex-row sm:items-center sm:justify-between sm:p-5">
                       <div>
                           <h3 className="text-lg font-bold text-white">Inventory</h3>
                           <p className="text-sm text-gray-500">Manage your items, ship rewards, or sell them back for coins.</p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 rounded-full bg-black/20 p-1">
                           {(['inventory', 'processing', 'shipped'] as const).map((filter) => (
                               <button
                                   key={filter}
                                   onClick={() => setInventoryFilter(filter)}
-                                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-colors ${
+                                  className={`rounded-full px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] transition-all ${
                                       inventoryFilter === filter
-                                          ? 'bg-brand-purple text-white'
-                                          : 'bg-[#0b0e14] text-gray-400 hover:text-white hover:bg-gray-800'
+                                          ? 'bg-[linear-gradient(135deg,rgba(109,94,252,0.95),rgba(47,123,246,0.9))] text-white shadow-[0_10px_24px_rgba(79,70,229,0.25)]'
+                                          : 'text-slate-400 hover:bg-white/[0.05] hover:text-white'
                                   }`}
                               >
                                   {filter === 'inventory' ? 'Inventory' : filter === 'processing' ? 'Processing' : 'Shipped'}
@@ -937,24 +938,24 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                       </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-[#131c29] to-[#111521] px-3 py-2.5">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div className="rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] px-4 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">Total items</p>
                           <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.totalItems}</p>
                           <p className="mt-1 text-[10px] text-cyan-100/60">{inventoryStats.sellableItems} sellable</p>
                       </div>
-                      <div className="rounded-xl border border-purple-500/25 bg-gradient-to-br from-[#1b1728] to-[#121320] px-3 py-2.5">
+                      <div className="rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] px-4 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-purple-300/70">Current value</p>
                           <CoinAmount amount={inventoryStats.currentValue} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 text-base font-black text-purple-100" iconClassName="w-4 h-4" />
                       </div>
-                      <div className="col-span-2 sm:col-span-1 rounded-xl border border-blue-500/20 bg-gradient-to-br from-[#141a27] to-[#10131d] px-3 py-2.5">
+                      <div className="rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] px-4 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:col-span-1">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-blue-200/70">Showing now</p>
                           <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.visibleItems}</p>
                       </div>
                   </div>
 
                   {inventoryFilter === 'inventory' && (
-                      <div className="bg-gradient-to-br from-[#161d2c] to-[#11151f] border border-blue-500/20 rounded-2xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
+                      <div className="rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_16px_40px_rgba(4,8,16,0.24)] sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                               <p className="text-sm font-black uppercase tracking-[0.12em] text-white">Ship multiple items</p>
                               <p className="text-xs text-blue-100/70">Select rewards below for a single premium checkout.</p>
@@ -1066,8 +1067,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                     ? 'from-blue-400/30 via-cyan-300/10 to-transparent'
                                     : 'from-slate-300/20 via-slate-200/10 to-transparent';
                               return (
-                                  <div key={item.instanceId} className={`relative bg-gradient-to-b from-[#171c2a] to-[#121622] border rounded-2xl p-3 group transition-all duration-300 flex flex-col hover:-translate-y-0.5 active:scale-[0.99] ${rarityTone} ${isSelected ? 'ring-2 ring-cyan-300/50 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_0_22px_rgba(34,211,238,0.22)]' : ''}`}>
-                                      <div className="relative aspect-square mb-3 bg-[#0b0f17] rounded-xl p-3 flex items-center justify-center overflow-hidden border border-white/5 shadow-inner">
+                                  <div key={item.instanceId} className={`group relative flex h-full flex-col overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(10,14,24,0.82))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_18px_36px_rgba(4,8,16,0.26)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_24px_44px_rgba(4,8,16,0.36)] active:scale-[0.99] ${rarityTone} ${isSelected ? 'ring-2 ring-cyan-300/40 shadow-[0_0_0_1px_rgba(34,211,238,0.35),0_0_24px_rgba(34,211,238,0.18)]' : ''}`}>
+                                      <div className="relative mb-4 flex aspect-[0.96] items-center justify-center overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.18),transparent_48%),linear-gradient(180deg,rgba(15,23,42,0.95),rgba(12,18,30,0.88))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                                           <div className={`pointer-events-none absolute -inset-4 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.22)_0%,rgba(56,189,248,0.08)_35%,transparent_70%)] opacity-80`} />
                                           <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${imageGlow}`} />
                                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/5" />
@@ -1136,15 +1137,15 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           </div>
                                       )}
 
-                                      <div className="mt-3.5 flex flex-col gap-2">
+                                      <div className="mt-4 flex flex-col gap-2.5">
                                           {inventoryFilter !== 'shipped' && (
                                             <button
                                               onClick={() => handleOpenShippingReview([item.instanceId])}
                                               disabled={!canShip}
-                                              className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${
+                                              className={`w-full rounded-2xl px-3.5 py-3 text-xs font-semibold uppercase tracking-[0.14em] transition-all border ${
                                                 canShip
-                                                  ? 'bg-blue-600/20 text-blue-200 border-blue-500/40 hover:bg-blue-600/30'
-                                                  : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
+                                                  ? 'bg-[linear-gradient(135deg,rgba(59,130,246,0.18),rgba(14,165,233,0.14))] text-sky-100 border-sky-400/20 hover:bg-[linear-gradient(135deg,rgba(59,130,246,0.24),rgba(14,165,233,0.18))]'
+                                                  : 'bg-black/20 text-gray-500 border-white/5 cursor-not-allowed'
                                               }`}
                                             >
                                               Ship item
@@ -1180,8 +1181,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                 disabled={!canSell || !!isGeneratingSellOffers[item.instanceId] || !!isSellingItems[item.instanceId]}
                                                 className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-80 ${
                                                   canSell
-                                                    ? 'bg-[#0b0e14] text-gray-200 border-gray-700 hover:border-brand-purple/60'
-                                                    : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
+                                                    ? 'bg-white/[0.04] text-slate-100 border-white/10 hover:border-indigo-300/30 hover:bg-white/[0.06]'
+                                                    : 'bg-black/20 text-gray-500 border-white/5 cursor-not-allowed'
                                                 }`}
                                               >
                                                 <span className="flex flex-col items-center gap-1 text-center">
@@ -1222,10 +1223,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                   }
                                                 }}
                                                 disabled={!item.trackingNumber}
-                                                className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${
+                                                className={`w-full rounded-2xl px-3.5 py-3 text-xs font-semibold uppercase tracking-[0.14em] transition-all border ${
                                                   item.trackingNumber
-                                                    ? 'bg-[#0b0e14] text-gray-200 border-gray-700 hover:border-brand-purple/60'
-                                                    : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
+                                                    ? 'bg-white/[0.04] text-slate-100 border-white/10 hover:border-indigo-300/30 hover:bg-white/[0.06]'
+                                                    : 'bg-black/20 text-gray-500 border-white/5 cursor-not-allowed'
                                                 }`}
                                               >
                                                 Track package
@@ -1245,8 +1246,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   )}
 
                   {showShippingReview && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-                          <div className="w-full max-w-lg rounded-2xl border border-gray-800 bg-[#0b0e14] p-6 shadow-2xl">
+                      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 sm:items-center sm:p-4">
+                          <div className="w-full max-w-xl rounded-[28px] bg-[linear-gradient(180deg,rgba(8,12,22,0.98),rgba(9,13,24,0.94))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_30px_70px_rgba(0,0,0,0.45)] sm:p-6">
                               <div className="flex items-center justify-between">
                                   <h3 className="text-lg font-bold text-white">Confirm shipment</h3>
                                   <button
@@ -1412,10 +1413,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
           )}
 
           {activeTab === 'community' && (
-              <div className="bg-[#131720] border border-gray-800 rounded-2xl overflow-hidden">
-                  <div className="p-4 border-b border-gray-800">
+              <div className="overflow-hidden rounded-[30px] bg-[linear-gradient(180deg,rgba(10,15,24,0.96),rgba(10,14,22,0.88))] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_54px_rgba(0,0,0,0.24)]">
+                  <div className="border-b border-white/5 p-4 sm:p-5">
                       <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Search players</label>
-                      <div className="mt-2 flex items-center gap-3 bg-[#0b0e14] border border-gray-800 rounded-xl px-3 py-2">
+                      <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white/[0.04] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                           <Search className="w-4 h-4 text-gray-500" />
                           <Input 
                             type="text"
@@ -1428,7 +1429,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   </div>
 
                   {trimmedSearch && (
-                      <div className="p-6 border-b border-gray-800">
+                      <div className="border-b border-white/5 p-4 sm:p-5">
                           <div className="flex items-center justify-between mb-4">
                               <h4 className="text-sm font-bold text-white">Search Results</h4>
                               <span className="text-xs text-gray-500">{communitySearchResults.length} matches</span>
@@ -1438,9 +1439,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   No players found for that search.
                               </div>
                           ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                   {communitySearchResults.map((p) => (
-                                      <div key={p.id} className="flex items-center justify-between p-4 bg-[#0b0e14] rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
+                                      <div key={p.id} className="flex items-center justify-between rounded-[24px] bg-white/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:bg-white/[0.055]">
                                           <div 
                                             className="flex items-center gap-4 cursor-pointer"
                                             onClick={() => setView({ type: 'PROFILE', userId: p.id })}
@@ -1464,31 +1465,31 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                       </div>
                   )}
 
-                  <div className="flex border-b border-gray-800">
+                  <div className="flex gap-2 border-b border-white/5 p-2">
                       <button 
                         onClick={() => setActivePeopleTab('followers')}
-                        className={`flex-1 py-4 font-bold text-sm transition-colors ${activePeopleTab === 'followers' ? 'text-white bg-[#1a2130]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex-1 rounded-2xl py-3 text-sm font-semibold transition-all ${activePeopleTab === 'followers' ? 'bg-white/[0.06] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]' : 'text-gray-500 hover:text-gray-300'}`}
                       >
                           Followers ({viewedFollowerIds.length})
                       </button>
                       <button 
                         onClick={() => setActivePeopleTab('following')}
-                        className={`flex-1 py-4 font-bold text-sm transition-colors ${activePeopleTab === 'following' ? 'text-white bg-[#1a2130]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex-1 rounded-2xl py-3 text-sm font-semibold transition-all ${activePeopleTab === 'following' ? 'bg-white/[0.06] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]' : 'text-gray-500 hover:text-gray-300'}`}
                       >
                           Following ({viewedFollowing.length})
                       </button>
                   </div>
                   
-                  <div className="p-6">
+                  <div className="p-4 sm:p-5">
                       {activePeople.length === 0 ? (
                           <div className="py-12 text-center">
                               <UsersIcon className="w-12 h-12 text-gray-800 mx-auto mb-4" />
                               <p className="text-gray-500">{activePeopleEmptyMessage}</p>
                           </div>
                       ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                               {activePeople.map((p) => (
-                                  <div key={p.id} className="flex items-center justify-between p-4 bg-[#0b0e14] rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
+                                  <div key={p.id} className="flex items-center justify-between rounded-[24px] bg-white/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:bg-white/[0.055]">
                                       <div 
                                         className="flex items-center gap-4 cursor-pointer"
                                         onClick={() => setView({ type: 'PROFILE', userId: p.id })}
@@ -1514,22 +1515,22 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
           )}
 
           {activeTab === 'settings' && isOwnProfile && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)] lg:items-start">
                   {/* Profile Settings */}
-                  <div className="lg:col-span-2 space-y-8">
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                  <div className="space-y-5 lg:space-y-6">
+                      <div className="rounded-[30px] bg-[linear-gradient(180deg,rgba(11,17,27,0.96),rgba(10,14,22,0.9))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_20px_44px_rgba(0,0,0,0.2)] sm:p-6">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <User className="w-5 h-5 text-brand-purple" /> Profile Information
                           </h3>
                           
-                          <div className="space-y-6">
+                          <div className="space-y-5 md:space-y-6">
                               <div>
                                   <label className="block text-sm font-bold text-gray-400 mb-2">Username</label>
                                   <Input 
                                       type="text" 
                                       value={profileForm.name}
                                       onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
-                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                      className="w-full rounded-2xl bg-white/[0.04] px-4 py-3 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                                   />
                               </div>
                               
@@ -1540,7 +1541,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           <button 
                                               key={idx}
                                               onClick={() => setProfileForm({...profileForm, avatar: url})}
-                                              className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${profileForm.avatar === url ? 'border-brand-purple scale-95' : 'border-transparent hover:border-gray-700'}`}
+                                              className={`relative aspect-square overflow-hidden rounded-2xl bg-white/[0.03] transition-all ${profileForm.avatar === url ? 'scale-[0.98] ring-2 ring-indigo-400/50' : 'hover:bg-white/[0.06]'}`}
                                           >
                                               <img loading="lazy" decoding="async" src={url} alt="preset" className="w-full h-full object-cover" />
                                               {profileForm.avatar === url && (
@@ -1555,14 +1556,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               
                               <button 
                                   onClick={handleSaveProfile}
-                                  className="w-full py-3 bg-brand-purple text-white rounded-xl font-bold hover:bg-purple-600 transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
+                                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#6d5efc,#2f7bf6)] px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(79,70,229,0.28)] transition-all hover:-translate-y-0.5"
                               >
                                   <Save className="w-5 h-5" /> Save Profile Changes
                               </button>
                           </div>
                       </div>
 
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[30px] bg-[linear-gradient(180deg,rgba(11,17,27,0.96),rgba(10,14,22,0.9))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_20px_44px_rgba(0,0,0,0.2)] sm:p-6">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <Lock className="w-5 h-5 text-brand-purple" /> Privacy
                           </h3>
@@ -1575,8 +1576,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               <button
                                   type="button"
                                   onClick={() => handleTopPullsVisibility(!topPullsPublic)}
-                                  className={`relative inline-flex h-10 w-20 items-center rounded-full border transition-colors ${
-                                    topPullsPublic ? 'bg-brand-purple/30 border-brand-purple' : 'bg-[#0b0e14] border-gray-700'
+                                  className={`relative inline-flex h-11 w-20 items-center rounded-full transition-colors ${
+                                    topPullsPublic ? 'bg-[linear-gradient(135deg,rgba(109,94,252,0.55),rgba(47,123,246,0.4))]' : 'bg-white/[0.06]'
                                   }`}
                               >
                                   <span
@@ -1590,7 +1591,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </div>
                       </div>
 
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[30px] bg-[linear-gradient(180deg,rgba(11,17,27,0.96),rgba(10,14,22,0.9))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_20px_44px_rgba(0,0,0,0.2)] sm:p-6">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <MapPin className="w-5 h-5 text-brand-purple" /> Shipping Address
                           </h3>
@@ -1602,7 +1603,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       type="text" 
                                       value={addressForm.fullName}
                                       onChange={(e) => setAddressForm({...addressForm, fullName: e.target.value})}
-                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                      className="w-full rounded-2xl bg-white/[0.04] px-4 py-3 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                                       placeholder="John Doe"
                                   />
                               </div>
@@ -1612,7 +1613,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       type="text" 
                                       value={addressForm.street}
                                       onChange={(e) => setAddressForm({...addressForm, street: e.target.value})}
-                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                      className="w-full rounded-2xl bg-white/[0.04] px-4 py-3 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                                       placeholder="123 Gaming Ave"
                                   />
                               </div>
@@ -1622,7 +1623,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       type="text" 
                                       value={addressForm.city}
                                       onChange={(e) => setAddressForm({...addressForm, city: e.target.value})}
-                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                      className="w-full rounded-2xl bg-white/[0.04] px-4 py-3 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                                   />
                               </div>
                               <div>
@@ -1631,7 +1632,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       type="text" 
                                       value={addressForm.state}
                                       onChange={(e) => setAddressForm({...addressForm, state: e.target.value})}
-                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                      className="w-full rounded-2xl bg-white/[0.04] px-4 py-3 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                                   />
                               </div>
                               <div>
@@ -1640,7 +1641,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       type="text" 
                                       value={addressForm.zipCode}
                                       onChange={(e) => setAddressForm({...addressForm, zipCode: e.target.value})}
-                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                      className="w-full rounded-2xl bg-white/[0.04] px-4 py-3 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                                   />
                               </div>
                               <div>
@@ -1649,7 +1650,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       type="text" 
                                       value={addressForm.country}
                                       onChange={(e) => setAddressForm({...addressForm, country: e.target.value})}
-                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                      className="w-full rounded-2xl bg-white/[0.04] px-4 py-3 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                                   />
                               </div>
                           </div>
@@ -1657,7 +1658,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           <button 
                               onClick={handleSaveAddress}
                               disabled={isSavingAddress}
-                              className="w-full mt-8 py-3 bg-[#1a2130] text-white rounded-xl font-bold hover:bg-gray-800 transition-all border border-gray-700 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+                              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-60"
                           >
                               <Save className="w-5 h-5" /> {isSavingAddress ? 'Saving Address…' : 'Save Shipping Address'}
                           </button>
@@ -1671,8 +1672,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   </div>
 
                   {/* Security & Account */}
-                  <div className="space-y-8">
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                  <div className="space-y-5 lg:space-y-6">
+                      <div className="rounded-[30px] bg-[linear-gradient(180deg,rgba(11,17,27,0.96),rgba(10,14,22,0.9))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_20px_44px_rgba(0,0,0,0.2)] sm:p-6">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <Shield className="w-5 h-5 text-brand-purple" /> Security
                           </h3>
@@ -1684,7 +1685,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       type="password" 
                                       value={passwordForm.current}
                                       onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
-                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                      className="w-full rounded-2xl bg-white/[0.04] px-4 py-2.5 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                                   />
                               </div>
                               <div>
@@ -1693,7 +1694,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       type="password" 
                                       value={passwordForm.new}
                                       onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
-                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                      className="w-full rounded-2xl bg-white/[0.04] px-4 py-2.5 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                                   />
                               </div>
                               <div>
@@ -1702,19 +1703,19 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       type="password" 
                                       value={passwordForm.confirm}
                                       onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
-                                      className="w-full bg-[#0b0e14] border border-gray-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-brand-purple transition-colors"
+                                      className="w-full rounded-2xl bg-white/[0.04] px-4 py-2.5 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                                   />
                               </div>
                               <button 
                                   onClick={handleUpdatePassword}
-                                  className="w-full py-2 bg-[#0b0e14] text-gray-300 rounded-lg font-bold border border-gray-800 hover:border-gray-600 transition-all text-sm"
+                                  className="w-full rounded-2xl bg-white/[0.05] px-4 py-3 text-sm font-semibold text-gray-200 transition-all hover:bg-white/[0.08]"
                               >
                                   Update Password
                               </button>
                           </div>
                       </div>
 
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[30px] bg-[linear-gradient(180deg,rgba(11,17,27,0.96),rgba(10,14,22,0.9))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_20px_44px_rgba(0,0,0,0.2)] sm:p-6">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <AlertTriangle className="w-5 h-5 text-red-500" /> Danger Zone
                           </h3>
@@ -1725,7 +1726,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       logout();
                                   }
                               }}
-                              className="w-full py-3 bg-red-500/10 text-red-500 rounded-xl font-bold hover:bg-red-500 hover:text-white transition-all border border-red-500/20 flex items-center justify-center gap-2"
+                              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-300 transition-all hover:bg-red-500/20"
                           >
                               <Trash2 className="w-5 h-5" /> Delete Account
                           </button>
@@ -1733,7 +1734,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
                       <button 
                           onClick={logout}
-                          className="w-full py-4 bg-[#0b0e14] text-gray-400 rounded-2xl font-bold hover:text-white hover:bg-gray-900 transition-all border border-gray-800 flex items-center justify-center gap-2"
+                          className="flex w-full items-center justify-center gap-2 rounded-[28px] bg-white/[0.04] px-4 py-4 text-sm font-semibold text-gray-300 transition-all hover:bg-white/[0.08] hover:text-white"
                       >
                           <LogOut className="w-5 h-5" /> Sign Out
                       </button>
