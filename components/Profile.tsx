@@ -626,207 +626,190 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Profile Header */}
-      <div className="relative mb-4 overflow-hidden rounded-[28px] bg-[linear-gradient(160deg,rgba(11,14,20,0.86),rgba(9,12,18,0.74))] shadow-[0_26px_64px_rgba(0,0,0,0.42),0_0_28px_rgba(64,212,255,0.06)] backdrop-blur-[20px]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(108,92,255,0.2),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.14),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.01))]" />
-        <div className="relative px-4 pb-3.5 pt-3.5 sm:px-5 sm:pb-4 sm:pt-4">
-          <div className="flex flex-col gap-3">
-            <div className="rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.02),0_18px_36px_rgba(5,10,20,0.22)] backdrop-blur-xl sm:p-4">
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:text-left">
-                  <div className="relative shrink-0">
-                    <div className="absolute inset-1 rounded-full bg-[radial-gradient(circle,rgba(110,92,255,0.42),rgba(56,189,248,0.14)_55%,transparent_74%)] blur-xl" />
-                    <div className="relative rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.04))] p-1 shadow-[0_16px_34px_rgba(12,17,29,0.34),inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-lg">
-                      <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUser.name} className="h-24 w-24 rounded-[20px] object-cover bg-[#0b0e14]/90 sm:h-[104px] sm:w-[104px]" />
-                    </div>
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#9099b2] sm:text-[11px]">Player Profile</p>
-                    <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <h2 className="truncate text-[1.7rem] font-black tracking-[-0.02em] text-white sm:text-[1.9rem]">{displayUser.name}</h2>
-                        <div className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,rgba(56,189,248,0.16),rgba(124,58,237,0.12))] px-2.5 py-1 text-[13px] font-medium text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_10px_24px_rgba(7,12,22,0.16)] backdrop-blur-md">
-                          <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                          <span className="text-[#9ba3ba]">XP Points:</span>
-                          <span className="font-bold text-white"><AnimatedNumber value={xpTotal} /></span>
-                        </div>
-                      </div>
-
-                      {!isOwnProfile && (
-                        <div className="flex w-full sm:w-auto sm:pt-0.5">
-                          {isFollowing ? (
-                            <button
-                              onClick={handleUnfollowClick}
-                              className="inline-flex h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.05))] px-[18px] text-sm font-bold text-gray-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_24px_rgba(7,12,22,0.2)] backdrop-blur-md transition-colors hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0.06))] hover:text-white sm:w-auto"
-                            >
-                              <UserCheck className="h-4 w-4" /> Following
-                            </button>
-                          ) : (
-                            <button
-                              onClick={handleFollowClick}
-                              className="inline-flex h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#7c3aed,#2563eb)] px-[18px] text-sm font-bold text-white shadow-[0_16px_32px_rgba(79,70,229,0.34)] transition-transform hover:-translate-y-0.5 sm:w-auto"
-                            >
-                              <UserPlus className="h-4 w-4" /> Follow
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
+    <div className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-4 px-4 py-4 duration-500 sm:px-5 lg:px-6">
+      <div className="space-y-5">
+        <section className="overflow-hidden rounded-[30px] border border-white/6 bg-[linear-gradient(180deg,#0c1018_0%,#0a0d14_100%)] shadow-[0_20px_70px_rgba(0,0,0,0.34)]">
+          <div className="border-b border-white/6 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+                <div className="relative mx-auto shrink-0 sm:mx-0">
+                  <div className="absolute inset-0 rounded-[28px] bg-brand-purple/12 blur-2xl" />
+                  <div className="relative rounded-[28px] border border-white/8 bg-white/[0.03] p-1.5">
+                    <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUser.name} className="h-24 w-24 rounded-[22px] object-cover bg-[#0b0e14] sm:h-28 sm:w-28" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-3 sm:gap-2.5">
+                <div className="min-w-0 text-center sm:text-left">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Account</p>
+                  <h1 className="mt-2 truncate text-3xl font-black tracking-[-0.03em] text-white sm:text-[2.35rem]">{displayUser.name}</h1>
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-sm text-slate-300">
+                      <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+                      <span className="text-slate-400">XP</span>
+                      <span className="font-semibold text-white"><AnimatedNumber value={xpTotal} /></span>
+                    </div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-sm text-slate-300">
+                      <CalendarDays className="h-4 w-4 text-slate-500" />
+                      <span>{joinedDateLabel}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[320px]">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {isOwnProfile ? (
+                    <>
+                      <button
+                        onClick={() => setActiveTab('settings')}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-semibold text-white transition-colors hover:bg-white/[0.06]"
+                      >
+                        <Settings className="h-4 w-4" /> Edit Profile
+                      </button>
+                      <button
+                        onClick={() => setView({ type: 'BOXES' })}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-brand-purple px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-purple/90"
+                      >
+                        <Sparkles className="h-4 w-4" /> Open Boxes
+                      </button>
+                    </>
+                  ) : isFollowing ? (
+                    <button
+                      onClick={handleUnfollowClick}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/8 bg-white/[0.03] px-4 text-sm font-semibold text-white transition-colors hover:bg-white/[0.06]"
+                    >
+                      <UserCheck className="h-4 w-4" /> Following
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleFollowClick}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-brand-purple px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-purple/90"
+                    >
+                      <UserPlus className="h-4 w-4" /> Follow
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   {[
                     { icon: UsersIcon, label: 'Followers', value: viewedFollowerIds.length.toLocaleString() },
                     { icon: UserPlus, label: 'Following', value: viewedFollowing.length.toLocaleString() },
-                    { icon: CalendarDays, label: 'Joined', value: joinedDateLabel }
+                    { icon: Boxes, label: 'Items', value: inventoryCount.toLocaleString() }
                   ].map(({ icon: Icon, label, value }) => (
-                    <div
-                      key={label}
-                      className="rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_8px_18px_rgba(7,10,19,0.16)] backdrop-blur-md min-[380px]:min-w-0"
-                    >
-                      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#7f88a1] sm:text-[11px] sm:tracking-[0.14em]">
-                        <Icon className="h-3.5 w-3.5 text-cyan-300/80" />
-                        <span className="leading-tight">{label}</span>
+                    <div key={label} className="rounded-2xl border border-white/6 bg-white/[0.025] px-3 py-3">
+                      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        <Icon className="h-3.5 w-3.5 text-slate-400" />
+                        <span>{label}</span>
                       </div>
-                      <div className="mt-1.5 text-sm font-bold leading-tight text-white break-words sm:text-[15px]">{value}</div>
+                      <div className="mt-2 text-base font-semibold text-white sm:text-lg">{value}</div>
                     </div>
                   ))}
                 </div>
-
-                {isOwnProfile && (
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      onClick={() => setActiveTab('settings')}
-                      className="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.05))] px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_22px_rgba(7,12,22,0.18)] backdrop-blur-md transition-colors hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0.07))]"
-                    >
-                      <Settings className="h-4 w-4" /> Edit Profile
-                    </button>
-                    <button
-                      onClick={() => setView({ type: 'BOXES' })}
-                      className="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#7c3aed,#2563eb)] px-4 text-sm font-bold text-white shadow-[0_16px_32px_rgba(79,70,229,0.34)] transition-transform hover:-translate-y-0.5"
-                    >
-                      <Sparkles className="h-4 w-4" /> Open Boxes
-                    </button>
-                  </div>
-                )}
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.9fr)]">
-              <div className="overflow-hidden rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_34px_rgba(5,10,20,0.18)] backdrop-blur-xl">
-                <div className="flex items-start justify-between gap-2.5">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7f88a1]">Top Pulls</p>
-                    <h3 className="mt-1.5 text-[1.05rem] font-black text-white">{canViewTopPulls ? `${topPulls.length} Highlight${topPulls.length === 1 ? '' : 's'}` : 'Private'}</h3>
-                    <p className="mt-1 text-[12px] leading-relaxed text-gray-400">A compact look at your highest-value drops.</p>
-                  </div>
-                  <div className="rounded-xl bg-[linear-gradient(180deg,rgba(232,121,249,0.16),rgba(168,85,247,0.08))] p-2 text-fuchsia-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-md">
-                    <Gem className="h-4 w-4" />
-                  </div>
-                </div>
-
-                {canViewTopPulls && topPulls.length > 0 ? (
-                  <div className="-mx-1 mt-3 flex gap-2.5 overflow-x-auto px-1 pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                    {topPulls.slice(0, 4).map((item, index) => (
-                      <div
-                        key={item.instanceId}
-                        className="min-w-[110px] flex-1 rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_12px_26px_rgba(4,8,17,0.28)] backdrop-blur-lg"
-                      >
-                        <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.22),transparent_58%),linear-gradient(180deg,#141a28,#101522)] p-2">
-                          <span className="absolute left-2 top-2 rounded-full border border-white/10 bg-black/45 px-2 py-0.5 text-[10px] font-black text-white">#{index + 1}</span>
-                          <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain" />
-                          <div className={`pointer-events-none absolute inset-0 opacity-30 bg-gradient-to-br ${
-                            item.rarity === 'legendary' ? 'from-yellow-400/50 via-transparent to-transparent' :
-                            item.rarity === 'epic' ? 'from-purple-400/50 via-transparent to-transparent' :
-                            item.rarity === 'rare' ? 'from-blue-400/50 via-transparent to-transparent' :
-                            item.rarity === 'uncommon' ? 'from-emerald-400/45 via-transparent to-transparent' :
-                            'from-white/10 via-transparent to-transparent'
-                          }`} />
-                        </div>
-                        <div className="mt-2 space-y-0.5">
-                          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#7d859d]">{item.rarity}</div>
-                          <div className="truncate text-xs font-semibold text-white">{item.name}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-3 rounded-2xl bg-white/[0.045] px-4 py-4 text-sm text-gray-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
-                    {canViewTopPulls ? 'Your best pulls will show here once you open more boxes.' : 'This player keeps their best pulls private.'}
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_34px_rgba(5,10,20,0.18)] backdrop-blur-xl min-[420px]:grid-cols-3 lg:grid-cols-1">
-                {[
-                  { icon: Sparkles, label: 'Top Pulls', value: topPulls.length.toLocaleString() },
-                  { icon: Boxes, label: 'Inventory', value: inventoryCount.toLocaleString() },
-                  { icon: CalendarDays, label: 'Member Since', value: joinedDateLabel }
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-md">
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#7f88a1] sm:tracking-[0.16em]">
-                      <Icon className="h-3.5 w-3.5 text-brand-purple" />
-                      <span className="leading-tight">{label}</span>
-                    </div>
-                    <div className="mt-1.5 text-sm font-bold leading-tight text-white break-words">{value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Main Tabs */}
-            <div className="relative w-full max-w-full">
-              <div
-                ref={tabScrollRef}
-                className="flex items-center gap-2 rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-xl w-full max-w-full overflow-x-auto whitespace-nowrap scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              >
-                {visibleProfileTabs.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold whitespace-nowrap transition-all snap-start ${activeTab === tab.id ? 'bg-[linear-gradient(135deg,rgba(124,58,237,0.32),rgba(37,99,235,0.24))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_24px_rgba(12,18,30,0.22)] backdrop-blur-md' : 'text-gray-400 hover:bg-white/[0.05] hover:text-gray-200'}`}
-                    >
-                      <Icon className="w-4 h-4" /> {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <div
-                className={`pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[#0b0e14] to-transparent transition-opacity ${
-                  tabScrollState.canScrollLeft ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
-              <div
-                className={`pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[#0b0e14] to-transparent transition-opacity ${
-                  tabScrollState.canScrollRight ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
-              <ChevronLeft
-                className={`pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 transition-opacity ${
-                  tabScrollState.canScrollLeft ? 'opacity-80' : 'opacity-0'
-                }`}
-              />
-              <ChevronRight
-                className={`pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 transition-opacity ${
-                  tabScrollState.canScrollRight ? 'opacity-80' : 'opacity-0'
-                }`}
-              />
             </div>
           </div>
-        </div>
-      </div>
+
+          <div className="grid gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(260px,0.9fr)] lg:px-8">
+            <div className="rounded-[24px] border border-white/6 bg-white/[0.025] p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Highlights</p>
+                  <h3 className="mt-1.5 text-lg font-bold text-white">{canViewTopPulls ? `${topPulls.length} top pull${topPulls.length === 1 ? '' : 's'}` : 'Top pulls private'}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-400">A quiet summary of your most valuable drops, surfaced without crowding the page.</p>
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-2.5 text-slate-200">
+                  <Gem className="h-4 w-4" />
+                </div>
+              </div>
+
+              {canViewTopPulls && topPulls.length > 0 ? (
+                <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto px-1 pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {topPulls.slice(0, 4).map((item, index) => (
+                    <div key={item.instanceId} className="min-w-[122px] flex-1 rounded-2xl border border-white/6 bg-[#0b0f17] p-2.5">
+                      <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(180deg,#111723,#0d1119)] p-2">
+                        <span className="absolute left-2 top-2 rounded-full border border-white/8 bg-black/40 px-2 py-0.5 text-[10px] font-black text-white">#{index + 1}</span>
+                        <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain" />
+                      </div>
+                      <div className="mt-2 space-y-0.5">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{item.rarity}</div>
+                        <div className="truncate text-xs font-semibold text-white">{item.name}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-dashed border-white/8 bg-[#0b0f17] px-4 py-6 text-sm text-slate-400">
+                  {canViewTopPulls ? 'Top pulls will appear here after you land more standout drops.' : 'This profile keeps top pulls private.'}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 rounded-[24px] border border-white/6 bg-white/[0.025] p-4 sm:p-5 min-[420px]:grid-cols-3 lg:grid-cols-1">
+              {[
+                { icon: Sparkles, label: 'Top Pulls', value: topPulls.length.toLocaleString() },
+                { icon: Boxes, label: 'Inventory', value: inventoryCount.toLocaleString() },
+                { icon: CalendarDays, label: 'Member Since', value: joinedDateLabel }
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="rounded-2xl border border-white/6 bg-[#0b0f17] px-3 py-3">
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    <Icon className="h-3.5 w-3.5 text-brand-purple/80" />
+                    <span className="leading-tight">{label}</span>
+                  </div>
+                  <div className="mt-1.5 text-sm font-bold leading-tight text-white break-words">{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative w-full max-w-full px-4 pb-4 sm:px-6 lg:px-8">
+            <div
+              ref={tabScrollRef}
+              className="flex w-full max-w-full snap-x snap-mandatory items-center gap-2 overflow-x-auto whitespace-nowrap rounded-2xl border border-white/6 bg-black/20 p-1.5 scroll-smooth [&::-webkit-scrollbar]:hidden"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {visibleProfileTabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`snap-start whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${activeTab === tab.id ? 'bg-white/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Icon className="h-4 w-4" /> {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div
+              className={`pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[#0b0e14] to-transparent transition-opacity ${
+                tabScrollState.canScrollLeft ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+            <div
+              className={`pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[#0b0e14] to-transparent transition-opacity ${
+                tabScrollState.canScrollRight ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+            <ChevronLeft
+              className={`pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 transition-opacity ${
+                tabScrollState.canScrollLeft ? 'opacity-60' : 'opacity-0'
+              }`}
+            />
+            <ChevronRight
+              className={`pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 transition-opacity ${
+                tabScrollState.canScrollRight ? 'opacity-60' : 'opacity-0'
+              }`}
+            />
+          </div>
+        </section>
 
       {/* Tab Content */}
       <div className="min-h-[400px]">
           {activeTab === 'topPulls' && (
-              <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-800 pb-4">
+              <div className="space-y-6 rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,rgba(11,14,20,0.92),rgba(9,12,18,0.88))] p-4 sm:p-5 lg:p-6">
+                  <div className="flex flex-col gap-4 rounded-[24px] border border-white/6 bg-white/[0.025] p-4 sm:flex-row sm:items-end sm:justify-between">
                       <div>
                           <h3 className="text-lg font-bold text-white">Top Pulls</h3>
                           <p className="text-sm text-gray-500">Your most valuable items, ranked by rarity and value.</p>
@@ -842,17 +825,17 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   </div>
 
                   {!canViewTopPulls ? (
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
+                      <div className="rounded-[28px] border border-dashed border-white/10 bg-[#0b0f17] p-10 text-center sm:p-14">
                           <Lock className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                           <h3 className="text-xl font-bold text-white mb-2">Top Pulls Are Private</h3>
                           <p className="text-gray-500">This player has chosen to keep their top pulls private.</p>
                       </div>
                   ) : (isOwnProfile && inventory.length === 0) ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                         {Array.from({ length: 6 }).map((_, idx) => <SkeletonTile key={`top-pull-skeleton-${idx}`} />)}
                       </div>
                   ) : topPulls.length === 0 ? (
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
+                      <div className="rounded-[28px] border border-dashed border-white/10 bg-[#0b0f17] p-10 text-center sm:p-14">
                           <Sparkles className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                           <h3 className="text-xl font-bold text-white mb-2">No top pulls yet</h3>
                           <p className="text-gray-500 mb-6">
@@ -868,7 +851,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           )}
                       </div>
                   ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                           {topPulls.map((item, index) => (
                               <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-3 sm:p-4 group hover:border-brand-purple/50 transition-all">
                                   <div className="relative aspect-square mb-3 sm:mb-4 bg-[#0b0e14] rounded-lg p-3 sm:p-4 flex items-center justify-center overflow-hidden">
@@ -900,9 +883,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
           )}
 
           {activeTab === 'inventory' && isOwnProfile && (
-              <div className="space-y-6">
+              <div className="space-y-6 rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,rgba(11,14,20,0.92),rgba(9,12,18,0.88))] p-4 sm:p-5 lg:p-6">
                   {dailyBox && canClaimDaily && (
-                      <div className="bg-gradient-to-br from-[#1a2130] to-[#131720] border border-yellow-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex flex-col gap-4 rounded-3xl border border-yellow-500/15 bg-yellow-500/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                           <div>
                               <div className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-400/80 mb-1">Free Signup Box Available</div>
                               <h4 className="text-lg font-bold text-white">Open your free signup box</h4>
@@ -915,20 +898,20 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </button>
                       </div>
                   )}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-800 pb-4">
+                  <div className="flex flex-col gap-4 rounded-[24px] border border-white/6 bg-white/[0.025] p-4 sm:flex-row sm:items-end sm:justify-between">
                       <div>
                           <h3 className="text-lg font-bold text-white">Inventory</h3>
                           <p className="text-sm text-gray-500">Manage your items, ship rewards, or sell them back for coins.</p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 rounded-2xl bg-[#0b0f17] p-1">
                           {(['inventory', 'processing', 'shipped'] as const).map((filter) => (
                               <button
                                   key={filter}
                                   onClick={() => setInventoryFilter(filter)}
                                   className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-colors ${
                                       inventoryFilter === filter
-                                          ? 'bg-brand-purple text-white'
-                                          : 'bg-[#0b0e14] text-gray-400 hover:text-white hover:bg-gray-800'
+                                          ? 'bg-white/[0.08] text-white'
+                                          : 'text-slate-400 hover:bg-white/[0.04] hover:text-white'
                                   }`}
                               >
                                   {filter === 'inventory' ? 'Inventory' : filter === 'processing' ? 'Processing' : 'Shipped'}
@@ -937,30 +920,30 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                       </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-[#131c29] to-[#111521] px-3 py-2.5">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                      <div className="rounded-2xl border border-white/6 bg-white/[0.025] px-4 py-4">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">Total items</p>
                           <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.totalItems}</p>
                           <p className="mt-1 text-[10px] text-cyan-100/60">{inventoryStats.sellableItems} sellable</p>
                       </div>
-                      <div className="rounded-xl border border-purple-500/25 bg-gradient-to-br from-[#1b1728] to-[#121320] px-3 py-2.5">
+                      <div className="rounded-2xl border border-white/6 bg-white/[0.025] px-4 py-4">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-purple-300/70">Current value</p>
                           <CoinAmount amount={inventoryStats.currentValue} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 text-base font-black text-purple-100" iconClassName="w-4 h-4" />
                       </div>
-                      <div className="col-span-2 sm:col-span-1 rounded-xl border border-blue-500/20 bg-gradient-to-br from-[#141a27] to-[#10131d] px-3 py-2.5">
+                      <div className="rounded-2xl border border-white/6 bg-white/[0.025] px-4 py-4">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-blue-200/70">Showing now</p>
                           <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.visibleItems}</p>
                       </div>
                   </div>
 
                   {inventoryFilter === 'inventory' && (
-                      <div className="bg-gradient-to-br from-[#161d2c] to-[#11151f] border border-blue-500/20 rounded-2xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
+                      <div className="flex flex-col gap-4 rounded-[24px] border border-white/6 bg-white/[0.025] p-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                               <p className="text-sm font-black uppercase tracking-[0.12em] text-white">Ship multiple items</p>
                               <p className="text-xs text-blue-100/70">Select rewards below for a single premium checkout.</p>
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                              <div className="flex items-center gap-2 text-xs text-blue-100/80 rounded-full border border-blue-400/20 bg-[#0b0f17]/70 px-3 py-1.5">
+                              <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/6 bg-[#0b0f17] px-3 py-2 text-xs text-slate-300">
                                   <span className="font-semibold">{selectedShipments.length} selected</span>
                                   {shippingCoinEnabled && (
                                     <>
@@ -986,7 +969,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   disabled={!user.shippingAddress || selectedShipments.length === 0}
                                   className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wide border transition-colors ${
                                     user.shippingAddress && selectedShipments.length > 0
-                                      ? 'bg-blue-500/25 text-blue-100 border-blue-300/45 hover:bg-blue-500/35 shadow-[0_0_18px_rgba(56,189,248,0.25)]'
+                                      ? 'bg-brand-purple text-white border-brand-purple/70 hover:bg-brand-purple/90'
                                       : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
                                   }`}
                               >
@@ -1001,7 +984,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                             {Array.from({ length: 6 }).map((_, idx) => <SkeletonRow key={`inv-skeleton-${idx}`} />)}
                           </div>
                         ) : filteredInventory.length === 0 ? (
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
+                      <div className="rounded-[28px] border border-dashed border-white/10 bg-[#0b0f17] p-10 text-center sm:p-14">
                           <Package className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                           <h3 className="text-xl font-bold text-white mb-2">
                               {inventoryFilter === 'inventory'
@@ -1025,7 +1008,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </button>
                       </div>
                   ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                           {filteredInventory.map((item) => {
                               const isAvailable = item.status === 'available';
                               const isLocked = !!item.locked;
@@ -1066,8 +1049,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                     ? 'from-blue-400/30 via-cyan-300/10 to-transparent'
                                     : 'from-slate-300/20 via-slate-200/10 to-transparent';
                               return (
-                                  <div key={item.instanceId} className={`relative bg-gradient-to-b from-[#171c2a] to-[#121622] border rounded-2xl p-3 group transition-all duration-300 flex flex-col hover:-translate-y-0.5 active:scale-[0.99] ${rarityTone} ${isSelected ? 'ring-2 ring-cyan-300/50 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_0_22px_rgba(34,211,238,0.22)]' : ''}`}>
-                                      <div className="relative aspect-square mb-3 bg-[#0b0f17] rounded-xl p-3 flex items-center justify-center overflow-hidden border border-white/5 shadow-inner">
+                                  <div key={item.instanceId} className={`group relative flex flex-col rounded-[24px] border bg-[linear-gradient(180deg,#111723_0%,#0c1119_100%)] p-4 transition-all duration-300 hover:-translate-y-0.5 ${rarityTone} ${isSelected ? 'ring-1 ring-brand-purple/50' : ''}`}>
+                                      <div className="relative mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-[#0a0f17] p-4">
                                           <div className={`pointer-events-none absolute -inset-4 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.22)_0%,rgba(56,189,248,0.08)_35%,transparent_70%)] opacity-80`} />
                                           <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${imageGlow}`} />
                                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/5" />
@@ -1105,7 +1088,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                             )}
                                           </button>
                                       </div>
-                                      <div className="flex items-center justify-between gap-1.5">
+                                      <div className="flex items-center justify-between gap-2">
                                           <div className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.16em]">{item.rarity}</div>
                                           <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border leading-none ${statusTone}`}>{statusLabel}</span>
                                       </div>
@@ -1114,7 +1097,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           Not redeemable for coins
                                         </div>
                                       )}
-                                      <h4 className="text-white font-bold text-sm mt-2 mb-1.5 line-clamp-2 min-h-[2.5rem] leading-snug">{item.name}</h4>
+                                      <h4 className="mt-3 mb-1.5 min-h-[2.5rem] text-sm font-semibold leading-snug text-white line-clamp-2">{item.name}</h4>
                                       {isXpItem ? (
                                         <div className="inline-flex items-center rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-300">
                                           XP reward
@@ -1136,7 +1119,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           </div>
                                       )}
 
-                                      <div className="mt-3.5 flex flex-col gap-2">
+                                      <div className="mt-4 flex flex-col gap-2">
                                           {inventoryFilter !== 'shipped' && (
                                             <button
                                               onClick={() => handleOpenShippingReview([item.instanceId])}
@@ -1246,7 +1229,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
                   {showShippingReview && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-                          <div className="w-full max-w-lg rounded-2xl border border-gray-800 bg-[#0b0e14] p-6 shadow-2xl">
+                          <div className="w-full max-w-lg rounded-[28px] border border-white/8 bg-[#0b0e14] p-6 shadow-2xl">
                               <div className="flex items-center justify-between">
                                   <h3 className="text-lg font-bold text-white">Confirm shipment</h3>
                                   <button
@@ -1522,7 +1505,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               <User className="w-5 h-5 text-brand-purple" /> Profile Information
                           </h3>
                           
-                          <div className="space-y-6">
+                          <div className="space-y-6 rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,rgba(11,14,20,0.92),rgba(9,12,18,0.88))] p-4 sm:p-5 lg:p-6">
                               <div>
                                   <label className="block text-sm font-bold text-gray-400 mb-2">Username</label>
                                   <Input 
@@ -1742,5 +1725,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
           )}
       </div>
     </div>
+  </div>
   );
 };
