@@ -32,6 +32,7 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
+import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { useSiteChat } from './hooks/useSiteChat';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
 import { SeoHead } from './components/SeoHead';
@@ -294,6 +295,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {view.type === 'CUSTOM_CREATOR' && (
         <div className="w-full">
           <CustomCaseCreator />
+        </div>
+      )}
+
+      {view.type === 'VERIFY_EMAIL' && (
+        <div className="w-full">
+          <VerifyEmailPage />
         </div>
       )}
 

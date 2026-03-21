@@ -3,7 +3,19 @@ import { getBearerToken, sendJson } from './_lib/http.js';
 
 const EXPECTED_EMAIL_FROM = 'Pullz.gg <verify@pullz.gg>';
 
-const getContinueUrl = () => process.env.VERIFY_CONTINUE_URL || 'https://pullz.gg';
+const getVerificationHandlerUrl = () => {
+  const configuredBaseUrl = process.env.VERIFY_CONTINUE_URL || 'https://pullz.gg';
+
+  try {
+    const url = new URL(configuredBaseUrl);
+    url.pathname = '/verify';
+    url.search = '';
+    url.hash = '';
+    return url.toString();
+  } catch {
+    return 'https://pullz.gg/verify';
+  }
+};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -44,7 +56,7 @@ export default async function handler(req, res) {
 
   try {
     const verificationLink = await adminAuth.generateEmailVerificationLink(decoded.email, {
-      url: getContinueUrl()
+      url: getVerificationHandlerUrl()
     });
 
     const resendResponse = await fetch('https://api.resend.com/emails', {

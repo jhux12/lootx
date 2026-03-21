@@ -450,6 +450,10 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'PROVABLY_FAIR' };
   }
 
+  if (primary === 'verify') {
+    return { type: 'VERIFY_EMAIL' };
+  }
+
   if (primary === 'admin' && secondary === 'upgrader' && segments[2] === 'targets') {
     return { type: 'ADMIN_UPGRADER_TARGETS' };
   }
@@ -503,6 +507,8 @@ const getPathFromView = (view: ViewState): string => {
       return '/case-lab';
     case 'PROVABLY_FAIR':
       return '/provably-fair';
+    case 'VERIFY_EMAIL':
+      return '/verify';
     case 'CASE_OPENING': {
       const search = view.isFree ? '?free=true' : '';
       return `/cases/${view.boxId}${search}`;
@@ -1299,6 +1305,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const handleEmailVerificationLink = async () => {
     if (typeof window === 'undefined') return;
+    if (window.location.pathname === '/verify') return;
     const url = new URL(window.location.href);
     const mode = url.searchParams.get('mode');
     const oobCode = url.searchParams.get('oobCode');
