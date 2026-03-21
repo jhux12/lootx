@@ -48,6 +48,8 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
   rarity: normalizeEliteRarity(String(item.rarity ?? 'common'))
 });
 
+const normalizeLookupValue = (value: unknown) => String(value ?? '').trim().toLowerCase();
+
 const SPIN_DURATION_MS = 5200;
 
 export default function UpgraderPage() {
@@ -194,12 +196,13 @@ export default function UpgraderPage() {
     }[selectedCollection];
 
     const targetMap = new Map(targets.map((item) => [String(item.id), item]));
+    const targetNameMap = new Map(targets.map((item) => [normalizeLookupValue(item.name), item]));
     const categories = settings?.categoriesEnabled ?? [];
     const rarities = settings?.raritiesEnabled ?? [];
 
     return siteItems
       .map((siteItem) => {
-        const matchingTarget = targetMap.get(String(siteItem.id));
+        const matchingTarget = targetMap.get(String(siteItem.id)) ?? targetNameMap.get(normalizeLookupValue(siteItem.name));
         if (!matchingTarget) return null;
 
         return {
