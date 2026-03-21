@@ -732,7 +732,7 @@ const buildUserDocument = (user: User) => {
     uid: user.id,
     email: user.email ?? '',
     username: user.username ?? user.name ?? '',
-    usernameLower: normalizeUsername(user.username ?? user.name ?? ''),
+    usernameLower: toFirestoreUsernameLower(user.username ?? user.name ?? ''),
     createdAt: user.createdAt ?? Date.now(),
     updatedAt: Date.now(),
     photoURL: user.photoURL,
@@ -754,17 +754,17 @@ const buildLegacyUserProfileBackfill = (firebaseUser: FirebaseUser, data: Record
           typeof data.displayName === 'string' ? data.displayName : firebaseUser.displayName,
           typeof data.email === 'string' ? data.email : firebaseUser.email
         );
-  const usernameLower =
-    typeof data.usernameLower === 'string' && data.usernameLower.trim()
-      ? normalizeUsername(data.usernameLower)
-      : normalizeUsername(username);
+  const existingUsernameLower = typeof data.usernameLower === 'string' ? data.usernameLower.trim() : '';
+  const usernameLower = isValidFirestoreUsernameLower(existingUsernameLower)
+    ? existingUsernameLower
+    : toFirestoreUsernameLower(existingUsernameLower || username);
 
   const patch: Record<string, unknown> = {};
 
   if (data.uid !== firebaseUser.uid) patch.uid = firebaseUser.uid;
   if (typeof data.email !== 'string' && firebaseUser.email) patch.email = firebaseUser.email;
   if (!(typeof data.username === 'string' && data.username.trim())) patch.username = username;
-  if (!(typeof data.usernameLower === 'string' && data.usernameLower.trim())) patch.usernameLower = usernameLower || 'player';
+  if (!isValidFirestoreUsernameLower(existingUsernameLower)) patch.usernameLower = usernameLower;
   if (data.createdAt === undefined) patch.createdAt = fallbackCreatedAt;
   if (data.updatedAt === undefined) patch.updatedAt = Date.now();
   if (data.lastLogin === undefined) patch.lastLogin = Date.now();
@@ -785,6 +785,18 @@ const normalizeUsername = (value: string) =>
     .replace(/\s+/g, '_')
     .replace(/[^a-z0-9_]/g, '')
     .replace(/^_+|_+$/g, '');
+
+const clampFirestoreUsernameLower = (value: string) => normalizeUsername(value).slice(0, 16);
+
+const isValidFirestoreUsernameLower = (value: string) => /^[a-z0-9_]{3,16}$/.test(value);
+
+const toFirestoreUsernameLower = (value: string, fallback = 'player') => {
+  const normalized = clampFirestoreUsernameLower(value);
+  if (isValidFirestoreUsernameLower(normalized)) return normalized;
+
+  const normalizedFallback = clampFirestoreUsernameLower(fallback);
+  return isValidFirestoreUsernameLower(normalizedFallback) ? normalizedFallback : 'player';
+};
 
 const buildBaseUsername = (displayName: string | null | undefined, email: string | null | undefined) => {
   const fromDisplayName = normalizeUsername(displayName ?? '');
@@ -2518,13 +2530,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const trimmedName = name.trim();
       const nextName = trimmedName || user.name || 'Player';
       const nextAvatar = avatar.trim() || user.avatar;
-      const nextUsernameLower = normalizeUsername(nextName);
+      const nextUsernameLower = clampFirestoreUsernameLower(nextName);
 
-      if (!nextUsernameLower || nextUsernameLower.length < 3 || nextUsernameLower.length > 16) {
+      if (!isValidFirestoreUsernameLower(nextUsernameLower)) {
         throw new Error('Username must be 3-16 characters and use only letters, numbers, or underscores.');
       }
 
-      const currentUsernameLower = normalizeUsername(user.username ?? user.name ?? '');
+      const currentUsernameLower = toFirestoreUsernameLower(user.username ?? user.name ?? '');
       if (nextUsernameLower !== currentUsernameLower) {
         const usersRef = collection(db, 'users');
         const existingUsers = await getDocs(query(usersRef, where('usernameLower', '==', nextUsernameLower), limit(2)));
