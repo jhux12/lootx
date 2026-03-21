@@ -572,6 +572,78 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return items[items.length - 1];
   };
 
+  const getDemoWinningItem = useCallback((randomValue: number) => {
+    const validItems = items.filter((item) => Number.isFinite(item.chance) && item.chance > 0);
+
+    if (validItems.length === 0) {
+      return getWinningItem(randomValue);
+    }
+
+    const baseTotalWeight = validItems.reduce((sum, item) => sum + item.chance, 0);
+    const baseExpectedValue = validItems.reduce((sum, item) => sum + item.chance * Math.max(0, Number(item.price ?? 0)), 0) / baseTotalWeight;
+    const positiveValues = validItems
+      .map((item) => Math.max(0, Number(item.price ?? 0)))
+      .filter((value) => value > 0);
+
+    if (!Number.isFinite(baseExpectedValue) || baseExpectedValue <= 0 || positiveValues.length === 0) {
+      return getWinningItem(randomValue);
+    }
+
+    const minPositiveValue = Math.min(...positiveValues);
+    const maxValue = Math.max(...positiveValues);
+    const maxAchievableExpectedValue = maxValue;
+    const targetExpectedValue = Math.min(
+      baseExpectedValue * 1.15,
+      baseExpectedValue * 1.2,
+      maxAchievableExpectedValue
+    );
+
+    let low = 0;
+    let high = 4;
+    let exponent = 0;
+
+    for (let i = 0; i < 18; i += 1) {
+      const mid = (low + high) / 2;
+      const adjustedTotalWeight = validItems.reduce((sum, item) => {
+        const value = Math.max(0, Number(item.price ?? 0));
+        const valueFactor = value > 0 ? Math.pow(value / minPositiveValue, mid) : 1;
+        return sum + item.chance * valueFactor;
+      }, 0);
+
+      const adjustedExpectedValue = validItems.reduce((sum, item) => {
+        const value = Math.max(0, Number(item.price ?? 0));
+        const valueFactor = value > 0 ? Math.pow(value / minPositiveValue, mid) : 1;
+        return sum + item.chance * valueFactor * value;
+      }, 0) / adjustedTotalWeight;
+
+      if (adjustedExpectedValue >= targetExpectedValue) {
+        exponent = mid;
+        high = mid;
+      } else {
+        low = mid;
+      }
+    }
+
+    const adjustedWeights = validItems.map((item) => {
+      const value = Math.max(0, Number(item.price ?? 0));
+      const valueFactor = value > 0 ? Math.pow(value / minPositiveValue, exponent) : 1;
+      return {
+        item,
+        weight: item.chance * valueFactor
+      };
+    });
+
+    const adjustedTotalWeight = adjustedWeights.reduce((sum, entry) => sum + entry.weight, 0);
+    let random = randomValue * adjustedTotalWeight;
+
+    for (const entry of adjustedWeights) {
+      if (random < entry.weight) return entry.item;
+      random -= entry.weight;
+    }
+
+    return adjustedWeights[adjustedWeights.length - 1]?.item ?? validItems[validItems.length - 1];
+  }, [items]);
+
   const getSpinSeedBase = useCallback((rollData?: { rollHash: string; rollValue: number; nonce: number }, stageTag = 'main') => {
     if (rollData?.rollHash) {
       return `${rollData.rollHash}:${rollData.nonce}:${stageTag}`;
@@ -1019,7 +1091,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     let rollClientSeed = clientSeed;
 
     if (isDemo) {
-      winner = getWinningItem(rollValue);
+      winner = getDemoWinningItem(rollValue);
     } else {
       try {
         // Server now authoritatively selects the prize + updates coins/inventory.
