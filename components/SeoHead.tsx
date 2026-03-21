@@ -9,7 +9,7 @@ type SeoConfig = {
 };
 
 const SITE_URL = 'https://pullz.gg';
-const FALLBACK_IMAGE = `${SITE_URL}/home-banners/homepage-preview.svg`;
+const FALLBACK_IMAGE = `${SITE_URL}/preview.png`;
 
 const ensureMeta = (selector: string, attributes: Record<string, string>) => {
   let node = document.head.querySelector<HTMLMetaElement>(selector);
@@ -115,7 +115,7 @@ export const SeoHead = ({ view }: { view: ViewState }) => {
     ensureMeta('meta[property="og:description"]', { property: 'og:description', content: seo.description });
     ensureMeta('meta[property="og:url"]', { property: 'og:url', content: canonicalUrl });
     ensureMeta('meta[property="og:image"]', { property: 'og:image', content: FALLBACK_IMAGE });
-    ensureMeta('meta[property="og:image:type"]', { property: 'og:image:type', content: 'image/svg+xml' });
+    ensureMeta('meta[property="og:image:type"]', { property: 'og:image:type', content: 'image/png' });
     ensureMeta('meta[property="og:image:width"]', { property: 'og:image:width', content: '1200' });
     ensureMeta('meta[property="og:image:height"]', { property: 'og:image:height', content: '630' });
 
