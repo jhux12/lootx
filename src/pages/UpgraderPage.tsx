@@ -193,23 +193,36 @@ export default function UpgraderPage() {
       apparel: 'apparel'
     }[selectedCollection];
 
+    const targetMap = new Map(targets.map((item) => [String(item.id), item]));
     const categories = settings?.categoriesEnabled ?? [];
     const rarities = settings?.raritiesEnabled ?? [];
-    return targets.filter((item) => {
-      const normalizedCategory = String(item.category ?? '');
-      const normalizedRarity = String(item.rarity ?? '').toLowerCase();
-      const normalizedTags = (
-        item.tags?.length
-          ? item.tags
-          : siteItems.find((siteItem) => String(siteItem.id) === String(item.id))?.tags ?? []
-      )
+
+    return siteItems
+      .map((siteItem) => {
+        const matchingTarget = targetMap.get(String(siteItem.id));
+        if (!matchingTarget) return null;
+
+        return {
+          ...matchingTarget,
+          name: siteItem.name ?? matchingTarget.name,
+          imageUrl: siteItem.image ?? matchingTarget.imageUrl,
+          rarity: rarityMap[String(siteItem.rarity ?? matchingTarget.rarity ?? 'common').toLowerCase()] ?? matchingTarget.rarity,
+          category: siteItem.category || matchingTarget.category || 'General',
+          tags: Array.isArray(siteItem.tags) && siteItem.tags.length > 0 ? siteItem.tags : matchingTarget.tags ?? []
+        } satisfies Item;
+      })
+      .filter((item): item is Item => Boolean(item))
+      .filter((item) => {
+        const normalizedCategory = String(item.category ?? '');
+        const normalizedRarity = String(item.rarity ?? '').toLowerCase();
+        const normalizedTags = (item.tags ?? [])
         .map((tag) => String(tag ?? '').trim().toLowerCase())
         .filter(Boolean);
-      const categoryAllowed = categories.length === 0 || categories.includes(normalizedCategory);
-      const rarityAllowed = rarities.length === 0 || rarities.includes(normalizedRarity);
-      const collectionAllowed = normalizedTags.length > 0 && normalizedTags.includes(selectedTag);
-      return categoryAllowed && rarityAllowed && collectionAllowed;
-    });
+        const categoryAllowed = categories.length === 0 || categories.includes(normalizedCategory);
+        const rarityAllowed = rarities.length === 0 || rarities.includes(normalizedRarity);
+        const collectionAllowed = normalizedTags.length > 0 && normalizedTags.includes(selectedTag);
+        return categoryAllowed && rarityAllowed && collectionAllowed;
+      });
   }, [selectedCollection, settings, siteItems, targets]);
 
   const chance = useMemo(() => {
