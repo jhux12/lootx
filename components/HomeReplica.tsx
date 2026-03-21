@@ -303,7 +303,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
           onClick={onSignUp}
           className="text-center text-2xl font-black uppercase text-white sm:text-4xl"
         >
-          Deposit now and get a <span className="text-[#6962ff]">free</span> mystery box!
+          Sign up now and get a <span className="text-[#6962ff]">free</span> mystery box!
         </button>
       </section>
 
