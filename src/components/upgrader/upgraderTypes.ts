@@ -7,6 +7,7 @@ export interface Item {
   coinValue: number;
   rarity: Rarity;
   category: string;
+  tags?: string[];
   enabled?: boolean;
 }
 

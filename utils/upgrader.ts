@@ -30,6 +30,7 @@ export type UpgraderTarget = {
   coinValue: number;
   rarity: string;
   category: string;
+  tags?: string[];
   enabled: boolean;
   featured?: boolean;
   weight?: number;
