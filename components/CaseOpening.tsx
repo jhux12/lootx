@@ -2047,7 +2047,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                       <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[9px] font-black text-amber-100">i</span>
-                      Not redeemable
+                      Not redeemable for coins
                     </span>
                   </div>
                 </div>
