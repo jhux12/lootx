@@ -6,7 +6,7 @@ import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 
 const DEFAULT_CLIENT_SEED = 'pullz-player';
-const STARTER_COINS = 1000;
+const DEFAULT_NEW_USER_COINS = 0;
 
 const normalizeSizes = (sizes = []) =>
   sizes
@@ -171,7 +171,7 @@ export default async function handler(req, res) {
 
       const rawCoins = userSnap.exists ? (userData.coins ?? userData.balance) : undefined;
       const hasCoins = Number.isFinite(toFiniteNumber(rawCoins, Number.NaN));
-      const currentCoins = hasCoins ? toFiniteNumber(rawCoins, 0) : (userSnap.exists ? 0 : STARTER_COINS);
+      const currentCoins = hasCoins ? toFiniteNumber(rawCoins, 0) : DEFAULT_NEW_USER_COINS;
       const currentXp = Math.max(0, Math.floor(toFiniteNumber(userData.xpBalance ?? userData.xp, 0)));
       const normalizedEconomy = normalizeEconomySettings(economySettingsSnap.exists ? economySettingsSnap.data() ?? {} : {});
       const { settings: rewardsSettings } = await getRewardsSettings(transaction);
