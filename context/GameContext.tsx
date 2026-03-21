@@ -605,6 +605,7 @@ interface GameContextType {
   openAuthModal: (mode?: AuthModalMode) => void;
   resendEmailVerification: () => Promise<void>;
   refreshEmailVerification: () => Promise<void>;
+  dismissEmailVerificationModal: () => Promise<void>;
   setShowEmailVerifiedModal: (show: boolean) => void;
   setShowEmailVerificationModal: (show: boolean) => void;
   setView: (view: ViewState) => void;
@@ -658,7 +659,7 @@ const getDayStart = (timestamp: number = Date.now()) => {
 };
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
-const AuthContext = createContext<Pick<GameContextType, 'user' | 'isAuthenticated' | 'authInitialized' | 'openAuthModal' | 'login' | 'loginWithGoogle' | 'linkGoogleAccount' | 'register' | 'resetPassword' | 'logout' | 'authModalMode' | 'setAuthModalMode' | 'showLoginModal' | 'setShowLoginModal' | 'showEmailVerificationModal' | 'setShowEmailVerificationModal' | 'showEmailVerifiedModal' | 'setShowEmailVerifiedModal' | 'emailVerificationStatus' | 'resendEmailVerification' | 'refreshEmailVerification'> | undefined>(undefined);
+const AuthContext = createContext<Pick<GameContextType, 'user' | 'isAuthenticated' | 'authInitialized' | 'openAuthModal' | 'login' | 'loginWithGoogle' | 'linkGoogleAccount' | 'register' | 'resetPassword' | 'logout' | 'authModalMode' | 'setAuthModalMode' | 'showLoginModal' | 'setShowLoginModal' | 'showEmailVerificationModal' | 'setShowEmailVerificationModal' | 'showEmailVerifiedModal' | 'setShowEmailVerifiedModal' | 'emailVerificationStatus' | 'resendEmailVerification' | 'refreshEmailVerification' | 'dismissEmailVerificationModal'> | undefined>(undefined);
 const WalletContext = createContext<Pick<GameContextType, 'balance' | 'user' | 'syncBalance' | 'syncXpBalance' | 'addBalance' | 'deductBalance' | 'registerSpend' | 'awardCaseOpenXp'> | undefined>(undefined);
 const BoxesContext = createContext<Pick<GameContextType, 'boxes' | 'items' | 'createBox' | 'createUserBox' | 'updateBox' | 'deleteBox' | 'view' | 'setView'> | undefined>(undefined);
 const InventoryContext = createContext<Pick<GameContextType, 'inventory' | 'shipments' | 'addToInventory' | 'addInventoryItemFromServer' | 'sellItem' | 'shipItem'> | undefined>(undefined);
@@ -1989,6 +1990,27 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await checkEmailVerificationStatus(auth.currentUser);
   };
 
+  const dismissEmailVerificationModal = async () => {
+    setShowEmailVerificationModal(false);
+
+    const firebaseUser = auth.currentUser;
+    const isPendingPasswordVerification = Boolean(
+      firebaseUser &&
+      !firebaseUser.emailVerified &&
+      firebaseUser.providerData.some((provider) => provider.providerId === 'password')
+    );
+
+    if (!isPendingPasswordVerification) {
+      return;
+    }
+
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Failed to sign out pending email verification user', error);
+    }
+  };
+
   const login = async (email: string, pass: string, remember: boolean = true) => {
       await setAuthPersistence(remember);
       const credential = await signInWithEmailAndPassword(auth, email, pass);
@@ -3114,6 +3136,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       openAuthModal,
       resendEmailVerification,
       refreshEmailVerification,
+      dismissEmailVerificationModal,
       setShowEmailVerifiedModal,
       setShowEmailVerificationModal,
       setView,
@@ -3164,7 +3187,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       showEmailVerificationModal, showEmailVerifiedModal, emailVerificationStatus, balance, inventory, shipments,
       view, battles, boxes, items, coinPackages, bonusSettings, stripeSettings, login, loginWithGoogle,
       linkGoogleAccount, register, resetPassword, logout, setShowLoginModal, setShowTopUpModal, setTopUpModalIntent,
-      setAuthModalMode, openAuthModal, resendEmailVerification, refreshEmailVerification, setShowEmailVerifiedModal,
+      setAuthModalMode, openAuthModal, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal, setShowEmailVerifiedModal,
       setShowEmailVerificationModal, setView, addBalance, syncBalance, syncXpBalance, deductBalance, addToInventory,
       addInventoryItemFromServer, followUser, unfollowUser, sellItem, shipItem, updateAddress, updateUserInfo,
       addNotification, dismissNotification, clearNotifications, sendAdminNotification, updateUserFlags,
@@ -3178,8 +3201,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user, isAuthenticated, authInitialized, openAuthModal, login, loginWithGoogle, linkGoogleAccount, register,
     resetPassword, logout, authModalMode, setAuthModalMode, showLoginModal, setShowLoginModal,
     showEmailVerificationModal, setShowEmailVerificationModal, showEmailVerifiedModal, setShowEmailVerifiedModal,
-    emailVerificationStatus, resendEmailVerification, refreshEmailVerification
-  }), [user, isAuthenticated, authInitialized, openAuthModal, login, loginWithGoogle, linkGoogleAccount, register, resetPassword, logout, authModalMode, showLoginModal, showEmailVerificationModal, showEmailVerifiedModal, emailVerificationStatus, resendEmailVerification, refreshEmailVerification]);
+    emailVerificationStatus, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal
+  }), [user, isAuthenticated, authInitialized, openAuthModal, login, loginWithGoogle, linkGoogleAccount, register, resetPassword, logout, authModalMode, showLoginModal, showEmailVerificationModal, showEmailVerifiedModal, emailVerificationStatus, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal]);
 
   const walletContextValue = useMemo(() => ({ user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp }), [user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp]);
   const boxesContextValue = useMemo(() => ({ boxes, items, createBox, createUserBox, updateBox, deleteBox, view, setView }), [boxes, items, createBox, createUserBox, updateBox, deleteBox, view, setView]);
