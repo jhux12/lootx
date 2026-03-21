@@ -593,16 +593,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const maxValue = Math.max(...positiveValues);
     const maxAchievableExpectedValue = maxValue;
     const targetExpectedValue = Math.min(
-      baseExpectedValue * 1.15,
-      baseExpectedValue * 1.2,
+      baseExpectedValue * 1.1,
       maxAchievableExpectedValue
     );
 
     let low = 0;
-    let high = 4;
+    let high = 2;
     let exponent = 0;
 
-    for (let i = 0; i < 18; i += 1) {
+    for (let i = 0; i < 14; i += 1) {
       const mid = (low + high) / 2;
       const adjustedTotalWeight = validItems.reduce((sum, item) => {
         const value = Math.max(0, Number(item.price ?? 0));
