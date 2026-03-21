@@ -345,6 +345,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const xpRingCircumference = 2 * Math.PI * xpRingRadius;
   const xpRingOffset = xpRingCircumference * (1 - xpProgress);
 
+  const closeSelectedCaseItem = useCallback((event?: Event | React.SyntheticEvent) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    setSelectedCaseItem(null);
+  }, []);
+
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
 
@@ -497,7 +503,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        setSelectedCaseItem(null);
+        closeSelectedCaseItem(event);
         return;
       }
 
@@ -2021,20 +2027,30 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
         </div>
         {/* Slide Up Item Sheet */}
-        <div className={`item-modal-overlay fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm ${selectedCaseItem ? '' : 'pointer-events-none'} ${itemModalActive ? 'active' : ''}`} onClick={() => setSelectedCaseItem(null)} />
+        <div
+          className={`item-modal-overlay fixed inset-0 z-[110] touch-manipulation bg-black/80 backdrop-blur-sm ${selectedCaseItem ? '' : 'pointer-events-none'} ${itemModalActive ? 'active' : ''}`}
+          onClick={closeSelectedCaseItem}
+        />
         <div className={`item-modal-sheet fixed bottom-0 left-0 right-0 z-[120] transform ${itemModalActive ? 'active' : ''}`}>
           <ProvablyFairModal isOpen={verifyModalOpen} onClose={() => setVerifyModalOpen(false)} data={{ serverSeedHash: lastRoll?.serverSeedHash, clientSeed: lastRoll?.clientSeed, nonce: lastRoll?.nonce, winningItem: wonItem?.name, resultIndex: lastRoll ? Math.floor(lastRoll.rollValue * 1000000) : undefined }} />
 
         {selectedCaseItem && (
-            <div ref={itemModalRef} role="dialog" aria-modal="true" aria-labelledby="item-details-title" className={`modal-container mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] ${itemModalActive ? 'active' : ''}`}>
+            <div
+              ref={itemModalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="item-details-title"
+              onClick={(event) => event.stopPropagation()}
+              className={`modal-container mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] ${itemModalActive ? 'active' : ''}`}
+            >
               <div className="item-modal-hero relative flex h-64 sm:h-72 items-center justify-center overflow-hidden px-3" style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}80 0%, transparent 72%)` }}>
                 <div className={`item-modal-rarity-bg item-modal-rarity-bg--${String(selectedCaseItem.rarity ?? 'common').toLowerCase().replace(/\s+/g, '-')} ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" />
                 <div className={`item-modal-rarity-glow ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" style={{ background: `radial-gradient(circle at center, ${selectedCaseItem.color}55 0%, transparent 70%)` }} />
                 <button
                   ref={itemModalCloseRef}
                   type="button"
-                  onClick={() => setSelectedCaseItem(null)}
-                  className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white"
+                  onClick={closeSelectedCaseItem}
+                  className="absolute right-4 top-4 z-20 flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border border-white/10 bg-black/40 text-white active:scale-[0.98]"
                   aria-label="Close item details"
                 >
                   <X className="h-4 w-4" />
@@ -2060,7 +2076,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     <div className="mt-1 text-lg font-bold text-white">{typeof selectedCaseItem.chance === 'number' ? `${selectedCaseItem.chance}%` : '—'}</div>
                   </div>
                 </div>
-                <button type="button" onClick={() => setSelectedCaseItem(null)} className="h-12 w-full rounded-xl bg-white text-sm font-bold text-black transition hover:bg-gray-200">Close</button>
+                <button
+                  type="button"
+                  onClick={closeSelectedCaseItem}
+                  className="h-12 w-full touch-manipulation rounded-xl bg-white px-4 text-sm font-bold text-black transition hover:bg-gray-200 active:scale-[0.99]"
+                >
+                  Close
+                </button>
               </div>
             </div>
           )}
