@@ -158,7 +158,12 @@ service cloud.firestore {
     }
 
     match /settings/{docId} {
-      allow read: if isAdmin() || docId == 'bonus' || docId == 'stripe' || docId == 'economy';
+      allow read: if isAdmin()
+        || docId == 'bonus'
+        || docId == 'bonus-settings'
+        || docId == 'stripe'
+        || docId == 'stripe-settings'
+        || docId == 'economy';
       allow write: if isAdmin();
     }
 
