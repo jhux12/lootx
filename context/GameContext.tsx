@@ -1047,6 +1047,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const activeUserIdRef = useRef<string | null>(null);
   const userUnsubscribeRef = useRef<(() => void) | null>(null);
   const inventoryUnsubscribeRef = useRef<(() => void) | null>(null);
+  const legacyProfileBackfillInFlightRef = useRef<Set<string>>(new Set());
   const syncAdminClaim = async (firebaseUser: FirebaseUser | null) => {
     if (!firebaseUser) {
       setUser((prev) => ({ ...prev, isAdmin: false }));
@@ -1183,10 +1184,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const data = snapshot.data();
       const legacyProfileBackfill = buildLegacyUserProfileBackfill(firebaseUser, data);
-      if (Object.keys(legacyProfileBackfill).length > 0) {
-        void setDoc(userRef, legacyProfileBackfill, { merge: true }).catch((error) => {
-          console.error('Failed to backfill legacy user profile fields', error);
-        });
+      if (Object.keys(legacyProfileBackfill).length > 0 && !legacyProfileBackfillInFlightRef.current.has(firebaseUser.uid)) {
+        legacyProfileBackfillInFlightRef.current.add(firebaseUser.uid);
+        void authedFetch<{ ok: boolean; patched?: boolean }>('/api/backfill-user-profile', {
+          method: 'POST',
+          body: JSON.stringify({})
+        })
+          .catch((error) => {
+            console.error('Failed to backfill legacy user profile fields', error);
+          })
+          .finally(() => {
+            legacyProfileBackfillInFlightRef.current.delete(firebaseUser.uid);
+          });
       }
       const profile = buildUserProfile(firebaseUser, data);
 
