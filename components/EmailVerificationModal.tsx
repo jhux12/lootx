@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, Mail, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -16,6 +16,22 @@ export const EmailVerificationModal: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const closeModal = () => {
+    playSound('click');
+    setShowEmailVerificationModal(false);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleResend = async () => {
     setIsResending(true);
@@ -53,56 +69,68 @@ export const EmailVerificationModal: React.FC = () => {
   const isChecking = emailVerificationStatus === 'checking';
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in" />
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-950/72 backdrop-blur-[4px] transition-opacity duration-200 animate-in fade-in"
+        aria-label="Close verification modal"
+        onClick={closeModal}
+      />
 
-      <div className="relative w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto bg-[#131720] border border-gray-700 rounded-2xl shadow-2xl p-6 sm:p-8 animate-in zoom-in-95">
+      <div className="relative z-10 w-full max-w-md overflow-hidden rounded-[28px] border border-white/12 bg-slate-950/72 p-5 shadow-[0_30px_90px_rgba(15,23,42,0.6)] backdrop-blur-2xl sm:max-h-[calc(100vh-2rem)] sm:p-7">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.18),_transparent_42%),radial-gradient(circle_at_bottom,_rgba(168,85,247,0.14),_transparent_42%)]" />
+
         <button
-          onClick={() => setShowEmailVerificationModal(false)}
-          className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+          onClick={closeModal}
+          className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition-colors hover:bg-white/10 hover:text-white sm:right-4 sm:top-4"
           aria-label="Close verification modal"
         >
-          <X className="w-5 h-5" />
+          <X className="h-5 w-5" />
         </button>
 
-        <div className="text-center mb-6">
-          <div className="flex justify-center mb-5">
-            <BrandLockup
-              className="justify-center"
-              logoClassName="h-12 md:h-14"
-              textClassName="text-xl"
-              showTextOnMobile
-            />
+        <div className="relative text-center">
+          <div className="mb-6 flex justify-center">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+              <BrandLockup
+                className="gap-2.5 sm:gap-3"
+                logoClassName="h-10 w-auto sm:h-12"
+                textClassName="text-lg sm:text-xl"
+                dotClassName="text-xs sm:text-sm"
+                showTextOnMobile
+              />
+            </div>
           </div>
-          <h2 className="text-2xl font-black text-white mb-2">Verify your email</h2>
-          <p className="text-gray-500 text-sm">
+
+          <h2 className="text-2xl font-black tracking-tight text-white sm:text-[2rem]">Verify your email</h2>
+          <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-300 sm:text-[15px]">
             We sent a verification link to your inbox. Confirm your email to unlock full access.
           </p>
         </div>
 
-        {isChecking && (
-          <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-center gap-2 text-blue-300 text-sm">
-            <CheckCircle2 className="w-4 h-4" /> Verification successful — signing you in...
-          </div>
-        )}
+        <div className="relative mt-6 space-y-3 sm:mt-7">
+          {isChecking && (
+            <div className="flex items-center gap-2 rounded-2xl border border-blue-400/25 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
+              <CheckCircle2 className="h-4 w-4 shrink-0" /> Verification successful — signing you in...
+            </div>
+          )}
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2 text-red-400 text-sm">
-            <AlertCircle className="w-4 h-4" /> {error}
-          </div>
-        )}
-        {message && (
-          <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2 text-green-300 text-sm">
-            <AlertCircle className="w-4 h-4" /> {message}
-          </div>
-        )}
+          {error && (
+            <div className="flex items-center gap-2 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+              <AlertCircle className="h-4 w-4 shrink-0" /> {error}
+            </div>
+          )}
 
-        <div className="space-y-3">
+          {message && (
+            <div className="flex items-center gap-2 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+              <AlertCircle className="h-4 w-4 shrink-0" /> {message}
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleRefresh}
             disabled={isRefreshing || isChecking}
-            className="w-full text-white font-bold py-3 rounded-lg shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 btn-logo-gradient"
+            className="btn-logo-gradient flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-base font-bold text-white shadow-lg transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isRefreshing ? 'Checking...' : 'I verified my email'}
           </button>
@@ -110,9 +138,9 @@ export const EmailVerificationModal: React.FC = () => {
             type="button"
             onClick={handleResend}
             disabled={isResending || isChecking}
-            className="w-full text-gray-200 font-semibold py-3 rounded-lg border border-gray-700 bg-[#111827] hover:bg-[#1f2937] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-base font-semibold text-slate-100 transition-colors hover:bg-white/[0.07] disabled:opacity-50"
           >
-            <Mail className="w-4 h-4" />
+            <Mail className="h-4 w-4" />
             {isResending ? 'Resending...' : 'Resend verification email'}
           </button>
         </div>
