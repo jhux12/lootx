@@ -1918,10 +1918,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!auth.currentUser) {
       throw new Error('Please sign in to resend the verification email.');
     }
-    await sendEmailVerification(auth.currentUser, {
-      url: window.location.origin,
-      handleCodeInApp: true
+
+    const token = await auth.currentUser.getIdToken();
+    const response = await fetch('/api/send-email-verification', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ origin: window.location.origin })
     });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(typeof data?.error === 'string' ? data.error : 'Unable to resend verification email.');
+    }
   };
 
   const refreshEmailVerification = async () => {
