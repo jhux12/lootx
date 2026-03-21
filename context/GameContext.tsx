@@ -19,7 +19,6 @@ import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   linkWithCredential,
-  sendEmailVerification,
   sendPasswordResetEmail,
   signOut,
   getIdTokenResult,
@@ -451,6 +450,10 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'PROVABLY_FAIR' };
   }
 
+  if (primary === 'verify') {
+    return { type: 'VERIFY_EMAIL' };
+  }
+
   if (primary === 'admin' && secondary === 'upgrader' && segments[2] === 'targets') {
     return { type: 'ADMIN_UPGRADER_TARGETS' };
   }
@@ -504,6 +507,8 @@ const getPathFromView = (view: ViewState): string => {
       return '/case-lab';
     case 'PROVABLY_FAIR':
       return '/provably-fair';
+    case 'VERIFY_EMAIL':
+      return '/verify';
     case 'CASE_OPENING': {
       const search = view.isFree ? '?free=true' : '';
       return `/cases/${view.boxId}${search}`;
@@ -727,7 +732,7 @@ const buildUserDocument = (user: User) => {
     uid: user.id,
     email: user.email ?? '',
     username: user.username ?? user.name ?? '',
-    usernameLower: normalizeUsername(user.username ?? user.name ?? ''),
+    usernameLower: toFirestoreUsernameLower(user.username ?? user.name ?? ''),
     createdAt: user.createdAt ?? Date.now(),
     updatedAt: Date.now(),
     photoURL: user.photoURL,
@@ -749,17 +754,17 @@ const buildLegacyUserProfileBackfill = (firebaseUser: FirebaseUser, data: Record
           typeof data.displayName === 'string' ? data.displayName : firebaseUser.displayName,
           typeof data.email === 'string' ? data.email : firebaseUser.email
         );
-  const usernameLower =
-    typeof data.usernameLower === 'string' && data.usernameLower.trim()
-      ? normalizeUsername(data.usernameLower)
-      : normalizeUsername(username);
+  const existingUsernameLower = typeof data.usernameLower === 'string' ? data.usernameLower.trim() : '';
+  const usernameLower = isValidFirestoreUsernameLower(existingUsernameLower)
+    ? existingUsernameLower
+    : toFirestoreUsernameLower(existingUsernameLower || username);
 
   const patch: Record<string, unknown> = {};
 
   if (data.uid !== firebaseUser.uid) patch.uid = firebaseUser.uid;
   if (typeof data.email !== 'string' && firebaseUser.email) patch.email = firebaseUser.email;
   if (!(typeof data.username === 'string' && data.username.trim())) patch.username = username;
-  if (!(typeof data.usernameLower === 'string' && data.usernameLower.trim())) patch.usernameLower = usernameLower || 'player';
+  if (!isValidFirestoreUsernameLower(existingUsernameLower)) patch.usernameLower = usernameLower;
   if (data.createdAt === undefined) patch.createdAt = fallbackCreatedAt;
   if (data.updatedAt === undefined) patch.updatedAt = Date.now();
   if (data.lastLogin === undefined) patch.lastLogin = Date.now();
@@ -780,6 +785,18 @@ const normalizeUsername = (value: string) =>
     .replace(/\s+/g, '_')
     .replace(/[^a-z0-9_]/g, '')
     .replace(/^_+|_+$/g, '');
+
+const clampFirestoreUsernameLower = (value: string) => normalizeUsername(value).slice(0, 16);
+
+const isValidFirestoreUsernameLower = (value: string) => /^[a-z0-9_]{3,16}$/.test(value);
+
+const toFirestoreUsernameLower = (value: string, fallback = 'player') => {
+  const normalized = clampFirestoreUsernameLower(value);
+  if (isValidFirestoreUsernameLower(normalized)) return normalized;
+
+  const normalizedFallback = clampFirestoreUsernameLower(fallback);
+  return isValidFirestoreUsernameLower(normalizedFallback) ? normalizedFallback : 'player';
+};
 
 const buildBaseUsername = (displayName: string | null | undefined, email: string | null | undefined) => {
   const fromDisplayName = normalizeUsername(displayName ?? '');
@@ -1030,6 +1047,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const activeUserIdRef = useRef<string | null>(null);
   const userUnsubscribeRef = useRef<(() => void) | null>(null);
   const inventoryUnsubscribeRef = useRef<(() => void) | null>(null);
+  const legacyProfileBackfillInFlightRef = useRef<Set<string>>(new Set());
   const syncAdminClaim = async (firebaseUser: FirebaseUser | null) => {
     if (!firebaseUser) {
       setUser((prev) => ({ ...prev, isAdmin: false }));
@@ -1166,10 +1184,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const data = snapshot.data();
       const legacyProfileBackfill = buildLegacyUserProfileBackfill(firebaseUser, data);
-      if (Object.keys(legacyProfileBackfill).length > 0) {
-        void setDoc(userRef, legacyProfileBackfill, { merge: true }).catch((error) => {
-          console.error('Failed to backfill legacy user profile fields', error);
-        });
+      if (Object.keys(legacyProfileBackfill).length > 0 && !legacyProfileBackfillInFlightRef.current.has(firebaseUser.uid)) {
+        legacyProfileBackfillInFlightRef.current.add(firebaseUser.uid);
+        void authedFetch<{ ok: boolean; patched?: boolean }>('/api/backfill-user-profile', {
+          method: 'POST',
+          body: JSON.stringify({})
+        })
+          .catch((error) => {
+            console.error('Failed to backfill legacy user profile fields', error);
+          })
+          .finally(() => {
+            legacyProfileBackfillInFlightRef.current.delete(firebaseUser.uid);
+          });
       }
       const profile = buildUserProfile(firebaseUser, data);
 
@@ -1300,6 +1326,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const handleEmailVerificationLink = async () => {
     if (typeof window === 'undefined') return;
+    if (window.location.pathname === '/verify') return;
     const url = new URL(window.location.href);
     const mode = url.searchParams.get('mode');
     const oobCode = url.searchParams.get('oobCode');
@@ -1914,14 +1941,48 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const sendCustomVerificationEmail = async (firebaseUser: FirebaseUser) => {
+    if (!firebaseUser.email) {
+      throw new Error('No email address is available for this account.');
+    }
+
+    const token = await firebaseUser.getIdToken();
+    const response = await fetch('/api/send-verification-email', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const errorCode = payload?.error;
+      if (errorCode === 'EMAIL_ALREADY_VERIFIED') {
+        throw new Error('Your email is already verified. Please refresh this page.');
+      }
+      if (errorCode === 'EMAIL_SEND_FAILED') {
+        throw new Error('We could not send the verification email right now. Please try again in a moment.');
+      }
+      if (errorCode === 'EMAIL_CONFIG_INVALID') {
+        throw new Error('Email delivery is temporarily unavailable. Please contact support if this continues.');
+      }
+      if (errorCode === 'UNAUTHENTICATED') {
+        throw new Error('Please sign in again to continue.');
+      }
+
+      throw new Error(payload?.message || 'Unable to send verification email right now.');
+    }
+
+    return payload;
+  };
+
   const resendEmailVerification = async () => {
     if (!auth.currentUser) {
       throw new Error('Please sign in to resend the verification email.');
     }
-    await sendEmailVerification(auth.currentUser, {
-      url: window.location.origin,
-      handleCodeInApp: true
-    });
+    await sendCustomVerificationEmail(auth.currentUser);
   };
 
   const refreshEmailVerification = async () => {
@@ -1934,10 +1995,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!credential.user.emailVerified) {
         const redirectPath = getCurrentPath();
         setPendingEmailVerification(redirectPath);
-        await sendEmailVerification(credential.user, {
-          url: window.location.origin,
-          handleCodeInApp: true
-        });
+        await sendCustomVerificationEmail(credential.user);
         setEmailVerificationStatus('pending');
         setShowEmailVerificationModal(true);
         setShowLoginModal(false);
@@ -2002,10 +2060,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const credential = await createUserWithEmailAndPassword(auth, email, pass);
       const redirectPath = getCurrentPath();
       setPendingEmailVerification(redirectPath);
-      await sendEmailVerification(credential.user, {
-        url: window.location.origin,
-        handleCodeInApp: true
-      });
+      await sendCustomVerificationEmail(credential.user);
       const createdAt = Date.now();
       const username = await ensureUniqueUsername(buildBaseUsername(name, email));
       const newUser: User = {
@@ -2049,10 +2104,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (!signInCredential.user.emailVerified) {
             const redirectPath = getCurrentPath();
             setPendingEmailVerification(redirectPath);
-            await sendEmailVerification(signInCredential.user, {
-              url: window.location.origin,
-              handleCodeInApp: true
-            });
+            await sendCustomVerificationEmail(signInCredential.user);
             setEmailVerificationStatus('pending');
             setShowEmailVerificationModal(true);
             setShowLoginModal(false);
@@ -2487,13 +2539,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const trimmedName = name.trim();
       const nextName = trimmedName || user.name || 'Player';
       const nextAvatar = avatar.trim() || user.avatar;
-      const nextUsernameLower = normalizeUsername(nextName);
+      const nextUsernameLower = clampFirestoreUsernameLower(nextName);
 
-      if (!nextUsernameLower || nextUsernameLower.length < 3 || nextUsernameLower.length > 16) {
+      if (!isValidFirestoreUsernameLower(nextUsernameLower)) {
         throw new Error('Username must be 3-16 characters and use only letters, numbers, or underscores.');
       }
 
-      const currentUsernameLower = normalizeUsername(user.username ?? user.name ?? '');
+      const currentUsernameLower = toFirestoreUsernameLower(user.username ?? user.name ?? '');
       if (nextUsernameLower !== currentUsernameLower) {
         const usersRef = collection(db, 'users');
         const existingUsers = await getDocs(query(usersRef, where('usernameLower', '==', nextUsernameLower), limit(2)));

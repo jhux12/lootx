@@ -315,4 +315,5 @@ export type ViewState =
   | { type: 'BATTLES' }
   | { type: 'PLINKO' }
   | { type: 'ADMIN_UPGRADER_SETTINGS' }
-  | { type: 'ADMIN_UPGRADER_TARGETS' };
+  | { type: 'ADMIN_UPGRADER_TARGETS' }
+  | { type: 'VERIFY_EMAIL' };
