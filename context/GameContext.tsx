@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useMemo, useCallback } from 'react';
 import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage, StripeSettings, Shipment, ShipmentStatus } from '../types';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
@@ -1037,7 +1037,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [topUpModalIntent, setTopUpModalIntent] = useState<TopUpModalIntent | null>(null);
   const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
-  const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
+  const [showEmailVerificationModalState, setShowEmailVerificationModalState] = useState(false);
+  const showEmailVerificationModal = showEmailVerificationModalState;
   const [showEmailVerifiedModal, setShowEmailVerifiedModal] = useState(false);
   const [emailVerificationStatus, setEmailVerificationStatus] = useState<EmailVerificationStatus>('idle');
   const [authInitialized, setAuthInitialized] = useState(false);
@@ -1048,6 +1049,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const userUnsubscribeRef = useRef<(() => void) | null>(null);
   const inventoryUnsubscribeRef = useRef<(() => void) | null>(null);
   const legacyProfileBackfillInFlightRef = useRef<Set<string>>(new Set());
+  const emailVerificationModalDismissedRef = useRef(false);
+  const setShowEmailVerificationModal = useCallback((show: boolean) => {
+    emailVerificationModalDismissedRef.current = !show;
+    setShowEmailVerificationModalState(show);
+  }, []);
+  const openEmailVerificationModal = useCallback(() => {
+    emailVerificationModalDismissedRef.current = false;
+    setShowEmailVerificationModalState(true);
+  }, []);
+
   const syncAdminClaim = async (firebaseUser: FirebaseUser | null) => {
     if (!firebaseUser) {
       setUser((prev) => ({ ...prev, isAdmin: false }));
@@ -1320,7 +1331,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     setEmailVerificationStatus('pending');
-    setShowEmailVerificationModal(true);
+    setShowEmailVerificationModalState(!emailVerificationModalDismissedRef.current);
     setShowEmailVerifiedModal(false);
   };
 
@@ -1997,7 +2008,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setPendingEmailVerification(redirectPath);
         await sendCustomVerificationEmail(credential.user);
         setEmailVerificationStatus('pending');
-        setShowEmailVerificationModal(true);
+        openEmailVerificationModal();
         setShowLoginModal(false);
         return;
       }
@@ -2096,7 +2107,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser), { merge: true });
       setShowLoginModal(false);
       setEmailVerificationStatus('pending');
-      setShowEmailVerificationModal(true);
+      openEmailVerificationModal();
     } catch (error: any) {
       if (error?.code === 'auth/email-already-in-use') {
         try {
@@ -2106,7 +2117,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setPendingEmailVerification(redirectPath);
             await sendCustomVerificationEmail(signInCredential.user);
             setEmailVerificationStatus('pending');
-            setShowEmailVerificationModal(true);
+            openEmailVerificationModal();
             setShowLoginModal(false);
             return;
           }
