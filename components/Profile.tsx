@@ -6,7 +6,7 @@ import { XP_ICON } from '../constants';
 import { getSellBackValue } from '../utils/sellBack';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
-import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight, CalendarDays, Gem, Boxes } from 'lucide-react';
+import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight, CalendarDays, Gem, Boxes, Wallet, Truck } from 'lucide-react';
 import { auth } from '../firebase';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
@@ -191,6 +191,21 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   );
 
   const visibleProfileTabs = useMemo(() => profileTabs.filter((tab) => tab.visible), [profileTabs]);
+
+  const profileQuickActions = isOwnProfile
+    ? [
+        { label: 'View public profile', icon: ExternalLink, action: () => window.open(`/profile/${displayUser.id}`, '_blank', 'noopener,noreferrer') },
+        { label: 'Balance history', icon: Wallet, action: () => setActiveTab('topPulls') },
+        { label: 'Shipping settings', icon: Truck, action: () => setActiveTab('settings') }
+      ]
+    : [];
+
+  const inventorySurfaceTabs = [
+    { id: 'inventory', label: 'Inventory', icon: Package },
+    { id: 'processing', label: 'Withdrawals', icon: Truck },
+    { id: 'community', label: 'Referrals', icon: UsersIcon },
+    { id: 'settings', label: 'Settings', icon: Settings }
+  ] as const;
 
   useEffect(() => {
     if (!visibleProfileTabs.some((tab) => tab.id === activeTab)) {
@@ -626,7 +641,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500 px-3 py-4 sm:px-4 md:px-6">
+      <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="space-y-4">
       {/* Profile Header */}
       <div className="relative mb-4 overflow-hidden rounded-[28px] bg-[linear-gradient(160deg,rgba(11,14,20,0.86),rgba(9,12,18,0.74))] shadow-[0_26px_64px_rgba(0,0,0,0.42),0_0_28px_rgba(64,212,255,0.06)] backdrop-blur-[20px]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(108,92,255,0.2),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.14),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.01))]" />
@@ -697,25 +714,40 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                 </div>
 
                 {isOwnProfile && (
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                    <button
+                      onClick={() => setView({ type: 'BOXES' })}
+                      className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#f59e0b,#f97316)] px-4 text-sm font-bold text-black shadow-[0_16px_32px_rgba(249,115,22,0.26)] transition-transform hover:-translate-y-0.5"
+                    >
+                      <Sparkles className="h-4 w-4" /> Browse Boxes
+                    </button>
                     <button
                       onClick={() => setActiveTab('settings')}
-                      className="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.05))] px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_22px_rgba(7,12,22,0.18)] backdrop-blur-md transition-colors hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0.07))]"
+                      className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.05))] px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_22px_rgba(7,12,22,0.18)] backdrop-blur-md transition-colors hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0.07))]"
                     >
                       <Settings className="h-4 w-4" /> Edit Profile
                     </button>
-                    <button
-                      onClick={() => setView({ type: 'BOXES' })}
-                      className="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#7c3aed,#2563eb)] px-4 text-sm font-bold text-white shadow-[0_16px_32px_rgba(79,70,229,0.34)] transition-transform hover:-translate-y-0.5"
-                    >
-                      <Sparkles className="h-4 w-4" /> Open Boxes
-                    </button>
+                  </div>
+                )}
+
+                {isOwnProfile && profileQuickActions.length > 0 && (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {profileQuickActions.map(({ label, icon: Icon, action }) => (
+                      <button
+                        key={label}
+                        onClick={action}
+                        className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-sm font-semibold text-gray-200 transition-colors hover:bg-white/10"
+                      >
+                        <Icon className="h-4 w-4" />
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.9fr)]">
+            <div className="grid grid-cols-1 gap-2.5">
               <div className="overflow-hidden rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_34px_rgba(5,10,20,0.18)] backdrop-blur-xl">
                 <div className="flex items-start justify-between gap-2.5">
                   <div>
@@ -822,8 +854,38 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
         </div>
       </div>
 
+        </aside>
+
+        <section className="min-w-0 space-y-4">
+          <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,16,24,0.96),rgba(8,10,16,0.98))] shadow-[0_24px_60px_rgba(0,0,0,0.42)]">
+            <div className="border-b border-white/8 px-3 py-3 sm:px-4">
+              <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {inventorySurfaceTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id || (tab.id === 'processing' && activeTab === 'inventory' && inventoryFilter !== 'inventory');
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        if (tab.id === 'community' || tab.id === 'settings') {
+                          setActiveTab(tab.id);
+                          return;
+                        }
+                        setActiveTab('inventory');
+                        setInventoryFilter(tab.id === 'processing' ? 'processing' : 'inventory');
+                      }}
+                      className={`inline-flex min-h-[42px] items-center gap-2 rounded-xl border px-3 py-2 text-sm font-bold whitespace-nowrap transition-colors ${isActive ? 'border-amber-300/40 bg-amber-300/12 text-white' : 'border-white/10 bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
       {/* Tab Content */}
-      <div className="min-h-[400px]">
+      <div className="min-h-[400px] px-3 py-4 sm:px-4 sm:py-5">
           {activeTab === 'topPulls' && (
               <div className="space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-800 pb-4">
@@ -848,7 +910,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           <p className="text-gray-500">This player has chosen to keep their top pulls private.</p>
                       </div>
                   ) : (isOwnProfile && inventory.length === 0) ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                         {Array.from({ length: 6 }).map((_, idx) => <SkeletonTile key={`top-pull-skeleton-${idx}`} />)}
                       </div>
                   ) : topPulls.length === 0 ? (
@@ -868,7 +930,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           )}
                       </div>
                   ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                           {topPulls.map((item, index) => (
                               <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-3 sm:p-4 group hover:border-brand-purple/50 transition-all">
                                   <div className="relative aspect-square mb-3 sm:mb-4 bg-[#0b0e14] rounded-lg p-3 sm:p-4 flex items-center justify-center overflow-hidden">
@@ -915,29 +977,49 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </button>
                       </div>
                   )}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-800 pb-4">
-                      <div>
-                          <h3 className="text-lg font-bold text-white">Inventory</h3>
-                          <p className="text-sm text-gray-500">Manage your items, ship rewards, or sell them back for coins.</p>
+                  <div className="space-y-4 rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                          <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200/70">Inventory</p>
+                              <h3 className="mt-1 text-2xl font-black text-white">Your items</h3>
+                              <p className="mt-1 text-sm text-gray-400">A simplified inventory layout inspired by the reference profile page, tuned for mobile and desktop.</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                              {(['inventory', 'processing', 'shipped'] as const).map((filter) => (
+                                  <button
+                                      key={filter}
+                                      onClick={() => setInventoryFilter(filter)}
+                                      className={`min-h-[42px] rounded-xl border px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] transition-colors ${
+                                          inventoryFilter === filter
+                                              ? 'border-amber-300/40 bg-amber-300/12 text-white'
+                                              : 'border-white/10 bg-[#0b0e14] text-gray-400 hover:text-white hover:bg-gray-800'
+                                      }`}
+                                  >
+                                      {filter === 'inventory' ? 'Inventory' : filter === 'processing' ? 'Processing' : 'Shipped'}
+                                  </button>
+                              ))}
+                          </div>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                          {(['inventory', 'processing', 'shipped'] as const).map((filter) => (
-                              <button
-                                  key={filter}
-                                  onClick={() => setInventoryFilter(filter)}
-                                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-colors ${
-                                      inventoryFilter === filter
-                                          ? 'bg-brand-purple text-white'
-                                          : 'bg-[#0b0e14] text-gray-400 hover:text-white hover:bg-gray-800'
-                                  }`}
-                              >
-                                  {filter === 'inventory' ? 'Inventory' : filter === 'processing' ? 'Processing' : 'Shipped'}
-                              </button>
-                          ))}
+
+                      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px]">
+                        <div className="rounded-2xl border border-white/8 bg-[#0b0e14]/80 px-3 py-3">
+                          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+                            <Search className="h-4 w-4" /> Search inventory
+                          </div>
+                          <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-gray-400">Search and filter controls can be added here next.</div>
+                        </div>
+                        <div className="rounded-2xl border border-white/8 bg-[#0b0e14]/80 px-3 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Sort by</p>
+                          <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white">Newest</div>
+                        </div>
+                        <div className="rounded-2xl border border-white/8 bg-[#0b0e14]/80 px-3 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Rarity</p>
+                          <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white">All categories</div>
+                        </div>
                       </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-[#131c29] to-[#111521] px-3 py-2.5">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">Total items</p>
                           <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.totalItems}</p>
@@ -1025,7 +1107,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </button>
                       </div>
                   ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                           {filteredInventory.map((item) => {
                               const isAvailable = item.status === 'available';
                               const isLocked = !!item.locked;
@@ -1740,6 +1822,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   </div>
               </div>
           )}
+      </div>
+          </div>
+        </section>
       </div>
     </div>
   );
