@@ -716,66 +716,21 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)]">
-              <div className="overflow-hidden rounded-[28px] border border-white/6 bg-white/[0.03] p-4 shadow-[0_18px_40px_rgba(4,10,20,0.24)]">
-                <div className="flex items-start justify-between gap-2.5">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7f88a1]">Top Pulls</p>
-                    <h3 className="mt-1.5 text-[1.05rem] font-black text-white">{canViewTopPulls ? `${topPulls.length} Highlight${topPulls.length === 1 ? '' : 's'}` : 'Private'}</h3>
-                    <p className="mt-1 text-[12px] leading-relaxed text-gray-400">A compact look at your highest-value drops.</p>
+            <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+              {[
+                { icon: Sparkles, label: 'Top pulls', value: topPulls.length.toLocaleString() },
+                { icon: Boxes, label: 'Inventory', value: inventoryCount.toLocaleString() },
+                { icon: UsersIcon, label: 'Followers', value: viewedFollowerIds.length.toLocaleString() },
+                { icon: CalendarDays, label: 'Joined', value: joinedDateLabel }
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="rounded-[22px] bg-[#0a101b] px-4 py-3">
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    <Icon className="h-3.5 w-3.5 text-violet-300/80" />
+                    <span>{label}</span>
                   </div>
-                  <div className="rounded-xl bg-[linear-gradient(180deg,rgba(232,121,249,0.16),rgba(168,85,247,0.08))] p-2 text-fuchsia-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-md">
-                    <Gem className="h-4 w-4" />
-                  </div>
+                  <div className="mt-1.5 text-sm font-semibold text-white">{value}</div>
                 </div>
-
-                {canViewTopPulls && topPulls.length > 0 ? (
-                  <div className="-mx-1 mt-3 flex gap-2.5 overflow-x-auto px-1 pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                    {topPulls.slice(0, 4).map((item, index) => (
-                      <div
-                        key={item.instanceId}
-                        className="min-w-[110px] flex-1 rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_12px_26px_rgba(4,8,17,0.28)] backdrop-blur-lg"
-                      >
-                        <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.22),transparent_58%),linear-gradient(180deg,#141a28,#101522)] p-2">
-                          <span className="absolute left-2 top-2 rounded-full border border-white/10 bg-black/45 px-2 py-0.5 text-[10px] font-black text-white">#{index + 1}</span>
-                          <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain" />
-                          <div className={`pointer-events-none absolute inset-0 opacity-30 bg-gradient-to-br ${
-                            item.rarity === 'legendary' ? 'from-yellow-400/50 via-transparent to-transparent' :
-                            item.rarity === 'epic' ? 'from-purple-400/50 via-transparent to-transparent' :
-                            item.rarity === 'rare' ? 'from-blue-400/50 via-transparent to-transparent' :
-                            item.rarity === 'uncommon' ? 'from-emerald-400/45 via-transparent to-transparent' :
-                            'from-white/10 via-transparent to-transparent'
-                          }`} />
-                        </div>
-                        <div className="mt-2 space-y-0.5">
-                          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#7d859d]">{item.rarity}</div>
-                          <div className="truncate text-xs font-semibold text-white">{item.name}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-3 rounded-2xl bg-white/[0.045] px-4 py-4 text-sm text-gray-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
-                    {canViewTopPulls ? 'Your best pulls will show here once you open more boxes.' : 'This player keeps their best pulls private.'}
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 rounded-[28px] border border-white/6 bg-white/[0.03] p-4 shadow-[0_18px_40px_rgba(4,10,20,0.24)] min-[420px]:grid-cols-3 lg:grid-cols-1">
-                {[
-                  { icon: Sparkles, label: 'Top Pulls', value: topPulls.length.toLocaleString() },
-                  { icon: Boxes, label: 'Inventory', value: inventoryCount.toLocaleString() },
-                  { icon: CalendarDays, label: 'Member Since', value: joinedDateLabel }
-                ].map(({ icon: Icon, label, value }) => (
-                    <div key={label} className="rounded-2xl bg-[#0a101b] px-3 py-3">
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#7f88a1] sm:tracking-[0.16em]">
-                      <Icon className="h-3.5 w-3.5 text-brand-purple" />
-                      <span className="leading-tight">{label}</span>
-                    </div>
-                    <div className="mt-1.5 text-sm font-bold leading-tight text-white break-words">{value}</div>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
 
             {/* Main Tabs */}
@@ -843,7 +798,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   </div>
 
                   {!canViewTopPulls ? (
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-12 text-center">
                           <Lock className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                           <h3 className="text-xl font-bold text-white mb-2">Top Pulls Are Private</h3>
                           <p className="text-gray-500">This player has chosen to keep their top pulls private.</p>
@@ -853,7 +808,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                         {Array.from({ length: 6 }).map((_, idx) => <SkeletonTile key={`top-pull-skeleton-${idx}`} />)}
                       </div>
                   ) : topPulls.length === 0 ? (
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-12 text-center">
                           <Sparkles className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                           <h3 className="text-xl font-bold text-white mb-2">No top pulls yet</h3>
                           <p className="text-gray-500 mb-6">
@@ -869,10 +824,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           )}
                       </div>
                   ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                           {topPulls.map((item, index) => (
-                              <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-3 sm:p-4 group hover:border-brand-purple/50 transition-all">
-                                  <div className="relative aspect-square mb-3 sm:mb-4 bg-[#0b0e14] rounded-lg p-3 sm:p-4 flex items-center justify-center overflow-hidden">
+                              <div key={item.instanceId} className="rounded-[26px] border border-white/6 bg-[#0d1220] p-3.5 sm:p-4 group transition-all">
+                                  <div className="relative aspect-square mb-3 sm:mb-4 bg-[#0a101b] rounded-[22px] p-3 sm:p-4 flex items-center justify-center overflow-hidden">
                                       <div className="absolute left-2 top-2 z-10 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide bg-black/70 text-white border border-white/10">
                                         #{index + 1}
                                       </div>
@@ -1517,10 +1472,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
           )}
 
           {activeTab === 'settings' && isOwnProfile && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                   {/* Profile Settings */}
                   <div className="lg:col-span-2 space-y-8">
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-6 shadow-[0_20px_44px_rgba(4,10,20,0.3)]">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <User className="w-5 h-5 text-brand-purple" /> Profile Information
                           </h3>
@@ -1565,7 +1520,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </div>
                       </div>
 
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-6 shadow-[0_20px_44px_rgba(4,10,20,0.3)]">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <Lock className="w-5 h-5 text-brand-purple" /> Privacy
                           </h3>
@@ -1593,7 +1548,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </div>
                       </div>
 
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-6 shadow-[0_20px_44px_rgba(4,10,20,0.3)]">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <MapPin className="w-5 h-5 text-brand-purple" /> Shipping Address
                           </h3>
@@ -1675,7 +1630,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
                   {/* Security & Account */}
                   <div className="space-y-8">
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-6 shadow-[0_20px_44px_rgba(4,10,20,0.3)]">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <Shield className="w-5 h-5 text-brand-purple" /> Security
                           </h3>
@@ -1717,7 +1672,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </div>
                       </div>
 
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-6 shadow-[0_20px_44px_rgba(4,10,20,0.3)]">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <AlertTriangle className="w-5 h-5 text-red-500" /> Danger Zone
                           </h3>
@@ -1736,7 +1691,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
                       <button 
                           onClick={logout}
-                          className="w-full py-4 bg-[#0b0e14] text-gray-400 rounded-2xl font-bold hover:text-white hover:bg-gray-900 transition-all border border-gray-800 flex items-center justify-center gap-2"
+                          className="w-full py-4 bg-[#0a101b] text-gray-400 rounded-[24px] font-bold hover:text-white hover:bg-[#111827] transition-all border border-white/6 flex items-center justify-center gap-2"
                       >
                           <LogOut className="w-5 h-5" /> Sign Out
                       </button>
