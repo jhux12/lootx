@@ -554,7 +554,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
                           <div className="h-1.5 w-20 rounded-t-full bg-[#f8d793]/85 shadow-[0_0_20px_rgba(248,215,147,0.55)] sm:w-24" />
                         </div>
-                        <div className="relative z-10 flex h-[150px] w-full items-center justify-center sm:h-[190px]">
+                        <div className="relative z-10 flex h-[150px] w-full items-center justify-center pb-3 sm:h-[190px] sm:pb-4">
                           {topItem ? (
                             <img
                               src={topItem.image}
@@ -562,13 +562,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                               aria-hidden={!isVisible}
                               loading="lazy"
                               decoding="async"
-                              className={`absolute h-full w-full object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
+                              className={`absolute z-10 h-full w-full -translate-y-1 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 sm:-translate-y-2 ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
                             />
                           ) : null}
                           <BlurImage
                             src={box.image}
                             alt={box.name}
-                            className={`relative h-full w-full object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ${isVisible ? 'scale-95 opacity-0' : 'scale-100 opacity-100'} group-hover:scale-105`}
+                            className={`relative z-20 h-full w-full -translate-y-1 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 sm:-translate-y-2 ${isVisible ? 'invisible scale-95 opacity-0' : 'visible scale-100 opacity-100'} group-hover:scale-105`}
                           />
                         </div>
                       </div>
