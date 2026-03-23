@@ -200,17 +200,14 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       <style>{fairValueBannerKeyframes}</style>
       <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-hidden border-y border-white/10 bg-[#11151f] shadow-[0_35px_70px_-50px_rgba(0,0,0,1)]">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,#121827_0%,#171b2b_32%,#11151f_58%,#0f1320_100%)]" />
-        <div className="pointer-events-none absolute inset-y-0 left-[-10%] w-[38%] bg-[radial-gradient(circle,rgba(111,125,255,0.32)_0%,rgba(111,125,255,0.08)_42%,transparent_72%)] animate-[fairValueGlow_8s_ease-in-out_infinite]" />
-        <div className="pointer-events-none absolute right-[-8%] top-[-15%] h-[150%] w-[38%] bg-[radial-gradient(circle,rgba(236,104,200,0.24)_0%,rgba(236,104,200,0.08)_38%,transparent_70%)] animate-[fairValueFloat_10s_ease-in-out_infinite]" />
+        <div className="pointer-events-none absolute inset-y-0 left-[-10%] hidden w-[38%] bg-[radial-gradient(circle,rgba(111,125,255,0.32)_0%,rgba(111,125,255,0.08)_42%,transparent_72%)] sm:block sm:animate-[fairValueGlow_8s_ease-in-out_infinite]" />
+        <div className="pointer-events-none absolute right-[-8%] top-[-15%] hidden h-[150%] w-[38%] bg-[radial-gradient(circle,rgba(236,104,200,0.24)_0%,rgba(236,104,200,0.08)_38%,transparent_70%)] sm:block sm:animate-[fairValueFloat_10s_ease-in-out_infinite]" />
         <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(255,255,255,0.05)_0,rgba(255,255,255,0.05)_2px,transparent_2px,transparent_44px),repeating-linear-gradient(-58deg,rgba(255,255,255,0.045)_0,rgba(255,255,255,0.045)_2px,transparent_2px,transparent_44px)] opacity-20" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
         <div className="relative mx-auto flex w-full max-w-[1240px] px-4 pt-8 text-left sm:px-6 sm:pt-10 lg:px-8">
           <div className="relative z-10 flex w-full items-end justify-between gap-3 sm:gap-5 lg:min-h-[360px] lg:items-center lg:pr-[18rem]">
             <div className="flex min-w-0 flex-1 flex-col items-start pb-6 sm:pb-8 lg:pb-10">
-              <span className="mb-4 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/75 backdrop-blur-sm sm:text-xs">
-                Trusted value on every pull
-              </span>
-              <h1 className="relative max-w-4xl text-[2.15rem] font-black uppercase italic leading-[0.9] tracking-tight text-white sm:text-5xl lg:text-7xl">
+              <h1 className="relative max-w-4xl text-[2.15rem] font-black uppercase italic leading-[0.9] tracking-tight text-white sm:pt-1 sm:text-5xl lg:text-7xl">
                 <span className="inline-block">Fair Value</span>{' '}
                 <span className="relative inline-block bg-gradient-to-r from-[#6f7dff] via-[#8f67ff] to-[#ec68c8] bg-clip-text text-transparent before:absolute before:inset-x-0 before:bottom-1 before:h-[0.18em] before:rounded-full before:bg-gradient-to-r before:from-[#6f7dff]/0 before:via-[#8f67ff]/60 before:to-[#ec68c8]/0 before:blur-md before:content-['']">Guarantee</span>
               </h1>
