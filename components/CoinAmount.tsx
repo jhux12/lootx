@@ -8,6 +8,7 @@ interface CoinAmountProps {
   iconClassName?: string;
   textClassName?: string;
   formatOptions?: Intl.NumberFormatOptions;
+  formatter?: (value: number) => string;
   showSign?: boolean;
   animated?: boolean;
 }
@@ -18,6 +19,7 @@ export const CoinAmount: React.FC<CoinAmountProps> = ({
   iconClassName,
   textClassName,
   formatOptions,
+  formatter,
   showSign = false,
   animated = true
 }) => {
@@ -26,7 +28,7 @@ export const CoinAmount: React.FC<CoinAmountProps> = ({
   }
 
   const absoluteAmount = showSign ? Math.abs(amount) : amount;
-  const formatter = (value: number) => value.toLocaleString(undefined, formatOptions ?? { maximumFractionDigits: 0 });
+  const formatValue = formatter ?? ((value: number) => value.toLocaleString(undefined, formatOptions ?? { maximumFractionDigits: 0 }));
   const sign = showSign ? (amount < 0 ? '-' : '+') : '';
 
   return (
@@ -34,7 +36,7 @@ export const CoinAmount: React.FC<CoinAmountProps> = ({
       <img src={COIN_ICON} alt="Coin" className={`w-4 h-4 ${iconClassName ?? ''}`} />
       <span className={textClassName}>
         {sign}
-        {animated ? <AnimatedNumber value={absoluteAmount} format={formatter} /> : formatter(absoluteAmount)}
+        {animated ? <AnimatedNumber value={absoluteAmount} format={formatValue} /> : formatValue(absoluteAmount)}
       </span>
     </span>
   );

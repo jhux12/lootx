@@ -97,6 +97,12 @@ const createHotPicksBackground = () => {
 
 const HOT_PICKS_BACKGROUND = createHotPicksBackground();
 
+
+const formatCompactCoins = (amount: number) => {
+  const roundedAmount = Math.round(amount);
+  if (roundedAmount >= 1000) return `${Math.round(roundedAmount / 1000)}K`;
+  return roundedAmount.toLocaleString();
+};
 const withOpacity = (color: string, alphaHex: string) => {
   if (/^#([0-9a-fA-F]{6})$/.test(color)) return `${color}${alphaHex}`;
   if (/^#([0-9a-fA-F]{3})$/.test(color)) {
@@ -575,9 +581,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                               className={`absolute z-10 h-full w-full -translate-y-2 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ease-out sm:-translate-y-3 ${isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-95 opacity-0'}`}
                             />
                           ) : null}
-                          <BlurImage
+                          <img
                             src={box.image}
                             alt={box.name}
+                            loading="lazy"
+                            decoding="async"
                             className={`absolute inset-0 z-20 h-full w-full -translate-y-2 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ease-out sm:-translate-y-3 ${isVisible ? '-translate-y-10 scale-90 opacity-0' : 'translate-y-0 scale-100 opacity-100'} group-hover:translate-y-0 group-hover:scale-105`}
                           />
                         </div>
@@ -591,7 +599,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                           <div className="flex min-w-[110px] flex-1 items-center rounded-[0.9rem] bg-white/5 px-3 py-2">
                             <CoinAmount
                               amount={getBoxPrice(box)}
-                              formatOptions={{ minimumFractionDigits: 0, maximumFractionDigits: 2 }}
+                              formatter={formatCompactCoins}
+                              animated={false}
                               className="whitespace-nowrap text-sm font-extrabold text-white"
                               iconClassName="h-4 w-4"
                             />
