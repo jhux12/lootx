@@ -204,18 +204,27 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         <div className="pointer-events-none absolute right-[-8%] top-[-15%] h-[150%] w-[38%] bg-[radial-gradient(circle,rgba(236,104,200,0.24)_0%,rgba(236,104,200,0.08)_38%,transparent_70%)] animate-[fairValueFloat_10s_ease-in-out_infinite]" />
         <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(255,255,255,0.05)_0,rgba(255,255,255,0.05)_2px,transparent_2px,transparent_44px),repeating-linear-gradient(-58deg,rgba(255,255,255,0.045)_0,rgba(255,255,255,0.045)_2px,transparent_2px,transparent_44px)] opacity-20" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-        <div className="relative mx-auto flex w-full max-w-[1240px] flex-col items-center px-4 py-10 text-center sm:px-6 sm:py-12 lg:px-8">
-          <span className="mb-4 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/75 backdrop-blur-sm sm:text-xs">
-            Trusted value on every pull
-          </span>
-          <h1 className="relative text-4xl font-black uppercase italic leading-[0.9] tracking-tight text-white sm:text-6xl lg:text-7xl">
-            <span className="inline-block animate-[fairValueFloat_7s_ease-in-out_infinite]">Fair Value</span>{' '}
-            <span className="relative inline-block bg-gradient-to-r from-[#6f7dff] via-[#8f67ff] to-[#ec68c8] bg-clip-text text-transparent before:absolute before:inset-x-0 before:bottom-1 before:h-[0.18em] before:rounded-full before:bg-gradient-to-r before:from-[#6f7dff]/0 before:via-[#8f67ff]/60 before:to-[#ec68c8]/0 before:blur-md before:content-[''] after:absolute after:inset-0 after:bg-[linear-gradient(105deg,transparent_18%,rgba(255,255,255,0.45)_50%,transparent_82%)] after:opacity-70 after:mix-blend-screen after:animate-[fairValueShimmer_3.8s_linear_infinite] after:content-['']">Guarantee</span>
-          </h1>
-          <p className="relative mt-4 max-w-3xl text-xs font-semibold uppercase tracking-[0.24em] text-gray-300 sm:text-base sm:tracking-[0.22em]">
-            Discover, open &amp; collect on Pullz
-          </p>
+        <div className="relative mx-auto flex w-full max-w-[1240px] items-end justify-center px-4 pt-10 sm:px-6 sm:pt-12 lg:px-8">
+          <div className="relative z-10 flex w-full flex-col items-start pb-[180px] pr-[120px] text-left sm:pb-[220px] sm:pr-[160px] lg:min-h-[420px] lg:justify-center lg:pb-12 lg:pr-[22rem]">
+            <span className="mb-4 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/75 backdrop-blur-sm sm:text-xs">
+              Trusted value on every pull
+            </span>
+            <h1 className="relative max-w-4xl text-4xl font-black uppercase italic leading-[0.9] tracking-tight text-white sm:text-6xl lg:text-7xl">
+              <span className="inline-block animate-[fairValueFloat_7s_ease-in-out_infinite]">Fair Value</span>{' '}
+              <span className="relative inline-block bg-gradient-to-r from-[#6f7dff] via-[#8f67ff] to-[#ec68c8] bg-clip-text text-transparent before:absolute before:inset-x-0 before:bottom-1 before:h-[0.18em] before:rounded-full before:bg-gradient-to-r before:from-[#6f7dff]/0 before:via-[#8f67ff]/60 before:to-[#ec68c8]/0 before:blur-md before:content-[''] after:absolute after:inset-0 after:bg-[linear-gradient(105deg,transparent_18%,rgba(255,255,255,0.45)_50%,transparent_82%)] after:opacity-70 after:mix-blend-screen after:animate-[fairValueShimmer_3.8s_linear_infinite] after:content-['']">Guarantee</span>
+            </h1>
+            <p className="relative mt-4 max-w-3xl text-xs font-semibold uppercase tracking-[0.24em] text-gray-300 sm:text-base sm:tracking-[0.22em]">
+              Discover, open &amp; collect on Pullz
+            </p>
+          </div>
 
+          <img
+            src="/heroperson.png"
+            alt="Pullz fair value guarantee hero"
+            loading="lazy"
+            decoding="async"
+            className="pointer-events-none absolute bottom-0 right-2 z-0 h-auto w-[112px] object-contain sm:right-4 sm:w-[148px] lg:right-10 lg:w-[240px] xl:right-14 xl:w-[264px]"
+          />
         </div>
       </section>
 
