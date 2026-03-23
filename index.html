@@ -34,7 +34,7 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+              sans: ['Inter', 'system-ui', 'sans-serif'],
               mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
             },
             colors: {
@@ -58,6 +58,16 @@
       body {
         background-color: #0b0e14;
         color: white;
+        font-family: 'Inter', system-ui, sans-serif;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
       }
       /* Custom scrollbar for chat */
       .scrollbar-thin::-webkit-scrollbar {
