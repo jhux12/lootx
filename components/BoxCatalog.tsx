@@ -590,8 +590,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                         <div className="line-clamp-2 min-h-[2.75rem] text-sm font-extrabold text-white sm:text-[1.05rem]">
                           {box.name}
                         </div>
-                        <div className="flex w-full flex-col gap-1.5 overflow-hidden rounded-2xl bg-[#232454] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:flex-row sm:items-center sm:gap-1">
-                          <div className="flex w-full min-w-0 flex-1 items-center rounded-[0.9rem] bg-white/5 px-2.5 py-2 sm:px-3">
+                        <div className="flex w-full items-center gap-1 overflow-hidden rounded-2xl bg-[#232454] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                          <div className="flex min-w-0 flex-1 items-center justify-center rounded-[0.9rem] bg-white/5 px-2 py-2 sm:px-3">
                             <CoinAmount
                               amount={Math.round(getBoxPrice(box))}
                               formatOptions={{ maximumFractionDigits: 0 }}
@@ -600,9 +600,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                               iconClassName="h-3.5 w-3.5 sm:h-4 sm:w-4"
                             />
                           </div>
-                          <div className="inline-flex w-full shrink-0 items-center justify-center gap-1 rounded-[0.9rem] bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] px-2.5 py-2 text-xs font-extrabold text-white shadow-[0_10px_24px_-16px_rgba(168,85,247,0.95)] sm:w-auto sm:min-w-[96px] sm:gap-1.5 sm:px-3 sm:text-sm">
-                            <Package2 className="h-4 w-4" />
-                            <span>Open</span>
+                          <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.9rem] bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-[0_10px_24px_-16px_rgba(168,85,247,0.95)] sm:h-11 sm:w-11">
+                            <Package2 className="h-4 w-4 sm:h-5 sm:w-5" />
                           </div>
                         </div>
                       </div>
