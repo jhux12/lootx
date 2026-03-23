@@ -47,29 +47,31 @@ export const TopDropsSlider: React.FC<TopDropsSliderProps> = ({ boxes, onOpenBox
 
       <div className="relative border-b border-white/5 px-4 py-3">
         <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/20 bg-indigo-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-200">
-          <Gem className="h-3.5 w-3.5" /> Highest value items
+          <Gem className="h-3.5 w-3.5" /> Best Pullz
         </div>
       </div>
 
-      <div className="relative md:hidden">
-        <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {topDropItems.map((item) => (
+      <div className="relative overflow-hidden md:hidden">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-neutral-950 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-neutral-950 to-transparent" />
+        <div className="ticker-animation flex items-center gap-2 px-4 py-3">
+          {[...topDropItems, ...topDropItems].map((item, index) => (
             <button
-              key={item.sourceKey}
+              key={`${item.sourceKey}-mobile-${index}`}
               type="button"
               onClick={() => onOpenBox(item.sourceBoxId)}
-              className="min-w-[168px] snap-start rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-left transition active:scale-[0.98]"
+              className="flex w-[138px] shrink-0 flex-col rounded-xl border border-white/10 bg-white/[0.03] p-2.5 text-left transition active:scale-[0.98]"
+              title={`${item.name} from ${item.sourceBoxName}`}
             >
-              <div className="mb-3 flex h-24 items-center justify-center rounded-xl bg-black/20 p-3">
-                <img src={item.image} alt={item.name} loading="lazy" className="h-full w-full object-contain drop-shadow-xl" />
+              <div className="mb-2 flex h-16 items-center justify-center rounded-lg bg-black/20 p-2">
+                <img src={item.image} alt={item.name} loading="lazy" className="h-full w-full object-contain drop-shadow-lg" />
               </div>
-              <div className="line-clamp-2 min-h-[2.5rem] text-sm font-bold text-white">{item.name}</div>
-              <div className="mt-1 line-clamp-1 text-xs text-neutral-400">{item.sourceBoxName}</div>
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <div className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white">
-                  <CoinAmount amount={toCoins(item.value, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="text-xs font-bold text-white" iconClassName="h-3.5 w-3.5" />
+              <div className="line-clamp-2 min-h-[2rem] text-xs font-bold text-white">{item.name}</div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-[11px] font-bold text-white">
+                  <CoinAmount amount={toCoins(item.value, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="text-[11px] font-bold text-white" iconClassName="h-3 w-3" />
                 </div>
-                <ArrowUpRight className="h-4 w-4 text-neutral-400" />
+                <ArrowUpRight className="h-3.5 w-3.5 text-neutral-500" />
               </div>
             </button>
           ))}
