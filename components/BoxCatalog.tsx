@@ -554,7 +554,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
                           <div className="h-1.5 w-20 rounded-t-full bg-[#f8d793]/85 shadow-[0_0_20px_rgba(248,215,147,0.55)] sm:w-24" />
                         </div>
-                        <div className="relative z-10 flex h-[150px] w-full items-center justify-center pb-3 sm:h-[190px] sm:pb-4">
+                        <div className="relative z-10 flex h-[150px] w-full items-center justify-center pb-5 sm:h-[190px] sm:pb-6">
                           {topItem ? (
                             <img
                               src={topItem.image}
@@ -562,13 +562,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                               aria-hidden={!isVisible}
                               loading="lazy"
                               decoding="async"
-                              className={`absolute z-10 h-full w-full -translate-y-1 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 sm:-translate-y-2 ${isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-3 scale-95 opacity-0'}`}
+                              className={`absolute z-10 h-full w-full -translate-y-2 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 sm:-translate-y-3 ${isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-3 scale-95 opacity-0'}`}
                             />
                           ) : null}
                           <BlurImage
                             src={box.image}
                             alt={box.name}
-                            className={`absolute inset-0 z-20 h-full w-full -translate-y-1 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ease-out sm:-translate-y-2 ${isVisible ? '-translate-y-7 scale-90 opacity-0' : 'translate-y-0 scale-100 opacity-100'} group-hover:translate-y-0 group-hover:scale-105`}
+                            className={`absolute inset-0 z-20 h-full w-full -translate-y-2 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ease-out sm:-translate-y-3 ${isVisible ? '-translate-y-7 scale-90 opacity-0' : 'translate-y-0 scale-100 opacity-100'} group-hover:translate-y-0 group-hover:scale-105`}
                           />
                         </div>
                       </div>
@@ -577,16 +577,16 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                         <div className="line-clamp-2 min-h-[2.75rem] text-sm font-extrabold text-white sm:text-[1.05rem]">
                           {box.name}
                         </div>
-                        <div className="flex w-full items-stretch overflow-hidden rounded-2xl bg-[#232454] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                          <div className="flex min-w-0 flex-1 items-center px-3 py-2">
+                        <div className="flex w-full items-center gap-1.5 overflow-hidden rounded-2xl bg-[#232454] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                          <div className="flex min-w-[110px] flex-1 items-center rounded-[0.9rem] bg-white/5 px-3 py-2">
                             <CoinAmount
                               amount={getBoxPrice(box)}
                               formatOptions={{ minimumFractionDigits: 0, maximumFractionDigits: 2 }}
-                              className="text-sm font-extrabold text-white"
+                              className="whitespace-nowrap text-sm font-extrabold text-white"
                               iconClassName="h-4 w-4"
                             />
                           </div>
-                          <div className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[0.9rem] bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] px-3 py-2 text-sm font-extrabold text-white shadow-[0_10px_24px_-16px_rgba(168,85,247,0.95)]">
+                          <div className="inline-flex min-w-[96px] shrink-0 items-center justify-center gap-1.5 rounded-[0.9rem] bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] px-3 py-2 text-sm font-extrabold text-white shadow-[0_10px_24px_-16px_rgba(168,85,247,0.95)]">
                             <Package2 className="h-4 w-4" />
                             <span>Open</span>
                           </div>
