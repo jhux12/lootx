@@ -562,13 +562,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                               aria-hidden={!isVisible}
                               loading="lazy"
                               decoding="async"
-                              className={`absolute z-10 h-full w-full -translate-y-1 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 sm:-translate-y-2 ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
+                              className={`absolute z-10 h-full w-full -translate-y-1 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 sm:-translate-y-2 ${isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-3 scale-95 opacity-0'}`}
                             />
                           ) : null}
                           <BlurImage
                             src={box.image}
                             alt={box.name}
-                            className={`relative z-20 h-full w-full -translate-y-1 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 sm:-translate-y-2 ${isVisible ? 'invisible scale-95 opacity-0' : 'visible scale-100 opacity-100'} group-hover:scale-105`}
+                            className={`relative z-20 h-full w-full -translate-y-1 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 sm:-translate-y-2 ${isVisible ? 'invisible -translate-y-6 scale-90 opacity-0' : 'visible translate-y-0 scale-100 opacity-100'} group-hover:translate-y-0 group-hover:scale-105`}
                           />
                         </div>
                       </div>
