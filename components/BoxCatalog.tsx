@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Filter, ChevronDown, SlidersHorizontal, Sparkles, X } from 'lucide-react';
+import { Search, Filter, ChevronDown, SlidersHorizontal, Sparkles, X, Package2 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
@@ -96,6 +96,16 @@ const createHotPicksBackground = () => {
 };
 
 const HOT_PICKS_BACKGROUND = createHotPicksBackground();
+
+const withOpacity = (color: string, alphaHex: string) => {
+  if (/^#([0-9a-fA-F]{6})$/.test(color)) return `${color}${alphaHex}`;
+  if (/^#([0-9a-fA-F]{3})$/.test(color)) {
+    const [, shortHex] = color.match(/^#([0-9a-fA-F]{3})$/) ?? [];
+    if (shortHex) return `#${shortHex.split('').map((char) => char + char).join('')}${alphaHex}`;
+  }
+
+  return color;
+};
 
 const toCategoryKey = (value: string) =>
   value
@@ -516,32 +526,39 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5">
-                {group.boxes.map((box) => (
-                  <button
-                    key={box.id}
-                    onClick={() => openBox(box.id)}
-                    className="group flex flex-col overflow-hidden rounded-xl border border-white/5 bg-[#131315] text-left transition-all duration-300 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10"
-                    type="button"
-                    onMouseEnter={() => {
-                      if (typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-                        void prefetchBox(box.id, async () => box, box.image);
-                        setPreviewBoxId(box.id);
-                      }
-                    }}
-                    onMouseLeave={() => setPreviewBoxId((current) => (current === box.id ? null : current))}
-                  >
-                    <div className="relative flex h-[160px] w-full items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent p-4 sm:h-[180px] sm:p-6">
-                      {[...box.items]
-                        .sort((left, right) => right.price - left.price)
-                        .slice(0, 2)
-                        .map((item, itemIndex) => {
+                {group.boxes.map((box) => {
+                  const previewItems = [...box.items].sort((left, right) => right.price - left.price).slice(0, 2);
+                  const isVisible = previewBoxId === box.id;
+                  const topPanelBackground = `linear-gradient(180deg, ${withOpacity(box.accentColor, '14')} 0%, ${withOpacity(box.accentColor, '8a')} 58%, ${withOpacity(box.accentColor, 'd9')} 100%)`;
+
+                  return (
+                    <button
+                      key={box.id}
+                      onClick={() => openBox(box.id)}
+                      className="group flex flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#151129] text-left shadow-[0_18px_40px_-28px_rgba(0,0,0,0.85)] transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_24px_60px_-32px_rgba(0,0,0,0.9)]"
+                      type="button"
+                      onMouseEnter={() => {
+                        if (typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+                          void prefetchBox(box.id, async () => box, box.image);
+                          setPreviewBoxId(box.id);
+                        }
+                      }}
+                      onMouseLeave={() => setPreviewBoxId((current) => (current === box.id ? null : current))}
+                    >
+                      <div
+                        className="relative flex min-h-[210px] w-full items-end justify-center overflow-hidden px-3 pt-5 sm:min-h-[250px] sm:px-4 sm:pt-6"
+                        style={{ background: topPanelBackground }}
+                      >
+                        <div className="pointer-events-none absolute inset-x-[10%] top-4 h-28 rounded-[2rem] bg-white/10 blur-2xl sm:top-6 sm:h-36" />
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/20 via-black/5 to-transparent" />
+                        <div className="pointer-events-none absolute bottom-5 left-1/2 h-1.5 w-20 -translate-x-1/2 rounded-full bg-[#f8d793]/85 shadow-[0_0_20px_rgba(248,215,147,0.55)] sm:bottom-6 sm:w-24" />
+                        {previewItems.map((item, itemIndex) => {
                           const side = itemIndex === 0 ? 'left' : 'right';
-                          const isVisible = previewBoxId === box.id;
 
                           return (
                             <div
                               key={`${box.id}-${item.id}-${side}`}
-                              className={`pointer-events-none absolute top-1/2 z-0 hidden -translate-y-1/2 transition-all duration-300 ease-out md:block ${side === 'left' ? 'left-2 sm:left-3' : 'right-2 sm:right-3'} ${isVisible ? 'translate-x-0 opacity-100' : side === 'left' ? '-translate-x-3 opacity-0' : 'translate-x-3 opacity-0'}`}
+                              className={`pointer-events-none absolute top-1/2 z-0 hidden -translate-y-1/2 transition-all duration-300 ease-out md:block ${side === 'left' ? 'left-1 sm:left-2' : 'right-1 sm:right-2'} ${isVisible ? 'translate-x-0 opacity-100' : side === 'left' ? '-translate-x-3 opacity-0' : 'translate-x-3 opacity-0'}`}
                             >
                               <img
                                 src={item.image}
@@ -554,28 +571,35 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                             </div>
                           );
                         })}
-                      <BlurImage
-                        src={box.image}
-                        alt={box.name}
-                        className="relative z-10 h-full w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3"
-                      />
-                    </div>
-
-                    <div className="flex w-full flex-col items-start border-t border-white/5 bg-neutral-900/50 p-3 sm:p-4">
-                      <div className="mb-2 line-clamp-2 min-h-[2.5rem] text-xs font-bold text-white transition-colors group-hover:text-indigo-400 sm:text-sm">
-                        {box.name}
-                      </div>
-                      <div className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 shadow-md shadow-indigo-900/20 transition-colors group-hover:bg-indigo-500 sm:px-4">
-                        <CoinAmount
-                          amount={getBoxPrice(box)}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          className="text-sm font-bold text-white sm:text-lg"
-                          iconClassName="h-4 w-4 sm:h-5 sm:w-5"
+                        <BlurImage
+                          src={box.image}
+                          alt={box.name}
+                          className="relative z-10 h-[150px] w-full object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-transform duration-300 group-hover:scale-105 sm:h-[190px]"
                         />
                       </div>
-                    </div>
-                  </button>
-                ))}
+
+                      <div className="flex w-full flex-col gap-3 bg-[#151129] px-3 pb-3 pt-4 sm:px-4 sm:pb-4">
+                        <div className="line-clamp-2 min-h-[2.75rem] text-sm font-extrabold text-white sm:text-[1.05rem]">
+                          {box.name}
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="inline-flex w-fit items-center gap-1.5 rounded-xl bg-[#2d3a7a] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                            <CoinAmount
+                              amount={getBoxPrice(box)}
+                              formatOptions={{ minimumFractionDigits: 0, maximumFractionDigits: 2 }}
+                              className="text-sm font-extrabold text-white"
+                              iconClassName="h-4 w-4"
+                            />
+                          </div>
+                          <div className="inline-flex w-fit items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] px-3 py-2 text-sm font-extrabold text-white shadow-[0_10px_24px_-16px_rgba(168,85,247,0.95)]">
+                            <Package2 className="h-4 w-4" />
+                            <span>Open</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}
