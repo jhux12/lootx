@@ -204,8 +204,8 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         <div className="pointer-events-none absolute right-[-8%] top-[-15%] h-[150%] w-[38%] bg-[radial-gradient(circle,rgba(236,104,200,0.24)_0%,rgba(236,104,200,0.08)_38%,transparent_70%)] animate-[fairValueFloat_10s_ease-in-out_infinite]" />
         <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(255,255,255,0.05)_0,rgba(255,255,255,0.05)_2px,transparent_2px,transparent_44px),repeating-linear-gradient(-58deg,rgba(255,255,255,0.045)_0,rgba(255,255,255,0.045)_2px,transparent_2px,transparent_44px)] opacity-20" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-        <div className="relative mx-auto flex w-full max-w-[1240px] items-end justify-center px-4 pt-10 text-center sm:px-6 sm:pt-12 lg:px-8">
-          <div className="relative z-10 flex w-full flex-col items-center pb-[320px] sm:pb-[420px] lg:min-h-[420px] lg:items-start lg:justify-center lg:pb-12 lg:pr-[28rem] lg:text-left">
+        <div className="relative mx-auto flex w-full max-w-[1240px] items-end justify-center px-4 pt-10 sm:px-6 sm:pt-12 lg:px-8">
+          <div className="relative z-10 flex w-full flex-col items-start pb-[180px] pr-[120px] text-left sm:pb-[220px] sm:pr-[160px] lg:min-h-[420px] lg:justify-center lg:pb-12 lg:pr-[22rem]">
             <span className="mb-4 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/75 backdrop-blur-sm sm:text-xs">
               Trusted value on every pull
             </span>
@@ -223,7 +223,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
             alt="Pullz fair value guarantee hero"
             loading="lazy"
             decoding="async"
-            className="pointer-events-none absolute bottom-0 right-1/2 z-0 h-auto w-[200px] translate-x-1/2 object-contain sm:w-[260px] lg:right-10 lg:w-[340px] lg:translate-x-0 xl:right-14 xl:w-[380px]"
+            className="pointer-events-none absolute bottom-0 right-2 z-0 h-auto w-[112px] object-contain sm:right-4 sm:w-[148px] lg:right-10 lg:w-[240px] xl:right-14 xl:w-[264px]"
           />
         </div>
       </section>
