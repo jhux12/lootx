@@ -199,19 +199,36 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           playSound('click');
           openAuthModal('login');
         }}
-        className="rounded-xl border border-white/10 bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800"
+        className="rounded-xl border border-white/10 bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 sm:px-5"
       >
         Sign in
       </button>
-      <button
-        onClick={() => {
-          playSound('click');
-          openAuthModal('register');
-        }}
-        className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
-      >
-        Sign up
-      </button>
+      <div className="relative flex flex-col items-center">
+        <button
+          onClick={() => {
+            playSound('click');
+            openAuthModal('register');
+          }}
+          className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 sm:px-5"
+        >
+          Sign up
+        </button>
+        <div className="absolute left-1/2 top-full z-10 flex -translate-x-1/2 flex-col items-center pt-1.5">
+          <span aria-hidden="true" className="h-3 w-px bg-indigo-300/70" />
+          <span aria-hidden="true" className="-mt-1 text-[11px] leading-none text-indigo-300">↓</span>
+          <button
+            type="button"
+            onClick={() => {
+              playSound('click');
+              openAuthModal('register');
+            }}
+            className="mt-1 rounded-full border border-indigo-400/35 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-100 transition-colors hover:border-indigo-300/60 hover:bg-white/[0.07] sm:px-3.5"
+            aria-label="Claim free box"
+          >
+            Claim free box
+          </button>
+        </div>
+      </div>
     </>
   ), [openAuthModal, playSound]);
 
