@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { admin, firestore } from './_lib/firebaseAdmin.js';
 import { sendJson } from './_lib/http.js';
+import { appendLedgerEntry } from './_lib/ledger.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -126,9 +127,30 @@ export default async function handler(req, res) {
           return;
         }
 
+        const userSnap = await transaction.get(userRef);
+        const userData = userSnap.exists ? userSnap.data() ?? {} : {};
+        const currentCoins = Number(userData.coins ?? userData.balance ?? 0) || 0;
+        const nextCoins = currentCoins + totalCoins;
+
         transaction.set(userRef, {
-          coins: admin.firestore.FieldValue.increment(totalCoins)
+          coins: admin.firestore.FieldValue.increment(totalCoins),
+          balance: admin.firestore.FieldValue.increment(totalCoins)
         }, { merge: true });
+        appendLedgerEntry({
+          transaction,
+          userRef,
+          userData,
+          entry: {
+            id: session.id,
+            userId: uid,
+            type: 'deposit',
+            amount: totalCoins,
+            createdAt: Date.now(),
+            balanceAfter: nextCoins,
+            sourceId: session.id,
+            memo: packageId ? `Deposit package ${packageId}` : 'Stripe deposit'
+          }
+        });
 
         transaction.set(creditRef, {
           uid,

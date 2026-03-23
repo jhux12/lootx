@@ -1,5 +1,6 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
+import { appendLedgerEntry } from './_lib/ledger.js';
 import { computeXpAward, getXpSettings } from './_lib/xp.js';
 
 const isXpPurchasedInventoryItem = (inventoryItem = {}) => (
@@ -202,6 +203,21 @@ export default async function handler(req, res) {
 
       const transactionRef = userRef.collection('transactions').doc();
       transaction.set(userRef, userPatch, { merge: true });
+      appendLedgerEntry({
+        transaction,
+        userRef,
+        userData,
+        entry: {
+          id: transactionRef.id,
+          userId: decoded.uid,
+          type: 'sell_back',
+          amount: creditCoins,
+          createdAt: Date.now(),
+          balanceAfter: newCoins,
+          sourceId: inventoryRef.id,
+          memo: `Sold ${inventoryItem.name ?? 'inventory item'}`
+        }
+      });
       transaction.set(inventoryRef, {
         status: 'sold',
         soldAt: admin.firestore.FieldValue.serverTimestamp(),
