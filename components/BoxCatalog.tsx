@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Filter, ChevronDown, SlidersHorizontal, Sparkles, X } from 'lucide-react';
+import { Search, Filter, ChevronDown, SlidersHorizontal, Sparkles, X, Package2 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
@@ -96,6 +96,17 @@ const createHotPicksBackground = () => {
 };
 
 const HOT_PICKS_BACKGROUND = createHotPicksBackground();
+
+
+const withOpacity = (color: string, alphaHex: string) => {
+  if (/^#([0-9a-fA-F]{6})$/.test(color)) return `${color}${alphaHex}`;
+  if (/^#([0-9a-fA-F]{3})$/.test(color)) {
+    const [, shortHex] = color.match(/^#([0-9a-fA-F]{3})$/) ?? [];
+    if (shortHex) return `#${shortHex.split('').map((char) => char + char).join('')}${alphaHex}`;
+  }
+
+  return color;
+};
 
 const toCategoryKey = (value: string) =>
   value
@@ -327,9 +338,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               <button
                 key={box.id}
                 onClick={() => openBox(box.id)}
-                className="group relative flex min-h-[220px] flex-col items-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-4 text-left transition-transform hover:-translate-y-1 hover:border-indigo-400/40"
+                className="group relative flex min-h-[220px] flex-col items-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-4 text-center transition-transform hover:-translate-y-1 hover:border-indigo-400/40"
                 type="button"
               >
+                <div className="mb-3 flex w-full items-center justify-center">
+                  <div className="line-clamp-2 text-center text-sm font-bold text-white">{box.name}</div>
+                </div>
                 <div className="relative flex h-[132px] w-full items-center justify-center sm:h-[150px]">
                   <BlurImage
                     src={box.image}
@@ -337,12 +351,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                     className="h-full w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
-                <div className="mt-3 flex w-full flex-1 flex-col justify-between gap-3">
-                  <div>
-                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200/80">Hot pick</div>
-                    <div className="line-clamp-2 text-sm font-bold text-white">{box.name}</div>
-                  </div>
-                  <div className="inline-flex w-fit items-center gap-1.5 rounded-md border border-indigo-400/35 bg-indigo-900/70 px-3 py-1">
+                <div className="mt-4 flex w-full flex-1 items-end justify-center">
+                  <div className="inline-flex items-center justify-center gap-1.5 rounded-md border border-indigo-400/35 bg-indigo-900/70 px-3 py-1">
                     <CoinAmount
                       amount={getBoxPrice(box)}
                       formatOptions={{ maximumFractionDigits: 0 }}
@@ -516,66 +526,87 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5">
-                {group.boxes.map((box) => (
-                  <button
-                    key={box.id}
-                    onClick={() => openBox(box.id)}
-                    className="group flex flex-col overflow-hidden rounded-xl border border-white/5 bg-[#131315] text-left transition-all duration-300 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10"
-                    type="button"
-                    onMouseEnter={() => {
-                      if (typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+                {group.boxes.map((box) => {
+                  const topItem = [...box.items].sort((left, right) => right.price - left.price)[0] ?? null;
+                  const isVisible = previewBoxId === box.id;
+                  const topPanelBackground = `linear-gradient(180deg, ${withOpacity(box.accentColor, '14')} 0%, ${withOpacity(box.accentColor, '8a')} 58%, ${withOpacity(box.accentColor, 'd9')} 100%)`;
+
+                  return (
+                    <button
+                      key={box.id}
+                      onClick={() => openBox(box.id)}
+                      className="group flex flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#151129] text-left shadow-[0_18px_40px_-28px_rgba(0,0,0,0.85)] transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_24px_60px_-32px_rgba(0,0,0,0.9)]"
+                      type="button"
+                      onMouseEnter={() => {
+                        if (typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+                          void prefetchBox(box.id, async () => box, box.image);
+                          setPreviewBoxId(box.id);
+                        }
+                      }}
+                      onMouseLeave={() => setPreviewBoxId((current) => (current === box.id ? null : current))}
+                      onTouchStart={() => {
                         void prefetchBox(box.id, async () => box, box.image);
                         setPreviewBoxId(box.id);
-                      }
-                    }}
-                    onMouseLeave={() => setPreviewBoxId((current) => (current === box.id ? null : current))}
-                  >
-                    <div className="relative flex h-[160px] w-full items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent p-4 sm:h-[180px] sm:p-6">
-                      {[...box.items]
-                        .sort((left, right) => right.price - left.price)
-                        .slice(0, 2)
-                        .map((item, itemIndex) => {
-                          const side = itemIndex === 0 ? 'left' : 'right';
-                          const isVisible = previewBoxId === box.id;
-
-                          return (
-                            <div
-                              key={`${box.id}-${item.id}-${side}`}
-                              className={`pointer-events-none absolute top-1/2 z-0 hidden -translate-y-1/2 transition-all duration-300 ease-out md:block ${side === 'left' ? 'left-2 sm:left-3' : 'right-2 sm:right-3'} ${isVisible ? 'translate-x-0 opacity-100' : side === 'left' ? '-translate-x-3 opacity-0' : 'translate-x-3 opacity-0'}`}
-                            >
-                              <img
-                                src={item.image}
-                                alt=""
-                                aria-hidden="true"
-                                loading="lazy"
-                                decoding="async"
-                                className="h-14 w-14 object-contain opacity-90 drop-shadow-[0_12px_20px_rgba(0,0,0,0.45)] sm:h-20 sm:w-20"
-                              />
-                            </div>
-                          );
-                        })}
-                      <BlurImage
-                        src={box.image}
-                        alt={box.name}
-                        className="relative z-10 h-full w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3"
-                      />
-                    </div>
-
-                    <div className="flex w-full flex-col items-start border-t border-white/5 bg-neutral-900/50 p-3 sm:p-4">
-                      <div className="mb-2 line-clamp-2 min-h-[2.5rem] text-xs font-bold text-white transition-colors group-hover:text-indigo-400 sm:text-sm">
-                        {box.name}
+                      }}
+                      onTouchEnd={() => {
+                        window.setTimeout(() => {
+                          setPreviewBoxId((current) => (current === box.id ? null : current));
+                        }, 450);
+                      }}
+                      onTouchCancel={() => setPreviewBoxId((current) => (current === box.id ? null : current))}
+                    >
+                      <div
+                        className="relative flex min-h-[210px] w-full items-end justify-center overflow-hidden px-3 pt-7 sm:min-h-[250px] sm:px-4 sm:pt-8"
+                        style={{ background: topPanelBackground }}
+                      >
+                        <div className="pointer-events-none absolute inset-x-[10%] top-4 h-28 rounded-[2rem] bg-white/10 blur-2xl sm:top-6 sm:h-36" />
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/20 via-black/5 to-transparent" />
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
+                          <div className="h-1.5 w-20 rounded-t-full bg-[#f8d793]/85 shadow-[0_0_20px_rgba(248,215,147,0.55)] sm:w-24" />
+                        </div>
+                        <div className="relative z-10 flex h-[150px] w-full items-center justify-center pb-5 sm:h-[190px] sm:pb-6">
+                          {topItem ? (
+                            <img
+                              src={topItem.image}
+                              alt=""
+                              aria-hidden={!isVisible}
+                              loading="lazy"
+                              decoding="async"
+                              className={`absolute z-10 h-full w-full -translate-y-2 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ease-out sm:-translate-y-3 ${isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-95 opacity-0'}`}
+                            />
+                          ) : null}
+                          <img
+                            src={box.image}
+                            alt={box.name}
+                            loading="lazy"
+                            decoding="async"
+                            className={`absolute inset-0 z-20 h-full w-full -translate-y-2 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ease-out sm:-translate-y-3 ${isVisible ? '-translate-y-10 scale-90 opacity-0' : 'translate-y-0 scale-100 opacity-100'} group-hover:translate-y-0 group-hover:scale-105`}
+                          />
+                        </div>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 shadow-md shadow-indigo-900/20 transition-colors group-hover:bg-indigo-500 sm:px-4">
-                        <CoinAmount
-                          amount={getBoxPrice(box)}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          className="text-sm font-bold text-white sm:text-lg"
-                          iconClassName="h-4 w-4 sm:h-5 sm:w-5"
-                        />
+
+                      <div className="flex w-full flex-col gap-3 bg-[#151129] px-3 pb-3 pt-4 sm:px-4 sm:pb-4">
+                        <div className="line-clamp-2 min-h-[2.75rem] text-sm font-extrabold text-white sm:text-[1.05rem]">
+                          {box.name}
+                        </div>
+                        <div className="flex w-full items-center gap-1 overflow-hidden rounded-2xl bg-[#232454] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                          <div className="flex min-w-0 flex-1 items-center justify-center rounded-[0.9rem] bg-white/5 px-2 py-2 sm:px-3">
+                            <CoinAmount
+                              amount={Math.round(getBoxPrice(box))}
+                              formatOptions={{ maximumFractionDigits: 0 }}
+                              animated={false}
+                              className="min-w-0 whitespace-nowrap text-xs font-extrabold tabular-nums text-white sm:text-sm"
+                              iconClassName="h-3.5 w-3.5 sm:h-4 sm:w-4"
+                            />
+                          </div>
+                          <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.9rem] bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-[0_10px_24px_-16px_rgba(168,85,247,0.95)] sm:h-11 sm:w-11">
+                            <Package2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}
