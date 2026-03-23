@@ -227,100 +227,101 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-[980px] rounded-3xl border border-white/10 bg-[#0b0d13] p-3 sm:p-4">
-        <p className="pb-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-500">
-          Best mystery boxes online
-        </p>
-        <div className="overflow-hidden rounded-3xl border border-[#242a38] bg-[#090c13]">
-          <div className="grid min-h-[240px] md:grid-cols-[360px_1fr]">
-            <button
-              type="button"
-              onClick={() => showcaseBox && onOpenBox(showcaseBox.id)}
-              className="relative flex min-h-[320px] flex-col items-center justify-end overflow-hidden border-b border-[#242a38] bg-[radial-gradient(circle_at_30%_20%,rgba(81,104,255,0.32),transparent_52%),radial-gradient(circle_at_72%_70%,rgba(249,134,36,0.22),transparent_62%),linear-gradient(180deg,#12192b_0%,#0a0d15_100%)] p-5 text-center md:min-h-[240px] md:items-start md:border-b-0 md:border-r md:text-left"
-            >
-              <div className="pointer-events-none absolute left-1/2 top-[150px] h-10 w-44 -translate-x-1/2 rounded-full bg-orange-400/45 blur-xl md:left-[110px] md:top-[118px] md:w-36 md:translate-x-0" />
-              {showcaseBox && (
-                <img
-                  loading="lazy"
-                  decoding="async"
-                  src={showcaseBox.image}
-                  alt={showcaseBox.name}
-                  className="pointer-events-none absolute left-1/2 top-7 h-44 w-44 -translate-x-1/2 object-contain opacity-100 sm:h-52 sm:w-52 md:left-7 md:top-5 md:h-36 md:w-36 md:translate-x-0"
-                />
-              )}
-              <p className="relative z-10 line-clamp-2 text-[50px] font-black uppercase italic leading-[0.88] tracking-tight text-white sm:text-[56px] md:text-[40px]">
-                {showcaseBox?.name ?? 'Iphone 17 Series'}
-              </p>
-              <div className="relative z-10 mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]">
-                <span className="rounded bg-[#5f64ff] px-2 py-1 text-white">New arrival</span>
-                <span className="text-gray-400">Sneakers</span>
-              </div>
-            </button>
-
-            <div className="relative flex items-center overflow-hidden bg-[linear-gradient(180deg,#0a0d14_0%,#07090e_100%)]">
-              <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-r from-[#090c13] to-transparent sm:w-20" />
-              <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#090c13] to-transparent sm:w-20" />
-
-              <div
-                className={`flex px-[50%] py-6 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[5200ms] ease-[cubic-bezier(0.08,0.9,0.15,1)]' : 'duration-200 ease-out'}`}
-                style={{
-                  gap: `${SPINNER_CARD_GAP}px`,
-                  marginLeft: `-${SPINNER_CARD_WIDTH / 2}px`,
-                  transform: `translateX(-${demoSpinIndex * (SPINNER_CARD_WIDTH + SPINNER_CARD_GAP)}px)`
-                }}
+      <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-hidden border-y border-white/10 bg-[#0b0d13] shadow-[0_35px_70px_-50px_rgba(0,0,0,1)]">
+        <div className="mx-auto w-full max-w-[1400px] px-3 py-4 sm:px-5 lg:px-7">
+          <p className="pb-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-500">
+            Best mystery boxes online
+          </p>
+          <div className="overflow-hidden rounded-[28px] border border-[#242a38] bg-[#090c13]">
+            <div className="grid min-h-[240px] xl:grid-cols-[360px_minmax(0,1fr)]">
+              <button
+                type="button"
+                onClick={() => showcaseBox && onOpenBox(showcaseBox.id)}
+                className="relative flex min-h-[300px] flex-col items-center justify-end overflow-hidden border-b border-[#242a38] bg-[radial-gradient(circle_at_30%_20%,rgba(81,104,255,0.32),transparent_52%),radial-gradient(circle_at_72%_70%,rgba(249,134,36,0.22),transparent_62%),linear-gradient(180deg,#12192b_0%,#0a0d15_100%)] p-5 text-center sm:min-h-[320px] xl:min-h-[240px] xl:items-start xl:border-b-0 xl:border-r xl:text-left"
               >
-                {demoReelItems.map((item, idx) => {
-                  const isCenter = idx === demoSpinIndex;
-                  const isLandedWinner = landedIndex === idx && !isSpinAnimating;
-                  const isLegendary = String(item.rarity ?? '').toLowerCase() === 'legendary';
-                  return (
-                    <div
-                      key={`${item.id}-${idx}`}
-                      className={`relative flex h-[136px] w-[136px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition ${
-                        isLandedWinner
-                          ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
-                          : 'border-gray-800'
-                      }`}
-                      style={{
-                        boxShadow: isLandedWinner
-                          ? `${isLegendary ? '0 0 18px rgba(251,191,36,0.28), ' : ''}0 0 24px rgba(34,211,238,0.34)`
-                          : (isLegendary ? '0 0 18px rgba(251,191,36,0.28)' : undefined)
-                      }}
-                    >
+                <div className="pointer-events-none absolute left-1/2 top-[150px] h-10 w-44 -translate-x-1/2 rounded-full bg-orange-400/45 blur-xl xl:left-[110px] xl:top-[118px] xl:w-36 xl:translate-x-0" />
+                {showcaseBox && (
+                  <img
+                    loading="lazy"
+                    decoding="async"
+                    src={showcaseBox.image}
+                    alt={showcaseBox.name}
+                    className="pointer-events-none absolute left-1/2 top-7 h-44 w-44 -translate-x-1/2 object-contain opacity-100 sm:h-52 sm:w-52 xl:left-7 xl:top-5 xl:h-36 xl:w-36 xl:translate-x-0"
+                  />
+                )}
+                <p className="relative z-10 line-clamp-2 text-[42px] font-black uppercase italic leading-[0.88] tracking-tight text-white sm:text-[56px] xl:text-[40px]">
+                  {showcaseBox?.name ?? 'Iphone 17 Series'}
+                </p>
+                <div className="relative z-10 mt-3 flex flex-wrap items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] xl:justify-start">
+                  <span className="rounded bg-[#5f64ff] px-2 py-1 text-white">New arrival</span>
+                  <span className="text-gray-400">Sneakers</span>
+                </div>
+              </button>
+
+              <div className="relative flex min-h-[220px] items-center overflow-hidden bg-[linear-gradient(180deg,#0a0d14_0%,#07090e_100%)] sm:min-h-[260px]">
+                <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-r from-[#090c13] to-transparent sm:w-20" />
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#090c13] to-transparent sm:w-20" />
+
+                <div
+                  className={`flex px-[50%] py-6 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[5200ms] ease-[cubic-bezier(0.08,0.9,0.15,1)]' : 'duration-200 ease-out'}`}
+                  style={{
+                    gap: `${SPINNER_CARD_GAP}px`,
+                    marginLeft: `-${SPINNER_CARD_WIDTH / 2}px`,
+                    transform: `translateX(-${demoSpinIndex * (SPINNER_CARD_WIDTH + SPINNER_CARD_GAP)}px)`
+                  }}
+                >
+                  {demoReelItems.map((item, idx) => {
+                    const isLandedWinner = landedIndex === idx && !isSpinAnimating;
+                    const isLegendary = String(item.rarity ?? '').toLowerCase() === 'legendary';
+                    return (
                       <div
-                        className="absolute inset-4 rounded-full opacity-90"
+                        key={`${item.id}-${idx}`}
+                        className={`relative flex h-[122px] w-[122px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition sm:h-[136px] sm:w-[136px] ${
+                          isLandedWinner
+                            ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
+                            : 'border-gray-800'
+                        }`}
                         style={{
-                          background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
+                          boxShadow: isLandedWinner
+                            ? `${isLegendary ? '0 0 18px rgba(251,191,36,0.28), ' : ''}0 0 24px rgba(34,211,238,0.34)`
+                            : (isLegendary ? '0 0 18px rgba(251,191,36,0.28)' : undefined)
                         }}
-                      ></div>
-                      <img
-                        loading="lazy"
-                        decoding="async"
-                        src={item.image}
-                        alt={item.name}
-                        className="relative z-10 h-[90px] w-[90px] object-contain"
-                      />
-                      <div className="relative z-10 mt-2 flex items-center justify-center px-1 text-xs font-semibold text-emerald-100 sm:text-sm">
-                        <CoinAmount
-                          amount={item.price}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          className="text-emerald-100"
-                          iconClassName="h-4 w-4"
+                      >
+                        <div
+                          className="absolute inset-4 rounded-full opacity-90"
+                          style={{
+                            background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
+                          }}
+                        ></div>
+                        <img
+                          loading="lazy"
+                          decoding="async"
+                          src={item.image}
+                          alt={item.name}
+                          className="relative z-10 h-[78px] w-[78px] object-contain sm:h-[90px] sm:w-[90px]"
                         />
+                        <div className="relative z-10 mt-2 flex items-center justify-center px-1 text-xs font-semibold text-emerald-100 sm:text-sm">
+                          <CoinAmount
+                            amount={item.price}
+                            formatOptions={{ maximumFractionDigits: 0 }}
+                            className="text-emerald-100"
+                            iconClassName="h-4 w-4"
+                          />
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl opacity-60" style={{ backgroundColor: item.color }}></div>
                       </div>
-                      <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl opacity-60" style={{ backgroundColor: item.color }}></div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+
+                <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-cyan-300/50" />
+                <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-14 -translate-x-1/2 bg-gradient-to-r from-cyan-400/0 via-cyan-300/20 to-cyan-400/0 sm:w-20" />
               </div>
-
-              <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-cyan-300/50" />
-              <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-14 -translate-x-1/2 bg-gradient-to-r from-cyan-400/0 via-cyan-300/20 to-cyan-400/0 sm:w-20" />
             </div>
-          </div>
 
-          <div className="flex items-center justify-center border-t border-[#242a38] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#59d189]">
-            ● Live demo mode
+            <div className="flex items-center justify-center border-t border-[#242a38] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#59d189]">
+              ● Live demo mode
+            </div>
           </div>
         </div>
       </section>
@@ -371,84 +372,92 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         })}
       </section>
 
-      <section>
-        <h2 className="text-center text-3xl font-black uppercase text-white sm:text-4xl">
-          How it <span className="text-[#6962ff]">works</span>
-        </h2>
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
-          {[
-            ['01', 'Pick a box', 'Choose a category you love'],
-            ['02', 'Open it', 'Reveal your pull instantly'],
-            ['03', 'Keep or trade', 'Ship items or convert to coins']
-          ].map(([num, title, description], index) => {
-            const stepImage = stripeSettings.howItWorksStepImageUrls[index]?.trim();
-            return (
-              <article
-                key={num}
-                className="rounded-2xl border border-white/10 bg-[#0d0f16] p-6 text-center"
-              >
-                {stepImage ? (
-                  <img
-                    src={stepImage}
-                    alt={`Step ${index + 1}`}
-                    className="mx-auto h-36 w-full max-w-[260px] rounded-xl object-cover sm:h-44"
-                    loading="lazy"
-                  />
-                ) : (
-                  <p className="text-5xl font-black text-white/10">{num}</p>
-                )}
-                <p className="mt-5 text-2xl font-extrabold uppercase text-white">{title}</p>
-                <p className="mt-2 text-sm text-gray-400">{description}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-4xl">
-        <h2 className="text-center text-3xl font-black uppercase text-white sm:text-4xl">
-          Frequently asked <span className="text-[#6962ff]">questions</span>
-        </h2>
-        <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-[#0d0f16]">
-          {FAQ_ITEMS.map((item, index) => {
-            const expanded = openFaq === index;
-            return (
-              <div key={item.question} className="border-b border-white/10 last:border-b-0">
-                <button
-                  type="button"
-                  onClick={() => setOpenFaq(expanded ? -1 : index)}
-                  className="flex w-full items-center justify-between px-4 py-4 text-left sm:px-6"
+      <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 border-y border-white/10 bg-[#0d0f16]">
+        <div className="mx-auto w-full max-w-[1400px] px-3 py-10 sm:px-5 sm:py-12 lg:px-7">
+          <h2 className="text-center text-3xl font-black uppercase text-white sm:text-4xl">
+            How it <span className="text-[#6962ff]">works</span>
+          </h2>
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            {[
+              ['01', 'Pick a box', 'Choose a category you love'],
+              ['02', 'Open it', 'Reveal your pull instantly'],
+              ['03', 'Keep or trade', 'Ship items or convert to coins']
+            ].map(([num, title, description], index) => {
+              const stepImage = stripeSettings.howItWorksStepImageUrls[index]?.trim();
+              return (
+                <article
+                  key={num}
+                  className="rounded-2xl border border-white/10 bg-[#111520] p-6 text-center"
                 >
-                  <span className="text-sm font-bold text-white sm:text-base">{item.question}</span>
-                  <ChevronDown className={`h-4 w-4 text-gray-400 transition ${expanded ? 'rotate-180' : ''}`} />
-                </button>
-                {expanded && (
-                  <p className="px-4 pb-4 text-sm text-gray-300 sm:px-6 sm:pb-6">{item.answer}</p>
-                )}
-              </div>
-            );
-          })}
+                  {stepImage ? (
+                    <img
+                      src={stepImage}
+                      alt={`Step ${index + 1}`}
+                      className="mx-auto h-36 w-full rounded-xl object-cover sm:h-44"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <p className="text-5xl font-black text-white/10">{num}</p>
+                  )}
+                  <p className="mt-5 text-2xl font-extrabold uppercase text-white">{title}</p>
+                  <p className="mt-2 text-sm text-gray-400">{description}</p>
+                </article>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-4xl rounded-2xl border border-white/10 bg-[#0d0f16] p-6 sm:p-8">
-        <h3 className="text-2xl font-black text-white">Mystery Boxes for Sale by Category</h3>
-        <p className="mt-3 text-sm leading-relaxed text-gray-300">
-          Pullz is an online mystery box website where you can buy mystery boxes across multiple categories, from
-          tech and gaming setups to trading cards, collectibles, anime and more.
-        </p>
-        <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-gray-300 marker:text-[#6962ff]">
-          <li>Trading cards, collector packs and rare sealed products.</li>
-          <li>Gaming gear, phones, accessories and desk essentials.</li>
-          <li>Figures, lifestyle items and fan-favorite collectibles.</li>
-        </ul>
-        <button
-          type="button"
-          onClick={onViewAllBoxes}
-          className="mt-6 rounded-lg bg-[#5a55ff] px-8 py-3 text-sm font-extrabold uppercase tracking-[0.08em] text-white transition hover:bg-[#6d68ff]"
-        >
-          View all boxes
-        </button>
+      <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 border-y border-white/10 bg-[#0b0f17]">
+        <div className="mx-auto w-full max-w-[1400px] px-3 py-10 sm:px-5 sm:py-12 lg:px-7">
+          <h2 className="text-center text-3xl font-black uppercase text-white sm:text-4xl">
+            Frequently asked <span className="text-[#6962ff]">questions</span>
+          </h2>
+          <div className="mx-auto mt-5 w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#0f141d]">
+            {FAQ_ITEMS.map((item, index) => {
+              const expanded = openFaq === index;
+              return (
+                <div key={item.question} className="border-b border-white/10 last:border-b-0">
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaq(expanded ? -1 : index)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left sm:px-6"
+                  >
+                    <span className="text-sm font-bold text-white sm:text-base">{item.question}</span>
+                    <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition ${expanded ? 'rotate-180' : ''}`} />
+                  </button>
+                  {expanded && (
+                    <p className="px-4 pb-4 text-sm text-gray-300 sm:px-6 sm:pb-6">{item.answer}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 border-y border-white/10 bg-[#0d0f16]">
+        <div className="mx-auto w-full max-w-[1400px] px-3 py-10 sm:px-5 sm:py-12 lg:px-7">
+          <div className="rounded-2xl border border-white/10 bg-[#111520] p-6 sm:p-8">
+            <h3 className="text-2xl font-black text-white">Mystery Boxes for Sale by Category</h3>
+            <p className="mt-3 max-w-4xl text-sm leading-relaxed text-gray-300">
+              Pullz is an online mystery box website where you can buy mystery boxes across multiple categories, from
+              tech and gaming setups to trading cards, collectibles, anime and more.
+            </p>
+            <ul className="mt-4 grid gap-2 pl-5 text-sm text-gray-300 marker:text-[#6962ff] md:grid-cols-2">
+              <li className="list-disc">Trading cards, collector packs and rare sealed products.</li>
+              <li className="list-disc">Gaming gear, phones, accessories and desk essentials.</li>
+              <li className="list-disc md:col-span-2">Figures, lifestyle items and fan-favorite collectibles.</li>
+            </ul>
+            <button
+              type="button"
+              onClick={onViewAllBoxes}
+              className="mt-6 w-full rounded-lg bg-[#5a55ff] px-8 py-3 text-sm font-extrabold uppercase tracking-[0.08em] text-white transition hover:bg-[#6d68ff] sm:w-auto"
+            >
+              View all boxes
+            </button>
+          </div>
+        </div>
       </section>
 
     </div>
