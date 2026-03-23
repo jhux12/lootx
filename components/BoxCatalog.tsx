@@ -527,7 +527,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5">
                 {group.boxes.map((box) => {
-                  const previewItems = [...box.items].sort((left, right) => right.price - left.price).slice(0, 2);
+                  const topItem = [...box.items].sort((left, right) => right.price - left.price)[0] ?? null;
                   const isVisible = previewBoxId === box.id;
                   const topPanelBackground = `linear-gradient(180deg, ${withOpacity(box.accentColor, '14')} 0%, ${withOpacity(box.accentColor, '8a')} 58%, ${withOpacity(box.accentColor, 'd9')} 100%)`;
 
@@ -551,39 +551,34 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       >
                         <div className="pointer-events-none absolute inset-x-[10%] top-4 h-28 rounded-[2rem] bg-white/10 blur-2xl sm:top-6 sm:h-36" />
                         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/20 via-black/5 to-transparent" />
-                        <div className="pointer-events-none absolute bottom-5 left-1/2 h-1.5 w-20 -translate-x-1/2 rounded-full bg-[#f8d793]/85 shadow-[0_0_20px_rgba(248,215,147,0.55)] sm:bottom-6 sm:w-24" />
-                        {previewItems.map((item, itemIndex) => {
-                          const side = itemIndex === 0 ? 'left' : 'right';
-
-                          return (
-                            <div
-                              key={`${box.id}-${item.id}-${side}`}
-                              className={`pointer-events-none absolute top-1/2 z-0 hidden -translate-y-1/2 transition-all duration-300 ease-out md:block ${side === 'left' ? 'left-1 sm:left-2' : 'right-1 sm:right-2'} ${isVisible ? 'translate-x-0 opacity-100' : side === 'left' ? '-translate-x-3 opacity-0' : 'translate-x-3 opacity-0'}`}
-                            >
-                              <img
-                                src={item.image}
-                                alt=""
-                                aria-hidden="true"
-                                loading="lazy"
-                                decoding="async"
-                                className="h-14 w-14 object-contain opacity-90 drop-shadow-[0_12px_20px_rgba(0,0,0,0.45)] sm:h-20 sm:w-20"
-                              />
-                            </div>
-                          );
-                        })}
-                        <BlurImage
-                          src={box.image}
-                          alt={box.name}
-                          className="relative z-10 h-[150px] w-full object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-transform duration-300 group-hover:scale-105 sm:h-[190px]"
-                        />
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
+                          <div className="h-1.5 w-20 rounded-t-full bg-[#f8d793]/85 shadow-[0_0_20px_rgba(248,215,147,0.55)] sm:w-24" />
+                        </div>
+                        <div className="relative z-10 flex h-[150px] w-full items-center justify-center sm:h-[190px]">
+                          {topItem ? (
+                            <img
+                              src={topItem.image}
+                              alt=""
+                              aria-hidden={!isVisible}
+                              loading="lazy"
+                              decoding="async"
+                              className={`absolute h-full w-full object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
+                            />
+                          ) : null}
+                          <BlurImage
+                            src={box.image}
+                            alt={box.name}
+                            className={`relative h-full w-full object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ${isVisible ? 'scale-95 opacity-0' : 'scale-100 opacity-100'} group-hover:scale-105`}
+                          />
+                        </div>
                       </div>
 
                       <div className="flex w-full flex-col gap-3 bg-[#151129] px-3 pb-3 pt-4 sm:px-4 sm:pb-4">
                         <div className="line-clamp-2 min-h-[2.75rem] text-sm font-extrabold text-white sm:text-[1.05rem]">
                           {box.name}
                         </div>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="inline-flex w-fit items-center gap-1.5 rounded-xl bg-[#2d3a7a] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                        <div className="flex w-full items-stretch overflow-hidden rounded-2xl bg-[#232454] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                          <div className="flex min-w-0 flex-1 items-center px-3 py-2">
                             <CoinAmount
                               amount={getBoxPrice(box)}
                               formatOptions={{ minimumFractionDigits: 0, maximumFractionDigits: 2 }}
@@ -591,7 +586,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                               iconClassName="h-4 w-4"
                             />
                           </div>
-                          <div className="inline-flex w-fit items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] px-3 py-2 text-sm font-extrabold text-white shadow-[0_10px_24px_-16px_rgba(168,85,247,0.95)]">
+                          <div className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[0.9rem] bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] px-3 py-2 text-sm font-extrabold text-white shadow-[0_10px_24px_-16px_rgba(168,85,247,0.95)]">
                             <Package2 className="h-4 w-4" />
                             <span>Open</span>
                           </div>
