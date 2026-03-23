@@ -215,20 +215,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
           <p className="relative mt-4 max-w-3xl text-xs font-semibold uppercase tracking-[0.24em] text-gray-300 sm:text-base sm:tracking-[0.22em]">
             Discover, open &amp; collect on Pullz
           </p>
-          <div className="relative mt-6 grid w-full max-w-4xl gap-3 text-left sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/55">Transparent odds</p>
-              <p className="mt-2 text-sm text-gray-200">Clear drop rates and pricing designed to stay easy to understand on any screen.</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/55">Real products</p>
-              <p className="mt-2 text-sm text-gray-200">Win physical items you can ship, or trade them back into coins whenever you prefer.</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/55">Mobile ready</p>
-              <p className="mt-2 text-sm text-gray-200">The full-width layout, spacing, and copy all scale cleanly from phones to large displays.</p>
-            </div>
-          </div>
+
         </div>
       </section>
 
