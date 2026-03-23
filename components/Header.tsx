@@ -203,7 +203,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       >
         Sign in
       </button>
-      <div className="relative flex flex-col items-center">
+      <div className="flex flex-col items-center">
         <button
           onClick={() => {
             playSound('click');
@@ -213,21 +213,23 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
         >
           Sign up
         </button>
-        <div className="absolute left-1/2 top-full z-10 flex -translate-x-1/2 flex-col items-center pt-1.5">
-          <span aria-hidden="true" className="h-3 w-px bg-indigo-300/70" />
-          <span aria-hidden="true" className="-mt-1 text-[11px] leading-none text-indigo-300">↓</span>
-          <button
-            type="button"
-            onClick={() => {
-              playSound('click');
-              openAuthModal('register');
-            }}
-            className="mt-1 rounded-full border border-indigo-400/35 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-100 transition-colors hover:border-indigo-300/60 hover:bg-white/[0.07] sm:px-3.5"
-            aria-label="Claim free box"
-          >
-            Claim free box
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            playSound('click');
+            openAuthModal('register');
+          }}
+          className="mt-2 inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-[#131722] px-3 py-2 text-left text-[11px] font-semibold text-white shadow-[0_10px_30px_rgba(15,23,42,0.28)] transition-colors hover:border-indigo-400/40 hover:bg-[#171c29] sm:px-3.5"
+          aria-label="Claim free box"
+        >
+          <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-200">
+            <Sparkles className="h-3.5 w-3.5" />
+          </span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-indigo-300/80">Free box</span>
+            <span className="whitespace-nowrap text-[11px] font-semibold text-white">Claim free box</span>
+          </span>
+        </button>
       </div>
     </>
   ), [openAuthModal, playSound]);
@@ -240,7 +242,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
         className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/5 bg-neutral-950 md:bg-neutral-950/90 md:backdrop-blur-md`}
       >
         <div className="pt-[env(safe-area-inset-top,0px)]">
-          <nav className="mx-auto flex h-[88px] sm:h-[96px] max-w-7xl items-center justify-between px-4 lg:px-8">
+          <nav className="mx-auto flex min-h-[88px] max-w-7xl items-center justify-between px-4 py-4 sm:min-h-[96px] lg:px-8">
             <div className="flex items-center gap-3 lg:gap-x-10">
             <button
               type="button"
