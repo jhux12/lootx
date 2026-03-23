@@ -314,9 +314,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   return (
     <div className="w-full pb-20">
       <div className="relative z-20 w-full">
-        <div className="mx-auto w-full max-w-screen-2xl px-2 py-0 md:px-16 md:py-6">
-          <TopDropsSlider boxes={displayBoxes} onOpenBox={openBox} />
-        </div>
+        <TopDropsSlider boxes={displayBoxes} onOpenBox={openBox} className="py-0 md:py-6" />
       </div>
 
       <div
