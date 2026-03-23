@@ -3,7 +3,7 @@ import { Save, RefreshCw, Calculator, ShieldCheck, Plus, X } from 'lucide-react'
 import { useGame } from '../../../context/GameContext';
 import { rotateServerSeed, saveUpgraderSettings } from '../../../services/upgraderAdminService';
 import { getUpgraderSettings } from '../../../services/upgraderService';
-import { UpgraderSettings } from '../../../utils/upgrader';
+import { computeExpectedPayout, computeUpgradeChance, getProfitabilitySafety, UpgraderSettings, validateUpgraderSettings } from '../../../utils/upgrader';
 
 export default function UpgraderSettingsPage() {
   const { items } = useGame();
@@ -26,17 +26,44 @@ export default function UpgraderSettingsPage() {
     [items]
   );
 
-  const calculatedChance = () => {
-    if (!settings) return '0.0001';
-    const s = parseFloat(previewSource) || 0;
-    const t = parseFloat(previewTarget) || 1;
-    if (s <= 0 || t <= 0) return '0.0001';
-    const raw = s / t;
-    const edgeRaw = settings.edgeMultiplier ?? 0.92;
-    const edge = edgeRaw > 1 ? edgeRaw / 100 : edgeRaw;
-    const chance = raw * edge;
-    return (Math.min(Math.max(chance, settings.minChance), settings.maxChance) * 100).toFixed(4);
-  };
+  const previewMetrics = useMemo(() => {
+    if (!settings) {
+      return {
+        chancePercent: '0.0000',
+        expectedPayout: '0.00',
+        effectiveRtp: '0.00',
+        effectiveEdge: '100.00',
+        wasClamped: false
+      };
+    }
+
+    const sourceValue = parseFloat(previewSource) || 0;
+    const targetValue = parseFloat(previewTarget) || 0;
+    const chance = computeUpgradeChance({
+      sourceValue,
+      targetValue,
+      settings,
+      isSameRarity: true,
+      vipMultiplier: settings.vipBonusEnabled ? 2 : 1
+    });
+    const expectedPayout = computeExpectedPayout({ chance, targetValue });
+    const safety = getProfitabilitySafety({
+      chance,
+      sourceValue,
+      targetValue,
+      maxExpectedPayoutRatio: settings.maxExpectedPayoutRatio
+    });
+
+    return {
+      chancePercent: (chance * 100).toFixed(4),
+      expectedPayout: expectedPayout.toFixed(2),
+      effectiveRtp: ((sourceValue > 0 ? expectedPayout / sourceValue : 0) * 100).toFixed(2),
+      effectiveEdge: (100 - ((sourceValue > 0 ? expectedPayout / sourceValue : 0) * 100)).toFixed(2),
+      wasClamped: safety.wasClamped
+    };
+  }, [previewSource, previewTarget, settings]);
+
+  const settingsValidation = useMemo(() => (settings ? validateUpgraderSettings(settings) : null), [settings]);
 
   const handleSave = async () => {
     if (!settings) return;
@@ -44,6 +71,8 @@ export default function UpgraderSettingsPage() {
     try {
       await saveUpgraderSettings(settings);
       setMessage('Settings saved.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Failed to save settings.');
     } finally {
       setSaving(false);
     }
@@ -114,6 +143,11 @@ export default function UpgraderSettingsPage() {
         </div>
 
         {message && <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">{message}</div>}
+        {settingsValidation && !settingsValidation.ok && (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">
+            {settingsValidation.issues.join(' ')}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4">
@@ -144,6 +178,19 @@ export default function UpgraderSettingsPage() {
                     edgeMultiplier: Number(e.target.value || 0) / 100
                   })
                 }
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-sm"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase">Max Expected Payout Ratio (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={(settings.maxExpectedPayoutRatio * 100).toFixed(2)}
+                onChange={(e) => setSettings({ ...settings, maxExpectedPayoutRatio: Number(e.target.value || 0) / 100 })}
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-sm"
               />
             </div>
@@ -180,9 +227,28 @@ export default function UpgraderSettingsPage() {
                 <input type="number" value={previewSource} onChange={(e) => setPreviewSource(e.target.value)} className="w-full bg-slate-950/50 border border-indigo-500/20 rounded-lg px-4 py-2 text-sm" />
                 <input type="number" value={previewTarget} onChange={(e) => setPreviewTarget(e.target.value)} className="w-full bg-slate-950/50 border border-indigo-500/20 rounded-lg px-4 py-2 text-sm" />
               </div>
-              <div className="p-6 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-center">
-                <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Resulting Chance</span>
-                <div className="text-4xl font-black text-white">{calculatedChance()}%</div>
+              <div className="p-4 sm:p-6 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-center space-y-3">
+                <div>
+                  <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Resulting Chance</span>
+                  <div className="text-3xl sm:text-4xl font-black text-white">{previewMetrics.chancePercent}%</div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                  <div className="rounded-xl border border-indigo-500/20 bg-slate-950/40 p-3">
+                    <p className="text-[11px] uppercase tracking-wider text-slate-400">Expected Payout</p>
+                    <p className="text-lg font-bold text-white">{previewMetrics.expectedPayout}</p>
+                  </div>
+                  <div className="rounded-xl border border-indigo-500/20 bg-slate-950/40 p-3">
+                    <p className="text-[11px] uppercase tracking-wider text-slate-400">Effective RTP</p>
+                    <p className="text-lg font-bold text-emerald-300">{previewMetrics.effectiveRtp}%</p>
+                  </div>
+                  <div className="rounded-xl border border-indigo-500/20 bg-slate-950/40 p-3">
+                    <p className="text-[11px] uppercase tracking-wider text-slate-400">House Edge</p>
+                    <p className="text-lg font-bold text-amber-300">{previewMetrics.effectiveEdge}%</p>
+                  </div>
+                </div>
+                {previewMetrics.wasClamped && (
+                  <p className="text-xs text-amber-300">Chance is being clamped by the expected value ceiling after VIP/promo/same-rarity modifiers.</p>
+                )}
               </div>
             </div>
 
