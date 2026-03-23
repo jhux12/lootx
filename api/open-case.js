@@ -2,6 +2,7 @@ import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { computeRoll, pickPrizeByWeight, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { normalizeEconomySettings, getXpCost } from './_lib/economy.js';
+import { appendLedgerEntry } from './_lib/ledger.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 
@@ -293,6 +294,21 @@ export default async function handler(req, res) {
       }, { merge: true });
 
       if (coinCost > 0) {
+        appendLedgerEntry({
+          transaction,
+          userRef,
+          userData,
+          entry: {
+            id: openRef.id,
+            userId: decoded.uid,
+            type: 'case_open',
+            amount: -coinCost,
+            createdAt: Date.now(),
+            balanceAfter: newCoins,
+            sourceId: openRef.id,
+            memo: `Opened ${boxData.name ?? 'Mystery Box'}`
+          }
+        });
         await applySpendAndRewards({
           transaction,
           uid: decoded.uid,

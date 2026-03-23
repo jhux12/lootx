@@ -954,6 +954,72 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
   } as User;
 };
 
+type AdminDirectoryUserRecord = {
+  id: string;
+  email?: string;
+  displayName?: string;
+  photoURL?: string;
+  provider?: string;
+  disabled?: boolean;
+  createdAt?: number;
+  firestoreData?: Record<string, any>;
+};
+
+const buildUserProfileFromAdminDirectory = (record: AdminDirectoryUserRecord) => {
+  const data = record.firestoreData ?? {};
+  const fallbackName =
+    data.displayName ||
+    data.username ||
+    data.name ||
+    record.displayName ||
+    record.email?.split('@')[0] ||
+    'Player';
+  const fallbackAvatar =
+    data.photoURL ||
+    data.avatar ||
+    record.photoURL ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName)}&background=111827&color=10b981`;
+
+  const profile = buildUserProfileFromDoc(record.id, {
+    ...data,
+    email: data.email ?? record.email ?? '',
+    displayName: data.displayName ?? record.displayName,
+    photoURL: data.photoURL ?? record.photoURL,
+    avatar: data.avatar ?? fallbackAvatar,
+    provider: data.provider ?? record.provider,
+    createdAt: data.createdAt ?? record.createdAt ?? Date.now(),
+    status: data.status ?? (record.disabled ? 'suspended' : 'active')
+  });
+
+  return {
+    ...profile,
+    inventory: normalizeInventoryItems(data.inventory)
+  } as User;
+};
+
+const mergeAdminUsers = (snapshotUsers: User[], directoryUsers: AdminDirectoryUserRecord[], fallbackUser: User) => {
+  const merged = new Map<string, User>();
+  directoryUsers.forEach((record) => {
+    merged.set(record.id, buildUserProfileFromAdminDirectory(record));
+  });
+  snapshotUsers.forEach((entry) => {
+    merged.set(entry.id, {
+      ...(merged.get(entry.id) ?? {}),
+      ...entry
+    });
+  });
+
+  if (!merged.size && fallbackUser?.id) {
+    merged.set(fallbackUser.id, fallbackUser);
+  }
+
+  return Array.from(merged.values()).sort((a, b) => {
+    const createdDiff = Number(b.createdAt ?? 0) - Number(a.createdAt ?? 0);
+    if (createdDiff !== 0) return createdDiff;
+    return (a.name ?? '').localeCompare(b.name ?? '');
+  });
+};
+
 const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
   const data = docSnap.data() as Record<string, any>;
   const rarity = (data.rarity ?? 'common') as InventoryItem['rarity'];
@@ -1085,6 +1151,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User>(GUEST_USER);
   const [users, setUsers] = useState<User[]>([]);
+  const [adminDirectoryUsers, setAdminDirectoryUsers] = useState<AdminDirectoryUserRecord[]>([]);
   const [balance, setBalance] = useState<number>(0);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
@@ -1500,11 +1567,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     if (!isAuthenticated) {
+      setAdminDirectoryUsers([]);
       setUsers([]);
       return;
     }
 
     if (!user.isAdmin) {
+      setAdminDirectoryUsers([]);
       setUsers([user]);
       return;
     }
@@ -1518,7 +1587,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         size: 'size' in snapshot ? snapshot.size : undefined
       });
       const loaded = snapshot.docs.map((docSnap) => buildUserProfileFromDoc(docSnap.id, docSnap.data()));
-      setUsers(loaded.length ? loaded : [user]);
+      setUsers(mergeAdminUsers(loaded, adminDirectoryUsers, user));
     }, (error) => {
       console.error('SNAPSHOT FAILED', {
         path: usersPath,
@@ -1526,11 +1595,51 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         message: error?.message,
         error
       });
-      setUsers([user]);
+      setUsers(mergeAdminUsers([], adminDirectoryUsers, user));
     });
 
     return () => unsubscribe();
-  }, [isAuthenticated, user.id, user.isAdmin]);
+  }, [adminDirectoryUsers, isAuthenticated, user]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user.isAdmin) return;
+
+    let cancelled = false;
+
+    const loadAdminDirectoryUsers = async () => {
+      try {
+        const response = await authedFetch<{ users?: AdminDirectoryUserRecord[] }>('/api/admin/users');
+        if (!cancelled) {
+          setAdminDirectoryUsers(Array.isArray(response.users) ? response.users : []);
+        }
+      } catch (error) {
+        console.error('Failed to load admin user directory', error);
+        if (!cancelled) {
+          setAdminDirectoryUsers([]);
+        }
+      }
+    };
+
+    void loadAdminDirectoryUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user.isAdmin]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUsers([]);
+      return;
+    }
+
+    if (!user.isAdmin) {
+      setUsers([user]);
+      return;
+    }
+
+    setUsers((current) => mergeAdminUsers(current, adminDirectoryUsers, user));
+  }, [adminDirectoryUsers, isAuthenticated, user]);
 
   useEffect(() => {
     if (!isAuthenticated || !user.isAdmin) {
@@ -2625,7 +2734,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateUserAdminData = async (userId: string, updates: Partial<User>) => {
       if (!isAuthenticated || !auth.currentUser) return;
-      const sanitizedUpdates = filterSafeUserProfileFields(sanitizeDeep(updates as Record<string, unknown>));
+      const sanitizedUpdates = sanitizeDeep(updates as Record<string, unknown>);
 
       if (Object.keys(sanitizedUpdates).length > 0) {
         try {
@@ -2643,10 +2752,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!isAuthenticated || !auth.currentUser) return;
       const balanceValue = Number.isFinite(nextBalance) ? Math.max(0, nextBalance) : 0;
 
-      console.warn('Blocked client-side balance write to /users/{uid}; balance must be updated server-side.', {
-        userId,
-        attemptedBalance: balanceValue
-      });
+      try {
+        await setDoc(getUserRef(userId), { balance: balanceValue, coins: balanceValue, updatedAt: Date.now() }, { merge: true });
+      } catch (error) {
+        console.error('Failed to update admin balance in Firebase', error);
+      }
 
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, balance: balanceValue } : u));
       setUser(prev => prev.id === userId ? { ...prev, balance: balanceValue } : prev);

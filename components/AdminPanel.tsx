@@ -407,6 +407,8 @@ export const AdminPanel: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userStatuses, setUserStatuses] = useState<Record<string, UserStatus>>({});
   const [userLocks, setUserLocks] = useState<Record<string, UserLocks>>({});
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [expandedUserIds, setExpandedUserIds] = useState<Record<string, boolean>>({});
   const [ledgerEntries, setLedgerEntries] = useState<Record<string, LedgerEntry[]>>({});
   const [adminLogs, setAdminLogs] = useState<Record<string, AdminActionLog[]>>({});
   const [inventoryState, setInventoryState] = useState<Record<string, InventoryItem[]>>({});
@@ -726,47 +728,37 @@ export const AdminPanel: React.FC = () => {
       return `${sign}${formatted} coins`;
   };
 
-  const seedLedgerEntries = (profileId: string, index: number): LedgerEntry[] => {
-      const now = Date.now();
-      const base = now - (index + 1) * 1000 * 60 * 60 * 6;
-      return [
-          {
-              id: makeId('ledger'),
-              userId: profileId,
-              type: 'deposit',
-              amount: 250,
-              createdAt: base - 1000 * 60 * 60,
-              sourceId: `stripe-${profileId.slice(0, 6)}`,
-              memo: 'Stripe top-up'
-          },
-          {
-              id: makeId('ledger'),
-              userId: profileId,
-              type: 'case_open',
-              amount: -45,
-              createdAt: base - 1000 * 60 * 30,
-              sourceId: `case-${profileId.slice(0, 6)}-open`,
-              memo: 'Opened Neon Nexus Box'
-          },
-          {
-              id: makeId('ledger'),
-              userId: profileId,
-              type: 'sell_back',
-              amount: 82,
-              createdAt: base - 1000 * 60 * 12,
-              sourceId: `sell-${profileId.slice(0, 6)}`,
-              memo: 'Sold inventory item'
-          },
-          {
-              id: makeId('ledger'),
-              userId: profileId,
-              type: 'bonus',
-              amount: 15,
-              createdAt: base - 1000 * 60 * 5,
-              sourceId: `promo-${profileId.slice(0, 6)}`,
-              memo: 'Welcome promo credit'
+  const normalizeLedgerEntries = (entries: LedgerEntry[] = [], currentBalance?: number) => {
+      const sorted = [...entries].sort((a, b) => {
+          const createdDiff = Number(b.createdAt ?? 0) - Number(a.createdAt ?? 0);
+          if (createdDiff !== 0) return createdDiff;
+          return String(b.id).localeCompare(String(a.id));
+      });
+
+      let runningBalance = Number.isFinite(currentBalance) ? Number(currentBalance) : null;
+
+      return sorted.map((entry) => {
+          const nextEntry = {
+              ...entry,
+              amount: Number(entry.amount ?? 0),
+              createdAt: Number(entry.createdAt ?? 0)
+          };
+
+          if (runningBalance === null) {
+              return nextEntry;
           }
-      ];
+
+          const resolvedBalanceAfter = Number.isFinite(nextEntry.balanceAfter)
+              ? Number(nextEntry.balanceAfter)
+              : runningBalance;
+
+          runningBalance = resolvedBalanceAfter - nextEntry.amount;
+
+          return {
+              ...nextEntry,
+              balanceAfter: resolvedBalanceAfter
+          };
+      });
   };
 
   const seedInventory = (inventory: InventoryItem[] = [], profileId: string, index: number) => {
@@ -864,8 +856,8 @@ export const AdminPanel: React.FC = () => {
 
       setLedgerEntries((prev) => {
           const next = { ...prev };
-          users.forEach((profile, index) => {
-              next[profile.id] = profile.ledger ?? next[profile.id] ?? seedLedgerEntries(profile.id, index);
+          users.forEach((profile) => {
+              next[profile.id] = normalizeLedgerEntries(profile.ledger ?? next[profile.id] ?? [], profile.balance ?? 0);
           });
           return next;
       });
@@ -1067,12 +1059,14 @@ export const AdminPanel: React.FC = () => {
                   }, { merge: true });
               });
 
+              const winnerCurrentBalance = users.find((profile) => profile.id === uid)?.balance ?? 0;
               appendLedgerEntry(uid, {
                   id: makeId('ledger'),
                   userId: uid,
                   type: 'bonus',
                   amount: winner.rewardCoins,
                   createdAt: Date.now(),
+                  balanceAfter: winnerCurrentBalance + winner.rewardCoins,
                   sourceId: `leaderboard-${seasonId}-${winner.rank}`,
                   memo: `Leaderboard reward #${winner.rank}`
               });
@@ -1858,6 +1852,7 @@ export const AdminPanel: React.FC = () => {
               type: 'admin_adjustment',
               amount: delta,
               createdAt: Date.now(),
+              balanceAfter: nextBalance,
               sourceId: `admin-balance-${selectedUser.id.slice(0, 6)}`,
               memo: 'Admin balance edit'
           });
@@ -1971,12 +1966,13 @@ export const AdminPanel: React.FC = () => {
 
   const appendLedgerEntry = (targetUserId: string, entry: LedgerEntry) => {
       updateLedgerRecords(targetUserId, (entries) => {
-          const currentBalance = entries.reduce((sum, item) => sum + item.amount, 0);
           const entryWithBalance = {
               ...entry,
-              balanceAfter: entry.balanceAfter ?? currentBalance + entry.amount
+              balanceAfter: entry.balanceAfter
           };
-          return [entryWithBalance, ...entries];
+          const nextEntries = [entryWithBalance, ...entries];
+          const currentUserBalance = users.find((profile) => profile.id === targetUserId)?.balance ?? entryWithBalance.balanceAfter ?? 0;
+          return normalizeLedgerEntries(nextEntries, currentUserBalance);
       });
   };
 
@@ -2054,15 +2050,19 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleCreateReversal = () => {
-      if (!selectedUserId) return;
+      if (!selectedUserId || !selectedUser) return;
       const amountValue = Number(reversalAmount);
       if (!amountValue || !reversalReason.trim()) return;
+      const delta = -Math.abs(amountValue);
+      const nextBalance = Math.max(0, Number(selectedUser.balance ?? 0) + delta);
+      void updateUserBalance(selectedUserId, nextBalance);
       const entry: LedgerEntry = {
           id: makeId('ledger'),
           userId: selectedUserId,
           type: 'reversal',
-          amount: -Math.abs(amountValue),
+          amount: delta,
           createdAt: Date.now(),
+          balanceAfter: nextBalance,
           sourceId: `reversal-${selectedUserId.slice(0, 6)}`,
           memo: reversalReason.trim()
       };
@@ -2079,19 +2079,25 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleVoidOpen = () => {
-      if (!selectedUserId || !voidSourceId.trim()) return;
+      if (!selectedUserId || !selectedUser || !voidSourceId.trim()) return;
       const items = inventoryState[selectedUserId] ?? [];
       const impactedItems = items.filter((item) => item.provenance?.sourceId === voidSourceId.trim());
       const totalValue = impactedItems.reduce(
           (sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE),
           0
       );
+      const delta = totalValue === 0 ? 0 : -Math.abs(totalValue);
+      const nextBalance = Math.max(0, Number(selectedUser.balance ?? 0) + delta);
+      if (delta !== 0) {
+          void updateUserBalance(selectedUserId, nextBalance);
+      }
       const entry: LedgerEntry = {
           id: makeId('ledger'),
           userId: selectedUserId,
           type: 'reversal',
-          amount: totalValue === 0 ? 0 : -Math.abs(totalValue),
+          amount: delta,
           createdAt: Date.now(),
+          balanceAfter: nextBalance,
           sourceId: voidSourceId.trim(),
           memo: voidReason.trim() || 'Voided box open'
       };
@@ -2126,7 +2132,29 @@ export const AdminPanel: React.FC = () => {
   };
 
   const selectedUser = useMemo(() => users.find((profile) => profile.id === selectedUserId), [users, selectedUserId]);
-  const selectedLedgerEntries = selectedUserId ? ledgerEntries[selectedUserId] ?? [] : [];
+  const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
+  const filteredUsers = useMemo(() => {
+      if (!normalizedUserSearch) return users;
+      return users.filter((profile) => {
+          const searchableFields = [
+              profile.name,
+              profile.username,
+              profile.displayName,
+              profile.email,
+              profile.id,
+              String(profile.balance ?? 0),
+              String((inventoryState[profile.id] ?? profile.inventory ?? []).length)
+          ]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase();
+          return searchableFields.includes(normalizedUserSearch);
+      });
+  }, [inventoryState, normalizedUserSearch, users]);
+  const selectedLedgerEntries = useMemo(() => {
+      if (!selectedUserId) return [];
+      return normalizeLedgerEntries(ledgerEntries[selectedUserId] ?? [], selectedUser?.balance ?? 0);
+  }, [ledgerEntries, selectedUser, selectedUserId]);
   const selectedInventory = selectedUserId ? inventoryState[selectedUserId] ?? [] : [];
   const selectedAdminLogs = selectedUserId ? adminLogs[selectedUserId] ?? [] : [];
   const ledgerNetChange = selectedLedgerEntries.reduce((sum, entry) => sum + entry.amount, 0);
@@ -3787,12 +3815,42 @@ export const AdminPanel: React.FC = () => {
             {/* TAB: USERS */}
             {activeTab === 'users' && (
                 <div className="space-y-6">
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-5">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">User Directory</h3>
+                                <p className="text-sm text-gray-400">
+                                    Search every account, including profiles with zero coins and empty inventory.
+                                </p>
+                            </div>
+                            <div className="w-full lg:max-w-md">
+                                <Input
+                                    type="text"
+                                    value={userSearchQuery}
+                                    onChange={(event) => setUserSearchQuery(event.target.value)}
+                                    placeholder="Search by name, email, UID, balance, or inventory count"
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                            <span className="rounded-full bg-[#0b0e14] px-3 py-1 text-gray-400">
+                                Showing <span className="font-semibold text-gray-200">{filteredUsers.length}</span> of <span className="font-semibold text-gray-200">{users.length}</span> users
+                            </span>
+                            <span className="rounded-full bg-[#0b0e14] px-3 py-1 text-gray-400">
+                                Empty inventory accounts: <span className="font-semibold text-gray-200">{users.filter((profile) => (inventoryState[profile.id] ?? profile.inventory ?? []).length === 0).length}</span>
+                            </span>
+                        </div>
+                    </div>
+
                     <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
                         <div className="hidden md:block overflow-x-auto">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-[#0b0e14] text-gray-400 font-medium border-b border-gray-800">
                                     <tr>
                                         <th className="px-6 py-4">User</th>
+                                        <th className="px-6 py-4">Coins</th>
+                                        <th className="px-6 py-4">Inventory</th>
                                         <th className="px-6 py-4">Level</th>
                                         <th className="px-6 py-4">XP</th>
                                         <th className="px-6 py-4">Status</th>
@@ -3800,23 +3858,29 @@ export const AdminPanel: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-800">
-                                    {users.length === 0 ? (
+                                    {filteredUsers.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-6 text-center text-gray-500">
-                                                No users found in Firebase.
+                                            <td colSpan={7} className="px-6 py-6 text-center text-gray-500">
+                                                {users.length === 0 ? 'No users found in Firebase.' : 'No users match your search.'}
                                             </td>
                                         </tr>
                                     ) : (
-                                        users.map((profile) => {
+                                        filteredUsers.map((profile) => {
                                             const isEditing = editingUserId === profile.id;
                                             const progress = calculateLevelProgress(isEditing ? userXpInput : (profile.xp || 0));
                                             const status = userStatuses[profile.id] ?? 'active';
+                                            const inventoryCount = (inventoryState[profile.id] ?? profile.inventory ?? []).length;
                                             return (
                                                 <tr key={profile.id} className="hover:bg-[#1a2130] transition-colors">
                                                     <td className="px-6 py-4 flex items-center gap-3">
                                                         <img src={profile.avatar} alt={`${profile.name} avatar`} className="w-8 h-8 rounded-full" />
-                                                        <span className="font-bold text-white">{profile.name}</span>
+                                                        <div className="min-w-0">
+                                                            <div className="font-bold text-white truncate">{profile.name}</div>
+                                                            <div className="text-xs text-gray-500 truncate">{profile.email || profile.id}</div>
+                                                        </div>
                                                     </td>
+                                                    <td className="px-6 py-4 text-gray-300">{Math.round(profile.balance ?? 0).toLocaleString()}</td>
+                                                    <td className="px-6 py-4 text-gray-300">{inventoryCount}</td>
                                                     <td className="px-6 py-4 text-gray-400">XP {(profile.xpBalance ?? profile.xp ?? 0).toLocaleString()}</td>
                                                     <td className="px-6 py-4 text-gray-400">
                                                         {isEditing ? (
@@ -3872,7 +3936,10 @@ export const AdminPanel: React.FC = () => {
                                                                     </button>
                                                                     <button
                                                                         className="text-purple-400 hover:text-purple-300 font-bold text-xs"
-                                                                        onClick={() => setSelectedUserId(profile.id)}
+                                                                        onClick={() => {
+                                                                            setSelectedUserId(profile.id);
+                                                                            setExpandedUserIds((prev) => ({ ...prev, [profile.id]: true }));
+                                                                        }}
                                                                     >
                                                                         View
                                                                     </button>
@@ -3896,21 +3963,23 @@ export const AdminPanel: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
-                            {users.length === 0 ? (
+                            {filteredUsers.length === 0 ? (
                                 <div className="px-6 py-6 text-center text-gray-500">
-                                    No users found in Firebase.
+                                    {users.length === 0 ? 'No users found in Firebase.' : 'No users match your search.'}
                                 </div>
                             ) : (
-                                users.map((profile) => {
+                                filteredUsers.map((profile) => {
                                     const status = userStatuses[profile.id] ?? 'active';
                                     const isEditing = editingUserId === profile.id;
+                                    const inventoryCount = (inventoryState[profile.id] ?? profile.inventory ?? []).length;
+                                    const isExpanded = expandedUserIds[profile.id] || selectedUserId === profile.id;
                                     return (
                                         <div key={profile.id} className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4 space-y-3">
                                             <div className="flex items-center gap-3">
                                                 <img src={profile.avatar} alt={`${profile.name} avatar`} className="w-10 h-10 rounded-full" />
                                                 <div className="flex-1">
                                                     <div className="text-white font-bold">{profile.name}</div>
-                                                    <div className="text-xs text-gray-400">XP {(profile.xpBalance ?? profile.xp ?? 0).toLocaleString()}</div>
+                                                    <div className="text-xs text-gray-400 truncate">{profile.email || profile.id}</div>
                                                 </div>
                                                 <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
                                                     status === 'active'
@@ -3923,7 +3992,11 @@ export const AdminPanel: React.FC = () => {
                                                 </span>
                                             </div>
                                             <div className="text-xs text-gray-400">
-                                                XP: <span className="text-gray-200">{profile.xp ?? 0}</span>
+                                                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                                    <span>XP: <span className="text-gray-200">{profile.xp ?? 0}</span></span>
+                                                    <span>Coins: <span className="text-gray-200">{Math.round(profile.balance ?? 0).toLocaleString()}</span></span>
+                                                    <span>Inventory: <span className="text-gray-200">{inventoryCount}</span></span>
+                                                </div>
                                             </div>
                                             {isEditing && (
                                                 <div className="space-y-2">
@@ -3960,9 +4033,18 @@ export const AdminPanel: React.FC = () => {
                                                     </button>
                                                     <button
                                                         className="px-3 py-1.5 rounded-lg bg-purple-600/20 text-purple-300 text-xs font-semibold"
-                                                        onClick={() => setSelectedUserId(profile.id)}
+                                                        onClick={() => {
+                                                            setSelectedUserId(profile.id);
+                                                            setExpandedUserIds((prev) => ({ ...prev, [profile.id]: true }));
+                                                        }}
                                                     >
                                                         View
+                                                    </button>
+                                                    <button
+                                                        className="px-3 py-1.5 rounded-lg bg-slate-700/40 text-slate-200 text-xs font-semibold"
+                                                        onClick={() => setExpandedUserIds((prev) => ({ ...prev, [profile.id]: !prev[profile.id] }))}
+                                                    >
+                                                        {isExpanded ? 'Hide Details' : 'Quick Details'}
                                                     </button>
                                                     <button
                                                         className="px-3 py-1.5 rounded-lg bg-red-600/20 text-red-300 text-xs font-semibold disabled:opacity-50"
@@ -3971,6 +4053,18 @@ export const AdminPanel: React.FC = () => {
                                                     >
                                                         {deletingUserId === profile.id ? 'Deleting...' : 'Delete'}
                                                     </button>
+                                                </div>
+                                            )}
+                                            {isExpanded && (
+                                                <div className="rounded-xl border border-gray-800 bg-[#131720] p-3 text-xs text-gray-300">
+                                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                                        <div><span className="text-gray-500">UID:</span> <span className="break-all">{profile.id}</span></div>
+                                                        <div><span className="text-gray-500">Username:</span> {profile.username || '—'}</div>
+                                                        <div><span className="text-gray-500">Display name:</span> {profile.displayName || '—'}</div>
+                                                        <div><span className="text-gray-500">Created:</span> {profile.createdAt ? new Date(profile.createdAt).toLocaleString() : 'Unknown'}</div>
+                                                        <div><span className="text-gray-500">Provider:</span> {profile.provider || 'Unknown'}</div>
+                                                        <div><span className="text-gray-500">Status:</span> {status}</div>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

@@ -1,0 +1,68 @@
+import { adminAuth, db } from '../_lib/firebaseAdmin.js';
+import { deny, ok, requireAdmin } from '../_utils/auth.js';
+
+const listAllAuthUsers = async (nextPageToken, acc = []) => {
+  const result = await adminAuth.listUsers(1000, nextPageToken);
+  const merged = acc.concat(result.users);
+  if (result.pageToken) {
+    return listAllAuthUsers(result.pageToken, merged);
+  }
+  return merged;
+};
+
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return deny(res, 405, 'METHOD_NOT_ALLOWED');
+  }
+
+  try {
+    await requireAdmin(req);
+
+    const [authUsers, firestoreSnapshot] = await Promise.all([
+      listAllAuthUsers(),
+      db.collection('users').get()
+    ]);
+
+    const firestoreUsersById = new Map();
+    firestoreSnapshot.forEach((docSnap) => {
+      firestoreUsersById.set(docSnap.id, docSnap.data());
+    });
+
+    const users = authUsers.map((entry) => {
+      const primaryProvider = Array.isArray(entry.providerData) && entry.providerData.length > 0
+        ? entry.providerData[0]?.providerId
+        : undefined;
+
+      return {
+        id: entry.uid,
+        email: entry.email ?? '',
+        displayName: entry.displayName ?? '',
+        photoURL: entry.photoURL ?? '',
+        provider: primaryProvider ?? undefined,
+        disabled: entry.disabled === true,
+        createdAt: entry.metadata?.creationTime ? Date.parse(entry.metadata.creationTime) : undefined,
+        firestoreData: firestoreUsersById.get(entry.uid) ?? {}
+      };
+    });
+
+    firestoreUsersById.forEach((data, id) => {
+      if (users.some((entry) => entry.id === id)) return;
+      users.push({
+        id,
+        email: data.email ?? '',
+        displayName: data.displayName ?? data.name ?? '',
+        photoURL: data.photoURL ?? data.avatar ?? '',
+        provider: data.provider ?? undefined,
+        disabled: false,
+        createdAt: typeof data.createdAt === 'number' ? data.createdAt : undefined,
+        firestoreData: data
+      });
+    });
+
+    return ok(res, { users });
+  } catch (error) {
+    const status = error?.status ?? 500;
+    const message = error?.error ?? error?.message ?? 'FAILED_TO_LOAD_ADMIN_USERS';
+    return deny(res, status, message);
+  }
+}
