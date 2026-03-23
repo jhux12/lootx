@@ -728,47 +728,37 @@ export const AdminPanel: React.FC = () => {
       return `${sign}${formatted} coins`;
   };
 
-  const seedLedgerEntries = (profileId: string, index: number): LedgerEntry[] => {
-      const now = Date.now();
-      const base = now - (index + 1) * 1000 * 60 * 60 * 6;
-      return [
-          {
-              id: makeId('ledger'),
-              userId: profileId,
-              type: 'deposit',
-              amount: 250,
-              createdAt: base - 1000 * 60 * 60,
-              sourceId: `stripe-${profileId.slice(0, 6)}`,
-              memo: 'Stripe top-up'
-          },
-          {
-              id: makeId('ledger'),
-              userId: profileId,
-              type: 'case_open',
-              amount: -45,
-              createdAt: base - 1000 * 60 * 30,
-              sourceId: `case-${profileId.slice(0, 6)}-open`,
-              memo: 'Opened Neon Nexus Box'
-          },
-          {
-              id: makeId('ledger'),
-              userId: profileId,
-              type: 'sell_back',
-              amount: 82,
-              createdAt: base - 1000 * 60 * 12,
-              sourceId: `sell-${profileId.slice(0, 6)}`,
-              memo: 'Sold inventory item'
-          },
-          {
-              id: makeId('ledger'),
-              userId: profileId,
-              type: 'bonus',
-              amount: 15,
-              createdAt: base - 1000 * 60 * 5,
-              sourceId: `promo-${profileId.slice(0, 6)}`,
-              memo: 'Welcome promo credit'
+  const normalizeLedgerEntries = (entries: LedgerEntry[] = [], currentBalance?: number) => {
+      const sorted = [...entries].sort((a, b) => {
+          const createdDiff = Number(b.createdAt ?? 0) - Number(a.createdAt ?? 0);
+          if (createdDiff !== 0) return createdDiff;
+          return String(b.id).localeCompare(String(a.id));
+      });
+
+      let runningBalance = Number.isFinite(currentBalance) ? Number(currentBalance) : null;
+
+      return sorted.map((entry) => {
+          const nextEntry = {
+              ...entry,
+              amount: Number(entry.amount ?? 0),
+              createdAt: Number(entry.createdAt ?? 0)
+          };
+
+          if (runningBalance === null) {
+              return nextEntry;
           }
-      ];
+
+          const resolvedBalanceAfter = Number.isFinite(nextEntry.balanceAfter)
+              ? Number(nextEntry.balanceAfter)
+              : runningBalance;
+
+          runningBalance = resolvedBalanceAfter - nextEntry.amount;
+
+          return {
+              ...nextEntry,
+              balanceAfter: resolvedBalanceAfter
+          };
+      });
   };
 
   const seedInventory = (inventory: InventoryItem[] = [], profileId: string, index: number) => {
@@ -866,8 +856,8 @@ export const AdminPanel: React.FC = () => {
 
       setLedgerEntries((prev) => {
           const next = { ...prev };
-          users.forEach((profile, index) => {
-              next[profile.id] = profile.ledger ?? next[profile.id] ?? seedLedgerEntries(profile.id, index);
+          users.forEach((profile) => {
+              next[profile.id] = normalizeLedgerEntries(profile.ledger ?? next[profile.id] ?? [], profile.balance ?? 0);
           });
           return next;
       });
@@ -1069,12 +1059,14 @@ export const AdminPanel: React.FC = () => {
                   }, { merge: true });
               });
 
+              const winnerCurrentBalance = users.find((profile) => profile.id === uid)?.balance ?? 0;
               appendLedgerEntry(uid, {
                   id: makeId('ledger'),
                   userId: uid,
                   type: 'bonus',
                   amount: winner.rewardCoins,
                   createdAt: Date.now(),
+                  balanceAfter: winnerCurrentBalance + winner.rewardCoins,
                   sourceId: `leaderboard-${seasonId}-${winner.rank}`,
                   memo: `Leaderboard reward #${winner.rank}`
               });
@@ -1860,6 +1852,7 @@ export const AdminPanel: React.FC = () => {
               type: 'admin_adjustment',
               amount: delta,
               createdAt: Date.now(),
+              balanceAfter: nextBalance,
               sourceId: `admin-balance-${selectedUser.id.slice(0, 6)}`,
               memo: 'Admin balance edit'
           });
@@ -1973,12 +1966,13 @@ export const AdminPanel: React.FC = () => {
 
   const appendLedgerEntry = (targetUserId: string, entry: LedgerEntry) => {
       updateLedgerRecords(targetUserId, (entries) => {
-          const currentBalance = entries.reduce((sum, item) => sum + item.amount, 0);
           const entryWithBalance = {
               ...entry,
-              balanceAfter: entry.balanceAfter ?? currentBalance + entry.amount
+              balanceAfter: entry.balanceAfter
           };
-          return [entryWithBalance, ...entries];
+          const nextEntries = [entryWithBalance, ...entries];
+          const currentUserBalance = users.find((profile) => profile.id === targetUserId)?.balance ?? entryWithBalance.balanceAfter ?? 0;
+          return normalizeLedgerEntries(nextEntries, currentUserBalance);
       });
   };
 
@@ -2056,15 +2050,19 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleCreateReversal = () => {
-      if (!selectedUserId) return;
+      if (!selectedUserId || !selectedUser) return;
       const amountValue = Number(reversalAmount);
       if (!amountValue || !reversalReason.trim()) return;
+      const delta = -Math.abs(amountValue);
+      const nextBalance = Math.max(0, Number(selectedUser.balance ?? 0) + delta);
+      void updateUserBalance(selectedUserId, nextBalance);
       const entry: LedgerEntry = {
           id: makeId('ledger'),
           userId: selectedUserId,
           type: 'reversal',
-          amount: -Math.abs(amountValue),
+          amount: delta,
           createdAt: Date.now(),
+          balanceAfter: nextBalance,
           sourceId: `reversal-${selectedUserId.slice(0, 6)}`,
           memo: reversalReason.trim()
       };
@@ -2081,19 +2079,25 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleVoidOpen = () => {
-      if (!selectedUserId || !voidSourceId.trim()) return;
+      if (!selectedUserId || !selectedUser || !voidSourceId.trim()) return;
       const items = inventoryState[selectedUserId] ?? [];
       const impactedItems = items.filter((item) => item.provenance?.sourceId === voidSourceId.trim());
       const totalValue = impactedItems.reduce(
           (sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE),
           0
       );
+      const delta = totalValue === 0 ? 0 : -Math.abs(totalValue);
+      const nextBalance = Math.max(0, Number(selectedUser.balance ?? 0) + delta);
+      if (delta !== 0) {
+          void updateUserBalance(selectedUserId, nextBalance);
+      }
       const entry: LedgerEntry = {
           id: makeId('ledger'),
           userId: selectedUserId,
           type: 'reversal',
-          amount: totalValue === 0 ? 0 : -Math.abs(totalValue),
+          amount: delta,
           createdAt: Date.now(),
+          balanceAfter: nextBalance,
           sourceId: voidSourceId.trim(),
           memo: voidReason.trim() || 'Voided box open'
       };
@@ -2147,7 +2151,10 @@ export const AdminPanel: React.FC = () => {
           return searchableFields.includes(normalizedUserSearch);
       });
   }, [inventoryState, normalizedUserSearch, users]);
-  const selectedLedgerEntries = selectedUserId ? ledgerEntries[selectedUserId] ?? [] : [];
+  const selectedLedgerEntries = useMemo(() => {
+      if (!selectedUserId) return [];
+      return normalizeLedgerEntries(ledgerEntries[selectedUserId] ?? [], selectedUser?.balance ?? 0);
+  }, [ledgerEntries, selectedUser, selectedUserId]);
   const selectedInventory = selectedUserId ? inventoryState[selectedUserId] ?? [] : [];
   const selectedAdminLogs = selectedUserId ? adminLogs[selectedUserId] ?? [] : [];
   const ledgerNetChange = selectedLedgerEntries.reduce((sum, entry) => sum + entry.amount, 0);

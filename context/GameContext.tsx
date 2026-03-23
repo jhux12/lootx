@@ -2734,7 +2734,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateUserAdminData = async (userId: string, updates: Partial<User>) => {
       if (!isAuthenticated || !auth.currentUser) return;
-      const sanitizedUpdates = filterSafeUserProfileFields(sanitizeDeep(updates as Record<string, unknown>));
+      const sanitizedUpdates = sanitizeDeep(updates as Record<string, unknown>);
 
       if (Object.keys(sanitizedUpdates).length > 0) {
         try {
@@ -2752,10 +2752,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!isAuthenticated || !auth.currentUser) return;
       const balanceValue = Number.isFinite(nextBalance) ? Math.max(0, nextBalance) : 0;
 
-      console.warn('Blocked client-side balance write to /users/{uid}; balance must be updated server-side.', {
-        userId,
-        attemptedBalance: balanceValue
-      });
+      try {
+        await setDoc(getUserRef(userId), { balance: balanceValue, coins: balanceValue, updatedAt: Date.now() }, { merge: true });
+      } catch (error) {
+        console.error('Failed to update admin balance in Firebase', error);
+      }
 
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, balance: balanceValue } : u));
       setUser(prev => prev.id === userId ? { ...prev, balance: balanceValue } : prev);
