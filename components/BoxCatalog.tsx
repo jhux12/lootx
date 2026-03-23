@@ -544,9 +544,19 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                         }
                       }}
                       onMouseLeave={() => setPreviewBoxId((current) => (current === box.id ? null : current))}
+                      onTouchStart={() => {
+                        void prefetchBox(box.id, async () => box, box.image);
+                        setPreviewBoxId(box.id);
+                      }}
+                      onTouchEnd={() => {
+                        window.setTimeout(() => {
+                          setPreviewBoxId((current) => (current === box.id ? null : current));
+                        }, 450);
+                      }}
+                      onTouchCancel={() => setPreviewBoxId((current) => (current === box.id ? null : current))}
                     >
                       <div
-                        className="relative flex min-h-[210px] w-full items-end justify-center overflow-hidden px-3 pt-5 sm:min-h-[250px] sm:px-4 sm:pt-6"
+                        className="relative flex min-h-[210px] w-full items-end justify-center overflow-hidden px-3 pt-7 sm:min-h-[250px] sm:px-4 sm:pt-8"
                         style={{ background: topPanelBackground }}
                       >
                         <div className="pointer-events-none absolute inset-x-[10%] top-4 h-28 rounded-[2rem] bg-white/10 blur-2xl sm:top-6 sm:h-36" />
@@ -562,13 +572,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                               aria-hidden={!isVisible}
                               loading="lazy"
                               decoding="async"
-                              className={`absolute z-10 h-full w-full -translate-y-2 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 sm:-translate-y-3 ${isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-3 scale-95 opacity-0'}`}
+                              className={`absolute z-10 h-full w-full -translate-y-2 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ease-out sm:-translate-y-3 ${isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-95 opacity-0'}`}
                             />
                           ) : null}
                           <BlurImage
                             src={box.image}
                             alt={box.name}
-                            className={`absolute inset-0 z-20 h-full w-full -translate-y-2 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ease-out sm:-translate-y-3 ${isVisible ? '-translate-y-7 scale-90 opacity-0' : 'translate-y-0 scale-100 opacity-100'} group-hover:translate-y-0 group-hover:scale-105`}
+                            className={`absolute inset-0 z-20 h-full w-full -translate-y-2 object-contain drop-shadow-[0_24px_28px_rgba(0,0,0,0.42)] transition-all duration-300 ease-out sm:-translate-y-3 ${isVisible ? '-translate-y-10 scale-90 opacity-0' : 'translate-y-0 scale-100 opacity-100'} group-hover:translate-y-0 group-hover:scale-105`}
                           />
                         </div>
                       </div>
