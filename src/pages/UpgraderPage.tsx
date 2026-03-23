@@ -47,8 +47,55 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
 
 const SPIN_DURATION_MS = 5200;
 
+const DEMO_INVENTORY_SIZE = 6;
+const DEMO_TARGET_SIZE = 12;
+
+const shuffle = <T,>(items: T[]) => {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
+};
+
+type DemoBoxShape = { id: string; name: string; items: Array<{ id: string; name: string; image: string; price: number; rarity: string; category?: string }> };
+
+const buildDemoItemPool = (boxes: DemoBoxShape[]) =>
+  shuffle(
+    boxes.flatMap((box) =>
+      (box.items ?? []).map((item, itemIndex) => ({
+        id: `demo-${box.id}-${item.id}-${itemIndex}`,
+        name: item.name,
+        imageUrl: item.image,
+        coinValue: toCoins(Number(item.price ?? 0), PRICE_UNIT_MODE),
+        rarity: rarityMap[String(item.rarity).toLowerCase()] ?? 'Common',
+        category: item.category || box.name || 'Demo Box',
+        locked: false,
+        shipping: false
+      }))
+    )
+  );
+
+const buildDemoLoadout = (boxes: DemoBoxShape[]) => {
+  const pool = buildDemoItemPool(boxes);
+  const inventory = pool.slice(0, DEMO_INVENTORY_SIZE);
+  const targets = pool
+    .slice(DEMO_INVENTORY_SIZE, DEMO_INVENTORY_SIZE + DEMO_TARGET_SIZE)
+    .map(({ locked: _locked, shipping: _shipping, ...item }, itemIndex) => ({
+      ...item,
+      id: `demo-target-${item.id}-${itemIndex}`,
+      enabled: true
+    }));
+
+  return {
+    inventory,
+    targets
+  };
+};
+
 export default function UpgraderPage() {
-  const { inventory, isAuthenticated, openAuthModal } = useGame();
+  const { inventory, boxes, isAuthenticated, openAuthModal } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,6 +123,8 @@ export default function UpgraderPage() {
 
   const [reducedMotion, setReducedMotion] = useState(false);
   const [resultSheet, setResultSheet] = useState<{ item: EliteItem; success: boolean } | null>(null);
+  const [demoInventory, setDemoInventory] = useState<InventoryItem[]>([]);
+  const [demoTargets, setDemoTargets] = useState<Item[]>([]);
 
   useEffect(() => {
     const audio = new Audio(upgraderSoundUrl);
@@ -144,7 +193,11 @@ export default function UpgraderPage() {
           }))
         );
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load upgrader data.');
+        if (isAuthenticated) {
+          setError(loadError instanceof Error ? loadError.message : 'Failed to load upgrader data.');
+        } else {
+          setError(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -160,7 +213,16 @@ export default function UpgraderPage() {
       }
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated) return;
+    if (demoInventory.length > 0 && demoTargets.length > 0) return;
+    if (boxes.length === 0) return;
+    const demoLoadout = buildDemoLoadout(boxes);
+    setDemoInventory(demoLoadout.inventory);
+    setDemoTargets(demoLoadout.targets);
+  }, [boxes, demoInventory.length, demoTargets.length, isAuthenticated]);
 
   const realInventoryItems = useMemo<InventoryItem[]>(() => {
     const allowedIds = settings?.sourceItemIdsEnabled ?? [];
@@ -213,8 +275,12 @@ export default function UpgraderPage() {
     return '16, 185, 129';
   }, [chance]);
 
-  const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
-  const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
+  const availableInventoryItems = useMemo(() => (isAuthenticated ? realInventoryItems : demoInventory), [demoInventory, isAuthenticated, realInventoryItems]);
+  const availableTargetItems = useMemo(() => (isAuthenticated ? filteredTargets : demoTargets), [demoTargets, filteredTargets, isAuthenticated]);
+  const inventoryLabel = isAuthenticated ? 'Your Inventory' : 'Demo Inventory';
+  const targetLabel = isAuthenticated ? 'Target Items' : 'Demo Targets';
+  const inventoryItems = useMemo(() => availableInventoryItems.map((item) => mapToEliteItem(item)), [availableInventoryItems]);
+  const targetItems = useMemo(() => availableTargetItems.map((item) => mapToEliteItem(item)), [availableTargetItems]);
 
   const sourcePreview = source ? mapToEliteItem(source) : null;
   const targetPreview = target ? mapToEliteItem(target) : null;
@@ -249,7 +315,9 @@ export default function UpgraderPage() {
   }, [source, target]);
 
   const handleUpgrade = async () => {
-    if (!source || !target || !settings || isSubmitting || status === 'spinning') return;
+    if (!source || !target || isSubmitting || status === 'spinning') return;
+    if (!isAuthenticated && !source.id.startsWith('demo-')) return;
+    if (isAuthenticated && !settings) return;
 
     setError(null);
     setIsSubmitting(true);
@@ -262,13 +330,21 @@ export default function UpgraderPage() {
     }
 
     try {
-      const response = await attemptUpgrade({
-        sourceItemInstanceId: source.id,
-        targetItemId: target.id,
-        clientSeed: `${Date.now()}`
-      });
+      if (isAuthenticated) {
+        const response = await attemptUpgrade({
+          sourceItemInstanceId: source.id,
+          targetItemId: target.id,
+          clientSeed: `${Date.now()}`
+        });
 
-      const success = Boolean(response.win);
+        const success = Boolean(response.win);
+        setSpinResult(success);
+        setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
+        setSpinNonce((previous) => previous + 1);
+        return;
+      }
+
+      const success = Math.random() * 100 <= chance;
       setSpinResult(success);
       setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
       setSpinNonce((previous) => previous + 1);
@@ -289,6 +365,26 @@ export default function UpgraderPage() {
       setResultSheet({ item: historyItem, success });
     }
 
+    if (!isAuthenticated && source) {
+      setDemoInventory((previous) => {
+        const withoutSource = previous.filter((item) => item.id !== source.id);
+        if (!success || !target) return withoutSource;
+        return [
+          {
+            id: `demo-win-${target.id}-${Date.now()}`,
+            name: target.name,
+            imageUrl: target.imageUrl,
+            coinValue: target.coinValue,
+            rarity: target.rarity,
+            category: target.category,
+            locked: false,
+            shipping: false
+          },
+          ...withoutSource
+        ].slice(0, DEMO_INVENTORY_SIZE);
+      });
+    }
+
     setSource(null);
     setTarget(null);
     setSpinResult(null);
@@ -301,23 +397,6 @@ export default function UpgraderPage() {
       setStatus('idle');
     }, 1200);
   };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/70 p-6 sm:p-8 text-center space-y-4">
-          <h1 className="text-2xl font-black text-white uppercase tracking-tight">Upgrader</h1>
-          <p className="text-sm text-slate-300">Sign in to use your real inventory items in the upgrader.</p>
-          <button
-            onClick={() => openAuthModal('login')}
-            className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 transition-colors"
-          >
-            Sign In
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#050811] text-slate-200 font-sans selection:bg-violet-500/30 pb-44 lg:pb-32">
@@ -353,11 +432,47 @@ export default function UpgraderPage() {
       </header>
 
       <main className="max-w-[1600px] mx-auto flex flex-col lg:grid lg:grid-cols-[340px_1fr_340px] gap-4 lg:gap-8 p-3 sm:p-4 lg:p-8">
-        {error && <div className="lg:col-span-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{error}</div>}
+        {isAuthenticated && error && <div className="lg:col-span-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{error}</div>}
+        {!isAuthenticated && (
+          <section className="order-0 lg:col-span-3 rounded-2xl border border-cyan-400/20 bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-slate-900/70 p-4 sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-300">Demo Mode</p>
+                <h2 className="text-lg font-black text-white sm:text-xl">Try the upgrader before you sign in.</h2>
+                <p className="max-w-2xl text-sm text-slate-300">We filled this demo inventory and demo target list with random drops from random boxes so guests can test the full flow on mobile or desktop before using real items.</p>
+              </div>
+              <div className="flex flex-col gap-2 sm:w-auto sm:min-w-[220px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const demoLoadout = buildDemoLoadout(boxes);
+                    setDemoInventory(demoLoadout.inventory);
+                    setDemoTargets(demoLoadout.targets);
+                    setSource(null);
+                    setTarget(null);
+                    setStatus('idle');
+                    setSpinResult(null);
+                    setError(null);
+                  }}
+                  className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+                >
+                  Refresh Demo Loadout
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('login')}
+                  className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-indigo-500"
+                >
+                  Sign In for Real Upgrades
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className={`order-3 lg:order-1 flex-col gap-4 overflow-hidden ${activeTab === 'inventory' ? 'flex' : 'hidden lg:flex'}`}>
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Your Inventory <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{inventoryItems.length}</span></h2>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">{inventoryLabel} <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{inventoryItems.length}</span></h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[280px] sm:max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
             {inventoryItems.map((item) => (
@@ -367,7 +482,7 @@ export default function UpgraderPage() {
                 isSelected={source?.id === item.id}
                 onInfoClick={setDetailsItem}
                 onClick={() => {
-                  const match = realInventoryItems.find((entry) => entry.id === item.id) ?? null;
+                  const match = availableInventoryItems.find((entry) => entry.id === item.id) ?? null;
                   setSource(match);
                 }}
                 disabled={status === 'spinning' || loading}
@@ -411,12 +526,13 @@ export default function UpgraderPage() {
             <div className="mt-4 w-full">
               <button
                 onClick={handleUpgrade}
-                disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting}
-                className={`reactor-upgrade-btn w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base uppercase tracking-widest transition-all duration-300 ${status === 'idle' && source && target && settings?.enabled ? 'reactor-upgrade-btn-idle bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-[0_0_30px_rgba(34,211,238,0.2)] hover:scale-[1.02] active:scale-[0.98]' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
+                disabled={status !== 'idle' || !source || !target || (isAuthenticated ? !settings?.enabled : false) || isSubmitting}
+                className={`reactor-upgrade-btn w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base uppercase tracking-widest transition-all duration-300 ${status === 'idle' && source && target && (isAuthenticated ? settings?.enabled : true) ? 'reactor-upgrade-btn-idle bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-[0_0_30px_rgba(34,211,238,0.2)] hover:scale-[1.02] active:scale-[0.98]' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
               >
-                {status === 'spinning' ? 'Upgrading...' : 'Upgrade Item'}
+                {status === 'spinning' ? 'Upgrading...' : isAuthenticated ? 'Upgrade Item' : 'Demo Upgrade'}
               </button>
 
+              {!isAuthenticated && <p className="mt-3 text-center text-xs text-cyan-200/90">Demo upgrades use random results and never spend real inventory.</p>}
               <div className="mt-3 flex items-center justify-center gap-2 text-[10px] text-white/30 uppercase tracking-widest font-bold">
                 <LucideInfo className="w-3 h-3" />
                 <span>Provably Fair System</span>
@@ -436,13 +552,13 @@ export default function UpgraderPage() {
             onClick={() => setActiveTab('targets')}
             className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'targets' ? 'bg-cyan-500 text-[#03111a]' : 'text-slate-400'}`}
           >
-            Targets
+            {isAuthenticated ? 'Targets' : 'Demo Targets'}
           </button>
         </div>
 
         <section className={`order-4 lg:order-3 flex-col gap-4 overflow-hidden ${activeTab === 'targets' ? 'flex' : 'hidden lg:flex'}`}>
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Target Items <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{targetItems.length}</span></h2>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">{targetLabel} <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{targetItems.length}</span></h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[220px] sm:max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
             {targetItems.map((item) => (
@@ -452,7 +568,7 @@ export default function UpgraderPage() {
                 isSelected={target?.id === item.id}
                 onInfoClick={setDetailsItem}
                 onClick={() => {
-                  const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
+                  const match = availableTargetItems.find((entry) => entry.id === item.id) ?? null;
                   setTarget(match);
                 }}
                 disabled={status === 'spinning' || loading}
