@@ -77,6 +77,8 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const spinStopTimeoutRef = useRef<number | null>(null);
   const spinReplayTimeoutRef = useRef<number | null>(null);
   const demoSpinIndexRef = useRef(14);
+  const spinnerTrackRef = useRef<HTMLDivElement | null>(null);
+  const spinnerCardRef = useRef<HTMLDivElement | null>(null);
 
   const SPINNER_CARD_WIDTH = 136;
   const SPINNER_CARD_GAP = 12;
@@ -87,6 +89,47 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const INITIAL_REEL_LENGTH = 140;
 
   const spinnerItems = useMemo<CaseItem[]>(() => showcaseBox?.items ?? [], [showcaseBox]);
+  const [spinnerCardWidth, setSpinnerCardWidth] = useState(SPINNER_CARD_WIDTH);
+  const [spinnerCardGap, setSpinnerCardGap] = useState(SPINNER_CARD_GAP);
+
+  useEffect(() => {
+    const measureSpinnerTrack = () => {
+      const measuredWidth = spinnerCardRef.current?.offsetWidth;
+      const trackStyle = spinnerTrackRef.current ? window.getComputedStyle(spinnerTrackRef.current) : null;
+      const measuredGap = trackStyle ? Number.parseFloat(trackStyle.columnGap || trackStyle.gap || `${SPINNER_CARD_GAP}`) : NaN;
+
+      if (measuredWidth && Number.isFinite(measuredWidth)) {
+        setSpinnerCardWidth(measuredWidth);
+      }
+
+      if (Number.isFinite(measuredGap)) {
+        setSpinnerCardGap(measuredGap);
+      }
+    };
+
+    measureSpinnerTrack();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measureSpinnerTrack);
+      return () => window.removeEventListener('resize', measureSpinnerTrack);
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      measureSpinnerTrack();
+    });
+
+    if (spinnerTrackRef.current) {
+      resizeObserver.observe(spinnerTrackRef.current);
+    }
+
+    if (spinnerCardRef.current) {
+      resizeObserver.observe(spinnerCardRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [demoReelItems.length]);
 
   useEffect(() => {
     const clearSpinTimers = () => {
@@ -263,11 +306,12 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                 <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#090c13] to-transparent sm:w-20" />
 
                 <div
+                  ref={spinnerTrackRef}
                   className={`flex px-[50%] py-6 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[5200ms] ease-[cubic-bezier(0.08,0.9,0.15,1)]' : 'duration-200 ease-out'}`}
                   style={{
-                    gap: `${SPINNER_CARD_GAP}px`,
-                    marginLeft: `-${SPINNER_CARD_WIDTH / 2}px`,
-                    transform: `translateX(-${demoSpinIndex * (SPINNER_CARD_WIDTH + SPINNER_CARD_GAP)}px)`
+                    gap: `${spinnerCardGap}px`,
+                    marginLeft: `-${spinnerCardWidth / 2}px`,
+                    transform: `translateX(-${demoSpinIndex * (spinnerCardWidth + spinnerCardGap)}px)`
                   }}
                 >
                   {demoReelItems.map((item, idx) => {
@@ -275,6 +319,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                     const isLegendary = String(item.rarity ?? '').toLowerCase() === 'legendary';
                     return (
                       <div
+                        ref={idx === 0 ? spinnerCardRef : null}
                         key={`${item.id}-${idx}`}
                         className={`relative flex h-[122px] w-[122px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition sm:h-[136px] sm:w-[136px] ${
                           isLandedWinner
