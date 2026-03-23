@@ -19,25 +19,34 @@ type SliderDropItem = {
   value: number;
 };
 
+const shuffleItems = <T,>(items: T[]) => {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
+};
+
 export const TopDropsSlider: React.FC<TopDropsSliderProps> = ({ boxes, onOpenBox, className = '' }) => {
-  const topDropItems = useMemo<SliderDropItem[]>(
-    () =>
-      boxes
-        .filter((box) => !box.isUserCreated)
-        .flatMap((box) =>
-          box.items.map((item) => ({
-            sourceBoxId: box.id,
-            sourceKey: `${box.id}-${item.id ?? item.name}`,
-            sourceBoxName: box.name,
-            image: item.image,
-            name: item.name,
-            value: item.price
-          }))
-        )
-        .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))
-        .slice(0, 24),
-    [boxes]
-  );
+  const topDropItems = useMemo<SliderDropItem[]>(() => {
+    const highestValuePool = boxes
+      .filter((box) => !box.isUserCreated)
+      .flatMap((box) =>
+        box.items.map((item) => ({
+          sourceBoxId: box.id,
+          sourceKey: `${box.id}-${item.id ?? item.name}`,
+          sourceBoxName: box.name,
+          image: item.image,
+          name: item.name,
+          value: item.price
+        }))
+      )
+      .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))
+      .slice(0, 72);
+
+    return shuffleItems(highestValuePool).slice(0, 36);
+  }, [boxes]);
 
   if (topDropItems.length === 0) return null;
 
@@ -49,6 +58,7 @@ export const TopDropsSlider: React.FC<TopDropsSliderProps> = ({ boxes, onOpenBox
         <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/20 bg-indigo-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-200">
           <Gem className="h-3.5 w-3.5" /> Best Pullz
         </div>
+        <p className="mt-2 text-xs text-neutral-500">A refreshed mix of higher-value pulls from across the catalog each time the page loads.</p>
       </div>
 
       <div className="relative overflow-hidden md:hidden">
