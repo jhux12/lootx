@@ -80,6 +80,8 @@ export default function UpgraderTargetsPage() {
       setSelectedSiteItemId('');
       saveMessage('Target added from site items.');
       await loadTargets();
+    } catch (error) {
+      saveMessage(error instanceof Error ? error.message : 'Failed to save target.');
     } finally {
       setSaving(false);
     }
@@ -90,6 +92,8 @@ export default function UpgraderTargetsPage() {
     try {
       await saveUpgraderTarget({ ...target, enabled: !target.enabled });
       await loadTargets();
+    } catch (error) {
+      saveMessage(error instanceof Error ? error.message : 'Failed to update target.');
     } finally {
       setSaving(false);
     }

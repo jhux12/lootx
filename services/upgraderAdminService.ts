@@ -1,12 +1,20 @@
-import { addDoc, collection, deleteDoc, deleteField, doc, getDocs, setDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, deleteField, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { DEFAULT_UPGRADER_SETTINGS, UpgraderSettings, UpgraderTarget, normalizeUpgraderSettings } from '../utils/upgrader';
+import { DEFAULT_UPGRADER_SETTINGS, UpgraderSettings, UpgraderTarget, normalizeUpgraderSettings, validateUpgraderSettings } from '../utils/upgrader';
 import { sanitizeForFirestore } from '../utils/firestoreSanitize';
 
 export const saveUpgraderSettings = async (settings: Partial<UpgraderSettings>) => {
-  const payload: Record<string, unknown> = {
+  const normalized = normalizeUpgraderSettings({
     ...DEFAULT_UPGRADER_SETTINGS,
-    ...settings,
+    ...settings
+  });
+  const validation = validateUpgraderSettings(normalized);
+  if (!validation.ok) {
+    throw new Error(validation.issues[0] ?? 'Unsafe upgrader settings.');
+  }
+
+  const payload: Record<string, unknown> = {
+    ...normalized,
     serverSeed: deleteField(),
     updatedAt: Date.now()
   };
@@ -37,6 +45,13 @@ export const listUpgraderTargetsAdmin = async () => {
 };
 
 export const saveUpgraderTarget = async (target: Partial<UpgraderTarget> & { id?: string }) => {
+  const settingsSnapshot = await getDoc(doc(db, 'settings', 'upgrader'));
+  const settings = normalizeUpgraderSettings(settingsSnapshot.exists() ? settingsSnapshot.data() as Partial<UpgraderSettings> : undefined);
+  const validation = validateUpgraderSettings(settings);
+  if (!validation.ok) {
+    throw new Error('Fix upgrader settings before saving targets: unsafe expected value cap.');
+  }
+
   const payload = {
     name: String(target.name ?? ''),
     imageUrl: String(target.imageUrl ?? ''),
