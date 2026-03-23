@@ -321,9 +321,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           <h1 className="mb-3 text-center text-3xl font-black italic tracking-tighter text-white drop-shadow-lg md:text-5xl">
             Hot <span className="text-indigo-500">Picks</span>
           </h1>
-          <p className="mb-7 max-w-2xl text-center text-sm text-neutral-300 md:text-base">
-            Quick-entry favorites with strong top-end value so the first fold of the catalog feels alive on every device.
-          </p>
 
           <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
             {hotPicks.map((box) => (
