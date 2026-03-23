@@ -14,6 +14,16 @@ const toSafeString = (value, fallback = '') => (typeof value === 'string' ? valu
 
 const getCoinValue = (item = {}) => Math.max(0, toNumber(item.coinValue ?? item.value ?? item.price, 0));
 
+const computeExpectedPayout = ({ chance, targetValue }) => Math.max(0, chance) * Math.max(0, targetValue);
+
+const getMaxChanceFromExpectedPayout = ({ sourceValue, targetValue, maxExpectedPayoutRatio }) => {
+  if (!Number.isFinite(sourceValue) || !Number.isFinite(targetValue) || sourceValue <= 0 || targetValue <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, (sourceValue * Math.max(0, maxExpectedPayoutRatio)) / targetValue);
+};
+
 const computeChance = ({ sourceValue, targetValue, settings, sourceItem, targetItem, user }) => {
   const raw = sourceValue / targetValue;
   const edgeRaw = toNumber(settings.edgeMultiplier, 0.92);
@@ -32,7 +42,11 @@ const computeChance = ({ sourceValue, targetValue, settings, sourceItem, targetI
   chance *= toNumber(settings.promoEventMultiplier, 1);
   const minChance = Math.max(0, Math.min(1, toNumber(settings.minChance, 0.02)));
   const maxChance = Math.max(0, Math.min(1, toNumber(settings.maxChance, 0.7)));
-  return Math.min(maxChance, Math.max(minChance, chance));
+  chance = Math.min(maxChance, Math.max(minChance, chance));
+
+  const maxExpectedPayoutRatio = Math.max(0, Math.min(1, toNumber(settings.maxExpectedPayoutRatio, 0.98)));
+  const profitabilityCap = getMaxChanceFromExpectedPayout({ sourceValue, targetValue, maxExpectedPayoutRatio });
+  return Math.min(chance, profitabilityCap);
 };
 
 export default async function handler(req, res) {
@@ -118,6 +132,7 @@ export default async function handler(req, res) {
       const nonce = Math.max(0, Math.floor(toNumber(provablyData.upgradeNonce, 0))) + 1;
 
       const chance = computeChance({ sourceValue, targetValue, settings, sourceItem, targetItem, user: userData });
+      const expectedPayout = computeExpectedPayout({ chance, targetValue });
       const hashInput = `${serverSeed}:${decoded.uid}:${clientSeed}:${nonce}:${targetItemId}:${sourceItemInstanceId}`;
       const hash = sha256(hashInput);
       const roll = parseInt(hash.slice(0, 8), 16) / 0xffffffff;
@@ -194,6 +209,7 @@ export default async function handler(req, res) {
           category: targetCategory
         },
         chance,
+        expectedPayout,
         roll,
         win,
         nonce,
@@ -213,6 +229,7 @@ export default async function handler(req, res) {
         win,
         roll,
         chance,
+        expectedPayout,
         attemptId: attemptRef.id,
         awardedItem: awardedRef ? { id: awardedRef.id, name: targetName, imageUrl: targetImage } : undefined
       };
