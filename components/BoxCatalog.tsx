@@ -338,9 +338,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               <button
                 key={box.id}
                 onClick={() => openBox(box.id)}
-                className="group relative flex min-h-[220px] flex-col items-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-4 text-left transition-transform hover:-translate-y-1 hover:border-indigo-400/40"
+                className="group relative flex min-h-[220px] flex-col items-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-4 text-center transition-transform hover:-translate-y-1 hover:border-indigo-400/40"
                 type="button"
               >
+                <div className="mb-3 flex w-full items-center justify-center">
+                  <div className="line-clamp-2 text-center text-sm font-bold text-white">{box.name}</div>
+                </div>
                 <div className="relative flex h-[132px] w-full items-center justify-center sm:h-[150px]">
                   <BlurImage
                     src={box.image}
@@ -348,12 +351,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                     className="h-full w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
-                <div className="mt-3 flex w-full flex-1 flex-col justify-between gap-3">
-                  <div>
-                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200/80">Hot pick</div>
-                    <div className="line-clamp-2 text-sm font-bold text-white">{box.name}</div>
-                  </div>
-                  <div className="inline-flex w-fit items-center gap-1.5 rounded-md border border-indigo-400/35 bg-indigo-900/70 px-3 py-1">
+                <div className="mt-4 flex w-full flex-1 items-end justify-center">
+                  <div className="inline-flex items-center justify-center gap-1.5 rounded-md border border-indigo-400/35 bg-indigo-900/70 px-3 py-1">
                     <CoinAmount
                       amount={getBoxPrice(box)}
                       formatOptions={{ maximumFractionDigits: 0 }}
