@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LucideArrowRight,
+  LucideCpu,
   LucideHistory,
   LucideInfo,
+  LucideShirt,
+  LucideSparkles,
   LucideZap,
   LucideChevronLeft,
   LucideChevronRight,
@@ -45,10 +48,12 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
   rarity: normalizeEliteRarity(String(item.rarity ?? 'common'))
 });
 
+const normalizeLookupValue = (value: unknown) => String(value ?? '').trim().toLowerCase();
+
 const SPIN_DURATION_MS = 5200;
 
 export default function UpgraderPage() {
-  const { inventory, isAuthenticated, openAuthModal } = useGame();
+  const { inventory, items: siteItems, isAuthenticated, openAuthModal } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +68,7 @@ export default function UpgraderPage() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
+  const [selectedCollection, setSelectedCollection] = useState<'tech' | 'collectibles' | 'apparel'>('collectibles');
   const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const idleTimeoutRef = useRef<number | null>(null);
@@ -140,6 +146,7 @@ export default function UpgraderPage() {
             coinValue: toCoins(Number(entry.coinValue ?? 0), PRICE_UNIT_MODE),
             rarity: rarityMap[String(entry.rarity).toLowerCase()] ?? 'Common',
             category: entry.category || 'General',
+            tags: Array.isArray(entry.tags) ? entry.tags : [],
             enabled: entry.enabled !== false
           }))
         );
@@ -182,17 +189,44 @@ export default function UpgraderPage() {
   }, [inventory, settings?.sourceItemIdsEnabled]);
 
   const filteredTargets = useMemo(() => {
-    if (!settings) return targets;
-    const categories = settings.categoriesEnabled ?? [];
-    const rarities = settings.raritiesEnabled ?? [];
-    return targets.filter((item) => {
-      const normalizedCategory = String(item.category ?? '');
-      const normalizedRarity = String(item.rarity ?? '').toLowerCase();
-      const categoryAllowed = categories.length === 0 || categories.includes(normalizedCategory);
-      const rarityAllowed = rarities.length === 0 || rarities.includes(normalizedRarity);
-      return categoryAllowed && rarityAllowed;
-    });
-  }, [settings, targets]);
+    const selectedTag = {
+      tech: 'tech',
+      collectibles: 'collector',
+      apparel: 'apparel'
+    }[selectedCollection];
+
+    const targetMap = new Map(targets.map((item) => [String(item.id), item]));
+    const targetNameMap = new Map(targets.map((item) => [normalizeLookupValue(item.name), item]));
+    const categories = settings?.categoriesEnabled ?? [];
+    const rarities = settings?.raritiesEnabled ?? [];
+
+    return siteItems
+      .map((siteItem) => {
+        const matchingTarget = targetMap.get(String(siteItem.id)) ?? targetNameMap.get(normalizeLookupValue(siteItem.name));
+        if (!matchingTarget) return null;
+
+        return {
+          ...matchingTarget,
+          name: siteItem.name ?? matchingTarget.name,
+          imageUrl: siteItem.image ?? matchingTarget.imageUrl,
+          rarity: rarityMap[String(siteItem.rarity ?? matchingTarget.rarity ?? 'common').toLowerCase()] ?? matchingTarget.rarity,
+          category: siteItem.category || matchingTarget.category || 'General',
+          tags: Array.isArray(siteItem.tags) && siteItem.tags.length > 0 ? siteItem.tags : matchingTarget.tags ?? []
+        } satisfies Item;
+      })
+      .filter((item): item is Item => Boolean(item))
+      .filter((item) => {
+        const normalizedCategory = String(item.category ?? '');
+        const normalizedRarity = String(item.rarity ?? '').toLowerCase();
+        const normalizedTags = (item.tags ?? [])
+        .map((tag) => String(tag ?? '').trim().toLowerCase())
+        .filter(Boolean);
+        const categoryAllowed = categories.length === 0 || categories.includes(normalizedCategory);
+        const rarityAllowed = rarities.length === 0 || rarities.includes(normalizedRarity);
+        const collectionAllowed = normalizedTags.length > 0 && normalizedTags.includes(selectedTag);
+        return categoryAllowed && rarityAllowed && collectionAllowed;
+      });
+  }, [selectedCollection, settings, siteItems, targets]);
 
   const chance = useMemo(() => {
     if (!source || !target) return 0;
@@ -215,6 +249,15 @@ export default function UpgraderPage() {
 
   const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
   const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
+
+  const collectionOptions = useMemo(
+    () => [
+      { id: 'tech' as const, label: 'Tech', icon: LucideCpu, accent: 'from-cyan-400/25 via-sky-500/20 to-transparent' },
+      { id: 'collectibles' as const, label: 'Collectibles', icon: LucideSparkles, accent: 'from-violet-400/25 via-fuchsia-500/20 to-transparent' },
+      { id: 'apparel' as const, label: 'Apparel', icon: LucideShirt, accent: 'from-emerald-400/25 via-teal-500/20 to-transparent' }
+    ],
+    []
+  );
 
   const sourcePreview = source ? mapToEliteItem(source) : null;
   const targetPreview = target ? mapToEliteItem(target) : null;
@@ -444,8 +487,36 @@ export default function UpgraderPage() {
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Target Items <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{targetItems.length}</span></h2>
           </div>
+          <div className="-mx-1 overflow-x-auto px-1 pb-1 custom-scrollbar">
+            <div className="flex min-w-max gap-2 sm:min-w-0 sm:flex-wrap">
+              {collectionOptions.map(({ id, label, icon: Icon, accent }) => {
+                const isActive = selectedCollection === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSelectedCollection(id)}
+                    className={`group relative inline-flex items-center gap-2 overflow-hidden rounded-xl border px-3 py-2 text-xs font-semibold tracking-wide transition-all duration-200 sm:text-sm ${
+                      isActive
+                        ? 'border-white/30 bg-white/12 text-white shadow-[0_0_24px_rgba(56,189,248,0.16)]'
+                        : 'border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/20 hover:bg-white/[0.06] hover:text-white'
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    <span className={`absolute inset-0 bg-gradient-to-r ${accent} transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+                    <span className={`relative inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+                      isActive ? 'border-white/20 bg-black/30 text-white' : 'border-white/10 bg-black/20 text-slate-300'
+                    }`}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="relative whitespace-nowrap">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[220px] sm:max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
-            {targetItems.map((item) => (
+            {targetItems.length > 0 ? targetItems.map((item) => (
               <ItemCard
                 key={item.id}
                 item={item}
@@ -457,7 +528,12 @@ export default function UpgraderPage() {
                 }}
                 disabled={status === 'spinning' || loading}
               />
-            ))}
+            )) : (
+              <div className="col-span-full rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-8 text-center sm:px-6">
+                <p className="text-sm font-semibold text-slate-200">No {selectedCollection} targets available.</p>
+                <p className="mt-1 text-xs text-slate-400">Add matching site item tags to show products in this collection.</p>
+              </div>
+            )}
           </div>
         </section>
       </main>

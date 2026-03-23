@@ -20,6 +20,7 @@ export const getUpgraderTargets = async () => {
       coinValue: Number(data.coinValue ?? 0),
       rarity: String(data.rarity ?? 'common'),
       category: String(data.category ?? ''),
+      tags: Array.isArray(data.tags) ? data.tags.map((tag: unknown) => String(tag)) : [],
       enabled: data.enabled === true,
       featured: data.featured === true,
       weight: Number(data.weight ?? 1),
