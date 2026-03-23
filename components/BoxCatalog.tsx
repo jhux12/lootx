@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Filter, ChevronDown, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
-import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
+import { getBoxTags, getTagIconLabelFromClass, normalizeBoxTag } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { TopDropsSlider } from './TopDropsSlider';
@@ -96,6 +96,141 @@ const createHotPicksBackground = () => {
 };
 
 const HOT_PICKS_BACKGROUND = createHotPicksBackground();
+
+
+type CatalogBoxCardProps = {
+  box: MysteryBox;
+  onOpen: (boxId: string) => void;
+  onPreviewChange?: (boxId: string | null) => void;
+  previewActive?: boolean;
+  badgeLabel?: string;
+  tagIcons: Record<string, string>;
+};
+
+const CatalogBoxCard: React.FC<CatalogBoxCardProps> = ({
+  box,
+  onOpen,
+  onPreviewChange,
+  previewActive = false,
+  badgeLabel,
+  tagIcons
+}) => {
+  const previewItems = useMemo(() => [...box.items].sort((left, right) => right.price - left.price).slice(0, 2), [box.items]);
+  const tagLabel = badgeLabel ?? box.tag ?? box.tags?.[0] ?? '';
+  const tagIconClass = useMemo(
+    () => getBoxTags(box).map((tag) => tagIcons[tag] ?? '').find(Boolean) ?? '',
+    [box, tagIcons]
+  );
+  const tagIconLabel = tagIconClass ? getTagIconLabelFromClass(tagIconClass) : '';
+
+  return (
+    <button
+      onClick={() => onOpen(box.id)}
+      className="group relative flex h-full flex-col overflow-hidden rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,#181922_0%,#171923_58%,#251c37_100%)] p-4 text-left shadow-[0_26px_60px_-38px_rgba(0,0,0,0.95)] transition-all duration-300 hover:-translate-y-1 hover:border-white/14 hover:shadow-[0_30px_70px_-38px_rgba(0,0,0,1)] active:scale-[0.985] sm:p-[18px]"
+      type="button"
+      onMouseEnter={() => {
+        if (typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+          void prefetchBox(box.id, async () => box, box.image);
+          onPreviewChange?.(box.id);
+        }
+      }}
+      onMouseLeave={() => onPreviewChange?.(null)}
+      onFocus={() => onPreviewChange?.(box.id)}
+      onBlur={() => onPreviewChange?.(null)}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.06),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_22%)] opacity-80" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,rgba(109,68,255,0),rgba(109,68,255,0.14))]" />
+
+      <div className="relative flex h-full flex-col gap-3">
+        <div className="relative min-h-[11.5rem] overflow-hidden rounded-[20px]">
+          {(tagIconClass || tagLabel) ? (
+            <div className="absolute left-0 top-0 z-20">
+              <div className="inline-flex min-h-10 min-w-10 items-center justify-center gap-2 rounded-xl border border-orange-300/35 bg-[linear-gradient(180deg,#ff7547_0%,#ff4d32_100%)] px-3 py-2 text-sm font-semibold text-white shadow-[0_14px_24px_-16px_rgba(255,96,60,0.85)]">
+                {tagIconClass ? <i className={`${tagIconClass} text-sm`} aria-hidden="true" /> : null}
+                {!tagIconClass && tagLabel ? <span>{tagLabel}</span> : null}
+                {tagIconClass ? <span className="sr-only">{tagIconLabel || tagLabel || 'Tag icon'}</span> : null}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="relative flex h-full items-center justify-center px-3 pb-2 pt-10 sm:px-4 sm:pt-11">
+            <div className="pointer-events-none absolute inset-x-8 top-[32%] h-20 rounded-full opacity-70 blur-3xl transition-all duration-300 group-hover:scale-105" style={{ background: `${box.accentColor}55` }} />
+            <div className="pointer-events-none absolute inset-x-4 bottom-4 h-24 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.06),transparent_70%)] opacity-70" />
+
+            <BlurImage
+              src={box.image}
+              alt={box.name}
+              className="relative z-10 h-36 w-36 object-contain drop-shadow-[0_24px_34px_rgba(0,0,0,0.5)] transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-[1.035] sm:h-40 sm:w-40"
+            />
+
+            <div className={`pointer-events-none absolute inset-0 flex items-center justify-center rounded-[20px] bg-[linear-gradient(180deg,rgba(10,11,18,0.02),rgba(10,11,18,0.62))] transition-all duration-300 ${previewActive ? 'opacity-100' : 'opacity-0'}`}
+            >
+              <div className={`rounded-2xl border border-white/12 bg-black/40 px-5 py-3 text-center shadow-[0_18px_40px_-24px_rgba(0,0,0,0.95)] backdrop-blur-md transition-all duration-300 ${previewActive ? 'translate-y-0 scale-100' : 'translate-y-2 scale-[0.98]'}`}>
+                <span className="text-sm font-semibold tracking-[0.01em] text-white">Open Case</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-1 flex-col gap-3">
+          <div className="space-y-2">
+            <h3 className="line-clamp-2 text-[1.28rem] font-semibold leading-tight text-white sm:text-[1.42rem]">{box.name}</h3>
+
+            <div className="flex flex-wrap gap-2">
+              {previewItems.length > 0 ? (
+                <>
+                  {previewItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="inline-flex max-w-full items-center gap-2 rounded-xl border border-white/8 bg-white/[0.06] px-2.5 py-1.5 text-xs text-white/78 backdrop-blur-sm transition-colors duration-300 group-hover:bg-white/[0.08]"
+                      title={item.name}
+                    >
+                      <div className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-md bg-white/8">
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="h-full w-full bg-white/5" aria-hidden="true" />
+                        )}
+                      </div>
+                      <span className="max-w-[5.75rem] truncate sm:max-w-[6.5rem]">{item.name}</span>
+                    </div>
+                  ))}
+                  {box.items.length > previewItems.length ? (
+                    <div className="inline-flex items-center rounded-xl border border-white/8 bg-white/[0.05] px-2.5 py-1.5 text-xs font-medium text-white/62">
+                      +{box.items.length - previewItems.length}
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <div className="inline-flex items-center rounded-xl border border-white/8 bg-white/[0.05] px-2.5 py-1.5 text-xs text-white/55">
+                  Rewards reveal on open
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="pt-0.5">
+            <CoinAmount
+              amount={getBoxPrice(box)}
+              formatOptions={{ maximumFractionDigits: 0 }}
+              className="justify-start text-[1.85rem] font-semibold text-white"
+              iconClassName="mt-0.5 h-5 w-5"
+            />
+          </div>
+
+          <div className="mt-auto flex items-center gap-2 pt-1">
+            <div className="flex-1 rounded-xl bg-[linear-gradient(180deg,#6f52ff_0%,#5d44ef_100%)] px-4 py-3 text-center text-sm font-semibold text-white shadow-[0_18px_30px_-20px_rgba(98,74,255,0.95)] transition-all duration-300 group-hover:brightness-110">
+              Open Box
+            </div>
+            <div className="inline-flex min-w-[4.9rem] items-center justify-center rounded-xl border border-white/8 bg-white/[0.08] px-3 py-3 text-sm font-medium text-white/78 backdrop-blur-sm transition-colors duration-300 group-hover:bg-white/[0.11]">
+              Info
+            </div>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+};
 
 const toCategoryKey = (value: string) =>
   value
@@ -324,34 +459,15 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
           <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
             {hotPicks.map((box) => (
-              <button
+              <CatalogBoxCard
                 key={box.id}
-                onClick={() => openBox(box.id)}
-                className="group relative flex min-h-[220px] flex-col items-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-4 text-left transition-transform hover:-translate-y-1 hover:border-indigo-400/40"
-                type="button"
-              >
-                <div className="relative flex h-[132px] w-full items-center justify-center sm:h-[150px]">
-                  <BlurImage
-                    src={box.image}
-                    alt={box.name}
-                    className="h-full w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-105"
-                  />
-                </div>
-                <div className="mt-3 flex w-full flex-1 flex-col justify-between gap-3">
-                  <div>
-                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200/80">Hot pick</div>
-                    <div className="line-clamp-2 text-sm font-bold text-white">{box.name}</div>
-                  </div>
-                  <div className="inline-flex w-fit items-center gap-1.5 rounded-md border border-indigo-400/35 bg-indigo-900/70 px-3 py-1">
-                    <CoinAmount
-                      amount={getBoxPrice(box)}
-                      formatOptions={{ maximumFractionDigits: 0 }}
-                      className="text-sm font-bold text-white"
-                      iconClassName="h-4 w-4"
-                    />
-                  </div>
-                </div>
-              </button>
+                box={box}
+                onOpen={openBox}
+                previewActive={previewBoxId === box.id}
+                onPreviewChange={(boxId) => setPreviewBoxId(boxId)}
+                badgeLabel="Hot"
+                tagIcons={stripeSettings.boxTagIcons}
+              />
             ))}
           </div>
         </div>
@@ -517,64 +633,14 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5">
                 {group.boxes.map((box) => (
-                  <button
+                  <CatalogBoxCard
                     key={box.id}
-                    onClick={() => openBox(box.id)}
-                    className="group flex flex-col overflow-hidden rounded-xl border border-white/5 bg-[#131315] text-left transition-all duration-300 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10"
-                    type="button"
-                    onMouseEnter={() => {
-                      if (typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-                        void prefetchBox(box.id, async () => box, box.image);
-                        setPreviewBoxId(box.id);
-                      }
-                    }}
-                    onMouseLeave={() => setPreviewBoxId((current) => (current === box.id ? null : current))}
-                  >
-                    <div className="relative flex h-[160px] w-full items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent p-4 sm:h-[180px] sm:p-6">
-                      {[...box.items]
-                        .sort((left, right) => right.price - left.price)
-                        .slice(0, 2)
-                        .map((item, itemIndex) => {
-                          const side = itemIndex === 0 ? 'left' : 'right';
-                          const isVisible = previewBoxId === box.id;
-
-                          return (
-                            <div
-                              key={`${box.id}-${item.id}-${side}`}
-                              className={`pointer-events-none absolute top-1/2 z-0 hidden -translate-y-1/2 transition-all duration-300 ease-out md:block ${side === 'left' ? 'left-2 sm:left-3' : 'right-2 sm:right-3'} ${isVisible ? 'translate-x-0 opacity-100' : side === 'left' ? '-translate-x-3 opacity-0' : 'translate-x-3 opacity-0'}`}
-                            >
-                              <img
-                                src={item.image}
-                                alt=""
-                                aria-hidden="true"
-                                loading="lazy"
-                                decoding="async"
-                                className="h-14 w-14 object-contain opacity-90 drop-shadow-[0_12px_20px_rgba(0,0,0,0.45)] sm:h-20 sm:w-20"
-                              />
-                            </div>
-                          );
-                        })}
-                      <BlurImage
-                        src={box.image}
-                        alt={box.name}
-                        className="relative z-10 h-full w-full object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3"
-                      />
-                    </div>
-
-                    <div className="flex w-full flex-col items-start border-t border-white/5 bg-neutral-900/50 p-3 sm:p-4">
-                      <div className="mb-2 line-clamp-2 min-h-[2.5rem] text-xs font-bold text-white transition-colors group-hover:text-indigo-400 sm:text-sm">
-                        {box.name}
-                      </div>
-                      <div className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 shadow-md shadow-indigo-900/20 transition-colors group-hover:bg-indigo-500 sm:px-4">
-                        <CoinAmount
-                          amount={getBoxPrice(box)}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          className="text-sm font-bold text-white sm:text-lg"
-                          iconClassName="h-4 w-4 sm:h-5 sm:w-5"
-                        />
-                      </div>
-                    </div>
-                  </button>
+                    box={box}
+                    onOpen={openBox}
+                    previewActive={previewBoxId === box.id}
+                    onPreviewChange={setPreviewBoxId}
+                    tagIcons={stripeSettings.boxTagIcons}
+                  />
                 ))}
               </div>
             </div>
