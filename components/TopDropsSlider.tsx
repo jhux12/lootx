@@ -51,11 +51,11 @@ export const TopDropsSlider: React.FC<TopDropsSliderProps> = ({ boxes, onOpenBox
   if (topDropItems.length === 0) return null;
 
   return (
-    <section className={`relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/85 ${className}`}>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.16),_transparent_30%),radial-gradient(circle_at_80%_20%,_rgba(56,189,248,0.1),_transparent_22%)]" />
+    <section className={`relative w-full overflow-hidden ${className}`}>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.16),_transparent_24%),radial-gradient(circle_at_80%_20%,_rgba(56,189,248,0.1),_transparent_18%)]" />
 
-      <div className="relative border-b border-white/5 px-4 py-3">
-        <div className="inline-flex max-w-full items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-200 sm:text-xs">
+      <div className="relative w-full border-b border-white/5 px-4 py-3 sm:px-6 lg:px-8">
+        <div className="flex w-full items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-200 sm:text-xs">
           <Flame className="h-3.5 w-3.5 shrink-0 text-orange-400" />
           <span className="truncate">Best Pullz</span>
         </div>
@@ -64,7 +64,7 @@ export const TopDropsSlider: React.FC<TopDropsSliderProps> = ({ boxes, onOpenBox
       <div className="relative overflow-hidden md:hidden">
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-neutral-950 to-transparent" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-neutral-950 to-transparent" />
-        <div className="ticker-animation flex items-center gap-2 px-4 py-3">
+        <div className="ticker-animation flex items-center gap-2 px-4 py-3 sm:px-6">
           {[...topDropItems, ...topDropItems].map((item, index) => (
             <button
               key={`${item.sourceKey}-mobile-${index}`}
@@ -91,7 +91,7 @@ export const TopDropsSlider: React.FC<TopDropsSliderProps> = ({ boxes, onOpenBox
       <div className="relative hidden overflow-hidden md:block">
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-neutral-950 to-transparent" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-neutral-950 to-transparent" />
-        <div className="ticker-animation flex items-center gap-3 px-4 py-4">
+        <div className="ticker-animation flex items-center gap-3 px-4 py-4 sm:px-6 lg:px-8">
           {[...topDropItems, ...topDropItems].map((item, index) => (
             <button
               key={`${item.sourceKey}-${index}`}
