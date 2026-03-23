@@ -58,7 +58,6 @@ export const TopDropsSlider: React.FC<TopDropsSliderProps> = ({ boxes, onOpenBox
         <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/20 bg-indigo-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-200">
           <Gem className="h-3.5 w-3.5" /> Best Pullz
         </div>
-        <p className="mt-2 text-xs text-neutral-500">A refreshed mix of higher-value pulls from across the catalog each time the page loads.</p>
       </div>
 
       <div className="relative overflow-hidden md:hidden">
