@@ -628,28 +628,28 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Profile Header */}
-      <div className="relative mb-4 overflow-hidden rounded-[28px] bg-[linear-gradient(160deg,rgba(11,14,20,0.86),rgba(9,12,18,0.74))] shadow-[0_26px_64px_rgba(0,0,0,0.42),0_0_28px_rgba(64,212,255,0.06)] backdrop-blur-[20px]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(108,92,255,0.2),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.14),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.01))]" />
-        <div className="relative px-4 pb-3.5 pt-3.5 sm:px-5 sm:pb-4 sm:pt-4">
-          <div className="flex flex-col gap-3">
-            <div className="rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.02),0_18px_36px_rgba(5,10,20,0.22)] backdrop-blur-xl sm:p-4">
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:text-left">
+      <div className="relative mb-4 overflow-hidden rounded-[32px] border border-white/6 bg-[linear-gradient(180deg,#0c1220,#0a0f18)] shadow-[0_26px_64px_rgba(0,0,0,0.38)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.16),transparent_34%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_28%)]" />
+        <div className="relative px-4 py-4 sm:px-6 sm:py-6">
+          <div className="flex flex-col gap-4">
+            <div className="rounded-[28px] border border-white/6 bg-white/[0.03] p-4 shadow-[0_18px_40px_rgba(4,10,20,0.28)] sm:p-5">
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:text-left">
                   <div className="relative shrink-0">
-                    <div className="absolute inset-1 rounded-full bg-[radial-gradient(circle,rgba(110,92,255,0.42),rgba(56,189,248,0.14)_55%,transparent_74%)] blur-xl" />
-                    <div className="relative rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.04))] p-1 shadow-[0_16px_34px_rgba(12,17,29,0.34),inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-lg">
-                      <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUser.name} className="h-24 w-24 rounded-[20px] object-cover bg-[#0b0e14]/90 sm:h-[104px] sm:w-[104px]" />
+                    <div className="absolute inset-1 rounded-[28px] bg-violet-500/12 blur-2xl" />
+                    <div className="relative rounded-[28px] border border-white/10 bg-white/[0.04] p-1.5">
+                      <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUser.name} className="h-20 w-20 rounded-[22px] object-cover bg-[#0b0e14]/90 sm:h-24 sm:w-24" />
                     </div>
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#9099b2] sm:text-[11px]">Player Profile</p>
-                    <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 sm:text-[11px]">Pullz account</p>
+                    <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <h2 className="truncate text-[1.7rem] font-black tracking-[-0.02em] text-white sm:text-[1.9rem]">{displayUser.name}</h2>
-                        <div className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,rgba(56,189,248,0.16),rgba(124,58,237,0.12))] px-2.5 py-1 text-[13px] font-medium text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_10px_24px_rgba(7,12,22,0.16)] backdrop-blur-md">
+                        <h2 className="truncate text-[1.9rem] font-semibold tracking-[-0.03em] text-white sm:text-[2.2rem]">{displayUser.name}</h2>
+                        <div className="mt-3 inline-flex max-w-full items-center gap-1.5 rounded-full bg-violet-500/10 px-3 py-1.5 text-[13px] font-medium text-slate-200">
                           <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                          <span className="text-[#9ba3ba]">XP Points:</span>
+                          <span className="text-slate-400">XP</span>
                           <span className="font-bold text-white"><AnimatedNumber value={xpTotal} /></span>
                         </div>
                       </div>
@@ -659,14 +659,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           {isFollowing ? (
                             <button
                               onClick={handleUnfollowClick}
-                              className="inline-flex h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.05))] px-[18px] text-sm font-bold text-gray-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_24px_rgba(7,12,22,0.2)] backdrop-blur-md transition-colors hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0.06))] hover:text-white sm:w-auto"
+                            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] px-5 text-sm font-semibold text-gray-100 transition-colors hover:bg-white/[0.1] sm:w-auto"
                             >
                               <UserCheck className="h-4 w-4" /> Following
                             </button>
                           ) : (
                             <button
                               onClick={handleFollowClick}
-                              className="inline-flex h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#7c3aed,#2563eb)] px-[18px] text-sm font-bold text-white shadow-[0_16px_32px_rgba(79,70,229,0.34)] transition-transform hover:-translate-y-0.5 sm:w-auto"
+                            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#7c3aed,#2563eb)] px-5 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(79,70,229,0.24)] transition sm:w-auto"
                             >
                               <UserPlus className="h-4 w-4" /> Follow
                             </button>
@@ -677,36 +677,37 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-3 sm:gap-2.5">
+                <div className="flex flex-wrap gap-2.5">
                   {[
                     { icon: UsersIcon, label: 'Followers', value: viewedFollowerIds.length.toLocaleString() },
                     { icon: UserPlus, label: 'Following', value: viewedFollowing.length.toLocaleString() },
-                    { icon: CalendarDays, label: 'Joined', value: joinedDateLabel }
+                    { icon: CalendarDays, label: 'Joined', value: joinedDateLabel },
+                    { icon: Boxes, label: 'Inventory', value: inventoryCount.toLocaleString() }
                   ].map(({ icon: Icon, label, value }) => (
                     <div
                       key={label}
-                      className="rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_8px_18px_rgba(7,10,19,0.16)] backdrop-blur-md min-[380px]:min-w-0"
+                      className="min-w-[140px] rounded-full bg-white/[0.04] px-3.5 py-2.5 text-left"
                     >
-                      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#7f88a1] sm:text-[11px] sm:tracking-[0.14em]">
-                        <Icon className="h-3.5 w-3.5 text-cyan-300/80" />
+                      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500 sm:text-[11px] sm:tracking-[0.14em]">
+                        <Icon className="h-3.5 w-3.5 text-violet-300/80" />
                         <span className="leading-tight">{label}</span>
                       </div>
-                      <div className="mt-1.5 text-sm font-bold leading-tight text-white break-words sm:text-[15px]">{value}</div>
+                      <div className="mt-1 text-sm font-semibold leading-tight text-white break-words sm:text-[15px]">{value}</div>
                     </div>
                   ))}
                 </div>
 
                 {isOwnProfile && (
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:max-w-md">
                     <button
                       onClick={() => setActiveTab('settings')}
-                      className="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.05))] px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_22px_rgba(7,12,22,0.18)] backdrop-blur-md transition-colors hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0.07))]"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white/[0.06] px-4 text-sm font-semibold text-white transition-colors hover:bg-white/[0.1]"
                     >
                       <Settings className="h-4 w-4" /> Edit Profile
                     </button>
                     <button
                       onClick={() => setView({ type: 'BOXES' })}
-                      className="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#7c3aed,#2563eb)] px-4 text-sm font-bold text-white shadow-[0_16px_32px_rgba(79,70,229,0.34)] transition-transform hover:-translate-y-0.5"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#7c3aed,#2563eb)] px-4 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(79,70,229,0.24)] transition"
                     >
                       <Sparkles className="h-4 w-4" /> Open Boxes
                     </button>
@@ -715,73 +716,28 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.9fr)]">
-              <div className="overflow-hidden rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_34px_rgba(5,10,20,0.18)] backdrop-blur-xl">
-                <div className="flex items-start justify-between gap-2.5">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7f88a1]">Top Pulls</p>
-                    <h3 className="mt-1.5 text-[1.05rem] font-black text-white">{canViewTopPulls ? `${topPulls.length} Highlight${topPulls.length === 1 ? '' : 's'}` : 'Private'}</h3>
-                    <p className="mt-1 text-[12px] leading-relaxed text-gray-400">A compact look at your highest-value drops.</p>
+            <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+              {[
+                { icon: Sparkles, label: 'Top pulls', value: topPulls.length.toLocaleString() },
+                { icon: Boxes, label: 'Inventory', value: inventoryCount.toLocaleString() },
+                { icon: UsersIcon, label: 'Followers', value: viewedFollowerIds.length.toLocaleString() },
+                { icon: CalendarDays, label: 'Joined', value: joinedDateLabel }
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="rounded-[22px] bg-[#0a101b] px-4 py-3">
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    <Icon className="h-3.5 w-3.5 text-violet-300/80" />
+                    <span>{label}</span>
                   </div>
-                  <div className="rounded-xl bg-[linear-gradient(180deg,rgba(232,121,249,0.16),rgba(168,85,247,0.08))] p-2 text-fuchsia-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-md">
-                    <Gem className="h-4 w-4" />
-                  </div>
+                  <div className="mt-1.5 text-sm font-semibold text-white">{value}</div>
                 </div>
-
-                {canViewTopPulls && topPulls.length > 0 ? (
-                  <div className="-mx-1 mt-3 flex gap-2.5 overflow-x-auto px-1 pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                    {topPulls.slice(0, 4).map((item, index) => (
-                      <div
-                        key={item.instanceId}
-                        className="min-w-[110px] flex-1 rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_12px_26px_rgba(4,8,17,0.28)] backdrop-blur-lg"
-                      >
-                        <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.22),transparent_58%),linear-gradient(180deg,#141a28,#101522)] p-2">
-                          <span className="absolute left-2 top-2 rounded-full border border-white/10 bg-black/45 px-2 py-0.5 text-[10px] font-black text-white">#{index + 1}</span>
-                          <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain" />
-                          <div className={`pointer-events-none absolute inset-0 opacity-30 bg-gradient-to-br ${
-                            item.rarity === 'legendary' ? 'from-yellow-400/50 via-transparent to-transparent' :
-                            item.rarity === 'epic' ? 'from-purple-400/50 via-transparent to-transparent' :
-                            item.rarity === 'rare' ? 'from-blue-400/50 via-transparent to-transparent' :
-                            item.rarity === 'uncommon' ? 'from-emerald-400/45 via-transparent to-transparent' :
-                            'from-white/10 via-transparent to-transparent'
-                          }`} />
-                        </div>
-                        <div className="mt-2 space-y-0.5">
-                          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#7d859d]">{item.rarity}</div>
-                          <div className="truncate text-xs font-semibold text-white">{item.name}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-3 rounded-2xl bg-white/[0.045] px-4 py-4 text-sm text-gray-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
-                    {canViewTopPulls ? 'Your best pulls will show here once you open more boxes.' : 'This player keeps their best pulls private.'}
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_34px_rgba(5,10,20,0.18)] backdrop-blur-xl min-[420px]:grid-cols-3 lg:grid-cols-1">
-                {[
-                  { icon: Sparkles, label: 'Top Pulls', value: topPulls.length.toLocaleString() },
-                  { icon: Boxes, label: 'Inventory', value: inventoryCount.toLocaleString() },
-                  { icon: CalendarDays, label: 'Member Since', value: joinedDateLabel }
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-md">
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#7f88a1] sm:tracking-[0.16em]">
-                      <Icon className="h-3.5 w-3.5 text-brand-purple" />
-                      <span className="leading-tight">{label}</span>
-                    </div>
-                    <div className="mt-1.5 text-sm font-bold leading-tight text-white break-words">{value}</div>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
 
             {/* Main Tabs */}
             <div className="relative w-full max-w-full">
               <div
                 ref={tabScrollRef}
-                className="flex items-center gap-2 rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-xl w-full max-w-full overflow-x-auto whitespace-nowrap scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
+                className="flex items-center gap-2 rounded-full border border-white/6 bg-[#0a101b] p-1.5 w-full max-w-full overflow-x-auto whitespace-nowrap scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {visibleProfileTabs.map((tab) => {
@@ -790,7 +746,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold whitespace-nowrap transition-all snap-start ${activeTab === tab.id ? 'bg-[linear-gradient(135deg,rgba(124,58,237,0.32),rgba(37,99,235,0.24))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_24px_rgba(12,18,30,0.22)] backdrop-blur-md' : 'text-gray-400 hover:bg-white/[0.05] hover:text-gray-200'}`}
+                      className={`flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-all snap-start ${activeTab === tab.id ? 'bg-violet-500/18 text-white shadow-[inset_0_0_0_1px_rgba(167,139,250,0.2)]' : 'text-gray-400 hover:bg-white/[0.05] hover:text-gray-200'}`}
                     >
                       <Icon className="w-4 h-4" /> {tab.label}
                     </button>
@@ -826,7 +782,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
       <div className="min-h-[400px]">
           {activeTab === 'topPulls' && (
               <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-800 pb-4">
+                  <div className="flex flex-col gap-3 border-b border-white/6 pb-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                           <h3 className="text-lg font-bold text-white">Top Pulls</h3>
                           <p className="text-sm text-gray-500">Your most valuable items, ranked by rarity and value.</p>
@@ -842,7 +798,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   </div>
 
                   {!canViewTopPulls ? (
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-12 text-center">
                           <Lock className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                           <h3 className="text-xl font-bold text-white mb-2">Top Pulls Are Private</h3>
                           <p className="text-gray-500">This player has chosen to keep their top pulls private.</p>
@@ -852,7 +808,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                         {Array.from({ length: 6 }).map((_, idx) => <SkeletonTile key={`top-pull-skeleton-${idx}`} />)}
                       </div>
                   ) : topPulls.length === 0 ? (
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-12 text-center">
                           <Sparkles className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                           <h3 className="text-xl font-bold text-white mb-2">No top pulls yet</h3>
                           <p className="text-gray-500 mb-6">
@@ -868,10 +824,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           )}
                       </div>
                   ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                           {topPulls.map((item, index) => (
-                              <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-3 sm:p-4 group hover:border-brand-purple/50 transition-all">
-                                  <div className="relative aspect-square mb-3 sm:mb-4 bg-[#0b0e14] rounded-lg p-3 sm:p-4 flex items-center justify-center overflow-hidden">
+                              <div key={item.instanceId} className="rounded-[26px] border border-white/6 bg-[#0d1220] p-3.5 sm:p-4 group transition-all">
+                                  <div className="relative aspect-square mb-3 sm:mb-4 bg-[#0a101b] rounded-[22px] p-3 sm:p-4 flex items-center justify-center overflow-hidden">
                                       <div className="absolute left-2 top-2 z-10 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide bg-black/70 text-white border border-white/10">
                                         #{index + 1}
                                       </div>
@@ -920,15 +876,15 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           <h3 className="text-lg font-bold text-white">Inventory</h3>
                           <p className="text-sm text-gray-500">Manage your items, ship rewards, or sell them back for coins.</p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 rounded-full bg-[#0a101b] p-1">
                           {(['inventory', 'processing', 'shipped'] as const).map((filter) => (
                               <button
                                   key={filter}
                                   onClick={() => setInventoryFilter(filter)}
-                                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-colors ${
+                                  className={`px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-[0.16em] transition-colors ${
                                       inventoryFilter === filter
-                                          ? 'bg-brand-purple text-white'
-                                          : 'bg-[#0b0e14] text-gray-400 hover:text-white hover:bg-gray-800'
+                                          ? 'bg-violet-500/18 text-white'
+                                          : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
                                   }`}
                               >
                                   {filter === 'inventory' ? 'Inventory' : filter === 'processing' ? 'Processing' : 'Shipped'}
@@ -937,34 +893,35 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                       </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-[#131c29] to-[#111521] px-3 py-2.5">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div className="rounded-[24px] bg-[#0a101b] px-4 py-3.5">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">Total items</p>
                           <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.totalItems}</p>
                           <p className="mt-1 text-[10px] text-cyan-100/60">{inventoryStats.sellableItems} sellable</p>
                       </div>
-                      <div className="rounded-xl border border-purple-500/25 bg-gradient-to-br from-[#1b1728] to-[#121320] px-3 py-2.5">
+                      <div className="rounded-[24px] bg-[#0a101b] px-4 py-3.5">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-purple-300/70">Current value</p>
                           <CoinAmount amount={inventoryStats.currentValue} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 text-base font-black text-purple-100" iconClassName="w-4 h-4" />
                       </div>
-                      <div className="col-span-2 sm:col-span-1 rounded-xl border border-blue-500/20 bg-gradient-to-br from-[#141a27] to-[#10131d] px-3 py-2.5">
+                      <div className="rounded-[24px] bg-[#0a101b] px-4 py-3.5">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-blue-200/70">Showing now</p>
                           <p className="mt-1 text-lg font-black text-white leading-none">{inventoryStats.visibleItems}</p>
                       </div>
                   </div>
 
                   {inventoryFilter === 'inventory' && (
-                      <div className="bg-gradient-to-br from-[#161d2c] to-[#11151f] border border-blue-500/20 rounded-2xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
+                      <div className="rounded-[28px] border border-white/6 bg-[#0a101b] p-4 shadow-[0_18px_40px_rgba(4,10,20,0.24)]">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                              <p className="text-sm font-black uppercase tracking-[0.12em] text-white">Ship multiple items</p>
-                              <p className="text-xs text-blue-100/70">Select rewards below for a single premium checkout.</p>
+                              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-white">Ship multiple items</p>
+                              <p className="text-xs text-slate-400">Select rewards below for a single premium checkout.</p>
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                              <div className="flex items-center gap-2 text-xs text-blue-100/80 rounded-full border border-blue-400/20 bg-[#0b0f17]/70 px-3 py-1.5">
+                              <div className="flex items-center gap-2 text-xs text-slate-300 rounded-full bg-white/[0.05] px-3 py-1.5">
                                   <span className="font-semibold">{selectedShipments.length} selected</span>
                                   {shippingCoinEnabled && (
                                     <>
-                                      <span className="text-blue-300/40">•</span>
+                                      <span className="text-slate-600">•</span>
                                       <span>Per item</span>
                                       <CoinAmount
                                         amount={shippingCoinCostCoins}
@@ -976,7 +933,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   )}
                                   {!shippingCoinEnabled && shippingCashEnabled && (
                                     <>
-                                      <span className="text-gray-600">•</span>
+                                      <span className="text-slate-600">•</span>
                                       <span>Cash shipping only</span>
                                     </>
                                   )}
@@ -984,15 +941,16 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               <button
                                   onClick={() => setShowShippingReview(true)}
                                   disabled={!user.shippingAddress || selectedShipments.length === 0}
-                                  className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wide border transition-colors ${
+                                  className={`px-4 py-2 rounded-2xl font-semibold text-xs uppercase tracking-wide transition-colors ${
                                     user.shippingAddress && selectedShipments.length > 0
-                                      ? 'bg-blue-500/25 text-blue-100 border-blue-300/45 hover:bg-blue-500/35 shadow-[0_0_18px_rgba(56,189,248,0.25)]'
-                                      : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
+                                      ? 'bg-violet-500/18 text-white hover:bg-violet-500/24'
+                                      : 'bg-white/[0.04] text-gray-500 cursor-not-allowed'
                                   }`}
                               >
                                   Review shipping
                               </button>
                           </div>
+                        </div>
                       </div>
                   )}
 
@@ -1001,7 +959,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                             {Array.from({ length: 6 }).map((_, idx) => <SkeletonRow key={`inv-skeleton-${idx}`} />)}
                           </div>
                         ) : filteredInventory.length === 0 ? (
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-12 text-center">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-12 text-center">
                           <Package className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                           <h3 className="text-xl font-bold text-white mb-2">
                               {inventoryFilter === 'inventory'
@@ -1025,7 +983,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </button>
                       </div>
                   ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-1 gap-4 min-[460px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                           {filteredInventory.map((item) => {
                               const isAvailable = item.status === 'available';
                               const isLocked = !!item.locked;
@@ -1066,8 +1024,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                     ? 'from-blue-400/30 via-cyan-300/10 to-transparent'
                                     : 'from-slate-300/20 via-slate-200/10 to-transparent';
                               return (
-                                  <div key={item.instanceId} className={`relative bg-gradient-to-b from-[#171c2a] to-[#121622] border rounded-2xl p-3 group transition-all duration-300 flex flex-col hover:-translate-y-0.5 active:scale-[0.99] ${rarityTone} ${isSelected ? 'ring-2 ring-cyan-300/50 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_0_22px_rgba(34,211,238,0.22)]' : ''}`}>
-                                      <div className="relative aspect-square mb-3 bg-[#0b0f17] rounded-xl p-3 flex items-center justify-center overflow-hidden border border-white/5 shadow-inner">
+                                  <div key={item.instanceId} className={`relative border rounded-[28px] p-3.5 group transition-all duration-300 flex flex-col bg-[linear-gradient(180deg,#171c2a,#121622)] ${rarityTone} ${isSelected ? 'ring-2 ring-violet-300/40 shadow-[0_0_0_1px_rgba(167,139,250,0.2)]' : 'shadow-[0_18px_40px_rgba(4,10,20,0.28)]'}`}>
+                                      <div className="relative aspect-square mb-4 bg-[#0b0f17] rounded-[24px] p-4 flex items-center justify-center overflow-hidden">
                                           <div className={`pointer-events-none absolute -inset-4 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.22)_0%,rgba(56,189,248,0.08)_35%,transparent_70%)] opacity-80`} />
                                           <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${imageGlow}`} />
                                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/5" />
@@ -1106,15 +1064,15 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           </button>
                                       </div>
                                       <div className="flex items-center justify-between gap-1.5">
-                                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.16em]">{item.rarity}</div>
-                                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border leading-none ${statusTone}`}>{statusLabel}</span>
+                                          <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.16em]">{item.rarity}</div>
+                                          <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border leading-none ${statusTone}`}>{statusLabel}</span>
                                       </div>
                                       {item.redeemable === false && (
                                         <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
                                           Not redeemable for coins
                                         </div>
                                       )}
-                                      <h4 className="text-white font-bold text-sm mt-2 mb-1.5 line-clamp-2 min-h-[2.5rem] leading-snug">{item.name}</h4>
+                                      <h4 className="text-white font-semibold text-sm mt-2 mb-1.5 line-clamp-2 min-h-[2.5rem] leading-snug">{item.name}</h4>
                                       {isXpItem ? (
                                         <div className="inline-flex items-center rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-300">
                                           XP reward
@@ -1127,7 +1085,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           iconClassName="w-4 h-4"
                                         />
                                       )}
-                                      <div className="text-[11px] text-gray-500 mt-1.5">
+                                      <div className="text-[11px] text-slate-500 mt-1.5">
                                         Obtained {new Date(item.obtainedAt).toLocaleDateString()}
                                       </div>
                                       {inventoryFilter === 'shipped' && item.trackingNumber && (
@@ -1141,10 +1099,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                             <button
                                               onClick={() => handleOpenShippingReview([item.instanceId])}
                                               disabled={!canShip}
-                                              className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${
+                                              className={`w-full px-3 py-2 rounded-2xl font-semibold text-xs transition-colors ${
                                                 canShip
-                                                  ? 'bg-blue-600/20 text-blue-200 border-blue-500/40 hover:bg-blue-600/30'
-                                                  : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
+                                                  ? 'bg-violet-500/18 text-white hover:bg-violet-500/24'
+                                                  : 'bg-white/[0.04] text-gray-500 cursor-not-allowed'
                                               }`}
                                             >
                                               Ship item
@@ -1178,10 +1136,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                   setIsGeneratingSellOffers((prev) => ({ ...prev, [item.instanceId]: false }));
                                                 }}
                                                 disabled={!canSell || !!isGeneratingSellOffers[item.instanceId] || !!isSellingItems[item.instanceId]}
-                                                className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-80 ${
+                                                className={`w-full px-3 py-2 rounded-2xl font-semibold text-xs transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-80 ${
                                                   canSell
-                                                    ? 'bg-[#0b0e14] text-gray-200 border-gray-700 hover:border-brand-purple/60'
-                                                    : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
+                                                    ? 'bg-white/[0.05] text-gray-200 hover:bg-white/[0.08]'
+                                                    : 'bg-white/[0.04] text-gray-500 cursor-not-allowed'
                                                 }`}
                                               >
                                                 <span className="flex flex-col items-center gap-1 text-center">
@@ -1222,10 +1180,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                   }
                                                 }}
                                                 disabled={!item.trackingNumber}
-                                                className={`w-full px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${
+                                                className={`w-full px-3 py-2 rounded-2xl font-semibold text-xs transition-colors ${
                                                   item.trackingNumber
-                                                    ? 'bg-[#0b0e14] text-gray-200 border-gray-700 hover:border-brand-purple/60'
-                                                    : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
+                                                    ? 'bg-white/[0.05] text-gray-200 hover:bg-white/[0.08]'
+                                                    : 'bg-white/[0.04] text-gray-500 cursor-not-allowed'
                                                 }`}
                                               >
                                                 Track package
@@ -1412,10 +1370,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
           )}
 
           {activeTab === 'community' && (
-              <div className="bg-[#131720] border border-gray-800 rounded-2xl overflow-hidden">
-                  <div className="p-4 border-b border-gray-800">
+              <div className="overflow-hidden rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] shadow-[0_20px_44px_rgba(4,10,20,0.3)]">
+                  <div className="p-4 border-b border-white/6">
                       <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Search players</label>
-                      <div className="mt-2 flex items-center gap-3 bg-[#0b0e14] border border-gray-800 rounded-xl px-3 py-2">
+                      <div className="mt-2 flex items-center gap-3 rounded-[20px] bg-[#0a101b] px-4 py-3">
                           <Search className="w-4 h-4 text-gray-500" />
                           <Input 
                             type="text"
@@ -1428,7 +1386,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   </div>
 
                   {trimmedSearch && (
-                      <div className="p-6 border-b border-gray-800">
+                      <div className="p-6 border-b border-white/6">
                           <div className="flex items-center justify-between mb-4">
                               <h4 className="text-sm font-bold text-white">Search Results</h4>
                               <span className="text-xs text-gray-500">{communitySearchResults.length} matches</span>
@@ -1440,7 +1398,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           ) : (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   {communitySearchResults.map((p) => (
-                                      <div key={p.id} className="flex items-center justify-between p-4 bg-[#0b0e14] rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
+                                      <div key={p.id} className="flex items-center justify-between rounded-[24px] bg-[#0a101b] p-4 transition-colors">
                                           <div 
                                             className="flex items-center gap-4 cursor-pointer"
                                             onClick={() => setView({ type: 'PROFILE', userId: p.id })}
@@ -1464,16 +1422,16 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                       </div>
                   )}
 
-                  <div className="flex border-b border-gray-800">
+                  <div className="flex gap-2 border-b border-white/6 p-2">
                       <button 
                         onClick={() => setActivePeopleTab('followers')}
-                        className={`flex-1 py-4 font-bold text-sm transition-colors ${activePeopleTab === 'followers' ? 'text-white bg-[#1a2130]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex-1 rounded-full py-3 font-semibold text-sm transition-colors ${activePeopleTab === 'followers' ? 'text-white bg-violet-500/18' : 'text-gray-500 hover:text-gray-300'}`}
                       >
                           Followers ({viewedFollowerIds.length})
                       </button>
                       <button 
                         onClick={() => setActivePeopleTab('following')}
-                        className={`flex-1 py-4 font-bold text-sm transition-colors ${activePeopleTab === 'following' ? 'text-white bg-[#1a2130]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex-1 rounded-full py-3 font-semibold text-sm transition-colors ${activePeopleTab === 'following' ? 'text-white bg-violet-500/18' : 'text-gray-500 hover:text-gray-300'}`}
                       >
                           Following ({viewedFollowing.length})
                       </button>
@@ -1488,7 +1446,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                       ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {activePeople.map((p) => (
-                                  <div key={p.id} className="flex items-center justify-between p-4 bg-[#0b0e14] rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
+                                  <div key={p.id} className="flex items-center justify-between rounded-[24px] bg-[#0a101b] p-4 transition-colors">
                                       <div 
                                         className="flex items-center gap-4 cursor-pointer"
                                         onClick={() => setView({ type: 'PROFILE', userId: p.id })}
@@ -1514,10 +1472,10 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
           )}
 
           {activeTab === 'settings' && isOwnProfile && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                   {/* Profile Settings */}
                   <div className="lg:col-span-2 space-y-8">
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-6 shadow-[0_20px_44px_rgba(4,10,20,0.3)]">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <User className="w-5 h-5 text-brand-purple" /> Profile Information
                           </h3>
@@ -1562,7 +1520,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </div>
                       </div>
 
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-6 shadow-[0_20px_44px_rgba(4,10,20,0.3)]">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <Lock className="w-5 h-5 text-brand-purple" /> Privacy
                           </h3>
@@ -1590,7 +1548,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </div>
                       </div>
 
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-6 shadow-[0_20px_44px_rgba(4,10,20,0.3)]">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <MapPin className="w-5 h-5 text-brand-purple" /> Shipping Address
                           </h3>
@@ -1672,7 +1630,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
                   {/* Security & Account */}
                   <div className="space-y-8">
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-6 shadow-[0_20px_44px_rgba(4,10,20,0.3)]">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <Shield className="w-5 h-5 text-brand-purple" /> Security
                           </h3>
@@ -1714,7 +1672,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </div>
                       </div>
 
-                      <div className="bg-[#131720] border border-gray-800 rounded-2xl p-6">
+                      <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#0d1220,#0a1018)] p-6 shadow-[0_20px_44px_rgba(4,10,20,0.3)]">
                           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                               <AlertTriangle className="w-5 h-5 text-red-500" /> Danger Zone
                           </h3>
@@ -1733,7 +1691,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
                       <button 
                           onClick={logout}
-                          className="w-full py-4 bg-[#0b0e14] text-gray-400 rounded-2xl font-bold hover:text-white hover:bg-gray-900 transition-all border border-gray-800 flex items-center justify-center gap-2"
+                          className="w-full py-4 bg-[#0a101b] text-gray-400 rounded-[24px] font-bold hover:text-white hover:bg-[#111827] transition-all border border-white/6 flex items-center justify-center gap-2"
                       >
                           <LogOut className="w-5 h-5" /> Sign Out
                       </button>
