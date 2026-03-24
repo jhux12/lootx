@@ -26,6 +26,15 @@
   animation: pullz-toast-in 220ms ease-out forwards;
 }
 
+.pullz-toast-progress {
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.2));
+  transform-origin: left center;
+  animation: pullz-toast-progress linear forwards;
+  animation-duration: var(--pullz-toast-duration, 3500ms);
+}
+
 .pullz-toast-exit {
   animation: pullz-toast-out 180ms ease-in forwards;
 }
@@ -38,4 +47,9 @@
 @keyframes pullz-toast-out {
   from { opacity: 1; transform: translateY(0) scale(1); }
   to { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+
+@keyframes pullz-toast-progress {
+  from { transform: scaleX(1); opacity: 1; }
+  to { transform: scaleX(0); opacity: 0.65; }
 }
