@@ -261,9 +261,9 @@ export const Leaderboard: React.FC = () => {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1280px] px-3 pb-10 pt-20 sm:px-5 sm:pt-24">
-        <section className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-[#111725]">
-          <div className="relative aspect-[16/7] w-full sm:aspect-[3/1]">
+      <main className="pb-10 pt-20 sm:pt-24">
+        <section className="mb-6 w-full overflow-hidden border-y border-white/10 bg-[#111725] sm:mb-8">
+          <div className="relative aspect-[16/10] w-full sm:aspect-[3/1] lg:aspect-[5/1]">
             {settings.heroImageUrl.trim() ? (
               <img
                 src={settings.heroImageUrl.trim()}
@@ -272,7 +272,7 @@ export const Leaderboard: React.FC = () => {
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_20%_15%,rgba(111,125,255,0.35),transparent_46%),radial-gradient(circle_at_80%_80%,rgba(88,213,179,0.25),transparent_52%),linear-gradient(180deg,#171f32_0%,#0f1320_100%)] px-4 text-center">
-                <div>
+                <div className="px-4">
                   <p className="text-2xl font-black uppercase tracking-wide text-white sm:text-4xl">Leaderboard Hero</p>
                   <p className="mt-2 text-sm text-[#cdd3f5] sm:text-base">Hero image is managed in Admin Panel → Rewards Settings.</p>
                 </div>
@@ -280,35 +280,36 @@ export const Leaderboard: React.FC = () => {
             )}
           </div>
         </section>
-        {settingsLoaded && !hasActiveLeaderboard ? (
-          <section className="mx-auto max-w-3xl rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,23,37,0.96)_0%,rgba(13,17,27,0.96)_100%)] px-5 py-10 text-center shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:px-8 sm:py-14">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#7f74ff]/35 bg-[#7f74ff]/12 text-[#b9b2ff] sm:h-20 sm:w-20">
-              <Flame className="h-8 w-8 sm:h-10 sm:w-10" />
-            </div>
-            <h2 className="mt-5 text-3xl font-black uppercase tracking-[0.16em] text-white sm:text-4xl">
-              Starting Soon
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#cdd3f5] sm:text-base">
-              There isn’t a leaderboard running right now. Check back soon for the next competition and rewards drop.
-            </p>
-          </section>
-        ) : (
-          <div className="space-y-8">
-            {timeLeft && (
-              <section className="mx-auto w-full max-w-2xl rounded-2xl border border-white/10 bg-[#111725] p-4 sm:p-5">
-                <div className="flex items-center justify-center gap-3 sm:gap-5">
-                  <div className="hidden items-center gap-2 text-sm font-semibold text-gray-400 sm:flex">
-                    <Flame className="h-4 w-4 text-[#8f7dff]" /> Ends in:
-                  </div>
-                  {[['DAYS', timeLeft.days], ['HRS', timeLeft.hours], ['MIN', timeLeft.minutes], ['SEC', timeLeft.seconds]].map(([label, value]) => (
-                    <div key={String(label)} className="w-16 rounded-xl border border-[#7f74ff]/40 bg-gradient-to-b from-[#7f74ff]/25 to-[#1a2132] px-2 py-2 text-center shadow-[inset_0_2px_12px_rgba(162,154,255,0.3)] sm:w-20 sm:py-3">
-                      <div className="text-lg font-black text-[#b9b2ff] sm:text-2xl">{String(value).padStart(2, '0')}</div>
-                      <div className="text-[10px] font-bold tracking-wider text-gray-300 sm:text-xs">{label}</div>
+        <div className="mx-auto w-full max-w-[1280px] px-3 sm:px-5">
+          {settingsLoaded && !hasActiveLeaderboard ? (
+            <section className="mx-auto max-w-3xl rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,23,37,0.96)_0%,rgba(13,17,27,0.96)_100%)] px-5 py-10 text-center shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:px-8 sm:py-14">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#7f74ff]/35 bg-[#7f74ff]/12 text-[#b9b2ff] sm:h-20 sm:w-20">
+                <Flame className="h-8 w-8 sm:h-10 sm:w-10" />
+              </div>
+              <h2 className="mt-5 text-3xl font-black uppercase tracking-[0.16em] text-white sm:text-4xl">
+                Starting Soon
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#cdd3f5] sm:text-base">
+                There isn’t a leaderboard running right now. Check back soon for the next competition and rewards drop.
+              </p>
+            </section>
+          ) : (
+            <div className="space-y-8">
+              {timeLeft && (
+                <section className="mx-auto w-full max-w-2xl rounded-2xl border border-white/10 bg-[#111725] p-4 sm:p-5">
+                  <div className="flex items-center justify-center gap-3 sm:gap-5">
+                    <div className="hidden items-center gap-2 text-sm font-semibold text-gray-400 sm:flex">
+                      <Flame className="h-4 w-4 text-[#8f7dff]" /> Ends in:
                     </div>
-                  ))}
-                </div>
-              </section>
-            )}
+                    {[['DAYS', timeLeft.days], ['HRS', timeLeft.hours], ['MIN', timeLeft.minutes], ['SEC', timeLeft.seconds]].map(([label, value]) => (
+                      <div key={String(label)} className="w-16 rounded-xl border border-[#7f74ff]/40 bg-gradient-to-b from-[#7f74ff]/25 to-[#1a2132] px-2 py-2 text-center shadow-[inset_0_2px_12px_rgba(162,154,255,0.3)] sm:w-20 sm:py-3">
+                        <div className="text-lg font-black text-[#b9b2ff] sm:text-2xl">{String(value).padStart(2, '0')}</div>
+                        <div className="text-[10px] font-bold tracking-wider text-gray-300 sm:text-xs">{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
 
             <section>
               <h2 className="mb-4 text-center text-3xl font-bold">My Stats</h2>
@@ -399,7 +400,8 @@ export const Leaderboard: React.FC = () => {
               <p className="mt-1 text-base text-[#d9ddf0] sm:text-lg">5 lucky users in ranks 11-100 will randomly be selected to receive <img src={COIN_ICON} alt="Coins" className="inline h-4 w-4 object-contain" /> 100</p>
             </section>
           </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );
