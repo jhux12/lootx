@@ -19,6 +19,7 @@ import { ItemCard } from '../../components/upgrader-elite/ItemCard';
 import { UpgraderSpinner } from '../../components/upgrader-elite/UpgraderSpinner';
 import { Item as EliteItem, UpgradeStatus } from '../../components/upgrader-elite/types';
 import upgraderSoundUrl from '../../assets/upgrader.mp3';
+import { toast } from '../ui/toast/toast';
 
 const rarityMap: Record<string, Rarity> = {
   common: 'Common',
@@ -60,7 +61,6 @@ export default function UpgraderPage() {
   const [winZoneRotation, setWinZoneRotation] = useState(0);
   const [spinNonce, setSpinNonce] = useState(0);
   const [spinResult, setSpinResult] = useState<boolean | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
   const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
@@ -144,7 +144,7 @@ export default function UpgraderPage() {
           }))
         );
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load upgrader data.');
+        toast.error(loadError instanceof Error ? loadError.message : 'Failed to load upgrader data.');
       } finally {
         setLoading(false);
       }
@@ -251,7 +251,6 @@ export default function UpgraderPage() {
   const handleUpgrade = async () => {
     if (!source || !target || !settings || isSubmitting || status === 'spinning') return;
 
-    setError(null);
     setIsSubmitting(true);
     setStatus('spinning');
 
@@ -274,7 +273,7 @@ export default function UpgraderPage() {
       setSpinNonce((previous) => previous + 1);
     } catch (attemptError) {
       setStatus('idle');
-      setError(attemptError instanceof Error ? attemptError.message : 'Upgrade failed.');
+      toast.error(attemptError instanceof Error ? attemptError.message : 'Upgrade failed.');
     } finally {
       setIsSubmitting(false);
     }
@@ -353,8 +352,6 @@ export default function UpgraderPage() {
       </header>
 
       <main className="max-w-[1600px] mx-auto flex flex-col lg:grid lg:grid-cols-[340px_1fr_340px] gap-4 lg:gap-8 p-3 sm:p-4 lg:p-8">
-        {error && <div className="lg:col-span-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{error}</div>}
-
         <section className={`order-3 lg:order-1 flex-col gap-4 overflow-hidden ${activeTab === 'inventory' ? 'flex' : 'hidden lg:flex'}`}>
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Your Inventory <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{inventoryItems.length}</span></h2>

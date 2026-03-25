@@ -55,6 +55,29 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, [push]);
 
+  useEffect(() => {
+    const originalAlert = window.alert.bind(window);
+    const inferVariant = (message: string): ToastVariant => {
+      const normalized = message.toLowerCase();
+      if (/(success|updated|created|saved|copied|claimed|published|following|sent)/.test(normalized)) {
+        return 'success';
+      }
+      if (/(error|unable|fail|invalid|expired|cannot|can not|could not|required|must|please)/.test(normalized)) {
+        return 'error';
+      }
+      return 'info';
+    };
+
+    window.alert = (message?: string) => {
+      const nextMessage = typeof message === 'string' && message.trim() ? message : 'Notice';
+      push(inferVariant(nextMessage), nextMessage);
+    };
+
+    return () => {
+      window.alert = originalAlert;
+    };
+  }, [push]);
+
   useEffect(() => () => {
     Object.values(timers.current).forEach((timer) => window.clearTimeout(timer));
   }, []);
@@ -80,6 +103,7 @@ const ToastItem: React.FC<{ toast: ToastRecord; onDismiss: (id: string) => void;
   return (
     <div
       className={`pullz-toast-enter touch-pan-y rounded-xl border backdrop-blur-md shadow-[0_10px_24px_rgba(0,0,0,0.45)] ${variantStyles[toast.variant]}`}
+      style={{ ['--pullz-toast-duration' as string]: `${toast.durationMs ?? DEFAULT_DURATION_MS}ms` }}
       onMouseEnter={() => onResume(toast.id, 999999)}
       onMouseLeave={() => onResume(toast.id, 1200)}
       onTouchStart={(event) => {
@@ -101,6 +125,7 @@ const ToastItem: React.FC<{ toast: ToastRecord; onDismiss: (id: string) => void;
           <X className="h-4 w-4" />
         </button>
       </div>
+      <div className="pullz-toast-progress" aria-hidden="true" />
     </div>
   );
 };

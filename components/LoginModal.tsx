@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { X, Mail, Lock, User } from 'lucide-react';
 import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -7,6 +7,7 @@ import googleLogo from '../assets/google-logo.svg';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { getAuthErrorMessage } from '../utils/authErrors';
+import { toast } from '../src/ui/toast/toast';
 
 export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
@@ -28,8 +29,6 @@ export const LoginModal: React.FC = () => {
   const [userError, setUserError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
-  const errorBannerRef = React.useRef<HTMLDivElement | null>(null);
-
   const isLinkingGoogle = Boolean(googleLinkCredential);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,9 +163,19 @@ export const LoginModal: React.FC = () => {
 
   useEffect(() => {
     if (userError) {
-      errorBannerRef.current?.focus();
+      toast.error(userError);
     }
   }, [userError]);
+
+  useEffect(() => {
+    if (!message) return;
+    const normalized = message.toLowerCase();
+    if (/(success|sent|saved|updated|completed|linked)/.test(normalized)) {
+      toast.success(message);
+      return;
+    }
+    toast.info(message);
+  }, [message]);
 
   useEffect(() => {
     if (!showGoogleRequirementsTooltip) return;
@@ -270,35 +279,6 @@ export const LoginModal: React.FC = () => {
               />
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-indigo-300">Free signup bonus</p>
               <p className="mt-1 text-sm text-neutral-300">Register to claim your free box.</p>
-            </div>
-          )}
-
-          {userError && (
-            <div
-              ref={errorBannerRef}
-              role="alert"
-              aria-live="polite"
-              tabIndex={-1}
-              className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300 focus:outline-none focus:ring-2 focus:ring-red-400/50"
-            >
-              <div className="flex items-start gap-2">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{userError}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setUserError(null)}
-                className="text-red-200/80 transition-colors hover:text-red-100"
-                aria-label="Dismiss error"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-
-          {message && (
-            <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">
-              <AlertCircle className="h-4 w-4" /> {message}
             </div>
           )}
 

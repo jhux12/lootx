@@ -53,8 +53,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
-  const [addressSaveMessage, setAddressSaveMessage] = useState<string | null>(null);
-  const [addressSaveError, setAddressSaveError] = useState<string | null>(null);
   const sellOfferTimersRef = useRef<Record<string, number>>({});
   const tabScrollRef = useRef<HTMLDivElement>(null);
   const [tabScrollState, setTabScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
@@ -432,15 +430,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
   const handleSaveAddress = async () => {
       setIsSavingAddress(true);
-      setAddressSaveMessage(null);
-      setAddressSaveError(null);
       try {
         await updateAddress(addressForm);
-        setAddressSaveMessage('Shipping address saved!');
         toast.success("Shipping address saved!");
       } catch (error) {
         console.error('Failed to save shipping address from profile form', error);
-        setAddressSaveError('Could not save your shipping address. Please try again.');
         toast.error("Could not save your shipping address.");
       } finally {
         setIsSavingAddress(false);
@@ -1661,12 +1655,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           >
                               <Save className="w-5 h-5" /> {isSavingAddress ? 'Saving Address…' : 'Save Shipping Address'}
                           </button>
-                          {addressSaveMessage && (
-                            <p className="mt-3 text-sm font-medium text-emerald-400">{addressSaveMessage}</p>
-                          )}
-                          {addressSaveError && (
-                            <p className="mt-3 text-sm font-medium text-red-400">{addressSaveError}</p>
-                          )}
                       </div>
                   </div>
 
