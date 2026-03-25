@@ -163,7 +163,13 @@ service cloud.firestore {
         || docId == 'bonus-settings'
         || docId == 'stripe'
         || docId == 'stripe-settings'
-        || docId == 'economy';
+        || docId == 'economy'
+        || docId == 'upgrader';
+      allow write: if isAdmin();
+    }
+
+    match /upgraderTargets/{targetId} {
+      allow read: if true;
       allow write: if isAdmin();
     }
 
