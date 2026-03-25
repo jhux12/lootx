@@ -45,7 +45,6 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { activityStore } from '../src/lib/activity/activityStore';
-import { toast } from '../src/ui/toast/toast';
 
 const sanitizeData = <T extends Record<string, any>>(data: T): T => {
   return Object.fromEntries(
@@ -1154,8 +1153,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [users, setUsers] = useState<User[]>([]);
   const [adminDirectoryUsers, setAdminDirectoryUsers] = useState<AdminDirectoryUserRecord[]>([]);
   const [balance, setBalance] = useState<number>(0);
-  const previousBalanceRef = useRef<number | null>(null);
-  const hasHydratedBalanceRef = useRef(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -1180,34 +1177,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setBalance(nextBalance);
     }
   }, [balance, isAuthenticated, user.balance]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      previousBalanceRef.current = null;
-      hasHydratedBalanceRef.current = false;
-      return;
-    }
-
-    const currentBalance = Number(balance ?? 0);
-    if (!Number.isFinite(currentBalance)) return;
-
-    if (!hasHydratedBalanceRef.current) {
-      hasHydratedBalanceRef.current = true;
-      previousBalanceRef.current = currentBalance;
-      return;
-    }
-
-    const previousBalance = previousBalanceRef.current ?? currentBalance;
-    if (currentBalance > previousBalance) {
-      const increase = currentBalance - previousBalance;
-      const formattedIncrease = Number.isInteger(increase)
-        ? increase.toLocaleString()
-        : increase.toLocaleString(undefined, { maximumFractionDigits: 2 });
-      toast.success(`+${formattedIncrease} coins added to your balance.`);
-    }
-
-    previousBalanceRef.current = currentBalance;
-  }, [balance, isAuthenticated]);
 
   const setView = (nextView: ViewState) => {
     setViewState(nextView);
