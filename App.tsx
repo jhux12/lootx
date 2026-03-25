@@ -35,6 +35,7 @@ import { HomeReplica } from './components/HomeReplica';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { useSiteChat } from './hooks/useSiteChat';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
+import { InstallPrompt } from './src/ui/pwa/InstallPrompt';
 import { SeoHead } from './components/SeoHead';
 import { AdminGate } from './components/AdminGate';
 import {
@@ -442,6 +443,7 @@ const AppShell = () => {
         hasStickyHeader={shouldUseStickyHeader}
       />
       <MobileBottomNav />
+      <InstallPrompt />
 
       <InboxModal
         isOpen={showInbox}

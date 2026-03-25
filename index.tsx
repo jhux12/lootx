@@ -13,3 +13,12 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+// Register a minimal service worker for installability checks in supported PWA browsers.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Silently ignore registration failures in unsupported/private browsing contexts.
+    });
+  });
+}
