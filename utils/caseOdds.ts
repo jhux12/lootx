@@ -38,24 +38,26 @@ const normalizeChances = (items: CaseItem[]) => {
   if (total === 0) return items;
 
   const factor = 10 ** CHANCE_DECIMALS;
-  const normalized = items.map((item) => ({
-    ...item,
-    chance: Math.round(((item.chance / total) * 100) * factor) / factor
-  }));
+  const targetUnits = 100 * factor;
+  const rawUnits = items.map((item) => ((item.chance / total) * 100) * factor);
+  const flooredUnits = rawUnits.map((value) => Math.floor(value));
+  let unitsToDistribute = targetUnits - flooredUnits.reduce((sum, value) => sum + value, 0);
 
-  const normalizedTotal = calculateOddsTotal(normalized);
-  const diff = Math.round((100 - normalizedTotal) * factor) / factor;
+  if (unitsToDistribute > 0) {
+    const fractionalOrder = rawUnits
+      .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
+      .sort((a, b) => b.fraction - a.fraction);
 
-  if (Math.abs(diff) > 0) {
-    const targetIndex = normalized.reduce((bestIndex, item, index, list) =>
-      item.chance > list[bestIndex].chance ? index : bestIndex, 0);
-    normalized[targetIndex] = {
-      ...normalized[targetIndex],
-      chance: Math.round((normalized[targetIndex].chance + diff) * factor) / factor
-    };
+    for (let i = 0; i < fractionalOrder.length && unitsToDistribute > 0; i += 1) {
+      flooredUnits[fractionalOrder[i].index] += 1;
+      unitsToDistribute -= 1;
+    }
   }
 
-  return normalized;
+  return items.map((item, index) => ({
+    ...item,
+    chance: flooredUnits[index] / factor
+  }));
 };
 
 const getRiskWeights = (items: CaseItem[], riskLevel: number) => {
