@@ -75,6 +75,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const lastDailyClaim = Number.isFinite(user.lastDailyClaim ?? NaN) ? Number(user.lastDailyClaim) : 0;
   const dailyCooldownMs = 24 * 60 * 60 * 1000;
   const isDailySpinReady = !lastDailyClaim || (lastDailyClaim + dailyCooldownMs) <= Date.now();
+  const showDailySpinReady = isAuthenticated && isDailySpinReady;
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -221,13 +222,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   ), [openAuthModal, playSound]);
 
   const dailySpinDesktopClass = `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white transition-all ${
-    isDailySpinReady
+    showDailySpinReady
       ? 'border border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
       : 'hover:bg-white/5'
   }`;
 
   const dailySpinMobileClass = `${drawerCardClass} transition-all ${
-    isDailySpinReady
+    showDailySpinReady
       ? 'border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
       : ''
   }`;
@@ -292,9 +293,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 </button>
                 <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
                   <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass}>
-                    <RefreshCw className={`h-4 w-4 text-blue-500 ${isDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
+                    <RefreshCw className={`h-4 w-4 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
                     Daily Spin
-                    {isDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
+                    {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
                   </button>
                   <button type="button" onClick={() => navigate('POLLS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><BarChart3 className="h-4 w-4 text-cyan-300" />Polls</button>
                   <button type="button" onClick={() => navigate('REFERRALS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Users className="h-4 w-4 text-indigo-300" />Referrals</button>
@@ -465,9 +466,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             <h3 className="ml-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Rewards</h3>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => navigate('BONUSES')} className={dailySpinMobileClass}>
-                <RefreshCw className={`h-5 w-5 text-blue-500 ${isDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
+                <RefreshCw className={`h-5 w-5 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
                 <span className="text-sm font-bold text-white">Daily Spin</span>
-                {isDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
+                {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
               </button>
               <button onClick={() => navigate('POLLS')} className={drawerCardClass}><BarChart3 className="h-5 w-5 text-cyan-300" /><span className="text-sm font-bold text-white">Polls</span></button>
               <button onClick={() => navigate('REFERRALS')} className={drawerCardClass}><Users className="h-5 w-5 text-indigo-300" /><span className="text-sm font-bold text-white">Referrals</span></button>
