@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
+import { sendMetaEvent } from './_lib/metaCapi.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -19,8 +20,10 @@ export default async function handler(req, res) {
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await readJsonBody(req);
     const packageId = body?.packageId;
+    const eventId = typeof body?.eventId === 'string' ? body.eventId.trim() : '';
     const fbp = typeof body?.fbp === 'string' ? body.fbp.trim() : '';
     const fbc = typeof body?.fbc === 'string' ? body.fbc.trim() : '';
+    const normalizedEventId = eventId || `checkout_${Date.now()}_${decoded.uid.slice(0, 8)}`;
     if (!packageId || typeof packageId !== 'string') {
       return sendJson(res, 400, { error: 'Missing packageId' });
     }
@@ -37,6 +40,12 @@ export default async function handler(req, res) {
     const baseCoins = Number(data.coins ?? 0);
     const bonusCoins = Number(data.bonusCoins ?? 0);
     const totalCoins = baseCoins + bonusCoins;
+    const rawPrice = Number(data.price ?? data.amount ?? data.usdAmount ?? 0);
+    const displayPrice = typeof data.displayPrice === 'string' ? data.displayPrice : '';
+    const parsedDisplayPrice = Number(displayPrice.replace(/[^0-9.]/g, ''));
+    const packageValue = Number.isFinite(rawPrice) && rawPrice > 0
+      ? rawPrice
+      : (Number.isFinite(parsedDisplayPrice) && parsedDisplayPrice > 0 ? parsedDisplayPrice : 0);
 
     if (!active) {
       return sendJson(res, 400, { error: 'Package is inactive' });
@@ -65,10 +74,44 @@ export default async function handler(req, res) {
         baseCoins: String(baseCoins),
         bonusCoins: String(bonusCoins),
         coins: String(totalCoins),
+        eventId: normalizedEventId.slice(0, 200),
         fbp: fbp.slice(0, 200),
         fbc: fbc.slice(0, 200)
       }
     });
+
+    try {
+      const metaResult = await sendMetaEvent({
+        req,
+        event_name: 'InitiateCheckout',
+        event_id: normalizedEventId,
+        event_source_url: `${process.env.APP_URL}/top-up`,
+        user: {
+          email: decoded.email ?? null,
+          external_id: decoded.uid,
+          fbp,
+          fbc
+        },
+        custom_data: {
+          currency: 'USD',
+          value: packageValue > 0 ? packageValue : undefined
+        },
+        test_event_code: process.env.META_TEST_EVENT_CODE
+      });
+
+      if (!metaResult.ok && !metaResult.skipped) {
+        console.warn('create-checkout-session meta initiate event failed', {
+          eventId: normalizedEventId,
+          status: metaResult.status,
+          error: metaResult.error
+        });
+      }
+    } catch (metaError) {
+      console.error('create-checkout-session meta initiate event error', {
+        eventId: normalizedEventId,
+        message: metaError?.message
+      });
+    }
 
     return sendJson(res, 200, { sessionId: session.id });
   } catch (error) {

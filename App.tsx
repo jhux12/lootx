@@ -38,7 +38,7 @@ import { ToastProvider } from './src/ui/toast/ToastProvider';
 import { InstallPrompt } from './src/ui/pwa/InstallPrompt';
 import { SeoHead } from './components/SeoHead';
 import { AdminGate } from './components/AdminGate';
-import { trackEvent } from './utils/trackEvent';
+import { trackEvent, trackMetaEvent } from './utils/trackEvent';
 import {
   ShowcaseRow,
   ShowcaseRowBoxes,
@@ -124,10 +124,11 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     const topUpStatus = params.get('topup');
     if (topUpStatus !== 'success') return;
 
-    trackEvent('Purchase', {
+    const sessionId = params.get('session_id');
+    trackMetaEvent('Purchase', {
       content_name: 'TopUp',
       status: 'success'
-    });
+    }, sessionId ? { eventID: `purchase_${sessionId}` } : undefined);
   }, []);
 
   const baseHomeBoxes = useMemo(
