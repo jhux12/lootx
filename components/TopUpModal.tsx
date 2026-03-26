@@ -5,16 +5,13 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { auth } from '../firebase';
 import { CoinAmount } from './CoinAmount';
+import { readCookieValue, trackMetaEvent } from '../utils/trackEvent';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-const readCookieValue = (name: string): string => {
-  if (typeof document === 'undefined') return '';
-  const prefix = `${name}=`;
-  const cookies = document.cookie ? document.cookie.split('; ') : [];
-  const match = cookies.find((cookie) => cookie.startsWith(prefix));
-  if (!match) return '';
-  return decodeURIComponent(match.slice(prefix.length));
+const generateCheckoutEventId = () => {
+  const random = Math.random().toString(36).slice(2, 10);
+  return `checkout_${Date.now()}_${random}`;
 };
 
 export const TopUpModal: React.FC = () => {
@@ -123,6 +120,15 @@ export const TopUpModal: React.FC = () => {
       setErrorMessage(null);
 
       try {
+          const eventId = generateCheckoutEventId();
+          const fbp = readCookieValue('_fbp');
+          const fbc = readCookieValue('_fbc');
+          trackMetaEvent('InitiateCheckout', {
+            currency: 'USD',
+            value: priceValue,
+            num_items: 1
+          }, { eventID: eventId });
+
           const token = await auth.currentUser.getIdToken();
           const response = await fetch('/api/create-checkout-session', {
             method: 'POST',
@@ -132,8 +138,9 @@ export const TopUpModal: React.FC = () => {
             },
             body: JSON.stringify({
               packageId: selectedPackage.id,
-              fbp: readCookieValue('_fbp'),
-              fbc: readCookieValue('_fbc')
+              eventId,
+              fbp,
+              fbc
             })
           });
           if (!response.ok) {
