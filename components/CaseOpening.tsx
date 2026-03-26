@@ -19,6 +19,7 @@ import { BlurImage } from '../src/ui/images/BlurImage';
 import { activityStore } from '../src/lib/activity/activityStore';
 import { createMicroConfetti, MicroConfettiParticle } from '../src/ui/feedback/microConfetti';
 import { ProvablyFairModal } from '../src/ui/provably/ProvablyFairModal';
+import { trackEvent } from '../utils/trackEvent';
 import pullzLogo from '../assets/pullz-p.PNG';
 
 interface CaseOpeningProps {
@@ -1129,6 +1130,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         }>('/api/open-case', {
           method: 'POST',
           body: JSON.stringify({ boxId: box.id, isFree, operationId, paymentMethod })
+        });
+
+        trackEvent('OpenBox', {
+          boxId: box.id,
+          paymentMethod,
+          currencyType: data.currencyType ?? 'COIN',
+          isFree
         });
 
         const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
