@@ -111,11 +111,23 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    trackEvent('PageView', {
+      page: view.type,
+      path: window.location.pathname
+    });
+  }, [view.type]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const params = new URLSearchParams(window.location.search);
     const topUpStatus = params.get('topup');
     if (topUpStatus !== 'success') return;
 
-    trackEvent('Purchase');
+    trackEvent('Purchase', {
+      content_name: 'TopUp',
+      status: 'success'
+    });
   }, []);
 
   const baseHomeBoxes = useMemo(

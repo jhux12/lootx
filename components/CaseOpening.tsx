@@ -1132,7 +1132,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           body: JSON.stringify({ boxId: box.id, isFree, operationId, paymentMethod })
         });
 
-        trackEvent('OpenBox');
+        trackEvent('OpenBox', {
+          box_id: box.id,
+          box_name: box.name,
+          box_price: Number(data.price ?? box.price ?? 0),
+          currency_type: data.currencyType ?? (paymentMethod === 'xp' ? 'XP' : 'COIN'),
+          is_free: Boolean(isFree)
+        });
 
         const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
         const fallbackPrice = Number(
