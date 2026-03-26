@@ -13,10 +13,6 @@ export const trackEvent = (eventName: string, data?: TrackEventData) => {
     return;
   }
 
-  if (data && Object.keys(data).length > 0) {
-    window.fbq('track', eventName, data);
-    return;
-  }
-
-  window.fbq('track', eventName);
+  const hasData = Boolean(data && Object.keys(data).length > 0);
+  window.fbq('track', eventName, ...(hasData ? [data] : []));
 };

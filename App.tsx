@@ -115,8 +115,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     const topUpStatus = params.get('topup');
     if (topUpStatus !== 'success') return;
 
-    const sessionId = params.get('session_id');
-    trackEvent('Purchase', sessionId ? { sessionId } : undefined);
+    trackEvent('Purchase');
   }, []);
 
   const baseHomeBoxes = useMemo(
