@@ -17,7 +17,7 @@ import { LegalPage } from './components/LegalPage';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
-import { ShieldAlert } from 'lucide-react';
+import { BarChart3, ShieldAlert, Users } from 'lucide-react';
 import { InboxModal } from './components/InboxModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { HowItWorksSection } from './components/HowItWorksSection';
@@ -30,6 +30,7 @@ import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
+import { RewardsInfoPage } from './components/RewardsInfoPage';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
@@ -275,6 +276,28 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {view.type === 'POLLS' && (
+        <div className="w-full">
+          <RewardsInfoPage
+            title="Polls"
+            subtitle="Rewards Community"
+            description="Vote in community polls to help shape upcoming drops, reward events, and feature rollouts. Poll participation perks will appear here as they launch."
+            Icon={BarChart3}
+          />
+        </div>
+      )}
+
+      {view.type === 'REFERRALS' && (
+        <div className="w-full">
+          <RewardsInfoPage
+            title="Referrals"
+            subtitle="Grow & Earn"
+            description="Invite friends and unlock referral bonuses. Track your referral progress and rewards from this page when the referral system is active."
+            Icon={Users}
+          />
         </div>
       )}
 

@@ -302,6 +302,8 @@ export type ViewState =
   | { type: 'PROFILE'; userId?: string }
   | { type: 'INVENTORY' }
   | { type: 'BONUSES' }
+  | { type: 'POLLS' }
+  | { type: 'REFERRALS' }
   | { type: 'QUESTS' }
   | { type: 'CONTACT' }
   | { type: 'TERMS' }

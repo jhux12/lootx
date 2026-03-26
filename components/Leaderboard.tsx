@@ -262,22 +262,19 @@ export const Leaderboard: React.FC = () => {
       </header>
 
       <main className="pb-10 pt-20 sm:pt-24">
-        <section className="mb-6 w-full overflow-hidden border-y border-white/10 bg-[#111725] sm:mb-8">
-          <div className="relative aspect-[16/10] w-full sm:aspect-[3/1] lg:aspect-[5/1]">
-            {settings.heroImageUrl.trim() ? (
-              <img
-                src={settings.heroImageUrl.trim()}
-                alt="Leaderboard hero"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_20%_15%,rgba(111,125,255,0.35),transparent_46%),radial-gradient(circle_at_80%_80%,rgba(88,213,179,0.25),transparent_52%),linear-gradient(180deg,#171f32_0%,#0f1320_100%)] px-4 text-center">
-                <div className="px-4">
-                  <p className="text-2xl font-black uppercase tracking-wide text-white sm:text-4xl">Leaderboard Hero</p>
-                  <p className="mt-2 text-sm text-[#cdd3f5] sm:text-base">Hero image is managed in Admin Panel → Rewards Settings.</p>
-                </div>
-              </div>
-            )}
+        <section className="mx-auto mb-6 w-full max-w-[1280px] px-3 sm:mb-8 sm:px-5">
+          <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-[#11192b] via-[#131c30] to-[#0f1727] px-5 py-8 sm:px-8 sm:py-10">
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute -top-24 left-4 h-52 w-52 rounded-full bg-cyan-500/20 blur-3xl sm:h-72 sm:w-72" />
+              <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl sm:h-80 sm:w-80" />
+            </div>
+            <div className="relative z-10 max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/80">Rewards Competition</p>
+              <h1 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">Leaderboard</h1>
+              <p className="mt-3 text-sm leading-6 text-[#d3dafc] sm:text-base">
+                Climb the rankings each season by earning points and lock in bigger rewards before the timer runs out.
+              </p>
+            </div>
           </div>
         </section>
         <div className="mx-auto w-full max-w-[1280px] px-3 sm:px-5">
