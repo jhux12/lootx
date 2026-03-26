@@ -8,6 +8,15 @@ import { CoinAmount } from './CoinAmount';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
+const readCookieValue = (name: string): string => {
+  if (typeof document === 'undefined') return '';
+  const prefix = `${name}=`;
+  const cookies = document.cookie ? document.cookie.split('; ') : [];
+  const match = cookies.find((cookie) => cookie.startsWith(prefix));
+  if (!match) return '';
+  return decodeURIComponent(match.slice(prefix.length));
+};
+
 export const TopUpModal: React.FC = () => {
   const { setShowTopUpModal, setTopUpModalIntent, topUpModalIntent, coinPackages } = useGame();
   const { playSound } = useSound();
@@ -121,7 +130,11 @@ export const TopUpModal: React.FC = () => {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`
             },
-            body: JSON.stringify({ packageId: selectedPackage.id })
+            body: JSON.stringify({
+              packageId: selectedPackage.id,
+              fbp: readCookieValue('_fbp'),
+              fbc: readCookieValue('_fbc')
+            })
           });
           if (!response.ok) {
             const message = await response.text();

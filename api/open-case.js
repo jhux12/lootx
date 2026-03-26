@@ -5,6 +5,7 @@ import { normalizeEconomySettings, getXpCost } from './_lib/economy.js';
 import { appendLedgerEntry } from './_lib/ledger.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
+import { sendMetaEvent } from './_lib/metaCapi.js';
 
 const DEFAULT_CLIENT_SEED = 'pullz-player';
 const DEFAULT_NEW_USER_COINS = 0;
@@ -364,6 +365,7 @@ export default async function handler(req, res) {
       const openPayload = {
         uid: decoded.uid,
         boxId,
+        boxName: boxData.name ?? 'Mystery Box',
         price,
         priceXP: paidWithXp ? resolvedXpCost : null,
         currencyType: paidWithXp ? 'XP' : currencyType,
@@ -485,6 +487,44 @@ export default async function handler(req, res) {
         xpAwarded: totalXpAward
       });
     });
+
+    const sourceBoxId = requestBoxId || 'unknown';
+    const openBoxEventId = `openbox_${uid}_${responsePayload?.openId ?? Date.now()}`;
+
+    try {
+      const metaResult = await sendMetaEvent({
+        req,
+        event_name: 'OpenBox',
+        event_id: openBoxEventId,
+        event_source_url: `${process.env.APP_URL}/case/${sourceBoxId}`,
+        user: {
+          email: decoded?.email,
+          phone: decoded?.phone_number,
+          external_id: uid
+        },
+        custom_data: {
+          box_id: sourceBoxId,
+          box_name: responsePayload?.boxName ?? undefined,
+          currency: 'USD',
+          value: Number(responsePayload?.price ?? 0) || 0,
+          prize_name: responsePayload?.prize?.name ?? undefined
+        },
+        test_event_code: process.env.META_TEST_EVENT_CODE
+      });
+
+      if (!metaResult.ok && !metaResult.skipped) {
+        console.warn('open-case meta OpenBox event failed', {
+          openBoxEventId,
+          status: metaResult.status,
+          error: metaResult.error
+        });
+      }
+    } catch (metaError) {
+      console.error('open-case meta OpenBox event error', {
+        openBoxEventId,
+        message: metaError?.message
+      });
+    }
 
     return sendJson(res, 200, responsePayload);
   } catch (error) {
