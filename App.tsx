@@ -38,6 +38,7 @@ import { ToastProvider } from './src/ui/toast/ToastProvider';
 import { InstallPrompt } from './src/ui/pwa/InstallPrompt';
 import { SeoHead } from './components/SeoHead';
 import { AdminGate } from './components/AdminGate';
+import { trackEvent } from './utils/trackEvent';
 import {
   ShowcaseRow,
   ShowcaseRowBoxes,
@@ -105,6 +106,17 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       }
     );
     return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const topUpStatus = params.get('topup');
+    if (topUpStatus !== 'success') return;
+
+    const sessionId = params.get('session_id');
+    trackEvent('Purchase', sessionId ? { sessionId } : undefined);
   }, []);
 
   const baseHomeBoxes = useMemo(
