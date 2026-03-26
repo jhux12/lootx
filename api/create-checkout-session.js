@@ -19,6 +19,8 @@ export default async function handler(req, res) {
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await readJsonBody(req);
     const packageId = body?.packageId;
+    const fbp = typeof body?.fbp === 'string' ? body.fbp.trim() : '';
+    const fbc = typeof body?.fbc === 'string' ? body.fbc.trim() : '';
     if (!packageId || typeof packageId !== 'string') {
       return sendJson(res, 400, { error: 'Missing packageId' });
     }
@@ -63,6 +65,8 @@ export default async function handler(req, res) {
         baseCoins: String(baseCoins),
         bonusCoins: String(bonusCoins),
         coins: String(totalCoins),
+        fbp: fbp.slice(0, 200),
+        fbc: fbc.slice(0, 200)
       }
     });
 

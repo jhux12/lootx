@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { admin, firestore } from './_lib/firebaseAdmin.js';
 import { sendJson } from './_lib/http.js';
 import { appendLedgerEntry } from './_lib/ledger.js';
+import { sendMetaEvent } from './_lib/metaCapi.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -95,6 +96,8 @@ export default async function handler(req, res) {
     }
 
     const uid = metadata.uid;
+    const fbp = typeof metadata.fbp === 'string' ? metadata.fbp.trim() : '';
+    const fbc = typeof metadata.fbc === 'string' ? metadata.fbc.trim() : '';
     const totalCoins = Number(metadata.coins ?? 0);
     let baseCoins = Number(metadata.baseCoins ?? 0);
     let bonusCoins = Number(metadata.bonusCoins ?? 0);
@@ -164,6 +167,49 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error('stripe-webhook failed to credit coins', error);
       return sendJson(res, 500, { error: 'Failed to credit coins' });
+    }
+
+    const amountTotal = Number(session.amount_total ?? 0);
+    const purchaseValue = Number.isFinite(amountTotal) ? Math.max(0, amountTotal / 100) : 0;
+    const eventId = `purchase_${session.id}`;
+
+    try {
+      const userSnap = uid ? await firestore.collection('users').doc(uid).get() : null;
+      const userData = userSnap?.exists ? userSnap.data() ?? {} : {};
+      const email = session.customer_details?.email ?? userData.email ?? null;
+      const phone = session.customer_details?.phone ?? userData.phone ?? userData.phoneNumber ?? null;
+
+      const metaResult = await sendMetaEvent({
+        req,
+        event_name: 'Purchase',
+        event_id: eventId,
+        event_source_url: `${process.env.APP_URL}/top-up`,
+        user: {
+          email,
+          phone,
+          external_id: uid,
+          fbp,
+          fbc
+        },
+        custom_data: {
+          currency: 'USD',
+          value: purchaseValue
+        },
+        test_event_code: process.env.META_TEST_EVENT_CODE
+      });
+
+      if (!metaResult.ok && !metaResult.skipped) {
+        console.warn('stripe-webhook meta purchase event failed', {
+          eventId,
+          status: metaResult.status,
+          error: metaResult.error
+        });
+      }
+    } catch (metaError) {
+      console.error('stripe-webhook meta purchase event error', {
+        eventId,
+        message: metaError?.message
+      });
     }
   }
 
