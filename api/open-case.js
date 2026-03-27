@@ -7,6 +7,7 @@ import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
 import { markReferralFirstGameQualified } from './_lib/referrals.js';
+import { logFinancialTransaction } from './_lib/financialTransactions.js';
 
 const DEFAULT_CLIENT_SEED = 'pullz-player';
 const DEFAULT_NEW_USER_COINS = 0;
@@ -536,6 +537,20 @@ export default async function handler(req, res) {
       });
     }
 
+    await logFinancialTransaction({
+      id: `case_open_${uid}_${responsePayload?.openId ?? Date.now()}`,
+      type: 'coins_spent_case_open',
+      status: 'completed',
+      uid,
+      coinAmount: -Math.abs(Number(responsePayload?.price ?? 0)),
+      dollarAmount: 0,
+      itemName: responsePayload?.prize?.name ?? null,
+      itemId: responsePayload?.prize?.id ?? null,
+      source: 'open_case',
+      boxName: responsePayload?.boxName ?? null,
+      notes: responsePayload?.paymentMethod === 'xp' ? 'Paid with XP' : 'Paid with coins'
+    });
+
     return sendJson(res, 200, responsePayload);
   } catch (error) {
     const status = Number(error?.status) || 500;
@@ -554,6 +569,16 @@ export default async function handler(req, res) {
       currencyType: error?.currencyType,
       price: error?.price ?? error?.priceXP,
       details: error?.details ?? null
+    });
+
+    await logFinancialTransaction({
+      id: `case_open_failed_${uid ?? 'anon'}_${Date.now()}`,
+      type: 'coins_spent_case_open',
+      status: 'failed',
+      uid,
+      source: 'open_case',
+      boxName: requestBoxId ?? null,
+      notes: errorCode
     });
 
     return sendJson(res, status, {

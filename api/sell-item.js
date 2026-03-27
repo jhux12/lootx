@@ -1,6 +1,7 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { appendLedgerEntry } from './_lib/ledger.js';
+import { logFinancialTransaction } from './_lib/financialTransactions.js';
 import { computeXpAward, getXpSettings } from './_lib/xp.js';
 
 const isXpPurchasedInventoryItem = (inventoryItem = {}) => (
@@ -237,6 +238,17 @@ export default async function handler(req, res) {
       };
     });
 
+    await logFinancialTransaction({
+      id: `sell_back_${decoded.uid}_${Date.now()}`,
+      type: 'sell_back',
+      status: 'completed',
+      uid: decoded.uid,
+      coinAmount: Number(responsePayload?.creditCoins ?? 0),
+      source: 'sell_item',
+      itemId: inventoryId ?? null,
+      notes: 'Item sold back by user'
+    });
+
     return sendJson(res, 200, responsePayload);
   } catch (error) {
     const status = error?.status;
@@ -247,6 +259,15 @@ export default async function handler(req, res) {
         reasonCode: error?.details?.reasonCode || error?.error || 'SELL_REJECTED',
         item: error?.details?.item,
         statusCode: status
+      });
+      await logFinancialTransaction({
+        id: `sell_back_failed_${Date.now()}`,
+        type: 'sell_back',
+        status: 'failed',
+        uid: decoded?.uid ?? null,
+        itemId: inventoryId ?? null,
+        source: 'sell_item',
+        notes: error?.details?.reasonCode || error.error || 'SELL_FAILED'
       });
       return sendJson(res, status, {
         error: error.error || 'SELL_FAILED',

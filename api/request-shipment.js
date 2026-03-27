@@ -1,6 +1,7 @@
 import { adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
+import { logFinancialTransaction } from './_lib/financialTransactions.js';
 
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
 
@@ -119,10 +120,27 @@ export default async function handler(req, res) {
       });
     });
 
+    await logFinancialTransaction({
+      id: `shipment_request_${shipmentRef.id}`,
+      type: 'shipment_request',
+      status: 'pending',
+      uid: decoded.uid,
+      coinAmount: -Math.abs(Number(updatedCoins ?? 0)),
+      itemId: body?.inventoryId ?? null,
+      source: 'request_shipment',
+      notes: 'Shipment requested by user'
+    });
     return sendJson(res, 200, { ok: true, shipmentId: shipmentRef.id, newCoins: updatedCoins });
   } catch (error) {
     const status = error?.status;
     if (status) {
+      await logFinancialTransaction({
+        id: `shipment_request_failed_${Date.now()}`,
+        type: 'shipment_request',
+        status: 'failed',
+        notes: error.error || 'Unable to request shipment',
+        source: 'request_shipment'
+      });
       return sendJson(res, status, { error: error.error || 'Unable to request shipment' });
     }
     console.error('request-shipment error', error);

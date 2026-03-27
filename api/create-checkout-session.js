@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
+import { logFinancialTransaction } from './_lib/financialTransactions.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -80,6 +81,19 @@ export default async function handler(req, res) {
       }
     });
 
+
+    await logFinancialTransaction({
+      id: `topup_attempt_${normalizedEventId}`,
+      type: 'stripe_topup_attempt',
+      status: 'pending',
+      uid: decoded.uid,
+      email: decoded.email ?? null,
+      stripeSessionId: session.id,
+      dollarAmount: packageValue,
+      coinAmount: totalCoins,
+      source: 'create_checkout_session',
+      notes: packageId
+    });
     try {
       const metaResult = await sendMetaEvent({
         req,
@@ -116,6 +130,19 @@ export default async function handler(req, res) {
     return sendJson(res, 200, { sessionId: session.id });
   } catch (error) {
     console.error('create-checkout-session error', error);
+    try {
+      const body = await readJsonBody(req);
+      await logFinancialTransaction({
+        id: `topup_attempt_failed_${Date.now()}`,
+        type: 'stripe_topup_attempt',
+        status: 'failed',
+        uid: null,
+        dollarAmount: 0,
+        coinAmount: 0,
+        source: 'create_checkout_session',
+        notes: body?.packageId ? `package:${body.packageId}` : 'Checkout creation failed'
+      });
+    } catch {}
     return sendJson(res, 500, { error: 'Unable to create checkout session' });
   }
 }
