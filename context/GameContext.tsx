@@ -139,6 +139,30 @@ const DEFAULT_LOCKS: UserLocks = {
   shipments: false
 };
 
+
+const REFERRAL_CODE_STORAGE_KEY = 'pullz_pending_referral_code';
+
+const normalizeReferralCode = (value: string | null | undefined) =>
+  String(value ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+
+const getStoredReferralCode = () => {
+  if (typeof window === 'undefined') return '';
+  return normalizeReferralCode(window.localStorage.getItem(REFERRAL_CODE_STORAGE_KEY));
+};
+
+const setStoredReferralCode = (code: string) => {
+  if (typeof window === 'undefined') return;
+  const normalized = normalizeReferralCode(code);
+  if (!normalized) {
+    window.localStorage.removeItem(REFERRAL_CODE_STORAGE_KEY);
+    return;
+  }
+  window.localStorage.setItem(REFERRAL_CODE_STORAGE_KEY, normalized);
+};
+
 const EMAIL_VERIFICATION_PENDING_KEY = 'pendingEmailVerification';
 const EMAIL_VERIFICATION_REDIRECT_KEY = 'pendingEmailRedirect';
 const EMAIL_VERIFICATION_COMPLETED_KEY = 'emailVerificationCompleted';
@@ -1206,6 +1230,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const referralCode = normalizeReferralCode(url.searchParams.get('ref') ?? url.searchParams.get('code'));
+    if (referralCode) {
+      setStoredReferralCode(referralCode);
+    }
+
+    if (url.pathname === '/join') {
+      const nextPath = referralCode ? `/?ref=${encodeURIComponent(referralCode)}` : '/';
+      window.history.replaceState({}, '', nextPath);
+      setViewState(getViewFromLocation('/', url.search));
+    }
+  }, []);
+
   const openAuthModal = (mode: AuthModalMode = 'login') => {
     setAuthModalMode(mode);
     setShowLoginModal(true);
@@ -2008,6 +2048,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
+
+  const tryApplyPendingReferralAttribution = async () => {
+    const pendingReferralCode = getStoredReferralCode();
+    if (!pendingReferralCode) return;
+    try {
+      await authedFetch<{ ok: boolean; applied?: boolean }>('/api/referrals/attribution', {
+        method: 'POST',
+        body: JSON.stringify({ referralCode: pendingReferralCode })
+      });
+      setStoredReferralCode('');
+    } catch (referralError) {
+      console.error('Failed to apply pending referral attribution', referralError);
+    }
+  };
+
   const ensureGoogleUserProfile = async (firebaseUser: FirebaseUser) => {
     const userRef = getUserRef(firebaseUser.uid);
     const userSnapshot = await getDoc(userRef);
@@ -2052,6 +2107,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
 
       await setDoc(userRef, buildUserDocument(newUser), { merge: true });
+      await tryApplyPendingReferralAttribution();
       return;
     }
 
@@ -2243,6 +2299,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
 
       await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser), { merge: true });
+
+      await tryApplyPendingReferralAttribution();
+
       setShowLoginModal(false);
       setEmailVerificationStatus('pending');
       emailVerificationDismissedRef.current = false;

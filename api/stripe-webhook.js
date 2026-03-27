@@ -3,6 +3,7 @@ import { admin, firestore } from './_lib/firebaseAdmin.js';
 import { sendJson } from './_lib/http.js';
 import { appendLedgerEntry } from './_lib/ledger.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
+import { markReferralDepositQualified } from './_lib/referrals.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -169,6 +170,12 @@ export default async function handler(req, res) {
       return sendJson(res, 500, { error: 'Failed to credit coins' });
     }
 
+
+    try {
+      await markReferralDepositQualified({ referredUid: uid, depositCoins: totalCoins });
+    } catch (referralError) {
+      console.error('stripe-webhook failed to evaluate referral deposit qualification', referralError);
+    }
     const amountTotal = Number(session.amount_total ?? 0);
     const purchaseValue = Number.isFinite(amountTotal) ? Math.max(0, amountTotal / 100) : 0;
     const eventId = `purchase_${session.id}`;

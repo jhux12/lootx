@@ -17,7 +17,7 @@ import { LegalPage } from './components/LegalPage';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
-import { ShieldAlert, Users } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 import { InboxModal } from './components/InboxModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { HowItWorksSection } from './components/HowItWorksSection';
@@ -30,7 +30,7 @@ import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
-import { RewardsInfoPage } from './components/RewardsInfoPage';
+import { ReferralsPage } from './components/ReferralsPage';
 import { PollsPage } from './components/PollsPage';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
@@ -288,12 +288,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
       {view.type === 'REFERRALS' && (
         <div className="w-full">
-          <RewardsInfoPage
-            title="Referrals"
-            subtitle="Grow & Earn"
-            description="Invite friends and unlock referral bonuses. Track your referral progress and rewards from this page when the referral system is active."
-            Icon={Users}
-          />
+          <ReferralsPage />
         </div>
       )}
 
