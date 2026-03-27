@@ -285,19 +285,22 @@ export const ReferralsPage: React.FC = () => {
           .map((card) => {
             const Icon = card.icon;
             const value = data?.stats?.[card.key] ?? 0;
+            const valueClassName = 'mt-1 text-2xl font-black leading-none text-white sm:text-3xl';
             return (
               <div key={card.key} className="rounded-2xl border border-white/10 bg-[#0b101c] p-4">
                 <p className="mb-2 inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-400">
                   <Icon className="h-3.5 w-3.5" />
                   {card.label}
                 </p>
-                  {card.key === 'creditsEarned' ? (
-                    <CoinValue amount={Number(value)} className="mt-1 flex text-2xl font-black leading-none text-white sm:text-3xl" iconClassName="h-5 w-5 sm:h-6 sm:w-6" />
-                  ) : (
-                    <p className="text-2xl font-black text-white sm:text-3xl">{Number(value).toLocaleString()}</p>
-                  )}
-                </div>
-              );
+                {card.key === 'creditsEarned' ? (
+                  <div className={valueClassName}>
+                    <CoinValue amount={Number(value)} className="flex" iconClassName="h-5 w-5 sm:h-6 sm:w-6" />
+                  </div>
+                ) : (
+                  <p className={valueClassName}>{Number(value).toLocaleString()}</p>
+                )}
+              </div>
+            );
           })}
       </section>
 
