@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { authedFetch } from '../utils/authedFetch';
+import { COIN_ICON } from '../constants';
 
 type ReferralSettings = {
   enabled: boolean;
@@ -86,10 +87,19 @@ const DEFAULT_SETTINGS: ReferralSettings = {
 
 const statCards = [
   { key: 'referrals', label: 'Referrals', icon: Users },
-  { key: 'creditsEarned', label: 'Credits Earned', icon: Wallet },
+  { key: 'creditsEarned', label: 'Coins Earned', icon: Wallet },
   { key: 'leaderboardPts', label: 'Leaderboard Pts', icon: Crown },
   { key: 'pending', label: 'Pending', icon: HelpCircle }
 ] as const;
+
+const CANONICAL_REFERRAL_BASE_URL = 'https://pullz.gg';
+
+const CoinValue: React.FC<{ amount: number; className?: string; iconClassName?: string }> = ({ amount, className, iconClassName }) => (
+  <span className={`inline-flex items-center gap-1.5 ${className ?? ''}`}>
+    <span>{amount.toLocaleString()}</span>
+    <img src={COIN_ICON} alt="Coin" className={iconClassName ?? 'h-4 w-4'} />
+  </span>
+);
 
 const formatDate = (value: number | null) => {
   if (!value) return '—';
@@ -146,8 +156,8 @@ export const ReferralsPage: React.FC = () => {
 
   const referralLink = useMemo(() => {
     const code = data?.referralCode;
-    if (!code || typeof window === 'undefined') return '';
-    return `${window.location.origin}/join?ref=${encodeURIComponent(code)}`;
+    if (!code) return '';
+    return `${CANONICAL_REFERRAL_BASE_URL}/join?ref=${encodeURIComponent(code)}`;
   }, [data?.referralCode]);
 
   const copyLink = async () => {
@@ -271,25 +281,29 @@ export const ReferralsPage: React.FC = () => {
                   <Icon className="h-3.5 w-3.5" />
                   {card.label}
                 </p>
-                <p className="text-2xl font-black text-white sm:text-3xl">{Number(value).toLocaleString()}</p>
-              </div>
-            );
+                  {card.key === 'creditsEarned' ? (
+                    <CoinValue amount={Number(value)} className="text-2xl font-black text-white sm:text-3xl" iconClassName="h-5 w-5" />
+                  ) : (
+                    <p className="text-2xl font-black text-white sm:text-3xl">{Number(value).toLocaleString()}</p>
+                  )}
+                </div>
+              );
           })}
       </section>
 
       <section className="grid gap-3 md:grid-cols-2">
         <div className="rounded-2xl border border-cyan-500/20 bg-[#0b101c] p-5">
           <p className="text-xs uppercase tracking-[0.16em] text-cyan-200">You Get</p>
-          <p className="mt-2 text-4xl font-black text-white">{settings.referrerRewardCoins.toLocaleString()}</p>
-          <p className="mt-1 text-sm text-slate-300">Credits per completed referral</p>
+          <CoinValue amount={settings.referrerRewardCoins} className="mt-2 text-4xl font-black text-white" iconClassName="h-7 w-7" />
+          <p className="mt-1 text-sm text-slate-300">Coins per completed referral</p>
           {settings.leaderboardPointsEnabled && (
             <p className="mt-2 text-xs text-cyan-200">+{settings.referrerLeaderboardPoints} leaderboard pts</p>
           )}
         </div>
         <div className="rounded-2xl border border-violet-500/20 bg-[#0b101c] p-5">
           <p className="text-xs uppercase tracking-[0.16em] text-violet-200">Your Friend Gets</p>
-          <p className="mt-2 text-4xl font-black text-white">{settings.friendRewardCoins.toLocaleString()}</p>
-          <p className="mt-1 text-sm text-slate-300">Credits after qualifying</p>
+          <CoinValue amount={settings.friendRewardCoins} className="mt-2 text-4xl font-black text-white" iconClassName="h-7 w-7" />
+          <p className="mt-1 text-sm text-slate-300">Coins after qualifying</p>
           {settings.leaderboardPointsEnabled && (
             <p className="mt-2 text-xs text-violet-200">+{settings.friendLeaderboardPoints} leaderboard pts</p>
           )}
@@ -351,14 +365,14 @@ export const ReferralsPage: React.FC = () => {
           <div className="rounded-2xl border border-white/10 bg-[#0b101c] p-5">
             <h3 className="text-base font-bold text-white">Friend Joins with Your Code</h3>
             <p className="mt-2 text-sm text-slate-300">
-              They sign up through your link, deposit at least {settings.requiredDepositCoins.toLocaleString()} credits,
+              They sign up through your link, deposit at least <CoinValue amount={settings.requiredDepositCoins} className="align-middle font-semibold text-white" />,
               {settings.requireFirstQualifyingGame ? ' and play their first qualifying game.' : ' then become eligible for reward review.'}
             </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-[#0b101c] p-5">
             <h3 className="text-base font-bold text-white">You Both Get Rewarded</h3>
             <p className="mt-2 text-sm text-slate-300">
-              You receive {settings.referrerRewardCoins.toLocaleString()} and your friend receives {settings.friendRewardCoins.toLocaleString()}.
+              You receive <CoinValue amount={settings.referrerRewardCoins} className="align-middle font-semibold text-white" /> and your friend receives <CoinValue amount={settings.friendRewardCoins} className="align-middle font-semibold text-white" />.
             </p>
           </div>
         </div>
