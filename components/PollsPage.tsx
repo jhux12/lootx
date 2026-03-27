@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, Clock3, Coins, Lock } from 'lucide-react';
+import { Clock3, Coins, Lock } from 'lucide-react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { useGame } from '../context/GameContext';
 import { db } from '../firebase';
@@ -132,11 +132,6 @@ export const PollsPage: React.FC = () => {
           <div className="absolute -top-24 left-4 h-52 w-52 rounded-full bg-cyan-500/20 blur-3xl sm:h-72 sm:w-72" />
           <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl sm:h-80 sm:w-80" />
         </div>
-        <div className="relative z-10 flex items-center gap-3 text-cyan-100">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] sm:text-xs">
-            <BarChart3 className="h-3.5 w-3.5" /> Rewards Community
-          </div>
-        </div>
         <h1 className="relative z-10 mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">Polls</h1>
         <p className="relative z-10 mt-2 max-w-3xl text-sm leading-6 text-slate-200 sm:text-base">
           Vote in active community polls to shape upcoming drops and earn bonus coins.
@@ -167,7 +162,6 @@ export const PollsPage: React.FC = () => {
                   {poll.description && <p className="mt-1 text-sm text-gray-400">{poll.description}</p>}
                 </div>
                 <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-wide">
-                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">Active</span>
                   {expired && <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-300">Expired</span>}
                 </div>
               </div>
