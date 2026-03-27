@@ -6,6 +6,7 @@ import { appendLedgerEntry } from './_lib/ledger.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
+import { markReferralFirstGameQualified } from './_lib/referrals.js';
 
 const DEFAULT_CLIENT_SEED = 'pullz-player';
 const DEFAULT_NEW_USER_COINS = 0;
@@ -487,6 +488,15 @@ export default async function handler(req, res) {
         xpAwarded: totalXpAward
       });
     });
+
+
+    try {
+      if (responsePayload && responsePayload.isFree !== true) {
+        await markReferralFirstGameQualified({ referredUid: uid });
+      }
+    } catch (referralError) {
+      console.error('open-case failed to evaluate referral game qualification', referralError);
+    }
 
     const sourceBoxId = requestBoxId || 'unknown';
     const openBoxEventId = `openbox_${uid}_${responsePayload?.openId ?? Date.now()}`;

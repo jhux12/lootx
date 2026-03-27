@@ -2,6 +2,7 @@ import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { randomSeed, sha256 } from './_lib/provablyFair.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
+import { markReferralFirstGameQualified } from './_lib/referrals.js';
 
 const DEFAULTS = {
   enabled: true,
@@ -241,6 +242,12 @@ export default async function handler(req, res) {
         newCoins
       };
     });
+
+    try {
+      await markReferralFirstGameQualified({ referredUid: decoded.uid });
+    } catch (referralError) {
+      console.error('attempt-plinko failed to evaluate referral game qualification', referralError);
+    }
 
     return sendJson(res, 200, responsePayload);
   } catch (error) {

@@ -14,6 +14,7 @@ import { BoxesPageConfigEditor } from './admin/BoxesPageConfigEditor';
 import { LegalEditor } from './admin/LegalEditor';
 import { UpgraderAdminSection } from './admin/UpgraderAdminSection';
 import { PollsAdminSection } from './admin/PollsAdminSection';
+import { ReferralAdminSection } from './admin/ReferralAdminSection';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -233,7 +234,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -2775,6 +2776,12 @@ export const AdminPanel: React.FC = () => {
                        <Sparkles className="w-4 h-4" /> Bonuses
                    </button>
                    <button 
+                     onClick={() => setActiveTab('referrals')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'referrals' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <Users className="w-4 h-4" /> Referrals
+                   </button>
+                   <button 
                      onClick={() => setActiveTab('fees')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'fees' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -2835,6 +2842,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'shipments' && 'Shipment Manager'}
                     {activeTab === 'support' && 'Support Inbox'}
                     {activeTab === 'bonuses' && 'Bonuses & XP'}
+                    {activeTab === 'referrals' && 'Referral Program'}
                     {activeTab === 'fees' && 'Fees & Shipping'}
                     {activeTab === 'homepage' && 'Homepage Showcase'}
                     {activeTab === 'boxes-page' && 'Boxes Page'}
@@ -5521,6 +5529,10 @@ export const AdminPanel: React.FC = () => {
             )}
 
             {/* TAB: FEES & SHIPPING */}
+            {activeTab === 'referrals' && (
+                <ReferralAdminSection />
+            )}
+
             {activeTab === 'fees' && (
                 <div className="space-y-6">
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
