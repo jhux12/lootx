@@ -292,7 +292,7 @@ export const ReferralsPage: React.FC = () => {
                   {card.label}
                 </p>
                   {card.key === 'creditsEarned' ? (
-                    <CoinValue amount={Number(value)} className="text-2xl font-black text-white sm:text-3xl" iconClassName="h-5 w-5" />
+                    <CoinValue amount={Number(value)} className="mt-1 flex text-2xl font-black leading-none text-white sm:text-3xl" iconClassName="h-5 w-5 sm:h-6 sm:w-6" />
                   ) : (
                     <p className="text-2xl font-black text-white sm:text-3xl">{Number(value).toLocaleString()}</p>
                   )}
