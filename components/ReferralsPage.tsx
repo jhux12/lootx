@@ -204,7 +204,12 @@ export const ReferralsPage: React.FC = () => {
       <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="rounded-3xl border border-white/10 bg-[#0b101c] p-8 text-center sm:p-12">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">{settings.heroBadge}</p>
-          <h1 className="mb-3 text-3xl font-black text-white sm:text-5xl">{settings.heroTitle}</h1>
+          <h1 className="mb-3 flex flex-wrap items-center justify-center gap-3 text-3xl font-black text-white sm:text-5xl">
+            <span>Give</span>
+            <CoinValue amount={settings.friendRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
+            <span>Get</span>
+            <CoinValue amount={settings.referrerRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
+          </h1>
           <p className="mx-auto mb-8 max-w-2xl text-sm text-slate-300 sm:text-base">{settings.heroDescription}</p>
           <button
             onClick={() => openAuthModal('register')}
@@ -226,7 +231,12 @@ export const ReferralsPage: React.FC = () => {
         <p className="mb-3 w-fit rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-cyan-200">
           {settings.heroBadge}
         </p>
-        <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl">{settings.heroTitle}</h1>
+        <h1 className="flex flex-wrap items-center gap-3 text-3xl font-black tracking-tight text-white sm:text-5xl">
+          <span>Give</span>
+          <CoinValue amount={settings.friendRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
+          <span>Get</span>
+          <CoinValue amount={settings.referrerRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
+        </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">{settings.heroDescription}</p>
       </section>
 
