@@ -188,7 +188,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
 
   const navigate = (type: 'HOME' | 'BOXES' | 'PLINKO' | 'BONUSES' | 'LEADERBOARD' | 'QUESTS' | 'POLLS' | 'REFERRALS' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
     playSound('click');
-    if ((type === 'BONUSES' || type === 'INVENTORY' || type === 'PROFILE') && !isAuthenticated) {
+    const requiresAuth = type === 'BONUSES' || type === 'QUESTS' || type === 'POLLS' || type === 'REFERRALS' || type === 'INVENTORY' || type === 'PROFILE';
+    if (requiresAuth && !isAuthenticated) {
       openAuthModal('login');
       return;
     }
