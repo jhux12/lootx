@@ -365,7 +365,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       </div>
 
-      <div className="w-full border-b border-white/5 bg-neutral-950 shadow-xl">
+      <div
+        className="sticky top-0 z-[60] w-full border-b border-white/5 bg-neutral-950/95 shadow-xl backdrop-blur"
+        style={{ top: 'var(--pullz-header-height, 72px)' }}
+      >
         <div className="mx-auto max-w-6xl px-4 py-4">
           <div className="-mx-1 mb-4 hidden items-center gap-2 overflow-x-auto border-b border-white/5 px-1 pb-4 scrollbar-hide md:mx-0 md:flex md:border-none md:px-0 md:pb-0 [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch]">
             <button
@@ -516,7 +519,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5">{group.icon}</div>
                     <h2 className="text-xl font-bold text-white">{group.title}</h2>
                   </div>
-                  <p className="max-w-2xl text-sm text-neutral-400">{group.subtitle}</p>
                 </div>
                 <div className="hidden rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300 md:block">
                   {group.boxes.length} box{group.boxes.length === 1 ? '' : 'es'}
