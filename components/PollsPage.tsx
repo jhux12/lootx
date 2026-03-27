@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Clock3, Coins, Lock } from 'lucide-react';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { useGame } from '../context/GameContext';
 import { db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
@@ -25,29 +25,56 @@ export const PollsPage: React.FC = () => {
   const [voteNoticeByPoll, setVoteNoticeByPoll] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const pollsQuery = query(collection(db, 'polls'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(
-      pollsQuery,
-      (snapshot) => {
-        const next = snapshot.docs
-          .map((docSnap) => normalizePoll(docSnap.id, docSnap.data()))
+    let cancelled = false;
+
+    const loadPolls = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch('/api/polls/list', { method: 'GET' });
+        const payload = await response.json().catch(() => null) as { ok?: boolean; polls?: unknown[]; error?: string } | null;
+
+        if (!response.ok || !payload?.ok) {
+          throw new Error(payload?.error || 'Failed to load polls.');
+        }
+
+        if (cancelled) return;
+
+        const next = (payload.polls ?? [])
+          .map((entry) => {
+            if (!entry || typeof entry !== 'object') return null;
+            const candidate = entry as Record<string, unknown>;
+            const pollId = typeof candidate.id === 'string' ? candidate.id : '';
+            return pollId ? normalizePoll(pollId, candidate) : null;
+          })
           .filter((poll): poll is Poll => !!poll)
           .filter((poll) => poll.active && poll.published)
           .sort((a, b) => {
             if (a.active !== b.active) return a.active ? -1 : 1;
             return b.createdAt - a.createdAt;
           });
-        setPolls(next);
-        setLoading(false);
-      },
-      (listenError) => {
-        console.error('Failed to load polls', listenError);
-        setError('Unable to load polls right now.');
-        setLoading(false);
-      }
-    );
 
-    return () => unsubscribe();
+        setPolls(next);
+      } catch (loadError) {
+        console.error('Failed to load polls', loadError);
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : 'Unable to load polls right now.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadPolls();
+    const interval = window.setInterval(() => {
+      void loadPolls();
+    }, 30000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
