@@ -365,7 +365,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       </div>
 
-      <div className="w-full border-b border-white/5 bg-neutral-950 shadow-xl">
+      <div className="sticky top-[72px] z-30 w-full border-b border-white/5 bg-neutral-950/95 shadow-xl backdrop-blur md:top-[80px] lg:top-[88px]">
         <div className="mx-auto max-w-6xl px-4 py-4">
           <div className="-mx-1 mb-4 hidden items-center gap-2 overflow-x-auto border-b border-white/5 px-1 pb-4 scrollbar-hide md:mx-0 md:flex md:border-none md:px-0 md:pb-0 [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch]">
             <button
