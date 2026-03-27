@@ -110,11 +110,16 @@ const PullToRefresh: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     <div
       className="relative min-h-screen"
       style={{
-        transform: `translateY(${pullDistance}px)`,
-        transition: isPulling.current || isRefreshing ? 'none' : 'transform 200ms ease-out',
-        willChange: pullDistance > 0 ? 'transform' : undefined
+        overscrollBehaviorY: 'none'
       }}
     >
+      <div
+        aria-hidden="true"
+        style={{
+          height: `${pullDistance}px`,
+          transition: isPulling.current || isRefreshing ? 'none' : 'height 200ms ease-out'
+        }}
+      />
       <div
         aria-hidden={pullDistance === 0 && !isRefreshing}
         className="pointer-events-none fixed inset-x-0 top-[max(env(safe-area-inset-top),0px)] z-[70] flex justify-center"
@@ -133,7 +138,9 @@ const PullToRefresh: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           {indicatorLabel}
         </div>
       </div>
-      {children}
+      <div className="relative">
+        {children}
+      </div>
     </div>
   );
 };
