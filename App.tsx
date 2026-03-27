@@ -41,6 +41,7 @@ import { InstallPrompt } from './src/ui/pwa/InstallPrompt';
 import { SeoHead } from './components/SeoHead';
 import { AdminGate } from './components/AdminGate';
 import { trackEvent, trackMetaEvent } from './utils/trackEvent';
+import PullToRefresh from './components/PullToRefresh';
 import {
   ShowcaseRow,
   ShowcaseRowBoxes,
@@ -468,30 +469,32 @@ const AppShell = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
-      <SeoHead view={view} />
-      <Header
-        onOpenInbox={() => setShowInbox(true)}
-        unreadChatCount={hasUnseenChatMessages ? 1 : 0}
-        isSticky={shouldUseStickyHeader}
-      />
-      <AppLayout
-        hasUnseenChatMessages={hasUnseenChatMessages}
-        onChatViewed={markChatSeen}
-        hasStickyHeader={shouldUseStickyHeader}
-      />
-      <MobileBottomNav />
-      <InstallPrompt />
+    <PullToRefresh>
+      <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+        <SeoHead view={view} />
+        <Header
+          onOpenInbox={() => setShowInbox(true)}
+          unreadChatCount={hasUnseenChatMessages ? 1 : 0}
+          isSticky={shouldUseStickyHeader}
+        />
+        <AppLayout
+          hasUnseenChatMessages={hasUnseenChatMessages}
+          onChatViewed={markChatSeen}
+          hasStickyHeader={shouldUseStickyHeader}
+        />
+        <MobileBottomNav />
+        <InstallPrompt />
 
-      <InboxModal
-        isOpen={showInbox}
-        onClose={() => setShowInbox(false)}
-        hasUnseenMessages={hasUnseenChatMessages}
-        unreadChatCount={hasUnseenChatMessages ? 1 : 0}
-        onChatViewed={markChatSeen}
-      />
-      <ResetPasswordModal />
-    </div>
+        <InboxModal
+          isOpen={showInbox}
+          onClose={() => setShowInbox(false)}
+          hasUnseenMessages={hasUnseenChatMessages}
+          unreadChatCount={hasUnseenChatMessages ? 1 : 0}
+          onChatViewed={markChatSeen}
+        />
+        <ResetPasswordModal />
+      </div>
+    </PullToRefresh>
   );
 };
 
