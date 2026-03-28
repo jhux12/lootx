@@ -31,6 +31,15 @@ type ReferralRow = {
   notes?: string;
 };
 
+const getReferralStatusLabel = (row: ReferralRow) => {
+  const normalizedStatus = String(row.status || '').trim().toLowerCase();
+  if ((normalizedStatus === 'signed_up' || normalizedStatus === 'pending_qualification') && !row.depositQualified) {
+    return 'Pending';
+  }
+  if (!normalizedStatus) return 'Pending';
+  return normalizedStatus.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 const DEFAULT_SETTINGS: ReferralSettings = {
   enabled: true,
   referrerRewardCoins: 1000,
@@ -201,7 +210,7 @@ export const ReferralAdminSection: React.FC = () => {
                   <td className="px-3 py-2">{row.referrerDisplayName || row.id}</td>
                   <td className="px-3 py-2">{row.referredDisplayName || '-'}</td>
                   <td className="px-3 py-2">{row.referralCode || '-'}</td>
-                  <td className="px-3 py-2 capitalize">{row.status.replace(/_/g, ' ')}</td>
+                  <td className="px-3 py-2">{getReferralStatusLabel(row)}</td>
                   <td className="px-3 py-2">{row.depositQualified ? 'Deposit ✓' : 'Deposit ✕'} / {row.firstGameQualified ? 'Game ✓' : 'Game ✕'}</td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-2">

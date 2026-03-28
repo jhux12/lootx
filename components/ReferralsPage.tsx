@@ -40,6 +40,8 @@ type ReferralRecord = {
   joinedAt: number | null;
   status: string;
   youEarned: number;
+  depositQualified?: boolean;
+  firstGameQualified?: boolean;
 };
 
 type ReferralData = {
@@ -104,6 +106,18 @@ const CoinValue: React.FC<{ amount: number; className?: string; iconClassName?: 
 const formatDate = (value: number | null) => {
   if (!value) return '—';
   return new Date(value).toLocaleDateString();
+};
+
+const getReferralStatusLabel = (record: ReferralRecord) => {
+  const normalizedStatus = String(record.status || '').trim().toLowerCase();
+  if ((normalizedStatus === 'signed_up' || normalizedStatus === 'pending_qualification') && !record.depositQualified) {
+    return 'Pending';
+  }
+  if (normalizedStatus === 'rewarded') return 'Rewarded';
+  if (normalizedStatus === 'completed') return 'Completed';
+  if (normalizedStatus === 'invalid' || normalizedStatus === 'rejected') return 'Invalid';
+  if (!normalizedStatus) return 'Pending';
+  return normalizedStatus.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 export const ReferralsPage: React.FC = () => {
@@ -346,7 +360,7 @@ export const ReferralsPage: React.FC = () => {
                     <tr key={record.id} className="border-t border-white/10 text-slate-200">
                       <td className="px-4 py-3">{record.friendLabel}</td>
                       <td className="px-4 py-3">{formatDate(record.joinedAt)}</td>
-                      <td className="px-4 py-3 capitalize">{record.status.replace(/_/g, ' ')}</td>
+                      <td className="px-4 py-3">{getReferralStatusLabel(record)}</td>
                       <td className="px-4 py-3">{record.youEarned.toLocaleString()}</td>
                     </tr>
                   ))}
@@ -359,7 +373,7 @@ export const ReferralsPage: React.FC = () => {
                 <article key={record.id} className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
                   <p className="font-semibold text-white">{record.friendLabel}</p>
                   <p className="mt-1 text-slate-400">Joined: {formatDate(record.joinedAt)}</p>
-                  <p className="mt-1 capitalize text-slate-300">Status: {record.status.replace(/_/g, ' ')}</p>
+                  <p className="mt-1 text-slate-300">Status: {getReferralStatusLabel(record)}</p>
                   <p className="mt-1 text-cyan-200">You earned: {record.youEarned.toLocaleString()}</p>
                 </article>
               ))}
