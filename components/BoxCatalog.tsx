@@ -613,7 +613,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               </div>
               <h2 className="mb-2 text-2xl font-bold text-white">No boxes match this view yet</h2>
               <p className="mx-auto mb-6 max-w-xl text-sm text-neutral-400 sm:text-base">
-                Try clearing the current filters, switching to another sort, or jump back into the full catalog to keep browsing on mobile without extra clutter.
+                Try clearing the current filters, switching to another sort, or jump back into the full catalog to keep browsing.
               </p>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 {hasActiveFilters && (
