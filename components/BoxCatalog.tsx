@@ -389,7 +389,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               onClick={() => setActiveCategory('all')}
               className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${activeCategory === 'all' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-300'}`}
             >
-              <Sparkles className="h-4 w-4 text-orange-400" />
+              <Sparkles className="h-4 w-4 text-indigo-400" />
               All
             </button>
             {categories.map((cat) => (
@@ -425,7 +425,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:items-center xl:gap-3">
                 <div className="flex items-center gap-2">
                   <div className="flex min-w-[120px] items-center gap-1.5 rounded-xl border border-white/5 bg-black/45 px-3 py-2.5">
-                    <Sparkles className="h-4 w-4 text-orange-400" />
+                    <Sparkles className="h-4 w-4 text-indigo-400" />
                     <input
                       inputMode="numeric"
                       placeholder="Min"
@@ -436,7 +436,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   </div>
                   <span className="text-neutral-500">–</span>
                   <div className="flex min-w-[120px] items-center gap-1.5 rounded-xl border border-white/5 bg-black/45 px-3 py-2.5">
-                    <Sparkles className="h-4 w-4 text-orange-400" />
+                    <Sparkles className="h-4 w-4 text-indigo-400" />
                     <input
                       inputMode="numeric"
                       placeholder="Max"
@@ -557,7 +557,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                         <div className="pointer-events-none absolute inset-x-[10%] top-4 h-28 rounded-[2rem] bg-white/10 blur-2xl sm:top-6 sm:h-36" />
                         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/20 via-black/5 to-transparent" />
                         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
-                          <div className="h-1.5 w-20 rounded-t-full bg-[#f8d793]/85 shadow-[0_0_20px_rgba(248,215,147,0.55)] sm:w-24" />
+                          <div className="h-1.5 w-20 rounded-t-full bg-indigo-300/85 shadow-[0_0_20px_rgba(165,180,252,0.65)] sm:w-24" />
                         </div>
                         <div className="relative z-10 flex h-[160px] w-full -translate-y-3 items-center justify-center pb-6 sm:h-[190px] sm:translate-y-0 sm:pb-6">
                           {topItem ? (
