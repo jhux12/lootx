@@ -14,7 +14,6 @@ import {
   Sparkles,
   BarChart3,
   Clock3,
-  Shield,
   ShieldCheck,
   Trophy,
   Twitter,
@@ -24,14 +23,12 @@ import {
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
-import { authedFetch } from '../utils/authedFetch';
 import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
 import { XP_ICON } from '../constants';
 import { useBalanceFeedback } from '../src/ui/feedback/useBalanceFeedback';
 import { ActivityDrawer } from '../src/ui/activity/ActivityDrawer';
 import { useActivity } from '../src/lib/activity/useActivity';
-import { ProvablyFairBadge } from '../src/ui/provably/ProvablyFairBadge';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getClaimReadyQuestCount, normalizeQuestRules } from '../src/lib/quests';
@@ -67,7 +64,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const [claimedTodayCount, setClaimedTodayCount] = useState(0);
   const [locallyClaimedQuestIds, setLocallyClaimedQuestIds] = useState<Record<string, string>>({});
   const [showActivity, setShowActivity] = useState(false);
-  const [provablyData, setProvablyData] = useState<{ serverSeedHash?: string; clientSeed?: string; nonce?: number }>({});
+  const [openMobileSections, setOpenMobileSections] = useState({
+    games: true,
+    rewards: false,
+    learn: false,
+    support: false,
+    social: false
+  });
   const headerRef = useRef<HTMLElement | null>(null);
   const targetXp = Math.floor(user.xpBalance ?? user.xp ?? 0);
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
@@ -76,13 +79,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const dailyCooldownMs = 24 * 60 * 60 * 1000;
   const isDailySpinReady = !lastDailyClaim || (lastDailyClaim + dailyCooldownMs) <= Date.now();
   const showDailySpinReady = isAuthenticated && isDailySpinReady;
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    authedFetch<{ serverSeedHash: string; clientSeed: string; nonce: number }>('/api/provably-fair')
-      .then((data) => setProvablyData(data))
-      .catch(() => undefined);
-  }, [isAuthenticated]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -234,6 +230,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       : ''
   }`;
 
+  const toggleMobileSection = (section: keyof typeof openMobileSections) => {
+    setOpenMobileSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
+
   return (
     <>
     <div className="relative z-50">
@@ -345,7 +345,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 </div>
 
                 <div className="hidden items-center gap-2 lg:flex">
-                  <ProvablyFairBadge data={provablyData} />
                   <button
                     type="button"
                     onClick={() => setShowActivity(true)}
@@ -456,77 +455,105 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           )}
 
           <section className="space-y-3">
-            <h3 className="ml-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Games</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => navigate('BOXES')} className={drawerCardClass}><Package className="h-5 w-5 text-orange-500" /><span className="text-sm font-bold text-white">Boxes</span></button>
-              <button onClick={() => navigate('PLINKO')} className={drawerCardClass}><UpgraderIcon className="h-5 w-5 text-emerald-400" /><span className="text-sm font-bold text-white">Upgrader</span></button>
-            </div>
+            <button type="button" onClick={() => toggleMobileSection('games')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Games</h3>
+              <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.games ? 'rotate-180' : ''}`} />
+            </button>
+            {openMobileSections.games ? (
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => navigate('BOXES')} className={drawerCardClass}><Package className="h-5 w-5 text-orange-500" /><span className="text-sm font-bold text-white">Boxes</span></button>
+                <button onClick={() => navigate('PLINKO')} className={drawerCardClass}><UpgraderIcon className="h-5 w-5 text-emerald-400" /><span className="text-sm font-bold text-white">Upgrader</span></button>
+              </div>
+            ) : null}
           </section>
 
           <section className="space-y-3">
-            <h3 className="ml-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Rewards</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => navigate('BONUSES')} className={dailySpinMobileClass}>
-                <RefreshCw className={`h-5 w-5 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
-                <span className="text-sm font-bold text-white">Daily Spin</span>
-                {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
-              </button>
-              <button onClick={() => navigate('POLLS')} className={drawerCardClass}><BarChart3 className="h-5 w-5 text-cyan-300" /><span className="text-sm font-bold text-white">Polls</span></button>
-              <button onClick={() => navigate('REFERRALS')} className={drawerCardClass}><Users className="h-5 w-5 text-indigo-300" /><span className="text-sm font-bold text-white">Referrals</span></button>
-              <button onClick={() => navigate('LEADERBOARD')} className={drawerCardClass}><Trophy className="h-5 w-5 text-yellow-500" /><span className="text-sm font-bold text-white">Leaderboard</span></button>
-              <button onClick={() => navigate('QUESTS')} className={`${drawerCardClass} relative`}><Sparkles className="h-5 w-5 text-violet-300" /><span className="text-sm font-bold text-white">Quests</span>{questReadyCount > 0 ? <span className="absolute right-2 top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : claimedTodayCount > 0 ? <span className="absolute right-2 top-2 inline-flex items-center justify-center rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
-            </div>
+            <button type="button" onClick={() => toggleMobileSection('rewards')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Rewards</h3>
+              <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.rewards ? 'rotate-180' : ''}`} />
+            </button>
+            {openMobileSections.rewards ? (
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => navigate('BONUSES')} className={dailySpinMobileClass}>
+                  <RefreshCw className={`h-5 w-5 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
+                  <span className="text-sm font-bold text-white">Daily Spin</span>
+                  {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
+                </button>
+                <button onClick={() => navigate('POLLS')} className={drawerCardClass}><BarChart3 className="h-5 w-5 text-cyan-300" /><span className="text-sm font-bold text-white">Polls</span></button>
+                <button onClick={() => navigate('REFERRALS')} className={drawerCardClass}><Users className="h-5 w-5 text-indigo-300" /><span className="text-sm font-bold text-white">Referrals</span></button>
+                <button onClick={() => navigate('LEADERBOARD')} className={drawerCardClass}><Trophy className="h-5 w-5 text-yellow-500" /><span className="text-sm font-bold text-white">Leaderboard</span></button>
+                <button onClick={() => navigate('QUESTS')} className={`${drawerCardClass} relative`}><Sparkles className="h-5 w-5 text-violet-300" /><span className="text-sm font-bold text-white">Quests</span>{questReadyCount > 0 ? <span className="absolute right-2 top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : claimedTodayCount > 0 ? <span className="absolute right-2 top-2 inline-flex items-center justify-center rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
+              </div>
+            ) : null}
           </section>
 
           <section className="space-y-3">
-            <h3 className="ml-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Learn</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <button disabled className={`${drawerCardClass} cursor-not-allowed opacity-70`}><PenTool className="h-5 w-5 text-neutral-400" /><span className="text-sm font-bold text-white">Blog</span></button>
-              <button disabled className={`${drawerCardClass} cursor-not-allowed opacity-70`}><HelpCircle className="h-5 w-5 text-neutral-400" /><span className="text-sm font-bold text-white">FAQ</span></button>
-            </div>
-            <button onClick={() => navigate('PROVABLY_FAIR')} className={`${drawerCardClass} w-full`}><Shield className="h-5 w-5 text-green-500" /><span className="text-sm font-bold text-white">Fairness</span></button>
+            <button type="button" onClick={() => toggleMobileSection('learn')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Learn</h3>
+              <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.learn ? 'rotate-180' : ''}`} />
+            </button>
+            {openMobileSections.learn ? (
+              <div className="grid grid-cols-2 gap-3">
+                <button disabled className={`${drawerCardClass} cursor-not-allowed opacity-70`}><PenTool className="h-5 w-5 text-neutral-400" /><span className="text-sm font-bold text-white">Blog</span></button>
+                <button disabled className={`${drawerCardClass} cursor-not-allowed opacity-70`}><HelpCircle className="h-5 w-5 text-neutral-400" /><span className="text-sm font-bold text-white">FAQ</span></button>
+              </div>
+            ) : null}
           </section>
 
           <section className="space-y-3">
-            <h3 className="ml-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Info and Support</h3>
-            {isAuthenticated && (
-              <button
-                onClick={() => {
-                  playSound('click');
-                  setIsMobileMenuOpen(false);
-                  setShowActivity(true);
-                }}
-                className={`${drawerCardClass} w-full`}
-              >
-                <div className="relative">
-                  <Clock3 className="h-5 w-5 text-cyan-300" />
-                  {unreadCount > 0 ? <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-cyan-300" /> : null}
-                </div>
-                <div className="flex min-w-0 flex-col items-start">
-                  <span className="text-sm font-bold text-white">History</span>
-                  <span className="text-xs text-neutral-400">Recent opens, sells, and shipping</span>
-                </div>
-              </button>
-            )}
-            <button onClick={() => navigate('CONTACT')} className={`${drawerCardClass} w-full`}><LifeBuoy className="h-5 w-5 text-white" /><span className="text-sm font-bold text-white">Support</span></button>
+            <button type="button" onClick={() => toggleMobileSection('support')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Info and Support</h3>
+              <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.support ? 'rotate-180' : ''}`} />
+            </button>
+            {openMobileSections.support ? (
+              <>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      setIsMobileMenuOpen(false);
+                      setShowActivity(true);
+                    }}
+                    className={`${drawerCardClass} w-full`}
+                  >
+                    <div className="relative">
+                      <Clock3 className="h-5 w-5 text-cyan-300" />
+                      {unreadCount > 0 ? <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-cyan-300" /> : null}
+                    </div>
+                    <div className="flex min-w-0 flex-col items-start">
+                      <span className="text-sm font-bold text-white">History</span>
+                      <span className="text-xs text-neutral-400">Recent opens, sells, and shipping</span>
+                    </div>
+                  </button>
+                )}
+                <button onClick={() => navigate('CONTACT')} className={`${drawerCardClass} w-full`}><LifeBuoy className="h-5 w-5 text-white" /><span className="text-sm font-bold text-white">Support</span></button>
+              </>
+            ) : null}
           </section>
 
           <section className="mt-2 flex flex-col items-center gap-6">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Social Media</h3>
-            <div className="flex items-center gap-6 text-white">
-              <a href="#" aria-label="Facebook"><Facebook className="h-6 w-6" /></a>
-              <a href="#" aria-label="Instagram"><Instagram className="h-6 w-6" /></a>
-              <a href="#" aria-label="Youtube"><Youtube className="h-6 w-6" /></a>
-              <a href="#" aria-label="Twitter"><Twitter className="h-6 w-6" /></a>
-            </div>
-            <div className="flex flex-col items-center gap-3 text-xs font-bold text-neutral-500">
-              <div className="flex items-center gap-4">
-                <button onClick={() => navigate('TERMS')} className="hover:text-white">Terms of Service</button>
-                <span>|</span>
-                <button onClick={() => navigate('PRIVACY')} className="hover:text-white">Privacy Policy</button>
-              </div>
-              <button disabled className="cursor-not-allowed opacity-70">AML &amp; KYC Policy</button>
-            </div>
+            <button type="button" onClick={() => toggleMobileSection('social')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Social Media</h3>
+              <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.social ? 'rotate-180' : ''}`} />
+            </button>
+            {openMobileSections.social ? (
+              <>
+                <div className="flex items-center gap-6 text-white">
+                  <a href="#" aria-label="Facebook"><Facebook className="h-6 w-6" /></a>
+                  <a href="#" aria-label="Instagram"><Instagram className="h-6 w-6" /></a>
+                  <a href="#" aria-label="Youtube"><Youtube className="h-6 w-6" /></a>
+                  <a href="#" aria-label="Twitter"><Twitter className="h-6 w-6" /></a>
+                </div>
+                <div className="flex flex-col items-center gap-3 text-xs font-bold text-neutral-500">
+                  <div className="flex items-center gap-4">
+                    <button onClick={() => navigate('TERMS')} className="hover:text-white">Terms of Service</button>
+                    <span>|</span>
+                    <button onClick={() => navigate('PRIVACY')} className="hover:text-white">Privacy Policy</button>
+                  </div>
+                  <button disabled className="cursor-not-allowed opacity-70">AML &amp; KYC Policy</button>
+                </div>
+              </>
+            ) : null}
           </section>
         </div>
       </div>
