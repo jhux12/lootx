@@ -1802,18 +1802,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                    <button
                      onClick={handleTryFree}
                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed}
-                     className="w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20 flex flex-col items-center leading-tight"
+                     className="inline-flex max-w-full items-center justify-center px-2 py-1 text-xs sm:text-sm font-semibold text-white transition hover:text-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
                    >
-                     <span>Demo Spin</span>
-                   </button>
-                 )}
-                 {isAdmin && (
-                   <button
-                     onClick={() => handleSpin({ isDemo: true, forceGold: true })}
-                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed}
-                     className="w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg shadow-lg transition-all active:scale-95 bg-yellow-400 hover:bg-yellow-300 shadow-yellow-500/20 flex flex-col items-center leading-tight"
-                   >
-                     <span>Test Gold Spin</span>
+                     Demo Spin
                    </button>
                  )}
             </div>
