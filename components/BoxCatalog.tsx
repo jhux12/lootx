@@ -127,15 +127,25 @@ const toCategoryVariants = (value: string) => {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
-  const { boxes, setView, stripeSettings } = useGame();
+  const { boxes, setView, stripeSettings, balance } = useGame();
   const { playSound } = useSound();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('featured');
-  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [minPriceQuery, setMinPriceQuery] = useState('');
+  const [maxPriceQuery, setMaxPriceQuery] = useState('');
+  const [onlyAffordable, setOnlyAffordable] = useState(false);
   const [previewBoxId, setPreviewBoxId] = useState<string | null>(null);
 
-  const hasActiveFilters = activeCategory !== 'all' || searchQuery.trim().length > 0;
+  const minPrice = minPriceQuery.trim() ? Number(minPriceQuery) : null;
+  const maxPrice = maxPriceQuery.trim() ? Number(maxPriceQuery) : null;
+
+  const hasActiveFilters =
+    activeCategory !== 'all' ||
+    searchQuery.trim().length > 0 ||
+    Boolean(minPriceQuery.trim()) ||
+    Boolean(maxPriceQuery.trim()) ||
+    onlyAffordable;
 
   const displayBoxes = useMemo(
     () => boxes.filter((box) => !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
@@ -173,9 +183,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       const tags = getBoxTags(box);
       const matchesCategory = activeCategory === 'all' || tags.includes(normalizeBoxTag(activeCategory));
       const matchesSearch = box.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
-      return matchesCategory && matchesSearch;
+      const boxPrice = getBoxPrice(box);
+      const matchesMin = minPrice == null || Number.isNaN(minPrice) || boxPrice >= minPrice;
+      const matchesMax = maxPrice == null || Number.isNaN(maxPrice) || boxPrice <= maxPrice;
+      const matchesAffordable = !onlyAffordable || boxPrice <= balance;
+      return matchesCategory && matchesSearch && matchesMin && matchesMax && matchesAffordable;
     });
-  }, [activeCategory, displayBoxes, searchQuery]);
+  }, [activeCategory, balance, displayBoxes, maxPrice, minPrice, onlyAffordable, searchQuery]);
 
   const sortedFilteredBoxes = useMemo(() => getSortedBoxes(filteredBoxes, sortOption), [filteredBoxes, sortOption]);
 
@@ -303,6 +317,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const clearFilters = () => {
     setActiveCategory('all');
     setSearchQuery('');
+    setMinPriceQuery('');
+    setMaxPriceQuery('');
+    setOnlyAffordable(false);
     setSortOption('featured');
   };
 
@@ -365,20 +382,21 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       </div>
 
-      <div className="sticky top-0 z-40 w-full border-b border-white/5 bg-neutral-950/95 shadow-xl backdrop-blur">
-        <div className="mx-auto max-w-6xl px-4 py-4">
-          <div className="-mx-1 mb-4 hidden items-center gap-2 overflow-x-auto border-b border-white/5 px-1 pb-4 scrollbar-hide md:mx-0 md:flex md:border-none md:px-0 md:pb-0 [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch]">
+      <div className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#090a0f]/95 shadow-xl backdrop-blur">
+        <div className="mx-auto max-w-[1370px] px-3 py-4 sm:px-4">
+          <div className="-mx-1 mb-3 flex items-center gap-2 overflow-x-auto border-b border-white/10 px-1 pb-3 scrollbar-hide [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch]">
             <button
               onClick={() => setActiveCategory('all')}
-              className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-bold transition-all ${activeCategory === 'all' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
+              className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${activeCategory === 'all' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-300'}`}
             >
+              <Sparkles className="h-4 w-4 text-orange-400" />
               All
             </button>
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-bold transition-all ${activeCategory === cat.id ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
+                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${activeCategory === cat.id ? 'bg-white/10 text-white' : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-300'}`}
               >
                 {cat.iconClass ? <i aria-hidden="true" className={`${cat.iconClass} text-sm`} /> : <div className="h-4 w-4 rounded-full bg-indigo-500" />}
                 <span>{cat.title}</span>
@@ -386,13 +404,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             ))}
           </div>
 
-          <div className="rounded-xl border border-white/5 bg-neutral-900/50 p-2">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center">
-              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-white/5 bg-neutral-950 px-3 py-2.5 md:w-auto">
+          <div className="rounded-2xl border border-white/10 bg-[#121318] p-2.5 sm:p-3">
+            <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/5 bg-black/45 px-3 py-2.5 md:w-auto">
                 <Search className="h-4 w-4 shrink-0 text-neutral-500" />
                 <input
                   type="text"
-                  placeholder="Search boxes..."
+                  placeholder="Search boxes"
                   className="w-full min-w-0 border-none bg-transparent text-sm text-white placeholder-neutral-600 outline-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -404,7 +422,30 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 )}
               </div>
 
-              <div className="hidden items-center gap-3 md:flex">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:items-center xl:gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex min-w-[120px] items-center gap-1.5 rounded-xl border border-white/5 bg-black/45 px-3 py-2.5">
+                    <Sparkles className="h-4 w-4 text-orange-400" />
+                    <input
+                      inputMode="numeric"
+                      placeholder="Min"
+                      value={minPriceQuery}
+                      onChange={(event) => setMinPriceQuery(event.target.value.replace(/[^\d]/g, ''))}
+                      className="w-full border-none bg-transparent text-sm font-semibold text-white placeholder-neutral-500 outline-none"
+                    />
+                  </div>
+                  <span className="text-neutral-500">–</span>
+                  <div className="flex min-w-[120px] items-center gap-1.5 rounded-xl border border-white/5 bg-black/45 px-3 py-2.5">
+                    <Sparkles className="h-4 w-4 text-orange-400" />
+                    <input
+                      inputMode="numeric"
+                      placeholder="Max"
+                      value={maxPriceQuery}
+                      onChange={(event) => setMaxPriceQuery(event.target.value.replace(/[^\d]/g, ''))}
+                      className="w-full border-none bg-transparent text-sm font-semibold text-white placeholder-neutral-500 outline-none"
+                    />
+                  </div>
+                </div>
                 <label className="relative">
                   <span className="sr-only">Sort boxes</span>
                   <select
@@ -420,18 +461,27 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-neutral-400" />
                 </label>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/5 px-3 py-2.5 text-sm font-semibold text-neutral-200">
+                  <input
+                    type="checkbox"
+                    checked={onlyAffordable}
+                    onChange={(event) => setOnlyAffordable(event.target.checked)}
+                    className="h-4 w-4 rounded border-white/20 bg-black/40"
+                  />
+                  Enough Credits to Buy
+                </label>
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-white/20 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                  Clear Filters
+                </button>
               </div>
-
-              <button
-                className="flex w-full items-center justify-center rounded-lg bg-indigo-600 py-2.5 text-sm font-bold text-white md:hidden"
-                type="button"
-                onClick={() => setIsMobileFiltersOpen((current) => !current)}
-              >
-                <Filter className="mr-2 h-4 w-4" /> {isMobileFiltersOpen ? 'Hide Filters' : 'Filter & Sort'}
-              </button>
             </div>
 
-            <div className="mt-2 flex items-center justify-between gap-2 md:hidden">
+            <div className="mt-2 flex items-center justify-between gap-2 xl:hidden">
               <div className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap text-xs text-neutral-300 scrollbar-hide">
                 <span className="rounded-full bg-white/5 px-3 py-1.5 inline-flex items-center gap-2">
                   <span className="font-semibold text-white">{activeCategory === 'all' ? 'All boxes' : categories.find((cat) => cat.id === activeCategory)?.title ?? 'Filtered'}</span>
@@ -445,58 +495,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               )}
             </div>
           </div>
-
-          {isMobileFiltersOpen && (
-            <div className="mt-3 rounded-xl border border-white/10 bg-neutral-950/95 p-3 md:hidden">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Sort</p>
-                <label className="relative min-w-[160px]">
-                  <span className="sr-only">Sort boxes</span>
-                  <select
-                    value={sortOption}
-                    onChange={(event) => setSortOption(event.target.value as SortOption)}
-                    className="w-full appearance-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 pr-8 text-xs font-bold text-white outline-none"
-                  >
-                    {SORT_OPTIONS.map((option) => (
-                      <option key={`mobile-sort-${option.id}`} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
-                </label>
-              </div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Category filters</p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveCategory('all');
-                    setIsMobileFiltersOpen(false);
-                  }}
-                  className={`rounded-lg px-3 py-2 text-xs font-bold transition ${activeCategory === 'all' ? 'bg-white/15 text-white' : 'bg-white/5 text-neutral-300'}`}
-                >
-                  All
-                </button>
-                {categories.map((cat) => (
-                  <button
-                    key={`mobile-${cat.id}`}
-                    type="button"
-                    onClick={() => {
-                      setActiveCategory(cat.id);
-                      setIsMobileFiltersOpen(false);
-                    }}
-                    className={`rounded-lg px-3 py-2 text-xs font-bold transition ${activeCategory === cat.id ? 'bg-indigo-500/30 text-white' : 'bg-white/5 text-neutral-300'}`}
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      {cat.iconClass ? <i aria-hidden="true" className={`${cat.iconClass} text-xs`} /> : null}
-                      <span>{cat.title}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
