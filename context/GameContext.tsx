@@ -718,8 +718,6 @@ const GUEST_USER: User = {
   rakebackTier: null,
   followers: [],
   isAdmin: false,
-  chatWarnings: 0,
-  chatDisabled: false,
   termsFlagged: false
 };
 
@@ -865,7 +863,6 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
   const metadataCreatedAt = firebaseUser.metadata.creationTime ? Date.parse(firebaseUser.metadata.creationTime) : NaN;
   const fallbackCreatedAt = Number.isFinite(metadataCreatedAt) ? metadataCreatedAt : now;
   const createdAt = normalizeTimestamp(data.createdAt, fallbackCreatedAt);
-  const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
   const xp = Number(data.xpBalance ?? data.xp ?? 0);
   const lastDailyClaim = data.lastDailyClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyClaim, 0);
   const lastFreeBoxClaim = data.lastFreeBoxClaim === undefined ? undefined : normalizeTimestamp(data.lastFreeBoxClaim, 0);
@@ -882,7 +879,6 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
   return {
     id: firebaseUser.uid,
     createdAt,
-    lastChatAt,
     name: fallbackName,
     username: data.username ?? data.name ?? fallbackName,
     displayName: data.displayName ?? firebaseUser.displayName ?? undefined,
@@ -910,9 +906,6 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     followers: followerIds,
     shippingAddress: data.shippingAddress,
     isAdmin: false,
-    chatWarnings: data.chatWarnings ?? 0,
-    chatDisabled: data.chatDisabled ?? false,
-    chatDisabledAt: data.chatDisabledAt,
     termsFlagged: data.termsFlagged ?? false,
     status: data.status ?? 'active',
     locks: data.locks ?? DEFAULT_LOCKS,
@@ -929,7 +922,6 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
 const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {}) => {
   const now = Date.now();
   const createdAt = normalizeTimestamp(data.createdAt, now);
-  const lastChatAt = data.lastChatAt === undefined ? undefined : normalizeTimestamp(data.lastChatAt, now);
   const xp = Number(data.xpBalance ?? data.xp ?? 0);
   const lastDailyClaim = data.lastDailyClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyClaim, 0);
   const lastFreeBoxClaim = data.lastFreeBoxClaim === undefined ? undefined : normalizeTimestamp(data.lastFreeBoxClaim, 0);
@@ -945,7 +937,6 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
   return {
     id: userId,
     createdAt,
-    lastChatAt,
     name,
     username: data.username ?? data.name ?? name,
     displayName: data.displayName,
@@ -973,9 +964,6 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     followers: followerIds,
     shippingAddress: data.shippingAddress,
     isAdmin: false,
-    chatWarnings: data.chatWarnings ?? 0,
-    chatDisabled: data.chatDisabled ?? false,
-    chatDisabledAt: data.chatDisabledAt,
     termsFlagged: data.termsFlagged ?? false,
     status: data.status ?? 'active',
     locks: data.locks ?? DEFAULT_LOCKS,
@@ -1150,7 +1138,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const activeUserIdRef = useRef<string | null>(null);
   const emailVerificationDismissedRef = useRef(false);
   const userUnsubscribeRef = useRef<(() => void) | null>(null);
-  const inventoryUnsubscribeRef = useRef<(() => void) | null>(null);
   const legacyProfileBackfillInFlightRef = useRef<Set<string>>(new Set());
   const syncAdminClaim = async (firebaseUser: FirebaseUser | null) => {
     if (!firebaseUser) {
@@ -1275,11 +1262,23 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       userUnsubscribeRef.current();
       userUnsubscribeRef.current = null;
     }
-    if (inventoryUnsubscribeRef.current) {
-      inventoryUnsubscribeRef.current();
-      inventoryUnsubscribeRef.current = null;
-    }
   };
+
+  // Cost-control: inventory is fetched on demand (profile/inventory screens + post-mutation refresh)
+  // instead of a global realtime listener mounted for every authenticated session.
+  const refreshInventory = useCallback(async (uid: string, options?: { limitCount?: number }) => {
+    const cappedLimit = Math.max(10, Math.min(200, Number(options?.limitCount ?? 120)));
+    const inventoryPath = `users/${uid}/inventory?limit=${cappedLimit}`;
+    console.log('READING FIRESTORE PATH', inventoryPath);
+    const inventoryRef = query(collection(db, 'users', uid, 'inventory'), orderBy('obtainedAt', 'desc'), limit(cappedLimit));
+    const snapshot = await getDocs(inventoryRef);
+    hasInventorySubcollectionRef.current = snapshot.size > 0;
+    const loaded = snapshot.docs.map(mapInventoryDoc).sort((a, b) => b.obtainedAt - a.obtainedAt);
+    const pendingIds = pendingSoldIdsRef.current;
+    const filtered = loaded.filter((item) => !pendingIds.has(item.instanceId));
+    setInventory(filtered);
+    setUser((prev) => ({ ...prev, topPulls: rankTopPullsByValue(filtered) }));
+  }, []);
 
   const startAuthenticatedSession = (firebaseUser: FirebaseUser) => {
     if (activeUserIdRef.current === firebaseUser.uid) return;
@@ -1353,40 +1352,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     });
 
-    const inventoryPath = `users/${firebaseUser.uid}/inventory`;
-    console.log('READING FIRESTORE PATH', inventoryPath);
-    const inventoryRef = collection(db, 'users', firebaseUser.uid, 'inventory');
-    inventoryUnsubscribeRef.current = onSnapshot(inventoryRef, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: inventoryPath,
-        size: 'size' in snapshot ? snapshot.size : undefined
+    const shouldLoadInventory = typeof window !== 'undefined' && ['/inventory', '/profile'].some((path) => window.location.pathname.startsWith(path));
+    if (shouldLoadInventory) {
+      void refreshInventory(firebaseUser.uid).catch((error) => {
+        console.error('Failed to load inventory on-demand', error);
       });
-      hasInventorySubcollectionRef.current = snapshot.size > 0;
-      const loaded = snapshot.docs
-        .map(mapInventoryDoc)
-        .sort((a, b) => b.obtainedAt - a.obtainedAt);
-      const pendingIds = pendingSoldIdsRef.current;
-      const filtered = loaded.filter((item) => !pendingIds.has(item.instanceId));
-      if (pendingIds.size > 0) {
-        const nextPending = new Set<string>();
-        pendingIds.forEach((id) => {
-          if (loaded.some((item) => item.instanceId === id)) {
-            nextPending.add(id);
-          }
-        });
-        pendingSoldIdsRef.current = nextPending;
-      }
-      setInventory(filtered);
-      const nextTopPulls = rankTopPullsByValue(filtered);
-      setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
-    }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: inventoryPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
-    });
+    }
   };
 
   const checkEmailVerificationStatus = async (firebaseUser?: FirebaseUser | null) => {
@@ -1630,27 +1601,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    const usersPath = 'users';
-    console.log('READING FIRESTORE PATH', usersPath);
-    const usersRef = collection(db, 'users');
-    const unsubscribe = onSnapshot(usersRef, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: usersPath,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
-      const loaded = snapshot.docs.map((docSnap) => buildUserProfileFromDoc(docSnap.id, docSnap.data()));
-      setUsers(mergeAdminUsers(loaded, adminDirectoryUsers, user));
-    }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: usersPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
-      setUsers(mergeAdminUsers([], adminDirectoryUsers, user));
-    });
-
-    return () => unsubscribe();
+    void (async () => {
+      try {
+        const usersPath = 'users?limit=250';
+        console.log('READING FIRESTORE PATH', usersPath);
+        const snapshot = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(250)));
+        const loaded = snapshot.docs.map((docSnap) => buildUserProfileFromDoc(docSnap.id, docSnap.data()));
+        setUsers(mergeAdminUsers(loaded, adminDirectoryUsers, user));
+      } catch (error) {
+        console.error('Failed to load admin users', error);
+        setUsers(mergeAdminUsers([], adminDirectoryUsers, user));
+      }
+    })();
   }, [adminDirectoryUsers, isAuthenticated, user]);
 
   useEffect(() => {
@@ -1699,29 +1661,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    const shipmentsPath = 'shipments';
-    console.log('READING FIRESTORE PATH', shipmentsPath);
-    const shipmentsRef = collection(db, 'shipments');
-    const unsubscribe = onSnapshot(shipmentsRef, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: shipmentsPath,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
-      const loaded = snapshot.docs
-        .map(mapShipmentDoc)
-        .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-      setShipments(loaded);
-    }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: shipmentsPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
-      setShipments([]);
-    });
-
-    return () => unsubscribe();
+    void (async () => {
+      try {
+        const shipmentsPath = 'shipments?limit=200';
+        console.log('READING FIRESTORE PATH', shipmentsPath);
+        const snapshot = await getDocs(query(collection(db, 'shipments'), orderBy('createdAt', 'desc'), limit(200)));
+        const loaded = snapshot.docs
+          .map(mapShipmentDoc)
+          .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+        setShipments(loaded);
+      } catch (error) {
+        console.error('Failed to load shipments', error);
+        setShipments([]);
+      }
+    })();
   }, [isAuthenticated, user.isAdmin]);
 
   useEffect(() => {
@@ -1731,29 +1684,24 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!latestUser) return;
 
     const needsCreatedAtUpdate = !user.createdAt && !!latestUser.createdAt;
-    const needsLastChatUpdate = latestUser.lastChatAt !== undefined && latestUser.lastChatAt !== user.lastChatAt;
     const nextTopPullsPublic = latestUser.topPullsPublic ?? false;
     const needsTopPullsPublicUpdate = nextTopPullsPublic !== (user.topPullsPublic ?? false);
-    if (!needsCreatedAtUpdate && !needsLastChatUpdate && !needsTopPullsPublicUpdate) return;
+    if (!needsCreatedAtUpdate && !needsTopPullsPublicUpdate) return;
 
     const updates: Partial<User> = {};
     if (needsCreatedAtUpdate) updates.createdAt = latestUser.createdAt;
-    if (needsLastChatUpdate) updates.lastChatAt = latestUser.lastChatAt;
     if (needsTopPullsPublicUpdate) updates.topPullsPublic = nextTopPullsPublic;
 
     setUser((prev) => ({ ...prev, ...updates }));
-  }, [users, isAuthenticated, user.id, user.createdAt, user.lastChatAt, user.topPullsPublic]);
+  }, [users, isAuthenticated, user.id, user.createdAt, user.topPullsPublic]);
 
   useEffect(() => {
-    const itemsPath = 'items';
-    console.log('READING FIRESTORE PATH', itemsPath);
-    const itemsRef = collection(db, 'items');
-    const unsubscribe = onSnapshot(itemsRef, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: itemsPath,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
-      const loaded: CaseItem[] = snapshot.docs
+    void (async () => {
+      try {
+        const itemsPath = 'items?limit=500';
+        console.log('READING FIRESTORE PATH', itemsPath);
+        const snapshot = await getDocs(query(collection(db, 'items'), limit(500)));
+        const loaded: CaseItem[] = snapshot.docs
         .map((docSnap, index) => {
           const data = docSnap.data();
           const rarity = (data.rarity ?? 'common') as CaseItem['rarity'];
@@ -1776,36 +1724,27 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         })
         .sort((a, b) => a.price - b.price);
 
-      const fallbackItems = CASE_ITEMS.map((item) => ({
-        ...item,
-        brand: item.brand ?? '',
-        category: item.category ?? '',
-        tags: Array.isArray(item.tags) ? item.tags : []
-      }));
-      setItems(loaded.length ? loaded : fallbackItems);
-    }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: itemsPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
-    });
-
-    return () => unsubscribe();
+        const fallbackItems = CASE_ITEMS.map((item) => ({
+          ...item,
+          brand: item.brand ?? '',
+          category: item.category ?? '',
+          tags: Array.isArray(item.tags) ? item.tags : []
+        }));
+        setItems(loaded.length ? loaded : fallbackItems);
+      } catch (error) {
+        console.error('Failed to load items', error);
+      }
+    })();
   }, []);
 
   const expiredUserBoxDeletesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    const boxesPath = 'boxes';
-    console.log('READING FIRESTORE PATH', boxesPath);
-    const boxesRef = collection(db, 'boxes');
-    const unsubscribe = onSnapshot(boxesRef, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: boxesPath,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
+    void (async () => {
+      try {
+        const boxesPath = 'boxes?limit=250';
+        console.log('READING FIRESTORE PATH', boxesPath);
+        const snapshot = await getDocs(query(collection(db, 'boxes'), limit(250)));
       const expiredUserBoxIds: string[] = [];
       const firebaseBoxes = snapshot.docs
         .map((docSnap) => {
@@ -1875,7 +1814,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
       }
 
-      setBoxes(prev => {
+        setBoxes(prev => {
         const pendingUserCreated = prev.filter(
           (box) =>
             box.isUserCreated &&
@@ -1883,18 +1822,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             !!box.createdAt &&
             Date.now() - box.createdAt < USER_BOX_EXPIRY_MS
         );
-        return [...pendingUserCreated, ...firebaseBoxes].sort((a, b) => getBoxSortPrice(a) - getBoxSortPrice(b));
-      });
-    }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: boxesPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
-    });
-
-    return () => unsubscribe();
+          return [...pendingUserCreated, ...firebaseBoxes].sort((a, b) => getBoxSortPrice(a) - getBoxSortPrice(b));
+        });
+      } catch (error) {
+        console.error('Failed to load boxes', error);
+      }
+    })();
   }, [isAuthenticated, user.isAdmin]);
 
   useEffect(() => {
@@ -1914,15 +1847,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    const coinPackagesPath = 'coin_packages';
-    console.log('READING FIRESTORE PATH', coinPackagesPath);
-    const packagesRef = query(collection(db, 'coin_packages'), orderBy('sortOrder', 'asc'));
-    const unsubscribe = onSnapshot(packagesRef, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: coinPackagesPath,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
-      const loaded = snapshot.docs.map((docSnap) => {
+    void (async () => {
+      try {
+        const coinPackagesPath = 'coin_packages?limit=50';
+        console.log('READING FIRESTORE PATH', coinPackagesPath);
+        const snapshot = await getDocs(query(collection(db, 'coin_packages'), orderBy('sortOrder', 'asc'), limit(50)));
+        const loaded = snapshot.docs.map((docSnap) => {
         const data = docSnap.data();
         const coins = Number(data.coins ?? 0);
         const bonusCoins = Number(data.bonusCoins ?? 0);
@@ -1940,36 +1870,36 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           createdAt: normalizeTimestamp(data.createdAt, 0),
           updatedAt: normalizeTimestamp(data.updatedAt, 0)
         } as CoinPackage;
-      });
-      setCoinPackages(loaded);
-    }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: coinPackagesPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
-    });
-
-    return () => unsubscribe();
+        });
+        setCoinPackages(loaded);
+      } catch (error) {
+        console.error('Failed to load coin packages', error);
+      }
+    })();
   }, []);
 
   useEffect(() => {
     activityStore.setScope(isAuthenticated && user.id ? user.id : 'guest');
   }, [isAuthenticated, user.id]);
 
-
-  // Battles Realtime Sync
   useEffect(() => {
-    const battlesPath = 'battles';
-    console.log('READING FIRESTORE PATH', battlesPath);
-    const battlesRef = query(collection(db, 'battles'), orderBy('createdAt', 'desc'), limit(50));
-    const unsubscribe = onSnapshot(battlesRef, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: battlesPath,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
-      const firebaseBattles = snapshot.docs
+    if (!isAuthenticated || !auth.currentUser) return;
+    if (view.type !== 'INVENTORY' && view.type !== 'PROFILE') return;
+    void refreshInventory(auth.currentUser.uid).catch((error) => {
+      console.error('Failed to load inventory for inventory/profile view', error);
+    });
+  }, [isAuthenticated, refreshInventory, view.type]);
+
+
+  // Cost-control: the battle list is fetched in a bounded one-time query.
+  // Realtime is kept in BattleArena for a single active battle view.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const battlesPath = 'battles?limit=50';
+        console.log('READING FIRESTORE PATH', battlesPath);
+        const snapshot = await getDocs(query(collection(db, 'battles'), orderBy('createdAt', 'desc'), limit(50)));
+        const firebaseBattles = snapshot.docs
         .map((docSnap) => {
           const data = docSnap.data();
           const createdAt = data.createdAt?.toMillis
@@ -2009,17 +1939,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           } as Battle;
         });
 
-      setBattles(firebaseBattles);
-    }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: battlesPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
-    });
-
-    return () => unsubscribe();
+        setBattles(firebaseBattles);
+      } catch (error) {
+        console.error('Failed to load battles list', error);
+      }
+    })();
   }, [boxes]);
 
   // --- ACTIONS ---
@@ -2101,8 +2025,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         followers: [],
         shippingAddress: undefined,
         isAdmin: false,
-        chatWarnings: 0,
-        chatDisabled: false,
         termsFlagged: false
       };
 
@@ -2293,8 +2215,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         followers: [],
         shippingAddress: undefined,
         isAdmin: false,
-        chatWarnings: 0,
-        chatDisabled: false,
         termsFlagged: false
       };
 
@@ -2465,6 +2385,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       return nextInventory;
     });
+    if (auth.currentUser) {
+      void refreshInventory(auth.currentUser.uid).catch((error) => {
+        console.error('Failed to revalidate inventory after server item update', error);
+      });
+    }
   };
 
   const addNotification = (
@@ -2658,6 +2583,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         value: Number(data?.creditCoins ?? 0),
         meta: { inventoryId: instanceId }
       });
+      await refreshInventory(auth.currentUser.uid);
       return { creditCoins: Number(data?.creditCoins ?? 0) };
     } catch (error) {
       pendingSoldIdsRef.current.delete(instanceId);
@@ -2725,6 +2651,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         title: `Shipment requested for ${itemToShip.name}`,
         meta: { shipmentId: (data as { shipmentId?: string }).shipmentId, trackingStatus: 'Processing' }
       });
+      await refreshInventory(auth.currentUser.uid);
       return { shipmentId: (data as { shipmentId?: string }).shipmentId };
     } catch (error) {
       console.error('Failed to request shipment', error);

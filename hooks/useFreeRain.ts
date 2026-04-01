@@ -6,7 +6,6 @@ import { useGame } from '../context/GameContext';
 const RAIN_DURATION_MS = 60 * 60 * 1000;
 const RAIN_JOIN_BONUS = 10;
 const MIN_ACCOUNT_AGE_MS = 10 * 60 * 1000;
-const RECENT_CHAT_MS = 5 * 60 * 1000;
 
 const rainRef = doc(db, 'freeRain', 'current');
 
@@ -233,12 +232,8 @@ export const useFreeRain = () => {
       };
     }
 
-    if (!user.lastChatAt || now - user.lastChatAt > RECENT_CHAT_MS) {
-      return { eligible: false, reason: 'Send a chat join!.' };
-    }
-
     return { eligible: true };
-  }, [isAuthenticated, now, user.createdAt, user.lastChatAt]);
+  }, [isAuthenticated, now, user.createdAt]);
 
   const joinRain = useCallback(async () => {
     if (!isAuthenticated) {

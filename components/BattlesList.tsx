@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Swords, X } from 'lucide-react';
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
@@ -27,9 +25,8 @@ const formatStatus = (battle: any, now: number) => {
 };
 
 export const BattlesList: React.FC = () => {
-  const { joinBattle, createBattle, boxes, user } = useGame();
+  const { joinBattle, createBattle, boxes, user, battles } = useGame();
   const { playSound } = useSound();
-  const [rows, setRows] = useState<any[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedBoxIds, setSelectedBoxIds] = useState<string[]>([]);
   const [mode, setMode] = useState<'REGULAR' | 'CRAZY'>('REGULAR');
@@ -43,42 +40,19 @@ export const BattlesList: React.FC = () => {
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    const pathLabel = 'battles';
-    console.log('READING FIRESTORE PATH', pathLabel);
-    const battlesRef = query(collection(db, 'battles'), orderBy('createdAt', 'desc'), limit(10));
-    return onSnapshot(battlesRef, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: pathLabel,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
-      const mapped = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data();
-        const players = Array.isArray(data.players) ? data.players : [];
-        return {
-          id: docSnap.id,
-          state: String(data.state ?? 'LOBBY'),
-          startedAtMs: data.startedAt?.toMillis ? data.startedAt.toMillis() : 0,
-          maxPlayers: Number(data.maxPlayers ?? 2),
-          playerCount: players.length,
-          entryCostCoins: Number(data.entryCostCoins ?? 0),
-          rounds: Number(data.roundCount ?? 1),
-          currentRound: Number(data.currentRound ?? 1),
-          mode: String(data.mode ?? 'REGULAR'),
-          format: String(data.format ?? '1V1'),
-          players
-        };
-      });
-      setRows(mapped);
-    }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: pathLabel,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
-    });
-  }, []);
+  const rows = useMemo(() => battles.slice(0, 10).map((battle) => ({
+    id: battle.id,
+    state: battle.status === 'finished' ? 'COMPLETE' : battle.status === 'active' ? 'RUNNING' : 'LOBBY',
+    startedAtMs: Number(battle.createdAt ?? 0),
+    maxPlayers: Number(battle.maxPlayers ?? 2),
+    playerCount: Number(battle.playerCount ?? 0),
+    entryCostCoins: Number(battle.cost ?? 0),
+    rounds: Number(battle.rounds ?? 1),
+    currentRound: Number(battle.currentRound ?? 1),
+    mode: String(battle.mode ?? 'REGULAR').toUpperCase() === 'INVERSE' ? 'CRAZY' : String(battle.mode ?? 'REGULAR').toUpperCase(),
+    format: Number(battle.maxPlayers ?? 2) === 4 ? '2V2' : '1V1',
+    players: Array.isArray(battle.players) ? battle.players.map((player: any) => ({ uid: player.id ?? player.uid })) : []
+  })), [battles]);
 
   const battleBoxes = useMemo(() => boxes.filter((box) => !box.isUserCreated), [boxes]);
   const totalCost = useMemo(() => {
