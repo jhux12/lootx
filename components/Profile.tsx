@@ -6,7 +6,7 @@ import { COIN_ICON, XP_ICON } from '../constants';
 import { getSellBackValue } from '../utils/sellBack';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
-import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight, CalendarDays, Gem, Boxes, X, Heart } from 'lucide-react';
+import { User, Clock, MapPin, Save, Check, Settings, Shield, Lock, LogOut, AlertTriangle, UserPlus, UserCheck, Users as UsersIcon, Sparkles, Trash2, ExternalLink, Search, Package, ChevronLeft, ChevronRight, CalendarDays, Gem, Boxes, X } from 'lucide-react';
 import { auth } from '../firebase';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
@@ -871,7 +871,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           <p className="text-gray-500">This player has chosen to keep their top pulls private.</p>
                       </div>
                   ) : (isOwnProfile && inventory.length === 0) ? (
-                      <div className="grid grid-cols-1 min-[430px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                         {Array.from({ length: 6 }).map((_, idx) => <SkeletonTile key={`top-pull-skeleton-${idx}`} />)}
                       </div>
                   ) : topPulls.length === 0 ? (
@@ -891,7 +891,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           )}
                       </div>
                   ) : (
-                      <div className="grid grid-cols-1 min-[430px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                           {topPulls.map((item, index) => (
                               <div key={item.instanceId} className="bg-[#131720] border border-gray-800 rounded-xl p-3 sm:p-4 group hover:border-brand-purple/50 transition-all">
                                   <div className="relative aspect-square mb-3 sm:mb-4 bg-[#0b0e14] rounded-lg p-3 sm:p-4 flex items-center justify-center overflow-hidden">
@@ -1048,7 +1048,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                           </button>
                       </div>
                   ) : (
-                      <div className="grid grid-cols-1 min-[430px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                           {filteredInventory.map((item) => {
                               const isAvailable = item.status === 'available';
                               const isLocked = !!item.locked;
@@ -1076,12 +1076,19 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               const isSelectable = inventoryFilter === 'inventory' && canShip;
                               const isSelected = selectedShipments.includes(item.instanceId);
                               const rarityTone = item.rarity === 'legendary'
-                                ? 'border-yellow-400/45 shadow-[0_0_0_1px_rgba(250,204,21,0.18),0_0_20px_rgba(250,204,21,0.15)]'
+                                ? 'border-amber-400/45 shadow-[0_0_0_1px_rgba(245,158,11,0.24),0_0_20px_rgba(245,158,11,0.12)]'
                                 : item.rarity === 'epic' || item.rarity === 'ultra-rare'
-                                  ? 'border-purple-400/45 shadow-[0_0_0_1px_rgba(168,85,247,0.18),0_0_18px_rgba(168,85,247,0.16)]'
+                                  ? 'border-fuchsia-500/40 shadow-[0_0_0_1px_rgba(217,70,239,0.2),0_0_18px_rgba(217,70,239,0.11)]'
                                   : item.rarity === 'rare'
-                                    ? 'border-blue-400/45 shadow-[0_0_0_1px_rgba(59,130,246,0.15),0_0_18px_rgba(59,130,246,0.14)]'
-                                    : 'border-slate-600/70 shadow-[0_0_0_1px_rgba(148,163,184,0.1)]';
+                                    ? 'border-cyan-400/40 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_18px_rgba(34,211,238,0.1)]'
+                                    : 'border-slate-700/80 shadow-[0_0_0_1px_rgba(148,163,184,0.08)]';
+                              const rarityTileTone = item.rarity === 'legendary'
+                                ? 'from-amber-500/22 via-amber-900/18 to-[#10131b]'
+                                : item.rarity === 'epic' || item.rarity === 'ultra-rare'
+                                  ? 'from-fuchsia-500/20 via-purple-900/18 to-[#10131b]'
+                                  : item.rarity === 'rare'
+                                    ? 'from-cyan-500/20 via-blue-900/18 to-[#10131b]'
+                                    : 'from-slate-500/16 via-slate-800/18 to-[#10131b]';
                               const imageGlow = item.rarity === 'legendary'
                                 ? 'from-yellow-400/30 via-yellow-200/10 to-transparent'
                                 : item.rarity === 'epic' || item.rarity === 'ultra-rare'
@@ -1090,13 +1097,13 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                     ? 'from-blue-400/30 via-cyan-300/10 to-transparent'
                                     : 'from-slate-300/20 via-slate-200/10 to-transparent';
                               return (
-                                  <div key={item.instanceId} className={`relative bg-gradient-to-b from-[#2d6686] via-[#072033] to-[#010308] border rounded-[24px] p-4 group transition-all duration-300 flex flex-col hover:-translate-y-0.5 active:scale-[0.99] ${rarityTone} ${isSelected ? 'ring-2 ring-cyan-300/50 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_0_22px_rgba(34,211,238,0.22)]' : ''}`}>
-                                      <div className="relative aspect-[0.72] mb-4 bg-[#1a2130] rounded-2xl p-3 flex items-center justify-center overflow-hidden border border-white/5 shadow-inner">
+                                  <div key={item.instanceId} className={`relative bg-gradient-to-b ${rarityTileTone} border rounded-2xl p-2.5 sm:p-4 group transition-all duration-300 flex flex-col hover:-translate-y-0.5 active:scale-[0.99] ${rarityTone} ${isSelected ? 'ring-2 ring-cyan-300/50 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_0_22px_rgba(34,211,238,0.22)]' : ''}`}>
+                                      <div className="relative aspect-[0.74] mb-2.5 sm:mb-4 bg-[#0f1420] rounded-xl sm:rounded-2xl p-2 sm:p-3 flex items-center justify-center overflow-hidden border border-white/5 shadow-inner">
                                           <div className={`pointer-events-none absolute -inset-4 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.22)_0%,rgba(56,189,248,0.08)_35%,transparent_70%)] opacity-80`} />
                                           <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${imageGlow}`} />
                                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/5" />
                                           {isSelectable && (
-                                              <label className={`absolute left-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-2xl border backdrop-blur-sm ${isSelected ? 'bg-cyan-500/25 border-cyan-200/60 shadow-[0_0_12px_rgba(34,211,238,0.45)]' : 'bg-black/50 border-white/25'}`}>
+                                              <label className={`absolute left-1.5 top-1.5 z-10 flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl sm:rounded-2xl border backdrop-blur-sm ${isSelected ? 'bg-cyan-500/25 border-cyan-200/60 shadow-[0_0_12px_rgba(34,211,238,0.45)]' : 'bg-black/50 border-white/25'}`}>
                                                   <Checkbox
                                                       checked={selectedShipments.includes(item.instanceId)}
                                                       onChange={() => handleToggleShipment(item.instanceId)}
@@ -1105,13 +1112,6 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                   />
                                               </label>
                                           )}
-                                          <button
-                                            type="button"
-                                            className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-black/45 text-white/90"
-                                            aria-label="Favorite item"
-                                          >
-                                            <Heart className="h-5 w-5 fill-current" />
-                                          </button>
                                           <button
                                             type="button"
                                             onClick={() => {
@@ -1136,9 +1136,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                             )}
                                           </button>
                                       </div>
-                                      <div className="flex items-center justify-between gap-2">
-                                          <h4 className="text-white font-extrabold text-xl mt-0 mb-0 line-clamp-1 leading-tight sm:text-2xl">{item.name}</h4>
-                                          <span className="text-sm font-bold px-3 py-1 rounded-full border border-cyan-500/35 bg-cyan-500/20 text-cyan-200 leading-none capitalize">{item.rarity}</span>
+                                      <div className="flex items-center justify-between gap-1.5">
+                                          <h4 className="text-white font-extrabold text-sm mt-0 mb-0 line-clamp-1 leading-tight sm:text-lg">{item.name}</h4>
+                                          <span className="text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full border border-cyan-500/35 bg-cyan-500/20 text-cyan-200 leading-none capitalize">{item.rarity}</span>
                                       </div>
                                       {item.redeemable === false && (
                                         <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
@@ -1153,8 +1153,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                         <CoinAmount
                                           amount={toCoins(item.price, PRICE_UNIT_MODE)}
                                           formatOptions={{ maximumFractionDigits: 0 }}
-                                          className="text-white font-black text-3xl mt-1 mb-1 drop-shadow-[0_0_10px_rgba(74,222,128,0.32)] sm:text-2xl"
-                                          iconClassName="w-7 h-7"
+                                          className="text-white font-black text-xl mt-0.5 mb-0.5 drop-shadow-[0_0_10px_rgba(74,222,128,0.32)] sm:text-2xl"
+                                          iconClassName="w-5 h-5 sm:w-6 sm:h-6"
                                         />
                                       )}
                                       <div className="text-[11px] text-gray-400 mt-1">
@@ -1166,18 +1166,18 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                           </div>
                                       )}
 
-                                      <div className="mt-4 flex flex-col gap-2.5">
+                                      <div className="mt-2.5 sm:mt-4 flex flex-col gap-2">
                                           {inventoryFilter !== 'shipped' && (
                                             <button
                                               onClick={() => handleWithdrawClick(item.instanceId)}
                                               disabled={!canWithdraw}
-                                              className={`w-full px-3 py-3 rounded-2xl font-bold text-lg transition-colors border flex items-center justify-center gap-2 sm:text-xl ${
+                                              className={`w-full px-2.5 py-2.5 rounded-xl sm:rounded-2xl font-bold text-sm transition-colors border flex items-center justify-center gap-1.5 sm:text-base ${
                                                 canWithdraw
                                                   ? 'bg-[#060a12] text-white border-[#ff7a00] hover:bg-[#0e1420]'
                                                   : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
                                               }`}
                                             >
-                                              <Package className="h-5 w-5 text-[#ff7a00]" />
+                                              <Package className="h-4 w-4 text-[#ff7a00]" />
                                               Withdraw
                                             </button>
                                           )}
@@ -1185,13 +1185,13 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               <button
                                                 onClick={() => handleOpenTradeInModal(item.instanceId)}
                                                 disabled={!canSell || !!isGeneratingSellOffers[item.instanceId] || !!isSellingItems[item.instanceId]}
-                                                className={`w-full px-3 py-3 rounded-2xl font-bold text-lg transition-colors border flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-80 sm:text-xl ${
+                                                className={`w-full px-2.5 py-2.5 rounded-xl sm:rounded-2xl font-bold text-sm transition-colors border flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-80 sm:text-base ${
                                                   canSell
                                                     ? 'bg-[#060a12] text-white border-[#ff7a00] hover:bg-[#0e1420]'
                                                     : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
                                                 }`}
                                               >
-                                                <img src={COIN_ICON} alt="" className="h-6 w-6 object-contain" />
+                                                <img src={COIN_ICON} alt="" className="h-4 w-4 sm:h-5 sm:w-5 object-contain" />
                                                 {isSellingItems[item.instanceId] ? 'Trading in...' : 'Trade In'}
                                               </button>
                                           )}
@@ -1230,24 +1230,24 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   )}
 
                   {tradeInModalItem && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4">
-                          <div className="w-full max-w-2xl overflow-hidden rounded-[30px] border border-[#1f2430] bg-[#05070d] shadow-2xl">
-                              <div className="flex items-center justify-between border-b border-white/10 px-5 py-5 sm:px-8">
-                                  <h3 className="text-3xl font-extrabold text-white sm:text-4xl">Trade In Item</h3>
-                                  <button type="button" onClick={() => setTradeInModalItemId(null)} className="rounded-lg p-2 text-gray-400 hover:bg-white/5 hover:text-white" aria-label="Close trade in dialog">
-                                      <X className="h-8 w-8" />
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3">
+                          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-[#1f2430] bg-[#05070d] shadow-2xl">
+                              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5 sm:px-5">
+                                  <h3 className="text-xl font-extrabold text-white sm:text-2xl">Trade In Item</h3>
+                                  <button type="button" onClick={() => setTradeInModalItemId(null)} className="rounded-lg p-1.5 text-gray-400 hover:bg-white/5 hover:text-white" aria-label="Close trade in dialog">
+                                      <X className="h-6 w-6" />
                                   </button>
                               </div>
-                              <div className="space-y-5 px-5 py-5 sm:px-8 sm:py-7">
-                                  <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-gradient-to-b from-[#346481] to-[#05070d] p-4 sm:p-5">
-                                      <img src={tradeInModalItem.image} alt={tradeInModalItem.name} className="h-28 w-20 rounded-lg border border-white/10 bg-black/30 object-cover sm:h-36 sm:w-24" />
+                              <div className="space-y-3.5 px-4 py-4 sm:px-5 sm:py-5">
+                                  <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-gradient-to-b from-[#1b2435] to-[#090b11] p-3.5">
+                                      <img src={tradeInModalItem.image} alt={tradeInModalItem.name} className="h-20 w-14 rounded-lg border border-white/10 bg-black/30 object-cover sm:h-24 sm:w-16" />
                                       <div>
-                                          <p className="text-xl font-bold text-white sm:text-3xl">{tradeInModalItem.name}</p>
-                                          <CoinAmount amount={toCoins(tradeInModalItem.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-2 text-3xl font-black text-white sm:text-4xl" iconClassName="h-7 w-7 sm:h-8 sm:w-8" />
+                                          <p className="text-base font-bold text-white sm:text-xl">{tradeInModalItem.name}</p>
+                                          <CoinAmount amount={toCoins(tradeInModalItem.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1.5 text-xl font-black text-white sm:text-2xl" iconClassName="h-5 w-5 sm:h-6 sm:w-6" />
                                       </div>
                                   </div>
-                                  <div className="rounded-2xl bg-[#151822] px-4 py-4 sm:px-5">
-                                      <div className="space-y-2 text-base text-gray-300 sm:text-xl">
+                                  <div className="rounded-xl bg-[#151822] px-3.5 py-3.5 sm:px-4">
+                                      <div className="space-y-1.5 text-sm text-gray-300 sm:text-base">
                                           <div className="flex items-center justify-between">
                                               <span>Item Value</span>
                                               <CoinAmount amount={toCoins(tradeInModalItem.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="font-black text-white" iconClassName="h-5 w-5" />
@@ -1257,19 +1257,19 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               <span className="font-black text-red-400">-{Math.round(toCoins(tradeInModalItem.price, PRICE_UNIT_MODE) - getSellBackValue(toCoins(tradeInModalItem.price, PRICE_UNIT_MODE), getSellBackRate(tradeInModalItem)))}</span>
                                           </div>
                                           <div className="my-1 border-t border-white/10" />
-                                          <div className="flex items-center justify-between text-xl font-black text-white sm:text-2xl">
+                                          <div className="flex items-center justify-between text-lg font-black text-white sm:text-xl">
                                               <span>You Receive</span>
                                               <CoinAmount amount={getSellBackValue(toCoins(tradeInModalItem.price, PRICE_UNIT_MODE), getSellBackRate(tradeInModalItem))} formatOptions={{ maximumFractionDigits: 0 }} className="text-emerald-400" iconClassName="h-6 w-6" />
                                           </div>
                                       </div>
                                   </div>
-                                  <p className="px-1 text-center text-sm text-gray-400 sm:text-lg">This action cannot be undone. The item will be removed from your inventory.</p>
+                                  <p className="px-1 text-center text-xs text-gray-400 sm:text-sm">This action cannot be undone. The item will be removed from your inventory.</p>
                               </div>
-                              <div className="grid grid-cols-2 gap-3 border-t border-white/10 p-4 sm:p-5">
-                                  <button type="button" onClick={() => setTradeInModalItemId(null)} className="rounded-2xl bg-[#2a2d36] px-4 py-3 text-lg font-extrabold text-white sm:text-xl">
+                              <div className="grid grid-cols-2 gap-2.5 border-t border-white/10 p-3.5 sm:p-4">
+                                  <button type="button" onClick={() => setTradeInModalItemId(null)} className="rounded-xl bg-[#2a2d36] px-3 py-2.5 text-sm font-extrabold text-white sm:text-base">
                                       Cancel
                                   </button>
-                                  <button type="button" onClick={handleConfirmTradeIn} disabled={!!isSellingItems[tradeInModalItem.instanceId]} className="rounded-2xl bg-[#ff7a00] px-4 py-3 text-lg font-extrabold text-white disabled:opacity-70 sm:text-xl">
+                                  <button type="button" onClick={handleConfirmTradeIn} disabled={!!isSellingItems[tradeInModalItem.instanceId]} className="rounded-xl bg-[#ff7a00] px-3 py-2.5 text-sm font-extrabold text-white disabled:opacity-70 sm:text-base">
                                       {isSellingItems[tradeInModalItem.instanceId] ? 'Trading In...' : 'Trade In'}
                                   </button>
                               </div>
