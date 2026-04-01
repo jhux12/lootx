@@ -1076,19 +1076,19 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               const isSelectable = inventoryFilter === 'inventory' && canShip;
                               const isSelected = selectedShipments.includes(item.instanceId);
                               const rarityTone = item.rarity === 'legendary'
-                                ? 'border-amber-400/45 shadow-[0_0_0_1px_rgba(245,158,11,0.24),0_0_20px_rgba(245,158,11,0.12)]'
+                                ? 'border-violet-400/50 shadow-[0_0_0_1px_rgba(167,139,250,0.24),0_0_20px_rgba(167,139,250,0.12)]'
                                 : item.rarity === 'epic' || item.rarity === 'ultra-rare'
                                   ? 'border-fuchsia-500/40 shadow-[0_0_0_1px_rgba(217,70,239,0.2),0_0_18px_rgba(217,70,239,0.11)]'
                                   : item.rarity === 'rare'
                                     ? 'border-cyan-400/40 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_18px_rgba(34,211,238,0.1)]'
                                     : 'border-slate-700/80 shadow-[0_0_0_1px_rgba(148,163,184,0.08)]';
                               const rarityTileTone = item.rarity === 'legendary'
-                                ? 'from-amber-500/22 via-amber-900/18 to-[#10131b]'
+                                ? 'from-violet-500/30 via-indigo-900/35 to-violet-950/40'
                                 : item.rarity === 'epic' || item.rarity === 'ultra-rare'
-                                  ? 'from-fuchsia-500/20 via-purple-900/18 to-[#10131b]'
+                                  ? 'from-fuchsia-500/28 via-purple-900/35 to-indigo-950/40'
                                   : item.rarity === 'rare'
-                                    ? 'from-cyan-500/20 via-blue-900/18 to-[#10131b]'
-                                    : 'from-slate-500/16 via-slate-800/18 to-[#10131b]';
+                                    ? 'from-cyan-500/28 via-blue-900/35 to-indigo-950/40'
+                                    : 'from-slate-500/24 via-slate-800/35 to-slate-950/45';
                               const imageGlow = item.rarity === 'legendary'
                                 ? 'from-yellow-400/30 via-yellow-200/10 to-transparent'
                                 : item.rarity === 'epic' || item.rarity === 'ultra-rare'
@@ -1173,11 +1173,11 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               disabled={!canWithdraw}
                                               className={`w-full px-2.5 py-2.5 rounded-xl sm:rounded-2xl font-bold text-sm transition-colors border flex items-center justify-center gap-1.5 sm:text-base ${
                                                 canWithdraw
-                                                  ? 'bg-[#060a12] text-white border-[#ff7a00] hover:bg-[#0e1420]'
+                                                  ? 'bg-[#090d18] text-white border-[#7c3aed] hover:bg-[#121936]'
                                                   : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
                                               }`}
                                             >
-                                              <Package className="h-4 w-4 text-[#ff7a00]" />
+                                              <Package className="h-4 w-4 text-violet-300" />
                                               Withdraw
                                             </button>
                                           )}
@@ -1187,7 +1187,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                 disabled={!canSell || !!isGeneratingSellOffers[item.instanceId] || !!isSellingItems[item.instanceId]}
                                                 className={`w-full px-2.5 py-2.5 rounded-xl sm:rounded-2xl font-bold text-sm transition-colors border flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-80 sm:text-base ${
                                                   canSell
-                                                    ? 'bg-[#060a12] text-white border-[#ff7a00] hover:bg-[#0e1420]'
+                                                    ? 'bg-[#090d18] text-white border-[#7c3aed] hover:bg-[#121936]'
                                                     : 'bg-[#0b0e14] text-gray-500 border-gray-800 cursor-not-allowed'
                                                 }`}
                                               >
@@ -1269,7 +1269,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   <button type="button" onClick={() => setTradeInModalItemId(null)} className="rounded-xl bg-[#2a2d36] px-3 py-2.5 text-sm font-extrabold text-white sm:text-base">
                                       Cancel
                                   </button>
-                                  <button type="button" onClick={handleConfirmTradeIn} disabled={!!isSellingItems[tradeInModalItem.instanceId]} className="rounded-xl bg-[#ff7a00] px-3 py-2.5 text-sm font-extrabold text-white disabled:opacity-70 sm:text-base">
+                                  <button type="button" onClick={handleConfirmTradeIn} disabled={!!isSellingItems[tradeInModalItem.instanceId]} className="rounded-xl bg-gradient-to-r from-[#6d28d9] to-[#2563eb] px-3 py-2.5 text-sm font-extrabold text-white disabled:opacity-70 sm:text-base">
                                       {isSellingItems[tradeInModalItem.instanceId] ? 'Trading In...' : 'Trade In'}
                                   </button>
                               </div>
@@ -1287,7 +1287,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   </button>
                               </div>
                               <div className="px-5 py-6 sm:px-8">
-                                  <div className="rounded-2xl border border-[#9f4b0f] bg-[#311608] p-5">
+                                  <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-5">
                                       <p className="text-2xl font-extrabold text-white sm:text-3xl">Make your first deposit to unlock withdrawals.</p>
                                       <p className="mt-2 text-base text-gray-300 sm:text-xl">Once you deposit, you can withdraw items from your inventory.</p>
                                   </div>
@@ -1302,7 +1302,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       setWithdrawLockedModalOpen(false);
                                       setView({ type: 'BONUSES' });
                                     }}
-                                    className="rounded-2xl bg-[#ff7a00] px-4 py-3 text-lg font-extrabold text-white sm:text-xl"
+                                    className="rounded-2xl bg-gradient-to-r from-[#6d28d9] to-[#2563eb] px-4 py-3 text-lg font-extrabold text-white sm:text-xl"
                                   >
                                       Add Credits
                                   </button>
