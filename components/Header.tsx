@@ -256,12 +256,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             <div className="hidden lg:flex lg:gap-x-3">
               <div
                 className="relative"
-                onMouseEnter={() => setIsGamesMenuOpen(true)}
-                onMouseLeave={() => setIsGamesMenuOpen(false)}
               >
                 <button
                   type="button"
-                  onClick={() => setIsGamesMenuOpen((prev) => !prev)}
+                  onClick={() => {
+                    setIsGamesMenuOpen((prev) => !prev);
+                    setIsRewardsMenuOpen(false);
+                  }}
                   className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition-colors hover:border-white/5 hover:bg-neutral-800 hover:text-white"
                   aria-expanded={isGamesMenuOpen}
                   aria-haspopup="menu"
@@ -286,7 +287,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 </div>
               </div>
               <div className="relative">
-                <button type="button" onClick={() => setIsRewardsMenuOpen((prev) => !prev)} className="relative flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-purple-400 transition-colors hover:border-white/5 hover:bg-neutral-800" aria-expanded={isRewardsMenuOpen}>
+                <button type="button" onClick={() => {
+                  setIsRewardsMenuOpen((prev) => !prev);
+                  setIsGamesMenuOpen(false);
+                }} className="relative flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-purple-400 transition-colors hover:border-white/5 hover:bg-neutral-800" aria-expanded={isRewardsMenuOpen}>
                   <Sparkles className="h-4 w-4" />
                   Rewards
                   <ChevronDown className={`h-4 w-4 transition-transform ${isRewardsMenuOpen ? 'rotate-180' : ''}`} />
