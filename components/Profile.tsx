@@ -1304,7 +1304,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                     }}
                                     className="rounded-2xl bg-gradient-to-r from-[#6d28d9] to-[#2563eb] px-4 py-3 text-lg font-extrabold text-white sm:text-xl"
                                   >
-                                      Add Credits
+                                      Add Coins
                                   </button>
                               </div>
                           </div>
