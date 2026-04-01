@@ -38,9 +38,6 @@ export interface User {
   shippingAddress?: ShippingAddress;
   inventory?: InventoryItem[];
   isAdmin?: boolean;
-  chatWarnings?: number;
-  chatDisabled?: boolean;
-  chatDisabledAt?: number;
   termsFlagged?: boolean;
   status?: UserStatus;
   locks?: UserLocks;
@@ -49,7 +46,6 @@ export interface User {
   topPullsPublic?: boolean;
   topPulls?: InventoryItem[];
   createdAt?: number;
-  lastChatAt?: number;
   challengeStatsDay?: string;
   challengeStats?: {
     boxesOpened?: number;

@@ -29,7 +29,6 @@ export interface UserNotification {
 }
 
 const NOTIFICATION_LIST_LIMIT = 25;
-const UNREAD_COUNT_LIMIT = 100;
 const MARK_ALL_LIMIT = 50;
 
 const toNotification = (id: string, data: DocumentData): UserNotification => ({
@@ -61,41 +60,23 @@ export const useNotifications = (uid?: string | null) => {
     }
 
     const notificationsRef = collection(db, 'users', uid, 'notifications');
-    const listQuery = query(notificationsRef);
-    const unreadQuery = query(notificationsRef, where('readAt', '==', null), limit(UNREAD_COUNT_LIMIT));
+    const listQuery = query(notificationsRef, orderBy('createdAt', 'desc'), limit(NOTIFICATION_LIST_LIMIT));
 
     const listPathLabel = `users/${uid}/notifications`;
     console.log('READING FIRESTORE PATH', listPathLabel);
-    const unsubList = onSnapshot(listQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(listQuery, (snapshot) => {
       console.log('SNAPSHOT OK', {
         path: listPathLabel,
         size: 'size' in snapshot ? snapshot.size : undefined
       });
       const next = snapshot.docs
         .map((docSnap) => toNotification(docSnap.id, docSnap.data()))
-        .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0))
-        .slice(0, NOTIFICATION_LIST_LIMIT);
+        .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
       setNotifications(next);
+      setUnreadCount(next.filter((entry) => !entry.readAt).length);
     }, (error) => {
       console.error('SNAPSHOT FAILED', {
         path: listPathLabel,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
-    });
-
-    const unreadPathLabel = `users/${uid}/notifications?readAt=null&limit=${UNREAD_COUNT_LIMIT}`;
-    console.log('READING FIRESTORE PATH', unreadPathLabel);
-    const unsubUnread = onSnapshot(unreadQuery, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: unreadPathLabel,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
-      setUnreadCount(snapshot.size);
-    }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: unreadPathLabel,
         code: error?.code,
         message: error?.message,
         error
@@ -103,8 +84,7 @@ export const useNotifications = (uid?: string | null) => {
     });
 
     return () => {
-      unsubList();
-      unsubUnread();
+      unsubscribe();
     };
   }, [uid]);
 

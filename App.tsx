@@ -1,7 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { Header } from './components/Header';
 import { LiveTicker } from './components/LiveTicker';
-import { ChatSidebar } from './components/ChatSidebar';
 import { Hero } from './components/Hero';
 import { BoxGrid } from './components/BoxGrid';
 import { BoxCard } from './components/BoxCard';
@@ -18,7 +17,6 @@ import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert } from 'lucide-react';
-import { InboxModal } from './components/InboxModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { HowItWorksSection } from './components/HowItWorksSection';
 import { TrustSection } from './components/TrustSection';
@@ -35,7 +33,6 @@ import { PollsPage } from './components/PollsPage';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
-import { useSiteChat } from './hooks/useSiteChat';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
 import { InstallPrompt } from './src/ui/pwa/InstallPrompt';
 import { SeoHead } from './components/SeoHead';
@@ -416,18 +413,8 @@ function App() {
 export default App;
 
 const AppShell = () => {
-  const [showInbox, setShowInbox] = useState(false);
   const { view } = useGame();
   const shouldUseStickyHeader = view.type !== 'BOXES';
-  const { messages } = useSiteChat();
-  const latestMessageAt = messages[messages.length - 1]?.createdAt ?? 0;
-  const [lastSeenAt, setLastSeenAt] = useState(0);
-  const hasUnseenChatMessages = latestMessageAt > lastSeenAt;
-
-  const markChatSeen = useCallback(() => {
-    if (!latestMessageAt) return;
-    setLastSeenAt((prev) => Math.max(prev, latestMessageAt));
-  }, [latestMessageAt]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
@@ -473,25 +460,12 @@ const AppShell = () => {
       <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
         <SeoHead view={view} />
         <Header
-          onOpenInbox={() => setShowInbox(true)}
-          unreadChatCount={hasUnseenChatMessages ? 1 : 0}
+          onOpenInbox={() => undefined}
           isSticky={shouldUseStickyHeader}
         />
-        <AppLayout
-          hasUnseenChatMessages={hasUnseenChatMessages}
-          onChatViewed={markChatSeen}
-          hasStickyHeader={shouldUseStickyHeader}
-        />
+        <AppLayout hasStickyHeader={shouldUseStickyHeader} />
         <MobileBottomNav />
         <InstallPrompt />
-
-        <InboxModal
-          isOpen={showInbox}
-          onClose={() => setShowInbox(false)}
-          hasUnseenMessages={hasUnseenChatMessages}
-          unreadChatCount={hasUnseenChatMessages ? 1 : 0}
-          onChatViewed={markChatSeen}
-        />
         <ResetPasswordModal />
       </div>
     </PullToRefresh>
@@ -499,32 +473,11 @@ const AppShell = () => {
 };
 
 const AppLayout: React.FC<{
-  hasUnseenChatMessages: boolean;
-  onChatViewed: () => void;
   hasStickyHeader: boolean;
-}> = ({ hasUnseenChatMessages, onChatViewed, hasStickyHeader }) => {
-  const [isChatCollapsed, setIsChatCollapsed] = useState(true);
-
-  const chatWidth = isChatCollapsed ? '64px' : '380px';
-
+}> = ({ hasStickyHeader }) => {
   return (
-    <div
-      className={`flex flex-1 ${hasStickyHeader ? 'pt-[var(--pullz-header-height,72px)]' : ''}`}
-      style={{ '--chatw': chatWidth } as React.CSSProperties}
-      data-chat-collapsed={isChatCollapsed}
-    >
-      <MainContent isChatCollapsed={isChatCollapsed} />
-      <div
-        className="relative hidden shrink-0 xl:flex transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
-        style={{ width: 'var(--chatw)' }}
-      >
-        <ChatSidebar
-          isCollapsed={isChatCollapsed}
-          onToggle={setIsChatCollapsed}
-          hasUnseenMessages={hasUnseenChatMessages}
-          onChatViewed={onChatViewed}
-        />
-      </div>
+    <div className={`flex flex-1 ${hasStickyHeader ? 'pt-[var(--pullz-header-height,72px)]' : ''}`}>
+      <MainContent isChatCollapsed />
     </div>
   );
 };
