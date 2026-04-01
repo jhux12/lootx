@@ -468,7 +468,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                     onChange={(event) => setOnlyAffordable(event.target.checked)}
                     className="h-4 w-4 rounded border-white/20 bg-black/40"
                   />
-                  Enough Credits to Buy
+                  Enough Coins to Buy
                 </label>
                 <button
                   type="button"
@@ -647,7 +647,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             </p>
             <h2 className="mb-4 text-xl font-bold text-white">How Box Opening Works</h2>
             <p>
-              Browse the full catalog and buy a mystery box online in seconds. Pick any box, and before you open, every item inside is visible along with its drop rate. After opening, choose to ship the item or trade it in for Credits and use them on any other box.
+              Browse the full catalog and buy a mystery box online in seconds. Pick any box, and before you open, every item inside is visible along with its drop rate. After opening, choose to ship the item or trade it in for Coins and use them on any other box.
             </p>
           </div>
         </div>
