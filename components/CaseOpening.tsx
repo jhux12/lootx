@@ -1802,9 +1802,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                    <button
                      onClick={handleTryFree}
                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed}
-                     className="inline-flex max-w-full items-center justify-center px-2 py-1 text-xs sm:text-sm font-semibold text-emerald-300 underline underline-offset-4 transition hover:text-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
+                     className="inline-flex max-w-full items-center justify-center px-2 py-1 text-xs sm:text-sm font-semibold text-white transition hover:text-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
                    >
-                     Demo Spin (no rewards)
+                     Demo Spin
                    </button>
                  )}
             </div>
