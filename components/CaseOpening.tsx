@@ -61,7 +61,8 @@ const SPINNER_MOTION = {
   approachOffsetNearMissMaxPx: 58,
   nearMissChance: 0.42,
   durationVarianceMs: 420,
-  initialBlurDurationMs: 260
+  initialBlurDurationMs: 260,
+  landingInsetPx: 20
 } as const;
 
 const createSeededRng = (seed: string) => {
@@ -78,6 +79,16 @@ const createSeededRng = (seed: string) => {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+};
+
+const createRuntimeSpinSeed = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const values = new Uint32Array(2);
+    crypto.getRandomValues(values);
+    return `${values[0].toString(16)}:${values[1].toString(16)}`;
+  }
+
+  return `${Date.now().toString(16)}:${Math.random().toString(16).slice(2)}`;
 };
 
 const pickFromPool = <T,>(pool: T[], rng: () => number): T => pool[Math.floor(rng() * pool.length)];
@@ -777,7 +788,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     const shouldPlayStartSound = options?.playStartSound ?? true;
-    const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
+    const rngSeed = options?.seed ?? createRuntimeSpinSeed();
+    const rng = createSeededRng(`${winnerIndex}:${duration}:${rngSeed}`);
     const approachOffset = getApproachOffset(rng);
     const durationVariance = Math.round((rng() - 0.5) * SPINNER_MOTION.durationVarianceMs * 2);
     const resolvedDuration = Math.max(3000, duration + durationVariance);
@@ -794,7 +806,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     await waitForNextPaint();
 
-    const centeredTranslate = await resolveCenteredTranslate(winnerIndex, 0);
+    const winnerCardWidth = winningCardRef.current?.offsetWidth ?? CARD_WIDTH;
+    const maxLandingOffset = Math.max(0, (winnerCardWidth / 2) - SPINNER_MOTION.landingInsetPx);
+    const landingOffset = (rng() * 2 - 1) * maxLandingOffset;
+
+    const centeredTranslate = await resolveCenteredTranslate(winnerIndex, landingOffset);
     const approachTranslate = centeredTranslate === null ? null : centeredTranslate + approachOffset;
     if (centeredTranslate === null || approachTranslate === null) {
       spinRequestLockRef.current = false;
