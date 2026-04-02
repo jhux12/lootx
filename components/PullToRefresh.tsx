@@ -37,6 +37,9 @@ const PullToRefresh: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       if (!isCoarsePointerRef.current || event.touches.length !== 1 || isRefreshingRef.current) return;
       if (window.scrollY > 0) return;
 
+      const target = event.target as Element | null;
+      if (target?.closest('[data-disable-pull-refresh="true"]')) return;
+
       touchStartY.current = event.touches[0].clientY;
       isPulling.current = true;
       setIsReady(false);
