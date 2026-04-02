@@ -71,6 +71,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 
   const [demoSpinIndex, setDemoSpinIndex] = useState(14);
   const [isSpinAnimating, setIsSpinAnimating] = useState(false);
+  const [visibleHowItWorksSteps, setVisibleHowItWorksSteps] = useState<boolean[]>([false, false, false]);
   const [demoReelItems, setDemoReelItems] = useState<CaseItem[]>([]);
   const [landedIndex, setLandedIndex] = useState<number | null>(null);
   const spinStartTimeoutRef = useRef<number | null>(null);
@@ -79,6 +80,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const demoSpinIndexRef = useRef(14);
   const spinnerTrackRef = useRef<HTMLDivElement | null>(null);
   const spinnerCardRef = useRef<HTMLDivElement | null>(null);
+  const howItWorksStepRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   const SPINNER_CARD_WIDTH = 136;
   const SPINNER_CARD_GAP = 12;
@@ -206,6 +208,42 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       clearSpinTimers();
     };
   }, [spinnerItems]);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisibleHowItWorksSteps([true, true, true]);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const stepIndex = Number((entry.target as HTMLElement).dataset.stepIndex ?? '-1');
+          if (stepIndex < 0) return;
+
+          setVisibleHowItWorksSteps((previous) => {
+            if (previous[stepIndex]) return previous;
+            const next = [...previous];
+            next[stepIndex] = true;
+            return next;
+          });
+
+          observer.unobserve(entry.target);
+        });
+      },
+      {
+        threshold: 0.25,
+        rootMargin: '0px 0px -10% 0px'
+      }
+    );
+
+    howItWorksStepRefs.current.forEach((stepElement) => {
+      if (stepElement) observer.observe(stepElement);
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
 
   const fairValueBannerKeyframes = `
@@ -435,12 +473,25 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                   className="rounded-2xl border border-white/10 bg-[#111520] p-6 text-center"
                 >
                   {stepImage ? (
-                    <img
-                      src={stepImage}
-                      alt={`Step ${index + 1}`}
-                      className="mx-auto h-36 w-full rounded-xl object-cover sm:h-44"
-                      loading="lazy"
-                    />
+                    <div
+                      ref={(element) => {
+                        howItWorksStepRefs.current[index] = element;
+                      }}
+                      data-step-index={index}
+                      className={`mx-auto overflow-hidden rounded-xl transition-all duration-700 ease-out motion-reduce:transition-none ${
+                        visibleHowItWorksSteps[index]
+                          ? 'translate-y-0 opacity-100'
+                          : 'translate-y-8 opacity-0'
+                      }`}
+                      style={{ transitionDelay: `${index * 90}ms` }}
+                    >
+                      <img
+                        src={stepImage}
+                        alt={`Step ${index + 1}`}
+                        className="mx-auto h-24 w-full max-w-[180px] rounded-xl object-cover sm:h-28 md:h-24 lg:h-28"
+                        loading="lazy"
+                      />
+                    </div>
                   ) : (
                     <p className="text-5xl font-black text-white/10">{num}</p>
                   )}
