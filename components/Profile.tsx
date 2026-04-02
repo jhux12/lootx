@@ -1312,109 +1312,115 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   )}
 
                   {showShippingReview && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-                          <div className="w-full max-w-lg rounded-2xl border border-gray-800 bg-[#0b0e14] p-6 shadow-2xl">
-                              <div className="flex items-center justify-between">
-                                  <h3 className="text-lg font-bold text-white">Confirm shipment</h3>
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4">
+                          <div className="w-full max-w-5xl overflow-hidden rounded-2xl border border-[#1f2430] bg-[#05070d] shadow-2xl">
+                              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5 sm:px-5">
+                                  <h3 className="text-xl font-extrabold text-white sm:text-2xl">Confirm shipment</h3>
                                   <button
+                                      type="button"
                                       onClick={() => setShowShippingReview(false)}
-                                      className="text-gray-500 hover:text-white transition-colors"
+                                      className="rounded-lg p-1.5 text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
                                       aria-label="Close shipping review"
                                   >
-                                      ✕
+                                      <X className="h-6 w-6" />
                                   </button>
                               </div>
-                              <p className="mt-2 text-sm text-gray-500">
-                                  XP Shop items ship free.
-                              </p>
+                              <div className="space-y-3.5 px-4 py-4 sm:px-5 sm:py-5">
+                                  <p className="text-base text-gray-400 sm:text-lg">
+                                      XP Shop items ship free.
+                                  </p>
 
-                              <div className="mt-4 space-y-3 max-h-48 overflow-y-auto pr-1">
-                                  {selectedShipmentItems.map((item) => (
-                                      <div key={item.instanceId} className="flex items-center gap-3 rounded-xl border border-gray-800 bg-[#131720] p-3">
-                                          <div className="h-10 w-10 rounded-lg bg-[#0b0e14]"><BlurImage src={item.image} alt={item.name} className="h-10 w-10 rounded-lg object-contain" /></div>
-                                          <div className="flex-1">
-                                              <div className="text-sm font-semibold text-white">{item.name}</div>
-                                              <div className="text-xs text-gray-500">{item.rarity}</div>
+                                  <div className="max-h-56 space-y-3 overflow-y-auto pr-1">
+                                      {selectedShipmentItems.map((item) => (
+                                          <div key={item.instanceId} className="flex items-center gap-3 rounded-xl border border-white/10 bg-gradient-to-b from-[#1b2435] to-[#090b11] p-3.5">
+                                              <div className="h-14 w-10 rounded-lg border border-white/10 bg-black/30 sm:h-20 sm:w-14">
+                                                  <BlurImage src={item.image} alt={item.name} className="h-full w-full rounded-lg object-contain" />
+                                              </div>
+                                              <div className="min-w-0 flex-1">
+                                                  <div className="truncate text-sm font-bold text-white sm:text-base">{item.name}</div>
+                                                  <div className="text-xs text-gray-400 sm:text-sm">{item.rarity}</div>
+                                              </div>
+                                              {(shippingCoinEnabled || shippingCashEnabled || isFreeOnlySelection) && (
+                                                getCoinShippingCostForItem(item) > 0 ? (
+                                                  <CoinAmount
+                                                    amount={getCoinShippingCostForItem(item)}
+                                                    formatOptions={{ maximumFractionDigits: 0 }}
+                                                    className="text-blue-200 font-semibold text-sm"
+                                                    iconClassName="w-4 h-4"
+                                                  />
+                                                ) : (
+                                                  <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                                                    Free shipping
+                                                  </span>
+                                                )
+                                              )}
                                           </div>
-                                          {(shippingCoinEnabled || shippingCashEnabled || isFreeOnlySelection) && (
-                                            getCoinShippingCostForItem(item) > 0 ? (
-                                              <CoinAmount
-                                                amount={getCoinShippingCostForItem(item)}
-                                                formatOptions={{ maximumFractionDigits: 0 }}
-                                                className="text-blue-200 font-semibold text-xs"
-                                                iconClassName="w-3 h-3"
-                                              />
-                                            ) : (
-                                              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
-                                                Free shipping
-                                              </span>
-                                            )
+                                      ))}
+                                      {selectedShipmentItems.length === 0 && (
+                                          <div className="rounded-xl border border-white/10 bg-[#151822] py-6 text-center text-sm text-gray-500">
+                                              No shippable items selected.
+                                          </div>
+                                      )}
+                                  </div>
+
+                                  <div className="rounded-xl bg-[#151822] px-3.5 py-3.5 sm:px-4">
+                                      <div className="space-y-1.5 text-sm text-gray-300 sm:text-base">
+                                          <div className="flex items-center justify-between">
+                                              <span>Items selected</span>
+                                              <span>{selectedShipmentItems.length}</span>
+                                          </div>
+                                          <div className="flex items-center justify-between">
+                                              <span>Free shipping items</span>
+                                              <span>{freeShippingItemCount}</span>
+                                          </div>
+                                          <div className="flex items-center justify-between">
+                                              <span>Paid shipping items</span>
+                                              <span>{paidShippingItemCount}</span>
+                                          </div>
+                                          {(shippingCoinEnabled || shippingCashEnabled) && <div className="my-1 border-t border-white/10" />}
+                                          {shippingCoinEnabled && (
+                                            <div className="flex items-center justify-between text-lg font-black text-white sm:text-xl">
+                                                <span>Coins due now</span>
+                                                <CoinAmount
+                                                  amount={shippingCoinTotal}
+                                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                                  className="text-blue-200"
+                                                  iconClassName="w-5 h-5"
+                                                />
+                                            </div>
+                                          )}
+                                          {shippingCashEnabled && (
+                                              <div className="flex items-center justify-between font-semibold text-gray-300">
+                                                  <span>Cash due now</span>
+                                                  <span className="text-emerald-300">
+                                                      {formatUsd(shippingCashTotalCents)}
+                                                  </span>
+                                              </div>
                                           )}
                                       </div>
-                                  ))}
-                                  {selectedShipmentItems.length === 0 && (
-                                      <div className="text-sm text-gray-500 text-center py-6">
-                                          No shippable items selected.
+                                  </div>
+
+                                  {shippingCashEnabled && (
+                                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-3 text-sm text-emerald-200 sm:text-base">
+                                          Cash shipping uses Stripe Checkout. Your shipment is queued after payment succeeds.
+                                      </div>
+                                  )}
+
+                                  {!user.shippingAddress && (
+                                      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-3 text-sm text-amber-300 sm:text-base">
+                                          Add a shipping address in Settings to enable shipping.
                                       </div>
                                   )}
                               </div>
 
-                              <div className="mt-4 space-y-2 border-t border-gray-800 pt-4 text-sm">
-                                  <div className="flex items-center justify-between text-gray-400">
-                                      <span>Items selected</span>
-                                      <span>{selectedShipmentItems.length}</span>
-                                  </div>
-                                  <div className="flex items-center justify-between text-gray-400">
-                                      <span>Free shipping items</span>
-                                      <span>{freeShippingItemCount}</span>
-                                  </div>
-                                  <div className="flex items-center justify-between text-gray-400">
-                                      <span>Paid shipping items</span>
-                                      <span>{paidShippingItemCount}</span>
-                                  </div>
-                                  {shippingCoinEnabled && (
-                                    <>
-                                      <div className="flex items-center justify-between text-white font-bold">
-                                          <span>Coins due now</span>
-                                          <CoinAmount
-                                            amount={shippingCoinTotal}
-                                            formatOptions={{ maximumFractionDigits: 0 }}
-                                            className="text-blue-200"
-                                            iconClassName="w-4 h-4"
-                                          />
-                                      </div>
-                                    </>
-                                  )}
-                              {shippingCashEnabled && (
-                                  <div className="flex items-center justify-between text-gray-400">
-                                      <span>Cash due now</span>
-                                      <span className="text-emerald-300 font-semibold">
-                                          {formatUsd(shippingCashTotalCents)}
-                                      </span>
-                                  </div>
-                              )}
-                          </div>
-
-                              {shippingCashEnabled && (
-                                  <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-                                      Cash shipping uses Stripe Checkout. Your shipment is queued after payment succeeds.
-                                  </div>
-                              )}
-
-                              {!user.shippingAddress && (
-                                  <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-                                      Add a shipping address in Settings to enable shipping.
-                                  </div>
-                              )}
-
-                              <div className="mt-5 flex flex-col gap-3">
+                              <div className="space-y-3 border-t border-white/10 p-3.5 sm:p-4">
                                   <button
                                       onClick={() => setShowShippingReview(false)}
-                                      className="flex-1 rounded-lg border border-gray-700 bg-[#0b0e14] px-4 py-2 text-xs font-bold uppercase tracking-wide text-gray-300 hover:border-gray-500"
+                                      className="w-full rounded-xl border border-[#31466e] bg-[#040b17] px-4 py-3 text-base font-extrabold uppercase tracking-wide text-gray-300 transition-colors hover:border-[#4b5d86] hover:text-white"
                                   >
                                       Cancel
                                   </button>
-                                  <div className="flex flex-col gap-3 sm:flex-row">
+                                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                       {!isFreeOnlySelection && shippingCoinEnabled && (
                                           <button
                                               onClick={handleConfirmShipping}
@@ -1423,7 +1429,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                 selectedShipmentItems.length === 0 ||
                                                 !user.shippingAddress
                                               }
-                                              className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+                                              className={`rounded-xl border px-4 py-3 text-base font-extrabold uppercase tracking-wide transition-colors ${
                                                 !isSubmittingShipment && selectedShipmentItems.length > 0 && user.shippingAddress
                                                   ? 'border-blue-500/40 bg-blue-600/20 text-blue-200 hover:bg-blue-600/30'
                                                   : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
@@ -1440,7 +1446,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                 selectedShipmentItems.length === 0 ||
                                                 !user.shippingAddress
                                               }
-                                              className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+                                              className={`rounded-xl border px-4 py-3 text-base font-extrabold uppercase tracking-wide transition-colors ${
                                                 !isSubmittingCashShipping && selectedShipmentItems.length > 0 && user.shippingAddress
                                                   ? 'border-emerald-500/40 bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30'
                                                   : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
@@ -1461,7 +1467,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                 selectedShipmentItems.length === 0 ||
                                                 !user.shippingAddress
                                               }
-                                              className={`flex-1 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+                                              className={`rounded-xl border px-4 py-3 text-base font-extrabold uppercase tracking-wide transition-colors ${
                                                 !isSubmittingShipment && selectedShipmentItems.length > 0 && user.shippingAddress
                                                   ? 'border-emerald-500/40 bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30'
                                                   : 'border-gray-800 bg-[#0b0e14] text-gray-500 cursor-not-allowed'
