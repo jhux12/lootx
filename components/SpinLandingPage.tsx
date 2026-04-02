@@ -261,8 +261,8 @@ export const SpinLandingPage: React.FC = () => {
           New Users Only
         </span>
 
-        <h1 className="text-balance text-3xl font-black text-white sm:text-5xl">Spin For Your First Free Box</h1>
-        <p className="mt-3 max-w-xl text-sm text-slate-300 sm:text-base">New users only — win a free mystery box.</p>
+        <h1 className="text-balance text-3xl font-black text-white sm:text-5xl">Spin for a reward</h1>
+        <p className="mt-3 max-w-xl text-sm text-slate-300 sm:text-base">first time user bonus</p>
 
         <div className="mt-8 flex w-full flex-col items-center rounded-3xl border border-white/10 bg-[#090d18]/80 p-4 shadow-[0_0_120px_rgba(124,58,237,0.12)] backdrop-blur-sm sm:p-8">
           <div className="relative w-full max-w-4xl">
