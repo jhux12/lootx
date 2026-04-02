@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, Wallet, Loader2, CheckCircle, Info } from 'lucide-react';
+import { X, Wallet, Loader2, CheckCircle } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -188,12 +188,7 @@ export const TopUpModal: React.FC = () => {
                         <Wallet className="h-5 w-5 text-amber-300" />
                       </div>
                       <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-xl font-black text-white sm:text-3xl">Get Cravin Credits</h2>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/50 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-200 sm:text-xs">
-                            <Info className="h-3 w-3" /> What is Dust?
-                          </span>
-                        </div>
+                        <h2 className="text-xl font-black text-white sm:text-3xl">Get Coins</h2>
                         <p className="mt-1 text-xs text-gray-400 sm:text-sm">How many credits would you like?</p>
                       </div>
                     </div>
