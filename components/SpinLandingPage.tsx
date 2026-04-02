@@ -102,15 +102,16 @@ export const SpinLandingPage: React.FC = () => {
     setIsSpinning(true);
     setSpinnerState('SPIN');
     setSpinKey(`spin-landing-${Date.now()}`);
+  };
 
-    window.setTimeout(() => {
-      setSpinnerState('STOPPED');
-      setSpinResult('Free Mystery Box');
-      setShowWinModal(true);
-      setIsSpinning(false);
-      setConfetti(createMicroConfetti(24));
-      persistSpinState({ reward: 'Free Mystery Box', at: Date.now(), claimed: false });
-    }, SPIN_MS);
+  const handleSpinComplete = () => {
+    if (!isSpinning || spinnerState !== 'SPIN') return;
+    setSpinnerState('STOPPED');
+    setSpinResult('Free Mystery Box');
+    setShowWinModal(true);
+    setIsSpinning(false);
+    setConfetti(createMicroConfetti(24));
+    persistSpinState({ reward: 'Free Mystery Box', at: Date.now(), claimed: false });
   };
 
   const handleClaim = () => {
@@ -160,25 +161,17 @@ export const SpinLandingPage: React.FC = () => {
         <p className="mt-3 max-w-xl text-sm text-slate-300 sm:text-base">New users only — win a free mystery box.</p>
 
         <div className="mt-8 flex w-full flex-col items-center rounded-3xl border border-white/10 bg-[#090d18]/80 p-4 shadow-[0_0_120px_rgba(124,58,237,0.12)] backdrop-blur-sm sm:p-8">
-          <div className="w-full max-w-4xl">
+          <div className="relative w-full max-w-4xl">
             <SpinnerReel
               items={spinnerItems}
               winningItem={winningItem}
               spinKey={spinKey}
               state={spinnerState}
               durationMs={SPIN_MS}
+              onSpinComplete={handleSpinComplete}
             />
-          </div>
-
-          <div className="mt-5 w-full max-w-3xl rounded-xl border border-violet-500/20 bg-[#0b1222] p-3">
-            <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-200 sm:grid-cols-4 sm:text-xs">
-              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">50 Coins</div>
-              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">100 Coins</div>
-              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">Try Again</div>
-              <div className="rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-2 py-1.5 text-center font-semibold text-emerald-200">Free Mystery Box</div>
-              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">Starter Box</div>
-              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">Tech Box</div>
-              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">Pokémon Box</div>
+            <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
+              <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[14px] border-l-transparent border-r-transparent border-t-cyan-300 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)] sm:border-l-[12px] sm:border-r-[12px] sm:border-t-[18px]" />
             </div>
           </div>
 
