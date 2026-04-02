@@ -172,7 +172,7 @@ export const TopUpModal: React.FC = () => {
         onClick={handleClose}
       ></div>
       
-      <div className="relative flex max-h-[calc(100dvh-2rem)] min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-amber-500/20 bg-[#08090d] shadow-2xl shadow-black/60 animate-in zoom-in-95">
+      <div className="relative flex max-h-[calc(100dvh-2rem)] min-h-0 w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-amber-500/20 bg-[#08090d] shadow-2xl shadow-black/60 animate-in zoom-in-95">
         
         {success ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -200,10 +200,10 @@ export const TopUpModal: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6">
+                <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
                     {/* Amount Selector */}
-                    <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-gray-500">Select a pack</label>
-                    <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-gray-500">Select a pack</label>
+                    <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
                         {activePackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             No packages available right now.
@@ -220,7 +220,7 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative rounded-xl border bg-[#15171c] p-3 text-left transition-all ${isSelected ? getSelectedClasses(pack.badge) : `${getBadgeClasses(pack.badge)} hover:border-white/30`}`}
+                                  className={`relative rounded-xl border bg-[#15171c] p-3.5 text-left transition-all ${isSelected ? getSelectedClasses(pack.badge) : `${getBadgeClasses(pack.badge)} hover:border-white/30`}`}
                               >
                                   {pack.badge && (
                                     <span
@@ -233,7 +233,7 @@ export const TopUpModal: React.FC = () => {
                                       {pack.badge === 'best' ? 'Best value' : 'Good value'}
                                     </span>
                                   )}
-                                  <div className="mb-2 overflow-hidden rounded-lg border border-white/5 bg-black/20 p-2">
+                                  <div className="mb-3 overflow-hidden rounded-lg border border-white/5 bg-black/20 p-2.5">
                                     <img
                                       src={getPackageImage(pack)}
                                       alt={pack.name}
@@ -242,7 +242,7 @@ export const TopUpModal: React.FC = () => {
                                       decoding="async"
                                     />
                                   </div>
-                                  <div className="flex flex-col gap-1">
+                                  <div className="flex flex-col gap-1.5">
                                     <CoinAmount
                                       amount={pack.coins}
                                       formatOptions={{ maximumFractionDigits: 0 }}
@@ -253,11 +253,11 @@ export const TopUpModal: React.FC = () => {
                                       <span className="text-xs font-semibold text-gray-300">{pack.name}</span>
                                       {bonusCoins > 0 && (
                                         <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
-                                          +{bonusCoins.toLocaleString()} DUST
+                                          +{bonusCoins.toLocaleString()} BONUS
                                         </span>
                                       )}
                                     </div>
-                                    <div className="mt-1 rounded-lg border border-white/10 bg-white/10 px-3 py-1.5 text-center text-lg font-black text-white">
+                                    <div className="mt-1.5 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-center text-lg font-black text-white">
                                       {pack.displayPrice}
                                     </div>
                                   </div>
@@ -274,9 +274,9 @@ export const TopUpModal: React.FC = () => {
                     )}
 
                 </div>
-                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#10131c]/95 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Total Amount</p>
-                  <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-[#1a2030] px-3 py-2.5 sm:px-4">
+                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#10131c]/95 px-4 py-3.5 backdrop-blur-md sm:px-6 sm:py-4">
+                  <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-gray-400">Total Amount</p>
+                  <div className="mb-3.5 flex items-center justify-between rounded-xl border border-white/10 bg-[#1a2030] px-3 py-3 sm:px-4">
                     <CoinAmount
                       amount={selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))}
                       formatOptions={{ maximumFractionDigits: 0 }}
