@@ -280,6 +280,7 @@ export const AdminPanel: React.FC = () => {
       name: '',
       coins: 0,
       bonusCoins: 0,
+      imageUrl: '',
       displayPrice: '',
       stripePriceId: '',
       badge: undefined,
@@ -1384,6 +1385,7 @@ export const AdminPanel: React.FC = () => {
           name: '',
           coins: 0,
           bonusCoins: 0,
+          imageUrl: '',
           displayPrice: '',
           stripePriceId: '',
           badge: undefined,
@@ -1409,6 +1411,7 @@ export const AdminPanel: React.FC = () => {
       const name = packageDraft.name?.trim() ?? '';
       const coins = Number(packageDraft.coins ?? 0);
       const bonusCoins = Number(packageDraft.bonusCoins ?? 0);
+      const imageUrl = packageDraft.imageUrl?.trim() ?? '';
       const displayPrice = packageDraft.displayPrice?.trim() ?? '';
       const stripePriceId = packageDraft.stripePriceId?.trim() ?? '';
       const sortOrder = Number.isFinite(Number(packageDraft.sortOrder)) ? Number(packageDraft.sortOrder) : 0;
@@ -1431,6 +1434,10 @@ export const AdminPanel: React.FC = () => {
           setPackageError('Display price is required.');
           return;
       }
+      if (imageUrl && !/^https?:\/\//i.test(imageUrl)) {
+          setPackageError('Image URL must start with http:// or https://');
+          return;
+      }
       if (!stripePriceId.startsWith('price_')) {
           setPackageError('Stripe price ID must start with "price_".');
           return;
@@ -1444,6 +1451,7 @@ export const AdminPanel: React.FC = () => {
                   name,
                   coins,
                   bonusCoins,
+                  imageUrl,
                   displayPrice,
                   stripePriceId,
                   badge,
@@ -1455,6 +1463,7 @@ export const AdminPanel: React.FC = () => {
                   name,
                   coins,
                   bonusCoins,
+                  imageUrl,
                   displayPrice,
                   stripePriceId,
                   badge,
@@ -3726,7 +3735,7 @@ export const AdminPanel: React.FC = () => {
                     </div>
                     <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[900px] text-left text-sm">
+                            <table className="w-full min-w-[1040px] text-left text-sm">
                                 <thead className="bg-[#0b0e14] text-gray-400 font-medium">
                                     <tr>
                                         <th className="px-4 py-3">Name</th>
@@ -3734,6 +3743,7 @@ export const AdminPanel: React.FC = () => {
                                         <th className="px-4 py-3">Bonus Coins</th>
                                         <th className="px-4 py-3">Total</th>
                                         <th className="px-4 py-3">Display Price</th>
+                                        <th className="px-4 py-3">Image URL</th>
                                         <th className="px-4 py-3">Stripe Price ID</th>
                                         <th className="px-4 py-3">Badge</th>
                                         <th className="px-4 py-3">Active</th>
@@ -3767,6 +3777,15 @@ export const AdminPanel: React.FC = () => {
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-300">{pkg.displayPrice}</td>
+                                                <td className="px-4 py-3 text-xs text-gray-400">
+                                                    {pkg.imageUrl ? (
+                                                        <a href={pkg.imageUrl} target="_blank" rel="noreferrer" className="font-mono underline decoration-dotted underline-offset-2 hover:text-white">
+                                                            Custom image
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-gray-500">Default</span>
+                                                    )}
+                                                </td>
                                                 <td className="px-4 py-3 text-xs text-gray-400">
                                                     <span className="rounded bg-black/30 px-2 py-1 font-mono">{pkg.stripePriceId}</span>
                                                 </td>
@@ -6146,6 +6165,17 @@ export const AdminPanel: React.FC = () => {
                               onChange={(event) => setPackageDraft((prev) => ({ ...prev, displayPrice: event.target.value }))}
                               className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                           />
+                      </div>
+                      <div className="sm:col-span-2">
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Custom Image URL (optional)</label>
+                          <Input
+                              type="url"
+                              placeholder="https://cdn.example.com/packages/5000.png"
+                              value={packageDraft.imageUrl ?? ''}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, imageUrl: event.target.value }))}
+                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                          />
+                          <p className="mt-1 text-[11px] text-gray-500">Shown in the top-up modal card. Leave blank to use the default package art.</p>
                       </div>
                       <div className="sm:col-span-2">
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Stripe Price ID</label>

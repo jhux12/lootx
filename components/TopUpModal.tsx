@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, Wallet, Loader2, CheckCircle } from 'lucide-react';
+import { X, Wallet, Loader2, CheckCircle, Info } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -72,6 +72,9 @@ export const TopUpModal: React.FC = () => {
     }
     return 'border-emerald-400 bg-emerald-500/10 text-white shadow-lg shadow-emerald-900/20';
   };
+  const getPackageImage = (pack: typeof activePackages[number]) =>
+    pack.imageUrl?.trim() ||
+    'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2F12.png?alt=media&token=a82f5343-7e3e-4cb9-9d7a-b0451d4e49b0';
 
   React.useEffect(() => {
     if (!selectedPackageId && activePackages[0]) {
@@ -163,13 +166,13 @@ export const TopUpModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4 py-6 sm:items-center">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-3 py-4 sm:p-4 sm:py-6 sm:items-center">
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in" 
         onClick={handleClose}
       ></div>
       
-      <div className="relative w-full max-w-md max-h-[calc(100dvh-3rem)] min-h-0 overflow-hidden rounded-2xl border border-white/10 bg-[#0f131c] shadow-2xl animate-in zoom-in-95 flex flex-col sm:max-h-[calc(100dvh-2rem)]">
+      <div className="relative flex max-h-[calc(100dvh-2rem)] min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-amber-500/20 bg-[#08090d] shadow-2xl shadow-black/60 animate-in zoom-in-95">
         
         {success ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -179,28 +182,33 @@ export const TopUpModal: React.FC = () => {
             </div>
         ) : (
             <>
-                <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10">
-                        <Wallet className="h-5 w-5 text-blue-400" />
+                <div className="flex items-start justify-between border-b border-white/10 px-4 py-4 sm:px-6">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10">
+                        <Wallet className="h-5 w-5 text-amber-300" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-bold text-white">Top up</h2>
-                        <p className="text-xs text-gray-500">Choose a coin package</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="text-xl font-black text-white sm:text-3xl">Get Cravin Credits</h2>
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/50 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-200 sm:text-xs">
+                            <Info className="h-3 w-3" /> What is Dust?
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-400 sm:text-sm">How many credits would you like?</p>
                       </div>
                     </div>
                     <button 
                         onClick={handleClose} 
-                        className="text-gray-500 hover:text-white transition-colors"
+                        className="rounded-lg border border-white/10 p-2 text-gray-500 transition-colors hover:text-white"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+                <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6">
                     {/* Amount Selector */}
-                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Select a pack</label>
-                    <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-3">
+                    <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-gray-500">Select a pack</label>
+                    <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
                         {activePackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             No packages available right now.
@@ -217,7 +225,7 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative rounded-xl border px-3 py-3 text-left transition-all ${isSelected ? getSelectedClasses(pack.badge) : `${getBadgeClasses(pack.badge)} hover:border-white/30`}`}
+                                  className={`relative rounded-xl border bg-[#15171c] p-3 text-left transition-all ${isSelected ? getSelectedClasses(pack.badge) : `${getBadgeClasses(pack.badge)} hover:border-white/30`}`}
                               >
                                   {pack.badge && (
                                     <span
@@ -230,21 +238,32 @@ export const TopUpModal: React.FC = () => {
                                       {pack.badge === 'best' ? 'Best value' : 'Good value'}
                                     </span>
                                   )}
+                                  <div className="mb-2 overflow-hidden rounded-lg border border-white/5 bg-black/20 p-2">
+                                    <img
+                                      src={getPackageImage(pack)}
+                                      alt={pack.name}
+                                      className="h-24 w-full object-contain sm:h-28"
+                                      loading="lazy"
+                                      decoding="async"
+                                    />
+                                  </div>
                                   <div className="flex flex-col gap-1">
-                                    <span className="text-[11px] font-semibold text-gray-400">{pack.displayPrice}</span>
                                     <CoinAmount
                                       amount={pack.coins}
                                       formatOptions={{ maximumFractionDigits: 0 }}
-                                      className="text-white"
+                                      className="text-lg font-black text-white"
                                       iconClassName="w-3.5 h-3.5"
                                     />
                                     <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500">
-                                      <span>{pack.coins.toLocaleString()}</span>
+                                      <span className="text-xs font-semibold text-gray-300">{pack.name}</span>
                                       {bonusCoins > 0 && (
-                                        <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-semibold text-emerald-200">
-                                          +{bonusCoins.toLocaleString()} bonus
+                                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
+                                          +{bonusCoins.toLocaleString()} DUST
                                         </span>
                                       )}
+                                    </div>
+                                    <div className="mt-1 rounded-lg border border-white/10 bg-white/10 px-3 py-1.5 text-center text-lg font-black text-white">
+                                      {pack.displayPrice}
                                     </div>
                                   </div>
                               </button>
@@ -284,12 +303,6 @@ export const TopUpModal: React.FC = () => {
                             </span>
                         )}
                     </button>
-
-                    <img
-  src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2F12.png?alt=media&token=a82f5343-7e3e-4cb9-9d7a-b0451d4e49b0"
-  alt="Secure checkout"
-  className="mx-auto mt-3 h-24 opacity-80"
-/>
 
 <p className="text-center text-[10px] text-gray-500 mt-2">
   By depositing you agree to our Terms of Service.

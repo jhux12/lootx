@@ -1862,6 +1862,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           coins,
           bonusCoins,
           totalCoins: coins + bonusCoins,
+          imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
           displayPrice: data.displayPrice ?? '',
           stripePriceId: data.stripePriceId ?? '',
           badge: data.badge ?? undefined,
