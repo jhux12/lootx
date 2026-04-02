@@ -101,8 +101,15 @@ const PromoCaseSpinner: React.FC<{
 
   return (
     <div className="relative h-[15.5rem] overflow-hidden rounded-xl border border-gray-800 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] sm:h-64">
-      <div className="absolute top-0 bottom-0 left-1/2 z-[26] w-0.5 -translate-x-1/2 bg-cyan-400/45" />
-      <div className="absolute inset-y-0 left-1/2 z-[24] w-16 -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.24)_0%,rgba(34,211,238,0.08)_42%,rgba(34,211,238,0)_75%)] sm:w-20" />
+      <div className={`absolute top-0 bottom-0 left-1/2 z-[26] w-0.5 -translate-x-1/2 transition-opacity duration-300 ${state === 'SPIN' ? 'bg-cyan-300/60 opacity-100' : 'bg-cyan-400/35 opacity-80'}`} />
+      <div className={`absolute inset-y-0 left-1/2 z-[24] w-16 -translate-x-1/2 transition-all duration-500 sm:w-20 ${state === 'SPIN' ? 'opacity-90' : 'opacity-40'}`} style={{ background: 'radial-gradient(ellipse at center, rgba(34,211,238,0.24) 0%, rgba(34,211,238,0.08) 42%, rgba(34,211,238,0) 75%)' }} />
+      <div
+        className={`absolute inset-0 z-[21] pointer-events-none transition-opacity duration-200 ${state === 'SPIN' ? 'opacity-100' : 'opacity-0'}`}
+        style={{
+          background: 'linear-gradient(100deg, rgba(0,0,0,0) 0%, rgba(34,211,238,0.06) 35%, rgba(255,255,255,0.12) 50%, rgba(34,211,238,0.06) 65%, rgba(0,0,0,0) 100%)',
+          backdropFilter: 'blur(1.5px)'
+        }}
+      />
       <div className="absolute left-0 top-0 bottom-0 z-20 w-24 bg-gradient-to-r from-[#0b0e14] to-transparent pointer-events-none" />
       <div className="absolute right-0 top-0 bottom-0 z-20 w-24 bg-gradient-to-l from-[#0b0e14] to-transparent pointer-events-none" />
 
@@ -274,9 +281,6 @@ export const SpinLandingPage: React.FC = () => {
               durationMs={SPIN_MS}
               onSpinComplete={handleSpinComplete}
             />
-            <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
-              <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[14px] border-l-transparent border-r-transparent border-t-cyan-300 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)] sm:border-l-[12px] sm:border-r-[12px] sm:border-t-[18px]" />
-            </div>
           </div>
 
           <button
