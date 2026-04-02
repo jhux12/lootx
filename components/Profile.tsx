@@ -50,6 +50,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const [isSellingItems, setIsSellingItems] = useState<Record<string, boolean>>({});
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const [showShippingReview, setShowShippingReview] = useState(false);
+  const [shippingPaymentMethod, setShippingPaymentMethod] = useState<'coins' | 'cash'>('coins');
   const [withdrawLockedModalOpen, setWithdrawLockedModalOpen] = useState(false);
   const [tradeInModalItemId, setTradeInModalItemId] = useState<string | null>(null);
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
@@ -310,6 +311,14 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const freeShippingItemCount = selectedShipmentItems.filter((item) => isFreeShippingItem(item)).length;
   const paidShippingItemCount = Math.max(0, selectedShipmentItems.length - freeShippingItemCount);
   const isFreeOnlySelection = selectedShipmentItems.length > 0 && paidShippingItemCount === 0;
+  const canUseCoinShipping = !isFreeOnlySelection && shippingCoinEnabled;
+  const canUseCashShipping = !isFreeOnlySelection && shippingCashEnabled;
+  const hasShippingMethodToggle = canUseCoinShipping && canUseCashShipping;
+  const activeShippingMethod = hasShippingMethodToggle
+    ? shippingPaymentMethod
+    : canUseCashShipping
+      ? 'cash'
+      : 'coins';
   const formatUsd = (cents: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 
@@ -322,6 +331,15 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
     );
     setSelectedShipments((prev) => prev.filter((id) => selectableIds.has(id)));
   }, [normalizedInventory, user.shippingAddress]);
+
+  useEffect(() => {
+    if (canUseCoinShipping && canUseCashShipping) return;
+    if (canUseCashShipping) {
+      setShippingPaymentMethod('cash');
+      return;
+    }
+    setShippingPaymentMethod('coins');
+  }, [canUseCoinShipping, canUseCashShipping]);
 
   useEffect(() => {
     setSellOffers((prev) => {
@@ -453,6 +471,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
   const handleOpenShippingReview = (instanceIds: string[]) => {
     setSelectedShipments(instanceIds);
+    setShippingPaymentMethod(shippingCoinEnabled ? 'coins' : 'cash');
     setShowShippingReview(true);
   };
 
@@ -1005,7 +1024,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   )}
                               </div>
                               <button
-                                  onClick={() => setShowShippingReview(true)}
+                                  onClick={() => handleOpenShippingReview(selectedShipments)}
                                   disabled={!user.shippingAddress || selectedShipments.length === 0}
                                   className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wide border transition-colors ${
                                     user.shippingAddress && selectedShipments.length > 0
@@ -1330,6 +1349,35 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       XP Shop items ship free.
                                   </p>
 
+                                  {hasShippingMethodToggle && (
+                                      <div className="rounded-xl border border-white/10 bg-[#0b0e14] p-1.5">
+                                          <div className="grid grid-cols-2 gap-1.5">
+                                              <button
+                                                  type="button"
+                                                  onClick={() => setShippingPaymentMethod('coins')}
+                                                  className={`rounded-lg px-3 py-2 text-xs font-extrabold uppercase tracking-wide transition-colors sm:text-sm ${
+                                                    activeShippingMethod === 'coins'
+                                                      ? 'border border-blue-500/40 bg-blue-600/20 text-blue-200'
+                                                      : 'border border-transparent bg-transparent text-gray-400 hover:text-white'
+                                                  }`}
+                                              >
+                                                  Ship with coins
+                                              </button>
+                                              <button
+                                                  type="button"
+                                                  onClick={() => setShippingPaymentMethod('cash')}
+                                                  className={`rounded-lg px-3 py-2 text-xs font-extrabold uppercase tracking-wide transition-colors sm:text-sm ${
+                                                    activeShippingMethod === 'cash'
+                                                      ? 'border border-emerald-500/40 bg-emerald-600/20 text-emerald-200'
+                                                      : 'border border-transparent bg-transparent text-gray-400 hover:text-white'
+                                                  }`}
+                                              >
+                                                  Ship with cash
+                                              </button>
+                                          </div>
+                                      </div>
+                                  )}
+
                                   <div className="max-h-56 space-y-3 overflow-y-auto pr-1">
                                       {selectedShipmentItems.map((item) => (
                                           <div key={item.instanceId} className="flex items-center gap-3 rounded-xl border border-white/10 bg-gradient-to-b from-[#1b2435] to-[#090b11] p-3.5">
@@ -1377,8 +1425,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               <span>Paid shipping items</span>
                                               <span>{paidShippingItemCount}</span>
                                           </div>
-                                          {(shippingCoinEnabled || shippingCashEnabled) && <div className="my-1 border-t border-white/10" />}
-                                          {shippingCoinEnabled && (
+                                          {(canUseCoinShipping || canUseCashShipping) && <div className="my-1 border-t border-white/10" />}
+                                          {canUseCoinShipping && activeShippingMethod === 'coins' && (
                                             <div className="flex items-center justify-between text-lg font-black text-white sm:text-xl">
                                                 <span>Coins due now</span>
                                                 <CoinAmount
@@ -1389,7 +1437,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                                 />
                                             </div>
                                           )}
-                                          {shippingCashEnabled && (
+                                          {canUseCashShipping && activeShippingMethod === 'cash' && (
                                               <div className="flex items-center justify-between font-semibold text-gray-300">
                                                   <span>Cash due now</span>
                                                   <span className="text-emerald-300">
@@ -1400,7 +1448,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       </div>
                                   </div>
 
-                                  {shippingCashEnabled && (
+                                  {canUseCashShipping && activeShippingMethod === 'cash' && (
                                       <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-3 text-sm text-emerald-200 sm:text-base">
                                           Cash shipping uses Stripe Checkout. Your shipment is queued after payment succeeds.
                                       </div>
@@ -1420,8 +1468,8 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                   >
                                       Cancel
                                   </button>
-                                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                      {!isFreeOnlySelection && shippingCoinEnabled && (
+                                  <div className="grid grid-cols-1 gap-3">
+                                      {!isFreeOnlySelection && canUseCoinShipping && activeShippingMethod === 'coins' && (
                                           <button
                                               onClick={handleConfirmShipping}
                                               disabled={
@@ -1438,7 +1486,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                               {isSubmittingShipment ? 'Submitting...' : 'Ship with coins'}
                                           </button>
                                       )}
-                                      {!isFreeOnlySelection && shippingCashEnabled && (
+                                      {!isFreeOnlySelection && canUseCashShipping && activeShippingMethod === 'cash' && (
                                           <button
                                               onClick={handleCashShipping}
                                               disabled={
