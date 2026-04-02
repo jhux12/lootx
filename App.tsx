@@ -30,6 +30,7 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { ReferralsPage } from './components/ReferralsPage';
 import { PollsPage } from './components/PollsPage';
+import { SpinLandingPage } from './components/SpinLandingPage';
 import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
@@ -235,6 +236,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {view.type === 'BOXES' && (
         <div className="w-full">
           <BoxCatalog isChatCollapsed={isChatCollapsed} />
+        </div>
+      )}
+
+      {view.type === 'SPIN' && (
+        <div className="w-full">
+          <SpinLandingPage />
         </div>
       )}
 

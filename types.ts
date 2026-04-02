@@ -295,6 +295,7 @@ export interface AppNotification {
 
 export type ViewState = 
   | { type: 'HOME' }
+  | { type: 'SPIN' }
   | { type: 'BOXES' }
   | { type: 'PROFILE'; userId?: string }
   | { type: 'INVENTORY' }
