@@ -237,7 +237,7 @@ export const TopUpModal: React.FC = () => {
                                     <img
                                       src={getPackageImage(pack)}
                                       alt={pack.name}
-                                      className="h-24 w-full object-contain sm:h-28"
+                                      className="h-28 w-full object-contain sm:h-32"
                                       loading="lazy"
                                       decoding="async"
                                     />
@@ -273,36 +273,37 @@ export const TopUpModal: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Submit Button */}
-                    <button 
-                        onClick={handleDeposit}
-                        disabled={isLoading || !selectedPackage}
-                        className="w-full rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="w-5 h-5 animate-spin" /> Processing...
-                            </>
-                        ) : (
-                            <span className="inline-flex flex-col items-center gap-1 text-center sm:flex-row sm:gap-2">
-                              <span>Deposit {formattedDepositAmount}</span>
-                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-white/80 sm:text-sm">
-                                <CoinAmount
-                                  amount={selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))}
-                                  formatOptions={{ maximumFractionDigits: 0 }}
-                                  className="text-white"
-                                  iconClassName="w-4 h-4"
-                                />
-                                coins
-                              </span>
-                            </span>
-                        )}
-                    </button>
-
-<p className="text-center text-[10px] text-gray-500 mt-2">
-  By depositing you agree to our Terms of Service.
-</p>
-
+                </div>
+                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#10131c]/95 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-4">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Total Amount</p>
+                  <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-[#1a2030] px-3 py-2.5 sm:px-4">
+                    <CoinAmount
+                      amount={selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))}
+                      formatOptions={{ maximumFractionDigits: 0 }}
+                      className="text-xl font-black text-white"
+                      iconClassName="h-5 w-5"
+                    />
+                    <span className="text-sm font-semibold text-cyan-300">
+                      {selectedPackage?.coins?.toLocaleString() ?? 0}
+                      {Number(selectedPackage?.bonusCoins ?? 0) > 0 ? ` + ${(selectedPackage?.bonusCoins ?? 0).toLocaleString()} BONUS` : ''}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleDeposit}
+                    disabled={isLoading || !selectedPackage}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" /> Processing...
+                      </>
+                    ) : (
+                      <span>Buy for {formattedDepositAmount}</span>
+                    )}
+                  </button>
+                  <p className="mt-2 text-center text-[10px] text-gray-500">
+                    By depositing you agree to our Terms of Service.
+                  </p>
                 </div>
             </>
         )}
