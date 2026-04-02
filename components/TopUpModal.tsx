@@ -77,6 +77,25 @@ export const TopUpModal: React.FC = () => {
     'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2F12.png?alt=media&token=a82f5343-7e3e-4cb9-9d7a-b0451d4e49b0';
 
   React.useEffect(() => {
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalBodyOverscrollBehavior = document.body.style.overscrollBehavior;
+    const originalDocumentOverflow = document.documentElement.style.overflow;
+    const originalDocumentOverscrollBehavior = document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.overscrollBehavior = 'none';
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.body.style.overscrollBehavior = originalBodyOverscrollBehavior;
+      document.documentElement.style.overflow = originalDocumentOverflow;
+      document.documentElement.style.overscrollBehavior = originalDocumentOverscrollBehavior;
+    };
+  }, []);
+
+  React.useEffect(() => {
     if (!selectedPackageId && activePackages[0]) {
       setSelectedPackageId(activePackages[0].id);
     }
@@ -166,7 +185,7 @@ export const TopUpModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-3 py-4 sm:p-4 sm:py-6 sm:items-center">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-hidden overscroll-none p-3 py-4 sm:p-4 sm:py-6 sm:items-center">
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in" 
         onClick={handleClose}
@@ -189,7 +208,7 @@ export const TopUpModal: React.FC = () => {
                       </div>
                       <div>
                         <h2 className="text-xl font-black text-white sm:text-3xl">Get Coins</h2>
-                        <p className="mt-1 text-xs text-gray-400 sm:text-sm">How many credits would you like?</p>
+                        <p className="mt-1 text-xs text-gray-400 sm:text-sm">Select a coin package</p>
                       </div>
                     </div>
                     <button 
@@ -200,7 +219,7 @@ export const TopUpModal: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-5 [-webkit-overflow-scrolling:touch] sm:px-6 sm:py-6">
                     {/* Amount Selector */}
                     <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-gray-500">Select a pack</label>
                     <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
