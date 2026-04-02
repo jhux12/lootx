@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Gift, Sparkles } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { createMicroConfetti, type MicroConfettiParticle } from '../src/ui/feedback/microConfetti';
@@ -61,7 +61,12 @@ const PromoCaseSpinner: React.FC<{
 }> = ({ items, winningItem, spinKey, state, durationMs, onSpinComplete }) => {
   const [translateX, setTranslateX] = useState(0);
   const [transitionEnabled, setTransitionEnabled] = useState(false);
+  const completeRef = useRef(onSpinComplete);
   const pool = items.length ? items : [winningItem];
+
+  useEffect(() => {
+    completeRef.current = onSpinComplete;
+  }, [onSpinComplete]);
 
   const reelItems = useMemo(() => {
     const seed = hashSeed(spinKey);
@@ -87,12 +92,12 @@ const PromoCaseSpinner: React.FC<{
       setTransitionEnabled(true);
       setTranslateX(-(STOP_INDEX * STEP));
     });
-    const timer = window.setTimeout(onSpinComplete, durationMs + 80);
+    const timer = window.setTimeout(() => completeRef.current(), durationMs + 80);
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
-  }, [durationMs, onSpinComplete, state]);
+  }, [durationMs, state]);
 
   return (
     <div className="relative h-[15.5rem] overflow-hidden rounded-xl border border-gray-800 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] sm:h-64">
@@ -101,7 +106,7 @@ const PromoCaseSpinner: React.FC<{
       <div className="absolute left-0 top-0 bottom-0 z-20 w-24 bg-gradient-to-r from-[#0b0e14] to-transparent pointer-events-none" />
       <div className="absolute right-0 top-0 bottom-0 z-20 w-24 bg-gradient-to-l from-[#0b0e14] to-transparent pointer-events-none" />
 
-      <div className="absolute left-0 top-1/2 -translate-y-1/2" style={{ transform: `translate(calc(50% - ${CARD_WIDTH / 2}px), -50%)` }}>
+      <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `calc(50% - ${CARD_WIDTH / 2}px)` }}>
         <div
           className="flex will-change-transform"
           style={{
