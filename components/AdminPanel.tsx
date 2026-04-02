@@ -1438,7 +1438,7 @@ export const AdminPanel: React.FC = () => {
           setPackageError('Image URL must start with http:// or https://');
           return;
       }
-      if (!stripePriceId.startsWith('price_')) {
+      if (!editingPackageId && !stripePriceId.startsWith('price_')) {
           setPackageError('Stripe price ID must start with "price_".');
           return;
       }
