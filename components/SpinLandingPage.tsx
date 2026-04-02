@@ -2,18 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Gift, Sparkles } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { createMicroConfetti, type MicroConfettiParticle } from '../src/ui/feedback/microConfetti';
+import { SpinnerReel, type ReelItem } from './SpinnerReel';
 
 const REWARD_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
 const LOCAL_KEY = 'pullz_spin_free_box_result_v1';
-const WINNING_SEGMENTS = ['Starter Box', 'Tech Box', 'Pokémon Box', 'Free Mystery Box'] as const;
-const SEGMENTS = ['50 Coins', '100 Coins', 'Try Again', 'Starter Box', 'Tech Box', 'Pokémon Box', 'Free Mystery Box'] as const;
-const SEGMENT_COLORS = ['#0f172a', '#1e293b', '#312e81', '#3730a3', '#4338ca', '#6d28d9', '#7c3aed'];
 const SPIN_MS = 4200;
 
-type WinningSegment = typeof WINNING_SEGMENTS[number];
-
 type PersistedSpinState = {
-  reward: WinningSegment;
+  reward: string;
   at: number;
   claimed: boolean;
 };
@@ -24,11 +20,11 @@ const parseSpinState = (): PersistedSpinState | null => {
     const raw = window.localStorage.getItem(LOCAL_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PersistedSpinState>;
-    if (!parsed || typeof parsed.reward !== 'string' || !WINNING_SEGMENTS.includes(parsed.reward as WinningSegment)) {
+    if (!parsed || typeof parsed.reward !== 'string' || parsed.reward.trim().length === 0) {
       return null;
     }
     return {
-      reward: parsed.reward as WinningSegment,
+      reward: parsed.reward,
       at: Number(parsed.at) || Date.now(),
       claimed: Boolean(parsed.claimed)
     };
@@ -44,14 +40,36 @@ const persistSpinState = (state: PersistedSpinState) => {
 
 export const SpinLandingPage: React.FC = () => {
   const { boxes, isAuthenticated, user, openAuthModal, setView } = useGame();
-  const [rotation, setRotation] = useState(0);
+  const [spinKey, setSpinKey] = useState('spin-landing-idle');
+  const [spinnerState, setSpinnerState] = useState<'IDLE' | 'SPIN' | 'STOPPED'>('IDLE');
   const [isSpinning, setIsSpinning] = useState(false);
-  const [spinResult, setSpinResult] = useState<WinningSegment | null>(null);
+  const [spinResult, setSpinResult] = useState<string | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
 
   const freeSignupBox = useMemo(() => boxes.find((box) => box.isDaily) ?? null, [boxes]);
   const hasClaimedFreeBox = Boolean(user.lastFreeBoxClaim);
+  const spinnerItems = useMemo<ReelItem[]>(() => {
+    if (!freeSignupBox?.items?.length) return [];
+    return freeSignupBox.items.map((item) => ({
+      itemId: item.id,
+      itemName: item.name,
+      value: Number(item.price) || 0,
+      rarity: item.rarity,
+      imageUrl: item.image
+    }));
+  }, [freeSignupBox]);
+
+  const winningItem = useMemo<ReelItem>(
+    () => ({
+      itemId: 'free-signup-box',
+      itemName: 'Free Mystery Box',
+      value: 0,
+      rarity: 'legendary',
+      imageUrl: REWARD_IMAGE
+    }),
+    []
+  );
 
   useEffect(() => {
     const saved = parseSpinState();
@@ -76,37 +94,22 @@ export const SpinLandingPage: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [confetti]);
 
-  const winningAngles = useMemo(
-    () =>
-      Object.fromEntries(
-        SEGMENTS.map((label, index) => {
-          const segmentSize = 360 / SEGMENTS.length;
-          const midAngle = index * segmentSize + segmentSize / 2;
-          return [label, 360 - midAngle];
-        })
-      ) as Record<(typeof SEGMENTS)[number], number>,
-    []
-  );
-
-  const canSpin = !isSpinning && !spinResult && !hasClaimedFreeBox;
+  const canSpin = !isSpinning && !spinResult && !hasClaimedFreeBox && spinnerItems.length > 0;
 
   const handleSpin = () => {
     if (!canSpin) return;
 
     setIsSpinning(true);
-    const selectedReward = WINNING_SEGMENTS[Math.floor(Math.random() * WINNING_SEGMENTS.length)];
-    const targetAngle = winningAngles[selectedReward];
-    const fullSpins = 6;
-    const nextRotation = rotation + fullSpins * 360 + targetAngle;
-
-    setRotation(nextRotation);
+    setSpinnerState('SPIN');
+    setSpinKey(`spin-landing-${Date.now()}`);
 
     window.setTimeout(() => {
-      setSpinResult(selectedReward);
+      setSpinnerState('STOPPED');
+      setSpinResult('Free Mystery Box');
       setShowWinModal(true);
       setIsSpinning(false);
       setConfetti(createMicroConfetti(24));
-      persistSpinState({ reward: selectedReward, at: Date.now(), claimed: false });
+      persistSpinState({ reward: 'Free Mystery Box', at: Date.now(), claimed: false });
     }, SPIN_MS);
   };
 
@@ -157,65 +160,51 @@ export const SpinLandingPage: React.FC = () => {
         <p className="mt-3 max-w-xl text-sm text-slate-300 sm:text-base">New users only — win a free mystery box.</p>
 
         <div className="mt-8 flex w-full flex-col items-center rounded-3xl border border-white/10 bg-[#090d18]/80 p-4 shadow-[0_0_120px_rgba(124,58,237,0.12)] backdrop-blur-sm sm:p-8">
-          <div className="relative h-[320px] w-[320px] max-w-full sm:h-[500px] sm:w-[500px]">
-            <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 drop-shadow-[0_0_20px_rgba(56,189,248,0.45)]">
-              <div className="h-0 w-0 border-x-[16px] border-b-[28px] border-x-transparent border-b-cyan-300 sm:border-x-[20px] sm:border-b-[36px]" />
-            </div>
+          <div className="w-full max-w-4xl">
+            <SpinnerReel
+              items={spinnerItems}
+              winningItem={winningItem}
+              spinKey={spinKey}
+              state={spinnerState}
+              durationMs={SPIN_MS}
+            />
+          </div>
 
-            <div
-              className="relative h-full w-full rounded-full border-[6px] border-violet-400/30 shadow-[0_0_60px_rgba(139,92,246,0.35)] transition-transform duration-[4200ms] [transition-timing-function:cubic-bezier(0.14,0.74,0.19,1)]"
-              style={{
-                transform: `rotate(${rotation}deg)`,
-                background: `conic-gradient(${SEGMENT_COLORS.map((color, index) => `${color} ${(360 / SEGMENTS.length) * index}deg ${(360 / SEGMENTS.length) * (index + 1)}deg`).join(',')})`
-              }}
-            >
-              {SEGMENTS.map((segment, index) => {
-                const angle = (360 / SEGMENTS.length) * index + 360 / SEGMENTS.length / 2;
-                const radius = 110;
-                const radian = (angle * Math.PI) / 180;
-                const x = 50 + (radius * Math.cos(radian)) / 2.5;
-                const y = 50 + (radius * Math.sin(radian)) / 2.5;
-
-                return (
-                  <div
-                    key={segment}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 text-center"
-                    style={{
-                      left: `${x}%`,
-                      top: `${y}%`,
-                      transform: `translate(-50%, -50%) rotate(${angle + 90}deg)`
-                    }}
-                  >
-                    <span className="block max-w-[72px] text-[10px] font-bold uppercase tracking-wide text-white sm:max-w-[110px] sm:text-xs">{segment}</span>
-                  </div>
-                );
-              })}
-
-              <div className="absolute left-1/2 top-1/2 z-20 flex h-28 w-28 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#0f1322] shadow-[0_0_40px_rgba(56,189,248,0.2)] sm:h-36 sm:w-36">
-                <button
-                  type="button"
-                  onClick={handleSpin}
-                  disabled={!canSpin}
-                  className="group relative h-20 w-20 rounded-full bg-gradient-to-br from-cyan-400 to-violet-500 text-xs font-black uppercase tracking-wide text-slate-950 transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 sm:h-24 sm:w-24"
-                >
-                  {isSpinning ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-950">
-                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-900/30 border-t-slate-900" />
-                      Spinning
-                    </span>
-                  ) : spinResult ? (
-                    'Won'
-                  ) : (
-                    'Spin'
-                  )}
-                </button>
-              </div>
+          <div className="mt-5 w-full max-w-3xl rounded-xl border border-violet-500/20 bg-[#0b1222] p-3">
+            <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-200 sm:grid-cols-4 sm:text-xs">
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">50 Coins</div>
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">100 Coins</div>
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">Try Again</div>
+              <div className="rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-2 py-1.5 text-center font-semibold text-emerald-200">Free Mystery Box</div>
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">Starter Box</div>
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">Tech Box</div>
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center font-semibold">Pokémon Box</div>
             </div>
           </div>
 
-          <div className="mt-6 w-full max-w-md rounded-xl border border-violet-400/20 bg-violet-500/10 p-3 text-xs text-violet-100 sm:text-sm">
+          <button
+            type="button"
+            onClick={handleSpin}
+            disabled={!canSpin}
+            className="mt-6 inline-flex min-h-12 w-full max-w-sm items-center justify-center rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSpinning ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900/30 border-t-slate-900" />
+                Spinning...
+              </span>
+            ) : spinResult ? (
+              'Spin Completed'
+            ) : (
+              'Spin to Win'
+            )}
+          </button>
+
+          <div className="mt-4 w-full max-w-md rounded-xl border border-violet-400/20 bg-violet-500/10 p-3 text-xs text-violet-100 sm:text-sm">
             {hasClaimedFreeBox
               ? 'You already claimed your signup free box on this account.'
+              : spinnerItems.length === 0
+                ? 'No daily free box is configured yet. Please check back shortly.'
               : spinResult
                 ? `Your reward is ready: ${spinResult}.`
                 : 'Spin once to unlock your free signup mystery box reward.'}
