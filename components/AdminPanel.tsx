@@ -20,6 +20,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { getBoxTags, sanitizeFontAwesomeClass } from '../utils/boxTags';
+import { authedFetch } from '../utils/authedFetch';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -183,6 +184,40 @@ const DEFAULT_ECONOMY_SETTINGS: EconomySettingsDraft = {
     xpOpenEnabled: true
 };
 
+
+type FinancialSummary = {
+    totalTopUpRevenue: number;
+    totalCoinsPurchased: number;
+    totalCoinsSpent: number;
+    totalCoinsGrantedManually: number;
+    totalCoinsSoldBackToUsers: number;
+    totalPendingWithdrawalValue: number;
+    totalShippedItemValue: number;
+    estimatedProfit: number;
+    estimatedLoss: number;
+    netMargin: number;
+};
+
+type FinancialTransactionRow = {
+    id: string;
+    createdAt: string | null;
+    createdAtMs: number;
+    email: string | null;
+    username: string | null;
+    uid: string | null;
+    type: string;
+    status: string;
+    dollarAmount: number;
+    coinAmount: number;
+    itemName: string | null;
+    stripeSessionId: string | null;
+    paymentIntentId: string | null;
+    stripeCustomerId: string | null;
+    source: string | null;
+    notes: string | null;
+    boxName?: string | null;
+};
+
 type AdminSentNotification = {
     id: string;
     title: string;
@@ -235,6 +270,22 @@ export const AdminPanel: React.FC = () => {
     updateStripeSettings
   } = useGame();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals'>('dashboard');
+  const [financialRows, setFinancialRows] = useState<FinancialTransactionRow[]>([]);
+  const [financialSummary, setFinancialSummary] = useState<FinancialSummary | null>(null);
+  const [financialLoading, setFinancialLoading] = useState(false);
+  const [financialError, setFinancialError] = useState<string | null>(null);
+  const [financialFilter, setFinancialFilter] = useState<'all' | 'topups' | 'coins_spent' | 'admin_adjustments' | 'sell_backs' | 'shipments' | 'keeps' | 'failed' | 'pending' | 'refunded'>('all');
+  const [financialSearch, setFinancialSearch] = useState('');
+  const [financialDateRange, setFinancialDateRange] = useState<'today' | '7d' | '30d' | 'custom'>('30d');
+  const [financialCustomStart, setFinancialCustomStart] = useState('');
+  const [financialCustomEnd, setFinancialCustomEnd] = useState('');
+  const [financialPage, setFinancialPage] = useState(1);
+  const [financialPageSize, setFinancialPageSize] = useState(25);
+  const [financialTotal, setFinancialTotal] = useState(0);
+  const [financialSortBy, setFinancialSortBy] = useState<'createdAt' | 'dollarAmount' | 'coinAmount'>('createdAt');
+  const [financialSortDir, setFinancialSortDir] = useState<'asc' | 'desc'>('desc');
+  const [financialExplainers, setFinancialExplainers] = useState<{ profit?: string; loss?: string } | null>(null);
+
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -829,6 +880,115 @@ export const AdminPanel: React.FC = () => {
       if (shipmentFilter === 'shipped') return shipment.status === 'shipped';
       return true;
   });
+
+  const formatUsd = (value: number) => `$${Number(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  useEffect(() => {
+      if (activeTab !== 'dashboard') return;
+
+      const controller = new AbortController();
+      const fetchFinancialData = async () => {
+          setFinancialLoading(true);
+          setFinancialError(null);
+          try {
+              const params = new URLSearchParams({
+                  filter: financialFilter,
+                  search: financialSearch,
+                  range: financialDateRange,
+                  page: String(financialPage),
+                  pageSize: String(financialPageSize),
+                  sortBy: financialSortBy,
+                  sortDir: financialSortDir
+              });
+
+              if (financialDateRange === 'custom') {
+                  if (financialCustomStart) params.set('startDate', financialCustomStart);
+                  if (financialCustomEnd) params.set('endDate', financialCustomEnd);
+              }
+
+              const payload = await authedFetch<{
+                  rows: FinancialTransactionRow[];
+                  summary: FinancialSummary;
+                  total: number;
+                  explainers?: { profit?: string; loss?: string };
+              }>(`/api/admin/financial-transactions?${params.toString()}`, { signal: controller.signal });
+
+              setFinancialRows(Array.isArray(payload.rows) ? payload.rows : []);
+              setFinancialSummary(payload.summary ?? null);
+              setFinancialTotal(Number(payload.total ?? 0));
+              setFinancialExplainers(payload.explainers ?? null);
+          } catch (error) {
+              if ((error as Error)?.name === 'AbortError') return;
+              console.error('Failed loading financial data', error);
+              setFinancialError('Unable to load financial records right now.');
+          } finally {
+              setFinancialLoading(false);
+          }
+      };
+
+      void fetchFinancialData();
+      return () => controller.abort();
+  }, [
+      activeTab,
+      financialFilter,
+      financialSearch,
+      financialDateRange,
+      financialCustomStart,
+      financialCustomEnd,
+      financialPage,
+      financialPageSize,
+      financialSortBy,
+      financialSortDir
+  ]);
+
+  const financialStatCards = useMemo(() => {
+      if (!financialSummary) return [];
+      return [
+          { label: 'Total Top-Up Revenue', value: formatUsd(financialSummary.totalTopUpRevenue), hint: 'Successful Stripe top-ups only.' },
+          { label: 'Total Coins Purchased', value: financialSummary.totalCoinsPurchased.toLocaleString(), hint: 'Coins granted from paid top-ups.' },
+          { label: 'Total Coins Spent', value: financialSummary.totalCoinsSpent.toLocaleString(), hint: 'Coins consumed in games/boxes. Not direct P&L.' },
+          { label: 'Total Coins Granted Manually', value: financialSummary.totalCoinsGrantedManually.toLocaleString(), hint: 'Admin/manual/bonus credits.' },
+          { label: 'Total Coins Sold Back To Users', value: financialSummary.totalCoinsSoldBackToUsers.toLocaleString(), hint: 'Coins returned from sell-backs.' },
+          { label: 'Total Pending Withdrawal Value', value: formatUsd(financialSummary.totalPendingWithdrawalValue), hint: 'Pending shipment/withdraw liabilities.' },
+          { label: 'Total Shipped Item Value', value: formatUsd(financialSummary.totalShippedItemValue), hint: 'Shipped inventory value counted as loss.' },
+          { label: 'Estimated Profit', value: formatUsd(financialSummary.estimatedProfit), hint: financialExplainers?.profit ?? 'Revenue-led estimate.' },
+          { label: 'Estimated Loss', value: formatUsd(financialSummary.estimatedLoss), hint: financialExplainers?.loss ?? 'Inventory/refund/credit losses.' },
+          { label: 'Net Margin', value: formatUsd(financialSummary.netMargin), hint: 'Estimated Profit - Estimated Loss.' }
+      ];
+  }, [financialSummary, financialExplainers]);
+
+  const handleExportFinancialCsv = () => {
+      if (financialRows.length === 0) return;
+      const headers = ['Timestamp','User email','Username','UID','Transaction type','Status','Dollar amount','Coin amount','Item name','Stripe session ID','Payment intent ID','Stripe customer ID','Source','Notes'];
+      const lines = [headers.join(',')];
+      financialRows.forEach((row) => {
+          const values = [
+              row.createdAt ?? '',
+              row.email ?? '',
+              row.username ?? '',
+              row.uid ?? '',
+              row.type ?? '',
+              row.status ?? '',
+              row.dollarAmount ?? 0,
+              row.coinAmount ?? 0,
+              row.itemName ?? '',
+              row.stripeSessionId ?? '',
+              row.paymentIntentId ?? '',
+              row.stripeCustomerId ?? '',
+              row.source ?? row.boxName ?? '',
+              (row.notes ?? '').replace(/"/g, '""')
+          ].map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`);
+          lines.push(values.join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `financial-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+  };
+
   const stats = [
     { title: 'Total Coins', value: 124592, icon: CoinStatIcon, color: 'text-green-500', bg: 'bg-green-500/10', isCoin: true },
     { title: 'Active Users', value: '1,420', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
@@ -2864,64 +3024,182 @@ export const AdminPanel: React.FC = () => {
 
             {/* TAB: DASHBOARD */}
             {activeTab === 'dashboard' && (
-                <>
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                        {stats.map((stat, idx) => (
-                            <div key={idx} className="bg-[#131720] border border-gray-800 rounded-xl p-4">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className={`p-2 rounded-lg ${stat.bg}`}>
-                                        <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                                    </div>
-                                    <span className="text-xs font-bold text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded">+4.5%</span>
-                                </div>
-                                <div className="text-2xl font-bold text-white mb-1">
-                                    {stat.isCoin ? (
-                                        <CoinAmount
-                                          amount={stat.value as number}
-                                          formatOptions={{ maximumFractionDigits: 0 }}
-                                          className="text-white"
-                                          iconClassName="w-5 h-5"
-                                        />
-                                    ) : (
-                                        stat.value
-                                    )}
-                                </div>
-                                <div className="text-xs text-gray-500">{stat.title}</div>
+                <div className="space-y-6">
+                    <div className="rounded-xl border border-indigo-500/20 bg-[#131720] p-4 sm:p-6 shadow-[0_0_35px_rgba(99,102,241,0.12)]">
+                        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Financial Overview</h3>
+                                <p className="text-xs text-gray-400">Revenue, liabilities, coin movement, and estimated margin.</p>
                             </div>
-                        ))}
+                            <button
+                                type="button"
+                                onClick={handleExportFinancialCsv}
+                                disabled={financialRows.length === 0}
+                                className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-indigo-200 disabled:opacity-40"
+                            >
+                                Export CSV
+                            </button>
+                        </div>
+
+                        {financialLoading && <div className="text-sm text-gray-400">Loading financial overview...</div>}
+                        {financialError && <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{financialError}</div>}
+
+                        {!financialLoading && !financialError && financialStatCards.length > 0 && (
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                                {financialStatCards.map((card) => (
+                                    <div key={card.label} className="rounded-lg border border-gray-800 bg-[#0f131b] p-3">
+                                        <p className="text-[11px] uppercase tracking-wide text-gray-500">{card.label}</p>
+                                        <p className="mt-1 text-base font-semibold text-white sm:text-lg">{card.value}</p>
+                                        <p className="mt-1 text-[11px] text-gray-400">{card.hint}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
-                    {/* Recent Activity Mock */}
-                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
-                        <h3 className="text-lg font-bold text-white mb-6">Live Transactions</h3>
-                        <div className="space-y-4">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                                <div key={i} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-2 h-2 rounded-full ${i % 2 === 0 ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                                        <div>
-                                            <div className="text-sm font-bold text-gray-200">
-                                                {i % 2 === 0 ? 'Deposit' : 'Box Opening'}
-                                            </div>
-                                            <div className="text-xs text-gray-500">2 minutes ago</div>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <CoinAmount
-                                          amount={i % 2 === 0 ? 500 : -50}
-                                          formatOptions={{ maximumFractionDigits: 0 }}
-                                          showSign
-                                          className={`text-sm font-bold ${i % 2 === 0 ? 'text-green-400' : 'text-white'}`}
-                                          iconClassName="w-3.5 h-3.5"
-                                        />
-                                        <div className="text-xs text-gray-500">User_{1000 + i}</div>
-                                    </div>
+                    <div className="rounded-xl border border-gray-800 bg-[#131720] p-4 sm:p-6">
+                        <div className="mb-4 flex flex-col gap-3">
+                            <div className="flex flex-wrap gap-2">
+                                {[
+                                    { id: 'all', label: 'All' },
+                                    { id: 'topups', label: 'Top Ups' },
+                                    { id: 'coins_spent', label: 'Coins Spent' },
+                                    { id: 'admin_adjustments', label: 'Admin Adjustments' },
+                                    { id: 'sell_backs', label: 'Sell Backs' },
+                                    { id: 'shipments', label: 'Shipments' },
+                                    { id: 'keeps', label: 'Keeps' },
+                                    { id: 'failed', label: 'Failed Transactions' },
+                                    { id: 'pending', label: 'Pending Transactions' },
+                                    { id: 'refunded', label: 'Refunded' }
+                                ].map((filterOption) => (
+                                    <button
+                                        key={filterOption.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setFinancialFilter(filterOption.id as typeof financialFilter);
+                                            setFinancialPage(1);
+                                        }}
+                                        className={`rounded-md border px-2.5 py-1 text-xs ${financialFilter === filterOption.id ? 'border-indigo-400/40 bg-indigo-500/20 text-indigo-100' : 'border-gray-700 text-gray-300 hover:border-gray-500'}`}
+                                    >
+                                        {filterOption.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+                                <input
+                                    value={financialSearch}
+                                    onChange={(event) => {
+                                        setFinancialSearch(event.target.value);
+                                        setFinancialPage(1);
+                                    }}
+                                    placeholder="Search email, username, UID, Stripe session/payment ID"
+                                    className="lg:col-span-6 rounded-lg border border-gray-700 bg-[#0f131b] px-3 py-2 text-sm text-white focus:border-indigo-400 focus:outline-none"
+                                />
+                                <select
+                                    value={financialDateRange}
+                                    onChange={(event) => {
+                                        setFinancialDateRange(event.target.value as typeof financialDateRange);
+                                        setFinancialPage(1);
+                                    }}
+                                    className="lg:col-span-2 rounded-lg border border-gray-700 bg-[#0f131b] px-3 py-2 text-sm text-white"
+                                >
+                                    <option value="today">Today</option>
+                                    <option value="7d">7 days</option>
+                                    <option value="30d">30 days</option>
+                                    <option value="custom">Custom range</option>
+                                </select>
+                                <select
+                                    value={`${financialSortBy}:${financialSortDir}`}
+                                    onChange={(event) => {
+                                        const [sortBy, sortDir] = event.target.value.split(':');
+                                        setFinancialSortBy(sortBy as typeof financialSortBy);
+                                        setFinancialSortDir(sortDir as typeof financialSortDir);
+                                    }}
+                                    className="lg:col-span-2 rounded-lg border border-gray-700 bg-[#0f131b] px-3 py-2 text-sm text-white"
+                                >
+                                    <option value="createdAt:desc">Newest first</option>
+                                    <option value="createdAt:asc">Oldest first</option>
+                                    <option value="dollarAmount:desc">$ high to low</option>
+                                    <option value="dollarAmount:asc">$ low to high</option>
+                                    <option value="coinAmount:desc">Coins high to low</option>
+                                    <option value="coinAmount:asc">Coins low to high</option>
+                                </select>
+                                <select
+                                    value={String(financialPageSize)}
+                                    onChange={(event) => {
+                                        setFinancialPageSize(Number(event.target.value));
+                                        setFinancialPage(1);
+                                    }}
+                                    className="lg:col-span-2 rounded-lg border border-gray-700 bg-[#0f131b] px-3 py-2 text-sm text-white"
+                                >
+                                    <option value="25">25 / page</option>
+                                    <option value="50">50 / page</option>
+                                    <option value="100">100 / page</option>
+                                </select>
+                            </div>
+                            {financialDateRange === 'custom' && (
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <input type="date" value={financialCustomStart} onChange={(event) => setFinancialCustomStart(event.target.value)} className="rounded-lg border border-gray-700 bg-[#0f131b] px-3 py-2 text-sm text-white" />
+                                    <input type="date" value={financialCustomEnd} onChange={(event) => setFinancialCustomEnd(event.target.value)} className="rounded-lg border border-gray-700 bg-[#0f131b] px-3 py-2 text-sm text-white" />
                                 </div>
-                            ))}
+                            )}
+                        </div>
+
+                        <h3 className="mb-3 text-lg font-bold text-white">Transaction Logs</h3>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-left text-xs text-gray-300">
+                                <thead className="bg-[#0f131b] text-[11px] uppercase tracking-wide text-gray-400">
+                                    <tr>
+                                        <th className="px-3 py-2">Timestamp</th>
+                                        <th className="px-3 py-2">User</th>
+                                        <th className="px-3 py-2">UID</th>
+                                        <th className="px-3 py-2">Type</th>
+                                        <th className="px-3 py-2">Status</th>
+                                        <th className="px-3 py-2">$ Amount</th>
+                                        <th className="px-3 py-2">Coins</th>
+                                        <th className="px-3 py-2">Item</th>
+                                        <th className="px-3 py-2">Stripe Session / PI</th>
+                                        <th className="px-3 py-2">Customer</th>
+                                        <th className="px-3 py-2">Source</th>
+                                        <th className="px-3 py-2">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {!financialLoading && financialRows.length === 0 && (
+                                        <tr>
+                                            <td colSpan={12} className="px-3 py-8 text-center text-sm text-gray-500">No transaction records found for the selected filters.</td>
+                                        </tr>
+                                    )}
+                                    {financialRows.map((row) => (
+                                        <tr key={row.id} className="border-t border-gray-800 align-top">
+                                            <td className="px-3 py-2 whitespace-nowrap">{row.createdAt ? new Date(row.createdAt).toLocaleString() : '—'}</td>
+                                            <td className="px-3 py-2">{row.email || row.username ? <div><div>{row.email ?? '—'}</div><div className="text-gray-500">{row.username ?? '—'}</div></div> : '—'}</td>
+                                            <td className="px-3 py-2">{row.uid ?? '—'}</td>
+                                            <td className="px-3 py-2">{row.type ?? '—'}</td>
+                                            <td className="px-3 py-2">{row.status ?? '—'}</td>
+                                            <td className="px-3 py-2">{formatUsd(row.dollarAmount ?? 0)}</td>
+                                            <td className="px-3 py-2">{Number(row.coinAmount ?? 0).toLocaleString()}</td>
+                                            <td className="px-3 py-2">{row.itemName ?? '—'}</td>
+                                            <td className="px-3 py-2">{row.stripeSessionId || row.paymentIntentId ? <div><div>{row.stripeSessionId ?? '—'}</div><div className="text-gray-500">{row.paymentIntentId ?? '—'}</div></div> : '—'}</td>
+                                            <td className="px-3 py-2">{row.stripeCustomerId ?? '—'}</td>
+                                            <td className="px-3 py-2">{row.source ?? row.boxName ?? '—'}</td>
+                                            <td className="px-3 py-2">{row.notes ?? '—'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between text-xs text-gray-400">
+                            <span>Showing {financialRows.length} of {financialTotal.toLocaleString()} records</span>
+                            <div className="flex items-center gap-2">
+                                <button type="button" onClick={() => setFinancialPage((prev) => Math.max(1, prev - 1))} disabled={financialPage <= 1} className="rounded border border-gray-700 px-2 py-1 disabled:opacity-40">Prev</button>
+                                <span>Page {financialPage}</span>
+                                <button type="button" onClick={() => setFinancialPage((prev) => (prev * financialPageSize < financialTotal ? prev + 1 : prev))} disabled={financialPage * financialPageSize >= financialTotal} className="rounded border border-gray-700 px-2 py-1 disabled:opacity-40">Next</button>
+                            </div>
                         </div>
                     </div>
-                </>
+                </div>
             )}
 
             {/* TAB: ITEMS */}

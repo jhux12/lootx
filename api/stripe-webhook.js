@@ -4,6 +4,7 @@ import { sendJson } from './_lib/http.js';
 import { appendLedgerEntry } from './_lib/ledger.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
 import { markReferralDepositQualified } from './_lib/referrals.js';
+import { logFinancialTransaction } from './_lib/financialTransactions.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -36,6 +37,13 @@ export default async function handler(req, res) {
     );
   } catch (error) {
     console.error('stripe-webhook signature verification failed', error);
+    await logFinancialTransaction({
+      id: `stripe_webhook_invalid_${Date.now()}`,
+      type: 'stripe_webhook',
+      status: 'failed',
+      source: 'stripe_webhook',
+      notes: 'Invalid signature'
+    });
     return sendJson(res, 400, { error: 'Invalid signature' });
   }
 
@@ -92,6 +100,21 @@ export default async function handler(req, res) {
         console.error('stripe-webhook failed to mark shipping paid', error);
         return sendJson(res, 500, { error: 'Failed to update shipping payment' });
       }
+
+
+      await logFinancialTransaction({
+        id: `shipping_checkout_${session.id}`,
+        type: 'shipment_checkout',
+        status: 'completed',
+        uid,
+        stripeSessionId: session.id,
+        paymentIntentId: session.payment_intent ?? null,
+        stripeCustomerId: session.customer ?? null,
+        dollarAmount: Number(session.amount_total ?? 0) / 100,
+        coinAmount: 0,
+        source: 'stripe_webhook',
+        notes: shipmentBatchId
+      });
 
       return sendJson(res, 200, { received: true });
     }
@@ -167,9 +190,35 @@ export default async function handler(req, res) {
       });
     } catch (error) {
       console.error('stripe-webhook failed to credit coins', error);
+      await logFinancialTransaction({
+        id: `stripe_topup_${session.id}_failed`,
+        type: 'stripe_topup',
+        status: 'failed',
+        uid,
+        stripeSessionId: session.id,
+        paymentIntentId: session.payment_intent ?? null,
+        stripeCustomerId: session.customer ?? null,
+        dollarAmount: Number(session.amount_total ?? 0) / 100,
+        coinAmount: totalCoins,
+        source: 'stripe_webhook',
+        notes: 'Failed to credit user coins'
+      });
       return sendJson(res, 500, { error: 'Failed to credit coins' });
     }
 
+    await logFinancialTransaction({
+      id: `stripe_topup_${session.id}`,
+      type: 'stripe_topup',
+      status: 'completed',
+      uid,
+      stripeSessionId: session.id,
+      paymentIntentId: session.payment_intent ?? null,
+      stripeCustomerId: session.customer ?? null,
+      dollarAmount: Number(session.amount_total ?? 0) / 100,
+      coinAmount: totalCoins,
+      source: 'stripe_webhook',
+      notes: packageId ? `Package ${packageId}` : 'Stripe checkout completed'
+    });
 
     try {
       await markReferralDepositQualified({ referredUid: uid, depositCoins: totalCoins });
