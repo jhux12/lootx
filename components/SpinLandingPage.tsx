@@ -2,11 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Gift, Sparkles } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { createMicroConfetti, type MicroConfettiParticle } from '../src/ui/feedback/microConfetti';
-import { SpinnerReel, type ReelItem } from './SpinnerReel';
+import type { ReelItem } from './SpinnerReel';
 
 const REWARD_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
 const LOCAL_KEY = 'pullz_spin_free_box_result_v1';
 const SPIN_MS = 4200;
+const REEL_LENGTH = 40;
+const STOP_INDEX = 32;
+const CARD_WIDTH = 132;
+const CARD_GAP = 12;
+const STEP = CARD_WIDTH + CARD_GAP;
 
 type PersistedSpinState = {
   reward: string;
@@ -38,8 +43,91 @@ const persistSpinState = (state: PersistedSpinState) => {
   window.localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
 };
 
+const hashSeed = (input: string) => {
+  let hash = 0;
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash * 31 + input.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+};
+
+const PromoCaseSpinner: React.FC<{
+  items: ReelItem[];
+  winningItem: ReelItem;
+  spinKey: string;
+  state: 'IDLE' | 'SPIN' | 'STOPPED';
+  durationMs: number;
+  onSpinComplete: () => void;
+}> = ({ items, winningItem, spinKey, state, durationMs, onSpinComplete }) => {
+  const [translateX, setTranslateX] = useState(0);
+  const [transitionEnabled, setTransitionEnabled] = useState(false);
+  const pool = items.length ? items : [winningItem];
+
+  const reelItems = useMemo(() => {
+    const seed = hashSeed(spinKey);
+    const next = Array.from({ length: REEL_LENGTH }, (_, index) => pool[Math.abs((seed + index * 13) % pool.length)]);
+    next[STOP_INDEX] = winningItem;
+    return next;
+  }, [pool, spinKey, winningItem]);
+
+  useEffect(() => {
+    if (state === 'IDLE') {
+      setTransitionEnabled(false);
+      setTranslateX(0);
+      return;
+    }
+    if (state === 'STOPPED') {
+      setTransitionEnabled(false);
+      setTranslateX(-(STOP_INDEX * STEP));
+      return;
+    }
+    setTransitionEnabled(false);
+    setTranslateX(0);
+    const frame = window.requestAnimationFrame(() => {
+      setTransitionEnabled(true);
+      setTranslateX(-(STOP_INDEX * STEP));
+    });
+    const timer = window.setTimeout(onSpinComplete, durationMs + 80);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [durationMs, onSpinComplete, state]);
+
+  return (
+    <div className="relative h-[15.5rem] overflow-hidden rounded-xl border border-gray-800 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] sm:h-64">
+      <div className="absolute top-0 bottom-0 left-1/2 z-[26] w-0.5 -translate-x-1/2 bg-cyan-400/45" />
+      <div className="absolute inset-y-0 left-1/2 z-[24] w-16 -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.24)_0%,rgba(34,211,238,0.08)_42%,rgba(34,211,238,0)_75%)] sm:w-20" />
+      <div className="absolute left-0 top-0 bottom-0 z-20 w-24 bg-gradient-to-r from-[#0b0e14] to-transparent pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 z-20 w-24 bg-gradient-to-l from-[#0b0e14] to-transparent pointer-events-none" />
+
+      <div className="absolute left-0 top-1/2 -translate-y-1/2" style={{ transform: `translate(calc(50% - ${CARD_WIDTH / 2}px), -50%)` }}>
+        <div
+          className="flex will-change-transform"
+          style={{
+            gap: `${CARD_GAP}px`,
+            transform: `translateX(${translateX}px)`,
+            transition: transitionEnabled ? `transform ${durationMs}ms cubic-bezier(0.08, 0.78, 0.22, 1)` : 'none'
+          }}
+        >
+          {reelItems.map((item, idx) => (
+            <div
+              key={`${item.itemId ?? item.itemName}-${idx}`}
+              className={`relative flex h-[132px] w-[132px] shrink-0 flex-col items-center justify-center rounded-xl border border-gray-800 bg-[#151a23] p-3 ${idx === STOP_INDEX && state === 'STOPPED' ? 'ring-2 ring-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.45)]' : ''}`}
+            >
+              <div className="absolute inset-4 rounded-full bg-[radial-gradient(circle,rgba(34,211,238,0.28)_0%,rgba(34,211,238,0.08)_45%,rgba(34,211,238,0)_78%)]" />
+              <img src={item.imageUrl || REWARD_IMAGE} alt={item.itemName} className="relative z-10 mb-2 h-20 w-20 object-contain sm:h-24 sm:w-24" />
+              <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl bg-cyan-300/70" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const SpinLandingPage: React.FC = () => {
-  const { boxes, isAuthenticated, user, openAuthModal, setView } = useGame();
+  const { boxes, items, isAuthenticated, user, openAuthModal, setView } = useGame();
   const [spinKey, setSpinKey] = useState('spin-landing-idle');
   const [spinnerState, setSpinnerState] = useState<'IDLE' | 'SPIN' | 'STOPPED'>('IDLE');
   const [isSpinning, setIsSpinning] = useState(false);
@@ -50,6 +138,17 @@ export const SpinLandingPage: React.FC = () => {
   const freeSignupBox = useMemo(() => boxes.find((box) => box.isDaily) ?? null, [boxes]);
   const hasClaimedFreeBox = Boolean(user.lastFreeBoxClaim);
   const spinnerItems = useMemo<ReelItem[]>(() => {
+    const topGlobal = [...items]
+      .sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))
+      .slice(0, 24)
+      .map((item) => ({
+        itemId: item.id,
+        itemName: item.name,
+        value: Number(item.price) || 0,
+        rarity: item.rarity,
+        imageUrl: item.image
+      }));
+    if (topGlobal.length >= 8) return topGlobal;
     if (!freeSignupBox?.items?.length) return [];
     return freeSignupBox.items.map((item) => ({
       itemId: item.id,
@@ -58,7 +157,7 @@ export const SpinLandingPage: React.FC = () => {
       rarity: item.rarity,
       imageUrl: item.image
     }));
-  }, [freeSignupBox]);
+  }, [freeSignupBox, items]);
 
   const winningItem = useMemo<ReelItem>(
     () => ({
@@ -162,7 +261,7 @@ export const SpinLandingPage: React.FC = () => {
 
         <div className="mt-8 flex w-full flex-col items-center rounded-3xl border border-white/10 bg-[#090d18]/80 p-4 shadow-[0_0_120px_rgba(124,58,237,0.12)] backdrop-blur-sm sm:p-8">
           <div className="relative w-full max-w-4xl">
-            <SpinnerReel
+            <PromoCaseSpinner
               items={spinnerItems}
               winningItem={winningItem}
               spinKey={spinKey}
