@@ -438,7 +438,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                     <img
                       src={stepImage}
                       alt={`Step ${index + 1}`}
-                      className="mx-auto h-36 w-full rounded-xl object-cover sm:h-44"
+                      className="mx-auto h-24 w-full max-w-[180px] rounded-xl object-cover sm:h-28 sm:max-w-[210px]"
                       loading="lazy"
                     />
                   ) : (
