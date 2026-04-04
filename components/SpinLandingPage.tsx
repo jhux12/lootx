@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Gift, Sparkles } from 'lucide-react';
+import { Gift, ShieldCheck, Sparkles, Star, Zap } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { createMicroConfetti, type MicroConfettiParticle } from '../src/ui/feedback/microConfetti';
 import type { ReelItem } from './SpinnerReel';
@@ -236,7 +236,8 @@ export const SpinLandingPage: React.FC = () => {
 
   return (
     <section className="relative min-h-[calc(100vh-64px)] overflow-hidden px-4 py-6 sm:px-6 sm:py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(139,92,246,0.28),transparent_40%),radial-gradient(circle_at_80%_5%,rgba(59,130,246,0.22),transparent_42%),linear-gradient(180deg,#06070c_0%,#0a0d17_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_6%,rgba(168,85,247,0.3),transparent_40%),radial-gradient(circle_at_78%_0%,rgba(34,211,238,0.24),transparent_44%),radial-gradient(circle_at_50%_70%,rgba(59,130,246,0.15),transparent_42%),linear-gradient(180deg,#05070c_0%,#080b14_100%)]" />
+      <div className="pointer-events-none absolute -top-36 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-cyan-400/10 blur-3xl animate-pulse" />
 
       {confetti.map((piece) => (
         <span
@@ -255,69 +256,143 @@ export const SpinLandingPage: React.FC = () => {
         />
       ))}
 
-      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center text-center">
-        <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">
-          <Sparkles className="h-3.5 w-3.5" />
-          New Users Only
-        </span>
-
-        <h1 className="text-balance text-3xl font-black text-white sm:text-5xl">First Time User Bonus!</h1>
-        <p className="mt-3 max-w-xl text-sm text-slate-300 sm:text-base">First Pull On Us 👀 </p>
-
-        <div className="mt-8 flex w-full flex-col items-center rounded-3xl border border-white/10 bg-[#090d18]/80 p-4 shadow-[0_0_120px_rgba(124,58,237,0.12)] backdrop-blur-sm sm:p-8">
-          <div className="relative w-full max-w-4xl">
-            <PromoCaseSpinner
-              items={spinnerItems}
-              winningItem={winningItem}
-              spinKey={spinKey}
-              state={spinnerState}
-              durationMs={SPIN_MS}
-              onSpinComplete={handleSpinComplete}
-            />
+      <div className="relative z-10 mx-auto w-full max-w-6xl">
+        <div className="animate-[fade-in_700ms_ease-out] text-center">
+          <div className="mx-auto flex w-fit flex-wrap items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-2 backdrop-blur-xl">
+            {['New Users Only', 'Real Items', 'Fair Value Guarantee'].map((badge) => (
+              <span key={badge} className="rounded-full border border-cyan-300/30 bg-cyan-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100 sm:text-[11px]">
+                {badge}
+              </span>
+            ))}
           </div>
 
+          <h1 className="mt-5 text-balance text-4xl font-black leading-tight text-white sm:text-6xl">First Pull On Us</h1>
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-200 sm:text-lg">Spin to unlock your free mystery box and start with a shot at premium items.</p>
+        </div>
+
+        <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.03] p-3 shadow-[0_20px_100px_rgba(17,24,39,0.65)] backdrop-blur-2xl sm:p-5">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_1fr]">
+            <main className="order-1 rounded-2xl border border-white/10 bg-[#080d17]/75 p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] sm:p-6">
+              <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">Unlock Your First Pull</p>
+              <div className="relative rounded-2xl border border-cyan-200/20 bg-black/30 p-2 shadow-[0_0_40px_rgba(34,211,238,0.12)] sm:p-3">
+                <div className={`pointer-events-none absolute inset-0 rounded-2xl ${spinnerState === 'IDLE' ? 'animate-pulse' : ''}`} style={{ background: 'radial-gradient(circle at center, rgba(34,211,238,0.14), rgba(34,211,238,0) 65%)' }} />
+                <PromoCaseSpinner
+                  items={spinnerItems}
+                  winningItem={winningItem}
+                  spinKey={spinKey}
+                  state={spinnerState}
+                  durationMs={SPIN_MS}
+                  onSpinComplete={handleSpinComplete}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSpin}
+                disabled={!canSpin}
+                className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-cyan-300 via-sky-400 to-indigo-400 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {isSpinning ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900/30 border-t-slate-900" />
+                    Unlocking...
+                  </span>
+                ) : spinResult ? (
+                  'Reward Unlocked'
+                ) : (
+                  'Spin For Free'
+                )}
+              </button>
+
+              <p className="mt-2 text-center text-xs text-slate-300">1 free spin per new user</p>
+
+              <div className="mt-4 w-full rounded-xl border border-violet-300/20 bg-violet-500/10 p-3 text-center text-xs text-violet-100 sm:text-sm">
+                {hasClaimedFreeBox
+                  ? 'You already claimed your signup free box on this account.'
+                  : spinnerItems.length === 0
+                    ? 'No daily free box is configured yet. Please check back shortly.'
+                    : spinResult
+                      ? `Your reward is ready: ${spinResult}.`
+                      : 'Spin once to unlock your free signup mystery box reward.'}
+              </div>
+            </main>
+
+            <aside className="order-2 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">How It Works</p>
+              <div className="space-y-2.5">
+                {[
+                  { icon: Sparkles, title: 'Step 1', text: 'Spin' },
+                  { icon: Star, title: 'Step 2', text: 'Unlock Free Box' },
+                  { icon: Gift, title: 'Step 3', text: 'Claim + Open' }
+                ].map((step) => (
+                  <div key={step.title} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                    <step.icon className="h-4 w-4 text-cyan-200" />
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-300">{step.title}</p>
+                      <p className="text-sm font-medium text-white">{step.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <section className="mt-8">
+          <h2 className="text-center text-2xl font-bold text-white sm:text-3xl">What You Could Pull</h2>
+          <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
+            {(spinnerItems.length ? spinnerItems.slice(0, 6) : [winningItem]).map((item, idx) => (
+              <article key={`${item.itemId}-${idx}`} className="group relative min-w-[150px] rounded-2xl border border-white/10 bg-white/[0.03] p-3 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 sm:min-w-[180px]">
+                <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.2),rgba(34,211,238,0))] opacity-80" />
+                <img src={item.imageUrl || REWARD_IMAGE} alt={item.itemName} className="relative z-10 mx-auto h-20 w-20 object-contain sm:h-24 sm:w-24" />
+                <p className="relative z-10 mt-2 line-clamp-2 text-center text-xs font-semibold text-slate-100 sm:text-sm">{item.itemName}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {[
+            { icon: Gift, title: 'Real Rewards', text: 'Win real, authentic items' },
+            { icon: ShieldCheck, title: 'Fair Value Guarantee', text: 'Real, transparent odds' },
+            { icon: Zap, title: 'Instant Claim', text: 'Spin and open immediately' }
+          ].map((card) => (
+            <article key={card.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35">
+              <card.icon className="h-5 w-5 text-cyan-200" />
+              <h3 className="mt-3 text-base font-semibold text-white">{card.title}</h3>
+              <p className="mt-1 text-sm text-slate-300">{card.text}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="mt-8 rounded-3xl border border-cyan-200/20 bg-gradient-to-r from-cyan-400/10 via-blue-500/10 to-violet-500/10 p-6 text-center backdrop-blur-xl">
+          <h2 className="text-2xl font-black text-white sm:text-3xl">Your First Pull Is Waiting</h2>
           <button
             type="button"
             onClick={handleSpin}
             disabled={!canSpin}
-            className="mt-6 inline-flex min-h-12 w-full max-w-sm items-center justify-center rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-4 inline-flex min-h-12 w-full max-w-xs items-center justify-center rounded-xl bg-gradient-to-r from-cyan-300 via-sky-400 to-indigo-400 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
           >
-            {isSpinning ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900/30 border-t-slate-900" />
-                Spinning...
-              </span>
-            ) : spinResult ? (
-              'Spin Completed'
-            ) : (
-              'Spin to Win'
-            )}
+            {isSpinning ? 'Unlocking...' : spinResult ? 'Reward Unlocked' : 'Spin For Free'}
           </button>
-
-          <div className="mt-4 w-full max-w-md rounded-xl border border-violet-400/20 bg-violet-500/10 p-3 text-xs text-violet-100 sm:text-sm">
-            {hasClaimedFreeBox
-              ? 'You already claimed your signup free box on this account.'
-              : spinnerItems.length === 0
-                ? 'No daily free box is configured yet. Please check back shortly.'
-              : spinResult
-                ? `Your reward is ready: ${spinResult}.`
-                : 'Spin once to unlock your free signup mystery box reward.'}
-          </div>
-        </div>
+        </section>
       </div>
 
       {showWinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-violet-300/30 bg-[#0b1020] p-5 text-center shadow-[0_0_100px_rgba(139,92,246,0.25)] sm:p-6">
-            <img src={REWARD_IMAGE} alt="Free signup reward box" className="mx-auto h-20 w-20 rounded-xl border border-white/10 object-cover sm:h-24 sm:w-24" />
-            <h2 className="mt-4 text-2xl font-black text-white">You Won a Free Box 🎉</h2>
-            <p className="mt-2 text-sm text-slate-300">Create an account to claim your reward.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-cyan-300/25 bg-[#0a1020]/95 p-5 text-center shadow-[0_0_100px_rgba(34,211,238,0.2)] sm:p-6">
+            <div className="relative mx-auto h-24 w-24">
+              <div className="absolute inset-0 rounded-full bg-cyan-400/20 blur-2xl" />
+              <img src={REWARD_IMAGE} alt="Free signup reward box" className="relative z-10 mx-auto h-24 w-24 rounded-xl border border-white/10 object-cover" />
+            </div>
+            <h2 className="mt-4 text-2xl font-black text-white">You Unlocked a Free Box</h2>
+            <p className="mt-2 text-sm text-slate-300">Create your account to claim your reward</p>
 
             <button
               type="button"
               onClick={handleClaim}
               disabled={!freeSignupBox}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 px-4 py-3 text-sm font-black uppercase tracking-wide text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 via-sky-400 to-indigo-400 px-4 py-3 text-sm font-black uppercase tracking-wide text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Gift className="h-4 w-4" />
               Claim Free Box
@@ -331,6 +406,11 @@ export const SpinLandingPage: React.FC = () => {
         @keyframes spin-win-pop {
           0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
           100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, 0px)) rotate(210deg); }
+        }
+
+        @keyframes fade-in {
+          0% { opacity: 0; transform: translateY(12px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </section>
