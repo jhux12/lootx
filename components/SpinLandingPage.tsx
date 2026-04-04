@@ -268,7 +268,6 @@ export const SpinLandingPage: React.FC = () => {
 
           <h1 className="mt-5 text-balance text-4xl font-black leading-tight text-white sm:text-6xl">First Pull On Us</h1>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-200 sm:text-lg">Spin to unlock your free mystery box and start with a shot at premium items.</p>
-          <p className="mx-auto mt-2 max-w-xl text-xs text-slate-300 sm:text-sm">Create an account to claim your reward after the spin.</p>
         </div>
 
         <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.03] p-3 shadow-[0_20px_100px_rgba(17,24,39,0.65)] backdrop-blur-2xl sm:p-5">
@@ -354,8 +353,8 @@ export const SpinLandingPage: React.FC = () => {
 
         <section className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
-            { icon: Gift, title: 'Real Rewards', text: 'Win items inspired by premium categories' },
-            { icon: ShieldCheck, title: 'Fair Value Guarantee', text: 'Built to feel exciting and rewarding' },
+            { icon: Gift, title: 'Real Rewards', text: 'Win real, authentic items' },
+            { icon: ShieldCheck, title: 'Fair Value Guarantee', text: 'Real, transparent odds' },
             { icon: Zap, title: 'Instant Claim', text: 'Spin and open immediately' }
           ].map((card) => (
             <article key={card.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35">
