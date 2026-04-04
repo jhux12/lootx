@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Gift, Sparkles } from 'lucide-react';
+import { Gift, Lock, Sparkles, Zap } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { createMicroConfetti, type MicroConfettiParticle } from '../src/ui/feedback/microConfetti';
 import type { ReelItem } from './SpinnerReel';
@@ -12,6 +12,14 @@ const STOP_INDEX = 32;
 const CARD_WIDTH = 132;
 const CARD_GAP = 12;
 const STEP = CARD_WIDTH + CARD_GAP;
+
+const TRUST_BADGES = [
+  { icon: Lock, label: 'Provably Fair' },
+  { icon: Gift, label: 'Free First Pull' },
+  { icon: Zap, label: 'Instant Rewards' }
+];
+
+const SAMPLE_ITEMS = ['iPhone', 'PS5', 'Pokemon Cards', 'Gaming Headsets', 'Sneakers'];
 
 type PersistedSpinState = {
   reward: string;
@@ -261,8 +269,8 @@ export const SpinLandingPage: React.FC = () => {
           New Users Only
         </span>
 
-        <h1 className="text-balance text-3xl font-black text-white sm:text-5xl">First Time User Bonus!</h1>
-        <p className="mt-3 max-w-xl text-sm text-slate-300 sm:text-base">First Pull On Us 👀 </p>
+        <h1 className="text-balance text-3xl font-black text-white sm:text-5xl">First Time User Bonus</h1>
+        <p className="mt-3 max-w-xl text-sm text-slate-300 sm:text-base">🎁 First Pull On Us — Win Real Items Instantly</p>
 
         <div className="mt-8 flex w-full flex-col items-center rounded-3xl border border-white/10 bg-[#090d18]/80 p-4 shadow-[0_0_120px_rgba(124,58,237,0.12)] backdrop-blur-sm sm:p-8">
           <div className="relative w-full max-w-4xl">
@@ -290,9 +298,37 @@ export const SpinLandingPage: React.FC = () => {
             ) : spinResult ? (
               'Spin Completed'
             ) : (
-              'Spin to Win'
+              'Spin Your Free Pull'
             )}
           </button>
+
+          <p className="mt-3 text-center text-[11px] font-medium text-slate-300/70 sm:text-xs">New users only — limited time bonus</p>
+
+          <div className="mt-4 flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-slate-300/70 sm:gap-x-6 sm:text-xs">
+            {TRUST_BADGES.map((badge) => {
+              const Icon = badge.icon;
+              return (
+                <div key={badge.label} className="inline-flex items-center gap-1.5 opacity-80">
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{badge.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 w-full max-w-xl text-left">
+            <h3 className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-300/80">Win Items Like</h3>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {SAMPLE_ITEMS.map((sample) => (
+                <div
+                  key={sample}
+                  className="shrink-0 rounded-lg border border-cyan-300/20 bg-gradient-to-br from-cyan-400/10 via-transparent to-violet-500/10 px-3 py-2 text-xs font-semibold text-slate-100 shadow-[0_0_22px_rgba(34,211,238,0.14)]"
+                >
+                  {sample}
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className="mt-4 w-full max-w-md rounded-xl border border-violet-400/20 bg-violet-500/10 p-3 text-xs text-violet-100 sm:text-sm">
             {hasClaimedFreeBox
@@ -310,8 +346,12 @@ export const SpinLandingPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
           <div className="w-full max-w-sm rounded-2xl border border-violet-300/30 bg-[#0b1020] p-5 text-center shadow-[0_0_100px_rgba(139,92,246,0.25)] sm:p-6">
             <img src={REWARD_IMAGE} alt="Free signup reward box" className="mx-auto h-20 w-20 rounded-xl border border-white/10 object-cover sm:h-24 sm:w-24" />
-            <h2 className="mt-4 text-2xl font-black text-white">You Won a Free Box 🎉</h2>
-            <p className="mt-2 text-sm text-slate-300">Create an account to claim your reward.</p>
+            <h2 className="mt-4 text-2xl font-black text-white">
+              {isAuthenticated ? 'Your free mystery box is ready' : 'You unlocked your free mystery box'}
+            </h2>
+            <p className="mt-2 text-sm text-slate-300">
+              {isAuthenticated ? 'Open your reward now and see what you won.' : 'Create your account to claim your reward'}
+            </p>
 
             <button
               type="button"
@@ -320,7 +360,7 @@ export const SpinLandingPage: React.FC = () => {
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 px-4 py-3 text-sm font-black uppercase tracking-wide text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Gift className="h-4 w-4" />
-              Claim Free Box
+              {isAuthenticated ? 'Open Free Box' : 'Create Free Account'}
             </button>
             {!freeSignupBox && <p className="mt-2 text-xs text-red-300">No free signup box is currently configured.</p>}
           </div>
