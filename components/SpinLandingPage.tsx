@@ -175,27 +175,6 @@ export const SpinLandingPage: React.FC = () => {
     []
   );
 
-  const featuredRewards = useMemo(
-    () => [
-      {
-        title: 'Pokemon Card',
-        image: spinnerItems[0]?.imageUrl || REWARD_IMAGE,
-        accent: 'from-fuchsia-400/35 to-violet-300/5'
-      },
-      {
-        title: 'Tech Item',
-        image: spinnerItems[1]?.imageUrl || REWARD_IMAGE,
-        accent: 'from-cyan-300/35 to-sky-300/5'
-      },
-      {
-        title: 'Gaming Item',
-        image: spinnerItems[2]?.imageUrl || REWARD_IMAGE,
-        accent: 'from-indigo-300/35 to-blue-300/5'
-      }
-    ],
-    [spinnerItems]
-  );
-
   useEffect(() => {
     const saved = parseSpinState();
     if (saved && !saved.claimed) {
@@ -293,27 +272,8 @@ export const SpinLandingPage: React.FC = () => {
         </div>
 
         <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.03] p-3 shadow-[0_20px_100px_rgba(17,24,39,0.65)] backdrop-blur-2xl sm:p-5">
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_minmax(0,2fr)_1fr]">
-            <aside className="order-2 flex flex-row gap-3 overflow-x-auto pb-1 xl:order-1 xl:flex-col xl:overflow-visible">
-              {featuredRewards.map((reward, index) => (
-                <div
-                  key={reward.title}
-                  className="group relative min-w-[170px] flex-1 rounded-2xl border border-white/10 bg-slate-950/40 p-3 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35"
-                  style={{ animationDelay: `${index * 120}ms` }}
-                >
-                  <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${reward.accent} opacity-80`} />
-                  <div className="relative flex items-center gap-3">
-                    <img src={reward.image} alt={reward.title} className="h-14 w-14 rounded-xl border border-white/20 bg-black/30 object-contain sm:h-16 sm:w-16" />
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.14em] text-slate-300">Featured Reward</p>
-                      <p className="text-sm font-semibold text-white">{reward.title}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </aside>
-
-            <main className="order-1 rounded-2xl border border-white/10 bg-[#080d17]/75 p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] sm:p-6 xl:order-2">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_1fr]">
+            <main className="order-1 rounded-2xl border border-white/10 bg-[#080d17]/75 p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] sm:p-6">
               <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">Unlock Your First Pull</p>
               <div className="relative rounded-2xl border border-cyan-200/20 bg-black/30 p-2 shadow-[0_0_40px_rgba(34,211,238,0.12)] sm:p-3">
                 <div className={`pointer-events-none absolute inset-0 rounded-2xl ${spinnerState === 'IDLE' ? 'animate-pulse' : ''}`} style={{ background: 'radial-gradient(circle at center, rgba(34,211,238,0.14), rgba(34,211,238,0) 65%)' }} />
@@ -358,7 +318,7 @@ export const SpinLandingPage: React.FC = () => {
               </div>
             </main>
 
-            <aside className="order-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <aside className="order-2 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">How It Works</p>
               <div className="space-y-2.5">
                 {[
