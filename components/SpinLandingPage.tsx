@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Gift, Sparkles } from 'lucide-react';
+import { Gift, ShieldCheck, Sparkles, Zap } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { createMicroConfetti, type MicroConfettiParticle } from '../src/ui/feedback/microConfetti';
 import type { ReelItem } from './SpinnerReel';
@@ -51,6 +51,36 @@ const hashSeed = (input: string) => {
   return Math.abs(hash);
 };
 
+const rarityStyles = (rarity?: string) => {
+  const label = (rarity || 'common').toLowerCase();
+  if (label.includes('legendary')) {
+    return {
+      bar: 'from-amber-300/90 via-orange-400/90 to-yellow-300/90',
+      glow: 'shadow-[0_0_26px_rgba(251,191,36,0.3)]',
+      chip: 'border-amber-300/50 bg-amber-400/20 text-amber-100'
+    };
+  }
+  if (label.includes('epic')) {
+    return {
+      bar: 'from-fuchsia-300/90 via-violet-400/90 to-purple-300/90',
+      glow: 'shadow-[0_0_24px_rgba(192,132,252,0.28)]',
+      chip: 'border-fuchsia-300/45 bg-fuchsia-400/20 text-fuchsia-100'
+    };
+  }
+  if (label.includes('rare')) {
+    return {
+      bar: 'from-cyan-300/90 via-sky-400/90 to-blue-300/90',
+      glow: 'shadow-[0_0_22px_rgba(56,189,248,0.24)]',
+      chip: 'border-cyan-300/40 bg-cyan-400/20 text-cyan-100'
+    };
+  }
+  return {
+    bar: 'from-slate-300/85 via-slate-400/85 to-zinc-300/85',
+    glow: 'shadow-[0_0_18px_rgba(148,163,184,0.18)]',
+    chip: 'border-slate-300/30 bg-slate-400/10 text-slate-200'
+  };
+};
+
 const PromoCaseSpinner: React.FC<{
   items: ReelItem[];
   winningItem: ReelItem;
@@ -100,11 +130,24 @@ const PromoCaseSpinner: React.FC<{
   }, [durationMs, state]);
 
   return (
-    <div className="relative h-[15.5rem] overflow-hidden rounded-xl border border-gray-800 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] sm:h-64">
-      <div className={`absolute top-0 bottom-0 left-1/2 z-[26] w-0.5 -translate-x-1/2 transition-opacity duration-300 ${state === 'SPIN' ? 'bg-cyan-300/60 opacity-100' : 'bg-cyan-400/35 opacity-80'}`} />
-      <div className={`absolute inset-y-0 left-1/2 z-[24] w-16 -translate-x-1/2 transition-all duration-500 sm:w-20 ${state === 'SPIN' ? 'opacity-90' : 'opacity-40'}`} style={{ background: 'radial-gradient(ellipse at center, rgba(34,211,238,0.24) 0%, rgba(34,211,238,0.08) 42%, rgba(34,211,238,0) 75%)' }} />
-      <div className="absolute left-0 top-0 bottom-0 z-20 w-24 bg-gradient-to-r from-[#0b0e14] to-transparent pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 z-20 w-24 bg-gradient-to-l from-[#0b0e14] to-transparent pointer-events-none" />
+    <div className="relative h-[15.5rem] overflow-hidden rounded-2xl border border-cyan-300/20 bg-[linear-gradient(180deg,rgba(9,13,24,0.96)_0%,rgba(7,10,18,0.9)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_24px_80px_rgba(0,0,0,0.45)] sm:h-72">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.12),transparent_58%)]" />
+      <div className="pointer-events-none absolute left-0 top-0 h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-200/40 to-transparent" />
+      <div className="pointer-events-none absolute bottom-0 left-0 h-[2px] w-full bg-gradient-to-r from-transparent via-violet-200/30 to-transparent" />
+
+      <div
+        className={`absolute top-0 bottom-0 left-1/2 z-[26] w-[2px] -translate-x-1/2 transition-opacity duration-300 ${state === 'SPIN' ? 'bg-cyan-200/90 opacity-100' : 'bg-cyan-300/65 opacity-80'}`}
+      />
+      <div
+        className={`absolute inset-y-3 left-1/2 z-[24] w-[90px] -translate-x-1/2 rounded-2xl border border-cyan-300/25 bg-cyan-300/5 transition-all duration-500 sm:w-28 ${state === 'SPIN' ? 'animate-[zonePulse_1.6s_ease-in-out_infinite] opacity-95' : 'opacity-70'}`}
+      />
+      <div
+        className={`absolute inset-y-0 left-1/2 z-[22] w-20 -translate-x-1/2 transition-all duration-500 sm:w-24 ${state === 'SPIN' ? 'opacity-95' : 'opacity-55'}`}
+        style={{ background: 'radial-gradient(ellipse at center, rgba(34,211,238,0.28) 0%, rgba(34,211,238,0.08) 42%, rgba(34,211,238,0) 75%)' }}
+      />
+
+      <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-20 w-20 bg-gradient-to-r from-[#080c15] via-[#080c15]/90 to-transparent sm:w-24" />
+      <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-20 w-20 bg-gradient-to-l from-[#080c15] via-[#080c15]/90 to-transparent sm:w-24" />
 
       <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `calc(50% - ${CARD_WIDTH / 2}px)` }}>
         <div
@@ -115,16 +158,20 @@ const PromoCaseSpinner: React.FC<{
             transition: transitionEnabled ? `transform ${durationMs}ms cubic-bezier(0.08, 0.78, 0.22, 1)` : 'none'
           }}
         >
-          {reelItems.map((item, idx) => (
-            <div
-              key={`${item.itemId ?? item.itemName}-${idx}`}
-              className={`relative flex h-[132px] w-[132px] shrink-0 flex-col items-center justify-center rounded-xl border border-gray-800 bg-[#151a23] p-3 ${idx === STOP_INDEX && state === 'STOPPED' ? 'ring-2 ring-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.45)]' : ''}`}
-            >
-              <div className="absolute inset-4 rounded-full bg-[radial-gradient(circle,rgba(34,211,238,0.28)_0%,rgba(34,211,238,0.08)_45%,rgba(34,211,238,0)_78%)]" />
-              <img src={item.imageUrl || REWARD_IMAGE} alt={item.itemName} className="relative z-10 mb-2 h-20 w-20 object-contain sm:h-24 sm:w-24" />
-              <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl bg-cyan-300/70" />
-            </div>
-          ))}
+          {reelItems.map((item, idx) => {
+            const rarity = rarityStyles(item.rarity);
+            return (
+              <div
+                key={`${item.itemId ?? item.itemName}-${idx}`}
+                className={`group relative flex h-[132px] w-[132px] shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#131a28] p-3 backdrop-blur-sm ${rarity.glow} ${idx === STOP_INDEX && state === 'STOPPED' ? 'ring-2 ring-cyan-300/80 shadow-[0_0_30px_rgba(34,211,238,0.42)]' : ''}`}
+              >
+                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(165deg,rgba(255,255,255,0.11)_0%,rgba(255,255,255,0)_44%)]" />
+                <div className="pointer-events-none absolute inset-4 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18)_0%,rgba(34,211,238,0.08)_40%,rgba(34,211,238,0)_72%)]" />
+                <img src={item.imageUrl || REWARD_IMAGE} alt={item.itemName} className="relative z-10 mb-2 h-20 w-20 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.45)] sm:h-24 sm:w-24" />
+                <div className={`absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r ${rarity.bar}`} />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -164,6 +211,8 @@ export const SpinLandingPage: React.FC = () => {
     }));
   }, [freeSignupBox, items]);
 
+  const rewardPreview = useMemo(() => spinnerItems.slice(0, 6), [spinnerItems]);
+
   const winningItem = useMemo<ReelItem>(
     () => ({
       itemId: 'free-signup-box',
@@ -199,6 +248,7 @@ export const SpinLandingPage: React.FC = () => {
   }, [confetti]);
 
   const canSpin = !isSpinning && !spinResult && !hasClaimedFreeBox && spinnerItems.length > 0;
+  const spinStateLabel = isSpinning ? 'Finding your reward...' : spinResult ? 'Unlocked' : 'Take your shot';
 
   const handleSpin = () => {
     if (!canSpin) return;
@@ -235,8 +285,24 @@ export const SpinLandingPage: React.FC = () => {
   };
 
   return (
-    <section className="relative min-h-[calc(100vh-64px)] overflow-hidden px-4 py-6 sm:px-6 sm:py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(139,92,246,0.28),transparent_40%),radial-gradient(circle_at_80%_5%,rgba(59,130,246,0.22),transparent_42%),linear-gradient(180deg,#06070c_0%,#0a0d17_100%)]" />
+    <section className="relative min-h-[calc(100vh-64px)] overflow-hidden px-3 py-5 sm:px-6 sm:py-10">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_10%,rgba(168,85,247,0.24),transparent_34%),radial-gradient(circle_at_80%_0%,rgba(56,189,248,0.17),transparent_36%),radial-gradient(circle_at_50%_38%,rgba(99,102,241,0.12),transparent_48%),linear-gradient(180deg,#05070d_0%,#080c16_44%,#060913_100%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(148,163,184,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.16)_1px,transparent_1px)] [background-size:42px_42px] animate-[gridRotate_24s_linear_infinite]" />
+      <div className="pointer-events-none absolute -top-32 left-1/2 h-[26rem] w-[26rem] -translate-x-1/2 rounded-full bg-cyan-400/20 blur-[110px] animate-[floatAura_8s_ease-in-out_infinite]" />
+
+      {[...Array.from({ length: 10 })].map((_, i) => (
+        <span
+          key={`particle-${i}`}
+          className="pointer-events-none absolute rounded-full bg-cyan-200/45"
+          style={{
+            left: `${8 + i * 9}%`,
+            top: `${14 + ((i * 11) % 70)}%`,
+            width: `${i % 2 === 0 ? 2 : 1.5}px`,
+            height: `${i % 2 === 0 ? 2 : 1.5}px`,
+            animation: `floatParticle ${7 + (i % 4)}s ease-in-out ${i * 0.3}s infinite`
+          }}
+        />
+      ))}
 
       {confetti.map((piece) => (
         <span
@@ -255,73 +321,193 @@ export const SpinLandingPage: React.FC = () => {
         />
       ))}
 
-      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center text-center">
-        <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">
-          <Sparkles className="h-3.5 w-3.5" />
-          New Users Only
-        </span>
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-6 sm:gap-8">
+        <div className="animate-[fadeRise_600ms_ease-out] rounded-3xl border border-white/10 bg-white/[0.03] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_30px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl sm:p-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
+                <Sparkles className="h-3.5 w-3.5" />
+                New Users Only
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-300/35 bg-violet-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-100">
+                <Gift className="h-3.5 w-3.5" />
+                Real Items
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/35 bg-emerald-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-100">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Fair Value Guarantee
+              </span>
+            </div>
 
-        <h1 className="text-balance text-3xl font-black text-white sm:text-5xl">First Time User Bonus!</h1>
-        <p className="mt-3 max-w-xl text-sm text-slate-300 sm:text-base">First Pull On Us 👀 </p>
-
-        <div className="mt-8 flex w-full flex-col items-center rounded-3xl border border-white/10 bg-[#090d18]/80 p-4 shadow-[0_0_120px_rgba(124,58,237,0.12)] backdrop-blur-sm sm:p-8">
-          <div className="relative w-full max-w-4xl">
-            <PromoCaseSpinner
-              items={spinnerItems}
-              winningItem={winningItem}
-              spinKey={spinKey}
-              state={spinnerState}
-              durationMs={SPIN_MS}
-              onSpinComplete={handleSpinComplete}
-            />
+            <h1 className="text-balance text-4xl font-black leading-[1.04] tracking-tight text-white sm:text-6xl">First Pull On Us</h1>
+            <p className="mx-auto mt-3 max-w-2xl text-pretty text-sm text-slate-200/95 sm:text-lg">
+              Spin to unlock your free mystery box and start with a real shot at premium items.
+            </p>
+            <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-cyan-200/85 sm:text-sm">New users only. No code needed.</p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleSpin}
-            disabled={!canSpin}
-            className="mt-6 inline-flex min-h-12 w-full max-w-sm items-center justify-center rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSpinning ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900/30 border-t-slate-900" />
-                Spinning...
-              </span>
-            ) : spinResult ? (
-              'Spin Completed'
-            ) : (
-              'Spin to Win'
-            )}
-          </button>
+          <div className="relative mx-auto mt-6 w-full max-w-5xl rounded-3xl border border-cyan-300/20 bg-[#090f1d]/80 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_24px_85px_rgba(14,165,233,0.08)] sm:mt-8 sm:p-6">
+            <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/35 to-transparent" />
+            <div className="absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-violet-200/35 to-transparent" />
 
-          <div className="mt-4 w-full max-w-md rounded-xl border border-violet-400/20 bg-violet-500/10 p-3 text-xs text-violet-100 sm:text-sm">
-            {hasClaimedFreeBox
-              ? 'You already claimed your signup free box on this account.'
-              : spinnerItems.length === 0
-                ? 'No daily free box is configured yet. Please check back shortly.'
-              : spinResult
-                ? `Your reward is ready: ${spinResult}.`
-                : 'Spin once to unlock your free signup mystery box reward.'}
+            <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100 sm:text-sm">{spinStateLabel}</p>
+
+            <div className={`relative ${!isSpinning && !spinResult ? 'animate-[idlePulse_2.4s_ease-in-out_infinite]' : ''}`}>
+              <PromoCaseSpinner
+                items={spinnerItems}
+                winningItem={winningItem}
+                spinKey={spinKey}
+                state={spinnerState}
+                durationMs={SPIN_MS}
+                onSpinComplete={handleSpinComplete}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSpin}
+              disabled={!canSpin}
+              className="mt-5 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-200/45 bg-gradient-to-r from-cyan-300 via-sky-400 to-violet-400 px-6 py-3 text-base font-black uppercase tracking-[0.15em] text-slate-950 shadow-[0_10px_35px_rgba(34,211,238,0.28)] transition-all hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 sm:mx-auto sm:max-w-md sm:text-lg sm:tracking-[0.18em]"
+            >
+              {isSpinning ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900/30 border-t-slate-900" />
+                  Unlocking...
+                </span>
+              ) : spinResult ? (
+                'Reward Unlocked'
+              ) : (
+                <>
+                  <Zap className="h-4 w-4" />
+                  Spin For Free
+                </>
+              )}
+            </button>
+
+            <p className="mt-2 text-center text-[11px] text-slate-400 sm:text-xs">1 free spin per new user</p>
+
+            <div className="mt-4 w-full rounded-2xl border border-violet-300/20 bg-violet-400/10 p-3 text-xs text-violet-100 sm:mx-auto sm:max-w-xl sm:text-sm">
+              {hasClaimedFreeBox
+                ? 'You already claimed your signup free box on this account.'
+                : spinnerItems.length === 0
+                  ? 'No daily free box is configured yet. Please check back shortly.'
+                  : spinResult
+                    ? `Your reward is ready: ${spinResult}.`
+                    : 'Spin once to unlock your free signup mystery box reward.'}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+          {[
+            {
+              title: 'Real Rewards',
+              text: 'Win items inspired by the same premium categories featured across Pullz.gg.',
+              icon: Gift
+            },
+            {
+              title: 'Fair Value Guarantee',
+              text: 'Every box is built to feel exciting, transparent, and worth opening.',
+              icon: ShieldCheck
+            },
+            {
+              title: 'Instant Claim',
+              text: 'Win your free box, create your account, and jump straight into your first pull.',
+              icon: Zap
+            }
+          ].map((card) => (
+            <article
+              key={card.title}
+              className="group rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_16px_35px_rgba(0,0,0,0.33)] backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/25"
+            >
+              <card.icon className="h-5 w-5 text-cyan-200" />
+              <h3 className="mt-3 text-sm font-bold text-white sm:text-base">{card.title}</h3>
+              <p className="mt-1.5 text-xs text-slate-300 sm:text-sm">{card.text}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-md sm:p-6">
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-white sm:text-2xl">What You Could Pull</h2>
+              <p className="mt-1 text-xs text-slate-300 sm:text-sm">A preview of reward styles featured in the Pullz.gg experience.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {rewardPreview.map((item, idx) => {
+              const rarity = rarityStyles(item.rarity);
+              return (
+                <article
+                  key={`${item.itemId ?? item.itemName}-preview-${idx}`}
+                  className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-[#111827]/80 p-3 transition duration-300 hover:-translate-y-1 ${rarity.glow}`}
+                >
+                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(165deg,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0)_40%)]" />
+                  <div className="pointer-events-none absolute -top-8 left-1/2 h-16 w-16 -translate-x-1/2 rounded-full bg-cyan-200/20 blur-2xl" />
+
+                  <div className="relative z-10 flex justify-center">
+                    <img src={item.imageUrl || REWARD_IMAGE} alt={item.itemName} className="h-20 w-20 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.5)] sm:h-24 sm:w-24" />
+                  </div>
+
+                  <p className="relative z-10 mt-3 line-clamp-2 min-h-[2.3rem] text-xs font-semibold text-slate-100 sm:text-sm">{item.itemName}</p>
+                  <span className={`relative z-10 mt-2 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${rarity.chip}`}>
+                    {item.rarity || 'common'}
+                  </span>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:p-5">
+          <div className="flex flex-col gap-2 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-center sm:gap-6 sm:text-sm">
+            <p>Built for fast, fun, low-friction first pulls.</p>
+            <p>Designed to get you into the action instantly.</p>
+            <p>Best experienced on mobile and desktop.</p>
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-[0.16em] text-cyan-100 sm:mx-auto sm:max-w-lg sm:text-xs">
+            <span className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-2 py-1">Instant spin</span>
+            <span className="rounded-full border border-violet-300/25 bg-violet-400/10 px-2 py-1">Free first box</span>
+            <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2 py-1">Real item categories</span>
           </div>
         </div>
       </div>
 
       {showWinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-violet-300/30 bg-[#0b1020] p-5 text-center shadow-[0_0_100px_rgba(139,92,246,0.25)] sm:p-6">
-            <img src={REWARD_IMAGE} alt="Free signup reward box" className="mx-auto h-20 w-20 rounded-xl border border-white/10 object-cover sm:h-24 sm:w-24" />
-            <h2 className="mt-4 text-2xl font-black text-white">You Won a Free Box 🎉</h2>
-            <p className="mt-2 text-sm text-slate-300">Create an account to claim your reward.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#02040a]/84 p-3 sm:p-6">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-violet-300/30 bg-[linear-gradient(180deg,#0b1020_0%,#0a1022_100%)] p-5 text-center shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_30px_90px_rgba(124,58,237,0.45)] sm:p-7">
+            <div className="pointer-events-none absolute -top-8 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full bg-cyan-300/30 blur-3xl" />
+            <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/40 to-transparent" />
+
+            <div className="relative mx-auto mb-4 flex h-28 w-28 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] sm:h-32 sm:w-32">
+              <div className="absolute inset-3 rounded-full bg-[radial-gradient(circle,rgba(34,211,238,0.4)_0%,rgba(34,211,238,0.1)_55%,rgba(34,211,238,0)_78%)]" />
+              <img src={REWARD_IMAGE} alt="Free signup reward box" className="relative z-10 h-20 w-20 object-contain sm:h-24 sm:w-24" />
+            </div>
+
+            <h2 className="text-2xl font-black text-white sm:text-3xl">You Unlocked a Free Box</h2>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-slate-200 sm:text-base">Create your account to claim it and open your first Pullz box.</p>
+            <p className="mt-1 text-xs text-cyan-200/90">Your free box is ready to claim.</p>
 
             <button
               type="button"
               onClick={handleClaim}
               disabled={!freeSignupBox}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 px-4 py-3 text-sm font-black uppercase tracking-wide text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-200/40 bg-gradient-to-r from-cyan-300 via-sky-400 to-violet-400 px-4 py-3.5 text-sm font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 sm:text-base"
             >
               <Gift className="h-4 w-4" />
               Claim Free Box
             </button>
+
+            <button
+              type="button"
+              onClick={() => setShowWinModal(false)}
+              className="mt-2 inline-flex items-center justify-center text-xs font-medium text-slate-400 transition hover:text-slate-200"
+            >
+              Maybe later
+            </button>
+
             {!freeSignupBox && <p className="mt-2 text-xs text-red-300">No free signup box is currently configured.</p>}
           </div>
         </div>
@@ -331,6 +517,36 @@ export const SpinLandingPage: React.FC = () => {
         @keyframes spin-win-pop {
           0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
           100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, 0px)) rotate(210deg); }
+        }
+
+        @keyframes fadeRise {
+          0% { opacity: 0; transform: translateY(14px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes floatAura {
+          0%, 100% { transform: translateX(-50%) translateY(0px); }
+          50% { transform: translateX(-50%) translateY(14px); }
+        }
+
+        @keyframes floatParticle {
+          0%, 100% { transform: translateY(0px) scale(1); opacity: 0.4; }
+          50% { transform: translateY(-14px) scale(1.2); opacity: 0.9; }
+        }
+
+        @keyframes zonePulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.08), inset 0 0 0 1px rgba(34, 211, 238, 0.18); }
+          50% { box-shadow: 0 0 0 10px rgba(34, 211, 238, 0), inset 0 0 0 1px rgba(34, 211, 238, 0.36); }
+        }
+
+        @keyframes idlePulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.004); }
+        }
+
+        @keyframes gridRotate {
+          0% { transform: rotate(0deg) scale(1.08); }
+          100% { transform: rotate(360deg) scale(1.08); }
         }
       `}</style>
     </section>
