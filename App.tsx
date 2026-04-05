@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { Header } from './components/Header';
 import { LiveTicker } from './components/LiveTicker';
 import { Hero } from './components/Hero';
@@ -410,6 +411,7 @@ function App() {
         <PreviewProvider>
           <ToastProvider>
             <AppShell />
+            <Analytics />
           </ToastProvider>
         </PreviewProvider>
       </GameProvider>
