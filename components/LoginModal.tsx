@@ -223,7 +223,7 @@ export const LoginModal: React.FC = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden overscroll-none p-2 sm:p-4">
+    <div data-disable-pull-refresh="true" className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden overscroll-none p-2 sm:p-4">
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={() => setShowLoginModal(false)}
