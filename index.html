@@ -38,7 +38,7 @@
     <link rel="preconnect" href="https://firebasestorage.googleapis.com">
     <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com">
     <link rel="preload" as="image" href="/assets/hero.png" fetchpriority="high">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script>
@@ -47,7 +47,7 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+              sans: ['Inter', 'SF Pro Display', 'SF Pro Text', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
               mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
             },
             colors: {
@@ -83,8 +83,13 @@
         overflow-x: hidden;
       }
       body {
-        background-color: #0b0e14;
+        background:
+          radial-gradient(circle at 12% -8%, rgba(124, 92, 255, 0.16), transparent 34%),
+          radial-gradient(circle at 88% -16%, rgba(0, 229, 255, 0.1), transparent 36%),
+          #0b0f1a;
         color: white;
+        font-family: Inter, "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: 0.01em;
       }
       /* Custom scrollbar for chat */
       .scrollbar-thin::-webkit-scrollbar {
@@ -130,11 +135,11 @@
         animation: scroll 35s linear infinite;
       }
       .btn-logo-gradient {
-        background: linear-gradient(120deg, #7c3aed 0%, #6366f1 45%, #38bdf8 100%);
-        box-shadow: 0 16px 30px rgba(88, 80, 236, 0.35);
+        background: linear-gradient(120deg, #7c5cff 0%, #6e6dfd 52%, #00e5ff 100%);
+        box-shadow: 0 14px 28px rgba(124, 92, 255, 0.35);
       }
       .btn-logo-gradient:hover {
-        background: linear-gradient(120deg, #8b5cf6 0%, #7c3aed 45%, #4fd1ff 100%);
+        background: linear-gradient(120deg, #8b74ff 0%, #7b76ff 48%, #3cecff 100%);
       }
       .btn-logo-gradient:active {
         box-shadow: 0 10px 20px rgba(88, 80, 236, 0.3);
@@ -160,6 +165,13 @@
       @keyframes shimmer {
         0% { transform: translateX(-100%); }
         100% { transform: translateX(100%); }
+      }
+      @keyframes pageFadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .page-fade-in {
+        animation: pageFadeIn 260ms ease-out both;
       }
     </style>
   <script type="importmap">

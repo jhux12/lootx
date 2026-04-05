@@ -239,7 +239,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   };
 
   return (
-    <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
+    <div className={`mx-auto flex w-full flex-col gap-12 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
       <style>{fairValueBannerKeyframes}</style>
       <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-hidden border-y border-white/10 bg-[#11151f] shadow-[0_35px_70px_-50px_rgba(0,0,0,1)]">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,#121827_0%,#171b2b_32%,#11151f_58%,#0f1320_100%)]" />
@@ -250,12 +250,12 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         <div className="relative mx-auto flex w-full max-w-[1240px] px-4 pt-8 text-left sm:px-6 sm:pt-10 lg:px-8">
           <div className="relative z-10 flex w-full items-end justify-between gap-3 sm:gap-5 lg:min-h-[360px] lg:items-center lg:pr-[18rem]">
             <div className="flex min-w-0 flex-1 flex-col items-start pb-6 sm:pb-8 lg:pb-10">
-              <h1 className="relative max-w-4xl text-[2.15rem] font-black uppercase italic leading-[0.9] tracking-tight text-white sm:pt-1 sm:text-5xl lg:text-7xl">
-                <span className="inline-block">Fair Value</span>{' '}
-                <span className="relative inline-block bg-gradient-to-r from-[#6f7dff] via-[#8f67ff] to-[#ec68c8] bg-clip-text text-transparent before:absolute before:inset-x-0 before:bottom-1 before:h-[0.18em] before:rounded-full before:bg-gradient-to-r before:from-[#6f7dff]/0 before:via-[#8f67ff]/60 before:to-[#ec68c8]/0 before:blur-md before:content-['']">Guarantee</span>
+              <h1 className="relative max-w-4xl text-[2.05rem] font-black uppercase italic leading-[0.9] tracking-tight text-white sm:pt-1 sm:text-5xl lg:text-7xl">
+                <span className="inline-block">Premium</span>{' '}
+                <span className="relative inline-block bg-gradient-to-r from-[#7C5CFF] via-[#8f67ff] to-[#00E5FF] bg-clip-text text-transparent before:absolute before:inset-x-0 before:bottom-1 before:h-[0.18em] before:rounded-full before:bg-gradient-to-r before:from-[#7C5CFF]/0 before:via-[#8f67ff]/60 before:to-[#00E5FF]/0 before:blur-md before:content-['']">Pullz Experience</span>
               </h1>
               <p className="relative mt-4 max-w-[13rem] text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-300 sm:max-w-md sm:text-sm sm:tracking-[0.2em] lg:max-w-3xl lg:text-base lg:tracking-[0.22em]">
-                Discover, open &amp; collect on Pullz
+                Discover, open &amp; collect with confidence
               </p>
             </div>
 
@@ -273,7 +273,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-hidden border-y border-white/10 bg-[#0b0d13] shadow-[0_35px_70px_-50px_rgba(0,0,0,1)]">
         <div className="mx-auto w-full max-w-[1400px] px-3 py-4 sm:px-5 lg:px-7">
           <p className="pb-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-500">
-            Best mystery boxes online
+            Hero featured box
           </p>
           <div className="overflow-hidden rounded-[28px] border border-[#242a38] bg-[#090c13]">
             <div className="grid min-h-[240px] xl:grid-cols-[360px_minmax(0,1fr)]">
@@ -389,10 +389,18 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       </section>
 
       <section className="w-full">
+        <div className="mb-3 flex items-end justify-between">
+          <h2 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">Popular Boxes</h2>
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#AAB1C6]">Live now</span>
+        </div>
         <TopDropsSlider boxes={boxes} onOpenBox={onOpenBox} />
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
+        <div className="md:col-span-3 mb-1 flex items-end justify-between">
+          <h2 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">Featured Collections</h2>
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#AAB1C6]">Curated themes</span>
+        </div>
         {CATEGORIES.map((category, index) => {
           const categoryImage = stripeSettings.homeCategoryImageUrls[index]?.trim();
           return (
@@ -419,6 +427,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 
       <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 border-y border-white/10 bg-[#0d0f16]">
         <div className="mx-auto w-full max-w-[1400px] px-3 py-10 sm:px-5 sm:py-12 lg:px-7">
+          <p className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[#AAB1C6]">Live wins</p>
           <h2 className="text-center text-3xl font-black uppercase text-white sm:text-4xl">
             How it <span className="text-[#6962ff]">works</span>
           </h2>
@@ -484,6 +493,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 border-y border-white/10 bg-[#0d0f16]">
         <div className="mx-auto w-full max-w-[1400px] px-3 py-10 sm:px-5 sm:py-12 lg:px-7">
           <div className="rounded-2xl border border-white/10 bg-[#111520] p-6 sm:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#AAB1C6]">Daily rewards / free box</p>
             <h3 className="text-2xl font-black text-white">Mystery Boxes for Sale by Category</h3>
             <p className="mt-3 max-w-4xl text-sm leading-relaxed text-gray-300">
               Pullz is an online mystery box website where you can buy mystery boxes across multiple categories, from

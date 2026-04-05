@@ -64,6 +64,13 @@ const SPINNER_MOTION = {
   initialBlurDurationMs: 260
 } as const;
 
+const getRarityGlowClass = (rarity?: string) => {
+  const tone = String(rarity ?? '').toLowerCase();
+  if (tone === 'legendary') return 'shadow-[0_0_34px_rgba(250,204,21,0.42)] ring-1 ring-yellow-300/65';
+  if (tone === 'rare' || tone === 'ultra rare') return 'shadow-[0_0_28px_rgba(124,92,255,0.38)] ring-1 ring-[#7C5CFF]/55';
+  return '';
+};
+
 const createSeededRng = (seed: string) => {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i += 1) {
@@ -1502,7 +1509,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [lastReveal?.serverSeed, lastRoll, playSound]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
+    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300 page-fade-in">
       {!isReady ? (
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="text-center max-w-sm">
@@ -1517,7 +1524,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="flex items-center gap-4">
                 <button 
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
-                    className="min-h-11 flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
+                    className="min-h-11 flex items-center gap-2 rounded-xl border border-white/10 bg-[#121826] px-3 py-1.5 text-sm font-medium text-gray-300 transition-colors hover:text-white"
                 >
                     <ChevronLeft className="w-4 h-4" /> All boxes
                 </button>
@@ -1532,13 +1539,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     </div>
 
         {/* SPINNER AREA */}
-        <div className={`relative w-full bg-[#0b0e14] border rounded-2xl p-1 mb-8 overflow-hidden shadow-2xl transition-all duration-700 ${isGoldMode ? 'border-yellow-500 shadow-yellow-500/20' : 'border-gray-800'}`}>
+        <div className={`relative mb-8 w-full overflow-hidden rounded-3xl border bg-[#0f1524] p-1.5 shadow-[0_26px_50px_-34px_rgba(0,0,0,0.92)] transition-all duration-700 ${isGoldMode ? 'border-yellow-400/80 shadow-yellow-500/25' : 'border-white/10'}`}>
             
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
             <div className="relative z-20 px-2 pt-2 pb-3 sm:px-3 sm:pt-3 sm:pb-3">
-              <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-black/50 p-1.5 shadow-[0_0_24px_rgba(45,212,191,0.12)] backdrop-blur-md sm:gap-2 sm:p-2">
+              <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-[#0b101b]/85 p-1.5 shadow-[0_0_24px_rgba(45,212,191,0.12)] backdrop-blur-md sm:gap-2 sm:p-2">
                 <div className="flex min-w-0 flex-1 items-center">
                   {showXpOpenUi && (
                     <button
@@ -1648,7 +1655,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Spinner Window */}
-            <div ref={scrollViewportRef} className="relative h-[15.5rem] sm:h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+            <div ref={scrollViewportRef} className="relative flex h-[15.5rem] items-center overflow-hidden bg-[radial-gradient(circle_at_50%_35%,rgba(124,92,255,0.14),transparent_58%),linear-gradient(180deg,#11182a_0%,#0c111d_100%)] sm:h-64">
                 {spinnerBackgroundImage && (
                   <>
                     <img
@@ -1701,8 +1708,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 )}
                 
                 {/* Fade Gradients */}
-                <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
-                <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-32 bg-gradient-to-r from-[#0f1524] to-transparent"></div>
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-32 bg-gradient-to-l from-[#0f1524] to-transparent"></div>
 
                 <div
                   className={`absolute inset-0 z-[21] pointer-events-none transition-opacity duration-200 ${isInitialMotionBlurActive ? 'opacity-100' : 'opacity-0'}`}
@@ -1725,7 +1732,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === SPINNER_MOTION.preWinnerItems ? winningCardRef : null}
-                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3.5 sm:p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? 'ring-2 ring-white/50' : ''}`}
+                            className={`group relative flex flex-shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-[linear-gradient(160deg,#121826_0%,#161D2E_70%)] p-3.5 sm:p-3 ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? `ring-2 ring-white/50 ${getRarityGlowClass(item.rarity)}` : ''}`}
                             style={{ 
                                 width: `${CARD_WIDTH}px`, 
                                 height: `${CARD_WIDTH}px`,
@@ -1756,7 +1763,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="bg-[#0b0e14] px-3 pb-4 pt-3 sm:p-4 flex flex-col items-center justify-center gap-2.5 border-t border-gray-800 relative z-20">
+            <div className="relative z-20 flex flex-col items-center justify-center gap-2.5 border-t border-white/10 bg-[#0f1524] px-3 pb-4 pt-3 sm:p-4">
                  <button 
                     onClick={() => handleSpin()}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}

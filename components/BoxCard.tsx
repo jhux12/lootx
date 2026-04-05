@@ -114,15 +114,16 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
       onFocus={() => setIsPreviewVisible(true)}
       onBlur={() => setIsPreviewVisible(false)}
       onKeyDown={handleKeyDown}
-      className={`group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0b101a] text-center shadow-[0_12px_32px_-28px_rgba(0,0,0,0.75)] transition-all duration-300 ${isCompact ? 'p-3 sm:p-5' : 'p-4 sm:p-6'} ${isDropping ? 'translate-y-2 scale-[0.98]' : 'hover:-translate-y-1 hover:border-white/20'}`}
+      className={`group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(160deg,#121826_0%,#161D2E_56%,#111728_100%)] text-center shadow-[0_16px_34px_-24px_rgba(0,0,0,0.88)] transition-all duration-200 ${isCompact ? 'p-3 sm:p-5' : 'p-4 sm:p-6'} ${isDropping ? 'translate-y-2 scale-[0.98]' : 'hover:-translate-y-[6px] hover:border-[#7C5CFF]/40 hover:shadow-[0_14px_28px_-14px_rgba(124,92,255,0.45)]'}`}
       style={{ ['--risk-accent' as string]: box.accentColor }}
       tabIndex={0}
       role="button"
     >
       <div
-        className="pointer-events-none absolute inset-0 opacity-60"
+        className="pointer-events-none absolute inset-0 opacity-75"
         style={{ background: `linear-gradient(180deg, ${box.accentColor}1a, transparent 60%)` }}
       />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(124,92,255,0.18),transparent_56%)] opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
       <div className={`relative flex w-full flex-1 items-center justify-center ${isCompact ? 'mb-3 min-h-[8rem]' : 'mb-4 min-h-[10rem] sm:min-h-[11rem]'}`}>
         <div
           className="absolute inset-4 rounded-full opacity-25"
@@ -140,7 +141,7 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
       </div>
 
       <div className="flex w-full flex-col items-center gap-2 pb-1">
-        <h4 className={`font-semibold text-gray-100 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-xs sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
+        <h4 className={`font-semibold text-gray-100 transition-colors duration-200 group-hover:text-white ${isCompact ? 'text-xs sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
         {box.currencyType === 'XP' ? (
           <div className={`flex items-center justify-center gap-1 font-semibold text-white sm:text-lg ${isCompact ? 'text-sm' : 'text-base'}`}>
             <img src={XP_ICON} alt="XP" loading="lazy" decoding="async" className="h-4 w-4 object-contain" />

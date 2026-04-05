@@ -52,12 +52,12 @@ export const TopDropsSlider: React.FC<TopDropsSliderProps> = ({ boxes, onOpenBox
 
   return (
     <section className={`relative w-full overflow-hidden ${className}`}>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.16),_transparent_24%),radial-gradient(circle_at_80%_20%,_rgba(56,189,248,0.1),_transparent_18%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(124,92,255,0.16),_transparent_24%),radial-gradient(circle_at_80%_20%,_rgba(0,229,255,0.1),_transparent_18%)]" />
 
-      <div className="relative w-full border-b border-white/5 px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex w-full items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-200 sm:text-xs">
-          <Flame className="h-3.5 w-3.5 shrink-0 text-orange-400" />
-          <span className="truncate">Best Pullz</span>
+      <div className="relative w-full border-b border-white/10 px-4 py-3 sm:px-6 lg:px-8">
+        <div className="flex w-full items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#AAB1C6] sm:text-xs">
+          <Flame className="h-3.5 w-3.5 shrink-0 text-[#7C5CFF]" />
+          <span className="truncate">Live Wins</span>
         </div>
       </div>
 
