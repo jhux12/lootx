@@ -258,15 +258,7 @@ export const SpinLandingPage: React.FC = () => {
 
       <div className="relative z-10 mx-auto w-full max-w-6xl">
         <div className="animate-[fade-in_700ms_ease-out] text-center">
-          <div className="mx-auto flex w-fit flex-wrap items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-2 backdrop-blur-xl">
-            {['New Users Only', 'Real Items', 'Fair Value Guarantee'].map((badge) => (
-              <span key={badge} className="rounded-full border border-cyan-300/30 bg-cyan-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100 sm:text-[11px]">
-                {badge}
-              </span>
-            ))}
-          </div>
-
-          <h1 className="mt-5 text-balance text-4xl font-black leading-tight text-white sm:text-6xl">First Pull On Us</h1>
+          <h1 className="text-balance text-4xl font-black leading-tight text-white sm:text-6xl">First Pull On Us</h1>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-200 sm:text-lg">Spin to unlock your free mystery box and start with a shot at premium items.</p>
         </div>
 
