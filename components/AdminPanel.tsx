@@ -192,6 +192,21 @@ type AdminSentNotification = {
     createdAt?: Timestamp;
 };
 
+type DashboardTransaction = {
+    id: string;
+    userLabel: string;
+    type: LedgerEntryType;
+    amount: number;
+    createdAt: number;
+};
+
+type DashboardUserSummary = {
+    id: string;
+    createdAt: number;
+    balance: number;
+    ledger: LedgerEntry[];
+};
+
 const escapeText = (value: string) =>
     value
         .replace(/&/g, '&amp;')
@@ -205,6 +220,19 @@ const toSafeHtml = (value: string) => escapeText(value).replace(/\n/g, '<br />')
 const formatSupportTimestamp = (timestamp?: Timestamp) => {
     if (!timestamp) return 'Just now';
     return timestamp.toDate().toLocaleString();
+};
+
+const toMillis = (value: unknown, fallback = 0): number => {
+    if (value instanceof Timestamp) return value.toMillis();
+    if (typeof value === 'object' && value && typeof (value as { toMillis?: unknown }).toMillis === 'function') {
+        return Number((value as { toMillis: () => number }).toMillis());
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+        const parsed = Date.parse(value);
+        if (!Number.isNaN(parsed)) return parsed;
+    }
+    return fallback;
 };
 
 export const AdminPanel: React.FC = () => {
@@ -317,6 +345,8 @@ export const AdminPanel: React.FC = () => {
   const [supportStatusUpdates, setSupportStatusUpdates] = useState<Record<string, { sending: boolean; error?: string; success?: string }>>(
       {}
   );
+  const [dashboardTransactions, setDashboardTransactions] = useState<DashboardTransaction[]>([]);
+  const [dashboardUsers, setDashboardUsers] = useState<DashboardUserSummary[]>([]);
 
   useEffect(() => {
       const pathLabel = 'adminNotifications';
@@ -829,12 +859,100 @@ export const AdminPanel: React.FC = () => {
       if (shipmentFilter === 'shipped') return shipment.status === 'shipped';
       return true;
   });
-  const stats = [
-    { title: 'Total Coins', value: 124592, icon: CoinStatIcon, color: 'text-green-500', bg: 'bg-green-500/10', isCoin: true },
-    { title: 'Active Users', value: '1,420', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { title: 'Battles Today', value: '843', icon: SwordsIcon, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-    { title: 'Server Load', value: '12%', icon: Activity, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-  ];
+  useEffect(() => {
+      const usersPath = 'users (dashboard live stats)';
+      console.log('READING FIRESTORE PATH', usersPath);
+      const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(250));
+      const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
+          const nextTransactions: DashboardTransaction[] = [];
+          const nextUsers: DashboardUserSummary[] = [];
+          snapshot.docs.forEach((docSnap) => {
+              const data = docSnap.data() as Record<string, any>;
+              const ledger = Array.isArray(data.ledger) ? data.ledger : [];
+              const normalizedLedger: LedgerEntry[] = ledger
+                  .map((entry: any, index: number) => ({
+                      id: String(entry?.id ?? `${docSnap.id}-${index}`),
+                      userId: docSnap.id,
+                      type: (entry?.type ?? 'admin_adjustment') as LedgerEntryType,
+                      amount: Number(entry?.amount ?? 0),
+                      createdAt: toMillis(entry?.createdAt, 0)
+                  }))
+                  .filter((entry) => Number.isFinite(entry.amount) && Number.isFinite(entry.createdAt) && entry.createdAt > 0);
+              nextUsers.push({
+                  id: docSnap.id,
+                  createdAt: toMillis(data.createdAt, 0),
+                  balance: Math.max(0, Number(data.balance ?? data.coins ?? 0)),
+                  ledger: normalizedLedger
+              });
+              const userLabel =
+                  typeof data.username === 'string' && data.username.trim()
+                      ? data.username.trim()
+                      : (typeof data.name === 'string' && data.name.trim() ? data.name.trim() : `User_${docSnap.id.slice(0, 6)}`);
+
+              normalizedLedger.forEach((entry, index) => {
+                  if (entry.amount === 0) return;
+                  nextTransactions.push({
+                      id: `${docSnap.id}-${entry.id ?? index}-${entry.createdAt}`,
+                      userLabel,
+                      type: entry.type,
+                      amount: entry.amount,
+                      createdAt: entry.createdAt
+                  });
+              });
+          });
+
+          nextTransactions.sort((a, b) => b.createdAt - a.createdAt);
+          setDashboardTransactions(nextTransactions.slice(0, 12));
+          setDashboardUsers(nextUsers);
+      }, (error) => {
+          console.error('SNAPSHOT FAILED', {
+              path: usersPath,
+              code: error?.code,
+              message: error?.message,
+              error
+          });
+      });
+
+      return () => unsubscribe();
+  }, []);
+
+  const dashboardStats = useMemo(() => {
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+      const totalCoins = dashboardUsers.reduce((sum, profile) => sum + Math.max(0, Number(profile.balance ?? 0)), 0);
+      const signUpsToday = dashboardUsers.reduce((count, profile) => (
+          Number(profile.createdAt ?? 0) >= startOfToday ? count + 1 : count
+      ), 0);
+
+      const { depositedToday, spentToday } = dashboardUsers.reduce((totals, profile) => {
+          const ledger = profile.ledger ?? [];
+          ledger.forEach((entry) => {
+              const createdAt = Number(entry.createdAt ?? 0);
+              if (!Number.isFinite(createdAt) || createdAt < startOfToday) return;
+              const amount = Number(entry.amount ?? 0);
+              if (!Number.isFinite(amount) || amount === 0) return;
+              if (amount > 0 && entry.type === 'deposit') {
+                  totals.depositedToday += amount;
+              } else if (amount < 0) {
+                  totals.spentToday += Math.abs(amount);
+              }
+          });
+          return totals;
+      }, { depositedToday: 0, spentToday: 0 });
+
+      return [
+          { title: 'Total Coins', value: totalCoins, icon: CoinStatIcon, color: 'text-green-500', bg: 'bg-green-500/10', isCoin: true },
+          { title: 'Sign Ups Today', value: signUpsToday.toLocaleString(), icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { title: 'Coins Deposited Today', value: Math.round(depositedToday), icon: BadgeDollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10', isCoin: true },
+          { title: 'Coins Spent Today', value: Math.round(spentToday), icon: Activity, color: 'text-orange-400', bg: 'bg-orange-500/10', isCoin: true }
+      ];
+  }, [dashboardUsers]);
+
+  const liveTransactions = useMemo(
+      () => dashboardTransactions.slice(0, 8),
+      [dashboardTransactions]
+  );
 
   useEffect(() => {
       if (users.length === 0) return;
@@ -2866,14 +2984,14 @@ export const AdminPanel: React.FC = () => {
             {activeTab === 'dashboard' && (
                 <>
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                        {stats.map((stat, idx) => (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+                        {dashboardStats.map((stat, idx) => (
                             <div key={idx} className="bg-[#131720] border border-gray-800 rounded-xl p-4">
                                 <div className="flex items-start justify-between mb-4">
                                     <div className={`p-2 rounded-lg ${stat.bg}`}>
                                         <stat.icon className={`w-6 h-6 ${stat.color}`} />
                                     </div>
-                                    <span className="text-xs font-bold text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded">+4.5%</span>
+                                    <span className="text-[10px] font-bold text-gray-400 bg-gray-700/40 px-1.5 py-0.5 rounded">Today</span>
                                 </div>
                                 <div className="text-2xl font-bold text-white mb-1">
                                     {stat.isCoin ? (
@@ -2896,29 +3014,32 @@ export const AdminPanel: React.FC = () => {
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <h3 className="text-lg font-bold text-white mb-6">Live Transactions</h3>
                         <div className="space-y-4">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                                <div key={i} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-2 h-2 rounded-full ${i % 2 === 0 ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                            {liveTransactions.map((entry) => (
+                                <div key={entry.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between py-2 border-b border-gray-800 last:border-0">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className={`w-2 h-2 rounded-full shrink-0 ${entry.amount > 0 ? 'bg-green-500' : 'bg-blue-500'}`}></div>
                                         <div>
                                             <div className="text-sm font-bold text-gray-200">
-                                                {i % 2 === 0 ? 'Deposit' : 'Box Opening'}
+                                                {entry.type.replace(/_/g, ' ')}
                                             </div>
-                                            <div className="text-xs text-gray-500">2 minutes ago</div>
+                                            <div className="text-xs text-gray-500">{new Date(entry.createdAt).toLocaleString()}</div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-left sm:text-right">
                                         <CoinAmount
-                                          amount={i % 2 === 0 ? 500 : -50}
+                                          amount={entry.amount}
                                           formatOptions={{ maximumFractionDigits: 0 }}
                                           showSign
-                                          className={`text-sm font-bold ${i % 2 === 0 ? 'text-green-400' : 'text-white'}`}
+                                          className={`text-sm font-bold ${entry.amount > 0 ? 'text-green-400' : 'text-white'}`}
                                           iconClassName="w-3.5 h-3.5"
                                         />
-                                        <div className="text-xs text-gray-500">User_{1000 + i}</div>
+                                        <div className="text-xs text-gray-500 truncate max-w-[180px]">{entry.userLabel}</div>
                                     </div>
                                 </div>
                             ))}
+                            {liveTransactions.length === 0 && (
+                                <div className="text-sm text-gray-400">No recent transactions yet.</div>
+                            )}
                         </div>
                     </div>
                 </>
@@ -6285,10 +6406,6 @@ export const AdminPanel: React.FC = () => {
     </div>
   );
 };
-
-const SwordsIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline><line x1="13" y1="19" x2="19" y2="13"></line><line x1="16" y1="16" x2="20" y2="20"></line><line x1="19" y1="21" x2="21" y2="19"></line><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"></polyline><line x1="5" y1="14" x2="9" y2="18"></line><line x1="7" y1="17" x2="4" y2="20"></line><line x1="3" y1="19" x2="5" y2="21"></line></svg>
-);
 
 const CoinStatIcon = () => (
     <img src={COIN_ICON} alt="Coin" className="w-6 h-6" />
