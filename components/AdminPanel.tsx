@@ -442,6 +442,13 @@ export const AdminPanel: React.FC = () => {
   const [userLocks, setUserLocks] = useState<Record<string, UserLocks>>({});
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [expandedUserIds, setExpandedUserIds] = useState<Record<string, boolean>>({});
+  const [usersQuickFilter, setUsersQuickFilter] = useState<'all' | 'locked' | 'high_risk' | 'empty_inventory' | 'high_value'>('all');
+  const [usersSort, setUsersSort] = useState<{ key: 'user' | 'created' | 'lastActive' | 'status' | 'coins' | 'inventoryValue' | 'lifetimeDeposits' | 'lifetimeSpent' | 'pendingShipments' | 'risk'; direction: 'asc' | 'desc' }>({
+      key: 'created',
+      direction: 'desc'
+  });
+  const [userInternalLabels, setUserInternalLabels] = useState<Record<string, string[]>>({});
+  const [userAdminNotes, setUserAdminNotes] = useState<Record<string, string>>({});
   const [ledgerEntries, setLedgerEntries] = useState<Record<string, LedgerEntry[]>>({});
   const [adminLogs, setAdminLogs] = useState<Record<string, AdminActionLog[]>>({});
   const [inventoryState, setInventoryState] = useState<Record<string, InventoryItem[]>>({});
@@ -451,7 +458,7 @@ export const AdminPanel: React.FC = () => {
   const [voidReason, setVoidReason] = useState('');
   const [ledgerFilter, setLedgerFilter] = useState<'all' | LedgerEntryType>('all');
   const [ledgerSearch, setLedgerSearch] = useState('');
-  const [timelineFilter, setTimelineFilter] = useState<'all' | 'ledger' | 'inventory' | 'admin'>('all');
+  const [timelineFilter, setTimelineFilter] = useState<'all' | 'ledger' | 'inventory' | 'admin' | 'shipment' | 'support'>('all');
   const [timelineSearch, setTimelineSearch] = useState('');
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
   const [rewardsDraft, setRewardsDraft] = useState(DEFAULT_REWARDS_SETTINGS);
@@ -2260,26 +2267,129 @@ export const AdminPanel: React.FC = () => {
       setVoidReason('');
   };
 
+  const toggleUsersSort = (key: 'user' | 'created' | 'lastActive' | 'status' | 'coins' | 'inventoryValue' | 'lifetimeDeposits' | 'lifetimeSpent' | 'pendingShipments' | 'risk') => {
+      setUsersSort((prev) => ({
+          key,
+          direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+      }));
+  };
+
+  const toggleInternalLabel = (userId: string, label: string) => {
+      setUserInternalLabels((prev) => {
+          const current = prev[userId] ?? [];
+          const next = current.includes(label) ? current.filter((entry) => entry !== label) : [...current, label];
+          void updateUserAdminData(userId, { internalLabels: next }); // TODO: persist when backend model formalizes internalLabels.
+          return { ...prev, [userId]: next };
+      });
+  };
+
+  const saveAdminNote = (userId: string) => {
+      const note = userAdminNotes[userId] ?? '';
+      void updateUserAdminData(userId, { adminNotes: note }); // TODO: replace with dedicated admin notes collection when available.
+  };
+
   const selectedUser = useMemo(() => users.find((profile) => profile.id === selectedUserId), [users, selectedUserId]);
   const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
+  const getUserLabels = (profile: (typeof users)[number]) => {
+      const profileLabels = (profile as unknown as { internalLabels?: string[] }).internalLabels ?? [];
+      return userInternalLabels[profile.id] ?? profileLabels;
+  };
+  const getUserMetrics = (profile: (typeof users)[number]) => {
+      const inventory = inventoryState[profile.id] ?? profile.inventory ?? [];
+      const ledger = ledgerEntries[profile.id] ?? profile.ledger ?? [];
+      const logs = adminLogs[profile.id] ?? profile.adminLogs ?? [];
+      const pendingShipmentCount = shipments.filter((shipment) => shipment.uid === profile.id && shipment.status !== 'shipped').length;
+      const supportTicketCount = supportCases.filter((caseItem) => caseItem.uid === profile.id && caseItem.status !== 'Closed').length;
+      const lifetimeDeposits = ledger.filter((entry) => entry.type === 'deposit').reduce((sum, entry) => sum + Math.max(0, entry.amount), 0);
+      const lifetimeSpent = Math.abs(ledger.filter((entry) => entry.type === 'case_open').reduce((sum, entry) => sum + Math.min(0, entry.amount), 0));
+      const lifetimeSellback = ledger.filter((entry) => entry.type === 'sell_back').reduce((sum, entry) => sum + Math.max(0, entry.amount), 0);
+      const inventoryValue = inventory.reduce((sum, item) => sum + Number(item.price ?? 0), 0);
+      const hasRapidSellback = lifetimeSellback > 0 && lifetimeSpent > 0 && lifetimeSellback / lifetimeSpent > 0.75;
+      const failedPaymentCount = logs.filter((entry) => entry.actionType.includes('payment') || entry.reason.toLowerCase().includes('payment failed')).length;
+      const chargebackCount = ledger.filter((entry) => entry.type === 'chargeback_reversal').length;
+      const excessiveAdminAdjustments = logs.filter((entry) => entry.actionType.includes('admin') || entry.reason.toLowerCase().includes('adjust')).length;
+      const accountAgeMs = Date.now() - (profile.createdAt ?? Date.now());
+      const isNewHighValue = accountAgeMs < 7 * 24 * 60 * 60 * 1000 && (lifetimeDeposits > 25000 || Number(profile.balance ?? 0) > 20000);
+      const suspiciousFlags = [chargebackCount > 0, failedPaymentCount > 1, hasRapidSellback, isNewHighValue, pendingShipmentCount > 2, excessiveAdminAdjustments > 4].filter(Boolean).length;
+      const riskScore = Math.min(100, (chargebackCount * 25) + (failedPaymentCount * 10) + (hasRapidSellback ? 20 : 0) + (isNewHighValue ? 20 : 0) + (pendingShipmentCount > 2 ? 10 : 0) + (excessiveAdminAdjustments > 4 ? 15 : 0));
+      const riskLevel = riskScore >= 60 ? 'High' : riskScore >= 25 ? 'Medium' : 'Low';
+      const lastActive = (profile as unknown as { lastActiveAt?: number }).lastActiveAt ?? ledger[0]?.createdAt ?? profile.createdAt ?? Date.now();
+      const biggestWin = inventory.reduce((best, item) => Math.max(best, Number(item.price ?? 0)), 0);
+      return {
+          inventory,
+          logs,
+          pendingShipmentCount,
+          supportTicketCount,
+          lifetimeDeposits,
+          lifetimeSpent,
+          lifetimeSellback,
+          inventoryValue,
+          hasRapidSellback,
+          failedPaymentCount,
+          chargebackCount,
+          excessiveAdminAdjustments,
+          isNewHighValue,
+          suspiciousFlags,
+          riskScore,
+          riskLevel,
+          lastActive,
+          biggestWin
+      };
+  };
+
   const filteredUsers = useMemo(() => {
-      if (!normalizedUserSearch) return users;
-      return users.filter((profile) => {
-          const searchableFields = [
-              profile.name,
-              profile.username,
-              profile.displayName,
-              profile.email,
-              profile.id,
-              String(profile.balance ?? 0),
-              String((inventoryState[profile.id] ?? profile.inventory ?? []).length)
-          ]
-              .filter(Boolean)
-              .join(' ')
-              .toLowerCase();
-          return searchableFields.includes(normalizedUserSearch);
+      const searched = normalizedUserSearch
+          ? users.filter((profile) => {
+              const metrics = getUserMetrics(profile);
+              const searchableFields = [
+                  profile.name,
+                  profile.username,
+                  profile.displayName,
+                  profile.email,
+                  profile.id,
+                  String(profile.balance ?? 0),
+                  String(metrics.inventory.length),
+                  String(metrics.riskScore),
+                  ...getUserLabels(profile)
+              ]
+                  .filter(Boolean)
+                  .join(' ')
+                  .toLowerCase();
+              return searchableFields.includes(normalizedUserSearch);
+          })
+          : users;
+
+      const quickFiltered = searched.filter((profile) => {
+          const metrics = getUserMetrics(profile);
+          const locked = Object.values(userLocks[profile.id] ?? DEFAULT_LOCKS).some(Boolean);
+          if (usersQuickFilter === 'locked') return locked;
+          if (usersQuickFilter === 'high_risk') return metrics.riskScore >= 60;
+          if (usersQuickFilter === 'empty_inventory') return metrics.inventory.length === 0;
+          if (usersQuickFilter === 'high_value') return metrics.lifetimeDeposits >= 25000 || metrics.inventoryValue >= 15000;
+          return true;
       });
-  }, [inventoryState, normalizedUserSearch, users]);
+
+      const direction = usersSort.direction === 'asc' ? 1 : -1;
+      return [...quickFiltered].sort((a, b) => {
+          const am = getUserMetrics(a);
+          const bm = getUserMetrics(b);
+          const aStatus = userStatuses[a.id] ?? 'active';
+          const bStatus = userStatuses[b.id] ?? 'active';
+          const comparisons: Record<typeof usersSort.key, number> = {
+              user: (a.name || '').localeCompare(b.name || ''),
+              created: (a.createdAt ?? 0) - (b.createdAt ?? 0),
+              lastActive: am.lastActive - bm.lastActive,
+              status: aStatus.localeCompare(bStatus),
+              coins: Number(a.balance ?? 0) - Number(b.balance ?? 0),
+              inventoryValue: am.inventoryValue - bm.inventoryValue,
+              lifetimeDeposits: am.lifetimeDeposits - bm.lifetimeDeposits,
+              lifetimeSpent: am.lifetimeSpent - bm.lifetimeSpent,
+              pendingShipments: am.pendingShipmentCount - bm.pendingShipmentCount,
+              risk: am.riskScore - bm.riskScore
+          };
+          return comparisons[usersSort.key] * direction;
+      });
+  }, [normalizedUserSearch, users, usersQuickFilter, usersSort, inventoryState, ledgerEntries, adminLogs, shipments, supportCases, userInternalLabels, userLocks, userStatuses]);
   const selectedLedgerEntries = useMemo(() => {
       if (!selectedUserId) return [];
       return normalizeLedgerEntries(ledgerEntries[selectedUserId] ?? [], selectedUser?.balance ?? 0);
@@ -2290,6 +2400,8 @@ export const AdminPanel: React.FC = () => {
   const ledgerSearchValue = ledgerSearch.trim().toLowerCase();
 
   const timelineEntries = useMemo(() => {
+      const userShipments = selectedUserId ? shipments.filter((shipment) => shipment.uid === selectedUserId) : [];
+      const userSupportCases = selectedUserId ? supportCases.filter((caseItem) => caseItem.uid === selectedUserId) : [];
       const entries = [
           ...selectedLedgerEntries.map((entry) => ({
               id: entry.id,
@@ -2316,10 +2428,26 @@ export const AdminPanel: React.FC = () => {
               description: log.reason,
               meta: `Admin: ${log.adminUid}`,
               category: 'admin' as const
+          })),
+          ...userShipments.map((shipment) => ({
+              id: `shipment-${shipment.id}`,
+              createdAt: shipment.updatedAt ?? shipment.createdAt ?? 0,
+              title: `Shipment • ${shipment.status.replace('_', ' ')}`,
+              description: `${shipment.item.name} • ${shipment.trackingNumber ?? 'Tracking pending'}`,
+              meta: `Shipment ID: ${shipment.id}`,
+              category: 'shipment' as const
+          })),
+          ...userSupportCases.map((caseItem) => ({
+              id: `support-${caseItem.id}`,
+              createdAt: toMillis(caseItem.lastUpdatedAt ?? caseItem.createdAt),
+              title: `Support • ${caseItem.status}`,
+              description: caseItem.subject,
+              meta: `Case ID: ${caseItem.id}`,
+              category: 'support' as const
           }))
       ];
       return entries.sort((a, b) => b.createdAt - a.createdAt);
-  }, [selectedAdminLogs, selectedInventory, selectedLedgerEntries]);
+  }, [selectedAdminLogs, selectedInventory, selectedLedgerEntries, selectedUserId, shipments, supportCases]);
 
   const filteredLedgerEntries = selectedLedgerEntries.filter((entry) => {
       if (ledgerFilter !== 'all' && entry.type !== ledgerFilter) return false;
@@ -3971,143 +4099,106 @@ export const AdminPanel: React.FC = () => {
             {/* TAB: USERS */}
             {activeTab === 'users' && (
                 <div className="space-y-6">
-                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-5">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-6">
+                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                             <div>
-                                <h3 className="text-lg font-bold text-white">User Directory</h3>
-                                <p className="text-sm text-gray-400">
-                                    Search every account, including profiles with zero coins and empty inventory.
-                                </p>
+                                <h2 className="text-xl font-bold text-white">User Operations</h2>
+                                <p className="text-sm text-gray-400">Live user monitoring center for moderation, finance, inventory, shipments, and support workflows.</p>
                             </div>
-                            <div className="w-full lg:max-w-md">
+                            <div className="flex w-full flex-col gap-3 md:flex-row xl:w-auto">
                                 <Input
                                     type="text"
                                     value={userSearchQuery}
                                     onChange={(event) => setUserSearchQuery(event.target.value)}
-                                    placeholder="Search by name, email, UID, balance, or inventory count"
-                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                    placeholder="Search users, UID, email, labels, risk, balances"
+                                    className="w-full md:w-96 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
                                 />
+                                <button type="button" className="rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-xs font-semibold text-gray-300">Export</button>
                             </div>
                         </div>
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                            <span className="rounded-full bg-[#0b0e14] px-3 py-1 text-gray-400">
-                                Showing <span className="font-semibold text-gray-200">{filteredUsers.length}</span> of <span className="font-semibold text-gray-200">{users.length}</span> users
-                            </span>
-                            <span className="rounded-full bg-[#0b0e14] px-3 py-1 text-gray-400">
-                                Empty inventory accounts: <span className="font-semibold text-gray-200">{users.filter((profile) => (inventoryState[profile.id] ?? profile.inventory ?? []).length === 0).length}</span>
-                            </span>
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                            {[
+                                { key: 'all', label: 'All Users' },
+                                { key: 'high_risk', label: 'High Risk' },
+                                { key: 'locked', label: 'Any Lock' },
+                                { key: 'empty_inventory', label: 'Empty Inventory' },
+                                { key: 'high_value', label: 'High Value' }
+                            ].map((chip) => (
+                                <button
+                                    key={chip.key}
+                                    type="button"
+                                    onClick={() => setUsersQuickFilter(chip.key as typeof usersQuickFilter)}
+                                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${usersQuickFilter === chip.key ? 'bg-blue-500/20 text-blue-300 border border-blue-400/40' : 'bg-[#0b0e14] text-gray-400 border border-gray-700 hover:text-gray-200'}`}
+                                >
+                                    {chip.label}
+                                </button>
+                            ))}
+                            <span className="ml-auto rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">Live • synced</span>
                         </div>
                     </div>
 
-                    <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
-                        <div className="hidden md:block overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-[#0b0e14] text-gray-400 font-medium border-b border-gray-800">
+                    <div className="overflow-hidden rounded-2xl border border-gray-800 bg-[#131720]">
+                        <div className="max-h-[420px] overflow-auto">
+                            <table className="hidden min-w-[1400px] w-full text-left text-xs md:table">
+                                <thead className="sticky top-0 z-10 border-b border-gray-800 bg-[#0b0e14] text-gray-400">
                                     <tr>
-                                        <th className="px-6 py-4">User</th>
-                                        <th className="px-6 py-4">Coins</th>
-                                        <th className="px-6 py-4">Inventory</th>
-                                        <th className="px-6 py-4">Level</th>
-                                        <th className="px-6 py-4">XP</th>
-                                        <th className="px-6 py-4">Status</th>
-                                        <th className="px-6 py-4 text-right">Actions</th>
+                                        {[
+                                            ['User', 'user'], ['Email', 'user'], ['UID', 'user'], ['Created', 'created'], ['Last Active', 'lastActive'], ['Status', 'status'], ['Coins', 'coins'], ['Inventory Value', 'inventoryValue'], ['Lifetime Deposits', 'lifetimeDeposits'], ['Lifetime Spent', 'lifetimeSpent'], ['Pending Shipments', 'pendingShipments'], ['Risk Score', 'risk'], ['Internal Labels', 'user'], ['Actions', 'user']
+                                        ].map(([label, key]) => (
+                                            <th key={label} className="px-3 py-3 font-semibold">
+                                                <button type="button" onClick={() => toggleUsersSort(key as typeof usersSort.key)} className="inline-flex items-center gap-1 text-left hover:text-white">
+                                                    {label}
+                                                    {usersSort.key === key && <span>{usersSort.direction === 'desc' ? '↓' : '↑'}</span>}
+                                                </button>
+                                            </th>
+                                        ))}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-800">
                                     {filteredUsers.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-6 py-6 text-center text-gray-500">
-                                                {users.length === 0 ? 'No users found in Firebase.' : 'No users match your search.'}
-                                            </td>
+                                            <td colSpan={14} className="px-6 py-10 text-center text-gray-500">{users.length === 0 ? 'No users found in Firebase.' : 'No users match your search or filters.'}</td>
                                         </tr>
                                     ) : (
                                         filteredUsers.map((profile) => {
-                                            const isEditing = editingUserId === profile.id;
-                                            const progress = calculateLevelProgress(isEditing ? userXpInput : (profile.xp || 0));
+                                            const metrics = getUserMetrics(profile);
                                             const status = userStatuses[profile.id] ?? 'active';
-                                            const inventoryCount = (inventoryState[profile.id] ?? profile.inventory ?? []).length;
+                                            const labels = getUserLabels(profile);
+                                            const locked = Object.values(userLocks[profile.id] ?? DEFAULT_LOCKS).some(Boolean);
+                                            const isSelected = selectedUserId === profile.id;
                                             return (
-                                                <tr key={profile.id} className="hover:bg-[#1a2130] transition-colors">
-                                                    <td className="px-6 py-4 flex items-center gap-3">
-                                                        <img src={profile.avatar} alt={`${profile.name} avatar`} className="w-8 h-8 rounded-full" />
-                                                        <div className="min-w-0">
-                                                            <div className="font-bold text-white truncate">{profile.name}</div>
-                                                            <div className="text-xs text-gray-500 truncate">{profile.email || profile.id}</div>
+                                                <tr
+                                                    key={profile.id}
+                                                    onClick={() => setSelectedUserId(profile.id)}
+                                                    className={`cursor-pointer transition-colors hover:bg-[#182033] ${isSelected ? 'bg-blue-500/10' : ''}`}
+                                                >
+                                                    <td className="px-3 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <img src={profile.avatar} alt={profile.name} className="h-8 w-8 rounded-full" />
+                                                            <div>
+                                                                <div className="font-semibold text-white">{profile.displayName || profile.name}</div>
+                                                                <div className="text-[11px] text-gray-500">@{profile.username || 'unknown'}</div>
+                                                            </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-gray-300">{Math.round(profile.balance ?? 0).toLocaleString()}</td>
-                                                    <td className="px-6 py-4 text-gray-300">{inventoryCount}</td>
-                                                    <td className="px-6 py-4 text-gray-400">XP {(profile.xpBalance ?? profile.xp ?? 0).toLocaleString()}</td>
-                                                    <td className="px-6 py-4 text-gray-400">
-                                                        {isEditing ? (
-                                                            <div className="space-y-1">
-                                                                <Input
-                                                                    type="number"
-                                                                    value={userXpInput}
-                                                                    onChange={(e) => setUserXpInput(Number(e.target.value))}
-                                                                    className="w-32 bg-[#0b0e14] border border-gray-700 rounded px-3 py-1.5 text-white text-sm"
-                                                                />
-                                                                <div className="text-[11px] text-gray-500">XP after save: {Math.max(0, Math.floor(userXpInput)).toLocaleString()}</div>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-gray-300">{profile.xp ?? 0}</span>
-                                                        )}
+                                                    <td className="px-3 py-3 text-gray-300">{profile.email || '—'}</td>
+                                                    <td className="px-3 py-3 text-gray-500">{profile.id.slice(0, 10)}...</td>
+                                                    <td className="px-3 py-3 text-gray-300">{profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : '—'}</td>
+                                                    <td className="px-3 py-3 text-gray-300">{new Date(metrics.lastActive).toLocaleDateString()}</td>
+                                                    <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 font-bold ${status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : status === 'suspended' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-red-500/10 text-red-300'}`}>{status}</span></td>
+                                                    <td className="px-3 py-3 text-gray-200">{Math.round(profile.balance ?? 0).toLocaleString()}</td>
+                                                    <td className="px-3 py-3 text-gray-300">{Math.round(metrics.inventoryValue).toLocaleString()}</td>
+                                                    <td className="px-3 py-3 text-gray-300">{Math.round(metrics.lifetimeDeposits).toLocaleString()}</td>
+                                                    <td className="px-3 py-3 text-gray-300">{Math.round(metrics.lifetimeSpent).toLocaleString()}</td>
+                                                    <td className="px-3 py-3 text-gray-300">{metrics.pendingShipmentCount}</td>
+                                                    <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{metrics.riskScore}</span></td>
+                                                    <td className="px-3 py-3">
+                                                        <div className="flex flex-wrap gap-1">{labels.length ? labels.slice(0, 2).map((label) => <span key={label} className="rounded-full bg-indigo-500/15 px-2 py-1 text-[10px] text-indigo-300">{label}</span>) : <span className="text-gray-500">—</span>}</div>
                                                     </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                                            status === 'active'
-                                                                ? 'bg-green-500/10 text-green-500'
-                                                                : status === 'suspended'
-                                                                    ? 'bg-yellow-500/10 text-yellow-400'
-                                                                    : 'bg-red-500/10 text-red-400'
-                                                        }`}>
-                                                            {status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex justify-end gap-3">
-                                                            {isEditing ? (
-                                                                <>
-                                                                    <button
-                                                                        onClick={() => saveUserProgress(profile.id)}
-                                                                        disabled={isSavingUser}
-                                                                        className="text-green-400 hover:text-green-300 font-bold text-xs disabled:opacity-50"
-                                                                    >
-                                                                        {isSavingUser ? 'Saving...' : 'Save'}
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={cancelEditUser}
-                                                                        className="text-gray-400 hover:text-gray-300 font-bold text-xs"
-                                                                    >
-                                                                        Cancel
-                                                                    </button>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <button
-                                                                        className="text-blue-400 hover:text-blue-300 font-bold text-xs"
-                                                                        onClick={() => startEditUser(profile.id, profile.xp || 0)}
-                                                                    >
-                                                                        Edit XP
-                                                                    </button>
-                                                                    <button
-                                                                        className="text-purple-400 hover:text-purple-300 font-bold text-xs"
-                                                                        onClick={() => {
-                                                                            setSelectedUserId(profile.id);
-                                                                            setExpandedUserIds((prev) => ({ ...prev, [profile.id]: true }));
-                                                                        }}
-                                                                    >
-                                                                        View
-                                                                    </button>
-                                                                    <button
-                                                                        className="text-red-400 hover:text-red-300 font-bold text-xs disabled:opacity-50"
-                                                                        onClick={() => handleDeleteUser(profile.id)}
-                                                                        disabled={deletingUserId === profile.id}
-                                                                    >
-                                                                        {deletingUserId === profile.id ? 'Deleting...' : 'Delete'}
-                                                                    </button>
-                                                                </>
-                                                            )}
+                                                    <td className="px-3 py-3">
+                                                        <div className="flex items-center gap-2 text-[11px]">
+                                                            {locked && <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-red-300">Locked</span>}
+                                                            <button type="button" className="text-blue-300" onClick={(event) => { event.stopPropagation(); setSelectedUserId(profile.id); }}>Inspect</button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -4116,580 +4207,206 @@ export const AdminPanel: React.FC = () => {
                                     )}
                                 </tbody>
                             </table>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
-                            {filteredUsers.length === 0 ? (
-                                <div className="px-6 py-6 text-center text-gray-500">
-                                    {users.length === 0 ? 'No users found in Firebase.' : 'No users match your search.'}
-                                </div>
-                            ) : (
-                                filteredUsers.map((profile) => {
-                                    const status = userStatuses[profile.id] ?? 'active';
-                                    const isEditing = editingUserId === profile.id;
-                                    const inventoryCount = (inventoryState[profile.id] ?? profile.inventory ?? []).length;
-                                    const isExpanded = expandedUserIds[profile.id] || selectedUserId === profile.id;
+                            <div className="space-y-3 p-3 md:hidden">
+                                {filteredUsers.map((profile) => {
+                                    const metrics = getUserMetrics(profile);
                                     return (
-                                        <div key={profile.id} className="bg-[#0b0e14] border border-gray-800 rounded-xl p-4 space-y-3">
-                                            <div className="flex items-center gap-3">
-                                                <img src={profile.avatar} alt={`${profile.name} avatar`} className="w-10 h-10 rounded-full" />
-                                                <div className="flex-1">
-                                                    <div className="text-white font-bold">{profile.name}</div>
-                                                    <div className="text-xs text-gray-400 truncate">{profile.email || profile.id}</div>
+                                        <button type="button" key={profile.id} onClick={() => setSelectedUserId(profile.id)} className={`w-full rounded-xl border p-3 text-left ${selectedUserId === profile.id ? 'border-blue-500/50 bg-blue-500/10' : 'border-gray-800 bg-[#0b0e14]'}`}>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <div className="text-sm font-semibold text-white">{profile.name}</div>
+                                                    <div className="text-xs text-gray-500">{profile.email || profile.id}</div>
                                                 </div>
-                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
-                                                    status === 'active'
-                                                        ? 'bg-green-500/10 text-green-500'
-                                                        : status === 'suspended'
-                                                            ? 'bg-yellow-500/10 text-yellow-400'
-                                                            : 'bg-red-500/10 text-red-400'
-                                                }`}>
-                                                    {status}
-                                                </span>
+                                                <span className="rounded-full bg-[#131720] px-2 py-1 text-xs text-gray-300">Risk {metrics.riskScore}</span>
                                             </div>
-                                            <div className="text-xs text-gray-400">
-                                                <div className="flex flex-wrap gap-x-3 gap-y-1">
-                                                    <span>XP: <span className="text-gray-200">{profile.xp ?? 0}</span></span>
-                                                    <span>Coins: <span className="text-gray-200">{Math.round(profile.balance ?? 0).toLocaleString()}</span></span>
-                                                    <span>Inventory: <span className="text-gray-200">{inventoryCount}</span></span>
-                                                </div>
-                                            </div>
-                                            {isEditing && (
-                                                <div className="space-y-2">
-                                                    <Input
-                                                        type="number"
-                                                        value={userXpInput}
-                                                        onChange={(e) => setUserXpInput(Number(e.target.value))}
-                                                        className="w-full bg-[#131720] border border-gray-700 rounded px-3 py-2 text-white text-sm"
-                                                    />
-                                                    <div className="flex gap-3">
-                                                        <button
-                                                            onClick={() => saveUserProgress(profile.id)}
-                                                            disabled={isSavingUser}
-                                                            className="text-green-400 text-xs font-bold disabled:opacity-50"
-                                                        >
-                                                            {isSavingUser ? 'Saving...' : 'Save'}
-                                                        </button>
-                                                        <button
-                                                            onClick={cancelEditUser}
-                                                            className="text-gray-400 text-xs font-bold"
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {!isEditing && (
-                                                <div className="flex flex-wrap gap-2">
-                                                    <button
-                                                        className="px-3 py-1.5 rounded-lg bg-blue-600/20 text-blue-300 text-xs font-semibold"
-                                                        onClick={() => startEditUser(profile.id, profile.xp || 0)}
-                                                    >
-                                                        Edit XP
-                                                    </button>
-                                                    <button
-                                                        className="px-3 py-1.5 rounded-lg bg-purple-600/20 text-purple-300 text-xs font-semibold"
-                                                        onClick={() => {
-                                                            setSelectedUserId(profile.id);
-                                                            setExpandedUserIds((prev) => ({ ...prev, [profile.id]: true }));
-                                                        }}
-                                                    >
-                                                        View
-                                                    </button>
-                                                    <button
-                                                        className="px-3 py-1.5 rounded-lg bg-slate-700/40 text-slate-200 text-xs font-semibold"
-                                                        onClick={() => setExpandedUserIds((prev) => ({ ...prev, [profile.id]: !prev[profile.id] }))}
-                                                    >
-                                                        {isExpanded ? 'Hide Details' : 'Quick Details'}
-                                                    </button>
-                                                    <button
-                                                        className="px-3 py-1.5 rounded-lg bg-red-600/20 text-red-300 text-xs font-semibold disabled:opacity-50"
-                                                        onClick={() => handleDeleteUser(profile.id)}
-                                                        disabled={deletingUserId === profile.id}
-                                                    >
-                                                        {deletingUserId === profile.id ? 'Deleting...' : 'Delete'}
-                                                    </button>
-                                                </div>
-                                            )}
-                                            {isExpanded && (
-                                                <div className="rounded-xl border border-gray-800 bg-[#131720] p-3 text-xs text-gray-300">
-                                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                                        <div><span className="text-gray-500">UID:</span> <span className="break-all">{profile.id}</span></div>
-                                                        <div><span className="text-gray-500">Username:</span> {profile.username || '—'}</div>
-                                                        <div><span className="text-gray-500">Display name:</span> {profile.displayName || '—'}</div>
-                                                        <div><span className="text-gray-500">Created:</span> {profile.createdAt ? new Date(profile.createdAt).toLocaleString() : 'Unknown'}</div>
-                                                        <div><span className="text-gray-500">Provider:</span> {profile.provider || 'Unknown'}</div>
-                                                        <div><span className="text-gray-500">Status:</span> {status}</div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                        </button>
                                     );
-                                })
-                            )}
+                                })}
+                            </div>
                         </div>
                     </div>
 
                     {selectedUser ? (
-                        <div className="space-y-6">
-                            <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                    <div className="flex items-center gap-4">
-                                        <img src={selectedUser.avatar} alt={`${selectedUser.name} avatar`} className="w-12 h-12 rounded-full" />
-                                        <div>
-                                            <div className="text-white text-lg font-bold">{selectedUser.name}</div>
-                                            <div className="text-xs text-gray-400">{selectedUser.email || 'No email on file'}</div>
-                                        </div>
+                        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+                            <div className="space-y-6">
+                                <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <h3 className="text-sm font-bold uppercase tracking-wide text-gray-300">Unified Timeline</h3>
+                                        <span className="text-xs text-gray-500">{filteredTimelineEntries.length} events</span>
                                     </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        <span className="px-3 py-1 rounded-full bg-[#0b0e14] text-xs text-gray-400 inline-flex items-center gap-2">
-                                            Coins:
-                                            <CoinAmount
-                                              amount={selectedUser.balance ?? 0}
-                                              formatOptions={{ maximumFractionDigits: 0 }}
-                                              className="text-green-400 font-semibold"
-                                              iconClassName="w-3 h-3"
-                                            />
-                                        </span>
-                                        <span className="px-3 py-1 rounded-full bg-[#0b0e14] text-xs text-gray-400">
-                                            Inventory: <span className="text-gray-200 font-semibold">{selectedInventory.length}</span>
-                                        </span>
-                                        <span className="px-3 py-1 rounded-full bg-[#0b0e14] text-xs text-gray-400">
-                                            Ledger entries: <span className="text-gray-200 font-semibold">{selectedLedgerEntries.length}</span>
-                                        </span>
+                                    <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+                                        <Select value={timelineFilter} onChange={(event) => setTimelineFilter(event.target.value as typeof timelineFilter)} className="w-full sm:w-48 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
+                                            <option value="all">All types</option><option value="ledger">Ledger</option><option value="inventory">Inventory</option><option value="admin">Admin</option><option value="shipment">Shipment</option><option value="support">Support</option>
+                                        </Select>
+                                        <Input type="text" value={timelineSearch} onChange={(event) => setTimelineSearch(event.target.value)} placeholder="Search timeline" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
                                     </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        <button
-                                            onClick={startBalanceEdit}
-                                            className="px-3 py-2 rounded-lg bg-green-500/10 text-green-300 text-xs font-semibold"
-                                        >
-                                            Edit Balance
-                                        </button>
-                                        <button
-                                            onClick={() => setIsEditingInventory((prev) => !prev)}
-                                            className="px-3 py-2 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-semibold"
-                                        >
-                                            {isEditingInventory ? 'Done Editing Inventory' : 'Edit Inventory'}
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteUser(selectedUser.id)}
-                                            disabled={deletingUserId === selectedUser.id}
-                                            className="px-3 py-2 rounded-lg bg-red-500/10 text-red-300 text-xs font-semibold disabled:opacity-50"
-                                        >
-                                            {deletingUserId === selectedUser.id ? 'Deleting...' : 'Delete User'}
-                                        </button>
+                                    <div className="space-y-3">
+                                        {filteredTimelineEntries.length === 0 ? <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3 text-sm text-gray-500">No timeline events available.</div> : filteredTimelineEntries.slice(0, 30).map((entry) => (
+                                            <div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="rounded-full bg-[#131720] px-2 py-1 text-[10px] font-semibold uppercase text-gray-300">{entry.category}</span>
+                                                    <span className="text-[11px] text-gray-500">{formatTimestamp(entry.createdAt)}</span>
+                                                </div>
+                                                <div className="mt-1 text-sm font-semibold text-gray-100">{entry.title}</div>
+                                                <div className="text-xs text-gray-400">{entry.description}</div>
+                                                {entry.meta && <div className="text-[11px] text-gray-500">{entry.meta}</div>}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
-                                {isEditingBalance && (
-                                    <div className="mt-4 bg-[#0b0e14] border border-gray-800 rounded-lg p-4 flex flex-col sm:flex-row gap-3 sm:items-center">
-                                        <div className="flex-1">
-                                            <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Set Coin Balance</label>
-                                            <Input
-                                                type="number"
-                                                value={balanceDraft}
-                                                onChange={(event) => setBalanceDraft(event.target.value)}
-                                                className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                            />
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={saveBalanceEdit}
-                                                className="px-3 py-2 rounded-lg bg-green-500/20 text-green-300 text-xs font-semibold"
-                                            >
-                                                Save Balance
-                                            </button>
-                                            <button
-                                                onClick={cancelBalanceEdit}
-                                                className="px-3 py-2 rounded-lg bg-gray-700/40 text-gray-200 text-xs font-semibold"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
 
-                            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                                <div className="space-y-6">
-                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <UserCog className="w-4 h-4 text-blue-400" />
-                                            <h3 className="text-sm font-bold text-white">Status & Locks</h3>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Account Status</label>
-                                                <Select
-                                                    value={userStatuses[selectedUser.id] ?? 'active'}
-                                                    onChange={(event) => handleStatusChange(selectedUser.id, event.target.value as UserStatus)}
-                                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                                >
-                                                    <option value="active">Active</option>
-                                                    <option value="suspended">Suspended</option>
-                                                    <option value="banned">Banned</option>
-                                                </Select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Risk Locks</label>
-                                                <div className="space-y-2">
-                                                    {Object.entries(LOCK_LABELS).map(([key, label]) => {
-                                                        const isLocked = userLocks[selectedUser.id]?.[key as keyof UserLocks];
-                                                        return (
-                                                            <button
-                                                                key={key}
-                                                                onClick={() => handleLockToggle(selectedUser.id, key as keyof UserLocks)}
-                                                                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-sm ${
-                                                                    isLocked
-                                                                        ? 'bg-red-500/10 border-red-500/40 text-red-300'
-                                                                        : 'bg-[#0b0e14] border-gray-700 text-gray-300'
-                                                                }`}
-                                                            >
-                                                                <span>{label}</span>
-                                                                {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                                                            </button>
-                                                        );
-                                                    })}
+                            <div className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+                                {(() => {
+                                    const metrics = getUserMetrics(selectedUser);
+                                    const labels = getUserLabels(selectedUser);
+                                    const status = userStatuses[selectedUser.id] ?? 'active';
+                                    const editableXp = editingUserId === selectedUser.id;
+                                    return (
+                                        <>
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5">
+                                                <div className="flex items-start gap-3">
+                                                    <img src={selectedUser.avatar} alt={selectedUser.name} className="h-12 w-12 rounded-full" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="text-lg font-bold text-white">{selectedUser.displayName || selectedUser.name}</div>
+                                                        <div className="text-xs text-gray-400">@{selectedUser.username || 'unknown'} • {selectedUser.email || 'No email'}</div>
+                                                        <div className="mt-2 text-xs text-gray-500">UID: {selectedUser.id}</div>
+                                                        <div className="text-xs text-gray-500">Created: {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleString() : 'Unknown'} • Last active: {new Date(metrics.lastActive).toLocaleString()}</div>
+                                                        <div className="text-xs text-gray-500">Provider: {selectedUser.provider || 'Unknown'}</div>
+                                                        <div className="mt-2 flex flex-wrap gap-2">
+                                                            <span className={`rounded-full px-2 py-1 text-xs font-bold ${status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : status === 'suspended' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-red-500/10 text-red-300'}`}>{status}</span>
+                                                            <span className={`rounded-full px-2 py-1 text-xs font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>Risk {metrics.riskScore}</span>
+                                                            {labels.map((label) => <span key={label} className="rounded-full bg-indigo-500/15 px-2 py-1 text-xs text-indigo-300">{label}</span>)}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
 
-                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <ShieldCheck className="w-4 h-4 text-green-400" />
-                                            <h3 className="text-sm font-bold text-white">Fix Tools</h3>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <label className="block text-[10px] uppercase text-gray-500 font-bold">Reversal Entry</label>
-                                                <Input
-                                                    type="number"
-                                                    value={reversalAmount}
-                                                    onChange={(event) => setReversalAmount(event.target.value)}
-                                                    placeholder="Amount to reverse"
-                                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                                />
-                                                <Textarea
-                                                    value={reversalReason}
-                                                    onChange={(event) => setReversalReason(event.target.value)}
-                                                    rows={2}
-                                                    placeholder="Reason for reversal"
-                                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                                />
-                                                <button
-                                                    onClick={handleCreateReversal}
-                                                    disabled={!reversalAmount || !reversalReason.trim()}
-                                                    className="w-full px-3 py-2 rounded-lg bg-red-500/20 text-red-300 text-xs font-bold uppercase disabled:opacity-50"
-                                                >
-                                                    Create Reversal Entry
-                                                </button>
-                                            </div>
-                                            <div className="border-t border-gray-800 pt-4 space-y-2">
-                                                <label className="block text-[10px] uppercase text-gray-500 font-bold">Void Box Open</label>
-                                                <Input
-                                                    type="text"
-                                                    value={voidSourceId}
-                                                    onChange={(event) => setVoidSourceId(event.target.value)}
-                                                    placeholder="Box open ID"
-                                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                                />
-                                                <Textarea
-                                                    value={voidReason}
-                                                    onChange={(event) => setVoidReason(event.target.value)}
-                                                    rows={2}
-                                                    placeholder="Void reason"
-                                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                                />
-                                                <button
-                                                    onClick={handleVoidOpen}
-                                                    disabled={!voidSourceId.trim()}
-                                                    className="w-full px-3 py-2 rounded-lg bg-yellow-500/20 text-yellow-300 text-xs font-bold uppercase disabled:opacity-50"
-                                                >
-                                                    Void Open & Compensate
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="xl:col-span-2 space-y-6">
-                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
-                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                                            <div className="flex items-center gap-2">
-                                                <ScrollText className="w-4 h-4 text-purple-400" />
-                                                <h3 className="text-sm font-bold text-white">Immutable Coin Ledger</h3>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2 text-[11px]">
-                                                <span className="px-2 py-1 rounded-full bg-[#0b0e14] text-gray-400">
-                                                    Entries: <span className="text-gray-200 font-semibold">{selectedLedgerEntries.length}</span>
-                                                </span>
-                                                <span className="px-2 py-1 rounded-full bg-[#0b0e14] text-gray-400">
-                                                    Net:{' '}
-                                                    <CoinAmount
-                                                      amount={ledgerNetChange}
-                                                      formatOptions={{ maximumFractionDigits: 0 }}
-                                                      showSign
-                                                      className={ledgerNetChange >= 0 ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}
-                                                      iconClassName="w-3.5 h-3.5"
-                                                    />
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col md:flex-row gap-3 mb-4">
-                                            <Select
-                                                value={ledgerFilter}
-                                                onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)}
-                                                className="w-full md:w-48 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                            >
-                                                <option value="all">All entry types</option>
-                                                <option value="deposit">Deposit</option>
-                                                <option value="case_open">Box open</option>
-                                                <option value="sell_back">Sell back</option>
-                                                <option value="bonus">Bonus</option>
-                                                <option value="admin_adjustment">Admin adjustment</option>
-                                                <option value="chargeback_reversal">Chargeback reversal</option>
-                                                <option value="reversal">Reversal</option>
-                                            </Select>
-                                            <Input
-                                                type="text"
-                                                value={ledgerSearch}
-                                                onChange={(event) => setLedgerSearch(event.target.value)}
-                                                placeholder="Search memo or source ID"
-                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                            />
-                                        </div>
-                                        <div className="space-y-3">
-                                            {filteredLedgerEntries.length === 0 ? (
-                                                <div className="text-sm text-gray-500">No ledger entries yet.</div>
-                                            ) : (
-                                                filteredLedgerEntries.map((entry) => (
-                                                    <div key={entry.id} className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                                        <div>
-                                                            <div className="text-xs text-gray-400 uppercase">{entry.type.replace('_', ' ')}</div>
-                                                            <div className="text-sm text-gray-200 font-semibold">{entry.memo || 'Balance update'}</div>
-                                                            <div className="text-[11px] text-gray-500">
-                                                                {entry.sourceId || 'Manual entry'} • {formatTimestamp(entry.createdAt)}
-                                                                {entry.balanceAfter !== undefined && (
-                                                                    <span className="text-gray-400 inline-flex items-center gap-1">
-                                                                      • Balance
-                                                                      <CoinAmount
-                                                                        amount={entry.balanceAfter}
-                                                                        formatOptions={{ maximumFractionDigits: 0 }}
-                                                                        className="text-gray-400 font-semibold"
-                                                                        iconClassName="w-3 h-3"
-                                                                      />
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <CoinAmount
-                                                          amount={entry.amount}
-                                                          formatOptions={{ maximumFractionDigits: 0 }}
-                                                          showSign
-                                                          className={`text-sm font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}
-                                                          iconClassName="w-3.5 h-3.5"
-                                                        />
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {[
+                                                    ['Current Balance', `${Math.round(selectedUser.balance ?? 0).toLocaleString()} coins`],
+                                                    ['Lifetime Deposits', Math.round(metrics.lifetimeDeposits).toLocaleString()],
+                                                    ['Lifetime Spent', Math.round(metrics.lifetimeSpent).toLocaleString()],
+                                                    ['Lifetime Sellback', Math.round(metrics.lifetimeSellback).toLocaleString()],
+                                                    ['Inventory Count', metrics.inventory.length.toString()],
+                                                    ['Inventory Value', Math.round(metrics.inventoryValue).toLocaleString()],
+                                                    ['Pending Shipments', metrics.pendingShipmentCount.toString()],
+                                                    ['Support Tickets', metrics.supportTicketCount.toString()],
+                                                    ['Biggest Win', Math.round(metrics.biggestWin).toLocaleString()],
+                                                    ['Last Box Opened', selectedLedgerEntries.find((entry) => entry.type === 'case_open')?.sourceId ?? '—']
+                                                ].map(([label, value]) => (
+                                                    <div key={label} className="rounded-xl border border-gray-800 bg-[#131720] p-3">
+                                                        <div className="text-[10px] uppercase text-gray-500">{label}</div>
+                                                        <div className="mt-1 text-sm font-semibold text-gray-100">{value}</div>
                                                     </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <Package className="w-4 h-4 text-blue-400" />
-                                            <h3 className="text-sm font-bold text-white">Inventory Locks & Provenance</h3>
-                                        </div>
-                                        {isEditingInventory && (
-                                            <div className="mb-4 bg-[#0b0e14] border border-gray-800 rounded-lg p-4 space-y-3">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    <div>
-                                                        <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Item name</label>
-                                                        <Input
-                                                            type="text"
-                                                            value={inventoryDraft.name}
-                                                            onChange={(event) => setInventoryDraft((prev) => ({ ...prev, name: event.target.value }))}
-                                                            className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Value</label>
-                                                        <Input
-                                                            type="number"
-                                                            value={inventoryDraft.price}
-                                                            onChange={(event) => setInventoryDraft((prev) => ({ ...prev, price: event.target.value }))}
-                                                            className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Image URL</label>
-                                                        <Input
-                                                            type="text"
-                                                            value={inventoryDraft.image}
-                                                            onChange={(event) => setInventoryDraft((prev) => ({ ...prev, image: event.target.value }))}
-                                                            className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Rarity</label>
-                                                        <Select
-                                                            value={inventoryDraft.rarity}
-                                                            onChange={(event) => setInventoryDraft((prev) => ({ ...prev, rarity: event.target.value }))}
-                                                            className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                                        >
-                                                            {rarityColorOptions.map((option) => (
-                                                                <option key={option.value} value={option.value}>{option.label}</option>
-                                                            ))}
-                                                        </Select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] uppercase text-gray-500 font-bold mb-2">Status</label>
-                                                        <Select
-                                                            value={inventoryDraft.status}
-                                                            onChange={(event) => setInventoryDraft((prev) => ({ ...prev, status: event.target.value }))}
-                                                            className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                                        >
-                                                            <option value="available">Available</option>
-                                                            <option value="shipping_requested">Shipping requested</option>
-                                                            <option value="shipping">Shipping</option>
-                                                            <option value="shipped">Shipped</option>
-                                                        </Select>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={handleAddInventoryItem}
-                                                    className="w-full sm:w-auto px-3 py-2 rounded-lg bg-blue-500/20 text-blue-300 text-xs font-semibold"
-                                                >
-                                                    Add inventory item
-                                                </button>
-                                            </div>
-                                        )}
-                                        <div className="space-y-3">
-                                            {selectedInventory.length === 0 ? (
-                                                <div className="text-sm text-gray-500">No inventory items available.</div>
-                                            ) : (
-                                                selectedInventory.map((item) => (
-                                                    <div key={item.instanceId} className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                                                        <div className="flex items-start gap-3">
-                                                            <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg bg-[#131720] object-contain" />
-                                                            <div>
-                                                                <div className="text-sm text-white font-semibold">{item.name}</div>
-                                                                <div className="text-xs text-gray-500">
-                                                                    {item.provenance ? `From ${item.provenance.sourceType} (${item.provenance.sourceId})` : 'Provenance unknown'}
-                                                                </div>
-                                                                <div className="text-[10px] text-gray-500 mt-1">Status: {item.status}</div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex flex-col sm:flex-row gap-2">
-                                                            <button
-                                                                onClick={() => handleInventoryLockToggle(selectedUser.id, item.instanceId)}
-                                                                className={`px-3 py-2 rounded-lg text-xs font-bold uppercase ${
-                                                                    item.locked
-                                                                        ? 'bg-red-500/20 text-red-300'
-                                                                        : 'bg-[#131720] text-gray-300 border border-gray-700'
-                                                                }`}
-                                                            >
-                                                                {item.locked ? 'Unlock' : 'Lock'}
-                                                            </button>
-                                                            {isEditingInventory && (
-                                                                <button
-                                                                    onClick={() => handleRemoveInventoryItem(selectedUser.id, item.instanceId)}
-                                                                    className="px-3 py-2 rounded-lg text-xs font-bold uppercase bg-red-500/20 text-red-300"
-                                                                >
-                                                                    Remove
-                                                                </button>
-                                                            )}
-                                                            <div className="text-[10px] text-gray-500">
-                                                                {(item.history ?? []).slice(0, 2).map((history) => (
-                                                                    <div key={history.id}>
-                                                                        {history.action.replace('_', ' ')} • {formatTimestamp(history.createdAt)}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <ShieldAlert className="w-4 h-4 text-red-400" />
-                                            <h3 className="text-sm font-bold text-white">Admin Action Log</h3>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {selectedAdminLogs.length === 0 ? (
-                                                <div className="text-sm text-gray-500">No admin actions recorded.</div>
-                                            ) : (
-                                                selectedAdminLogs.map((log) => (
-                                                    <div key={log.id} className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3">
-                                                        <div className="text-xs text-gray-400 uppercase">{log.actionType.replace('_', ' ')}</div>
-                                                        <div className="text-sm text-gray-200 font-semibold">{log.reason}</div>
-                                                        <div className="text-[11px] text-gray-500">Admin {log.adminUid} • {formatTimestamp(log.createdAt)}</div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-5">
-                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                                            <div className="flex items-center gap-2">
-                                                <Activity className="w-4 h-4 text-green-400" />
-                                                <h3 className="text-sm font-bold text-white">Unified User Timeline</h3>
-                                            </div>
-                                            <div className="text-[11px] text-gray-500">
-                                                Showing <span className="text-gray-200 font-semibold">{Math.min(filteredTimelineEntries.length, 15)}</span> of <span className="text-gray-200 font-semibold">{filteredTimelineEntries.length}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col md:flex-row gap-3 mb-4">
-                                            <div className="flex flex-wrap gap-2">
-                                                {(['all', 'ledger', 'inventory', 'admin'] as const).map((filter) => (
-                                                    <button
-                                                        key={filter}
-                                                        onClick={() => setTimelineFilter(filter)}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-colors ${
-                                                            timelineFilter === filter
-                                                                ? 'bg-green-500/20 text-green-300'
-                                                                : 'bg-[#0b0e14] text-gray-400 hover:text-white hover:bg-gray-800'
-                                                        }`}
-                                                    >
-                                                        {filter === 'all' ? 'All' : filter}
-                                                    </button>
                                                 ))}
                                             </div>
-                                            <Input
-                                                type="text"
-                                                value={timelineSearch}
-                                                onChange={(event) => setTimelineSearch(event.target.value)}
-                                                placeholder="Search timeline details"
-                                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                            />
-                                        </div>
-                                        <div className="space-y-3">
-                                            {filteredTimelineEntries.length === 0 ? (
-                                                <div className="text-sm text-gray-500">No timeline events available.</div>
-                                            ) : (
-                                                filteredTimelineEntries.slice(0, 15).map((entry) => (
-                                                    <div key={entry.id} className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3">
-                                                        <div className="text-sm text-gray-200 font-semibold">{entry.title}</div>
-                                                        <div className="text-xs text-gray-400">{entry.description}</div>
-                                                        <div className="text-[11px] text-gray-500">
-                                                            {entry.meta ? `${entry.meta} • ` : ''}{formatTimestamp(entry.createdAt)}
+
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
+                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Account Controls</h4>
+                                                <Select value={status} onChange={(event) => handleStatusChange(selectedUser.id, event.target.value as UserStatus)} className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="active">Active</option><option value="suspended">Suspended</option><option value="banned">Banned</option></Select>
+                                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                                    {Object.entries(LOCK_LABELS).map(([key, label]) => {
+                                                        const isLocked = userLocks[selectedUser.id]?.[key as keyof UserLocks];
+                                                        return <button key={key} onClick={() => handleLockToggle(selectedUser.id, key as keyof UserLocks)} className={`rounded-lg border px-3 py-2 text-xs ${isLocked ? 'border-red-500/40 bg-red-500/10 text-red-300' : 'border-gray-700 bg-[#0b0e14] text-gray-300'}`}>{label}</button>;
+                                                    })}
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {editableXp ? (
+                                                        <>
+                                                            <Input type="number" value={userXpInput} onChange={(event) => setUserXpInput(Number(event.target.value))} className="w-36 bg-[#0b0e14] border border-gray-700 rounded px-3 py-1.5 text-white text-sm" />
+                                                            <button onClick={() => saveUserProgress(selectedUser.id)} disabled={isSavingUser} className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-300">Save XP</button>
+                                                            <button onClick={cancelEditUser} className="rounded-lg bg-gray-700/40 px-3 py-1.5 text-xs font-semibold text-gray-200">Cancel</button>
+                                                        </>
+                                                    ) : (
+                                                        <button onClick={() => startEditUser(selectedUser.id, selectedUser.xp || 0)} className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-semibold text-blue-300">Edit XP</button>
+                                                    )}
+                                                    <button onClick={() => handleDeleteUser(selectedUser.id)} disabled={deletingUserId === selectedUser.id} className="rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-semibold text-red-300">{deletingUserId === selectedUser.id ? 'Deleting...' : 'Delete User'}</button>
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
+                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Financial Controls</h4>
+                                                {!isEditingBalance ? <button onClick={startBalanceEdit} className="rounded-lg bg-emerald-500/20 px-3 py-2 text-xs font-semibold text-emerald-300">Edit Balance</button> : <div className="space-y-2"><Input type="number" value={balanceDraft} onChange={(event) => setBalanceDraft(event.target.value)} className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><div className="flex gap-2"><button onClick={saveBalanceEdit} className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-300">Save</button><button onClick={cancelBalanceEdit} className="rounded-lg bg-gray-700/40 px-3 py-1.5 text-xs font-semibold text-gray-200">Cancel</button></div></div>}
+                                                <Input type="number" value={reversalAmount} onChange={(event) => setReversalAmount(event.target.value)} placeholder="Reversal amount" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                                                <Textarea rows={2} value={reversalReason} onChange={(event) => setReversalReason(event.target.value)} placeholder="Reversal reason" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                                                <button onClick={handleCreateReversal} disabled={!reversalAmount || !reversalReason.trim()} className="w-full rounded-lg bg-red-500/20 px-3 py-2 text-xs font-bold uppercase text-red-300 disabled:opacity-50">Create Reversal</button>
+                                                <Input type="text" value={voidSourceId} onChange={(event) => setVoidSourceId(event.target.value)} placeholder="Void source ID" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                                                <Textarea rows={2} value={voidReason} onChange={(event) => setVoidReason(event.target.value)} placeholder="Void reason" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                                                <button onClick={handleVoidOpen} disabled={!voidSourceId.trim()} className="w-full rounded-lg bg-yellow-500/20 px-3 py-2 text-xs font-bold uppercase text-yellow-300 disabled:opacity-50">Void Open & Compensate</button>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
+                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Inventory Controls</h4>
+                                                <button onClick={() => setIsEditingInventory((prev) => !prev)} className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-semibold text-blue-300">{isEditingInventory ? 'Done Editing Inventory' : 'Edit Inventory'}</button>
+                                                {isEditingInventory && <div className="grid grid-cols-1 gap-2"><Input type="text" value={inventoryDraft.name} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, name: event.target.value }))} placeholder="Item name" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="number" value={inventoryDraft.price} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, price: event.target.value }))} placeholder="Value" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="text" value={inventoryDraft.image} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, image: event.target.value }))} placeholder="Image URL" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><button onClick={handleAddInventoryItem} className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-semibold text-blue-300">Add Inventory Item</button></div>}
+                                                <div className="max-h-56 space-y-2 overflow-auto pr-1">
+                                                    {selectedInventory.map((item) => (
+                                                        <div key={item.instanceId} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
+                                                            <div className="flex items-center justify-between gap-2"><span className="text-xs text-gray-200">{item.name}</span><span className="text-[10px] text-gray-500">{item.provenance ? `${item.provenance.sourceType}:${item.provenance.sourceId}` : 'unknown provenance'}</span></div>
+                                                            <div className="mt-1 flex gap-2"><button onClick={() => handleInventoryLockToggle(selectedUser.id, item.instanceId)} className="rounded bg-red-500/20 px-2 py-1 text-[10px] font-semibold text-red-300">{item.locked ? 'Unlock' : 'Lock'}</button>{isEditingInventory && <button onClick={() => handleRemoveInventoryItem(selectedUser.id, item.instanceId)} className="rounded bg-red-600/20 px-2 py-1 text-[10px] font-semibold text-red-300">Remove</button>}</div>
                                                         </div>
+                                                    ))}
+                                                    {selectedInventory.length === 0 && <div className="text-xs text-gray-500">No inventory items.</div>}
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
+                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Shipment Controls</h4>
+                                                <div className="text-xs text-gray-400">Pending shipments: <span className="font-semibold text-gray-200">{metrics.pendingShipmentCount}</span></div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
+                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Communication</h4>
+                                                <div>
+                                                    <div className="mb-2 text-[11px] uppercase text-gray-500">Internal Labels</div>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {['VIP', 'Fraud Watch', 'Big Depositor', 'Chargeback Risk', 'Support Sensitive', 'Needs Review'].map((label) => (
+                                                            <button key={label} onClick={() => toggleInternalLabel(selectedUser.id, label)} className={`rounded-full px-2 py-1 text-[10px] font-semibold ${labels.includes(label) ? 'bg-indigo-500/30 text-indigo-200' : 'bg-[#0b0e14] text-gray-400 border border-gray-700'}`}>{label}</button>
+                                                        ))}
                                                     </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
+                                                </div>
+                                                <div>
+                                                    <div className="mb-2 text-[11px] uppercase text-gray-500">Admin Notes</div>
+                                                    <Textarea rows={4} value={userAdminNotes[selectedUser.id] ?? ''} onChange={(event) => setUserAdminNotes((prev) => ({ ...prev, [selectedUser.id]: event.target.value }))} placeholder="Private operator notes only (not user-facing)." className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                                                    <div className="mt-2 flex gap-2"><button onClick={() => saveAdminNote(selectedUser.id)} className="rounded-lg bg-indigo-500/20 px-3 py-1.5 text-xs font-semibold text-indigo-200">Save Notes</button><button disabled className="rounded-lg bg-gray-700/40 px-3 py-1.5 text-xs font-semibold text-gray-400">Send Admin Notice (TODO)</button></div>
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-3">
+                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Risk & Compliance</h4>
+                                                <div className="rounded-lg border border-gray-700 bg-[#0b0e14] p-3">
+                                                    <div className="text-xs text-gray-400">Calculated Risk Score</div>
+                                                    <div className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{metrics.riskScore} • {metrics.riskLevel}</div>
+                                                </div>
+                                                <div className="grid grid-cols-1 gap-2 text-xs text-gray-300">
+                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Chargeback count: {metrics.chargebackCount}</div>
+                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Failed payment count: {metrics.failedPaymentCount}</div>
+                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Rapid sellback behavior: {metrics.hasRapidSellback ? 'Flagged' : 'None'}</div>
+                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">New account high-value activity: {metrics.isNewHighValue ? 'Flagged' : 'No'}</div>
+                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Repeated shipment requests: {metrics.pendingShipmentCount > 2 ? 'Flagged' : 'Normal'}</div>
+                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Excessive admin adjustments: {metrics.excessiveAdminAdjustments}</div>
+                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Suspicious activity flags: {metrics.suspiciousFlags}</div>
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-3">
+                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Immutable Ledger</h4>
+                                                <div className="flex gap-2"><Select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)} className="w-40 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="all">All</option><option value="deposit">Deposit</option><option value="case_open">Box open</option><option value="sell_back">Sell back</option><option value="bonus">Bonus</option><option value="admin_adjustment">Admin adjustment</option><option value="chargeback_reversal">Chargeback reversal</option><option value="reversal">Reversal</option></Select><Input type="text" value={ledgerSearch} onChange={(event) => setLedgerSearch(event.target.value)} placeholder="Search" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /></div>
+                                                <div className="max-h-60 space-y-2 overflow-auto pr-1">{filteredLedgerEntries.length === 0 ? <div className="text-xs text-gray-500">No ledger entries.</div> : filteredLedgerEntries.map((entry) => (<div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><div className="flex items-center justify-between gap-2"><span className="text-xs uppercase text-gray-400">{entry.type.replace('_', ' ')}</span><CoinAmount amount={entry.amount} formatOptions={{ maximumFractionDigits: 0 }} showSign className={`text-xs font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`} iconClassName="w-3.5 h-3.5" /></div><div className="text-xs text-gray-300">{entry.memo || 'Balance update'}</div><div className="text-[10px] text-gray-500">{entry.sourceId || 'Manual'} • {formatTimestamp(entry.createdAt)}</div></div>))}</div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-2">
+                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Admin Action Log</h4>
+                                                <div className="max-h-44 space-y-2 overflow-auto pr-1">{selectedAdminLogs.length === 0 ? <div className="text-xs text-gray-500">No admin actions recorded.</div> : selectedAdminLogs.map((log) => <div key={log.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><div className="text-xs uppercase text-gray-400">{log.actionType.replace('_', ' ')}</div><div className="text-xs text-gray-200">{log.reason}</div><div className="text-[10px] text-gray-500">Admin {log.adminUid} • {formatTimestamp(log.createdAt)}</div></div>)}</div>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-[#131720] border border-gray-800 rounded-xl p-6 text-sm text-gray-500">
-                            Select a user to review ledger activity, locks, and admin actions.
-                        </div>
+                        <div className="rounded-2xl border border-dashed border-gray-700 bg-[#131720] p-8 text-center text-sm text-gray-500">Select a user to open the operator inspector panel.</div>
                     )}
                 </div>
             )}
