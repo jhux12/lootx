@@ -1095,26 +1095,41 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                               const isSelectable = inventoryFilter === 'inventory' && canShip;
                               const isSelected = selectedShipments.includes(item.instanceId);
                               const rarityTone = item.rarity === 'legendary'
-                                ? 'border-violet-400/50 shadow-[0_0_0_1px_rgba(167,139,250,0.24),0_0_20px_rgba(167,139,250,0.12)]'
+                                ? 'border-amber-400/50 shadow-[0_0_0_1px_rgba(251,191,36,0.24),0_0_20px_rgba(251,191,36,0.14)]'
                                 : item.rarity === 'epic' || item.rarity === 'ultra-rare'
                                   ? 'border-fuchsia-500/40 shadow-[0_0_0_1px_rgba(217,70,239,0.2),0_0_18px_rgba(217,70,239,0.11)]'
                                   : item.rarity === 'rare'
                                     ? 'border-cyan-400/40 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_18px_rgba(34,211,238,0.1)]'
+                                    : item.rarity === 'uncommon'
+                                      ? 'border-emerald-500/45 shadow-[0_0_0_1px_rgba(16,185,129,0.2),0_0_18px_rgba(16,185,129,0.12)]'
                                     : 'border-slate-700/80 shadow-[0_0_0_1px_rgba(148,163,184,0.08)]';
                               const rarityTileTone = item.rarity === 'legendary'
-                                ? 'from-violet-500/30 via-indigo-900/35 to-violet-950/40'
+                                ? 'from-amber-400/28 via-yellow-800/35 to-yellow-950/45'
                                 : item.rarity === 'epic' || item.rarity === 'ultra-rare'
                                   ? 'from-fuchsia-500/28 via-purple-900/35 to-indigo-950/40'
                                   : item.rarity === 'rare'
                                     ? 'from-cyan-500/28 via-blue-900/35 to-indigo-950/40'
+                                    : item.rarity === 'uncommon'
+                                      ? 'from-emerald-500/28 via-emerald-900/35 to-emerald-950/45'
                                     : 'from-slate-500/24 via-slate-800/35 to-slate-950/45';
                               const imageGlow = item.rarity === 'legendary'
                                 ? 'from-yellow-400/30 via-yellow-200/10 to-transparent'
                                 : item.rarity === 'epic' || item.rarity === 'ultra-rare'
                                   ? 'from-purple-400/30 via-fuchsia-300/10 to-transparent'
+                                : item.rarity === 'rare'
+                                  ? 'from-blue-400/30 via-cyan-300/10 to-transparent'
+                                : item.rarity === 'uncommon'
+                                  ? 'from-emerald-400/28 via-emerald-200/10 to-transparent'
+                                : 'from-slate-300/20 via-slate-200/10 to-transparent';
+                              const rarityBadgeTone = item.rarity === 'legendary'
+                                ? 'border-amber-300/40 bg-amber-400/20 text-amber-100'
+                                : item.rarity === 'epic' || item.rarity === 'ultra-rare'
+                                  ? 'border-fuchsia-300/40 bg-fuchsia-500/20 text-fuchsia-100'
                                   : item.rarity === 'rare'
-                                    ? 'from-blue-400/30 via-cyan-300/10 to-transparent'
-                                    : 'from-slate-300/20 via-slate-200/10 to-transparent';
+                                    ? 'border-blue-300/40 bg-blue-500/20 text-blue-100'
+                                    : item.rarity === 'uncommon'
+                                      ? 'border-emerald-300/40 bg-emerald-500/20 text-emerald-100'
+                                      : 'border-slate-300/30 bg-slate-500/20 text-slate-100';
                               return (
                                   <div key={item.instanceId} className={`relative bg-gradient-to-b ${rarityTileTone} border rounded-2xl p-2.5 sm:p-4 group transition-all duration-300 flex flex-col hover:-translate-y-0.5 active:scale-[0.99] ${rarityTone} ${isSelected ? 'ring-2 ring-cyan-300/50 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_0_22px_rgba(34,211,238,0.22)]' : ''}`}>
                                       <div className="relative aspect-[0.74] mb-2.5 sm:mb-4 bg-[#0f1420] rounded-xl sm:rounded-2xl p-2 sm:p-3 flex items-center justify-center overflow-hidden border border-white/5 shadow-inner">
@@ -1148,7 +1163,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                             <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${
                                                 item.rarity === 'legendary' ? 'from-yellow-500' :
                                                 item.rarity === 'epic' ? 'from-purple-500' :
-                                                item.rarity === 'rare' ? 'from-blue-500' : 'from-gray-500'
+                                                item.rarity === 'rare' ? 'from-blue-500' :
+                                                item.rarity === 'uncommon' ? 'from-emerald-500' :
+                                                'from-gray-500'
                                             }`} />
                                             {(item.rarity === 'rare' || item.rarity === 'epic' || item.rarity === 'legendary') && (
                                               <div className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/15 to-transparent opacity-0 group-hover:opacity-100 group-hover:left-full transition-all duration-1000" />
@@ -1157,7 +1174,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                       </div>
                                       <div className="flex items-center justify-between gap-1.5">
                                           <h4 className="text-white font-extrabold text-sm mt-0 mb-0 line-clamp-1 leading-tight sm:text-lg">{item.name}</h4>
-                                          <span className="text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full border border-cyan-500/35 bg-cyan-500/20 text-cyan-200 leading-none capitalize">{item.rarity}</span>
+                                          <span className={`text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full border leading-none capitalize ${rarityBadgeTone}`}>{item.rarity}</span>
                                       </div>
                                       {item.redeemable === false && (
                                         <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
