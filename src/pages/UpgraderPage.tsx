@@ -48,6 +48,11 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
   rarity: normalizeEliteRarity(String(item.rarity ?? 'common'))
 });
 
+const normalizeMatchValue = (value: unknown) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase();
+
 const SPIN_DURATION_MS = 5200;
 
 export default function UpgraderPage() {
@@ -171,7 +176,11 @@ export default function UpgraderPage() {
 
     return inventory
       .filter((item) => (item.status ?? 'available') === 'available')
-      .filter((item) => !hasSourceAllowList || allowedIds.includes(String(item.id ?? '')))
+      .filter((item) => {
+        if (!hasSourceAllowList) return true;
+        const idCandidates = [item.id, item.sourceItemId, item.instanceId].map((entry) => String(entry ?? ''));
+        return idCandidates.some((candidate) => allowedIds.includes(candidate));
+      })
       .map((item) => ({
         id: item.instanceId,
         name: item.name,
@@ -198,9 +207,23 @@ export default function UpgraderPage() {
   }, [settings, targets]);
 
   const targetIdSet = useMemo(() => new Set(settingsFilteredTargets.map((item) => item.id)), [settingsFilteredTargets]);
+  const targetSignatureSet = useMemo(
+    () =>
+      new Set(
+        settingsFilteredTargets.map((item) => `${normalizeMatchValue(item.name)}::${Math.round(item.coinValue)}`)
+      ),
+    [settingsFilteredTargets]
+  );
   const availableBoxes = useMemo(
-    () => boxes.filter((box) => box.items.some((item) => targetIdSet.has(item.id))),
-    [boxes, targetIdSet]
+    () =>
+      boxes.filter((box) =>
+        box.items.some((item) => {
+          const priceCoins = Math.round(toCoins(Number(item.price ?? 0), PRICE_UNIT_MODE));
+          const signature = `${normalizeMatchValue(item.name)}::${priceCoins}`;
+          return targetIdSet.has(item.id) || targetSignatureSet.has(signature);
+        })
+      ),
+    [boxes, targetIdSet, targetSignatureSet]
   );
 
   useEffect(() => {
@@ -219,7 +242,13 @@ export default function UpgraderPage() {
     const inBox = !selectedBox
       ? []
       : settingsFilteredTargets
-          .filter((item) => selectedBox.items.some((entry) => entry.id === item.id))
+          .filter((item) =>
+            selectedBox.items.some((entry) => {
+              const nameMatch = normalizeMatchValue(entry.name) === normalizeMatchValue(item.name);
+              const priceMatch = Math.round(toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE)) === Math.round(item.coinValue);
+              return entry.id === item.id || (nameMatch && priceMatch);
+            })
+          )
           .filter((item) => {
             if (targetFilters.search && !item.name.toLowerCase().includes(targetFilters.search.toLowerCase().trim())) return false;
             if (targetFilters.rarity && String(item.rarity).toLowerCase() !== targetFilters.rarity) return false;
