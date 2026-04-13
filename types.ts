@@ -27,6 +27,10 @@ export interface User {
   lastDailyClaim?: number;
   lastFreeBoxClaim?: number;
   totalSpent?: number;
+  hasDeposited?: boolean;
+  firstDepositBonusClaimed?: boolean;
+  firstDepositAt?: number;
+  firstDepositBonusCoins?: number;
   rakebackBalance?: number;
   rakebackEarnedToday?: number;
   rakebackEarnedAt?: number;

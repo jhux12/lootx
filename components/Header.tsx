@@ -74,6 +74,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const headerRef = useRef<HTMLElement | null>(null);
   const targetXp = Math.floor(user.xpBalance ?? user.xp ?? 0);
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
+  const isFirstDepositEligible = isAuthenticated && !(user.hasDeposited || user.firstDepositBonusClaimed);
   const { unreadCount } = useActivity();
   const lastDailyClaim = Number.isFinite(user.lastDailyClaim ?? NaN) ? Number(user.lastDailyClaim) : 0;
   const dailyCooldownMs = 24 * 60 * 60 * 1000;
@@ -334,6 +335,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     />
                     <div className="relative z-10 flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-[#18181b] pl-3 pr-1.5 py-1.5">
                       <CoinAmount amount={balance} className="text-white text-sm font-bold" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                      {isFirstDepositEligible && (
+                        <span className="hidden rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-200 xl:inline-flex">
+                          First deposit +20%
+                        </span>
+                      )}
                       <button
                         onClick={() => {
                           playSound('click');
@@ -414,6 +420,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     className="relative z-10 flex items-center gap-1.5 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2.5 pr-1.5 py-1.5 sm:pl-3"
                   >
                     <CoinAmount amount={balance} className="text-xs font-bold text-white sm:text-sm" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                    {isFirstDepositEligible && (
+                      <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-200">
+                        +20%
+                      </span>
+                    )}
                     <span className="rounded bg-indigo-600 p-1"><Plus className="h-3.5 w-3.5" /></span>
                   </button>
                 </div>
