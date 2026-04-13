@@ -213,17 +213,17 @@ export default function UpgraderPage() {
   const selectableTargetBoxes = useMemo(() => activeMysteryBoxes, [activeMysteryBoxes]);
   const targetById = useMemo(() => {
     const map = new Map<string, Item>();
-    filteredTargets.forEach((entry) => map.set(String(entry.id), entry));
+    targets.forEach((entry) => map.set(String(entry.id), entry));
     return map;
-  }, [filteredTargets]);
+  }, [targets]);
   const targetByName = useMemo(() => {
     const map = new Map<string, Item>();
-    filteredTargets.forEach((entry) => {
+    targets.forEach((entry) => {
       const key = normalizeKey(String(entry.name ?? ''));
       if (key && !map.has(key)) map.set(key, entry);
     });
     return map;
-  }, [filteredTargets]);
+  }, [targets]);
 
   const selectedTargetBox = useMemo(
     () => selectableTargetBoxes.find((box) => box.id === selectedTargetBoxId) ?? null,
