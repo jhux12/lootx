@@ -228,11 +228,6 @@ export default function UpgraderPage() {
     }));
   }, [selectedTargetBox]);
 
-  const validTargetItemIds = useMemo(
-    () => new Set(itemsForSelectedBox.map((entry) => String(entry.id))),
-    [itemsForSelectedBox]
-  );
-
   const chance = useMemo(() => {
     if (!source || !target) return 0;
     if (!settings) {
@@ -272,13 +267,6 @@ export default function UpgraderPage() {
       setTarget(null);
     }
   }, [selectedTargetBox, target]);
-
-  useEffect(() => {
-    if (!target) return;
-    if (!validTargetItemIds.has(String(target.id))) {
-      setTarget(null);
-    }
-  }, [target, validTargetItemIds]);
 
   const sourcePreview = source ? mapToEliteItem(source) : null;
   const targetPreview = target ? mapToEliteItem(target) : null;
