@@ -197,22 +197,24 @@ export default function UpgraderPage() {
   }, [settings, targets]);
 
   const activeMysteryBoxes = useMemo(() => {
-    return boxes.filter((box) => {
-      const isSystemMysteryBox = !box.isUserCreated && !box.isDaily;
-      const isBoxActive = (box as { active?: boolean }).active !== false;
-      return isSystemMysteryBox && isBoxActive && Array.isArray(box.items) && box.items.length > 0;
-    });
+    return boxes
+      .filter((box) => {
+        const isSystemMysteryBox = !box.isUserCreated;
+        const isNotFreeBox = !box.isDaily;
+        const isCoinBox = !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0);
+        const isBoxActive = (box as { active?: boolean }).active !== false;
+        return isSystemMysteryBox && isNotFreeBox && isCoinBox && isBoxActive && Array.isArray(box.items) && box.items.length > 0;
+      })
+      .sort((left, right) => left.name.localeCompare(right.name));
   }, [boxes]);
 
   const targetItemIds = useMemo(() => new Set(filteredTargets.map((item) => String(item.id))), [filteredTargets]);
 
   const selectableTargetBoxes = useMemo(() => {
-    return activeMysteryBoxes
-      .map((box) => ({
-        ...box,
-        items: box.items.filter((boxItem) => targetItemIds.has(String(boxItem.id)))
-      }))
-      .filter((box) => box.items.length > 0);
+    return activeMysteryBoxes.map((box) => ({
+      ...box,
+      items: box.items.filter((boxItem) => targetItemIds.has(String(boxItem.id)))
+    }));
   }, [activeMysteryBoxes, targetItemIds]);
 
   const selectedTargetBox = useMemo(
@@ -540,7 +542,7 @@ export default function UpgraderPage() {
               })}
               {selectableTargetBoxes.length === 0 && (
                 <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-400">
-                  No active mystery boxes with upgradeable targets are available.
+                  No active mystery boxes are available right now.
                 </p>
               )}
             </div>
