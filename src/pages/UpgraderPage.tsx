@@ -3,6 +3,7 @@ import {
   LucideArrowRight,
   LucideHistory,
   LucideInfo,
+  LucideSearch,
   LucideZap,
   LucideChevronLeft,
   LucideChevronRight,
@@ -18,6 +19,7 @@ import { CoinAmount } from '../../components/CoinAmount';
 import { ItemCard } from '../../components/upgrader-elite/ItemCard';
 import { UpgraderSpinner } from '../../components/upgrader-elite/UpgraderSpinner';
 import { Item as EliteItem, UpgradeStatus } from '../../components/upgrader-elite/types';
+import { BoxCard } from '../../components/BoxCard';
 import upgraderSoundUrl from '../../assets/upgrader.mp3';
 import { toast } from '../ui/toast/toast';
 
@@ -49,7 +51,7 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
 const SPIN_DURATION_MS = 5200;
 
 export default function UpgraderPage() {
-  const { inventory, isAuthenticated, openAuthModal } = useGame();
+  const { inventory, boxes, isAuthenticated, openAuthModal } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,9 +64,11 @@ export default function UpgraderPage() {
   const [spinNonce, setSpinNonce] = useState(0);
   const [spinResult, setSpinResult] = useState<boolean | null>(null);
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
-  const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
+  const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
+  const [targetFilters, setTargetFilters] = useState({ search: '', rarity: '', min: 0, max: 0 });
   const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const boxCarouselRef = useRef<HTMLDivElement | null>(null);
   const idleTimeoutRef = useRef<number | null>(null);
   const spinAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastPlayedSpinNonceRef = useRef<number>(0);
@@ -166,9 +170,8 @@ export default function UpgraderPage() {
     const allowedIds = settings?.sourceItemIdsEnabled ?? [];
     const hasSourceAllowList = allowedIds.length > 0;
 
-    return inventory
+    const normalizedInventory = inventory
       .filter((item) => (item.status ?? 'available') === 'available')
-      .filter((item) => !hasSourceAllowList || allowedIds.includes(String(item.id ?? '')))
       .map((item) => ({
         id: item.instanceId,
         name: item.name,
@@ -179,9 +182,21 @@ export default function UpgraderPage() {
         locked: item.locked,
         shipping: item.status === 'shipping' || item.status === 'shipping_requested'
       }));
+
+    if (!hasSourceAllowList) return normalizedInventory;
+
+    const allowSet = new Set(allowedIds.map((entry) => String(entry)));
+    const allowFiltered = normalizedInventory.filter((entry) => {
+      const original = inventory.find((item) => item.instanceId === entry.id);
+      const originalId = String(original?.id ?? '');
+      const sourceItemId = String(original?.sourceItemId ?? '');
+      return allowSet.has(originalId) || allowSet.has(sourceItemId);
+    });
+
+    return allowFiltered.length > 0 ? allowFiltered : normalizedInventory;
   }, [inventory, settings?.sourceItemIdsEnabled]);
 
-  const filteredTargets = useMemo(() => {
+  const settingsFilteredTargets = useMemo(() => {
     if (!settings) return targets;
     const categories = settings.categoriesEnabled ?? [];
     const rarities = settings.raritiesEnabled ?? [];
@@ -193,6 +208,72 @@ export default function UpgraderPage() {
       return categoryAllowed && rarityAllowed;
     });
   }, [settings, targets]);
+
+  const getTargetsForBox = useMemo(() => {
+    const targetsById = new Map(settingsFilteredTargets.map((item) => [String(item.id), item]));
+    const targetsByName = new Map(settingsFilteredTargets.map((item) => [item.name.toLowerCase(), item]));
+
+    return (boxId: string) => {
+      const box = boxes.find((entry) => entry.id === boxId);
+      if (!box) return [] as Item[];
+      const byItems = box.items
+        .map((entry) => targetsById.get(String(entry.id)) ?? targetsByName.get(String(entry.name).toLowerCase()))
+        .filter((entry): entry is Item => Boolean(entry));
+
+      const byCategory = settingsFilteredTargets.filter((target) => {
+        const category = String(target.category ?? '').toLowerCase().trim();
+        return category === box.id.toLowerCase() || category === box.name.toLowerCase().trim();
+      });
+
+      const deduped = new Map<string, Item>();
+      [...byItems, ...byCategory].forEach((entry) => {
+        deduped.set(entry.id, entry);
+      });
+      return Array.from(deduped.values());
+    };
+  }, [boxes, settingsFilteredTargets]);
+
+  const availableBoxes = useMemo(() => {
+    const withTargets = boxes.filter((box) => getTargetsForBox(box.id).length > 0);
+    return withTargets.length > 0 ? withTargets : boxes;
+  }, [boxes, getTargetsForBox]);
+
+  useEffect(() => {
+    if (selectedBoxId && !availableBoxes.some((box) => box.id === selectedBoxId)) {
+      setSelectedBoxId(null);
+      setTarget(null);
+    }
+  }, [availableBoxes, selectedBoxId, setTarget]);
+
+  useEffect(() => {
+    if (selectedBoxId || availableBoxes.length === 0) return;
+    setSelectedBoxId(availableBoxes[0].id);
+  }, [availableBoxes, selectedBoxId]);
+
+  const selectedBox = useMemo(
+    () => availableBoxes.find((box) => box.id === selectedBoxId) ?? null,
+    [availableBoxes, selectedBoxId]
+  );
+
+  const filteredTargets = useMemo(() => {
+    const inBox = !selectedBox
+      ? []
+      : getTargetsForBox(selectedBox.id)
+          .filter((item) => {
+            if (targetFilters.search && !item.name.toLowerCase().includes(targetFilters.search.toLowerCase().trim())) return false;
+            if (targetFilters.rarity && String(item.rarity).toLowerCase() !== targetFilters.rarity) return false;
+            if (item.coinValue < targetFilters.min) return false;
+            if (targetFilters.max > 0 && item.coinValue > targetFilters.max) return false;
+            return true;
+          })
+          .sort((a, b) => a.coinValue - b.coinValue);
+    return inBox;
+  }, [selectedBox, getTargetsForBox, targetFilters.search, targetFilters.rarity, targetFilters.min, targetFilters.max]);
+
+  const availableRarities = useMemo(
+    () => Array.from(new Set(settingsFilteredTargets.map((item) => String(item.rarity).toLowerCase()))).sort(),
+    [settingsFilteredTargets]
+  );
 
   const chance = useMemo(() => {
     if (!source || !target) return 0;
@@ -212,9 +293,22 @@ export default function UpgraderPage() {
     if (chance < 60) return '217, 119, 6';
     return '16, 185, 129';
   }, [chance]);
+  const riskLabel = useMemo(() => {
+    if (chance >= 60) return { text: 'Safe', className: 'text-emerald-300' };
+    if (chance >= 35) return { text: 'Balanced', className: 'text-cyan-300' };
+    return { text: 'High Risk', className: 'text-rose-300' };
+  }, [chance]);
 
   const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
   const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
+
+  useEffect(() => {
+    if (!target || !selectedBox) return;
+    const stillInBox = filteredTargets.some((item) => item.id === target.id);
+    if (!stillInBox) {
+      setTarget(null);
+    }
+  }, [filteredTargets, selectedBox, target]);
 
   const sourcePreview = source ? mapToEliteItem(source) : null;
   const targetPreview = target ? mapToEliteItem(target) : null;
@@ -351,42 +445,181 @@ export default function UpgraderPage() {
         </div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto flex flex-col lg:grid lg:grid-cols-[340px_1fr_340px] gap-4 lg:gap-8 p-3 sm:p-4 lg:p-8">
-        <section className={`order-3 lg:order-1 flex-col gap-4 overflow-hidden ${activeTab === 'inventory' ? 'flex' : 'hidden lg:flex'}`}>
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Your Inventory <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{inventoryItems.length}</span></h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[280px] sm:max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
-            {inventoryItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                isSelected={source?.id === item.id}
-                onInfoClick={setDetailsItem}
-                onClick={() => {
-                  const match = realInventoryItems.find((entry) => entry.id === item.id) ?? null;
-                  setSource(match);
-                }}
-                disabled={status === 'spinning' || loading}
+      <main className="max-w-[1600px] mx-auto grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_440px] gap-4 lg:gap-8 p-3 sm:p-4 lg:p-8">
+        <section className="order-2 xl:order-1 space-y-4">
+          <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-black uppercase tracking-wider text-white">Step 1 — Select Your Item</h2>
+              <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">{inventoryItems.length}</span>
+            </div>
+            <div className="grid grid-flow-col auto-cols-[48%] gap-3 overflow-x-auto pb-1 sm:hidden">
+              {inventoryItems.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  isSelected={source?.id === item.id}
+                  onInfoClick={setDetailsItem}
+                  onClick={() => {
+                    const match = realInventoryItems.find((entry) => entry.id === item.id) ?? null;
+                    setSource(match);
+                  }}
+                  disabled={status === 'spinning' || loading}
+                />
+              ))}
+            </div>
+            <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[360px] overflow-y-auto pr-1 custom-scrollbar">
+              {inventoryItems.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  isSelected={source?.id === item.id}
+                  onInfoClick={setDetailsItem}
+                  onClick={() => {
+                    const match = realInventoryItems.find((entry) => entry.id === item.id) ?? null;
+                    setSource(match);
+                  }}
+                  disabled={status === 'spinning' || loading}
+                />
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-black uppercase tracking-wider text-white">Step 2 — Choose Target Box</h2>
+              <div className="flex items-center gap-2">
+                <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">{availableBoxes.length}</span>
+                <button
+                  type="button"
+                  onClick={() => boxCarouselRef.current?.scrollBy({ left: -260, behavior: 'smooth' })}
+                  className="hidden sm:inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-300 hover:text-white"
+                  aria-label="Scroll boxes left"
+                >
+                  <LucideChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => boxCarouselRef.current?.scrollBy({ left: 260, behavior: 'smooth' })}
+                  className="hidden sm:inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-300 hover:text-white"
+                  aria-label="Scroll boxes right"
+                >
+                  <LucideChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            {loading ? (
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="h-36 animate-pulse rounded-2xl border border-white/10 bg-white/5" />
+                ))}
+              </div>
+            ) : (
+              <div
+                ref={boxCarouselRef}
+                className="grid grid-flow-col auto-cols-[82%] sm:auto-cols-[45%] lg:auto-cols-[32%] gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+              >
+                {availableBoxes.map((box) => (
+                  <div key={box.id} className={`snap-start rounded-2xl transition ${selectedBoxId === box.id ? 'ring-2 ring-cyan-400/70 ring-offset-2 ring-offset-[#050811]' : ''}`}>
+                    <BoxCard box={box} onSelect={setSelectedBoxId} size="compact" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-black uppercase tracking-wider text-white">Step 3 — Select Target Item</h2>
+              <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">{targetItems.length}</span>
+            </div>
+            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <label className="col-span-2 sm:col-span-1 flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-xs">
+                <LucideSearch className="h-3.5 w-3.5 text-slate-400" />
+                <input
+                  value={targetFilters.search}
+                  onChange={(event) => setTargetFilters((previous) => ({ ...previous, search: event.target.value }))}
+                  placeholder="Search"
+                  className="w-full bg-transparent text-white outline-none"
+                />
+              </label>
+              <select
+                value={targetFilters.rarity}
+                onChange={(event) => setTargetFilters((previous) => ({ ...previous, rarity: event.target.value }))}
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-xs text-white"
+              >
+                <option value="">All rarities</option>
+                {availableRarities.map((rarity) => (
+                  <option key={rarity} value={rarity}>{rarity}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                value={targetFilters.min || ''}
+                onChange={(event) => setTargetFilters((previous) => ({ ...previous, min: Number(event.target.value || 0) }))}
+                placeholder="Min"
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-xs text-white"
               />
-            ))}
-          </div>
+              <input
+                type="number"
+                value={targetFilters.max || ''}
+                onChange={(event) => setTargetFilters((previous) => ({ ...previous, max: Number(event.target.value || 0) }))}
+                placeholder="Max"
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-xs text-white"
+              />
+            </div>
+
+            {!selectedBox ? (
+              <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.03] p-4 text-sm text-slate-400">Select a target box to load its items.</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[360px] overflow-y-auto pr-1 custom-scrollbar transition-all duration-300">
+                {targetItems.map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    isSelected={target?.id === item.id}
+                    onInfoClick={setDetailsItem}
+                    onClick={() => {
+                      const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
+                      setTarget(match);
+                    }}
+                    disabled={status === 'spinning' || loading}
+                  />
+                ))}
+                {targetItems.length === 0 && (
+                  <div className="col-span-full rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">No target items match your filters.</div>
+                )}
+              </div>
+            )}
+          </section>
         </section>
 
         <section
-          className="order-1 lg:order-2 reactor-stage flex flex-col items-center justify-center bg-white/[0.02] rounded-[24px] border border-violet-400/10 relative overflow-hidden p-4 sm:p-6"
+          className="order-1 xl:order-2 reactor-stage rounded-[24px] border border-violet-400/10 bg-white/[0.02] p-4 sm:p-6 xl:sticky xl:top-20 h-fit"
           style={{ ['--reactor-glow-rgb' as string]: reactorGlowRgb }}
         >
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] sm:w-[420px] sm:h-[420px] bg-violet-500/20 blur-[80px] rounded-full pointer-events-none" />
-
-          <div className="relative z-10 w-full max-w-md flex flex-col items-center">
-            <div className="flex items-center gap-3 sm:gap-6 mb-4 sm:mb-8">
-              <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-xl border-2 flex items-center justify-center ${sourcePreview ? 'border-violet-400/50 bg-violet-500/10' : 'border-white/10 bg-white/[0.02]'}`}>
-                {sourcePreview ? <img src={sourcePreview.image} alt={sourcePreview.name} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" /> : <LucideChevronLeft className="text-white/15" />}
-              </div>
-              <LucideArrowRight className={`w-4 h-4 sm:w-6 sm:h-6 ${sourcePreview && targetPreview ? 'text-violet-400' : 'text-white/20'}`} />
-              <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-xl border-2 flex items-center justify-center ${targetPreview ? 'border-cyan-400/50 bg-cyan-500/10' : 'border-white/10 bg-white/[0.02]'}`}>
-                {targetPreview ? <img src={targetPreview.image} alt={targetPreview.name} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" /> : <LucideChevronRight className="text-white/15" />}
+          <div className="relative z-10 w-full flex flex-col items-center">
+            <div className="mb-4 w-full rounded-2xl border border-white/10 bg-[#0f1524]/70 p-3 sm:mb-6">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Selected Upgrade</div>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                <div className={`rounded-xl border p-2 ${sourcePreview ? 'border-violet-400/40 bg-violet-500/10' : 'border-white/10 bg-white/[0.02]'}`}>
+                  <div className="flex items-center gap-2">
+                    {sourcePreview ? <img src={sourcePreview.image} alt={sourcePreview.name} className="h-10 w-10 rounded-lg object-cover" /> : <LucideChevronLeft className="text-white/20" />}
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-white">{sourcePreview?.name || 'Your Item'}</p>
+                      <CoinAmount amount={Math.round(sourcePreview?.price ?? 0)} className="text-[10px] font-semibold text-emerald-300" iconClassName="h-3 w-3" />
+                    </div>
+                  </div>
+                </div>
+                <LucideArrowRight className={`h-4 w-4 ${sourcePreview && targetPreview ? 'text-violet-300' : 'text-white/20'}`} />
+                <div className={`rounded-xl border p-2 ${targetPreview ? 'border-cyan-400/40 bg-cyan-500/10' : 'border-white/10 bg-white/[0.02]'}`}>
+                  <div className="flex items-center gap-2">
+                    {targetPreview ? <img src={targetPreview.image} alt={targetPreview.name} className="h-10 w-10 rounded-lg object-cover" /> : <LucideChevronRight className="text-white/20" />}
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-white">{targetPreview?.name || 'Target Item'}</p>
+                      <CoinAmount amount={Math.round(targetPreview?.price ?? 0)} className="text-[10px] font-semibold text-cyan-300" iconClassName="h-3 w-3" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -405,13 +638,27 @@ export default function UpgraderPage() {
               durationMs={SPIN_DURATION_MS}
             />
 
+            <div className="mt-4 w-full rounded-xl border border-white/10 bg-[#0d1322] p-3">
+              <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-400">
+                <span>Upgrade Chance Slider</span>
+                <span className="font-bold text-emerald-300">{chance.toFixed(2)}%</span>
+              </div>
+              <input type="range" min={0} max={100} value={Math.max(0, Math.min(100, chance))} readOnly className="mt-2 h-2 w-full accent-cyan-400" />
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className="text-slate-300">Success %: <span className="font-semibold text-white">{chance.toFixed(2)}%</span></span>
+                <span className={`font-semibold ${riskLabel.className}`}>Risk: {riskLabel.text}</span>
+              </div>
+            </div>
+
             <div className="mt-4 w-full">
               <button
                 onClick={handleUpgrade}
                 disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting}
                 className={`reactor-upgrade-btn w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base uppercase tracking-widest transition-all duration-300 ${status === 'idle' && source && target && settings?.enabled ? 'reactor-upgrade-btn-idle bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-[0_0_30px_rgba(34,211,238,0.2)] hover:scale-[1.02] active:scale-[0.98]' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
               >
-                {status === 'spinning' ? 'Upgrading...' : 'Upgrade Item'}
+                {status === 'spinning'
+                  ? 'Upgrading...'
+                  : `Upgrade Now · ${chance.toFixed(2)}% · ${source && target ? `${(target.coinValue / Math.max(source.coinValue, 1)).toFixed(2)}x` : '—'}`}
               </button>
 
               <div className="mt-3 flex items-center justify-center gap-2 text-[10px] text-white/30 uppercase tracking-widest font-bold">
@@ -419,42 +666,6 @@ export default function UpgraderPage() {
                 <span>Provably Fair System</span>
               </div>
             </div>
-          </div>
-        </section>
-
-        <div className="order-2 flex lg:hidden bg-white/5 p-1 rounded-xl border border-white/10">
-          <button
-            onClick={() => setActiveTab('inventory')}
-            className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'inventory' ? 'bg-violet-500 text-white' : 'text-slate-400'}`}
-          >
-            Inventory
-          </button>
-          <button
-            onClick={() => setActiveTab('targets')}
-            className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'targets' ? 'bg-cyan-500 text-[#03111a]' : 'text-slate-400'}`}
-          >
-            Targets
-          </button>
-        </div>
-
-        <section className={`order-4 lg:order-3 flex-col gap-4 overflow-hidden ${activeTab === 'targets' ? 'flex' : 'hidden lg:flex'}`}>
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Target Items <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{targetItems.length}</span></h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[220px] sm:max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
-            {targetItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                isSelected={target?.id === item.id}
-                onInfoClick={setDetailsItem}
-                onClick={() => {
-                  const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
-                  setTarget(match);
-                }}
-                disabled={status === 'spinning' || loading}
-              />
-            ))}
           </div>
         </section>
       </main>
