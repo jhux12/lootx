@@ -3,6 +3,7 @@ import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, Vi
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
+import { trackMetaEvent } from '../utils/trackEvent';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { 
   User as FirebaseUser,
@@ -2228,6 +2229,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser), { merge: true });
 
       await tryApplyPendingReferralAttribution();
+
+      try {
+        trackMetaEvent('CompleteRegistration', {
+          content_name: 'Account Registration',
+          status: true
+        });
+      } catch (err) {
+        console.warn('Meta registration tracking failed', err);
+      }
 
       setShowLoginModal(false);
       setEmailVerificationStatus('pending');
