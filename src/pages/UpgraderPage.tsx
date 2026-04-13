@@ -38,13 +38,15 @@ const normalizeEliteRarity = (rarity?: string): EliteItem['rarity'] => {
   return 'common';
 };
 
-  const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: string; coinValue?: number; image?: string }): EliteItem => ({
+const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: string; coinValue?: number; image?: string }): EliteItem => ({
   id: String(item.id ?? ''),
   name: String(item.name ?? 'Unknown'),
   price: Number(item.coinValue ?? 0),
   image: String(item.image ?? item.imageUrl ?? ''),
   rarity: normalizeEliteRarity(String(item.rarity ?? 'common'))
 });
+
+const normalizeKey = (value: string) => value.trim().toLowerCase();
 
 const SPIN_DURATION_MS = 5200;
 
@@ -209,7 +211,19 @@ export default function UpgraderPage() {
   }, [boxes]);
 
   const selectableTargetBoxes = useMemo(() => activeMysteryBoxes, [activeMysteryBoxes]);
-  const validTargetItemIds = useMemo(() => new Set(filteredTargets.map((entry) => String(entry.id))), [filteredTargets]);
+  const targetById = useMemo(() => {
+    const map = new Map<string, Item>();
+    filteredTargets.forEach((entry) => map.set(String(entry.id), entry));
+    return map;
+  }, [filteredTargets]);
+  const targetByName = useMemo(() => {
+    const map = new Map<string, Item>();
+    filteredTargets.forEach((entry) => {
+      const key = normalizeKey(String(entry.name ?? ''));
+      if (key && !map.has(key)) map.set(key, entry);
+    });
+    return map;
+  }, [filteredTargets]);
 
   const selectedTargetBox = useMemo(
     () => selectableTargetBoxes.find((box) => box.id === selectedTargetBoxId) ?? null,
@@ -219,15 +233,21 @@ export default function UpgraderPage() {
   const itemsForSelectedBox = useMemo<Item[]>(() => {
     if (!selectedTargetBox) return [];
     return selectedTargetBox.items.map((entry) => ({
-      id: String(entry.id ?? ''),
+      ...(targetById.get(String(entry.id)) ?? targetByName.get(normalizeKey(String(entry.name ?? '')))),
+      id: String((targetById.get(String(entry.id)) ?? targetByName.get(normalizeKey(String(entry.name ?? ''))))?.id ?? entry.id ?? ''),
       name: String(entry.name ?? 'Unknown Item'),
       imageUrl: String(entry.image ?? ''),
       coinValue: toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE),
       rarity: rarityMap[String(entry.rarity).toLowerCase()] ?? 'Common',
       category: String(entry.category ?? 'General'),
-      enabled: validTargetItemIds.has(String(entry.id))
+      enabled: Boolean(targetById.get(String(entry.id)) ?? targetByName.get(normalizeKey(String(entry.name ?? ''))))
     }));
-  }, [selectedTargetBox, validTargetItemIds]);
+  }, [selectedTargetBox, targetById, targetByName]);
+
+  const validTargetItemIds = useMemo(
+    () => new Set(itemsForSelectedBox.filter((entry) => entry.enabled !== false).map((entry) => String(entry.id))),
+    [itemsForSelectedBox]
+  );
 
   const chance = useMemo(() => {
     if (!source || !target) return 0;
