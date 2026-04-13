@@ -209,6 +209,7 @@ export default function UpgraderPage() {
   }, [boxes]);
 
   const selectableTargetBoxes = useMemo(() => activeMysteryBoxes, [activeMysteryBoxes]);
+  const validTargetItemIds = useMemo(() => new Set(filteredTargets.map((entry) => String(entry.id))), [filteredTargets]);
 
   const selectedTargetBox = useMemo(
     () => selectableTargetBoxes.find((box) => box.id === selectedTargetBoxId) ?? null,
@@ -224,9 +225,9 @@ export default function UpgraderPage() {
       coinValue: toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE),
       rarity: rarityMap[String(entry.rarity).toLowerCase()] ?? 'Common',
       category: String(entry.category ?? 'General'),
-      enabled: filteredTargets.some((targetEntry) => String(targetEntry.id) === String(entry.id))
+      enabled: validTargetItemIds.has(String(entry.id))
     }));
-  }, [filteredTargets, selectedTargetBox]);
+  }, [selectedTargetBox, validTargetItemIds]);
 
   const chance = useMemo(() => {
     if (!source || !target) return 0;
@@ -267,6 +268,13 @@ export default function UpgraderPage() {
       setTarget(null);
     }
   }, [selectedTargetBox, target]);
+
+  useEffect(() => {
+    if (!target) return;
+    if (!validTargetItemIds.has(String(target.id))) {
+      setTarget(null);
+    }
+  }, [target, validTargetItemIds]);
 
   const sourcePreview = source ? mapToEliteItem(source) : null;
   const targetPreview = target ? mapToEliteItem(target) : null;
@@ -558,17 +566,24 @@ export default function UpgraderPage() {
                 )}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 pr-1">
                   {targetItems.map((item) => (
-                    <ItemCard
-                      key={item.id}
-                      item={item}
-                      isSelected={target?.id === item.id}
-                      onInfoClick={setDetailsItem}
-                      onClick={() => {
-                        const match = itemsForSelectedBox.find((entry) => entry.id === item.id) ?? null;
-                        setTarget(match);
-                      }}
-                      disabled={status === 'spinning' || loading}
-                    />
+                    <div key={item.id} className="relative">
+                      <ItemCard
+                        item={item}
+                        isSelected={target?.id === item.id}
+                        onInfoClick={setDetailsItem}
+                        onClick={() => {
+                          const match = itemsForSelectedBox.find((entry) => entry.id === item.id) ?? null;
+                          if (!match || !validTargetItemIds.has(String(match.id))) return;
+                          setTarget(match);
+                        }}
+                        disabled={status === 'spinning' || loading || !validTargetItemIds.has(String(item.id))}
+                      />
+                      {!validTargetItemIds.has(String(item.id)) && (
+                        <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-md border border-rose-400/40 bg-rose-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-100">
+                          Unavailable
+                        </span>
+                      )}
+                    </div>
                   ))}
                   {targetItems.length === 0 && (
                     <p className="col-span-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-400">
