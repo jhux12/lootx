@@ -54,7 +54,7 @@ export const TopUpModal: React.FC = () => {
     return Math.max(0, computedMissing);
   }, [topUpModalIntent?.currentBalance, topUpModalIntent?.missingCoins, topUpModalIntent?.requiredCoins]);
   const isInsufficientBalanceFlow = topUpModalIntent?.reason === 'insufficient_balance' && missingCoins > 0;
-  const isFirstDepositEligible = !(user.hasDeposited || user.firstDepositBonusClaimed);
+  const isFirstDepositEligible = Boolean(user.id) && !user.hasDeposited && !user.firstDepositBonusClaimed;
   const getBadgeClasses = (badge?: string) => {
     if (badge === 'best') {
       return 'border-amber-400/80 bg-amber-500/10 text-amber-100';
