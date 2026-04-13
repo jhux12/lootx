@@ -320,11 +320,11 @@ export default function UpgraderPage() {
       });
 
       const success = Boolean(response.win);
-      const awardedInstanceId = response.awardedItem?.instanceId ?? response.awardedItem?.id;
-      if (success && awardedInstanceId) {
+      if (success) {
+        const awardedInstanceId = String(response.awardedItem?.instanceId ?? response.awardedItem?.id ?? `upgrader-local-${Date.now()}`);
         addInventoryItemFromServer({
           id: String(response.awardedItem.itemId ?? target.id),
-          instanceId: String(awardedInstanceId),
+          instanceId: awardedInstanceId,
           name: String(response.awardedItem.name ?? target.name),
           price: Number(response.awardedItem.coinValue ?? target.coinValue ?? 0),
           image: String(response.awardedItem.imageUrl ?? target.imageUrl ?? ''),
