@@ -13,7 +13,7 @@ export const SiteFooter: React.FC = () => {
   const { setView } = useGame();
 
   return (
-    <footer className="mt-20 border-t border-white/5 bg-[#070a12] py-10 text-sm text-gray-500">
+    <footer className="mt-20 border-t border-white/10 bg-[#0e1422] py-10 text-sm text-gray-500">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6">
         <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
           <BrandLockup
@@ -31,7 +31,7 @@ export const SiteFooter: React.FC = () => {
                 <button
                   key={link.label}
                   type="button"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-400 transition hover:border-white/30 hover:text-white"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#121826] text-gray-400 transition hover:border-[#7C5CFF]/45 hover:text-white"
                   aria-label={link.label}
                 >
                   <Icon className="h-4 w-4" />

@@ -211,7 +211,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
 
   return (
-    <main className="flex-1 min-w-0 pb-[90px] sm:pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+    <main className="page-fade-in flex-1 min-w-0 pb-[90px] sm:pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
       <Suspense fallback={<LoadingSpinner />}>
       {view.type === 'HOME' && (
         <HomeReplica
@@ -466,7 +466,7 @@ const AppShell = () => {
 
   return (
     <PullToRefresh>
-      <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+      <div className="min-h-screen bg-[#0B0F1A] text-white font-sans selection:bg-[#7C5CFF] selection:text-white flex flex-col">
         <SeoHead view={view} />
         <Header
           onOpenInbox={() => undefined}

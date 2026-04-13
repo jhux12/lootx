@@ -44,7 +44,7 @@ const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const drawerCardClass =
-  'flex items-center gap-3 rounded-xl border border-white/5 bg-[#18181b] p-3 text-left transition-colors hover:bg-[#202023]';
+  'flex items-center gap-3 rounded-xl border border-white/10 bg-[#141b2a] p-3 text-left transition-colors hover:bg-[#1a2438]';
 
 export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unreadChatCount: _unreadChatCount, isSticky = true }) => {
   const {
@@ -239,7 +239,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     <div className="relative z-50">
       <header
         ref={headerRef}
-        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/5 bg-neutral-950 md:bg-neutral-950/90 md:backdrop-blur-md`}
+        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/10 bg-[#0f1524]/95 shadow-[0_10px_30px_rgba(0,0,0,0.35)] md:backdrop-blur-xl`}
       >
         <div className="pt-[env(safe-area-inset-top,0px)]">
           <nav className="mx-auto flex h-[88px] sm:h-[96px] max-w-7xl items-center justify-between px-4 lg:px-8">
@@ -263,7 +263,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     setIsGamesMenuOpen((prev) => !prev);
                     setIsRewardsMenuOpen(false);
                   }}
-                  className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition-colors hover:border-white/5 hover:bg-neutral-800 hover:text-white"
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#151d2e] px-4 py-2.5 text-sm font-semibold text-cyan-200 transition-all hover:border-cyan-300/35 hover:bg-[#1a253b] hover:text-white"
                   aria-expanded={isGamesMenuOpen}
                   aria-haspopup="menu"
                 >
@@ -272,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   <ChevronDown className={`h-4 w-4 transition-transform ${isGamesMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
                 <div
-                  className={`absolute left-0 top-full mt-2 w-44 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${
+                  className={`absolute left-0 top-full mt-2 w-44 rounded-xl border border-white/10 bg-[#121826] p-1.5 shadow-2xl transition-all ${
                     isGamesMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'
                   }`}
                 >
@@ -290,13 +290,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 <button type="button" onClick={() => {
                   setIsRewardsMenuOpen((prev) => !prev);
                   setIsGamesMenuOpen(false);
-                }} className="relative flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-purple-400 transition-colors hover:border-white/5 hover:bg-neutral-800" aria-expanded={isRewardsMenuOpen}>
+                }} className="relative flex items-center gap-2 rounded-xl border border-white/10 bg-[#151d2e] px-4 py-2.5 text-sm font-semibold text-[#B7A8FF] transition-all hover:border-[#7C5CFF]/45 hover:bg-[#1a253b]" aria-expanded={isRewardsMenuOpen}>
                   <Sparkles className="h-4 w-4" />
                   Rewards
                   <ChevronDown className={`h-4 w-4 transition-transform ${isRewardsMenuOpen ? 'rotate-180' : ''}`} />
                   {questReadyCount > 0 ? <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}
                 </button>
-                <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
+                <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#121826] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
                   <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass}>
                     <RefreshCw className={`h-4 w-4 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
                     Daily Spin
@@ -308,7 +308,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   <button type="button" onClick={() => navigate('QUESTS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Sparkles className="h-4 w-4 text-violet-300" />Quests {questReadyCount > 0 ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : claimedTodayCount > 0 ? <span className="ml-auto rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
                 </div>
               </div>
-              <button onClick={() => navigate('LEADERBOARD')} className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-neutral-400 transition-colors hover:border-white/5 hover:bg-neutral-800 hover:text-white">
+              <button onClick={() => navigate('LEADERBOARD')} className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#151d2e] px-4 py-2.5 text-sm font-semibold text-gray-300 transition-all hover:border-white/25 hover:bg-[#1a253b] hover:text-white">
                 <Trophy className="h-4 w-4" />
                 Leaderboard
               </button>
@@ -319,27 +319,27 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             {isAuthenticated ? (
               <>
                 <div className="hidden items-center gap-2 lg:flex">
-                  <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5">
+                  <div className="flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-[#121826] px-3 py-1.5">
                     <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" />
                     <span className="text-xs font-bold text-white"><AnimatedNumber value={targetXp} /></span>
                   </div>
-                  <div className={`relative overflow-hidden rounded-lg p-[1px] ${balanceTone === 'up' ? 'shadow-[0_0_20px_rgba(34,197,94,0.35)]' : balanceTone === 'down' ? 'shadow-[0_0_20px_rgba(239,68,68,0.35)]' : ''}`}>
+                  <div className={`relative overflow-hidden rounded-full p-[1px] ${balanceTone === 'up' ? 'shadow-[0_0_20px_rgba(34,197,94,0.35)]' : balanceTone === 'down' ? 'shadow-[0_0_20px_rgba(239,68,68,0.35)]' : 'shadow-[0_0_26px_rgba(124,92,255,0.22)]'}`}>
                     <span
                       aria-hidden="true"
                       className="pointer-events-none absolute inset-0 rounded-lg bg-[conic-gradient(from_0deg,_#3b82f6,_#6366f1,_#8b5cf6,_#6366f1,_#3b82f6)] animate-[spin_10s_linear_infinite]"
                     />
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-[1px] rounded-[7px] bg-[#18181b]"
+                      className="pointer-events-none absolute inset-[1px] rounded-[999px] bg-[#121826]"
                     />
-                    <div className="relative z-10 flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-[#18181b] pl-3 pr-1.5 py-1.5">
+                    <div className="relative z-10 flex items-center gap-2 rounded-full border border-[#7C5CFF]/30 bg-[#121826] pl-3.5 pr-1.5 py-1.5">
                       <CoinAmount amount={balance} className="text-white text-sm font-bold" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
                       <button
                         onClick={() => {
                           playSound('click');
                           setShowTopUpModal(true);
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-white transition-colors hover:bg-indigo-500"
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7C5CFF] text-white transition-all hover:bg-[#8c70ff] hover:shadow-[0_0_14px_rgba(124,92,255,0.5)]"
                         aria-label="Top up"
                       >
                         <Plus className="h-4 w-4" />
@@ -393,28 +393,28 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
 
             {isAuthenticated && (
               <div className="flex items-center gap-2 lg:hidden">
-                <div className="flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5 sm:px-3">
+                <div className="flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-[#121826] px-2.5 py-1.5 sm:px-3">
                   <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
                   <span className="text-xs font-bold text-white sm:text-sm"><AnimatedNumber value={targetXp} /></span>
                 </div>
-                <div className="relative overflow-hidden rounded-md p-[1px]">
+                <div className="relative overflow-hidden rounded-full p-[1px] shadow-[0_0_20px_rgba(124,92,255,0.2)]">
                   <span
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-0 rounded-md bg-[conic-gradient(from_0deg,_#3b82f6,_#6366f1,_#8b5cf6,_#6366f1,_#3b82f6)] animate-[spin_10s_linear_infinite]"
                   />
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-[1px] rounded-[5px] bg-[#18181b]"
+                    className="pointer-events-none absolute inset-[1px] rounded-[999px] bg-[#121826]"
                   />
                   <button
                     onClick={() => {
                       playSound('click');
                       setShowTopUpModal(true);
                     }}
-                    className="relative z-10 flex items-center gap-1.5 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2.5 pr-1.5 py-1.5 sm:pl-3"
+                    className="relative z-10 flex items-center gap-1.5 rounded-full border border-[#7C5CFF]/30 bg-[#121826] pl-2.5 pr-1.5 py-1.5 sm:pl-3"
                   >
                     <CoinAmount amount={balance} className="text-xs font-bold text-white sm:text-sm" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
-                    <span className="rounded bg-indigo-600 p-1"><Plus className="h-3.5 w-3.5" /></span>
+                    <span className="rounded-full bg-[#7C5CFF] p-1"><Plus className="h-3.5 w-3.5" /></span>
                   </button>
                 </div>
               </div>
@@ -435,7 +435,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       />
 
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 w-full overflow-y-auto bg-[#09090b] px-4 py-4 transition-all duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-50 w-full overflow-y-auto bg-[#0f1524] px-4 py-4 transition-all duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${
           isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
