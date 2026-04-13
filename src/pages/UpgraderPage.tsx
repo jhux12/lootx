@@ -170,7 +170,6 @@ export default function UpgraderPage() {
 
     return inventory
       .filter((item) => (item.status ?? 'available') === 'available')
-      .filter((item) => !hasSourceAllowList || allowedIds.includes(String(item.id ?? '')))
       .map((item) => ({
         id: item.instanceId,
         name: item.name,
@@ -179,7 +178,8 @@ export default function UpgraderPage() {
         rarity: rarityMap[item.rarity] ?? 'Common',
         category: item.category || 'General',
         locked: item.locked,
-        shipping: item.status === 'shipping' || item.status === 'shipping_requested'
+        shipping: item.status === 'shipping' || item.status === 'shipping_requested',
+        upgradeEligible: !hasSourceAllowList || allowedIds.includes(String(item.id ?? ''))
       }));
   }, [inventory, settings?.sourceItemIdsEnabled]);
 
@@ -435,9 +435,14 @@ export default function UpgraderPage() {
                 onInfoClick={setDetailsItem}
                 onClick={() => {
                   const match = realInventoryItems.find((entry) => entry.id === item.id) ?? null;
+                  if (!match || (match as InventoryItem & { upgradeEligible?: boolean }).upgradeEligible === false) return;
                   setSource(match);
                 }}
-                disabled={status === 'spinning' || loading}
+                disabled={
+                  status === 'spinning' ||
+                  loading ||
+                  (realInventoryItems.find((entry) => entry.id === item.id) as (InventoryItem & { upgradeEligible?: boolean }) | undefined)?.upgradeEligible === false
+                }
               />
             ))}
           </div>
