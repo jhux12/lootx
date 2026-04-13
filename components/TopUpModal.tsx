@@ -55,7 +55,13 @@ export const TopUpModal: React.FC = () => {
   }, [topUpModalIntent?.currentBalance, topUpModalIntent?.missingCoins, topUpModalIntent?.requiredCoins]);
   const isInsufficientBalanceFlow = topUpModalIntent?.reason === 'insufficient_balance' && missingCoins > 0;
   const lifetimeDeposits = Number(user.lifetimeDeposits ?? 0);
-  const isFirstDepositEligible = Boolean(user.id) && lifetimeDeposits <= 0 && !user.hasDeposited && !user.firstDepositBonusClaimed;
+  const hasLedgerDepositHistory = Array.isArray(user.ledger)
+    && user.ledger.some((entry) => entry.type === 'deposit' && Number(entry.amount ?? 0) > 0);
+  const isFirstDepositEligible = Boolean(user.id)
+    && lifetimeDeposits <= 0
+    && !user.hasDeposited
+    && !user.firstDepositBonusClaimed
+    && !hasLedgerDepositHistory;
   const getBadgeClasses = (badge?: string) => {
     if (badge === 'best') {
       return 'border-amber-400/80 bg-amber-500/10 text-amber-100';

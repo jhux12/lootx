@@ -75,7 +75,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const targetXp = Math.floor(user.xpBalance ?? user.xp ?? 0);
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
   const lifetimeDeposits = Number(user.lifetimeDeposits ?? 0);
-  const isFirstDepositEligible = isAuthenticated && Boolean(user.id) && lifetimeDeposits <= 0 && !user.hasDeposited && !user.firstDepositBonusClaimed;
+  const hasLedgerDepositHistory = Array.isArray(user.ledger)
+    && user.ledger.some((entry) => entry.type === 'deposit' && Number(entry.amount ?? 0) > 0);
+  const isFirstDepositEligible = isAuthenticated
+    && Boolean(user.id)
+    && lifetimeDeposits <= 0
+    && !user.hasDeposited
+    && !user.firstDepositBonusClaimed
+    && !hasLedgerDepositHistory;
   const { unreadCount } = useActivity();
   const lastDailyClaim = Number.isFinite(user.lastDailyClaim ?? NaN) ? Number(user.lastDailyClaim) : 0;
   const dailyCooldownMs = 24 * 60 * 60 * 1000;
