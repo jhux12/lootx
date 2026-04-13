@@ -142,6 +142,7 @@ export default async function handler(req, res) {
         transaction.set(userRef, {
           coins: admin.firestore.FieldValue.increment(creditedCoins),
           balance: admin.firestore.FieldValue.increment(creditedCoins),
+          lifetimeDeposits: admin.firestore.FieldValue.increment(creditedCoins),
           hasDeposited: true,
           ...(alreadyDeposited ? {} : {
             firstDepositBonusClaimed: true,
