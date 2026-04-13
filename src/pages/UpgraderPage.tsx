@@ -38,7 +38,7 @@ const normalizeEliteRarity = (rarity?: string): EliteItem['rarity'] => {
   return 'common';
 };
 
-const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: string; coinValue?: number; image?: string }): EliteItem => ({
+  const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: string; coinValue?: number; image?: string }): EliteItem => ({
   id: String(item.id ?? ''),
   name: String(item.name ?? 'Unknown'),
   price: Number(item.coinValue ?? 0),
@@ -208,14 +208,7 @@ export default function UpgraderPage() {
       .sort((left, right) => left.name.localeCompare(right.name));
   }, [boxes]);
 
-  const targetItemIds = useMemo(() => new Set(filteredTargets.map((item) => String(item.id))), [filteredTargets]);
-
-  const selectableTargetBoxes = useMemo(() => {
-    return activeMysteryBoxes.map((box) => ({
-      ...box,
-      items: box.items.filter((boxItem) => targetItemIds.has(String(boxItem.id)))
-    }));
-  }, [activeMysteryBoxes, targetItemIds]);
+  const selectableTargetBoxes = useMemo(() => activeMysteryBoxes, [activeMysteryBoxes]);
 
   const selectedTargetBox = useMemo(
     () => selectableTargetBoxes.find((box) => box.id === selectedTargetBoxId) ?? null,
@@ -224,8 +217,15 @@ export default function UpgraderPage() {
 
   const itemsForSelectedBox = useMemo<Item[]>(() => {
     if (!selectedTargetBox) return [];
-    const allowedIds = new Set(selectedTargetBox.items.map((entry) => String(entry.id)));
-    return filteredTargets.filter((entry) => allowedIds.has(String(entry.id)));
+    return selectedTargetBox.items.map((entry) => ({
+      id: String(entry.id ?? ''),
+      name: String(entry.name ?? 'Unknown Item'),
+      imageUrl: String(entry.image ?? ''),
+      coinValue: toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE),
+      rarity: rarityMap[String(entry.rarity).toLowerCase()] ?? 'Common',
+      category: String(entry.category ?? 'General'),
+      enabled: filteredTargets.some((targetEntry) => String(targetEntry.id) === String(entry.id))
+    }));
   }, [filteredTargets, selectedTargetBox]);
 
   const chance = useMemo(() => {
@@ -531,7 +531,7 @@ export default function UpgraderPage() {
                       <img src={box.image} alt={box.name} className="h-14 w-14 shrink-0 rounded-xl object-cover" referrerPolicy="no-referrer" />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-bold text-white">{box.name}</p>
-                        <p className="text-xs text-slate-300">{box.items.length} upgradeable items</p>
+                        <p className="text-xs text-slate-300">{box.items.length} items</p>
                         <p className="text-[11px] font-semibold text-amber-300">
                           From <CoinAmount amount={Math.round(Number.isFinite(minPrice) ? minPrice : 0)} iconClassName="h-3 w-3" />
                         </p>

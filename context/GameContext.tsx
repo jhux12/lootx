@@ -1358,7 +1358,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     });
 
-    const shouldLoadInventory = typeof window !== 'undefined' && ['/inventory', '/profile'].some((path) => window.location.pathname.startsWith(path));
+    const shouldLoadInventory = typeof window !== 'undefined' && ['/inventory', '/profile', '/upgrader'].some((path) => window.location.pathname.startsWith(path));
     if (shouldLoadInventory) {
       void refreshInventory(firebaseUser.uid).catch((error) => {
         console.error('Failed to load inventory on-demand', error);
