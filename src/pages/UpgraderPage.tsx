@@ -129,6 +129,11 @@ export default function UpgraderPage() {
   }, [isMuted]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+    void refreshCurrentUserInventory().catch(() => undefined);
+  }, [isAuthenticated, refreshCurrentUserInventory]);
+
+  useEffect(() => {
     void (async () => {
       setLoading(true);
       try {
