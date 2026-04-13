@@ -49,7 +49,7 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
 const SPIN_DURATION_MS = 5200;
 
 export default function UpgraderPage() {
-  const { inventory, boxes, isAuthenticated, openAuthModal, addInventoryItemFromServer } = useGame();
+  const { inventory, boxes, isAuthenticated, openAuthModal, addInventoryItemFromServer, refreshCurrentUserInventory } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
   const [selectedTargetBoxId, setSelectedTargetBoxId] = useState<string | null>(null);
@@ -336,6 +336,7 @@ export default function UpgraderPage() {
           status: 'available',
           source: String(response.awardedItem.source ?? 'upgrader')
         });
+        void refreshCurrentUserInventory().catch(() => undefined);
       }
       setSpinResult(success);
       setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));

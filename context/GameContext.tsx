@@ -657,6 +657,7 @@ interface GameContextType {
   deductBalance: (amount: number, options?: { trackRewards?: boolean }) => boolean;
   addToInventory: (item: CaseItem, provenance?: InventoryProvenance) => InventoryItem;
   addInventoryItemFromServer: (item: InventoryItem) => void;
+  refreshCurrentUserInventory: () => Promise<void>;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string) => Promise<{ creditCoins?: number } | void>;
@@ -2399,6 +2400,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const refreshCurrentUserInventory = useCallback(async () => {
+    if (!auth.currentUser) return;
+    await refreshInventory(auth.currentUser.uid);
+  }, [refreshInventory]);
+
   const addNotification = (
     notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>
   ) => {
@@ -3269,6 +3275,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       deductBalance,
       addToInventory,
       addInventoryItemFromServer,
+      refreshCurrentUserInventory,
       followUser,
       unfollowUser,
       sellItem,
@@ -3312,7 +3319,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       linkGoogleAccount, register, resetPassword, logout, setShowLoginModal, setShowTopUpModal, setTopUpModalIntent,
       setAuthModalMode, openAuthModal, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal, setShowEmailVerifiedModal,
       setShowEmailVerificationModal, setView, addBalance, syncBalance, syncXpBalance, deductBalance, addToInventory,
-      addInventoryItemFromServer, followUser, unfollowUser, sellItem, shipItem, updateAddress, updateUserInfo,
+      addInventoryItemFromServer, refreshCurrentUserInventory, followUser, unfollowUser, sellItem, shipItem, updateAddress, updateUserInfo,
       addNotification, dismissNotification, clearNotifications, sendAdminNotification, updateUserFlags,
       updateUserAdminData, updateUserBalance, createBattle, joinBattle, updateBattle, createItem, updateItem,
       deleteItem, createCoinPackage, updateCoinPackage, deleteCoinPackage, createBox, createUserBox, updateBox,
