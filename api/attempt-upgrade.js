@@ -153,27 +153,25 @@ export default async function handler(req, res) {
       const sourceName = toSafeString(sourceItem.name, 'Inventory Item');
       const sourceRarity = toSafeString(sourceItem.rarity, 'common');
       const sourceCategory = toSafeString(sourceItem.category, 'misc');
-      const legacyInventory = Array.isArray(userData.inventory) ? userData.inventory : null;
-      const nextLegacyInventory = legacyInventory
-        ? [
-            ...(win
-              ? [{
-                  id: targetItemId,
-                  instanceId: awardedRef?.id ?? `${Date.now()}`,
-                  name: targetName,
-                  image: targetImage,
-                  price: targetValue,
-                  value: targetValue,
-                  rarity: targetRarity,
-                  category: targetCategory,
-                  obtainedAt: awardedAt,
-                  status: 'available',
-                  source: 'upgrader'
-                }]
-              : []),
-            ...legacyInventory.filter((entry) => String(entry?.instanceId ?? '') !== sourceItemInstanceId)
-          ]
-        : null;
+      const legacyInventory = Array.isArray(userData.inventory) ? userData.inventory : [];
+      const nextLegacyInventory = [
+        ...(win
+          ? [{
+              id: targetItemId,
+              instanceId: awardedRef?.id ?? `${Date.now()}`,
+              name: targetName,
+              image: targetImage,
+              price: targetValue,
+              value: targetValue,
+              rarity: targetRarity,
+              category: targetCategory,
+              obtainedAt: awardedAt,
+              status: 'available',
+              source: 'upgrader'
+            }]
+          : []),
+        ...legacyInventory.filter((entry) => String(entry?.instanceId ?? '') !== sourceItemInstanceId)
+      ];
 
       transaction.delete(sourceRef);
       if (awardedRef) {
@@ -209,7 +207,7 @@ export default async function handler(req, res) {
           upgraderUses: Math.max(0, Number(priorStats.upgraderUses ?? 0)) + 1,
           rarityUnboxed: priorStats.rarityUnboxed ?? {}
         },
-        ...(nextLegacyInventory ? { inventory: nextLegacyInventory.slice(0, 400) } : {})
+        inventory: nextLegacyInventory.slice(0, 400)
       }, { merge: true });
       transaction.set(provablyRef, {
         serverSeed,
