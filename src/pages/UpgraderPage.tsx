@@ -49,9 +49,10 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
 const SPIN_DURATION_MS = 5200;
 
 export default function UpgraderPage() {
-  const { inventory, isAuthenticated, openAuthModal } = useGame();
+  const { inventory, boxes, isAuthenticated, openAuthModal } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
+  const [selectedTargetBoxId, setSelectedTargetBoxId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [settings, setSettings] = useState<UpgraderSettings | null>(null);
@@ -63,6 +64,7 @@ export default function UpgraderPage() {
   const [spinResult, setSpinResult] = useState<boolean | null>(null);
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
+  const [targetSelectionStep, setTargetSelectionStep] = useState<'boxes' | 'items'>('boxes');
   const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const idleTimeoutRef = useRef<number | null>(null);
@@ -194,6 +196,36 @@ export default function UpgraderPage() {
     });
   }, [settings, targets]);
 
+  const activeMysteryBoxes = useMemo(() => {
+    return boxes.filter((box) => {
+      const isSystemMysteryBox = !box.isUserCreated && !box.isDaily;
+      const isBoxActive = (box as { active?: boolean }).active !== false;
+      return isSystemMysteryBox && isBoxActive && Array.isArray(box.items) && box.items.length > 0;
+    });
+  }, [boxes]);
+
+  const targetItemIds = useMemo(() => new Set(filteredTargets.map((item) => String(item.id))), [filteredTargets]);
+
+  const selectableTargetBoxes = useMemo(() => {
+    return activeMysteryBoxes
+      .map((box) => ({
+        ...box,
+        items: box.items.filter((boxItem) => targetItemIds.has(String(boxItem.id)))
+      }))
+      .filter((box) => box.items.length > 0);
+  }, [activeMysteryBoxes, targetItemIds]);
+
+  const selectedTargetBox = useMemo(
+    () => selectableTargetBoxes.find((box) => box.id === selectedTargetBoxId) ?? null,
+    [selectableTargetBoxes, selectedTargetBoxId]
+  );
+
+  const itemsForSelectedBox = useMemo<Item[]>(() => {
+    if (!selectedTargetBox) return [];
+    const allowedIds = new Set(selectedTargetBox.items.map((entry) => String(entry.id)));
+    return filteredTargets.filter((entry) => allowedIds.has(String(entry.id)));
+  }, [filteredTargets, selectedTargetBox]);
+
   const chance = useMemo(() => {
     if (!source || !target) return 0;
     if (!settings) {
@@ -214,7 +246,25 @@ export default function UpgraderPage() {
   }, [chance]);
 
   const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
-  const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
+  const targetItems = useMemo(() => itemsForSelectedBox.map((item) => mapToEliteItem(item)), [itemsForSelectedBox]);
+
+  useEffect(() => {
+    if (!selectedTargetBoxId) return;
+    const exists = selectableTargetBoxes.some((box) => box.id === selectedTargetBoxId);
+    if (!exists) {
+      setSelectedTargetBoxId(null);
+      setTarget(null);
+      setTargetSelectionStep('boxes');
+    }
+  }, [selectableTargetBoxes, selectedTargetBoxId]);
+
+  useEffect(() => {
+    if (!target || !selectedTargetBox) return;
+    const existsInSelectedBox = selectedTargetBox.items.some((entry) => String(entry.id) === String(target.id));
+    if (!existsInSelectedBox) {
+      setTarget(null);
+    }
+  }, [selectedTargetBox, target]);
 
   const sourcePreview = source ? mapToEliteItem(source) : null;
   const targetPreview = target ? mapToEliteItem(target) : null;
@@ -439,23 +489,92 @@ export default function UpgraderPage() {
 
         <section className={`order-4 lg:order-3 flex-col gap-4 overflow-hidden ${activeTab === 'targets' ? 'flex' : 'hidden lg:flex'}`}>
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Target Items <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{targetItems.length}</span></h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[220px] sm:max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
-            {targetItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                isSelected={target?.id === item.id}
-                onInfoClick={setDetailsItem}
+            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              {targetSelectionStep === 'boxes' ? 'Mystery Boxes' : 'Box Items'}
+              <span className="ml-1.5 bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">
+                {targetSelectionStep === 'boxes' ? selectableTargetBoxes.length : targetItems.length}
+              </span>
+            </h2>
+            {selectedTargetBox && (
+              <button
+                type="button"
                 onClick={() => {
-                  const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
-                  setTarget(match);
+                  setTargetSelectionStep('boxes');
+                  setTarget(null);
                 }}
-                disabled={status === 'spinning' || loading}
-              />
-            ))}
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:bg-white/10"
+              >
+                Change Box
+              </button>
+            )}
           </div>
+          {targetSelectionStep === 'boxes' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3 max-h-[220px] sm:max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
+              {selectableTargetBoxes.map((box) => {
+                const isSelected = selectedTargetBoxId === box.id;
+                const minPrice = box.items.reduce((lowest, entry) => Math.min(lowest, Number(entry.price ?? 0)), Number.POSITIVE_INFINITY);
+                return (
+                  <button
+                    key={box.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTargetBoxId(box.id);
+                      setTarget(null);
+                      setTargetSelectionStep('items');
+                    }}
+                    disabled={status === 'spinning' || loading}
+                    className={`rounded-xl border p-3 text-left transition ${isSelected ? 'border-cyan-400/70 bg-cyan-500/10' : 'border-white/10 bg-white/[0.03] hover:border-white/25'} ${(status === 'spinning' || loading) ? 'opacity-50 cursor-not-allowed' : 'active:scale-[0.99]'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <img src={box.image} alt={box.name} className="h-14 w-14 shrink-0 rounded-xl object-cover" referrerPolicy="no-referrer" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-white">{box.name}</p>
+                        <p className="text-xs text-slate-300">{box.items.length} upgradeable items</p>
+                        <p className="text-[11px] font-semibold text-amber-300">
+                          From <CoinAmount amount={Math.round(Number.isFinite(minPrice) ? minPrice : 0)} iconClassName="h-3 w-3" />
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+              {selectableTargetBoxes.length === 0 && (
+                <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-400">
+                  No active mystery boxes with upgradeable targets are available.
+                </p>
+              )}
+            </div>
+          )}
+
+          {targetSelectionStep === 'items' && (
+            <div className="space-y-2">
+              {selectedTargetBox && (
+                <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-2 text-xs text-cyan-100">
+                  Selected box: <span className="font-semibold">{selectedTargetBox.name}</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[220px] sm:max-h-[360px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
+                {targetItems.map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    isSelected={target?.id === item.id}
+                    onInfoClick={setDetailsItem}
+                    onClick={() => {
+                      const match = itemsForSelectedBox.find((entry) => entry.id === item.id) ?? null;
+                      setTarget(match);
+                    }}
+                    disabled={status === 'spinning' || loading}
+                  />
+                ))}
+                {targetItems.length === 0 && (
+                  <p className="col-span-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-400">
+                    Select a mystery box first to choose a target item.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </section>
       </main>
 
@@ -573,7 +692,7 @@ export default function UpgraderPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-white">2. Choose a Target</p>
-                  <p className="text-slate-300">Pick the item you want to upgrade to. Your win chance adjusts automatically based on value difference.</p>
+                  <p className="text-slate-300">Pick an active mystery box, then choose the item inside it you want to upgrade to. Your win chance adjusts automatically based on value difference.</p>
                 </div>
                 <div>
                   <p className="font-semibold text-white">3. Upgrade</p>
