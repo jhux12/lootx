@@ -32,6 +32,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getDocsFromServer,
   limit,
   onSnapshot,
   orderBy,
@@ -1278,7 +1279,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const inventoryPath = `users/${uid}/inventory?limit=${cappedLimit}`;
     console.log('READING FIRESTORE PATH', inventoryPath);
     const inventoryRef = query(collection(db, 'users', uid, 'inventory'), orderBy('obtainedAt', 'desc'), limit(cappedLimit));
-    const snapshot = await getDocs(inventoryRef);
+    const snapshot = await getDocsFromServer(inventoryRef);
     hasInventorySubcollectionRef.current = snapshot.size > 0;
     const loaded = snapshot.docs.map(mapInventoryDoc).sort((a, b) => b.obtainedAt - a.obtainedAt);
     const pendingIds = pendingSoldIdsRef.current;
