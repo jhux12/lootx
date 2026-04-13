@@ -86,28 +86,32 @@ export default async function handler(req, res) {
       const userRef = firestore.collection('users').doc(decoded.uid);
       const sourceRef = userRef.collection('inventory').doc(sourceItemInstanceId);
       const targetRef = firestore.collection('upgraderTargets').doc(targetItemId);
+      const siteItemRef = firestore.collection('items').doc(targetItemId);
       const settingsRef = firestore.collection('settings').doc('upgrader');
       const provablyRef = firestore.collection('provablyFair').doc(decoded.uid);
 
-      const [userSnap, sourceSnap, targetSnap, settingsSnap, provablySnap] = await Promise.all([
+      const [userSnap, sourceSnap, targetSnap, siteItemSnap, settingsSnap, provablySnap] = await Promise.all([
         transaction.get(userRef),
         transaction.get(sourceRef),
         transaction.get(targetRef),
+        transaction.get(siteItemRef),
         transaction.get(settingsRef),
         transaction.get(provablyRef)
       ]);
 
       if (!sourceSnap.exists) throw new Error('Source item not found in your inventory.');
-      if (!targetSnap.exists) throw new Error('Target item unavailable.');
+      if (!targetSnap.exists && !siteItemSnap.exists) throw new Error('Target item unavailable.');
 
       const settings = settingsSnap.exists ? settingsSnap.data() ?? {} : {};
       if (settings.enabled === false) throw new Error('Upgrader is currently disabled.');
 
       const sourceItem = sourceSnap.data() ?? {};
-      const targetItem = targetSnap.data() ?? {};
+      const targetItem = targetSnap.exists
+        ? targetSnap.data() ?? {}
+        : siteItemSnap.data() ?? {};
       if (sourceItem.status && sourceItem.status !== 'available') throw new Error('Source item is not available.');
       if (sourceItem.locked === true) throw new Error('Source item is locked.');
-      if (targetItem.enabled === false) throw new Error('Target item disabled by admin.');
+      if (targetSnap.exists && targetItem.enabled === false) throw new Error('Target item disabled by admin.');
 
       const sourceValue = getCoinValue(sourceItem);
       const targetValue = getCoinValue(targetItem);

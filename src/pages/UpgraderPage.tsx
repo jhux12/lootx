@@ -46,8 +46,6 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
   rarity: normalizeEliteRarity(String(item.rarity ?? 'common'))
 });
 
-const normalizeKey = (value: string) => value.trim().toLowerCase();
-
 const SPIN_DURATION_MS = 5200;
 
 export default function UpgraderPage() {
@@ -211,19 +209,6 @@ export default function UpgraderPage() {
   }, [boxes]);
 
   const selectableTargetBoxes = useMemo(() => activeMysteryBoxes, [activeMysteryBoxes]);
-  const targetById = useMemo(() => {
-    const map = new Map<string, Item>();
-    targets.forEach((entry) => map.set(String(entry.id), entry));
-    return map;
-  }, [targets]);
-  const targetByName = useMemo(() => {
-    const map = new Map<string, Item>();
-    targets.forEach((entry) => {
-      const key = normalizeKey(String(entry.name ?? ''));
-      if (key && !map.has(key)) map.set(key, entry);
-    });
-    return map;
-  }, [targets]);
 
   const selectedTargetBox = useMemo(
     () => selectableTargetBoxes.find((box) => box.id === selectedTargetBoxId) ?? null,
@@ -233,19 +218,18 @@ export default function UpgraderPage() {
   const itemsForSelectedBox = useMemo<Item[]>(() => {
     if (!selectedTargetBox) return [];
     return selectedTargetBox.items.map((entry) => ({
-      ...(targetById.get(String(entry.id)) ?? targetByName.get(normalizeKey(String(entry.name ?? '')))),
-      id: String((targetById.get(String(entry.id)) ?? targetByName.get(normalizeKey(String(entry.name ?? ''))))?.id ?? entry.id ?? ''),
+      id: String(entry.id ?? ''),
       name: String(entry.name ?? 'Unknown Item'),
       imageUrl: String(entry.image ?? ''),
       coinValue: toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE),
       rarity: rarityMap[String(entry.rarity).toLowerCase()] ?? 'Common',
       category: String(entry.category ?? 'General'),
-      enabled: Boolean(targetById.get(String(entry.id)) ?? targetByName.get(normalizeKey(String(entry.name ?? ''))))
+      enabled: true
     }));
-  }, [selectedTargetBox, targetById, targetByName]);
+  }, [selectedTargetBox]);
 
   const validTargetItemIds = useMemo(
-    () => new Set(itemsForSelectedBox.filter((entry) => entry.enabled !== false).map((entry) => String(entry.id))),
+    () => new Set(itemsForSelectedBox.map((entry) => String(entry.id))),
     [itemsForSelectedBox]
   );
 
@@ -593,16 +577,11 @@ export default function UpgraderPage() {
                         onInfoClick={setDetailsItem}
                         onClick={() => {
                           const match = itemsForSelectedBox.find((entry) => entry.id === item.id) ?? null;
-                          if (!match || !validTargetItemIds.has(String(match.id))) return;
+                          if (!match) return;
                           setTarget(match);
                         }}
-                        disabled={status === 'spinning' || loading || !validTargetItemIds.has(String(item.id))}
+                        disabled={status === 'spinning' || loading}
                       />
-                      {!validTargetItemIds.has(String(item.id)) && (
-                        <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-md border border-rose-400/40 bg-rose-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-100">
-                          Unavailable
-                        </span>
-                      )}
                     </div>
                   ))}
                   {targetItems.length === 0 && (
