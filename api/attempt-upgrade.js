@@ -153,6 +153,8 @@ export default async function handler(req, res) {
       const sourceRarity = toSafeString(sourceItem.rarity, 'common');
       const sourceCategory = toSafeString(sourceItem.category, 'misc');
 
+      const awardedAt = Date.now();
+
       transaction.delete(sourceRef);
       if (awardedRef) {
         transaction.set(awardedRef, {
@@ -166,7 +168,7 @@ export default async function handler(req, res) {
           category: targetCategory,
           chance: 0,
           color: toSafeString(targetItem.color, '#22d3ee'),
-          obtainedAt: Date.now(),
+          obtainedAt: awardedAt,
           status: 'available',
           source: 'upgrader'
         }, { merge: true });
@@ -235,7 +237,20 @@ export default async function handler(req, res) {
         chance,
         expectedPayout,
         attemptId: attemptRef.id,
-        awardedItem: awardedRef ? { id: awardedRef.id, name: targetName, imageUrl: targetImage } : undefined
+        awardedItem: awardedRef
+          ? {
+              instanceId: awardedRef.id,
+              itemId: targetItemId,
+              name: targetName,
+              imageUrl: targetImage,
+              coinValue: targetValue,
+              rarity: targetRarity,
+              category: targetCategory,
+              obtainedAt: awardedAt,
+              status: 'available',
+              source: 'upgrader'
+            }
+          : undefined
       };
     });
 

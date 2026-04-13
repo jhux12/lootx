@@ -49,7 +49,7 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
 const SPIN_DURATION_MS = 5200;
 
 export default function UpgraderPage() {
-  const { inventory, boxes, isAuthenticated, openAuthModal } = useGame();
+  const { inventory, boxes, isAuthenticated, openAuthModal, addInventoryItemFromServer } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
   const [selectedTargetBoxId, setSelectedTargetBoxId] = useState<string | null>(null);
@@ -320,6 +320,22 @@ export default function UpgraderPage() {
       });
 
       const success = Boolean(response.win);
+      if (success && response.awardedItem?.instanceId) {
+        addInventoryItemFromServer({
+          id: String(response.awardedItem.itemId ?? target.id),
+          instanceId: String(response.awardedItem.instanceId),
+          name: String(response.awardedItem.name ?? target.name),
+          price: Number(response.awardedItem.coinValue ?? target.coinValue ?? 0),
+          image: String(response.awardedItem.imageUrl ?? target.imageUrl ?? ''),
+          rarity: (String(response.awardedItem.rarity ?? target.rarity ?? 'common').toLowerCase() as InventoryItem['rarity']),
+          chance: 0,
+          color: '#22d3ee',
+          category: String(response.awardedItem.category ?? target.category ?? 'General'),
+          obtainedAt: Number(response.awardedItem.obtainedAt ?? Date.now()),
+          status: 'available',
+          source: String(response.awardedItem.source ?? 'upgrader')
+        });
+      }
       setSpinResult(success);
       setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
       setSpinNonce((previous) => previous + 1);
