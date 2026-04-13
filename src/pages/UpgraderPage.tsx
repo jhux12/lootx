@@ -49,9 +49,10 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
 const SPIN_DURATION_MS = 5200;
 
 export default function UpgraderPage() {
-  const { inventory, isAuthenticated, openAuthModal } = useGame();
+  const { inventory, boxes, isAuthenticated, openAuthModal, addInventoryItemFromServer, refreshCurrentUserInventory } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
+  const [selectedTargetBoxId, setSelectedTargetBoxId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [settings, setSettings] = useState<UpgraderSettings | null>(null);
@@ -63,6 +64,7 @@ export default function UpgraderPage() {
   const [spinResult, setSpinResult] = useState<boolean | null>(null);
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
+  const [targetSelectionStep, setTargetSelectionStep] = useState<'boxes' | 'items'>('boxes');
   const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const idleTimeoutRef = useRef<number | null>(null);
@@ -127,6 +129,11 @@ export default function UpgraderPage() {
   }, [isMuted]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+    void refreshCurrentUserInventory().catch(() => undefined);
+  }, [isAuthenticated, refreshCurrentUserInventory]);
+
+  useEffect(() => {
     void (async () => {
       setLoading(true);
       try {
@@ -168,7 +175,6 @@ export default function UpgraderPage() {
 
     return inventory
       .filter((item) => (item.status ?? 'available') === 'available')
-      .filter((item) => !hasSourceAllowList || allowedIds.includes(String(item.id ?? '')))
       .map((item) => ({
         id: item.instanceId,
         name: item.name,
@@ -177,7 +183,8 @@ export default function UpgraderPage() {
         rarity: rarityMap[item.rarity] ?? 'Common',
         category: item.category || 'General',
         locked: item.locked,
-        shipping: item.status === 'shipping' || item.status === 'shipping_requested'
+        shipping: item.status === 'shipping' || item.status === 'shipping_requested',
+        upgradeEligible: !hasSourceAllowList || allowedIds.includes(String(item.id ?? ''))
       }));
   }, [inventory, settings?.sourceItemIdsEnabled]);
 
@@ -193,6 +200,38 @@ export default function UpgraderPage() {
       return categoryAllowed && rarityAllowed;
     });
   }, [settings, targets]);
+
+  const activeMysteryBoxes = useMemo(() => {
+    return boxes
+      .filter((box) => {
+        const isSystemMysteryBox = !box.isUserCreated;
+        const isNotFreeBox = !box.isDaily;
+        const isCoinBox = !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0);
+        const isBoxActive = (box as { active?: boolean }).active !== false;
+        return isSystemMysteryBox && isNotFreeBox && isCoinBox && isBoxActive && Array.isArray(box.items) && box.items.length > 0;
+      })
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }, [boxes]);
+
+  const selectableTargetBoxes = useMemo(() => activeMysteryBoxes, [activeMysteryBoxes]);
+
+  const selectedTargetBox = useMemo(
+    () => selectableTargetBoxes.find((box) => box.id === selectedTargetBoxId) ?? null,
+    [selectableTargetBoxes, selectedTargetBoxId]
+  );
+
+  const itemsForSelectedBox = useMemo<Item[]>(() => {
+    if (!selectedTargetBox) return [];
+    return selectedTargetBox.items.map((entry) => ({
+      id: String(entry.id ?? ''),
+      name: String(entry.name ?? 'Unknown Item'),
+      imageUrl: String(entry.image ?? ''),
+      coinValue: toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE),
+      rarity: rarityMap[String(entry.rarity).toLowerCase()] ?? 'Common',
+      category: String(entry.category ?? 'General'),
+      enabled: true
+    }));
+  }, [selectedTargetBox]);
 
   const chance = useMemo(() => {
     if (!source || !target) return 0;
@@ -214,7 +253,25 @@ export default function UpgraderPage() {
   }, [chance]);
 
   const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
-  const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
+  const targetItems = useMemo(() => itemsForSelectedBox.map((item) => mapToEliteItem(item)), [itemsForSelectedBox]);
+
+  useEffect(() => {
+    if (!selectedTargetBoxId) return;
+    const exists = selectableTargetBoxes.some((box) => box.id === selectedTargetBoxId);
+    if (!exists) {
+      setSelectedTargetBoxId(null);
+      setTarget(null);
+      setTargetSelectionStep('boxes');
+    }
+  }, [selectableTargetBoxes, selectedTargetBoxId]);
+
+  useEffect(() => {
+    if (!target || !selectedTargetBox) return;
+    const existsInSelectedBox = selectedTargetBox.items.some((entry) => String(entry.id) === String(target.id));
+    if (!existsInSelectedBox) {
+      setTarget(null);
+    }
+  }, [selectedTargetBox, target]);
 
   const sourcePreview = source ? mapToEliteItem(source) : null;
   const targetPreview = target ? mapToEliteItem(target) : null;
@@ -268,6 +325,24 @@ export default function UpgraderPage() {
       });
 
       const success = Boolean(response.win);
+      if (success) {
+        const awardedInstanceId = String(response.awardedItem?.instanceId ?? response.awardedItem?.id ?? `upgrader-local-${Date.now()}`);
+        addInventoryItemFromServer({
+          id: String(response.awardedItem.itemId ?? target.id),
+          instanceId: awardedInstanceId,
+          name: String(response.awardedItem.name ?? target.name),
+          price: Number(response.awardedItem.coinValue ?? target.coinValue ?? 0),
+          image: String(response.awardedItem.imageUrl ?? target.imageUrl ?? ''),
+          rarity: (String(response.awardedItem.rarity ?? target.rarity ?? 'common').toLowerCase() as InventoryItem['rarity']),
+          chance: 0,
+          color: '#22d3ee',
+          category: String(response.awardedItem.category ?? target.category ?? 'General'),
+          obtainedAt: Number(response.awardedItem.obtainedAt ?? Date.now()),
+          status: 'available',
+          source: String(response.awardedItem.source ?? 'upgrader')
+        });
+        void refreshCurrentUserInventory().catch(() => undefined);
+      }
       setSpinResult(success);
       setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
       setSpinNonce((previous) => previous + 1);
@@ -365,9 +440,14 @@ export default function UpgraderPage() {
                 onInfoClick={setDetailsItem}
                 onClick={() => {
                   const match = realInventoryItems.find((entry) => entry.id === item.id) ?? null;
+                  if (!match || (match as InventoryItem & { upgradeEligible?: boolean }).upgradeEligible === false) return;
                   setSource(match);
                 }}
-                disabled={status === 'spinning' || loading}
+                disabled={
+                  status === 'spinning' ||
+                  loading ||
+                  (realInventoryItems.find((entry) => entry.id === item.id) as (InventoryItem & { upgradeEligible?: boolean }) | undefined)?.upgradeEligible === false
+                }
               />
             ))}
           </div>
@@ -439,22 +519,95 @@ export default function UpgraderPage() {
 
         <section className={`order-4 lg:order-3 flex-col gap-4 overflow-hidden ${activeTab === 'targets' ? 'flex' : 'hidden lg:flex'}`}>
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Target Items <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{targetItems.length}</span></h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 max-h-[220px] sm:max-h-[380px] lg:max-h-none overflow-y-auto pr-1 custom-scrollbar">
-            {targetItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                isSelected={target?.id === item.id}
-                onInfoClick={setDetailsItem}
+            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              {targetSelectionStep === 'boxes' ? 'Mystery Boxes' : 'Box Items'}
+              <span className="ml-1.5 bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">
+                {targetSelectionStep === 'boxes' ? selectableTargetBoxes.length : targetItems.length}
+              </span>
+            </h2>
+            {selectedTargetBox && (
+              <button
+                type="button"
                 onClick={() => {
-                  const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
-                  setTarget(match);
+                  setTargetSelectionStep('boxes');
+                  setTarget(null);
                 }}
-                disabled={status === 'spinning' || loading}
-              />
-            ))}
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:bg-white/10"
+              >
+                Change Box
+              </button>
+            )}
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-2 sm:p-3 h-[240px] sm:h-[390px] lg:h-[520px] overflow-y-auto custom-scrollbar">
+            {targetSelectionStep === 'boxes' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3 pr-1">
+                {selectableTargetBoxes.map((box) => {
+                  const isSelected = selectedTargetBoxId === box.id;
+                  const minPrice = box.items.reduce((lowest, entry) => Math.min(lowest, Number(entry.price ?? 0)), Number.POSITIVE_INFINITY);
+                  return (
+                    <button
+                      key={box.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTargetBoxId(box.id);
+                        setTarget(null);
+                        setTargetSelectionStep('items');
+                      }}
+                      disabled={status === 'spinning' || loading}
+                      className={`rounded-xl border p-3 text-left transition ${isSelected ? 'border-cyan-400/70 bg-cyan-500/10' : 'border-white/10 bg-white/[0.03] hover:border-white/25'} ${(status === 'spinning' || loading) ? 'opacity-50 cursor-not-allowed' : 'active:scale-[0.99]'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <img src={box.image} alt={box.name} className="h-14 w-14 shrink-0 rounded-xl object-cover" referrerPolicy="no-referrer" />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-white">{box.name}</p>
+                          <p className="text-xs text-slate-300">{box.items.length} items</p>
+                          <p className="text-[11px] font-semibold text-amber-300">
+                            From <CoinAmount amount={Math.round(Number.isFinite(minPrice) ? minPrice : 0)} iconClassName="h-3 w-3" />
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+                {selectableTargetBoxes.length === 0 && (
+                  <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-400">
+                    No active mystery boxes are available right now.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {targetSelectionStep === 'items' && (
+              <div className="space-y-2">
+                {selectedTargetBox && (
+                  <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-2 text-xs text-cyan-100">
+                    Selected box: <span className="font-semibold">{selectedTargetBox.name}</span>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 pr-1">
+                  {targetItems.map((item) => (
+                    <div key={item.id} className="relative">
+                      <ItemCard
+                        item={item}
+                        isSelected={target?.id === item.id}
+                        onInfoClick={setDetailsItem}
+                        onClick={() => {
+                          const match = itemsForSelectedBox.find((entry) => entry.id === item.id) ?? null;
+                          if (!match) return;
+                          setTarget(match);
+                        }}
+                        disabled={status === 'spinning' || loading}
+                      />
+                    </div>
+                  ))}
+                  {targetItems.length === 0 && (
+                    <p className="col-span-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-400">
+                      Select a mystery box first to choose a target item.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </main>
@@ -573,7 +726,7 @@ export default function UpgraderPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-white">2. Choose a Target</p>
-                  <p className="text-slate-300">Pick the item you want to upgrade to. Your win chance adjusts automatically based on value difference.</p>
+                  <p className="text-slate-300">Pick an active mystery box, then choose the item inside it you want to upgrade to. Your win chance adjusts automatically based on value difference.</p>
                 </div>
                 <div>
                   <p className="font-semibold text-white">3. Upgrade</p>

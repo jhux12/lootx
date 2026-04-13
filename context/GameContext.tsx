@@ -32,6 +32,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getDocsFromServer,
   limit,
   onSnapshot,
   orderBy,
@@ -657,6 +658,7 @@ interface GameContextType {
   deductBalance: (amount: number, options?: { trackRewards?: boolean }) => boolean;
   addToInventory: (item: CaseItem, provenance?: InventoryProvenance) => InventoryItem;
   addInventoryItemFromServer: (item: InventoryItem) => void;
+  refreshCurrentUserInventory: () => Promise<void>;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string) => Promise<{ creditCoins?: number } | void>;
@@ -1277,7 +1279,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const inventoryPath = `users/${uid}/inventory?limit=${cappedLimit}`;
     console.log('READING FIRESTORE PATH', inventoryPath);
     const inventoryRef = query(collection(db, 'users', uid, 'inventory'), orderBy('obtainedAt', 'desc'), limit(cappedLimit));
-    const snapshot = await getDocs(inventoryRef);
+    const snapshot = await getDocsFromServer(inventoryRef);
     hasInventorySubcollectionRef.current = snapshot.size > 0;
     const loaded = snapshot.docs.map(mapInventoryDoc).sort((a, b) => b.obtainedAt - a.obtainedAt);
     const pendingIds = pendingSoldIdsRef.current;
@@ -1358,7 +1360,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     });
 
-    const shouldLoadInventory = typeof window !== 'undefined' && ['/inventory', '/profile'].some((path) => window.location.pathname.startsWith(path));
+    const shouldLoadInventory = typeof window !== 'undefined' && ['/inventory', '/profile', '/upgrader'].some((path) => window.location.pathname.startsWith(path));
     if (shouldLoadInventory) {
       void refreshInventory(firebaseUser.uid).catch((error) => {
         console.error('Failed to load inventory on-demand', error);
@@ -2399,6 +2401,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const refreshCurrentUserInventory = useCallback(async () => {
+    if (!auth.currentUser) return;
+    await refreshInventory(auth.currentUser.uid);
+  }, [refreshInventory]);
+
   const addNotification = (
     notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>
   ) => {
@@ -3269,6 +3276,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       deductBalance,
       addToInventory,
       addInventoryItemFromServer,
+      refreshCurrentUserInventory,
       followUser,
       unfollowUser,
       sellItem,
@@ -3312,7 +3320,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       linkGoogleAccount, register, resetPassword, logout, setShowLoginModal, setShowTopUpModal, setTopUpModalIntent,
       setAuthModalMode, openAuthModal, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal, setShowEmailVerifiedModal,
       setShowEmailVerificationModal, setView, addBalance, syncBalance, syncXpBalance, deductBalance, addToInventory,
-      addInventoryItemFromServer, followUser, unfollowUser, sellItem, shipItem, updateAddress, updateUserInfo,
+      addInventoryItemFromServer, refreshCurrentUserInventory, followUser, unfollowUser, sellItem, shipItem, updateAddress, updateUserInfo,
       addNotification, dismissNotification, clearNotifications, sendAdminNotification, updateUserFlags,
       updateUserAdminData, updateUserBalance, createBattle, joinBattle, updateBattle, createItem, updateItem,
       deleteItem, createCoinPackage, updateCoinPackage, deleteCoinPackage, createBox, createUserBox, updateBox,

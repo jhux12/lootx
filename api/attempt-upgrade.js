@@ -86,28 +86,32 @@ export default async function handler(req, res) {
       const userRef = firestore.collection('users').doc(decoded.uid);
       const sourceRef = userRef.collection('inventory').doc(sourceItemInstanceId);
       const targetRef = firestore.collection('upgraderTargets').doc(targetItemId);
+      const siteItemRef = firestore.collection('items').doc(targetItemId);
       const settingsRef = firestore.collection('settings').doc('upgrader');
       const provablyRef = firestore.collection('provablyFair').doc(decoded.uid);
 
-      const [userSnap, sourceSnap, targetSnap, settingsSnap, provablySnap] = await Promise.all([
+      const [userSnap, sourceSnap, targetSnap, siteItemSnap, settingsSnap, provablySnap] = await Promise.all([
         transaction.get(userRef),
         transaction.get(sourceRef),
         transaction.get(targetRef),
+        transaction.get(siteItemRef),
         transaction.get(settingsRef),
         transaction.get(provablyRef)
       ]);
 
       if (!sourceSnap.exists) throw new Error('Source item not found in your inventory.');
-      if (!targetSnap.exists) throw new Error('Target item unavailable.');
+      if (!targetSnap.exists && !siteItemSnap.exists) throw new Error('Target item unavailable.');
 
       const settings = settingsSnap.exists ? settingsSnap.data() ?? {} : {};
       if (settings.enabled === false) throw new Error('Upgrader is currently disabled.');
 
       const sourceItem = sourceSnap.data() ?? {};
-      const targetItem = targetSnap.data() ?? {};
+      const targetItem = targetSnap.exists
+        ? targetSnap.data() ?? {}
+        : siteItemSnap.data() ?? {};
       if (sourceItem.status && sourceItem.status !== 'available') throw new Error('Source item is not available.');
       if (sourceItem.locked === true) throw new Error('Source item is locked.');
-      if (targetItem.enabled === false) throw new Error('Target item disabled by admin.');
+      if (targetSnap.exists && targetItem.enabled === false) throw new Error('Target item disabled by admin.');
 
       const sourceValue = getCoinValue(sourceItem);
       const targetValue = getCoinValue(targetItem);
@@ -125,6 +129,7 @@ export default async function handler(req, res) {
       if (targetItem.maxSourceValue != null && sourceValue > Number(targetItem.maxSourceValue)) throw new Error('Source value above target maximum.');
 
       const userData = userSnap.data() ?? {};
+      const awardedAt = Date.now();
       const provablyData = provablySnap.data() ?? {};
       const serverSeed = typeof provablyData.serverSeed === 'string' && provablyData.serverSeed ? provablyData.serverSeed : randomSeed();
       const serverSeedHash = typeof provablyData.serverSeedHash === 'string' && provablyData.serverSeedHash ? provablyData.serverSeedHash : sha256(serverSeed);
@@ -148,6 +153,25 @@ export default async function handler(req, res) {
       const sourceName = toSafeString(sourceItem.name, 'Inventory Item');
       const sourceRarity = toSafeString(sourceItem.rarity, 'common');
       const sourceCategory = toSafeString(sourceItem.category, 'misc');
+      const legacyInventory = Array.isArray(userData.inventory) ? userData.inventory : [];
+      const nextLegacyInventory = [
+        ...(win
+          ? [{
+              id: targetItemId,
+              instanceId: awardedRef?.id ?? `${Date.now()}`,
+              name: targetName,
+              image: targetImage,
+              price: targetValue,
+              value: targetValue,
+              rarity: targetRarity,
+              category: targetCategory,
+              obtainedAt: awardedAt,
+              status: 'available',
+              source: 'upgrader'
+            }]
+          : []),
+        ...legacyInventory.filter((entry) => String(entry?.instanceId ?? '') !== sourceItemInstanceId)
+      ];
 
       transaction.delete(sourceRef);
       if (awardedRef) {
@@ -162,7 +186,7 @@ export default async function handler(req, res) {
           category: targetCategory,
           chance: 0,
           color: toSafeString(targetItem.color, '#22d3ee'),
-          obtainedAt: Date.now(),
+          obtainedAt: awardedAt,
           status: 'available',
           source: 'upgrader'
         }, { merge: true });
@@ -182,7 +206,8 @@ export default async function handler(req, res) {
           sellBackCoins: Math.max(0, Number(priorStats.sellBackCoins ?? 0)),
           upgraderUses: Math.max(0, Number(priorStats.upgraderUses ?? 0)) + 1,
           rarityUnboxed: priorStats.rarityUnboxed ?? {}
-        }
+        },
+        inventory: nextLegacyInventory.slice(0, 400)
       }, { merge: true });
       transaction.set(provablyRef, {
         serverSeed,
@@ -231,7 +256,20 @@ export default async function handler(req, res) {
         chance,
         expectedPayout,
         attemptId: attemptRef.id,
-        awardedItem: awardedRef ? { id: awardedRef.id, name: targetName, imageUrl: targetImage } : undefined
+        awardedItem: awardedRef
+          ? {
+              instanceId: awardedRef.id,
+              itemId: targetItemId,
+              name: targetName,
+              imageUrl: targetImage,
+              coinValue: targetValue,
+              rarity: targetRarity,
+              category: targetCategory,
+              obtainedAt: awardedAt,
+              status: 'available',
+              source: 'upgrader'
+            }
+          : undefined
       };
     });
 
