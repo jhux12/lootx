@@ -129,6 +129,7 @@ export default async function handler(req, res) {
       if (targetItem.maxSourceValue != null && sourceValue > Number(targetItem.maxSourceValue)) throw new Error('Source value above target maximum.');
 
       const userData = userSnap.data() ?? {};
+      const awardedAt = Date.now();
       const provablyData = provablySnap.data() ?? {};
       const serverSeed = typeof provablyData.serverSeed === 'string' && provablyData.serverSeed ? provablyData.serverSeed : randomSeed();
       const serverSeedHash = typeof provablyData.serverSeedHash === 'string' && provablyData.serverSeedHash ? provablyData.serverSeedHash : sha256(serverSeed);
@@ -152,8 +153,27 @@ export default async function handler(req, res) {
       const sourceName = toSafeString(sourceItem.name, 'Inventory Item');
       const sourceRarity = toSafeString(sourceItem.rarity, 'common');
       const sourceCategory = toSafeString(sourceItem.category, 'misc');
-
-      const awardedAt = Date.now();
+      const legacyInventory = Array.isArray(userData.inventory) ? userData.inventory : null;
+      const nextLegacyInventory = legacyInventory
+        ? [
+            ...(win
+              ? [{
+                  id: targetItemId,
+                  instanceId: awardedRef?.id ?? `${Date.now()}`,
+                  name: targetName,
+                  image: targetImage,
+                  price: targetValue,
+                  value: targetValue,
+                  rarity: targetRarity,
+                  category: targetCategory,
+                  obtainedAt: awardedAt,
+                  status: 'available',
+                  source: 'upgrader'
+                }]
+              : []),
+            ...legacyInventory.filter((entry) => String(entry?.instanceId ?? '') !== sourceItemInstanceId)
+          ]
+        : null;
 
       transaction.delete(sourceRef);
       if (awardedRef) {
@@ -188,7 +208,8 @@ export default async function handler(req, res) {
           sellBackCoins: Math.max(0, Number(priorStats.sellBackCoins ?? 0)),
           upgraderUses: Math.max(0, Number(priorStats.upgraderUses ?? 0)) + 1,
           rarityUnboxed: priorStats.rarityUnboxed ?? {}
-        }
+        },
+        ...(nextLegacyInventory ? { inventory: nextLegacyInventory.slice(0, 400) } : {})
       }, { merge: true });
       transaction.set(provablyRef, {
         serverSeed,
