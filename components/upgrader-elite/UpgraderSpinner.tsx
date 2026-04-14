@@ -8,8 +8,8 @@ const TRAIL_GHOST_COUNT = 8;
 
 const getRiskColor = (chance: number) => {
   if (chance < 20) return '#ef4444';
-  if (chance < 50) return '#a855f7';
-  if (chance < 80) return '#22d3ee';
+  if (chance < 50) return '#8b5cf6';
+  if (chance < 80) return '#38bdf8';
   return '#22c55e';
 };
 
@@ -53,8 +53,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   const wheelRef = useRef<HTMLDivElement | null>(null);
   const needleRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
-  const flickerTimeoutRef = useRef<number | null>(null);
-  const flickerResetRef = useRef<number | null>(null);
   const trailRafRef = useRef<number | null>(null);
   const bounceRafRef = useRef<number | null>(null);
   const ghostNeedleRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -64,56 +62,14 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
 
   const chanceGlowRgb = useMemo(() => {
     if (chance < 30) return '190, 50, 70';
-    if (chance < 60) return '217, 119, 6';
+    if (chance < 60) return '99, 102, 241';
     return '16, 185, 129';
   }, [chance]);
 
   const circumference = Math.PI * 2 * ((size - 20) / 2);
   const offset = circumference - (Math.max(0, Math.min(100, chance)) / 100) * circumference;
   const riskColor = useMemo(() => getRiskColor(chance), [chance]);
-
   const wheelCenter = useMemo(() => ({ x: size / 2, y: size / 2 }), [size]);
-
-  useEffect(() => {
-    const clearFlickerTimers = () => {
-      if (flickerTimeoutRef.current) {
-        window.clearTimeout(flickerTimeoutRef.current);
-        flickerTimeoutRef.current = null;
-      }
-      if (flickerResetRef.current) {
-        window.clearTimeout(flickerResetRef.current);
-        flickerResetRef.current = null;
-      }
-    };
-
-    clearFlickerTimers();
-    wheelRef.current?.classList.remove('reactor-flicker');
-
-    if (status !== 'idle') {
-      return clearFlickerTimers;
-    }
-
-    let isCancelled = false;
-    const runFlicker = () => {
-      if (isCancelled || !wheelRef.current) return;
-
-      wheelRef.current.classList.add('reactor-flicker');
-
-      flickerResetRef.current = window.setTimeout(() => {
-        wheelRef.current?.classList.remove('reactor-flicker');
-      }, 120 + Math.floor(Math.random() * 80));
-
-      flickerTimeoutRef.current = window.setTimeout(runFlicker, 2000 + Math.floor(Math.random() * 2000));
-    };
-
-    flickerTimeoutRef.current = window.setTimeout(runFlicker, 2000 + Math.floor(Math.random() * 2000));
-
-    return () => {
-      isCancelled = true;
-      clearFlickerTimers();
-      wheelRef.current?.classList.remove('reactor-flicker');
-    };
-  }, [status]);
 
   const updateRotationFromEvent = (clientX: number, clientY: number) => {
     const wheelElement = wheelRef.current;
@@ -144,7 +100,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
       historyRef.current = [currentAngle, ...historyRef.current.slice(0, TRAIL_GHOST_COUNT - 1)];
       ghostNeedleRefs.current.forEach((ghost, index) => {
         if (!ghost) return;
-        const sampledAngle = historyRef.current[Math.min(TRAIL_GHOST_COUNT - 1, (index + 1) * 1)] ?? currentAngle;
+        const sampledAngle = historyRef.current[Math.min(TRAIL_GHOST_COUNT - 1, index + 1)] ?? currentAngle;
         ghost.style.transform = `rotate(${sampledAngle}deg)`;
       });
       trailRafRef.current = window.requestAnimationFrame(frame);
@@ -197,10 +153,10 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   }, []);
 
   return (
-    <div className="relative flex flex-col items-center justify-center py-4 sm:py-8">
+    <div className="relative flex flex-col items-center">
       <div
         ref={wheelRef}
-        className={`reactor-spinner relative touch-none ${status === 'idle' ? 'spinner-idle' : ''} ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        className={`relative touch-none rounded-full border border-indigo-300/30 bg-[#060b18] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
         style={{ width: size, height: size, ['--reactor-glow-rgb' as string]: chanceGlowRgb, ['--reactor-risk-color' as string]: riskColor }}
         onPointerDown={(event) => {
           if (!canRotateWinZone || status !== 'idle') return;
@@ -223,65 +179,48 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           event.currentTarget.releasePointerCapture(event.pointerId);
         }}
       >
-        <div
-          className="reactor-energy-layer absolute inset-[10%] rounded-full pointer-events-none"
-          style={{ animationPlayState: status === 'idle' ? 'running' : 'paused' }}
-        />
+        <div className="pointer-events-none absolute inset-4 rounded-full bg-[radial-gradient(circle_at_50%_35%,rgba(99,102,241,0.2),rgba(7,12,25,0.95)_70%)]" />
+        <div className="pointer-events-none absolute inset-8 rounded-full border border-indigo-300/15 opacity-70" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)', backgroundSize: '14px 14px' }} />
 
-        <div className="absolute inset-0 rounded-full">
-          <svg width={size} height={size} className="-rotate-90">
+        <svg width={size} height={size} className="absolute inset-0 -rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={(size - 20) / 2} fill="transparent" stroke="rgba(255,255,255,0.09)" strokeWidth={16} />
+          <g style={{ transformOrigin: `${size / 2}px ${size / 2}px`, transform: `rotate(${winZoneRotation}deg)` }}>
             <circle
               cx={size / 2}
               cy={size / 2}
               r={(size - 20) / 2}
               fill="transparent"
-              stroke="rgba(255,255,255,0.08)"
-              strokeWidth={20}
+              stroke="url(#win-gradient)"
+              strokeWidth={16}
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
             />
-            <g
-              style={{
-                transformOrigin: `${size / 2}px ${size / 2}px`,
-                transform: `rotate(${winZoneRotation}deg)`
-              }}
-            >
-              <circle
-                cx={size / 2}
-                cy={size / 2}
-                r={(size - 20) / 2}
-                fill="transparent"
-                stroke="url(#win-gradient)"
-                strokeWidth={20}
-                strokeDasharray={circumference}
-                strokeDashoffset={offset}
-                strokeLinecap="butt"
-              />
-            </g>
-            <defs>
-              <linearGradient id="win-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#10b981" />
-                <stop offset="100%" stopColor="#34d399" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
+          </g>
+          <defs>
+            <linearGradient id="win-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#818cf8" />
+              <stop offset="100%" stopColor="#22d3ee" />
+            </linearGradient>
+          </defs>
+        </svg>
 
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
           {(status === 'idle' || status === 'spinning') && (
             <>
-              <span className="text-4xl sm:text-5xl font-bold text-white tracking-tight">{chance.toFixed(2)}%</span>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold mt-1">Success Chance</p>
+              <span className="text-4xl font-bold tracking-tight text-white sm:text-5xl">{chance.toFixed(2)}%</span>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Chance to upgrade</p>
             </>
           )}
           {status === 'success' && (
             <>
-              <LucideCheckCircle2 className="w-14 h-14 text-emerald-500 mb-2" />
-              <span className="text-xl sm:text-2xl font-bold text-emerald-400 uppercase tracking-widest">Success</span>
+              <LucideCheckCircle2 className="mb-2 h-14 w-14 text-emerald-400" />
+              <span className="text-xl font-bold uppercase tracking-wider text-emerald-300">Success</span>
             </>
           )}
           {status === 'fail' && (
             <>
-              <LucideXCircle className="w-14 h-14 text-rose-500 mb-2" />
-              <span className="text-xl sm:text-2xl font-bold text-rose-400 uppercase tracking-widest">Failed</span>
+              <LucideXCircle className="mb-2 h-14 w-14 text-rose-400" />
+              <span className="text-xl font-bold uppercase tracking-wider text-rose-300">Failed</span>
             </>
           )}
         </div>
@@ -292,15 +231,12 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
             ref={(node) => {
               ghostNeedleRefs.current[index] = node;
             }}
-            className={`absolute top-0 left-1/2 -ml-[2px] w-[4px] h-1/2 origin-bottom z-10 pointer-events-none will-change-transform reactor-needle-ghost ${isTrailing ? 'reactor-needle-ghost-active' : ''}`}
-            style={{ opacity: (TRAIL_GHOST_COUNT - index) / (TRAIL_GHOST_COUNT * 10), filter: `blur(${index * 0.5}px)` }}
+            className={`pointer-events-none absolute left-1/2 top-0 z-10 -ml-[2px] h-1/2 w-[4px] origin-bottom will-change-transform ${isTrailing ? 'opacity-100' : 'opacity-0'}`}
+            style={{ opacity: isTrailing ? (TRAIL_GHOST_COUNT - index) / (TRAIL_GHOST_COUNT * 9) : 0, filter: `blur(${index * 0.45}px)` }}
           >
-            <div className="w-full h-full relative">
-              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[var(--reactor-risk-color)]" />
-              <div
-                className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-full"
-                style={{ background: 'linear-gradient(to bottom, var(--reactor-risk-color), rgba(255,255,255,0.25), transparent)' }}
-              />
+            <div className="relative h-full w-full">
+              <div className="absolute -top-1 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-[var(--reactor-risk-color)]" />
+              <div className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-gradient-to-b from-[var(--reactor-risk-color)] to-transparent" />
             </div>
           </div>
         ))}
@@ -314,29 +250,24 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
             handledNonceRef.current = spinNonce;
             runNeedlePhysicsBounce(() => onSpinComplete(Boolean(spinSuccess)));
           }}
-          className="absolute top-0 left-1/2 -ml-[2px] w-[4px] h-1/2 origin-bottom z-20 pointer-events-none will-change-transform"
+          className="pointer-events-none absolute left-1/2 top-0 z-20 -ml-[2px] h-1/2 w-[4px] origin-bottom will-change-transform"
           style={{
             transform: `rotate(${spinRotation + spinBounceOffset}deg)`,
             transition: status === 'spinning' ? `transform ${durationMs}ms cubic-bezier(0.16, 1, 0.3, 1)` : 'none'
           }}
         >
-          <div className={`w-full h-full relative reactor-needle ${isTrailing ? 'reactor-needle-trailing' : ''}`}>
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 bg-white rounded-full shadow-[0_0_20px_rgba(255,255,255,0.8)] border-4 border-[var(--reactor-risk-color)]" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-full bg-gradient-to-b from-white via-white/50 to-transparent" />
+          <div className="relative h-full w-full">
+            <div className="absolute -top-2 left-1/2 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-[var(--reactor-risk-color)] bg-white shadow-[0_0_15px_rgba(255,255,255,0.7)]" />
+            <div className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-gradient-to-b from-white via-white/70 to-transparent" />
           </div>
         </div>
       </div>
 
-      <div className="mt-5 h-8 flex items-center justify-center">
+      <div className="mt-3 h-6 text-center">
         {status === 'spinning' && (
-          <div className="flex items-center gap-2 text-white/60 font-mono text-xs sm:text-sm">
-            <LucideRefreshCw className="w-4 h-4 animate-spin" />
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+            <LucideRefreshCw className="h-3.5 w-3.5 animate-spin" />
             <span>CALCULATING OUTCOME...</span>
-          </div>
-        )}
-        {status === 'idle' && canRotateWinZone && (
-          <div className="text-white/55 text-[10px] sm:text-xs uppercase tracking-[0.16em] font-semibold text-center px-4">
-            Drag the ring to rotate your winning zone
           </div>
         )}
       </div>
