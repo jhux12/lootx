@@ -4,8 +4,7 @@ import {
   LucideSearch,
   LucideSettings2,
   LucideVolume2,
-  LucideVolumeX,
-  LucideZap
+  LucideVolumeX
 } from 'lucide-react';
 import { InventoryItem, Item, Rarity } from '../components/upgrader/upgraderTypes';
 import { useGame } from '../../context/GameContext';
@@ -96,13 +95,15 @@ const Toolbar = ({
 const SelectedPreview = ({ label, item }: { label: string; item: EliteItem | null }) => (
   <div className="rounded-2xl border border-indigo-300/20 bg-gradient-to-b from-[#0d142b] to-[#070c18] p-4 sm:p-5">
     <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-    <div className="relative mt-4 flex h-[220px] items-center justify-center overflow-hidden rounded-xl border border-indigo-300/15 bg-[#050914]">
+    <div className="relative mt-4 flex h-[240px] flex-col items-center justify-between overflow-hidden rounded-xl border border-indigo-300/15 bg-[#050914] px-3 pb-3 pt-4 sm:h-[250px]">
       <div className="absolute top-4 h-28 w-40 bg-indigo-300/15 blur-3xl" />
-      <div className="absolute bottom-6 h-5 w-36 rounded-[999px] bg-cyan-300/15 blur-md" />
+      <div className="absolute bottom-14 h-5 w-36 rounded-[999px] bg-cyan-300/15 blur-md" />
       {item ? (
         <>
-          <img src={item.image} alt={item.name} className="relative z-10 h-36 w-36 object-contain" referrerPolicy="no-referrer" />
-          <div className="absolute bottom-3 left-3 right-3 rounded-lg border border-indigo-300/20 bg-[#0b1228]/90 px-2 py-1 text-center">
+          <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center">
+            <img src={item.image} alt={item.name} className="max-h-[140px] w-auto max-w-[140px] object-contain sm:max-h-[155px] sm:max-w-[155px]" referrerPolicy="no-referrer" />
+          </div>
+          <div className="relative z-10 w-full rounded-lg border border-indigo-300/20 bg-[#0b1228]/90 px-2 py-1 text-center">
             <p className="truncate text-xs font-semibold text-white">{item.name}</p>
             <CoinAmount amount={Math.round(item.price)} className="justify-center text-[11px] text-slate-200" iconClassName="h-3 w-3" />
           </div>
@@ -154,6 +155,7 @@ export default function UpgraderPage() {
 
   const [reducedMotion, setReducedMotion] = useState(false);
   const [resultSheet, setResultSheet] = useState<{ item: EliteItem; success: boolean } | null>(null);
+  const [isDemoSpin, setIsDemoSpin] = useState(false);
 
   useEffect(() => {
     const audio = new Audio(upgraderSoundUrl);
@@ -358,8 +360,27 @@ export default function UpgraderPage() {
     }
   };
 
+  const handleDemoSpin = () => {
+    if (!source || !target || status === 'spinning') return;
+    const success = Math.random() * 100 < chance;
+    setIsDemoSpin(true);
+    setStatus('spinning');
+    setSpinResult(success);
+    setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
+    setSpinNonce((previous) => previous + 1);
+  };
+
   const handleSpinComplete = (success: boolean) => {
     setStatus(success ? 'success' : 'fail');
+
+    if (isDemoSpin) {
+      setSpinResult(null);
+      setIsDemoSpin(false);
+      if (idleTimeoutRef.current) window.clearTimeout(idleTimeoutRef.current);
+      idleTimeoutRef.current = window.setTimeout(() => setStatus('idle'), 900);
+      return;
+    }
+
     const historyItem = success ? targetPreview : sourcePreview;
     if (historyItem) {
       setHistory((previous) => [{ item: historyItem, success, date: Date.now() }, ...previous].slice(0, 20));
@@ -418,12 +439,9 @@ export default function UpgraderPage() {
               />
 
               <div className="mt-2 flex w-full max-w-[340px] items-center justify-center gap-2">
-                <button type="button" onClick={() => setSpinRotation((p) => p + 360)} className="h-9 rounded-lg border border-indigo-300/25 bg-[#0b1430] px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-200">Demo Spin</button>
+                <button type="button" disabled={!source || !target || status === 'spinning'} onClick={handleDemoSpin} className={`h-9 rounded-lg border px-3 text-[11px] font-semibold uppercase tracking-[0.14em] ${source && target && status !== 'spinning' ? 'border-indigo-300/25 bg-[#0b1430] text-slate-200' : 'cursor-not-allowed border-indigo-300/15 bg-[#0a1124] text-slate-500'}`}>Demo Spin</button>
                 <button onClick={handleUpgrade} disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting} className={`h-9 flex-1 rounded-lg border px-3 text-[11px] font-bold uppercase tracking-[0.16em] ${status === 'idle' && source && target && settings?.enabled ? 'border-indigo-300/55 bg-gradient-to-r from-indigo-500 to-violet-500 text-white' : 'cursor-not-allowed border-indigo-300/20 bg-[#0a1124] text-slate-500'}`}>
                   {status === 'spinning' ? 'Upgrading...' : 'Upgrade'}
-                </button>
-                <button type="button" className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300/25 bg-[#0b1430] text-slate-200" aria-label="Provably fair">
-                  <LucideZap className="h-4 w-4" />
                 </button>
               </div>
             </div>
