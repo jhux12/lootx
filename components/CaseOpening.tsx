@@ -1726,7 +1726,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === SPINNER_MOTION.preWinnerItems ? winningCardRef : null}
-                            className={`group relative flex h-[150px] w-[120px] flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.03)] p-2 transition-all duration-300 hover:border-cyan-200/35 hover:shadow-[0_0_18px_rgba(0,234,255,0.22)] sm:h-[210px] sm:w-[170px] sm:p-2.5 ${item.id === 'golden-ticket' ? 'border-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.35)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? 'ring-2 ring-white/50' : ''}`}
+                            className={`group relative flex h-[168px] w-[132px] flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.03)] p-2 transition-all duration-300 hover:border-cyan-200/35 hover:shadow-[0_0_18px_rgba(0,234,255,0.22)] sm:h-[210px] sm:w-[170px] sm:p-2.5 ${item.id === 'golden-ticket' ? 'border-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.35)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? 'ring-2 ring-white/50' : ''}`}
                             style={{ 
                                 boxShadow: item.id === 'golden-ticket'
                                   ? undefined
@@ -1744,7 +1744,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
-                                className={`relative z-10 mb-1 h-[5.5rem] w-[5.5rem] object-contain sm:h-32 sm:w-32 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
+                                className={`relative z-10 mb-1 h-[6.4rem] w-[6.4rem] object-contain sm:h-32 sm:w-32 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
                             />
                             <div 
                                 className="absolute bottom-0 left-0 right-0 h-[2px] opacity-60 rounded-b-2xl"

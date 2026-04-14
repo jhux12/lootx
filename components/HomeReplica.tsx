@@ -321,7 +321,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                       <div
                         ref={idx === 0 ? spinnerCardRef : null}
                         key={`${item.id}-${idx}`}
-                        className={`group relative flex h-[150px] w-[120px] flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.03)] p-2 transition-all duration-300 hover:border-cyan-200/35 hover:shadow-[0_0_18px_rgba(0,234,255,0.22)] sm:h-[210px] sm:w-[170px] sm:p-2.5 ${
+                        className={`group relative flex h-[168px] w-[132px] flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.03)] p-2 transition-all duration-300 hover:border-cyan-200/35 hover:shadow-[0_0_18px_rgba(0,234,255,0.22)] sm:h-[210px] sm:w-[170px] sm:p-2.5 ${
                           isLandedWinner
                             ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
                             : ''
@@ -344,7 +344,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                           decoding="async"
                           src={item.image}
                           alt={item.name}
-                          className="relative z-10 h-[88px] w-[88px] object-contain sm:h-32 sm:w-32"
+                          className="relative z-10 h-[104px] w-[104px] object-contain sm:h-32 sm:w-32"
                         />
                         <div className="relative z-10 mt-2 flex items-center justify-center px-1 text-xs font-semibold text-emerald-100 sm:text-sm">
                           <CoinAmount
