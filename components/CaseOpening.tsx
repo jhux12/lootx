@@ -1735,12 +1735,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
-                            <div
-                                className="absolute inset-4 rounded-full opacity-90"
+                            <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+                              <div
+                                className="absolute inset-x-[16%] top-[18%] bottom-[24%] rounded-[44%] blur-[10px] opacity-85"
                                 style={{
-                                  background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
+                                  background: `radial-gradient(ellipse at 50% 42%, ${item.color}cc 0%, ${item.color}66 38%, ${item.color}1f 64%, ${item.color}00 100%)`
                                 }}
-                            ></div>
+                              />
+                              <div
+                                className="absolute left-[24%] right-[24%] bottom-[16%] h-[18%] rounded-full blur-md opacity-70"
+                                style={{
+                                  background: `radial-gradient(ellipse at center, ${item.color}a6 0%, ${item.color}33 55%, ${item.color}00 100%)`
+                                }}
+                              />
+                            </div>
                             <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
