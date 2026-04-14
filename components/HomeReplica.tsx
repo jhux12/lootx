@@ -324,7 +324,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 
                 <div
                   ref={spinnerTrackRef}
-                  className={`flex px-[50%] py-6 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[5200ms] ease-[cubic-bezier(0.08,0.9,0.15,1)]' : 'duration-200 ease-out'}`}
+                  className={`flex px-[50%] py-2 sm:py-3 will-change-transform transition-transform ${isSpinAnimating ? 'duration-[5200ms] ease-[cubic-bezier(0.08,0.9,0.15,1)]' : 'duration-200 ease-out'}`}
                   style={{
                     gap: `${spinnerCardGap}px`,
                     marginLeft: `-${spinnerCardWidth / 2}px`,
@@ -339,7 +339,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                       <div
                         ref={idx === 0 ? spinnerCardRef : null}
                         key={`${item.id}-${idx}`}
-                        className={`relative flex h-[122px] w-[122px] flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-xl border px-2.5 pb-2 pt-3 transition sm:h-[136px] sm:w-[136px] sm:px-3 ${
+                        className={`relative flex h-[190px] w-[122px] flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-xl border px-2.5 pb-2 pt-3 transition sm:h-[214px] sm:w-[136px] sm:px-3 ${
                           isCenterCard
                             ? 'border-emerald-300/70 bg-gradient-to-b from-emerald-700/85 via-emerald-800/80 to-emerald-900/85'
                             : 'border-[#2f3241] bg-gradient-to-b from-[#242736]/95 via-[#1d202c]/95 to-[#161925]/95'
@@ -385,7 +385,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                           decoding="async"
                           src={item.image}
                           alt={item.name}
-                          className="relative z-10 h-[74px] w-[74px] object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)] sm:h-[86px] sm:w-[86px]"
+                          className="relative z-10 h-[86px] w-[86px] object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)] sm:h-[102px] sm:w-[102px]"
                         />
                         <div className="relative z-10 mt-1.5 flex items-center justify-center px-1 text-xs font-semibold text-slate-100 sm:text-sm">
                           <CoinAmount

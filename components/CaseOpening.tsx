@@ -1730,7 +1730,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             className={`relative flex-shrink-0 overflow-hidden rounded-xl border px-2.5 pb-2 pt-3 sm:px-3 flex flex-col items-center justify-between group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''} ${isCenterCard ? 'border-emerald-300/70 bg-gradient-to-b from-emerald-700/85 via-emerald-800/80 to-emerald-900/85' : 'border-[#2f3241] bg-gradient-to-b from-[#242736]/95 via-[#1d202c]/95 to-[#161925]/95'} ${isLandingFlashActive && isCenterCard ? 'ring-2 ring-white/50' : ''}`}
                             style={{ 
                                 width: `${CARD_WIDTH}px`, 
-                                height: `${CARD_WIDTH}px`,
+                                height: 'calc(100% - 0.75rem)',
                                 boxShadow: item.id === 'golden-ticket'
                                   ? undefined
                                   : `${isCenterCard ? `0 0 0 1px rgba(110,231,183,0.35) inset, 0 14px 30px rgba(4,120,87,0.34), ` : ''}${isLandingFlashActive && isCenterCard ? `0 0 26px ${item.color}88, ` : ''}${String(item.rarity ?? '').toLowerCase() === 'legendary' ? '0 0 16px rgba(251,191,36,0.2), ' : ''}0 8px 18px rgba(3,6,18,0.45)`
@@ -1764,10 +1764,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 }}
                               />
                             </div>
-                            <img loading="eager" decoding="async" 
+                                <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
-                                className={`relative z-10 h-[6.2rem] w-[6.2rem] object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)] mb-1 sm:h-[5.5rem] sm:w-[5.5rem] ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
+                                className={`relative z-10 h-[7.1rem] w-[7.1rem] object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)] mb-1 sm:h-[7.6rem] sm:w-[7.6rem] ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
                             />
                             <div className="relative z-10 mt-1 flex items-center justify-center px-1 text-xs font-semibold text-slate-100">
                               <CoinAmount
