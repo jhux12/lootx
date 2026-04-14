@@ -119,7 +119,7 @@ const SelectedPreview = ({ label, item }: { label: string; item: EliteItem | nul
 );
 
 export default function UpgraderPage() {
-  const { inventory, isAuthenticated, openAuthModal } = useGame();
+  const { inventory, isAuthenticated, openAuthModal, refreshUserInventory } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
@@ -344,6 +344,10 @@ export default function UpgraderPage() {
     try {
       const response = await attemptUpgrade({ sourceItemInstanceId: source.id, targetItemId: target.id, clientSeed: `${Date.now()}` });
       const success = Boolean(response.win);
+      if (success) {
+        console.log('Refreshing inventory after upgrade');
+        await refreshUserInventory();
+      }
       setSpinResult(success);
       setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
       setSpinNonce((previous) => previous + 1);
