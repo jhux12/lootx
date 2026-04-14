@@ -44,8 +44,9 @@ interface RevealData {
   rotatedAt: number;
 }
 
-const CARD_WIDTH = 160;
-const GAP_WIDTH = 16;
+const CARD_WIDTH = 170;
+const CARD_HEIGHT = 210;
+const GAP_WIDTH = 4;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -1648,7 +1649,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Spinner Window */}
-            <div ref={scrollViewportRef} className="relative h-[15.5rem] sm:h-64 flex items-center overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+            <div
+              ref={scrollViewportRef}
+              className="relative mx-auto flex h-[240px] w-full max-w-[1000px] items-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.02)] shadow-[inset_0_0_30px_rgba(0,0,0,0.5)]"
+            >
                 {spinnerBackgroundImage && (
                   <>
                     <img
@@ -1657,7 +1661,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       aria-hidden="true"
                       className="absolute inset-0 h-full w-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/35" aria-hidden="true" />
+                    <div className="absolute inset-0 bg-black/45" aria-hidden="true" />
                   </>
                 )}
                 {isBoxPreviewVisible && (
@@ -1682,27 +1686,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   </div>
                 )}
 
-                {isSpinning && (
-                  <>
-                    <div
-                      className={`absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 z-[26] pointer-events-none ${isGoldMode ? 'bg-yellow-400/55' : 'bg-cyan-400/40'}`}
-                      aria-hidden="true"
-                    ></div>
-                    <div
-                      className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-16 sm:w-20 pointer-events-none z-[24] transition-opacity duration-500 ${isReelDecelerating ? 'opacity-80' : 'opacity-45'}`}
-                      style={{
-                        background: isGoldMode
-                          ? 'radial-gradient(ellipse at center, rgba(250,204,21,0.24) 0%, rgba(250,204,21,0.08) 42%, rgba(250,204,21,0) 75%)'
-                          : 'radial-gradient(ellipse at center, rgba(34,211,238,0.24) 0%, rgba(34,211,238,0.08) 42%, rgba(34,211,238,0) 75%)'
-                      }}
-                      aria-hidden="true"
-                    />
-                  </>
-                )}
+                <div
+                  className={`absolute inset-y-0 left-1/2 z-[26] w-[2px] -translate-x-1/2 pointer-events-none ${isGoldMode ? 'bg-gradient-to-b from-transparent via-yellow-300/80 to-transparent' : 'bg-gradient-to-b from-transparent via-cyan-300/80 to-transparent'}`}
+                  style={{ boxShadow: isGoldMode ? '0 0 14px rgba(250,204,21,0.55)' : '0 0 14px rgba(0,234,255,0.55)' }}
+                  aria-hidden="true"
+                />
+                <div
+                  className={`absolute inset-y-0 left-1/2 z-[24] w-14 -translate-x-1/2 pointer-events-none transition-opacity duration-500 sm:w-20 ${isSpinning ? (isReelDecelerating ? 'opacity-85' : 'opacity-55') : 'opacity-35'}`}
+                  style={{
+                    background: isGoldMode
+                      ? 'radial-gradient(ellipse at center, rgba(250,204,21,0.24) 0%, rgba(250,204,21,0.08) 42%, rgba(250,204,21,0) 75%)'
+                      : 'radial-gradient(ellipse at center, rgba(34,211,238,0.24) 0%, rgba(34,211,238,0.08) 42%, rgba(34,211,238,0) 75%)'
+                  }}
+                  aria-hidden="true"
+                />
                 
                 {/* Fade Gradients */}
-                <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
-                <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-20 pointer-events-none"></div>
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-20 bg-gradient-to-r from-[#070b12] via-[#070b12]/85 to-transparent sm:w-28"></div>
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-20 bg-gradient-to-l from-[#070b12] via-[#070b12]/85 to-transparent sm:w-28"></div>
 
                 <div
                   className={`absolute inset-0 z-[21] pointer-events-none transition-opacity duration-200 ${isInitialMotionBlurActive ? 'opacity-100' : 'opacity-0'}`}
@@ -1725,18 +1726,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === SPINNER_MOTION.preWinnerItems ? winningCardRef : null}
-                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3.5 sm:p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? 'ring-2 ring-white/50' : ''}`}
+                            className={`group relative flex h-[150px] w-[120px] flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.03)] p-2 transition-all duration-300 hover:border-cyan-200/35 hover:shadow-[0_0_18px_rgba(0,234,255,0.22)] sm:h-[210px] sm:w-[170px] sm:p-2.5 ${item.id === 'golden-ticket' ? 'border-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.35)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? 'ring-2 ring-white/50' : ''}`}
                             style={{ 
-                                width: `${CARD_WIDTH}px`, 
-                                height: `${CARD_WIDTH}px`,
                                 boxShadow: item.id === 'golden-ticket'
                                   ? undefined
-                                  : `${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? `0 0 26px ${item.color}88, ` : ''}0 4px 0 0 ${item.color}20`
+                                  : `${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? `0 0 26px ${item.color}88, ` : ''}0 8px 24px rgba(0,0,0,0.45)`
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                                className="absolute inset-4 rounded-full opacity-90"
+                                className="absolute inset-3 rounded-full opacity-90"
                                 style={{
                                   background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
                                 }}
@@ -1744,10 +1743,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
-                                className={`relative z-10 h-[6.5rem] w-[6.5rem] object-contain mb-2 sm:h-24 sm:w-24 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
+                                className={`relative z-10 mb-1 h-[5.5rem] w-[5.5rem] object-contain sm:h-32 sm:w-32 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
                             />
                             <div 
-                                className="absolute bottom-0 left-0 right-0 h-1 opacity-50 rounded-b-xl"
+                                className="absolute bottom-0 left-0 right-0 h-[2px] opacity-60 rounded-b-2xl"
                                 style={{ backgroundColor: item.color }}
                             ></div>
                         </div>
