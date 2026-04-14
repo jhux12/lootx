@@ -1721,45 +1721,68 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     className={`flex will-change-transform transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`} 
                     style={{ gap: `${GAP_WIDTH}px`, transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}
                 >
-                    {reelItems.map((item, idx) => (
+                    {reelItems.map((item, idx) => {
+                        const isCenterCard = idx === SPINNER_MOTION.preWinnerItems;
+                        return (
                         <div 
                             key={`${item.id}-${idx}`}
-                            ref={idx === SPINNER_MOTION.preWinnerItems ? winningCardRef : null}
-                            className={`relative flex-shrink-0 bg-[#151a23] border border-gray-800 rounded-xl p-3.5 sm:p-3 flex flex-col items-center justify-center group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? 'ring-2 ring-white/50' : ''}`}
+                            ref={isCenterCard ? winningCardRef : null}
+                            className={`relative flex-shrink-0 overflow-hidden rounded-xl border px-2.5 pb-2 pt-3 sm:px-3 flex flex-col items-center justify-between group ${item.id === 'golden-ticket' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''} ${isCenterCard ? 'border-emerald-300/70 bg-gradient-to-b from-emerald-700/85 via-emerald-800/80 to-emerald-900/85' : 'border-[#2f3241] bg-gradient-to-b from-[#242736]/95 via-[#1d202c]/95 to-[#161925]/95'} ${isLandingFlashActive && isCenterCard ? 'ring-2 ring-white/50' : ''}`}
                             style={{ 
                                 width: `${CARD_WIDTH}px`, 
                                 height: `${CARD_WIDTH}px`,
                                 boxShadow: item.id === 'golden-ticket'
                                   ? undefined
-                                  : `${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? `0 0 26px ${item.color}88, ` : ''}0 4px 0 0 ${item.color}20`
+                                  : `${isCenterCard ? `0 0 0 1px rgba(110,231,183,0.35) inset, 0 14px 30px rgba(4,120,87,0.34), ` : ''}${isLandingFlashActive && isCenterCard ? `0 0 26px ${item.color}88, ` : ''}${String(item.rarity ?? '').toLowerCase() === 'legendary' ? '0 0 16px rgba(251,191,36,0.2), ' : ''}0 8px 18px rgba(3,6,18,0.45)`
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
+                            <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-white/10" />
+                            <div className="pointer-events-none absolute inset-y-0 left-0 w-px bg-black/40" />
+                            <div className="absolute right-2 top-2 z-20 rounded-full border border-[#8a3a16]/70 bg-[#2d1209]/90 px-1.5 py-0.5 text-[10px] font-bold text-orange-100 shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
+                              <span className="inline-flex items-center gap-1">
+                                <span className="text-orange-300">+</span>
+                                <CoinAmount
+                                  amount={item.price}
+                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                  className="text-[10px] font-bold text-orange-100"
+                                  iconClassName="h-3 w-3"
+                                />
+                              </span>
+                            </div>
                             <div className="pointer-events-none absolute inset-0" aria-hidden="true">
                               <div
-                                className="absolute inset-x-[16%] top-[18%] bottom-[24%] rounded-[44%] blur-[10px] opacity-85"
+                                className="absolute inset-x-[12%] top-[16%] bottom-[24%] rounded-[46%] blur-[14px] opacity-90"
                                 style={{
-                                  background: `radial-gradient(ellipse at 50% 42%, ${item.color}cc 0%, ${item.color}66 38%, ${item.color}1f 64%, ${item.color}00 100%)`
+                                  background: `radial-gradient(ellipse at 50% 42%, ${item.color}d6 0%, ${item.color}7a 34%, ${item.color}22 62%, ${item.color}00 100%)`
                                 }}
                               />
                               <div
-                                className="absolute left-[24%] right-[24%] bottom-[16%] h-[18%] rounded-full blur-md opacity-70"
+                                className="absolute left-[20%] right-[20%] bottom-[18%] h-[20%] rounded-full blur-lg opacity-75"
                                 style={{
-                                  background: `radial-gradient(ellipse at center, ${item.color}a6 0%, ${item.color}33 55%, ${item.color}00 100%)`
+                                  background: `radial-gradient(ellipse at center, ${item.color}b8 0%, ${item.color}47 52%, ${item.color}00 100%)`
                                 }}
                               />
                             </div>
                             <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
-                                className={`relative z-10 h-[6.5rem] w-[6.5rem] object-contain mb-2 sm:h-24 sm:w-24 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
+                                className={`relative z-10 h-[6.2rem] w-[6.2rem] object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)] mb-1 sm:h-[5.5rem] sm:w-[5.5rem] ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
                             />
+                            <div className="relative z-10 mt-1 flex items-center justify-center px-1 text-xs font-semibold text-slate-100">
+                              <CoinAmount
+                                amount={item.price}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="text-slate-100"
+                                iconClassName="h-4 w-4"
+                              />
+                            </div>
                             <div 
-                                className="absolute bottom-0 left-0 right-0 h-1 opacity-50 rounded-b-xl"
+                                className="absolute bottom-0 left-0 right-0 h-1.5 opacity-70 rounded-b-xl"
                                 style={{ backgroundColor: item.color }}
                             ></div>
                         </div>
-                    ))}
+                    )})}
                 </div>
             </div>
 

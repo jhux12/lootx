@@ -334,35 +334,49 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                   {demoReelItems.map((item, idx) => {
                     const isLandedWinner = landedIndex === idx && !isSpinAnimating;
                     const isLegendary = String(item.rarity ?? '').toLowerCase() === 'legendary';
+                    const isCenterCard = idx === demoSpinIndex;
                     return (
                       <div
                         ref={idx === 0 ? spinnerCardRef : null}
                         key={`${item.id}-${idx}`}
-                        className={`relative flex h-[122px] w-[122px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition sm:h-[136px] sm:w-[136px] ${
-                          isLandedWinner
-                            ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
-                            : 'border-gray-800'
+                        className={`relative flex h-[122px] w-[122px] flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-xl border px-2.5 pb-2 pt-3 transition sm:h-[136px] sm:w-[136px] sm:px-3 ${
+                          isCenterCard
+                            ? 'border-emerald-300/70 bg-gradient-to-b from-emerald-700/85 via-emerald-800/80 to-emerald-900/85'
+                            : 'border-[#2f3241] bg-gradient-to-b from-[#242736]/95 via-[#1d202c]/95 to-[#161925]/95'
                         }`}
                         style={{
-                          boxShadow: isLandedWinner
-                            ? `${isLegendary ? '0 0 18px rgba(251,191,36,0.28), ' : ''}0 0 24px rgba(34,211,238,0.34)`
-                            : (isLegendary ? '0 0 18px rgba(251,191,36,0.28)' : undefined)
+                          boxShadow: isCenterCard
+                            ? `0 0 0 1px rgba(110,231,183,0.35) inset, 0 14px 30px rgba(4,120,87,0.34), ${isLegendary ? '0 0 22px rgba(251,191,36,0.3)' : '0 0 14px rgba(16,185,129,0.24)'}`
+                            : `${isLegendary ? '0 0 16px rgba(251,191,36,0.2), ' : ''}0 8px 18px rgba(3,6,18,0.45)`
                         }}
                       >
+                        <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-white/10" />
+                        <div className="pointer-events-none absolute inset-y-0 left-0 w-px bg-black/40" />
+                        <div className="absolute right-2 top-2 z-20 rounded-full border border-[#8a3a16]/70 bg-[#2d1209]/90 px-1.5 py-0.5 text-[10px] font-bold text-orange-100 shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
+                          <span className="inline-flex items-center gap-1">
+                            <span className="text-orange-300">+</span>
+                            <CoinAmount
+                              amount={item.price}
+                              formatOptions={{ maximumFractionDigits: 0 }}
+                              className="text-[10px] font-bold text-orange-100"
+                              iconClassName="h-3 w-3"
+                            />
+                          </span>
+                        </div>
                         <div
                           className="pointer-events-none absolute inset-0"
                           aria-hidden="true"
                         >
                           <div
-                            className="absolute inset-x-[16%] top-[18%] bottom-[24%] rounded-[44%] blur-[10px] opacity-85"
+                            className="absolute inset-x-[12%] top-[16%] bottom-[24%] rounded-[46%] blur-[14px] opacity-90"
                             style={{
-                              background: `radial-gradient(ellipse at 50% 42%, ${item.color}cc 0%, ${item.color}66 38%, ${item.color}1f 64%, ${item.color}00 100%)`
+                              background: `radial-gradient(ellipse at 50% 42%, ${item.color}d6 0%, ${item.color}7a 34%, ${item.color}22 62%, ${item.color}00 100%)`
                             }}
                           />
                           <div
-                            className="absolute left-[24%] right-[24%] bottom-[16%] h-[18%] rounded-full blur-md opacity-70"
+                            className="absolute left-[20%] right-[20%] bottom-[18%] h-[20%] rounded-full blur-lg opacity-75"
                             style={{
-                              background: `radial-gradient(ellipse at center, ${item.color}a6 0%, ${item.color}33 55%, ${item.color}00 100%)`
+                              background: `radial-gradient(ellipse at center, ${item.color}b8 0%, ${item.color}47 52%, ${item.color}00 100%)`
                             }}
                           />
                         </div>
@@ -371,22 +385,26 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                           decoding="async"
                           src={item.image}
                           alt={item.name}
-                          className="relative z-10 h-[78px] w-[78px] object-contain sm:h-[90px] sm:w-[90px]"
+                          className="relative z-10 h-[74px] w-[74px] object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)] sm:h-[86px] sm:w-[86px]"
                         />
-                        <div className="relative z-10 mt-2 flex items-center justify-center px-1 text-xs font-semibold text-emerald-100 sm:text-sm">
+                        <div className="relative z-10 mt-1.5 flex items-center justify-center px-1 text-xs font-semibold text-slate-100 sm:text-sm">
                           <CoinAmount
                             amount={item.price}
                             formatOptions={{ maximumFractionDigits: 0 }}
-                            className="text-emerald-100"
+                            className="text-slate-100"
                             iconClassName="h-4 w-4"
                           />
                         </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl opacity-60" style={{ backgroundColor: item.color }}></div>
+                        <div className="absolute bottom-0 left-0 right-0 h-1.5 rounded-b-xl opacity-70" style={{ backgroundColor: item.color }}></div>
+                        {isLandedWinner && (
+                          <div className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-cyan-300/70" />
+                        )}
                       </div>
                     );
                   })}
                 </div>
 
+                <div className="pointer-events-none absolute left-1/2 top-0 z-30 h-0 w-0 -translate-x-1/2 border-l-[9px] border-r-[9px] border-t-[13px] border-l-transparent border-r-transparent border-t-orange-500 sm:border-l-[10px] sm:border-r-[10px] sm:border-t-[15px]" />
                 <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-cyan-300/50" />
                 <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-14 -translate-x-1/2 bg-gradient-to-r from-cyan-400/0 via-cyan-300/20 to-cyan-400/0 sm:w-20" />
               </div>
