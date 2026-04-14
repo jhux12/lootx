@@ -80,8 +80,8 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const spinnerTrackRef = useRef<HTMLDivElement | null>(null);
   const spinnerCardRef = useRef<HTMLDivElement | null>(null);
 
-  const SPINNER_CARD_WIDTH = 136;
-  const SPINNER_CARD_GAP = 12;
+  const SPINNER_CARD_WIDTH = 170;
+  const SPINNER_CARD_GAP = 4;
   const SPINNER_DURATION_MS = 5200;
   const SPINNER_REPLAY_DELAY_MS = 800;
   const SPINNER_TRAVEL_MIN = 18;
@@ -301,9 +301,9 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                 </div>
               </button>
 
-              <div className="relative flex min-h-[220px] items-center overflow-hidden bg-[linear-gradient(180deg,#0a0d14_0%,#07090e_100%)] sm:min-h-[260px]">
-                <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-r from-[#090c13] to-transparent sm:w-20" />
-                <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-[#090c13] to-transparent sm:w-20" />
+              <div className="relative mx-auto flex h-[240px] w-full max-w-[1000px] items-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.02)] shadow-[inset_0_0_30px_rgba(0,0,0,0.5)]">
+                <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-20 w-20 bg-gradient-to-r from-[#070b12] via-[#070b12]/85 to-transparent sm:w-28" />
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-20 w-20 bg-gradient-to-l from-[#070b12] via-[#070b12]/85 to-transparent sm:w-28" />
 
                 <div
                   ref={spinnerTrackRef}
@@ -321,21 +321,22 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                       <div
                         ref={idx === 0 ? spinnerCardRef : null}
                         key={`${item.id}-${idx}`}
-                        className={`relative flex h-[122px] w-[122px] flex-shrink-0 flex-col items-center justify-center rounded-xl border bg-[#151a23] p-3 transition sm:h-[136px] sm:w-[136px] ${
+                        className={`group relative flex h-[150px] w-[120px] flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.03)] p-2 transition-all duration-300 hover:border-cyan-200/35 hover:shadow-[0_0_18px_rgba(0,234,255,0.22)] sm:h-[210px] sm:w-[170px] sm:p-2.5 ${
                           isLandedWinner
                             ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
-                            : 'border-gray-800'
+                            : ''
                         }`}
                         style={{
                           boxShadow: isLandedWinner
                             ? `${isLegendary ? '0 0 18px rgba(251,191,36,0.28), ' : ''}0 0 24px rgba(34,211,238,0.34)`
-                            : (isLegendary ? '0 0 18px rgba(251,191,36,0.28)' : undefined)
+                            : (isLegendary ? '0 0 18px rgba(251,191,36,0.28)' : '0 8px 24px rgba(0,0,0,0.45)')
                         }}
                       >
                         <div
-                          className="absolute inset-4 rounded-full opacity-90"
+                          className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-16 -translate-x-1/2 -translate-y-1/2 rounded-[999px] opacity-90 blur-xl sm:h-28 sm:w-24"
                           style={{
-                            background: `radial-gradient(circle, ${item.color}75 0%, ${item.color}2d 45%, ${item.color}00 78%)`
+                            background: `${item.color}66`,
+                            boxShadow: `0 0 38px ${item.color}88`
                           }}
                         ></div>
                         <img
@@ -343,7 +344,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                           decoding="async"
                           src={item.image}
                           alt={item.name}
-                          className="relative z-10 h-[78px] w-[78px] object-contain sm:h-[90px] sm:w-[90px]"
+                          className="relative z-10 h-[88px] w-[88px] object-contain sm:h-32 sm:w-32"
                         />
                         <div className="relative z-10 mt-2 flex items-center justify-center px-1 text-xs font-semibold text-emerald-100 sm:text-sm">
                           <CoinAmount
@@ -353,14 +354,17 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                             iconClassName="h-4 w-4"
                           />
                         </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl opacity-60" style={{ backgroundColor: item.color }}></div>
+                        <div className="absolute bottom-0 left-0 right-0 h-[2px] rounded-b-2xl opacity-60" style={{ backgroundColor: item.color }}></div>
                       </div>
                     );
                   })}
                 </div>
 
-                <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-cyan-300/50" />
-                <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-14 -translate-x-1/2 bg-gradient-to-r from-cyan-400/0 via-cyan-300/20 to-cyan-400/0 sm:w-20" />
+                <div
+                  className="pointer-events-none absolute inset-y-0 left-1/2 z-[26] w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-300/80 to-transparent"
+                  style={{ boxShadow: '0 0 14px rgba(0,234,255,0.55)' }}
+                />
+                <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[24] w-14 -translate-x-1/2 bg-gradient-to-r from-cyan-400/0 via-cyan-300/20 to-cyan-400/0 sm:w-20" />
               </div>
             </div>
 
