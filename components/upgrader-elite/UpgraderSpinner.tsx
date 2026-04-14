@@ -204,8 +204,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           </defs>
         </svg>
 
-        <div className="absolute left-1/2 top-2 z-20 h-0 w-0 -translate-x-1/2 border-l-[8px] border-r-[8px] border-t-[12px] border-l-transparent border-r-transparent border-t-indigo-300/80" />
-
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
           {(status === 'idle' || status === 'spinning') && (
             <>

@@ -189,13 +189,14 @@ export default function UpgraderPage() {
   useEffect(() => {
     const audio = spinAudioRef.current;
     if (!audio || isMuted) return;
+    if (isDemoSpin) return;
     if (status !== 'spinning' || spinNonce <= 0) return;
     if (lastPlayedSpinNonceRef.current === spinNonce) return;
 
     lastPlayedSpinNonceRef.current = spinNonce;
     audio.currentTime = 0;
     void audio.play().catch(() => undefined);
-  }, [isMuted, spinNonce, status]);
+  }, [isDemoSpin, isMuted, spinNonce, status]);
 
   useEffect(() => {
     if (!isMuted) return;
@@ -339,12 +340,6 @@ export default function UpgraderPage() {
 
     setIsSubmitting(true);
     setStatus('spinning');
-
-    if (!isMuted && spinAudioRef.current) {
-      lastPlayedSpinNonceRef.current = spinNonce + 1;
-      spinAudioRef.current.currentTime = 0;
-      void spinAudioRef.current.play().catch(() => undefined);
-    }
 
     try {
       const response = await attemptUpgrade({ sourceItemInstanceId: source.id, targetItemId: target.id, clientSeed: `${Date.now()}` });
