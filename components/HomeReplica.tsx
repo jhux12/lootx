@@ -158,20 +158,37 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       return undefined;
     }
 
+    const legendaryPool = spinnerItems.filter((item) => String(item.rarity ?? '').toLowerCase() === 'legendary');
+    const nonLegendaryPool = spinnerItems.filter((item) => String(item.rarity ?? '').toLowerCase() !== 'legendary');
+    const hasDedicatedLegendaryWinnerPool = legendaryPool.length > 0 && nonLegendaryPool.length > 0;
+
     const pickRandomItem = () => spinnerItems[Math.floor(Math.random() * spinnerItems.length)];
+    const pickFillerItem = () => {
+      if (hasDedicatedLegendaryWinnerPool) {
+        return nonLegendaryPool[Math.floor(Math.random() * nonLegendaryPool.length)];
+      }
+      return pickRandomItem();
+    };
 
     const runDemoSpin = () => {
-      const legendaryPool = spinnerItems.filter((item) => String(item.rarity ?? '').toLowerCase() === 'legendary');
       const winnerPool = legendaryPool.length > 0 ? legendaryPool : spinnerItems;
       const winner = winnerPool[Math.floor(Math.random() * winnerPool.length)];
       const travel = SPINNER_TRAVEL_MIN + Math.floor(Math.random() * (SPINNER_TRAVEL_MAX - SPINNER_TRAVEL_MIN + 1));
       const targetIndex = demoSpinIndexRef.current + travel;
 
       setDemoReelItems((previous) => {
-        const next = previous.length > 0 ? [...previous] : Array.from({ length: INITIAL_REEL_LENGTH }, pickRandomItem);
+        const next = previous.length > 0 ? [...previous] : Array.from({ length: INITIAL_REEL_LENGTH }, pickFillerItem);
 
         while (next.length <= targetIndex + 12) {
-          next.push(pickRandomItem());
+          next.push(pickFillerItem());
+        }
+
+        if (hasDedicatedLegendaryWinnerPool) {
+          for (let idx = 0; idx < next.length; idx += 1) {
+            if (String(next[idx]?.rarity ?? '').toLowerCase() === 'legendary') {
+              next[idx] = pickFillerItem();
+            }
+          }
         }
 
         next[targetIndex] = winner;
@@ -194,7 +211,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       }, SPINNER_DURATION_MS + 90);
     };
 
-    const initialReel = Array.from({ length: INITIAL_REEL_LENGTH }, pickRandomItem);
+    const initialReel = Array.from({ length: INITIAL_REEL_LENGTH }, pickFillerItem);
     setDemoReelItems(initialReel);
     setDemoSpinIndex(14);
     demoSpinIndexRef.current = 14;
