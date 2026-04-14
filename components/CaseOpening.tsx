@@ -82,6 +82,7 @@ const createSeededRng = (seed: string) => {
 };
 
 const pickFromPool = <T,>(pool: T[], rng: () => number): T => pool[Math.floor(rng() * pool.length)];
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -716,10 +717,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       return null;
     }
 
+    const firstCard = container.firstElementChild as HTMLElement | null;
+    const cardWidth = firstCard?.offsetWidth ?? CARD_WIDTH;
+    const containerStyle = window.getComputedStyle(container);
+    const measuredGap = Number.parseFloat(containerStyle.columnGap || containerStyle.gap || `${GAP_WIDTH}`) || GAP_WIDTH;
+
     // Fallback for first-frame races: compute center using known card geometry.
     if (!winnerCard) {
       const viewportCenterX = viewport.clientWidth / 2;
-      const winnerCenterX = (winnerIndex * (CARD_WIDTH + GAP_WIDTH)) + (CARD_WIDTH / 2);
+      const winnerCenterX = (winnerIndex * (cardWidth + measuredGap)) + (cardWidth / 2);
       return viewportCenterX - winnerCenterX + landingOffset;
     }
 
@@ -742,6 +748,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
     return null;
   }, [getCenteredTranslate]);
+
+  const getTranslateBounds = useCallback(() => {
+    const viewport = scrollViewportRef.current;
+    const container = scrollContainerRef.current;
+    if (!viewport || !container) return null;
+
+    const minTranslate = Math.min(0, viewport.clientWidth - container.scrollWidth);
+    return { minTranslate, maxTranslate: 0 };
+  }, []);
+
+  const clampTranslate = useCallback((translateX: number) => {
+    const bounds = getTranslateBounds();
+    if (!bounds) return translateX;
+    return clamp(translateX, bounds.minTranslate, bounds.maxTranslate);
+  }, [getTranslateBounds]);
 
   const resetSpinnerAnimation = useCallback(() => {
     if (spinnerAnimationRef.current) {
@@ -795,8 +816,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     await waitForNextPaint();
 
-    const centeredTranslate = await resolveCenteredTranslate(winnerIndex, 0);
-    const approachTranslate = centeredTranslate === null ? null : centeredTranslate + approachOffset;
+    const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
+    const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
+    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
     if (centeredTranslate === null || approachTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
@@ -804,7 +826,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection);
+    const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
 
     setIsReelInFastMotion(true);
     setIsInitialMotionBlurActive(true);
@@ -870,7 +892,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [getApproachOffset, playSound, resetSpinnerAnimation, resolveCenteredTranslate]);
+  }, [clampTranslate, getApproachOffset, playSound, resetSpinnerAnimation, resolveCenteredTranslate]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
