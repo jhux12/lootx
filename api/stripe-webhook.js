@@ -133,12 +133,22 @@ export default async function handler(req, res) {
 
         const userSnap = await transaction.get(userRef);
         const userData = userSnap.exists ? userSnap.data() ?? {} : {};
+        const alreadyDeposited = userData.hasDeposited === true || userData.firstDepositBonusClaimed === true;
+        const firstDepositBonusCoins = alreadyDeposited ? 0 : Math.max(0, Math.round(totalCoins * 0.2));
+        const creditedCoins = totalCoins + firstDepositBonusCoins;
         const currentCoins = Number(userData.coins ?? userData.balance ?? 0) || 0;
-        const nextCoins = currentCoins + totalCoins;
+        const nextCoins = currentCoins + creditedCoins;
 
         transaction.set(userRef, {
-          coins: admin.firestore.FieldValue.increment(totalCoins),
-          balance: admin.firestore.FieldValue.increment(totalCoins)
+          coins: admin.firestore.FieldValue.increment(creditedCoins),
+          balance: admin.firestore.FieldValue.increment(creditedCoins),
+          lifetimeDeposits: admin.firestore.FieldValue.increment(creditedCoins),
+          hasDeposited: true,
+          ...(alreadyDeposited ? {} : {
+            firstDepositBonusClaimed: true,
+            firstDepositAt: admin.firestore.FieldValue.serverTimestamp(),
+            firstDepositBonusCoins
+          })
         }, { merge: true });
         appendLedgerEntry({
           transaction,
@@ -148,19 +158,24 @@ export default async function handler(req, res) {
             id: session.id,
             userId: uid,
             type: 'deposit',
-            amount: totalCoins,
+            amount: creditedCoins,
             createdAt: Date.now(),
             balanceAfter: nextCoins,
             sourceId: session.id,
-            memo: packageId ? `Deposit package ${packageId}` : 'Stripe deposit'
+            memo: packageId
+              ? `Deposit package ${packageId}${firstDepositBonusCoins > 0 ? ' (+20% first deposit bonus)' : ''}`
+              : `Stripe deposit${firstDepositBonusCoins > 0 ? ' (+20% first deposit bonus)' : ''}`
           }
         });
 
         transaction.set(creditRef, {
           uid,
           coins: totalCoins,
+          creditedCoins,
           baseCoins,
           bonusCoins,
+          firstDepositBonusCoins,
+          firstDepositBonusApplied: firstDepositBonusCoins > 0,
           packageId,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });

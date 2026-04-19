@@ -15,7 +15,7 @@ const generateCheckoutEventId = () => {
 };
 
 export const TopUpModal: React.FC = () => {
-  const { setShowTopUpModal, setTopUpModalIntent, topUpModalIntent, coinPackages } = useGame();
+  const { setShowTopUpModal, setTopUpModalIntent, topUpModalIntent, coinPackages, user } = useGame();
   const { playSound } = useSound();
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [hasUserSelectedPackage, setHasUserSelectedPackage] = useState(false);
@@ -58,6 +58,14 @@ export const TopUpModal: React.FC = () => {
     return Math.max(0, computedMissing);
   }, [topUpModalIntent?.currentBalance, topUpModalIntent?.missingCoins, topUpModalIntent?.requiredCoins]);
   const isInsufficientBalanceFlow = topUpModalIntent?.reason === 'insufficient_balance' && missingCoins > 0;
+  const lifetimeDeposits = Number(user.lifetimeDeposits ?? 0);
+  const hasLedgerDepositHistory = Array.isArray(user.ledger)
+    && user.ledger.some((entry) => entry.type === 'deposit' && Number(entry.amount ?? 0) > 0);
+  const isFirstDepositEligible = Boolean(user.id)
+    && lifetimeDeposits <= 0
+    && !user.hasDeposited
+    && !user.firstDepositBonusClaimed
+    && !hasLedgerDepositHistory;
   const getBadgeClasses = (badge?: string) => {
     const normalizedBadge = badge?.toLowerCase() ?? '';
     if (normalizedBadge.includes('best')) {
@@ -226,6 +234,11 @@ export const TopUpModal: React.FC = () => {
                       <div>
                         <h2 className="text-xl font-black text-white sm:text-3xl">Get Coins</h2>
                         <p className="mt-1 text-xs text-gray-400 sm:text-sm">Select a coin package</p>
+                        {isFirstDepositEligible && (
+                          <p className="mt-1 text-[11px] font-medium text-emerald-300 sm:text-xs">
+                            First deposit gets +20% bonus coins
+                          </p>
+                        )}
                       </div>
                     </div>
                     <button 
@@ -273,6 +286,11 @@ export const TopUpModal: React.FC = () => {
                                       }`}
                                     >
                                       {badgeText}
+                                    </span>
+                                  )}
+                                  {isFirstDepositEligible && (
+                                    <span className="absolute left-2 top-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-200">
+                                      +20% first deposit
                                     </span>
                                   )}
                                   <div className="mb-3 overflow-hidden rounded-lg border border-white/5 bg-black/20 p-2.5">
@@ -347,6 +365,9 @@ export const TopUpModal: React.FC = () => {
                   </button>
                   <p className="mt-2 text-center text-[10px] text-gray-500">
                     By depositing you agree to our Terms of Service.
+                  </p>
+                  <p className="mt-1 text-center text-[10px] text-gray-500">
+                    Secure checkout • Instant coins • Stripe powered
                   </p>
                 </div>
             </>

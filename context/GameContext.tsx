@@ -878,6 +878,10 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     : Array.isArray(data.friends)
       ? data.friends
       : [];
+  const ledgerEntries = Array.isArray(data.ledger) ? data.ledger : [];
+  const lifetimeDeposits = Number(data.lifetimeDeposits ?? 0);
+  const hasLedgerDepositHistory = ledgerEntries.some((entry) => entry?.type === 'deposit' && Number(entry?.amount ?? 0) > 0);
+  const hasDeposited = data.hasDeposited === true || lifetimeDeposits > 0 || hasLedgerDepositHistory;
   const balance = Number(data.coins ?? data.balance ?? 0);
 
   const fallbackName = data.displayName || data.username || data.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Player';
@@ -899,6 +903,11 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     xpBalance: xp,
     xpEarnedLifetime: Number(data.xpEarnedLifetime ?? 0),
     xpSpentLifetime: Number(data.xpSpentLifetime ?? 0),
+    hasDeposited,
+    firstDepositBonusClaimed: data.firstDepositBonusClaimed === true,
+    firstDepositAt: data.firstDepositAt === undefined ? undefined : normalizeTimestamp(data.firstDepositAt, 0),
+    firstDepositBonusCoins: Number(data.firstDepositBonusCoins ?? 0),
+    lifetimeDeposits,
     lastDailyClaim,
     lastFreeBoxClaim,
     totalSpent: Number(data.totalSpent ?? 0),
@@ -916,7 +925,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     termsFlagged: data.termsFlagged ?? false,
     status: data.status ?? 'active',
     locks: data.locks ?? DEFAULT_LOCKS,
-    ledger: Array.isArray(data.ledger) ? data.ledger : undefined,
+    ledger: ledgerEntries,
     adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
     topPullsPublic: data.topPullsPublic ?? false,
     topPulls: normalizeInventoryItems(data.topPulls),
@@ -937,6 +946,10 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     : Array.isArray(data.friends)
       ? data.friends
       : [];
+  const ledgerEntries = Array.isArray(data.ledger) ? data.ledger : [];
+  const lifetimeDeposits = Number(data.lifetimeDeposits ?? 0);
+  const hasLedgerDepositHistory = ledgerEntries.some((entry) => entry?.type === 'deposit' && Number(entry?.amount ?? 0) > 0);
+  const hasDeposited = data.hasDeposited === true || lifetimeDeposits > 0 || hasLedgerDepositHistory;
   const balance = Number(data.coins ?? data.balance ?? 0);
   const name = data.displayName || data.username || data.name || (data.email ? data.email.split('@')[0] : 'Player');
   const avatar = data.photoURL || data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`;
@@ -957,6 +970,11 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     xpBalance: xp,
     xpEarnedLifetime: Number(data.xpEarnedLifetime ?? 0),
     xpSpentLifetime: Number(data.xpSpentLifetime ?? 0),
+    hasDeposited,
+    firstDepositBonusClaimed: data.firstDepositBonusClaimed === true,
+    firstDepositAt: data.firstDepositAt === undefined ? undefined : normalizeTimestamp(data.firstDepositAt, 0),
+    firstDepositBonusCoins: Number(data.firstDepositBonusCoins ?? 0),
+    lifetimeDeposits,
     lastDailyClaim,
     lastFreeBoxClaim,
     totalSpent: Number(data.totalSpent ?? 0),
@@ -974,7 +992,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     termsFlagged: data.termsFlagged ?? false,
     status: data.status ?? 'active',
     locks: data.locks ?? DEFAULT_LOCKS,
-    ledger: Array.isArray(data.ledger) ? data.ledger : undefined,
+    ledger: ledgerEntries,
     adminLogs: Array.isArray(data.adminLogs) ? data.adminLogs : undefined,
     topPullsPublic: data.topPullsPublic ?? false,
     topPulls: normalizeInventoryItems(data.topPulls),
