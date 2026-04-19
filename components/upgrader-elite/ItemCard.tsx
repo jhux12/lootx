@@ -31,8 +31,8 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, o
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`group relative flex w-full flex-col overflow-hidden rounded-xl border p-2.5 text-left transition duration-200 sm:p-3
-        ${isSelected ? 'border-indigo-300/70 bg-[#151f46] ring-1 ring-indigo-300/50' : 'border-indigo-300/20 bg-gradient-to-b from-[#101836] to-[#0b1126] hover:border-indigo-300/45'}
+      className={`group relative flex w-full flex-col overflow-hidden rounded-xl border p-2.5 text-left transition duration-300 sm:p-3
+        ${isSelected ? 'scale-[1.015] border-cyan-300/80 bg-[#151f46] ring-2 ring-cyan-300/40 shadow-[0_0_20px_rgba(34,211,238,0.22)]' : 'border-indigo-300/20 bg-gradient-to-b from-[#101836] to-[#0b1126] hover:scale-[1.01] hover:border-indigo-300/45'}
         ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer active:scale-[0.99]'}
       `}
     >

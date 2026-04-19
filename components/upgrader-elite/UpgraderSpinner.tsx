@@ -7,10 +7,9 @@ export const needlePhysics = { overshootDeg: 6, settleMs: 520, damping: 0.18, fr
 const TRAIL_GHOST_COUNT = 8;
 
 const getRiskColor = (chance: number) => {
-  if (chance < 20) return '#ef4444';
-  if (chance < 50) return '#8b5cf6';
-  if (chance < 80) return '#38bdf8';
-  return '#22c55e';
+  if (chance >= 70) return '#22c55e';
+  if (chance >= 40) return '#f59e0b';
+  return '#ef4444';
 };
 
 const angleFromTransform = (node: HTMLElement) => {
@@ -22,6 +21,8 @@ const angleFromTransform = (node: HTMLElement) => {
 
 interface UpgraderSpinnerProps {
   chance: number;
+  hasSource: boolean;
+  hasTarget: boolean;
   status: UpgradeStatus;
   spinRotation: number;
   spinNonce: number;
@@ -37,6 +38,8 @@ interface UpgraderSpinnerProps {
 
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   chance,
+  hasSource,
+  hasTarget,
   status,
   spinRotation,
   spinNonce,
@@ -59,17 +62,49 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   const historyRef = useRef<number[]>(Array(TRAIL_GHOST_COUNT).fill(0));
   const [spinBounceOffset, setSpinBounceOffset] = useState(0);
   const [isTrailing, setIsTrailing] = useState(false);
+  const [animatedChance, setAnimatedChance] = useState(chance);
 
   const chanceGlowRgb = useMemo(() => {
-    if (chance < 30) return '190, 50, 70';
-    if (chance < 60) return '99, 102, 241';
-    return '16, 185, 129';
+    if (chance >= 70) return '34, 197, 94';
+    if (chance >= 40) return '245, 158, 11';
+    return '239, 68, 68';
   }, [chance]);
 
   const circumference = Math.PI * 2 * ((size - 20) / 2);
   const offset = circumference - (Math.max(0, Math.min(100, chance)) / 100) * circumference;
   const riskColor = useMemo(() => getRiskColor(chance), [chance]);
   const wheelCenter = useMemo(() => ({ x: size / 2, y: size / 2 }), [size]);
+  const riskBand = useMemo(() => {
+    if (chance >= 70) return { label: 'Safe', className: 'text-emerald-300' };
+    if (chance >= 40) return { label: 'Balanced', className: 'text-amber-300' };
+    return { label: 'High Risk', className: 'text-rose-300' };
+  }, [chance]);
+
+  useEffect(() => {
+    const start = animatedChance;
+    const end = chance;
+    if (Math.abs(end - start) < 0.01) {
+      setAnimatedChance(end);
+      return;
+    }
+
+    const duration = reducedMotion ? 0 : 480;
+    if (duration === 0) {
+      setAnimatedChance(end);
+      return;
+    }
+
+    const frameStart = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - frameStart) / duration);
+      const eased = 1 - (1 - t) ** 3;
+      setAnimatedChance(start + (end - start) * eased);
+      if (t < 1) raf = window.requestAnimationFrame(tick);
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [chance, reducedMotion]);
 
   const updateRotationFromEvent = (clientX: number, clientY: number) => {
     const wheelElement = wheelRef.current;
@@ -207,8 +242,20 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
           {(status === 'idle' || status === 'spinning') && (
             <>
-              <span className="text-4xl font-bold tracking-tight text-white sm:text-5xl">{chance.toFixed(2)}%</span>
-              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Chance to upgrade</p>
+              {hasSource && hasTarget ? (
+                <>
+                  <span className={`text-4xl font-bold tracking-tight sm:text-5xl ${riskBand.className}`}>{animatedChance.toFixed(2)}%</span>
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Chance to upgrade</p>
+                  <p className={`mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${riskBand.className}`}>{riskBand.label}</p>
+                </>
+              ) : (
+                <>
+                  <span className="px-8 text-center text-base font-semibold leading-relaxed text-slate-300">
+                    Pick both items to see your upgrade chance
+                  </span>
+                  <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Awaiting selections</p>
+                </>
+              )}
             </>
           )}
           {status === 'success' && (
