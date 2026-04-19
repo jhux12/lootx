@@ -83,6 +83,10 @@ export interface CaseItem {
   sizes?: string[];
   redeemable?: boolean;
   forceFullSellBack?: boolean;
+  upgraderEnabled?: boolean;
+  upgraderCategory?: '' | 'tech' | 'collectible' | 'apparel';
+  upgraderSort?: number;
+  upgraderFeatured?: boolean;
 }
 
 export interface MysteryBox {

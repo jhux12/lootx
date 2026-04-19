@@ -71,6 +71,13 @@ const ITEM_SIZE_SUGGESTIONS = [
     'US 12'
 ] as const;
 
+const UPGRADER_CATEGORY_OPTIONS = [
+    { value: '', label: 'None' },
+    { value: 'tech', label: 'Tech' },
+    { value: 'collectible', label: 'Collectible' },
+    { value: 'apparel', label: 'Apparel' }
+] as const;
+
 const ITEM_SPREADSHEET_REQUIRED_HEADERS = ['name', 'price', 'image', 'rarity', 'chance', 'color'] as const;
 const ITEM_SPREADSHEET_OPTIONAL_HEADERS = ['brand', 'category', 'tags'] as const;
 const ITEM_SPREADSHEET_HEADERS = [...ITEM_SPREADSHEET_REQUIRED_HEADERS, ...ITEM_SPREADSHEET_OPTIONAL_HEADERS] as const;
@@ -280,12 +287,18 @@ export const AdminPanel: React.FC = () => {
       tags: [],
       sizes: [],
       redeemable: true,
-      forceFullSellBack: false
+      forceFullSellBack: false,
+      upgraderEnabled: false,
+      upgraderCategory: '',
+      upgraderSort: undefined,
+      upgraderFeatured: false
   });
   const [itemTagInput, setItemTagInput] = useState('');
   const [itemSizeInput, setItemSizeInput] = useState('');
   const [boxTagInput, setBoxTagInput] = useState('');
   const [itemSearchQuery, setItemSearchQuery] = useState('');
+  const [itemUpgraderOnlyFilter, setItemUpgraderOnlyFilter] = useState(false);
+  const [itemUpgraderCategoryFilter, setItemUpgraderCategoryFilter] = useState<'' | 'tech' | 'collectible' | 'apparel'>('');
   const [itemVisibleCount, setItemVisibleCount] = useState(20);
   const itemListContainerRef = useRef<HTMLDivElement | null>(null);
   const itemListSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -385,16 +398,21 @@ export const AdminPanel: React.FC = () => {
 
   const filteredAdminItems = useMemo(() => {
       const query = itemSearchQuery.trim().toLowerCase();
-      if (!query) {
-          return items;
-      }
-
       return items.filter((item) => {
+          if (itemUpgraderOnlyFilter && item.upgraderEnabled !== true) {
+              return false;
+          }
+          if (itemUpgraderCategoryFilter && item.upgraderCategory !== itemUpgraderCategoryFilter) {
+              return false;
+          }
           const haystack = [
               item.name,
               item.brand,
               item.category,
               item.rarity,
+              item.upgraderCategory,
+              item.upgraderFeatured ? 'featured' : '',
+              item.upgraderEnabled ? 'upgrader' : '',
               ...(item.tags ?? []),
               ...(item.sizes ?? [])
           ]
@@ -402,9 +420,9 @@ export const AdminPanel: React.FC = () => {
               .join(' ')
               .toLowerCase();
 
-          return haystack.includes(query);
+          return !query || haystack.includes(query);
       });
-  }, [itemSearchQuery, items]);
+  }, [itemSearchQuery, items, itemUpgraderOnlyFilter, itemUpgraderCategoryFilter]);
 
   const visibleAdminItems = useMemo(
       () => filteredAdminItems.slice(0, itemVisibleCount),
@@ -413,7 +431,7 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       setItemVisibleCount(20);
-  }, [itemSearchQuery, items]);
+  }, [itemSearchQuery, items, itemUpgraderOnlyFilter, itemUpgraderCategoryFilter]);
 
   useEffect(() => {
       const sentinel = itemListSentinelRef.current;
@@ -1430,6 +1448,12 @@ export const AdminPanel: React.FC = () => {
       const category = newItem.category?.trim() ?? '';
       const tags = normalizeTagList(newItem.tags ?? []);
       const sizes = normalizeSizeList(newItem.sizes ?? []);
+      const upgraderCategory = ['tech', 'collectible', 'apparel'].includes(String(newItem.upgraderCategory ?? ''))
+          ? (String(newItem.upgraderCategory) as CaseItem['upgraderCategory'])
+          : '';
+      const upgraderSort = newItem.upgraderSort == null || newItem.upgraderSort === ''
+          ? undefined
+          : Number(newItem.upgraderSort);
 
       const item: CaseItem = {
           id: editingItemId || `custom-item-${Date.now()}`,
@@ -1444,7 +1468,11 @@ export const AdminPanel: React.FC = () => {
           tags,
           sizes: sizes.length ? sizes : undefined,
           redeemable: newItem.redeemable ?? true,
-          forceFullSellBack: newItem.forceFullSellBack ?? false
+          forceFullSellBack: newItem.forceFullSellBack ?? false,
+          upgraderEnabled: newItem.upgraderEnabled === true,
+          upgraderCategory,
+          upgraderSort: Number.isFinite(upgraderSort) ? upgraderSort : undefined,
+          upgraderFeatured: newItem.upgraderFeatured === true
       };
 
       if (editingItemId) {
@@ -1471,7 +1499,11 @@ export const AdminPanel: React.FC = () => {
           tags: item.tags ?? [],
           sizes: item.sizes ?? [],
           redeemable: item.redeemable ?? true,
-          forceFullSellBack: item.forceFullSellBack ?? false
+          forceFullSellBack: item.forceFullSellBack ?? false,
+          upgraderEnabled: item.upgraderEnabled === true,
+          upgraderCategory: item.upgraderCategory ?? '',
+          upgraderSort: item.upgraderSort,
+          upgraderFeatured: item.upgraderFeatured === true
       });
       setItemTagInput('');
       setItemSizeInput('');
@@ -1500,7 +1532,11 @@ export const AdminPanel: React.FC = () => {
           tags: [],
           sizes: [],
           redeemable: true,
-          forceFullSellBack: false
+          forceFullSellBack: false,
+          upgraderEnabled: false,
+          upgraderCategory: '',
+          upgraderSort: undefined,
+          upgraderFeatured: false
       });
       setItemTagInput('');
       setItemSizeInput('');
@@ -1770,7 +1806,10 @@ export const AdminPanel: React.FC = () => {
                   brand: brand.trim(),
                   category: category.trim(),
                   tags: normalizedTags,
-                  redeemable: true
+                  redeemable: true,
+                  upgraderEnabled: false,
+                  upgraderCategory: '',
+                  upgraderFeatured: false
               });
           }
           errors.push(...rowErrors);
@@ -3287,6 +3326,38 @@ export const AdminPanel: React.FC = () => {
                                   </span>
                                 </span>
                             </label>
+                            <label className="col-span-1 md:col-span-2 flex items-center gap-3 rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-sm text-cyan-100">
+                                <Checkbox
+                                  checked={newItem.upgraderEnabled ?? false}
+                                  onChange={(event) => setNewItem({ ...newItem, upgraderEnabled: event.target.checked })}
+                                  className="h-4 w-4 rounded border-cyan-400/60 bg-transparent text-cyan-400 focus:ring-cyan-300"
+                                />
+                                Enable for Elite Upgrader
+                            </label>
+                            <Select
+                                className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300"
+                                value={newItem.upgraderCategory ?? ''}
+                                onChange={(event) => setNewItem({ ...newItem, upgraderCategory: event.target.value as CaseItem['upgraderCategory'] })}
+                            >
+                                {UPGRADER_CATEGORY_OPTIONS.map((option) => (
+                                    <option key={option.value || 'none'} value={option.value}>{option.label}</option>
+                                ))}
+                            </Select>
+                            <Input
+                                type="number"
+                                placeholder="Upgrader sort order (optional)"
+                                className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white"
+                                value={newItem.upgraderSort ?? ''}
+                                onChange={(event) => setNewItem({ ...newItem, upgraderSort: event.target.value === '' ? undefined : Number(event.target.value) })}
+                            />
+                            <label className="col-span-1 md:col-span-2 flex items-center gap-3 rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300">
+                                <Checkbox
+                                  checked={newItem.upgraderFeatured ?? false}
+                                  onChange={(event) => setNewItem({ ...newItem, upgraderFeatured: event.target.checked })}
+                                  className="h-4 w-4 rounded border-gray-600 bg-transparent text-fuchsia-500 focus:ring-fuchsia-400"
+                                />
+                                Featured in Upgrader
+                            </label>
                         </div>
                         <div className="mb-4">
                             <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Item Tags</label>
@@ -3399,21 +3470,39 @@ export const AdminPanel: React.FC = () => {
 
                     {/* Item List */}
                     <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
-                        <div className="flex flex-col gap-3 border-b border-gray-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex flex-col gap-3 border-b border-gray-800 px-4 py-4">
                             <div>
                                 <h3 className="text-lg font-bold text-white">Item Inventory</h3>
                                 <p className="text-xs text-gray-400">
                                     Showing {Math.min(itemVisibleCount, filteredAdminItems.length)} of {filteredAdminItems.length} items. Scroll to load more.
                                 </p>
                             </div>
-                            <div className="w-full sm:w-64">
+                            <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3">
                                 <Input
                                     value={itemSearchQuery}
                                     onChange={(event) => setItemSearchQuery(event.target.value)}
                                     placeholder="Search items, tags, sizes..."
-                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-sm text-white"
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-sm text-white sm:col-span-2"
                                 />
+                                <Select
+                                    value={itemUpgraderCategoryFilter}
+                                    onChange={(event) => setItemUpgraderCategoryFilter(event.target.value as typeof itemUpgraderCategoryFilter)}
+                                    className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-sm text-gray-300"
+                                >
+                                    <option value="">All upgrader categories</option>
+                                    <option value="tech">Tech</option>
+                                    <option value="collectible">Collectible</option>
+                                    <option value="apparel">Apparel</option>
+                                </Select>
                             </div>
+                            <label className="inline-flex items-center gap-2 self-start rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-xs text-gray-300">
+                                <Checkbox
+                                    checked={itemUpgraderOnlyFilter}
+                                    onChange={(event) => setItemUpgraderOnlyFilter(event.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-600 bg-transparent text-cyan-400 focus:ring-cyan-300"
+                                />
+                                Show only upgrader-enabled
+                            </label>
                         </div>
                         <div ref={itemListContainerRef} className="max-h-[520px] overflow-y-auto">
                             <table className="w-full text-left text-sm">
@@ -3422,6 +3511,7 @@ export const AdminPanel: React.FC = () => {
                                         <th className="px-4 py-3">Item</th>
                                         <th className="px-4 py-3">Rarity</th>
                                         <th className="px-4 py-3">Price</th>
+                                        <th className="px-4 py-3">Upgrader</th>
                                         <th className="px-4 py-3 text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -3468,6 +3558,23 @@ export const AdminPanel: React.FC = () => {
                                                   iconClassName="w-3.5 h-3.5"
                                                 />
                                             </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide">
+                                                    <span className={`rounded-full border px-2 py-0.5 font-semibold ${item.upgraderEnabled ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200' : 'border-gray-700 text-gray-500'}`}>
+                                                        {item.upgraderEnabled ? 'Enabled' : 'Off'}
+                                                    </span>
+                                                    {item.upgraderCategory ? (
+                                                        <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 font-semibold text-cyan-200">
+                                                            {item.upgraderCategory}
+                                                        </span>
+                                                    ) : null}
+                                                    {item.upgraderFeatured ? (
+                                                        <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-2 py-0.5 font-semibold text-fuchsia-200">
+                                                            Featured
+                                                        </span>
+                                                    ) : null}
+                                                </div>
+                                            </td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end gap-2">
                                                     <button onClick={() => handleEditItem(item)} className="p-1.5 hover:bg-blue-500/10 text-blue-400 rounded transition-colors"><Edit2 className="w-4 h-4" /></button>
@@ -3478,7 +3585,7 @@ export const AdminPanel: React.FC = () => {
                                     ))}
                                     {filteredAdminItems.length === 0 && (
                                         <tr>
-                                            <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-400">
+                                            <td colSpan={5} className="px-4 py-6 text-center text-sm text-gray-400">
                                                 No items found. Try another search.
                                             </td>
                                         </tr>

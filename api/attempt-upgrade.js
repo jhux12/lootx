@@ -85,7 +85,7 @@ export default async function handler(req, res) {
     await firestore.runTransaction(async (transaction) => {
       const userRef = firestore.collection('users').doc(decoded.uid);
       const sourceRef = userRef.collection('inventory').doc(sourceItemInstanceId);
-      const targetRef = firestore.collection('upgraderTargets').doc(targetItemId);
+      const targetRef = firestore.collection('items').doc(targetItemId);
       const settingsRef = firestore.collection('settings').doc('upgrader');
       const provablyRef = firestore.collection('provablyFair').doc(decoded.uid);
 
@@ -107,7 +107,7 @@ export default async function handler(req, res) {
       const targetItem = targetSnap.data() ?? {};
       if (sourceItem.status && sourceItem.status !== 'available') throw new Error('Source item is not available.');
       if (sourceItem.locked === true) throw new Error('Source item is locked.');
-      if (targetItem.enabled === false) throw new Error('Target item disabled by admin.');
+      if (targetItem.upgraderEnabled !== true) throw new Error('Target item disabled by admin.');
 
       const sourceValue = getCoinValue(sourceItem);
       const targetValue = getCoinValue(targetItem);
@@ -115,7 +115,8 @@ export default async function handler(req, res) {
       if (settings.requireTargetHigherValue !== false && targetValue <= sourceValue) throw new Error('Target must be higher value.');
       if (targetValue < sourceValue * toNumber(settings.minUpgradeRatio, 1.25)) throw new Error('Target does not meet minimum upgrade ratio.');
       if (settings.maxTargetValue != null && targetValue > Number(settings.maxTargetValue)) throw new Error('Target exceeds configured cap.');
-      if (Array.isArray(settings.categoriesEnabled) && settings.categoriesEnabled.length > 0 && !settings.categoriesEnabled.includes(targetItem.category)) throw new Error('Target category is currently disabled.');
+      const resolvedTargetCategory = toSafeString(targetItem.upgraderCategory || targetItem.category, '');
+      if (Array.isArray(settings.categoriesEnabled) && settings.categoriesEnabled.length > 0 && !settings.categoriesEnabled.includes(resolvedTargetCategory)) throw new Error('Target category is currently disabled.');
       if (Array.isArray(settings.raritiesEnabled) && settings.raritiesEnabled.length > 0 && !settings.raritiesEnabled.includes(targetItem.rarity)) throw new Error('Target rarity is currently disabled.');
       if (sourceItem.source === 'freebox' && settings.allowFromFreeBox === false) throw new Error('Free box items are blocked for upgrades.');
       const allowedSourceItemIds = Array.isArray(settings.sourceItemIdsEnabled) ? settings.sourceItemIdsEnabled.map((entry) => String(entry)) : [];
@@ -144,7 +145,7 @@ export default async function handler(req, res) {
       const targetName = toSafeString(targetItem.name, 'Upgrader Target');
       const targetImage = toSafeString(targetItem.imageUrl || targetItem.image, '');
       const targetRarity = toSafeString(targetItem.rarity, 'common');
-      const targetCategory = toSafeString(targetItem.category, 'misc');
+      const targetCategory = toSafeString(targetItem.upgraderCategory || targetItem.category, 'misc');
       const sourceName = toSafeString(sourceItem.name, 'Inventory Item');
       const sourceRarity = toSafeString(sourceItem.rarity, 'common');
       const sourceCategory = toSafeString(sourceItem.category, 'misc');

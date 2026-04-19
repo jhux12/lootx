@@ -18,9 +18,38 @@ const normalizeTarget = (target: Partial<UpgraderTarget>): UpgraderTarget => ({
   category: String(target.category ?? ''),
   enabled: target.enabled === true,
   featured: target.featured === true,
+  upgraderSort: target.upgraderSort == null ? undefined : Number(target.upgraderSort),
   weight: Number(target.weight ?? 1),
   minSourceValue: target.minSourceValue == null ? undefined : Number(target.minSourceValue),
   maxSourceValue: target.maxSourceValue == null ? undefined : Number(target.maxSourceValue)
+});
+
+const normalizeCategory = (value: unknown) => {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return ['tech', 'collectible', 'apparel'].includes(normalized) ? normalized : '';
+};
+
+const normalizeTargetFromItem = (target: Partial<UpgraderTarget> & {
+  image?: string;
+  value?: number;
+  price?: number;
+  upgraderEnabled?: boolean;
+  upgraderCategory?: string;
+  upgraderSort?: number;
+  upgraderFeatured?: boolean;
+}): UpgraderTarget => normalizeTarget({
+  id: String(target.id ?? ''),
+  name: String(target.name ?? 'Unknown target'),
+  imageUrl: String(target.imageUrl ?? target.image ?? ''),
+  coinValue: Number(target.coinValue ?? target.value ?? target.price ?? 0),
+  rarity: String(target.rarity ?? 'common'),
+  category: normalizeCategory(target.upgraderCategory ?? target.category),
+  enabled: target.upgraderEnabled === true || target.enabled === true,
+  featured: target.upgraderFeatured === true || target.featured === true,
+  weight: Number(target.weight ?? 1),
+  minSourceValue: target.minSourceValue == null ? undefined : Number(target.minSourceValue),
+  maxSourceValue: target.maxSourceValue == null ? undefined : Number(target.maxSourceValue),
+  upgraderSort: target.upgraderSort
 });
 
 const getPublicUpgraderConfig = async (): Promise<{ settings: Record<string, unknown>; targets: UpgraderTarget[] }> => {
@@ -61,19 +90,26 @@ export const getUpgraderTargets = async () => {
     const { targets } = await getPublicUpgraderConfig();
     return targets;
   } catch {
-    const q = query(collection(db, 'upgraderTargets'), where('enabled', '==', true));
+    const q = query(collection(db, 'items'), where('upgraderEnabled', '==', true));
     const snapshot = await getDocs(q);
     return snapshot.docs.map((docSnapshot) => {
       const data = docSnapshot.data();
-      return normalizeTarget({
+      return normalizeTargetFromItem({
         id: docSnapshot.id,
         name: data.name,
+        image: data.image,
         imageUrl: data.imageUrl,
+        value: data.value,
+        price: data.price,
         coinValue: data.coinValue,
         rarity: data.rarity,
         category: data.category,
+        upgraderCategory: data.upgraderCategory,
+        upgraderSort: data.upgraderSort,
         enabled: data.enabled,
+        upgraderEnabled: data.upgraderEnabled,
         featured: data.featured,
+        upgraderFeatured: data.upgraderFeatured,
         weight: data.weight,
         minSourceValue: data.minSourceValue,
         maxSourceValue: data.maxSourceValue

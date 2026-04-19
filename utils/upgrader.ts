@@ -33,6 +33,7 @@ export type UpgraderTarget = {
   category: string;
   enabled: boolean;
   featured?: boolean;
+  upgraderSort?: number;
   weight?: number;
   minSourceValue?: number;
   maxSourceValue?: number;
