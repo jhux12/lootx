@@ -37,7 +37,11 @@ export const TopUpModal: React.FC = () => {
     }));
   }, [activePackages]);
 
-  const selectedPackage = activePackages.find((pkg) => pkg.id === selectedPackageId) ?? activePackages[0];
+  const defaultPackage = useMemo(
+    () => activePackages.find((pkg) => pkg.defaultSelected) ?? activePackages[0],
+    [activePackages]
+  );
+  const selectedPackage = activePackages.find((pkg) => pkg.id === selectedPackageId) ?? defaultPackage;
   const formattedDepositAmount = selectedPackage?.displayPrice ?? '$0.00';
   const priceValue = useMemo(() => {
     const raw = formattedDepositAmount.replace(/[^0-9.]/g, '');
@@ -75,6 +79,19 @@ export const TopUpModal: React.FC = () => {
   const getPackageImage = (pack: typeof activePackages[number]) =>
     pack.imageUrl?.trim() ||
     'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2F12.png?alt=media&token=a82f5343-7e3e-4cb9-9d7a-b0451d4e49b0';
+  const getBonusLabel = (pack: typeof activePackages[number]) => {
+    const customLabel = pack.bonusLabel?.trim();
+    if (customLabel) return customLabel;
+    const baseCoins = Math.max(0, Number(pack.coins ?? 0));
+    const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
+    if (!baseCoins || bonusCoins <= 0) return '';
+    const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
+    return `+${bonusPercent}% MORE COINS`;
+  };
+  const getTierVisualWeight = (index: number) => {
+    if (activePackages.length <= 1) return 0;
+    return index / (activePackages.length - 1);
+  };
 
   React.useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
@@ -96,10 +113,10 @@ export const TopUpModal: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
-    if (!selectedPackageId && activePackages[0]) {
-      setSelectedPackageId(activePackages[0].id);
+    if (!selectedPackageId && defaultPackage) {
+      setSelectedPackageId(defaultPackage.id);
     }
-  }, [activePackages, selectedPackageId]);
+  }, [defaultPackage, selectedPackageId]);
 
   React.useEffect(() => {
     if (!isInsufficientBalanceFlow || normalizedPackages.length === 0) {
@@ -228,9 +245,11 @@ export const TopUpModal: React.FC = () => {
                             No packages available right now.
                           </div>
                         ) : (
-                          activePackages.map((pack) => {
+                          activePackages.map((pack, index) => {
                             const isSelected = selectedPackage?.id === pack.id;
                             const bonusCoins = pack.bonusCoins ?? 0;
+                            const bonusLabel = getBonusLabel(pack);
+                            const tierWeight = getTierVisualWeight(index);
                             return (
                               <button
                                   key={pack.id}
@@ -240,6 +259,7 @@ export const TopUpModal: React.FC = () => {
                                     playSound('click');
                                   }}
                                   className={`relative rounded-xl border bg-[#15171c] p-3.5 text-left transition-all ${isSelected ? getSelectedClasses(pack.badge) : `${getBadgeClasses(pack.badge)} hover:border-white/30`}`}
+                                  style={!isSelected ? { borderColor: `rgba(148, 163, 184, ${0.1 + tierWeight * 0.22})` } : undefined}
                               >
                                   {pack.badge && (
                                     <span
@@ -265,14 +285,14 @@ export const TopUpModal: React.FC = () => {
                                     <CoinAmount
                                       amount={pack.coins}
                                       formatOptions={{ maximumFractionDigits: 0 }}
-                                      className="text-lg font-black text-white"
+                                      className={`font-black text-white ${tierWeight > 0.66 ? 'text-2xl' : tierWeight > 0.33 ? 'text-xl' : 'text-lg'}`}
                                       iconClassName="w-3.5 h-3.5"
                                     />
                                     <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500">
                                       <span className="text-xs font-semibold text-gray-300">{pack.name}</span>
-                                      {bonusCoins > 0 && (
+                                      {bonusCoins > 0 && bonusLabel && (
                                         <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
-                                          +{bonusCoins.toLocaleString()} BONUS
+                                          {bonusLabel}
                                         </span>
                                       )}
                                     </div>
@@ -304,7 +324,7 @@ export const TopUpModal: React.FC = () => {
                     />
                     <span className="text-sm font-semibold text-cyan-300">
                       {selectedPackage?.coins?.toLocaleString() ?? 0}
-                      {Number(selectedPackage?.bonusCoins ?? 0) > 0 ? ` + ${(selectedPackage?.bonusCoins ?? 0).toLocaleString()} BONUS` : ''}
+                      {Number(selectedPackage?.bonusCoins ?? 0) > 0 && selectedPackage ? ` • ${getBonusLabel(selectedPackage)}` : ''}
                     </span>
                   </div>
                   <button
@@ -317,7 +337,9 @@ export const TopUpModal: React.FC = () => {
                         <Loader2 className="h-5 w-5 animate-spin" /> Processing...
                       </>
                     ) : (
-                      <span>Buy for {formattedDepositAmount}</span>
+                      <span>
+                        Get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} Coins → {formattedDepositAmount}
+                      </span>
                     )}
                   </button>
                   <p className="mt-2 text-center text-[10px] text-gray-500">

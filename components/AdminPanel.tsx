@@ -308,6 +308,8 @@ export const AdminPanel: React.FC = () => {
       name: '',
       coins: 0,
       bonusCoins: 0,
+      bonusLabel: '',
+      defaultSelected: false,
       imageUrl: '',
       displayPrice: '',
       stripePriceId: '',
@@ -1510,6 +1512,8 @@ export const AdminPanel: React.FC = () => {
           name: '',
           coins: 0,
           bonusCoins: 0,
+          bonusLabel: '',
+          defaultSelected: false,
           imageUrl: '',
           displayPrice: '',
           stripePriceId: '',
@@ -1537,10 +1541,12 @@ export const AdminPanel: React.FC = () => {
       const coins = Number(packageDraft.coins ?? 0);
       const bonusCoins = Number(packageDraft.bonusCoins ?? 0);
       const imageUrl = packageDraft.imageUrl?.trim() ?? '';
+      const bonusLabel = packageDraft.bonusLabel?.trim() ?? '';
       const displayPrice = packageDraft.displayPrice?.trim() ?? '';
       const stripePriceId = packageDraft.stripePriceId?.trim() ?? '';
       const sortOrder = Number.isFinite(Number(packageDraft.sortOrder)) ? Number(packageDraft.sortOrder) : 0;
       const active = packageDraft.active ?? true;
+      const defaultSelected = packageDraft.defaultSelected ?? false;
       const badge = packageDraft.badge ?? undefined;
 
       if (!name) {
@@ -1576,6 +1582,8 @@ export const AdminPanel: React.FC = () => {
                   name,
                   coins,
                   bonusCoins,
+                  bonusLabel,
+                  defaultSelected,
                   imageUrl,
                   displayPrice,
                   stripePriceId,
@@ -1588,6 +1596,8 @@ export const AdminPanel: React.FC = () => {
                   name,
                   coins,
                   bonusCoins,
+                  bonusLabel,
+                  defaultSelected,
                   imageUrl,
                   displayPrice,
                   stripePriceId,
@@ -3992,10 +4002,12 @@ export const AdminPanel: React.FC = () => {
                                         <th className="px-4 py-3">Bonus Coins</th>
                                         <th className="px-4 py-3">Total</th>
                                         <th className="px-4 py-3">Display Price</th>
+                                        <th className="px-4 py-3">Bonus Label</th>
                                         <th className="px-4 py-3">Image URL</th>
                                         <th className="px-4 py-3">Stripe Price ID</th>
                                         <th className="px-4 py-3">Badge</th>
                                         <th className="px-4 py-3">Active</th>
+                                        <th className="px-4 py-3">Default</th>
                                         <th className="px-4 py-3">Sort</th>
                                         <th className="px-4 py-3">Updated</th>
                                         <th className="px-4 py-3 text-right">Actions</th>
@@ -4026,6 +4038,7 @@ export const AdminPanel: React.FC = () => {
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-300">{pkg.displayPrice}</td>
+                                                <td className="px-4 py-3 text-xs text-gray-300">{pkg.bonusLabel?.trim() || '—'}</td>
                                                 <td className="px-4 py-3 text-xs text-gray-400">
                                                     {pkg.imageUrl ? (
                                                         <a href={pkg.imageUrl} target="_blank" rel="noreferrer" className="font-mono underline decoration-dotted underline-offset-2 hover:text-white">
@@ -4059,6 +4072,13 @@ export const AdminPanel: React.FC = () => {
                                                     >
                                                         {pkg.active ? 'Active' : 'Inactive'}
                                                     </button>
+                                                </td>
+                                                <td className="px-4 py-3 text-xs text-gray-300">
+                                                    {pkg.defaultSelected ? (
+                                                        <span className="rounded-full bg-cyan-500/20 px-2 py-1 font-semibold text-cyan-200">Preselected</span>
+                                                    ) : (
+                                                        <span className="text-gray-500">—</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-300">{pkg.sortOrder}</td>
                                                 <td className="px-4 py-3 text-gray-400 text-xs">
@@ -6004,6 +6024,16 @@ export const AdminPanel: React.FC = () => {
                               className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                           />
                       </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Bonus Label (optional)</label>
+                          <Input
+                              type="text"
+                              placeholder="+40% MORE COINS"
+                              value={packageDraft.bonusLabel ?? ''}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, bonusLabel: event.target.value }))}
+                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                          />
+                      </div>
                       <div className="sm:col-span-2">
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Custom Image URL (optional)</label>
                           <Input
@@ -6062,6 +6092,18 @@ export const AdminPanel: React.FC = () => {
                           />
                           <label htmlFor="package-active" className="text-sm text-gray-300">
                               Active
+                          </label>
+                      </div>
+                      <div className="flex items-center gap-2 mt-6">
+                          <Input
+                              id="package-default-selected"
+                              type="checkbox"
+                              checked={packageDraft.defaultSelected ?? false}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, defaultSelected: event.target.checked }))}
+                              className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-cyan-500 focus:ring-cyan-500"
+                          />
+                          <label htmlFor="package-default-selected" className="text-sm text-gray-300">
+                              Preselect by default
                           </label>
                       </div>
                   </div>
