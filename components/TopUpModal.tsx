@@ -86,7 +86,15 @@ export const TopUpModal: React.FC = () => {
     const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
     if (!baseCoins || bonusCoins <= 0) return '';
     const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
-    return `+${bonusPercent}% MORE COINS`;
+    return `+${bonusPercent}% BONUS${bonusPercent === 50 ? ' 🔥' : ''}`;
+  };
+  const getBonusSummaryLabel = (pack?: typeof activePackages[number]) => {
+    if (!pack) return '';
+    const baseCoins = Math.max(0, Number(pack.coins ?? 0));
+    const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
+    if (!baseCoins || bonusCoins <= 0) return '';
+    const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
+    return `(+${bonusPercent}% BONUS)`;
   };
   const getTierStyles = (index: number) => {
     switch (index) {
@@ -95,7 +103,7 @@ export const TopUpModal: React.FC = () => {
       case 1:
         return 'border-white/20 hover:scale-[1.02]';
       case 2:
-        return 'scale-[1.06] border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.4)] z-10';
+        return 'scale-[1.06] border-emerald-300 shadow-[0_0_30px_rgba(16,185,129,0.5)] z-10';
       case 3:
         return 'border-blue-400/40 shadow-[0_0_15px_rgba(59,130,246,0.3)]';
       case 4:
@@ -357,8 +365,8 @@ export const TopUpModal: React.FC = () => {
                       iconClassName="h-5 w-5"
                     />
                     <span className="text-sm font-semibold text-cyan-300">
-                      {selectedPackage?.coins?.toLocaleString() ?? 0}
-                      {Number(selectedPackage?.bonusCoins ?? 0) > 0 && selectedPackage ? ` • ${getBonusLabel(selectedPackage)}` : ''}
+                      You get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} coins{' '}
+                      {getBonusSummaryLabel(selectedPackage)}
                     </span>
                   </div>
                   <button
@@ -372,7 +380,7 @@ export const TopUpModal: React.FC = () => {
                       </>
                     ) : (
                       <span>
-                        Get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} Coins → {formattedDepositAmount}
+                        Get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} Coins for {formattedDepositAmount}
                       </span>
                     )}
                   </button>
