@@ -44,11 +44,14 @@ interface RevealData {
   rotatedAt: number;
 }
 
-const CARD_WIDTH = 170;
-const CARD_HEIGHT = 210;
-const GAP_WIDTH = 4;
-const SPINNER_VIEWPORT_HEIGHT = 240;
-const MOBILE_SPINNER_SCALE = 0.84;
+const DESKTOP_CARD_WIDTH = 170;
+const MOBILE_CARD_WIDTH = 124;
+const DESKTOP_CARD_HEIGHT = 210;
+const MOBILE_CARD_HEIGHT = 158;
+const DESKTOP_GAP_WIDTH = 8;
+const MOBILE_GAP_WIDTH = 6;
+const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
+const MOBILE_SPINNER_VIEWPORT_HEIGHT = 186;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -85,6 +88,37 @@ const createSeededRng = (seed: string) => {
 
 const pickFromPool = <T,>(pool: T[], rng: () => number): T => pool[Math.floor(rng() * pool.length)];
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const createBezierEasing = (x1: number, y1: number, x2: number, y2: number) => {
+  const sampleCurveX = (t: number) => ((1 - 3 * x2 + 3 * x1) * t + (3 * x2 - 6 * x1)) * t * t + (3 * x1) * t;
+  const sampleCurveY = (t: number) => ((1 - 3 * y2 + 3 * y1) * t + (3 * y2 - 6 * y1)) * t * t + (3 * y1) * t;
+  const sampleDerivativeX = (t: number) => (3 * (1 - 3 * x2 + 3 * x1) * t + 2 * (3 * x2 - 6 * x1)) * t + (3 * x1);
+
+  const solveCurveX = (x: number) => {
+    let t2 = x;
+    for (let i = 0; i < 8; i += 1) {
+      const x2AtT = sampleCurveX(t2) - x;
+      if (Math.abs(x2AtT) < 1e-6) return t2;
+      const derivative = sampleDerivativeX(t2);
+      if (Math.abs(derivative) < 1e-6) break;
+      t2 -= x2AtT / derivative;
+    }
+
+    let t0 = 0;
+    let t1 = 1;
+    t2 = x;
+    while (t0 < t1) {
+      const x2AtT = sampleCurveX(t2);
+      if (Math.abs(x2AtT - x) < 1e-6) return t2;
+      if (x > x2AtT) t0 = t2;
+      else t1 = t2;
+      t2 = (t1 - t0) * 0.5 + t0;
+      if (Math.abs(t1 - t0) < 1e-6) break;
+    }
+    return t2;
+  };
+
+  return (x: number) => sampleCurveY(solveCurveX(x));
+};
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -290,6 +324,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
+  const [reelWinnerIndex, setReelWinnerIndex] = useState(SPINNER_MOTION.preWinnerItems);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
@@ -317,10 +352,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [itemModalActive, setItemModalActive] = useState(false);
   const [animatedModalCoins, setAnimatedModalCoins] = useState(0);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
-  const [isReelInFastMotion, setIsReelInFastMotion] = useState(false);
-  const [isInitialMotionBlurActive, setIsInitialMotionBlurActive] = useState(false);
-  const [isReelDecelerating, setIsReelDecelerating] = useState(false);
-  const [isLandingFlashActive, setIsLandingFlashActive] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [isMobileViewport, setIsMobileViewport] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
   );
@@ -337,14 +369,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const winningCardRef = useRef<HTMLDivElement>(null);
   const spinnerAnimationRef = useRef<Animation | null>(null);
-  const initialBlurTimerRef = useRef<number | null>(null);
-  const spinTickFrameRef = useRef<number | null>(null);
-  const spinTickLastIndexRef = useRef<number>(-1);
+  const tickTimerRef = useRef<number | null>(null);
   const spinnerMeasurementsRef = useRef({
-    cardWidth: CARD_WIDTH,
-    reelGap: GAP_WIDTH,
+    cardWidth: DESKTOP_CARD_WIDTH,
+    reelGap: DESKTOP_GAP_WIDTH,
     viewportWidth: 0,
-    stepWidth: CARD_WIDTH + GAP_WIDTH
+    stepWidth: DESKTOP_CARD_WIDTH + DESKTOP_GAP_WIDTH
   });
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
@@ -382,7 +412,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const xpRingRadius = 14;
   const xpRingCircumference = 2 * Math.PI * xpRingRadius;
   const xpRingOffset = xpRingCircumference * (1 - xpProgress);
-  const shouldSimplifyReelEffects = isMobileViewport && isReelInFastMotion;
+  const spinnerCardWidth = isMobileViewport ? MOBILE_CARD_WIDTH : DESKTOP_CARD_WIDTH;
+  const spinnerCardHeight = isMobileViewport ? MOBILE_CARD_HEIGHT : DESKTOP_CARD_HEIGHT;
+  const spinnerGap = isMobileViewport ? MOBILE_GAP_WIDTH : DESKTOP_GAP_WIDTH;
+  const spinnerViewportHeight = isMobileViewport ? MOBILE_SPINNER_VIEWPORT_HEIGHT : DESKTOP_SPINNER_VIEWPORT_HEIGHT;
+  const shouldSimplifyReelEffects = isMobileViewport && animationPhase === 'spinning';
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -400,9 +434,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (!viewport || !container) return;
 
     const firstCard = container.firstElementChild as HTMLElement | null;
-    const cardWidth = firstCard?.offsetWidth ?? CARD_WIDTH;
-    const containerStyle = window.getComputedStyle(container);
-    const reelGap = Number.parseFloat(containerStyle.columnGap || containerStyle.gap || `${GAP_WIDTH}`) || GAP_WIDTH;
+    const cardWidth = firstCard?.offsetWidth ?? spinnerCardWidth;
+    const reelGap = spinnerGap;
     const viewportWidth = viewport.clientWidth;
 
     spinnerMeasurementsRef.current = {
@@ -411,7 +444,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       viewportWidth,
       stepWidth: Math.max(1, cardWidth + reelGap)
     };
-  }, []);
+  }, [spinnerCardWidth, spinnerGap]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -551,12 +584,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   useEffect(() => {
     // Fill the static view with random items from the specific box
     if (items.length > 0) {
-        const staticItems = Array.from({ length: 15 }, () => 
+        const staticItems = Array.from({ length: isMobileViewport ? 11 : 15 }, () => 
           items[Math.floor(Math.random() * items.length)]
         );
         setReelItems(staticItems);
+        setReelWinnerIndex(Math.floor(staticItems.length / 2));
     }
-  }, [items]);
+  }, [isMobileViewport, items]);
 
   useEffect(() => {
     if (!selectedCaseItem) return;
@@ -753,8 +787,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
-    const winnerIndex = SPINNER_MOTION.preWinnerItems;
-    const reelLength = SPINNER_MOTION.preWinnerItems + 1 + SPINNER_MOTION.postWinnerItems;
+    const preWinnerItems = isMobileViewport ? 42 : SPINNER_MOTION.preWinnerItems;
+    const postWinnerItems = isMobileViewport ? 9 : SPINNER_MOTION.postWinnerItems;
+    const winnerIndex = preWinnerItems;
+    const reelLength = preWinnerItems + 1 + postWinnerItems;
     const newReel: CaseItem[] = [];
 
     // Deterministic filler generation preserves visual variety while remaining reproducible.
@@ -789,7 +825,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     return { items: newReel, winnerIndex };
-  }, []);
+  }, [isMobileViewport]);
 
   const getCenteredTranslate = useCallback((winnerIndex: number, landingOffset = 0) => {
     const viewport = scrollViewportRef.current;
@@ -844,20 +880,92 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
     }
 
-    if (initialBlurTimerRef.current) {
-      window.clearTimeout(initialBlurTimerRef.current);
-      initialBlurTimerRef.current = null;
+    if (tickTimerRef.current !== null) {
+      window.clearTimeout(tickTimerRef.current);
+      tickTimerRef.current = null;
     }
-    if (spinTickFrameRef.current !== null) {
-      window.cancelAnimationFrame(spinTickFrameRef.current);
-      spinTickFrameRef.current = null;
-    }
-    spinTickLastIndexRef.current = -1;
-
-    setIsInitialMotionBlurActive(false);
-    setIsReelInFastMotion(false);
-    setIsReelDecelerating(false);
+    setAnimationPhase('idle');
   }, []);
+
+  const scheduleTickSounds = useCallback((options: {
+    durationMs: number;
+    winnerIndex: number;
+    overshootTranslate: number;
+    finalTranslate: number;
+  }) => {
+    const { durationMs, winnerIndex, overshootTranslate, finalTranslate } = options;
+    if (tickTimerRef.current !== null) {
+      window.clearTimeout(tickTimerRef.current);
+      tickTimerRef.current = null;
+    }
+
+    const { stepWidth } = spinnerMeasurementsRef.current;
+    if (!Number.isFinite(stepWidth) || stepWidth <= 0) return;
+
+    const segmentOneDuration = durationMs * 0.8;
+    const segmentTwoDuration = durationMs - segmentOneDuration;
+    const easeMain = createBezierEasing(0.1, 0.9, 0.25, 1);
+    const easeSettle = createBezierEasing(0.14, 0.9, 0.22, 1);
+    const invertEasing = (target: number, easing: (t: number) => number) => {
+      let low = 0;
+      let high = 1;
+      for (let i = 0; i < 22; i += 1) {
+        const mid = (low + high) / 2;
+        const value = easing(mid);
+        if (value < target) low = mid;
+        else high = mid;
+      }
+      return (low + high) / 2;
+    };
+
+    const times: number[] = [];
+    const pushCrossingTimes = (
+      fromX: number,
+      toX: number,
+      easing: (t: number) => number,
+      segmentStartMs: number,
+      segmentDurationMs: number
+    ) => {
+      const minX = Math.min(fromX, toX);
+      const maxX = Math.max(fromX, toX);
+
+      for (let index = 1; index <= winnerIndex + 2; index += 1) {
+        const crossingX = -(index * stepWidth);
+        if (crossingX < minX || crossingX > maxX) continue;
+        const range = toX - fromX;
+        if (Math.abs(range) < 1e-6) continue;
+        const normalized = (crossingX - fromX) / range;
+        if (normalized <= 0 || normalized >= 1) continue;
+        const easedTime = invertEasing(normalized, easing);
+        times.push(segmentStartMs + (easedTime * segmentDurationMs));
+      }
+    };
+
+    pushCrossingTimes(0, overshootTranslate, easeMain, 0, segmentOneDuration);
+    pushCrossingTimes(overshootTranslate, finalTranslate, easeSettle, segmentOneDuration, segmentTwoDuration);
+
+    const scheduled = times
+      .map((value) => Math.max(16, Math.floor(value)))
+      .sort((a, b) => a - b)
+      .filter((value, index, array) => index === 0 || value - array[index - 1] >= 18);
+
+    if (!scheduled.length) return;
+
+    const startAt = performance.now();
+    let cursor = 0;
+    const loop = () => {
+      playSound('spin-tick');
+      cursor += 1;
+      if (cursor >= scheduled.length) {
+        tickTimerRef.current = null;
+        return;
+      }
+      const elapsed = performance.now() - startAt;
+      const nextDelay = Math.max(12, scheduled[cursor] - elapsed);
+      tickTimerRef.current = window.setTimeout(loop, nextDelay);
+    };
+    tickTimerRef.current = window.setTimeout(loop, scheduled[0]);
+  }, [playSound]);
 
   const animateSpin = useCallback(async (
     winnerIndex: number,
@@ -896,49 +1004,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const overshootDirection = approachOffset >= 0 ? -1 : 1;
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
     updateSpinnerMeasurements();
-
-    const trackTickSound = () => {
-      const viewport = scrollViewportRef.current;
-      const activeContainer = scrollContainerRef.current;
-      if (!viewport || !activeContainer) {
-        spinTickFrameRef.current = null;
-        return;
-      }
-
-      const transform = window.getComputedStyle(activeContainer).transform;
-      let translateX = 0;
-      if (transform && transform !== 'none') {
-        try {
-          translateX = new DOMMatrixReadOnly(transform).m41;
-        } catch {
-          translateX = 0;
-        }
-      }
-
-      const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
-      const resolvedViewportWidth = viewportWidth || viewport.clientWidth;
-      const centerIndex = Math.floor(((resolvedViewportWidth / 2) - translateX - (cardWidth / 2)) / stepWidth);
-      const maxIndex = Math.max(0, activeContainer.childElementCount - 1);
-      const boundedCenterIndex = clamp(centerIndex, 0, maxIndex);
-      const previousIndex = spinTickLastIndexRef.current;
-
-      if (previousIndex >= 0 && boundedCenterIndex > previousIndex) {
-        // One tick per frame avoids stacked plays that mobile browsers may throttle/drop.
-        playSound('spin-tick');
-      }
-
-      spinTickLastIndexRef.current = boundedCenterIndex;
-      spinTickFrameRef.current = window.requestAnimationFrame(trackTickSound);
-    };
-
-    setIsReelInFastMotion(true);
-    setIsInitialMotionBlurActive(true);
-    setIsReelDecelerating(false);
-
-    initialBlurTimerRef.current = window.setTimeout(() => {
-      setIsInitialMotionBlurActive(false);
-      initialBlurTimerRef.current = null;
-    }, SPINNER_MOTION.initialBlurDurationMs);
+    setAnimationPhase('spinning');
+    scheduleTickSounds({
+      durationMs: resolvedDuration,
+      winnerIndex,
+      overshootTranslate: overshootTarget,
+      finalTranslate: centeredTranslate
+    });
 
     const animation = container.animate(
       [
@@ -954,25 +1026,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     );
 
     spinnerAnimationRef.current = animation;
-    spinTickLastIndexRef.current = -1;
-    spinTickFrameRef.current = window.requestAnimationFrame(trackTickSound);
-
-    const decelerationTimer = window.setTimeout(() => {
-      setIsReelDecelerating(true);
-    }, Math.max(0, resolvedDuration - 1500));
+    const decelerationTimer = window.setTimeout(() => setAnimationPhase('settling'), Math.max(0, resolvedDuration - 850));
 
     animation.onfinish = () => {
       window.clearTimeout(decelerationTimer);
-      if (initialBlurTimerRef.current) {
-        window.clearTimeout(initialBlurTimerRef.current);
-        initialBlurTimerRef.current = null;
+      if (tickTimerRef.current !== null) {
+        window.clearTimeout(tickTimerRef.current);
+        tickTimerRef.current = null;
       }
-      setIsInitialMotionBlurActive(false);
-      if (spinTickFrameRef.current !== null) {
-        window.cancelAnimationFrame(spinTickFrameRef.current);
-        spinTickFrameRef.current = null;
-      }
-      spinTickLastIndexRef.current = -1;
 
       if (typeof animation.commitStyles === 'function') {
         animation.commitStyles();
@@ -981,10 +1042,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       container.style.transition = 'none';
       container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
 
-      setIsReelInFastMotion(false);
-      setIsReelDecelerating(false);
-      setIsLandingFlashActive(true);
-      window.setTimeout(() => setIsLandingFlashActive(false), SPINNER_MOTION.settleDurationMs);
+      setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
       onComplete();
@@ -992,22 +1050,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     animation.oncancel = () => {
       window.clearTimeout(decelerationTimer);
-      if (initialBlurTimerRef.current) {
-        window.clearTimeout(initialBlurTimerRef.current);
-        initialBlurTimerRef.current = null;
+      if (tickTimerRef.current !== null) {
+        window.clearTimeout(tickTimerRef.current);
+        tickTimerRef.current = null;
       }
-      setIsInitialMotionBlurActive(false);
-      if (spinTickFrameRef.current !== null) {
-        window.cancelAnimationFrame(spinTickFrameRef.current);
-        spinTickFrameRef.current = null;
-      }
-      spinTickLastIndexRef.current = -1;
-      setIsReelInFastMotion(false);
-      setIsReelDecelerating(false);
+      setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, playSound, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, resetSpinnerAnimation, resolveCenteredTranslate, scheduleTickSounds, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1095,17 +1146,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }));
   }, []);
 
+  useEffect(() => {
+    if (!items.length) return;
+    void preloadReelImages(items);
+  }, [items, preloadReelImages]);
+
   const waitForNextPaint = () => new Promise<void>((resolve) => {
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => resolve());
     });
   });
 
-  const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[]) => {
+  const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[], winnerIndex: number) => {
     resetSpinnerAnimation();
-    setIsReelInFastMotion(false);
-    setIsReelDecelerating(false);
-    setIsLandingFlashActive(false);
+    setAnimationPhase('idle');
     winningCardRef.current = null;
 
     if (scrollContainerRef.current) {
@@ -1113,10 +1167,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       scrollContainerRef.current.style.transition = 'none';
     }
 
-    await preloadReelImages(nextReelItems);
     setReelItems(nextReelItems);
+    setReelWinnerIndex(winnerIndex);
     await waitForNextPaint();
-  }, [preloadReelImages, resetSpinnerAnimation]);
+  }, [resetSpinnerAnimation]);
 
 
 
@@ -1419,7 +1473,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
         const ticketSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-ticket');
         const ticketReelResult = generateReel(GOLDEN_TICKET_ITEM, items, { sprinkleGold: true, seed: ticketSeed });
-        await prepareReelForSpin(ticketReelResult.items);
+        await prepareReelForSpin(ticketReelResult.items, ticketReelResult.winnerIndex);
 
         animateSpin(ticketReelResult.winnerIndex, SPINNER_MOTION.goldTicketDurationMs, () => {
             // Stage 1 Complete: Activate Gold Mode
@@ -1432,7 +1486,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 const pool = legendaryPool.length > 0 ? legendaryPool : items;
                 const goldSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-final');
                 const goldReelResult = generateReel(winner, pool, { sprinkleGold: true, seed: goldSeed });
-                void prepareReelForSpin(goldReelResult.items).then(() => {
+                void prepareReelForSpin(goldReelResult.items, goldReelResult.winnerIndex).then(() => {
                   animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
@@ -1445,7 +1499,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         // --- NORMAL SPIN FLOW ---
         const mainSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'main');
         const normalReelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
-        await prepareReelForSpin(normalReelResult.items);
+        await prepareReelForSpin(normalReelResult.items, normalReelResult.winnerIndex);
 
         animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs, () => {
             finishSpin(winner);
@@ -1835,15 +1889,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Spinner Window */}
             <div
               className="relative mx-auto w-full max-w-[1000px]"
-              style={{ height: `${Math.round(SPINNER_VIEWPORT_HEIGHT * (isMobileViewport ? MOBILE_SPINNER_SCALE : 1))}px` }}
+              style={{ height: `${spinnerViewportHeight}px` }}
             >
             <div
               ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex h-[240px] w-full max-w-[1000px] -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.02)] shadow-[inset_0_0_30px_rgba(0,0,0,0.5)]"
-              style={{
-                transform: `translate(-50%, -50%) scale(${isMobileViewport ? MOBILE_SPINNER_SCALE : 1})`,
-                transformOrigin: 'center center'
-              }}
+              className="absolute left-1/2 top-1/2 flex w-full max-w-[1000px] -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.02)]"
+              style={{ height: `${spinnerViewportHeight}px` }}
             >
                 {spinnerBackgroundImage && (
                   <>
@@ -1884,7 +1935,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   aria-hidden="true"
                 />
                 <div
-                  className={`absolute inset-y-0 left-1/2 z-[24] w-14 -translate-x-1/2 pointer-events-none transition-opacity duration-500 sm:w-20 ${isSpinning ? (isReelDecelerating ? 'opacity-85' : 'opacity-55') : 'opacity-35'}`}
+                  className={`absolute inset-y-0 left-1/2 z-[24] w-14 -translate-x-1/2 pointer-events-none transition-opacity duration-500 sm:w-20 ${isSpinning ? (animationPhase === 'settling' ? 'opacity-85' : 'opacity-55') : 'opacity-35'}`}
                   style={{
                     background: isGoldMode
                       ? 'radial-gradient(ellipse at center, rgba(250,204,21,0.24) 0%, rgba(250,204,21,0.08) 42%, rgba(250,204,21,0) 75%)'
@@ -1898,12 +1949,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-20 bg-gradient-to-l from-[#070b12] via-[#070b12]/85 to-transparent sm:w-28"></div>
 
                 <div
-                  className={`absolute inset-0 z-[21] pointer-events-none transition-opacity duration-200 ${isInitialMotionBlurActive ? 'opacity-100' : 'opacity-0'}`}
+                  className={`absolute inset-0 z-[21] pointer-events-none transition-opacity duration-200 ${animationPhase === 'spinning' ? 'opacity-70' : 'opacity-0'}`}
                   style={{
                     background: isGoldMode
                       ? 'linear-gradient(100deg, rgba(0,0,0,0) 0%, rgba(250,204,21,0.08) 35%, rgba(255,255,255,0.14) 50%, rgba(250,204,21,0.08) 65%, rgba(0,0,0,0) 100%)'
-                      : 'linear-gradient(100deg, rgba(0,0,0,0) 0%, rgba(34,211,238,0.06) 35%, rgba(255,255,255,0.12) 50%, rgba(34,211,238,0.06) 65%, rgba(0,0,0,0) 100%)',
-                    backdropFilter: shouldSimplifyReelEffects ? 'none' : 'blur(1.5px)'
+                      : 'linear-gradient(100deg, rgba(0,0,0,0) 0%, rgba(34,211,238,0.06) 35%, rgba(255,255,255,0.12) 50%, rgba(34,211,238,0.06) 65%, rgba(0,0,0,0) 100%)'
                   }}
                   aria-hidden="true"
                 />
@@ -1913,7 +1963,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     ref={scrollContainerRef}
                     className={`flex will-change-transform transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`} 
                     style={{
-                      gap: `${GAP_WIDTH}px`,
+                      gap: `${spinnerGap}px`,
                       transform: 'translate3d(0,0,0)',
                       backfaceVisibility: 'hidden',
                       WebkitBackfaceVisibility: 'hidden',
@@ -1924,30 +1974,32 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     {reelItems.map((item, idx) => (
                         <div 
                             key={`${item.id}-${idx}`}
-                            ref={idx === SPINNER_MOTION.preWinnerItems ? winningCardRef : null}
-                            className={`group relative flex h-[210px] w-[170px] flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.03)] p-2.5 transition-all duration-300 hover:border-cyan-200/35 hover:shadow-[0_0_18px_rgba(0,234,255,0.22)] ${item.id === 'golden-ticket' ? 'border-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.35)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? 'ring-2 ring-white/50' : ''}`}
+                            ref={idx === reelWinnerIndex ? winningCardRef : null}
+                            className={`group relative flex flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(160deg,rgba(16,24,38,0.95),rgba(8,12,22,0.96))] p-2 transition-colors duration-300 md:hover:scale-[1.015] md:hover:border-cyan-200/35 ${item.id === 'golden-ticket' ? 'border-yellow-500/60' : ''} ${animationPhase === 'idle' && idx === reelWinnerIndex ? 'ring-1 ring-white/40' : ''}`}
                             style={{
+                                width: `${spinnerCardWidth}px`,
+                                height: `${spinnerCardHeight}px`,
                                 transform: 'translateZ(0)',
                                 WebkitTransform: 'translateZ(0)',
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
-                                boxShadow: item.id === 'golden-ticket'
-                                  ? undefined
-                                  : `${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? `0 0 26px ${item.color}88, ` : ''}0 8px 24px rgba(0,0,0,0.45)`
+                                boxShadow: animationPhase === 'idle' ? '0 8px 20px rgba(2,6,23,0.45)' : 'none'
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                                className={`pointer-events-none absolute left-1/2 top-1/2 h-28 w-24 -translate-x-1/2 -translate-y-1/2 rounded-[999px] opacity-90 ${shouldSimplifyReelEffects ? 'blur-md' : 'blur-xl'}`}
+                                className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[999px] opacity-70 ${shouldSimplifyReelEffects ? 'blur-sm' : 'blur-md'}`}
                                 style={{
+                                  width: isMobileViewport ? '64px' : '92px',
+                                  height: isMobileViewport ? '76px' : '108px',
                                   background: `${item.color}66`,
-                                  boxShadow: shouldSimplifyReelEffects ? `0 0 24px ${item.color}70` : `0 0 38px ${item.color}88`
+                                  boxShadow: animationPhase === 'idle' ? `0 0 24px ${item.color}50` : 'none'
                                 }}
                             ></div>
                             <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
-                                className={`relative z-10 mb-1 h-32 w-32 object-contain ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
+                                className={`relative z-10 mb-1 object-contain ${isMobileViewport ? 'h-24 w-24' : 'h-32 w-32'} ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
                                 style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                             />
                             <div 
