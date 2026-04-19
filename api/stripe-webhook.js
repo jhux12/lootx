@@ -103,6 +103,29 @@ export default async function handler(req, res) {
     let baseCoins = Number(metadata.baseCoins ?? 0);
     let bonusCoins = Number(metadata.bonusCoins ?? 0);
     const packageId = metadata.packageId ?? null;
+    const sessionCurrency = typeof session.currency === 'string' ? session.currency.toUpperCase() : 'USD';
+    const amountTotalCents = Number(session.amount_total ?? 0);
+
+    let packageName = null;
+    let stripePriceId = null;
+    if (packageId) {
+      try {
+        const packageSnap = await firestore.collection('coin_packages').doc(String(packageId)).get();
+        if (packageSnap.exists) {
+          const packageData = packageSnap.data() ?? {};
+          const rawName = packageData.name ?? packageData.title ?? packageData.displayName ?? null;
+          packageName = typeof rawName === 'string' && rawName.trim() ? rawName.trim() : null;
+          stripePriceId = typeof packageData.stripePriceId === 'string' && packageData.stripePriceId.trim()
+            ? packageData.stripePriceId.trim()
+            : null;
+        }
+      } catch (packageError) {
+        console.warn('stripe-webhook failed to read package metadata', {
+          packageId,
+          message: packageError?.message
+        });
+      }
+    }
 
     if (!Number.isFinite(baseCoins)) {
       baseCoins = 0;
@@ -162,6 +185,11 @@ export default async function handler(req, res) {
           baseCoins,
           bonusCoins,
           packageId,
+          packageName,
+          stripePriceId,
+          amountTotalCents: Number.isFinite(amountTotalCents) ? Math.max(0, Math.round(amountTotalCents)) : 0,
+          currency: sessionCurrency,
+          paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
       });
@@ -183,7 +211,8 @@ export default async function handler(req, res) {
     try {
       const userSnap = uid ? await firestore.collection('users').doc(uid).get() : null;
       const userData = userSnap?.exists ? userSnap.data() ?? {} : {};
-      const email = session.customer_details?.email ?? userData.email ?? null;
+      const emailCandidate = session.customer_details?.email ?? userData.email ?? null;
+      const email = typeof emailCandidate === 'string' && emailCandidate.trim() ? emailCandidate.trim() : null;
       const phone = session.customer_details?.phone ?? userData.phone ?? userData.phoneNumber ?? null;
 
       const metaResult = await sendMetaEvent({
@@ -194,13 +223,17 @@ export default async function handler(req, res) {
         user: {
           email,
           phone,
-          external_id: uid,
+          external_id: String(uid),
           fbp,
           fbc
         },
         custom_data: {
-          currency: 'USD',
-          value: purchaseValue
+          currency: sessionCurrency || 'USD',
+          value: purchaseValue,
+          content_name: packageName ?? (packageId ? `Package ${packageId}` : 'Top Up'),
+          content_ids: stripePriceId ? [stripePriceId] : (packageId ? [String(packageId)] : undefined),
+          content_type: 'product',
+          num_items: 1
         },
         test_event_code: process.env.META_TEST_EVENT_CODE
       });
