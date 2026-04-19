@@ -114,6 +114,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (muted) return;
 
     initializeAudio();
+    const audioContext = ensureAudioContextReady();
 
     if (type === 'spin-tick') {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -121,7 +122,6 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       lastTickAtRef.current = now;
 
       try {
-        const audioContext = ensureAudioContextReady();
         if (!audioContext) return;
 
         if (audioContext.state === 'running') {
