@@ -49,7 +49,6 @@ export const TopUpModal: React.FC = () => {
     return Number.isFinite(parsed) ? parsed : 0;
   }, [formattedDepositAmount]);
   const totalCoins = (selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0)));
-  const effectiveRate = priceValue > 0 ? Math.round(totalCoins / priceValue) : null;
   const missingCoins = useMemo(() => {
     const requiredCoins = Number(topUpModalIntent?.requiredCoins ?? 0);
     const currentBalance = Number(topUpModalIntent?.currentBalance ?? 0);
@@ -81,13 +80,40 @@ export const TopUpModal: React.FC = () => {
   const getPackageImage = (pack: typeof activePackages[number]) =>
     pack.imageUrl?.trim() ||
     'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2F12.png?alt=media&token=a82f5343-7e3e-4cb9-9d7a-b0451d4e49b0';
-  const getBonusLabel = (pack: typeof activePackages[number]) => {
-    const baseCoins = Math.max(0, Number(pack.coins ?? 0));
-    const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
-    if (!baseCoins || bonusCoins <= 0) return '';
-    const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
-    return `+${bonusPercent}% MORE COINS`;
+  const getPackagePriceValue = (pack: typeof activePackages[number]) => {
+    const raw = String(pack.displayPrice ?? '').replace(/[^0-9.]/g, '');
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
   };
+  const getTotalCoinsForPack = (pack: typeof activePackages[number]) =>
+    Math.max(0, Number(pack.totalCoins ?? (pack.coins ?? 0) + (pack.bonusCoins ?? 0)));
+  const valueBaselineRate = useMemo(() => {
+    const rates = activePackages
+      .map((pack) => {
+        const packagePrice = getPackagePriceValue(pack);
+        const packageCoins = getTotalCoinsForPack(pack);
+        return packagePrice > 0 ? packageCoins / packagePrice : 0;
+      })
+      .filter((rate) => rate > 0);
+    if (rates.length === 0) return 0;
+    return Math.min(...rates);
+  }, [activePackages]);
+  const getValueLabel = (pack: typeof activePackages[number]) => {
+    const packagePrice = getPackagePriceValue(pack);
+    const packageCoins = getTotalCoinsForPack(pack);
+    if (!valueBaselineRate || packagePrice <= 0 || packageCoins <= 0) return '1X VALUE';
+    const multiplier = packageCoins / packagePrice / valueBaselineRate;
+    const roundedToTenth = Math.round(multiplier * 10) / 10;
+    const isWhole = Math.abs(roundedToTenth - Math.round(roundedToTenth)) < 0.05;
+    return `${isWhole ? Math.round(roundedToTenth) : roundedToTenth.toFixed(1)}X VALUE`;
+  };
+  const getPriorityBadge = (pack: typeof activePackages[number]) => {
+    const packagePrice = getPackagePriceValue(pack);
+    if (Math.abs(packagePrice - 25) < 0.01) return 'MOST POPULAR';
+    if (Math.abs(packagePrice - 50) < 0.01) return 'BEST VALUE 🔥';
+    return '';
+  };
+  const isFocalPackage = (pack: typeof activePackages[number]) => Math.abs(getPackagePriceValue(pack) - 50) < 0.01;
   const getTierVisualWeight = (index: number) => {
     if (activePackages.length <= 1) return 0;
     return index / (activePackages.length - 1);
@@ -247,10 +273,10 @@ export const TopUpModal: React.FC = () => {
                         ) : (
                           activePackages.map((pack, index) => {
                             const isSelected = selectedPackage?.id === pack.id;
-                            const bonusCoins = pack.bonusCoins ?? 0;
-                            const bonusLabel = getBonusLabel(pack);
+                            const valueLabel = getValueLabel(pack);
                             const tierWeight = getTierVisualWeight(index);
-                            const badgeText = pack.badge?.trim() ?? '';
+                            const badgeText = getPriorityBadge(pack);
+                            const focalPackage = isFocalPackage(pack);
                             return (
                               <button
                                   key={pack.id}
@@ -259,17 +285,15 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative rounded-xl border bg-[#15171c] p-3.5 text-left transition-all ${isSelected ? getSelectedClasses(pack.badge) : `${getBadgeClasses(pack.badge)} hover:border-white/30`}`}
-                                  style={!isSelected ? { borderColor: `rgba(148, 163, 184, ${0.1 + tierWeight * 0.22})` } : undefined}
+                                  className={`relative rounded-xl border bg-[#15171c] p-3.5 text-left transition-all ${focalPackage ? 'md:scale-[1.04] scale-[1.02] border-amber-300/40 shadow-[0_0_22px_rgba(251,191,36,0.22)]' : ''} ${isSelected ? getSelectedClasses(focalPackage ? 'best' : pack.badge) : `${getBadgeClasses(focalPackage ? 'best' : pack.badge)} hover:border-white/30`}`}
+                                  style={!isSelected ? { borderColor: focalPackage ? 'rgba(251, 191, 36, 0.45)' : `rgba(148, 163, 184, ${0.1 + tierWeight * 0.22})` } : undefined}
                               >
                                   {badgeText && (
                                     <span
-                                      className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+                                      className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
                                         badgeText.toLowerCase().includes('best')
                                           ? 'bg-amber-500 text-black'
-                                          : badgeText.toLowerCase().includes('good')
-                                            ? 'bg-sky-500 text-black'
-                                            : 'bg-zinc-200 text-black'
+                                          : 'bg-sky-500 text-black'
                                       }`}
                                     >
                                       {badgeText}
@@ -293,11 +317,9 @@ export const TopUpModal: React.FC = () => {
                                     />
                                     <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500">
                                       <span className="text-xs font-semibold text-gray-300">{pack.name}</span>
-                                      {bonusCoins > 0 && bonusLabel && (
-                                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
-                                          {bonusLabel}
-                                        </span>
-                                      )}
+                                      <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
+                                        {valueLabel}
+                                      </span>
                                     </div>
                                     <div className="mt-1.5 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-center text-lg font-black text-white">
                                       {pack.displayPrice}
@@ -325,9 +347,8 @@ export const TopUpModal: React.FC = () => {
                       className="text-xl font-black text-white"
                       iconClassName="h-5 w-5"
                     />
-                    <span className="text-sm font-semibold text-cyan-300">
-                      {selectedPackage?.coins?.toLocaleString() ?? 0}
-                      {Number(selectedPackage?.bonusCoins ?? 0) > 0 && selectedPackage ? ` • ${getBonusLabel(selectedPackage)}` : ''}
+                    <span className="text-right text-sm font-semibold text-cyan-300">
+                      You get {Math.round(totalCoins).toLocaleString()} coins ({selectedPackage ? getValueLabel(selectedPackage) : '1X VALUE'})
                     </span>
                   </div>
                   <button
