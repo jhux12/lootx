@@ -693,6 +693,7 @@ interface GameContextType {
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
   updateShipmentStatus: (shipmentId: string, userId: string, inventoryId: string | undefined, status: ShipmentStatus, trackingNumber?: string) => Promise<void>;
+  refreshUserInventory: () => Promise<void>;
 }
 
 const getDayStart = (timestamp: number = Date.now()) => {
@@ -1054,13 +1055,13 @@ const mergeAdminUsers = (snapshotUsers: User[], directoryUsers: AdminDirectoryUs
 const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
   const data = docSnap.data() as Record<string, any>;
   const rarity = (data.rarity ?? 'common') as InventoryItem['rarity'];
-  const value = Number(data.value ?? data.price ?? 0);
+  const value = Number(data.coinValue ?? data.value ?? data.price ?? 0);
   const obtainedAt = normalizeTimestamp(data.obtainedAt, Date.now());
   const status = (data.status ?? 'available') as InventoryItem['status'];
   const history = Array.isArray(data.history) ? data.history : undefined;
 
-  return {
-    id: data.prizeId ?? docSnap.id,
+  const mappedItem = {
+    id: data.id ?? data.prizeId ?? docSnap.id,
     instanceId: docSnap.id,
     name: data.name ?? 'Mystery Item',
     price: value,
@@ -1087,6 +1088,9 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     shippingCostOverrideCoins: data.shippingCostOverrideCoins == null ? undefined : Number(data.shippingCostOverrideCoins),
     shippingCostOverrideCents: data.shippingCostOverrideCents == null ? undefined : Number(data.shippingCostOverrideCents)
   } as InventoryItem;
+
+  console.log('Mapped inventory item:', mappedItem);
+  return mappedItem;
 };
 
 const mapShipmentDoc = (docSnap: QueryDocumentSnapshot) => {
@@ -1286,6 +1290,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setInventory(filtered);
     setUser((prev) => ({ ...prev, topPulls: rankTopPullsByValue(filtered) }));
   }, []);
+
+  const refreshUserInventory = useCallback(async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    console.log('Refreshing inventory after upgrade');
+    await refreshInventory(uid);
+  }, [refreshInventory]);
 
   const startAuthenticatedSession = (firebaseUser: FirebaseUser) => {
     if (activeUserIdRef.current === firebaseUser.uid) return;
@@ -3363,6 +3374,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       generateAffiliateCode,
       updateUserProgress,
       updateShipmentStatus,
+      refreshUserInventory,
       authInitialized
     }), [
       user, isAuthenticated, users, notifications, showLoginModal, showTopUpModal, topUpModalIntent, authModalMode,
@@ -3376,7 +3388,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updateUserAdminData, updateUserBalance, createBattle, joinBattle, updateBattle, createItem, updateItem,
       deleteItem, createCoinPackage, updateCoinPackage, deleteCoinPackage, createBox, createUserBox, updateBox,
       deleteBox, claimFreeBox, claimRakeback, updateBonusSettings, updateStripeSettings, awardCaseOpenXp,
-      registerSpend, generateAffiliateCode, updateUserProgress, updateShipmentStatus, authInitialized
+      registerSpend, generateAffiliateCode, updateUserProgress, updateShipmentStatus, refreshUserInventory, authInitialized
     ]);
 
   const authContextValue = useMemo(() => ({

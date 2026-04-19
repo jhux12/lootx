@@ -145,27 +145,32 @@ export default async function handler(req, res) {
       const targetImage = toSafeString(targetItem.imageUrl || targetItem.image, '');
       const targetRarity = toSafeString(targetItem.rarity, 'common');
       const targetCategory = toSafeString(targetItem.category, 'misc');
+      const targetCatalogId = toSafeString(targetItem.id, targetItemId);
       const sourceName = toSafeString(sourceItem.name, 'Inventory Item');
       const sourceRarity = toSafeString(sourceItem.rarity, 'common');
       const sourceCategory = toSafeString(sourceItem.category, 'misc');
 
       transaction.delete(sourceRef);
       if (awardedRef) {
-        transaction.set(awardedRef, {
+        const awardedAt = Number(Date.now());
+        const normalizedTargetValue = Number(targetValue);
+        const awardData = {
           instanceId: awardedRef.id,
-          id: targetItemId,
+          id: targetCatalogId,
           name: targetName,
           image: targetImage,
-          price: targetValue,
-          coinValue: targetValue,
+          coinValue: normalizedTargetValue,
+          price: normalizedTargetValue,
           rarity: targetRarity,
           category: targetCategory,
           chance: 0,
           color: toSafeString(targetItem.color, '#22d3ee'),
-          obtainedAt: Date.now(),
+          obtainedAt: awardedAt,
           status: 'available',
           source: 'upgrader'
-        }, { merge: true });
+        };
+        console.log('Upgrader award:', awardData);
+        transaction.set(awardedRef, awardData, { merge: true });
       }
 
       const today = new Date().toISOString().slice(0, 10);
