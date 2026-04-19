@@ -342,7 +342,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
   const preFreeSpinBalanceRef = useRef<number | null>(null);
-  const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number; coinsShort: number } | null>(null);
+  const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
   const spinRequestLockRef = useRef(false);
   const canFreeSpin = !user.lastFreeBoxClaim;
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1219,11 +1219,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         if ((data.currencyType ?? 'COIN') === 'COIN') {
           const updatedCoinBalance = Number(data.newCoinBalance ?? data.newCoins ?? 0);
           syncBalance(updatedCoinBalance);
-          if (isFree && cheapestPaidBoxPrice > 0) {
+          if (isFree) {
             const baselineBalance = Number(preFreeSpinBalanceRef.current ?? balance ?? user.balance ?? 0);
             const coinsWon = Math.max(0, Math.floor(updatedCoinBalance - baselineBalance));
-            const coinsShort = Math.max(0, Math.ceil(cheapestPaidBoxPrice - updatedCoinBalance));
-            pendingPostFreeBoxFlowRef.current = { coinsWon, coinsShort };
+            pendingPostFreeBoxFlowRef.current = { coinsWon };
           }
           if (!isFree) {
             const spentAmount = toCoins(Number(data.price ?? box?.price ?? 0), PRICE_UNIT_MODE);
@@ -1395,18 +1394,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsBoxPreviewVisible(true);
     setIsBoxPreviewFading(false);
 
-    const pendingPostFreeBoxFlow = pendingPostFreeBoxFlowRef.current;
-    if (isFree && !isDemoSpin && pendingPostFreeBoxFlow) {
-      setShowWinModal(false);
-      setShowPostFreeBoxModal(true);
-      setPostFreeBoxCoinsWon(pendingPostFreeBoxFlow.coinsWon);
-      setPostFreeBoxCoinsShort(pendingPostFreeBoxFlow.coinsShort);
-      setRewardResolved(true);
-      pendingPostFreeBoxFlowRef.current = null;
-      setWonInventoryItem(null);
-      return;
-    }
-
     setShowWinModal(true);
     if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
       const particles = createMicroConfetti(18);
@@ -1442,6 +1429,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     resetReelTrackPosition();
     setWonInventoryItem(null);
     setSellOfferGenerated(false);
+
+    const pendingPostFreeBoxFlow = pendingPostFreeBoxFlowRef.current;
+    if (pendingPostFreeBoxFlow) {
+      const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
+      setPostFreeBoxCoinsWon(pendingPostFreeBoxFlow.coinsWon);
+      setPostFreeBoxCoinsShort(Math.max(0, Math.ceil(cheapestPaidBoxPrice - availableCoins)));
+      setShowPostFreeBoxModal(true);
+      pendingPostFreeBoxFlowRef.current = null;
+    }
   };
 
   const handlePostFreePrimaryAction = () => {
@@ -1566,11 +1562,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (wonItem && !rewardResolved) {
         setRewardResolved(true);
       }
-      setShowWinModal(false);
-      setWonInventoryItem(null);
-      setSellOfferGenerated(false);
       setIsGeneratingSellOffer(false);
       setIsSellingItem(false);
+      closeWinModal();
   };
 
   const handleCopyProof = useCallback(async () => {
