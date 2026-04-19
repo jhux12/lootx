@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { Header } from './components/Header';
 import { LiveTicker } from './components/LiveTicker';
@@ -40,6 +40,7 @@ import { InstallPrompt } from './src/ui/pwa/InstallPrompt';
 import { SeoHead } from './components/SeoHead';
 import { AdminGate } from './components/AdminGate';
 import { trackEvent, trackMetaEvent } from './utils/trackEvent';
+import { auth } from './firebase';
 import PullToRefresh from './components/PullToRefresh';
 import {
   ShowcaseRow,
@@ -94,6 +95,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const { playSound } = useSound();
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
+  const trackedPurchaseSessionsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
@@ -122,16 +124,97 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    const firebaseUser = auth.currentUser;
+    if (!isAuthenticated || !user || !firebaseUser) return;
+
     const params = new URLSearchParams(window.location.search);
-    const topUpStatus = params.get('topup');
-    if (topUpStatus !== 'success') return;
+    if (params.get('topup') !== 'success') return;
 
     const sessionId = params.get('session_id');
-    trackMetaEvent('Purchase', {
-      content_name: 'TopUp',
-      status: 'success'
-    }, sessionId ? { eventID: `purchase_${sessionId}` } : undefined);
-  }, []);
+    if (!sessionId || trackedPurchaseSessionsRef.current.has(sessionId)) return;
+    trackedPurchaseSessionsRef.current.add(sessionId);
+
+    let isCancelled = false;
+
+    const syncPurchaseTracking = async () => {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/topup-purchase', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ sessionId })
+        });
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload || isCancelled) {
+          return;
+        }
+
+        if (payload.status !== 'ready') {
+          trackedPurchaseSessionsRef.current.delete(sessionId);
+          return;
+        }
+
+        const purchase = payload.purchase ?? {};
+        const eventId = typeof purchase.eventID === 'string' && purchase.eventID.trim()
+          ? purchase.eventID.trim()
+          : `purchase_${sessionId}`;
+        const purchaseValue = Number(purchase.value);
+
+        if (purchase.alreadyTracked !== true) {
+          if (!Number.isFinite(purchaseValue) || purchaseValue <= 0) {
+            trackedPurchaseSessionsRef.current.delete(sessionId);
+            return;
+          }
+
+          const purchaseEventData: Record<string, unknown> = {
+            currency: typeof purchase.currency === 'string' ? purchase.currency : 'USD',
+            value: purchaseValue,
+            content_name: typeof purchase.content_name === 'string' ? purchase.content_name : 'Top Up',
+            content_ids: Array.isArray(purchase.content_ids) ? purchase.content_ids : undefined,
+            content_type: 'product',
+            num_items: 1
+          };
+          if (user.email) {
+            purchaseEventData.em = user.email;
+          }
+          if (user.id) {
+            purchaseEventData.external_id = user.id;
+          }
+
+          trackMetaEvent('Purchase', purchaseEventData, { eventID: eventId });
+
+          await fetch('/api/topup-purchase', {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ sessionId })
+          }).catch(() => undefined);
+        }
+
+        const nextParams = new URLSearchParams(window.location.search);
+        nextParams.delete('topup');
+        nextParams.delete('session_id');
+        const nextSearch = nextParams.toString();
+        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+        window.history.replaceState({}, '', nextUrl);
+      } catch (error) {
+        trackedPurchaseSessionsRef.current.delete(sessionId);
+        console.warn('Unable to finalize Meta purchase tracking', error);
+      }
+    };
+
+    void syncPurchaseTracking();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthenticated, user?.id]);
 
   const baseHomeBoxes = useMemo(
     () => boxes.filter(box => !box.isUserCreated && !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),

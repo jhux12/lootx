@@ -2005,6 +2005,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const shouldTrackRegistrationForUser = (uid: string): boolean => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+
+    const globalRegistrationTracker = ((window as any).__registrationTracked ??= {} as Record<string, boolean>);
+    if (globalRegistrationTracker[uid]) {
+      return false;
+    }
+
+    globalRegistrationTracker[uid] = true;
+    return true;
+  };
+
   const ensureGoogleUserProfile = async (firebaseUser: FirebaseUser) => {
     const userRef = getUserRef(firebaseUser.uid);
     const userSnapshot = await getDoc(userRef);
@@ -2160,11 +2174,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (isNewGoogleUser) {
         try {
-          console.log('Firing CompleteRegistration for new Google user');
-          trackMetaEvent('CompleteRegistration', {
-            content_name: 'Account Registration',
-            status: true
-          });
+          if (shouldTrackRegistrationForUser(credential.user.uid)) {
+            const registrationData: Record<string, unknown> = {
+              content_name: 'Account Registration',
+              status: true
+            };
+            if (credential.user.email) {
+              registrationData.em = credential.user.email;
+            }
+            registrationData.external_id = credential.user.uid;
+
+            console.log('Firing CompleteRegistration for new Google user');
+            trackMetaEvent('CompleteRegistration', registrationData, {
+              eventID: `complete_registration_${credential.user.uid}`
+            });
+          }
         } catch (err) {
           console.warn('Meta Google registration tracking failed', err);
         }
@@ -2255,9 +2279,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await tryApplyPendingReferralAttribution();
 
       try {
-        trackMetaEvent('CompleteRegistration', {
+        if (!shouldTrackRegistrationForUser(credential.user.uid)) {
+          return;
+        }
+
+        const registrationData: Record<string, unknown> = {
           content_name: 'Account Registration',
           status: true
+        };
+        if (credential.user.email) {
+          registrationData.em = credential.user.email;
+        }
+        registrationData.external_id = credential.user.uid;
+
+        trackMetaEvent('CompleteRegistration', registrationData, {
+          eventID: `complete_registration_${credential.user.uid}`
         });
       } catch (err) {
         console.warn('Meta registration tracking failed', err);
