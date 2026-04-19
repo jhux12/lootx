@@ -23,6 +23,8 @@ const SOUND_VOLUMES: Partial<Record<SoundType, number>> = {
 export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [muted, setMuted] = useState(false);
   const audioRefs = useRef<Partial<Record<SoundType, HTMLAudioElement>>>({});
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const lastTickAtRef = useRef(0);
   const didInitRef = useRef(false);
 
   const initializeAudio = useCallback(() => {
@@ -57,10 +59,46 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const playSound = useCallback((type: SoundType) => {
     if (muted) return;
 
-    // Only allow the unboxing spinner start sound.
-    if (type !== 'spin-start') return;
-
     initializeAudio();
+
+    if (type === 'spin-tick') {
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      if (now - lastTickAtRef.current < 28) return;
+      lastTickAtRef.current = now;
+
+      try {
+        const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!AudioContextCtor) return;
+
+        if (!audioContextRef.current) {
+          audioContextRef.current = new AudioContextCtor();
+        }
+
+        const audioContext = audioContextRef.current;
+        if (audioContext.state === 'suspended') {
+          void audioContext.resume().catch(() => undefined);
+        }
+
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(1320, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.07, audioContext.currentTime + 0.004);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.04);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.045);
+      } catch {
+        // ignore playback errors
+      }
+      return;
+    }
+
+    if (type !== 'spin-start') return;
 
 
     const audio = audioRefs.current[type];
