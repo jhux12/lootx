@@ -321,6 +321,7 @@ export const AdminPanel: React.FC = () => {
   const [riskBalance, setRiskBalance] = useState(50);
   const [targetEV, setTargetEV] = useState(0.85);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
+  const [oddsEditorMode, setOddsEditorMode] = useState<'auto' | 'manual'>('auto');
   const [itemBrandFilter, setItemBrandFilter] = useState('');
   const [itemCategoryFilter, setItemCategoryFilter] = useState('');
   const [itemTagFilters, setItemTagFilters] = useState<string[]>([]);
@@ -1912,6 +1913,7 @@ export const AdminPanel: React.FC = () => {
 
       // Apply updates
       setSelectedItems(updatedItems);
+      setOddsEditorMode('auto');
       setNewBox(prev => ({
           ...prev,
           [isXpBox ? 'priceXP' : 'price']: parseFloat(calculatedPrice.toFixed(2))
@@ -1919,6 +1921,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   useEffect(() => {
+      if (oddsEditorMode !== 'auto') return;
       setSelectedItems((prev) => {
           if (prev.length === 0) return prev;
 
@@ -1942,7 +1945,7 @@ export const AdminPanel: React.FC = () => {
 
           return updatedItems;
       });
-  }, [clampedTargetEV, effectiveBoxPrice, hasExplicitBoxPrice, isXpBox, riskBalance]);
+  }, [clampedTargetEV, effectiveBoxPrice, hasExplicitBoxPrice, isXpBox, oddsEditorMode, riskBalance]);
 
   const updateAdminLogs = (targetUserId: string, updater: (entries: AdminActionLog[]) => AdminActionLog[]) => {
       setAdminLogs((prev) => {
@@ -2526,37 +2529,17 @@ export const AdminPanel: React.FC = () => {
           alert("Select at least one item for the box");
           return;
       }
-      const baseSelection = selectedItems.map(item => ({ ...item, chance: 0 }));
-      const refreshedItems = applyRarityOverrides(
-          buildOddsWithRiskAndTargetEV(
-              baseSelection,
-              riskBalance,
-              clampedTargetEV,
-              Number(effectiveBoxPrice)
-          ),
-          selectedItems
-      );
-      const refreshedOddsTotal = calculateOddsTotal(refreshedItems);
-      const refreshedEv = calculateExpectedValue(refreshedItems);
-      const refreshedEvRatio = effectiveBoxPrice > 0 ? refreshedEv / Number(effectiveBoxPrice) : 0;
-      const refreshedOddsOutOfBounds = Math.abs(refreshedOddsTotal - 100) > 0.001;
-      const refreshedEvOutOfBounds = effectiveBoxPrice > 0
-        ? Math.abs(refreshedEvRatio - clampedTargetEV) > EV_TOLERANCE
-        : false;
-
-      setSelectedItems(refreshedItems);
-
-      if (refreshedOddsOutOfBounds) {
+      if (oddsOutOfBounds) {
           alert("Total odds must equal 100% before saving.");
           return;
       }
-      if (refreshedEvOutOfBounds) {
+      if (evOutOfBounds) {
           alert("Expected value is outside the allowed tolerance.");
           return;
       }
 
       // Clone items to decouple from global pool (ensuring box-specific chances)
-      const boxItems = refreshedItems.map(i => ({...i}));
+      const boxItems = selectedItems.map(i => ({...i}));
       
       // If setting as daily, unset others first (best effort approach)
       if (newBox.isDaily) {
@@ -2597,6 +2580,7 @@ export const AdminPanel: React.FC = () => {
       });
       setBoxTagInput('');
       setSelectedItems(box.items.map(i => ({...i})));
+      setOddsEditorMode('manual');
       setRiskBalance(box.riskLevel ?? 50);
       setTargetEV(box.targetEV ?? 0.85);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2677,6 +2661,7 @@ export const AdminPanel: React.FC = () => {
       });
       setBoxTagInput('');
       setSelectedItems([]);
+      setOddsEditorMode('auto');
       setRiskBalance(50);
       setTargetEV(0.85);
   };
@@ -2707,6 +2692,19 @@ export const AdminPanel: React.FC = () => {
       } else {
           setSelectedItems(prev => [...prev, { ...item }]);
       }
+  };
+
+  const handleSelectedItemChanceChange = (itemId: string, chanceInput: string) => {
+      const parsedChance = Number(chanceInput);
+      const nextChance = Number.isFinite(parsedChance)
+          ? Math.min(100, Math.max(0, parsedChance))
+          : 0;
+      setOddsEditorMode('manual');
+      setSelectedItems((prev) => prev.map((entry) => (
+          entry.id === itemId
+              ? { ...entry, chance: Number(nextChance.toFixed(4)) }
+              : entry
+      )));
   };
 
   const buildEditableBoxPayload = (items: CaseItem[]): MysteryBox => ({
@@ -3772,6 +3770,9 @@ export const AdminPanel: React.FC = () => {
                                     <Calculator className="w-3 h-3" /> Auto-Calculate Odds & Price
                                  </button>
                              </div>
+                             <p className="mb-3 text-[11px] text-gray-500">
+                                 Mode: <span className="font-semibold text-gray-300">{oddsEditorMode === 'manual' ? 'Manual odds' : 'Auto-calculated odds'}</span>. You can edit each item&apos;s chance directly below.
+                             </p>
 
                              <div className="mb-4 flex flex-col gap-3">
                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -3880,10 +3881,18 @@ export const AdminPanel: React.FC = () => {
                                                    className="text-gray-500"
                                                    iconClassName="w-3 h-3"
                                                  />
-                                                 <div className="flex items-center gap-1 bg-black/30 px-2 py-0.5 rounded">
-                                                     <span className="text-gray-400">Chance:</span>
-                                                     <span className="font-bold text-white">{item.chance}%</span>
-                                                 </div>
+                                                 <label className="flex items-center gap-1 bg-black/30 px-2 py-1 rounded w-full sm:w-auto">
+                                                     <span className="text-gray-400 whitespace-nowrap">Chance %</span>
+                                                     <Input
+                                                         type="number"
+                                                         min={0}
+                                                         max={100}
+                                                         step={0.0001}
+                                                         value={item.chance}
+                                                         onChange={(event) => handleSelectedItemChanceChange(item.id, event.target.value)}
+                                                         className="w-24 bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-white font-semibold text-xs"
+                                                     />
+                                                 </label>
                                                  <label className="relative">
                                                      <span className="sr-only">Item rarity for {item.name}</span>
                                                      <select
