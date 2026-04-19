@@ -22,6 +22,7 @@ import {
   linkWithCredential,
   sendPasswordResetEmail,
   signOut,
+  getAdditionalUserInfo,
   getIdTokenResult,
   onIdTokenChanged
 } from 'firebase/auth';
@@ -2146,7 +2147,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await setAuthPersistence(remember);
       const credential = await signInWithPopup(auth, provider);
+      const isNewGoogleUser = Boolean(getAdditionalUserInfo(credential)?.isNewUser);
       await ensureGoogleUserProfile(credential.user);
+
+      if (isNewGoogleUser) {
+        try {
+          console.log('Firing CompleteRegistration for new Google user');
+          trackMetaEvent('CompleteRegistration', {
+            content_name: 'Account Registration',
+            status: true
+          });
+        } catch (err) {
+          console.warn('Meta Google registration tracking failed', err);
+        }
+      }
+
       setShowLoginModal(false);
       return { status: 'success' };
     } catch (error: any) {
