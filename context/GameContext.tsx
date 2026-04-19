@@ -1729,7 +1729,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             tags: Array.isArray(data.tags) ? (data.tags as CaseItem['tags']) : [],
             sizes: Array.isArray(data.sizes) ? data.sizes.filter((size: unknown) => typeof size === 'string') : [],
             redeemable: data.redeemable ?? true,
-            forceFullSellBack: data.forceFullSellBack === true
+            forceFullSellBack: data.forceFullSellBack === true,
+            upgraderEnabled: data.upgraderEnabled === true,
+            upgraderCategory: ['tech', 'collectible', 'apparel'].includes(String(data.upgraderCategory ?? ''))
+              ? (String(data.upgraderCategory) as CaseItem['upgraderCategory'])
+              : '',
+            upgraderSort: Number.isFinite(Number(data.upgraderSort)) ? Number(data.upgraderSort) : undefined,
+            upgraderFeatured: data.upgraderFeatured === true
           } as CaseItem;
         })
         .sort((a, b) => a.price - b.price);

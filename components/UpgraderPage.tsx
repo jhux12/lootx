@@ -24,7 +24,7 @@ export const UpgraderPage: React.FC = () => {
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<null | { win: boolean; roll: number; chance: number; awardedItem?: { name: string; imageUrl: string } }>(null);
-  const [filters, setFilters] = useState({ rarity: '', category: '', min: 0, max: 0, sort: 'asc' as 'asc' | 'desc' });
+  const [filters, setFilters] = useState({ category: 'all' as 'all' | 'tech' | 'collectible' | 'apparel', min: 0, max: 0 });
 
   useEffect(() => {
     void (async () => {
