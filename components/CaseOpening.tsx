@@ -333,6 +333,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const winningCardRef = useRef<HTMLDivElement>(null);
   const spinnerAnimationRef = useRef<Animation | null>(null);
   const initialBlurTimerRef = useRef<number | null>(null);
+  const spinTickFrameRef = useRef<number | null>(null);
+  const spinTickLastIndexRef = useRef<number>(-1);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const itemModalRevealFrameRef = useRef<number | null>(null);
@@ -802,6 +804,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       window.clearTimeout(initialBlurTimerRef.current);
       initialBlurTimerRef.current = null;
     }
+    if (spinTickFrameRef.current !== null) {
+      window.cancelAnimationFrame(spinTickFrameRef.current);
+      spinTickFrameRef.current = null;
+    }
+    spinTickLastIndexRef.current = -1;
 
     setIsInitialMotionBlurActive(false);
     setIsReelInFastMotion(false);
@@ -849,6 +856,45 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const overshootDirection = approachOffset >= 0 ? -1 : 1;
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
+    const firstCard = container.firstElementChild as HTMLElement | null;
+    const cardWidth = firstCard?.offsetWidth ?? CARD_WIDTH;
+    const containerStyle = window.getComputedStyle(container);
+    const measuredGap = Number.parseFloat(containerStyle.columnGap || containerStyle.gap || `${GAP_WIDTH}`) || GAP_WIDTH;
+    const stepWidth = Math.max(1, cardWidth + measuredGap);
+
+    const trackTickSound = () => {
+      const viewport = scrollViewportRef.current;
+      const activeContainer = scrollContainerRef.current;
+      if (!viewport || !activeContainer) {
+        spinTickFrameRef.current = null;
+        return;
+      }
+
+      const transform = window.getComputedStyle(activeContainer).transform;
+      let translateX = 0;
+      if (transform && transform !== 'none') {
+        try {
+          translateX = new DOMMatrixReadOnly(transform).m41;
+        } catch {
+          translateX = 0;
+        }
+      }
+
+      const centerIndex = Math.floor(((viewport.clientWidth / 2) - translateX - (cardWidth / 2)) / stepWidth);
+      const maxIndex = Math.max(0, activeContainer.childElementCount - 1);
+      const boundedCenterIndex = clamp(centerIndex, 0, maxIndex);
+      const previousIndex = spinTickLastIndexRef.current;
+
+      if (previousIndex >= 0 && boundedCenterIndex > previousIndex) {
+        const passedCount = Math.min(5, boundedCenterIndex - previousIndex);
+        for (let i = 0; i < passedCount; i += 1) {
+          playSound('spin-tick');
+        }
+      }
+
+      spinTickLastIndexRef.current = boundedCenterIndex;
+      spinTickFrameRef.current = window.requestAnimationFrame(trackTickSound);
+    };
 
     setIsReelInFastMotion(true);
     setIsInitialMotionBlurActive(true);
@@ -873,6 +919,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     );
 
     spinnerAnimationRef.current = animation;
+    spinTickLastIndexRef.current = -1;
+    spinTickFrameRef.current = window.requestAnimationFrame(trackTickSound);
 
     const decelerationTimer = window.setTimeout(() => {
       setIsReelDecelerating(true);
@@ -885,6 +933,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         initialBlurTimerRef.current = null;
       }
       setIsInitialMotionBlurActive(false);
+      if (spinTickFrameRef.current !== null) {
+        window.cancelAnimationFrame(spinTickFrameRef.current);
+        spinTickFrameRef.current = null;
+      }
+      spinTickLastIndexRef.current = -1;
 
       if (typeof animation.commitStyles === 'function') {
         animation.commitStyles();
@@ -909,6 +962,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         initialBlurTimerRef.current = null;
       }
       setIsInitialMotionBlurActive(false);
+      if (spinTickFrameRef.current !== null) {
+        window.cancelAnimationFrame(spinTickFrameRef.current);
+        spinTickFrameRef.current = null;
+      }
+      spinTickLastIndexRef.current = -1;
       setIsReelInFastMotion(false);
       setIsReelDecelerating(false);
       spinnerAnimationRef.current = null;
