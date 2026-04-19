@@ -231,7 +231,7 @@ export default function UpgraderPage() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const idleTimeoutRef = useRef<number | null>(null);
   const spinAudioRef = useRef<HTMLAudioElement | null>(null);
-  const lastPlayedSpinNonceRef = useRef<number>(0);
+  const lastPlayedResultRef = useRef<string | null>(null);
   const [spinnerSize, setSpinnerSize] = useState<number>(290);
   const [isMuted, setIsMuted] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -288,14 +288,14 @@ export default function UpgraderPage() {
   useEffect(() => {
     const audio = spinAudioRef.current;
     if (!audio || isMuted) return;
-    if (isDemoSpin) return;
-    if (status !== 'spinning' || spinNonce <= 0) return;
-    if (lastPlayedSpinNonceRef.current === spinNonce) return;
+    if (!resultSheet?.success) return;
+    const resultKey = `${resultSheet.item.id}-${resultSheet.item.price}-${resultSheet.success}`;
+    if (lastPlayedResultRef.current === resultKey) return;
 
-    lastPlayedSpinNonceRef.current = spinNonce;
+    lastPlayedResultRef.current = resultKey;
     audio.currentTime = 0;
     void audio.play().catch(() => undefined);
-  }, [isDemoSpin, isMuted, spinNonce, status]);
+  }, [isMuted, resultSheet]);
 
   useEffect(() => {
     if (!isMuted) return;

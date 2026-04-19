@@ -819,7 +819,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     winnerIndex: number,
     duration: number,
     onComplete: () => void,
-    options?: { playStartSound?: boolean; seed?: string }
+    options?: { seed?: string }
   ) => {
     const container = scrollContainerRef.current;
     if (!container) {
@@ -827,15 +827,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       return;
     }
 
-    const shouldPlayStartSound = options?.playStartSound ?? true;
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const approachOffset = getApproachOffset(rng);
     const durationVariance = Math.round((rng() - 0.5) * SPINNER_MOTION.durationVarianceMs * 2);
     const resolvedDuration = Math.max(3000, duration + durationVariance);
-
-    if (shouldPlayStartSound) {
-      playSound('spin-start');
-    }
 
     resetSpinnerAnimation();
 
@@ -1401,7 +1396,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
-                  }, { playStartSound: false });
+                  });
                 });
             }, 700);
         });
@@ -1452,6 +1447,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsBoxPreviewVisible(true);
     setIsBoxPreviewFading(false);
 
+    playSound('spin-start');
     setShowWinModal(true);
     if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
       const particles = createMicroConfetti(18);
