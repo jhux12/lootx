@@ -9,10 +9,18 @@ interface ItemCardProps {
   onClick?: () => void;
   onInfoClick?: (item: Item) => void;
   disabled?: boolean;
+  quantityBadge?: number;
+  hintLabel?: string;
+  tone?: 'source' | 'target';
 }
 
-export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, onInfoClick, disabled }) => (
+export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, onInfoClick, disabled, quantityBadge, hintLabel, tone = 'target' }) => (
   <div className="relative">
+    {quantityBadge && quantityBadge > 1 && (
+      <span className="absolute left-2 top-2 z-20 rounded-full border border-indigo-200/30 bg-[#1a2449] px-2 py-0.5 text-[10px] font-bold text-indigo-100">
+        x{quantityBadge}
+      </span>
+    )}
     {onInfoClick && (
       <button
         type="button"
@@ -32,7 +40,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, o
       onClick={onClick}
       disabled={disabled}
       className={`group relative flex w-full flex-col overflow-hidden rounded-xl border p-2.5 text-left transition duration-300 sm:p-3
-        ${isSelected ? 'scale-[1.015] border-cyan-300/80 bg-[#151f46] ring-2 ring-cyan-300/40 shadow-[0_0_20px_rgba(34,211,238,0.22)]' : 'border-indigo-300/20 bg-gradient-to-b from-[#101836] to-[#0b1126] hover:scale-[1.01] hover:border-indigo-300/45'}
+        ${isSelected ? 'scale-[1.015] border-cyan-300/80 bg-[#151f46] ring-2 ring-cyan-300/40 shadow-[0_0_20px_rgba(34,211,238,0.22)]' : tone === 'source' ? 'border-indigo-300/15 bg-gradient-to-b from-[#0e152f] to-[#0a1024] hover:scale-[1.006] hover:border-indigo-300/30' : 'border-indigo-200/30 bg-gradient-to-b from-[#131d3f] to-[#0d1530] hover:scale-[1.012] hover:border-cyan-200/55 hover:shadow-[0_0_20px_rgba(34,211,238,0.15)]'}
         ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer active:scale-[0.99]'}
       `}
     >
@@ -52,6 +60,13 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, o
       <div className="mt-2 rounded-md border border-indigo-300/20 bg-[#0b132d] px-2 py-1">
         <CoinAmount amount={Math.round(item.price)} className="text-[11px] font-semibold text-slate-100" iconClassName="h-3 w-3" />
       </div>
+      {hintLabel && (
+        <div className="mt-1.5">
+          <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-cyan-200">
+            {hintLabel}
+          </span>
+        </div>
+      )}
     </button>
   </div>
 );

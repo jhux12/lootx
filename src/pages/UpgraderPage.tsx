@@ -46,8 +46,25 @@ const mapToEliteItem = (item: Partial<Item & InventoryItem> & { imageUrl?: strin
 
 const SPIN_DURATION_MS = 5200;
 
-type SortMode = 'value_desc' | 'value_asc' | 'name_asc';
+type SortMode = 'best_match' | 'value_desc' | 'value_asc' | 'name_asc';
 type CategoryFilter = 'all' | 'tech' | 'collectibles' | 'apparel';
+type RiskPreset = 'all' | 'safe' | 'balanced' | 'high_risk';
+
+interface GroupedInventoryItem {
+  key: string;
+  display: EliteItem;
+  memberIds: string[];
+}
+
+const PANEL_INITIAL_LIMIT = 15;
+const PANEL_INCREMENT = 12;
+
+const UPGRADE_PRESETS: Array<{ value: RiskPreset; label: string; helper: string }> = [
+  { value: 'all', label: 'All Targets', helper: 'No multiplier constraint' },
+  { value: 'safe', label: 'Safe', helper: '1.2x–2x' },
+  { value: 'balanced', label: 'Balanced', helper: '2x–4x' },
+  { value: 'high_risk', label: 'High Risk', helper: '4x+' }
+];
 
 const CATEGORY_OPTIONS: Array<{ value: CategoryFilter; label: string }> = [
   { value: 'all', label: 'All' },
@@ -72,33 +89,64 @@ const sortItems = (items: EliteItem[], mode: SortMode) => {
   return sorted;
 };
 
+const sortTargetItems = (items: EliteItem[], mode: SortMode, source: InventoryItem | null) => {
+  if (mode !== 'best_match') return sortItems(items, mode);
+  const sorted = [...items];
+  if (!source) return sortItems(sorted, 'value_desc');
+
+  return sorted.sort((a, b) => {
+    const aRatio = a.price / Math.max(1, source.coinValue);
+    const bRatio = b.price / Math.max(1, source.coinValue);
+    const aDistance = Math.abs(aRatio - 2.3);
+    const bDistance = Math.abs(bRatio - 2.3);
+    if (aDistance !== bDistance) return aDistance - bDistance;
+    return a.price - b.price;
+  });
+};
+
+const getMultiplierLabel = (multiplier: number): string | null => {
+  if (!Number.isFinite(multiplier) || multiplier <= 0) return null;
+  if (multiplier < 2) return 'Safe';
+  if (multiplier < 4) return 'Balanced';
+  return 'High Risk';
+};
+
 const Toolbar = ({
   min,
   max,
   search,
   sort,
   category,
+  upgradePreset,
+  sourceSelected,
+  includeBestMatch,
   onMin,
   onMax,
   onSearch,
   onSort,
-  onCategory
+  onCategory,
+  onUpgradePreset
 }: {
   min: string;
   max: string;
   search: string;
   sort: SortMode;
   category: CategoryFilter;
+  upgradePreset?: RiskPreset;
+  sourceSelected?: boolean;
+  includeBestMatch?: boolean;
   onMin: (value: string) => void;
   onMax: (value: string) => void;
   onSearch: (value: string) => void;
   onSort: (value: SortMode) => void;
   onCategory: (value: CategoryFilter) => void;
+  onUpgradePreset?: (value: RiskPreset) => void;
 }) => (
   <div className="grid grid-cols-2 gap-2 rounded-xl border border-indigo-300/20 bg-[#090f20] p-2 md:grid-cols-[90px_90px_130px_130px_minmax(0,1fr)_36px]">
     <input value={min} onChange={(e) => onMin(e.target.value)} placeholder="Min" className="h-8 rounded-md border border-indigo-300/20 bg-[#060b19] px-2 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-indigo-300/50" />
     <input value={max} onChange={(e) => onMax(e.target.value)} placeholder="Max" className="h-8 rounded-md border border-indigo-300/20 bg-[#060b19] px-2 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-indigo-300/50" />
     <select value={sort} onChange={(e) => onSort(e.target.value as SortMode)} className="h-8 rounded-md border border-indigo-300/20 bg-[#060b19] px-2 text-xs text-slate-200 outline-none focus:border-indigo-300/50">
+      {includeBestMatch && <option value="best_match">Best Match</option>}
       <option value="value_desc">High Value</option>
       <option value="value_asc">Low Value</option>
       <option value="name_asc">Name</option>
@@ -115,6 +163,26 @@ const Toolbar = ({
     <button type="button" className="hidden h-8 items-center justify-center rounded-md border border-indigo-300/25 bg-[#0b1328] text-slate-300 md:flex" aria-label="Filters">
       <LucideSettings2 className="h-3.5 w-3.5" />
     </button>
+    {onUpgradePreset && (
+      <div className="col-span-2 mt-1 flex flex-wrap items-center gap-1 md:col-span-6">
+        {UPGRADE_PRESETS.map((preset) => {
+          const isActive = upgradePreset === preset.value;
+          const isDisabled = preset.value !== 'all' && !sourceSelected;
+          return (
+            <button
+              key={preset.value}
+              type="button"
+              onClick={() => onUpgradePreset(preset.value)}
+              disabled={isDisabled}
+              className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${isActive ? 'border-cyan-300/60 bg-cyan-400/10 text-cyan-100' : 'border-indigo-300/20 bg-[#0a1124] text-slate-400 hover:border-indigo-300/40 hover:text-slate-200'} ${isDisabled ? 'cursor-not-allowed opacity-40' : ''}`}
+              title={preset.helper}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
+      </div>
+    )}
   </div>
 );
 
@@ -178,8 +246,11 @@ export default function UpgraderPage() {
   const [targetMin, setTargetMin] = useState('');
   const [targetMax, setTargetMax] = useState('');
   const [targetSearch, setTargetSearch] = useState('');
-  const [targetSort, setTargetSort] = useState<SortMode>('value_desc');
+  const [targetSort, setTargetSort] = useState<SortMode>('best_match');
   const [targetCategory, setTargetCategory] = useState<CategoryFilter>('all');
+  const [targetRiskPreset, setTargetRiskPreset] = useState<RiskPreset>('all');
+  const [inventoryVisibleCount, setInventoryVisibleCount] = useState(PANEL_INITIAL_LIMIT);
+  const [targetVisibleCount, setTargetVisibleCount] = useState(PANEL_INITIAL_LIMIT);
 
   const [reducedMotion, setReducedMotion] = useState(false);
   const [resultSheet, setResultSheet] = useState<{ item: EliteItem; success: boolean } | null>(null);
@@ -314,37 +385,35 @@ export default function UpgraderPage() {
     }) * 100;
   }, [settings, source, target]);
 
-const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
+  const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToEliteItem(item)), [realInventoryItems]);
   const targetItems = useMemo(() => filteredTargets.map((item) => mapToEliteItem(item)), [filteredTargets]);
 
-  const suggestedTargets = useMemo(() => {
-    if (!source) return [];
-    const multipliers = [2, 3, 5];
-    const chosen: EliteItem[] = [];
-    const seen = new Set<string>();
-    multipliers.forEach((multiplier) => {
-      const desired = source.coinValue * multiplier;
-      const closest = targetItems
-        .filter((item) => item.price > source.coinValue && !seen.has(item.id))
-        .sort((a, b) => Math.abs(a.price - desired) - Math.abs(b.price - desired))[0];
-      if (closest) {
-        seen.add(closest.id);
-        chosen.push(closest);
+  const groupedInventoryItems = useMemo<GroupedInventoryItem[]>(() => {
+    const grouped = new Map<string, GroupedInventoryItem>();
+    inventoryItems.forEach((item) => {
+      const key = `${item.name.toLowerCase()}|${item.image}|${item.price}`;
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.memberIds.push(item.id);
+      } else {
+        grouped.set(key, { key, display: item, memberIds: [item.id] });
       }
     });
-    return chosen.slice(0, 3);
-  }, [source, targetItems]);
+    return [...grouped.values()];
+  }, [inventoryItems]);
 
   const filteredInventoryItems = useMemo(() => {
     const min = Number(inventoryMin || 0);
     const max = Number(inventoryMax || Number.MAX_SAFE_INTEGER);
     const search = inventorySearch.trim().toLowerCase();
-    const filtered = inventoryItems.filter((item) => {
-      const matchesCategory = inventoryCategory === 'all' || normalizeCategory(item.category) === inventoryCategory;
-      return matchesCategory && item.price >= min && item.price <= max && item.name.toLowerCase().includes(search);
+    const filtered = groupedInventoryItems.filter((group) => {
+      const matchesCategory = inventoryCategory === 'all' || normalizeCategory(group.display.category) === inventoryCategory;
+      return matchesCategory && group.display.price >= min && group.display.price <= max && group.display.name.toLowerCase().includes(search);
     });
-    return sortItems(filtered, inventorySort);
-  }, [inventoryCategory, inventoryItems, inventoryMax, inventoryMin, inventorySearch, inventorySort]);
+    return sortItems(filtered.map((entry) => entry.display), inventorySort)
+      .map((sortedItem) => groupedInventoryItems.find((group) => group.display.id === sortedItem.id))
+      .filter((entry): entry is GroupedInventoryItem => Boolean(entry));
+  }, [groupedInventoryItems, inventoryCategory, inventoryMax, inventoryMin, inventorySearch, inventorySort]);
 
   const filteredTargetItems = useMemo(() => {
     const min = Number(targetMin || 0);
@@ -352,10 +421,58 @@ const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToElite
     const search = targetSearch.trim().toLowerCase();
     const filtered = targetItems.filter((item) => {
       const matchesCategory = targetCategory === 'all' || normalizeCategory(item.category) === targetCategory;
-      return matchesCategory && item.price >= min && item.price <= max && item.name.toLowerCase().includes(search);
+      const multiplier = source ? item.price / Math.max(1, source.coinValue) : null;
+      const passesPreset = targetRiskPreset === 'all'
+        || (!source ? false : targetRiskPreset === 'safe' ? multiplier! >= 1.2 && multiplier! < 2 : targetRiskPreset === 'balanced' ? multiplier! >= 2 && multiplier! < 4 : multiplier! >= 4);
+      return matchesCategory && item.price >= min && item.price <= max && item.name.toLowerCase().includes(search) && passesPreset;
     });
-    return sortItems(filtered, targetSort);
-  }, [targetCategory, targetItems, targetMax, targetMin, targetSearch, targetSort]);
+    return sortTargetItems(filtered, targetSort, source);
+  }, [source, targetCategory, targetItems, targetMax, targetMin, targetRiskPreset, targetSearch, targetSort]);
+
+  const suggestedTargets = useMemo(() => {
+    if (!source) return [];
+    const ranges = [
+      { min: 1.5, max: 2, label: 'Safe' },
+      { min: 2, max: 4, label: 'Balanced' },
+      { min: 4, max: Number.POSITIVE_INFINITY, label: 'High Risk' }
+    ] as const;
+
+    return ranges
+      .map((range) => {
+        const desired = source.coinValue * (range.min === 4 ? 4.4 : (range.min + range.max) / 2);
+        const candidate = targetItems
+          .filter((item) => {
+            const ratio = item.price / Math.max(1, source.coinValue);
+            return ratio >= range.min && ratio < range.max;
+          })
+          .sort((a, b) => Math.abs(a.price - desired) - Math.abs(b.price - desired))[0];
+        return candidate ? { item: candidate, label: range.label } : null;
+      })
+      .filter((entry): entry is { item: EliteItem; label: string } => Boolean(entry));
+  }, [source, targetItems]);
+
+  const visibleInventoryItems = useMemo(
+    () => filteredInventoryItems.slice(0, inventoryVisibleCount),
+    [filteredInventoryItems, inventoryVisibleCount]
+  );
+  const visibleTargetItems = useMemo(
+    () => filteredTargetItems.slice(0, targetVisibleCount),
+    [filteredTargetItems, targetVisibleCount]
+  );
+
+  useEffect(() => {
+    setInventoryVisibleCount(PANEL_INITIAL_LIMIT);
+  }, [inventoryMin, inventoryMax, inventorySearch, inventorySort, inventoryCategory, groupedInventoryItems.length]);
+
+  useEffect(() => {
+    setTargetVisibleCount(PANEL_INITIAL_LIMIT);
+  }, [targetMin, targetMax, targetSearch, targetSort, targetCategory, targetRiskPreset, source?.id, targetItems.length]);
+
+  useEffect(() => {
+    if (!source && targetRiskPreset !== 'all') {
+      setTargetRiskPreset('all');
+    }
+  }, [source, targetRiskPreset]);
 
   const sourcePreview = source ? mapToEliteItem(source) : null;
   const targetPreview = target ? mapToEliteItem(target) : null;
@@ -516,43 +633,60 @@ const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToElite
         </div>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-          <div className={`${activeTab === 'inventory' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/15 bg-[#080d1c] p-3 sm:p-4 lg:flex`}>
+          <div className={`${activeTab === 'inventory' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/10 bg-[#070c19] p-3 sm:p-4 lg:flex`}>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">Your Items</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Your Items</h2>
               <span className="rounded-md border border-indigo-300/20 bg-[#101837] px-2 py-0.5 text-[10px] text-slate-300">{filteredInventoryItems.length}</span>
             </div>
             <Toolbar min={inventoryMin} max={inventoryMax} search={inventorySearch} sort={inventorySort} category={inventoryCategory} onMin={setInventoryMin} onMax={setInventoryMax} onSearch={setInventorySearch} onSort={setInventorySort} onCategory={setInventoryCategory} />
             <div className="mt-3 grid flex-1 grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3 custom-scrollbar">
-              {filteredInventoryItems.map((item) => (
+              {visibleInventoryItems.map((group) => (
                 <ItemCard
-                  key={item.id}
-                  item={item}
-                  isSelected={source?.id === item.id}
+                  key={group.key}
+                  item={group.display}
+                  quantityBadge={group.memberIds.length}
+                  tone="source"
+                  isSelected={Boolean(source?.id && group.memberIds.includes(source.id))}
                   onInfoClick={setDetailsItem}
                   onClick={() => {
-                    const match = realInventoryItems.find((entry) => entry.id === item.id) ?? null;
+                    const preferredId = source?.id && group.memberIds.includes(source.id) ? source.id : group.memberIds[0];
+                    const match = realInventoryItems.find((entry) => entry.id === preferredId) ?? null;
                     setSource(match);
                   }}
                   disabled={status === 'spinning' || loading}
                 />
               ))}
             </div>
+            {filteredInventoryItems.length > visibleInventoryItems.length && (
+              <button
+                type="button"
+                onClick={() => setInventoryVisibleCount((previous) => previous + PANEL_INCREMENT)}
+                className="mt-3 h-9 rounded-lg border border-indigo-300/25 bg-[#0d1732] text-xs font-semibold uppercase tracking-[0.14em] text-slate-200 transition hover:border-indigo-300/50 hover:text-white"
+              >
+                Load More ({filteredInventoryItems.length - visibleInventoryItems.length} left)
+              </button>
+            )}
           </div>
 
-          <div className={`${activeTab === 'targets' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/15 bg-[#080d1c] p-3 sm:p-4 lg:flex`}>
+          <div className={`${activeTab === 'targets' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/20 bg-[#0a1022] p-3 sm:p-4 lg:flex`}>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">Site Items</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">Site Items</h2>
               <span className="rounded-md border border-indigo-300/20 bg-[#101837] px-2 py-0.5 text-[10px] text-slate-300">{filteredTargetItems.length}</span>
             </div>
-            <Toolbar min={targetMin} max={targetMax} search={targetSearch} sort={targetSort} category={targetCategory} onMin={setTargetMin} onMax={setTargetMax} onSearch={setTargetSearch} onSort={setTargetSort} onCategory={setTargetCategory} />
+            <Toolbar min={targetMin} max={targetMax} search={targetSearch} sort={targetSort} category={targetCategory} includeBestMatch upgradePreset={targetRiskPreset} sourceSelected={Boolean(source)} onUpgradePreset={setTargetRiskPreset} onMin={setTargetMin} onMax={setTargetMax} onSearch={setTargetSearch} onSort={setTargetSort} onCategory={setTargetCategory} />
+            {!source && (
+              <div className="mt-3 rounded-xl border border-dashed border-indigo-300/30 bg-[#0a1228] p-3 text-xs text-slate-400">
+                Select your source item on the left to unlock best-match sorting, suggested targets, and risk presets.
+              </div>
+            )}
             {source && suggestedTargets.length > 0 && (
-              <div className="mt-3 rounded-xl border border-indigo-300/20 bg-[#091126] p-2.5">
+              <div className="mt-3 rounded-xl border border-indigo-300/25 bg-[#0a1430] p-2.5">
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">Suggested Upgrades</p>
-                  <p className="text-[10px] text-slate-500">~2x · ~3x · ~5x</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-200">Suggested Upgrades</p>
+                  <p className="text-[10px] text-slate-400">Safe · Balanced · High Risk</p>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  {suggestedTargets.map((item) => (
+                  {suggestedTargets.map(({ item, label }) => (
                     <button
                       key={`suggested-${item.id}`}
                       type="button"
@@ -560,9 +694,10 @@ const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToElite
                         const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
                         setTarget(match);
                       }}
-                      className="rounded-lg border border-indigo-300/25 bg-[#0d1632] p-2 text-left transition hover:border-indigo-300/50 hover:bg-[#122149]"
+                      className="rounded-lg border border-indigo-300/25 bg-[#0f1a3b] p-2 text-left transition hover:border-cyan-300/55 hover:bg-[#182857]"
                     >
                       <p className="truncate text-[10px] font-semibold text-slate-100">{item.name}</p>
+                      <p className="mt-1 text-[9px] uppercase tracking-[0.14em] text-cyan-200">{label}</p>
                       <p className="mt-1 text-[10px] text-cyan-300">{(item.price / Math.max(1, source.coinValue)).toFixed(2)}x</p>
                     </button>
                   ))}
@@ -570,10 +705,12 @@ const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToElite
               </div>
             )}
             <div className="mt-3 grid flex-1 grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3 custom-scrollbar">
-              {filteredTargetItems.map((item) => (
+              {visibleTargetItems.map((item) => (
                 <ItemCard
                   key={item.id}
                   item={item}
+                  tone="target"
+                  hintLabel={source ? (item.id === suggestedTargets[0]?.item.id ? 'Best Match' : getMultiplierLabel(item.price / Math.max(1, source.coinValue)) ?? undefined) : undefined}
                   isSelected={target?.id === item.id}
                   onInfoClick={setDetailsItem}
                   onClick={() => {
@@ -584,6 +721,15 @@ const inventoryItems = useMemo(() => realInventoryItems.map((item) => mapToElite
                 />
               ))}
             </div>
+            {filteredTargetItems.length > visibleTargetItems.length && (
+              <button
+                type="button"
+                onClick={() => setTargetVisibleCount((previous) => previous + PANEL_INCREMENT)}
+                className="mt-3 h-9 rounded-lg border border-indigo-300/30 bg-[#13224b] text-xs font-semibold uppercase tracking-[0.14em] text-slate-100 transition hover:border-cyan-300/50 hover:text-white"
+              >
+                Load More ({filteredTargetItems.length - visibleTargetItems.length} left)
+              </button>
+            )}
           </div>
         </section>
       </main>
