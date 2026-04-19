@@ -64,7 +64,9 @@ const SPINNER_MOTION = {
   approachOffsetNearMissMaxPx: 58,
   nearMissChance: 0.42,
   durationVarianceMs: 420,
-  initialBlurDurationMs: 260
+  initialBlurDurationMs: 260,
+  mobileTickSampleMs: 42,
+  mobilePreloadBudgetMs: 160
 } as const;
 
 const createSeededRng = (seed: string) => {
@@ -340,6 +342,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const initialBlurTimerRef = useRef<number | null>(null);
   const spinTickFrameRef = useRef<number | null>(null);
   const spinTickLastIndexRef = useRef<number>(-1);
+  const spinTickLastSampleTimeRef = useRef<number>(0);
   const spinnerMeasurementsRef = useRef({
     cardWidth: CARD_WIDTH,
     reelGap: GAP_WIDTH,
@@ -853,6 +856,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinTickFrameRef.current = null;
     }
     spinTickLastIndexRef.current = -1;
+    spinTickLastSampleTimeRef.current = 0;
 
     setIsInitialMotionBlurActive(false);
     setIsReelInFastMotion(false);
@@ -881,6 +885,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     container.style.transition = 'none';
     container.style.transform = 'translate3d(0px, 0, 0)';
     container.style.backfaceVisibility = 'hidden';
+    container.style.willChange = 'transform';
 
     await waitForNextPaint();
 
@@ -897,12 +902,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
     updateSpinnerMeasurements();
 
-    const trackTickSound = () => {
+    const trackTickSound = (timestamp: number) => {
       const viewport = scrollViewportRef.current;
       const activeContainer = scrollContainerRef.current;
       if (!viewport || !activeContainer) {
         spinTickFrameRef.current = null;
         return;
+      }
+      if (isMobileViewport) {
+        const lastSampleTime = spinTickLastSampleTimeRef.current;
+        if (timestamp - lastSampleTime < SPINNER_MOTION.mobileTickSampleMs) {
+          spinTickFrameRef.current = window.requestAnimationFrame(trackTickSound);
+          return;
+        }
+        spinTickLastSampleTimeRef.current = timestamp;
       }
 
       const transform = window.getComputedStyle(activeContainer).transform;
@@ -955,6 +968,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     spinnerAnimationRef.current = animation;
     spinTickLastIndexRef.current = -1;
+    spinTickLastSampleTimeRef.current = 0;
     spinTickFrameRef.current = window.requestAnimationFrame(trackTickSound);
 
     const decelerationTimer = window.setTimeout(() => {
@@ -973,6 +987,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         spinTickFrameRef.current = null;
       }
       spinTickLastIndexRef.current = -1;
+      spinTickLastSampleTimeRef.current = 0;
 
       if (typeof animation.commitStyles === 'function') {
         animation.commitStyles();
@@ -980,6 +995,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       animation.cancel();
       container.style.transition = 'none';
       container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.willChange = 'auto';
 
       setIsReelInFastMotion(false);
       setIsReelDecelerating(false);
@@ -1002,12 +1018,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         spinTickFrameRef.current = null;
       }
       spinTickLastIndexRef.current = -1;
+      spinTickLastSampleTimeRef.current = 0;
       setIsReelInFastMotion(false);
       setIsReelDecelerating(false);
+      container.style.willChange = 'auto';
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, playSound, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, isMobileViewport, playSound, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1113,10 +1131,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       scrollContainerRef.current.style.transition = 'none';
     }
 
-    await preloadReelImages(nextReelItems);
+    if (isMobileViewport) {
+      await Promise.race([
+        preloadReelImages(nextReelItems),
+        new Promise<void>((resolve) => window.setTimeout(resolve, SPINNER_MOTION.mobilePreloadBudgetMs))
+      ]);
+    } else {
+      await preloadReelImages(nextReelItems);
+    }
     setReelItems(nextReelItems);
     await waitForNextPaint();
-  }, [preloadReelImages, resetSpinnerAnimation]);
+  }, [isMobileViewport, preloadReelImages, resetSpinnerAnimation]);
 
 
 
