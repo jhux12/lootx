@@ -47,6 +47,8 @@ interface RevealData {
 const CARD_WIDTH = 170;
 const CARD_HEIGHT = 210;
 const GAP_WIDTH = 4;
+const SPINNER_VIEWPORT_HEIGHT = 240;
+const MOBILE_SPINNER_SCALE = 0.84;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -338,6 +340,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const initialBlurTimerRef = useRef<number | null>(null);
   const spinTickFrameRef = useRef<number | null>(null);
   const spinTickLastIndexRef = useRef<number>(-1);
+  const spinnerMeasurementsRef = useRef({
+    cardWidth: CARD_WIDTH,
+    reelGap: GAP_WIDTH,
+    viewportWidth: 0,
+    stepWidth: CARD_WIDTH + GAP_WIDTH
+  });
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const itemModalRevealFrameRef = useRef<number | null>(null);
@@ -385,6 +393,43 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     window.addEventListener('resize', updateViewportMode);
     return () => window.removeEventListener('resize', updateViewportMode);
   }, []);
+
+  const updateSpinnerMeasurements = useCallback(() => {
+    const viewport = scrollViewportRef.current;
+    const container = scrollContainerRef.current;
+    if (!viewport || !container) return;
+
+    const firstCard = container.firstElementChild as HTMLElement | null;
+    const cardWidth = firstCard?.offsetWidth ?? CARD_WIDTH;
+    const containerStyle = window.getComputedStyle(container);
+    const reelGap = Number.parseFloat(containerStyle.columnGap || containerStyle.gap || `${GAP_WIDTH}`) || GAP_WIDTH;
+    const viewportWidth = viewport.clientWidth;
+
+    spinnerMeasurementsRef.current = {
+      cardWidth,
+      reelGap,
+      viewportWidth,
+      stepWidth: Math.max(1, cardWidth + reelGap)
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const viewport = scrollViewportRef.current;
+    const container = scrollContainerRef.current;
+    if (!viewport || !container) return;
+
+    updateSpinnerMeasurements();
+
+    const observer = new ResizeObserver(() => updateSpinnerMeasurements());
+    observer.observe(viewport);
+    observer.observe(container);
+
+    const firstCard = container.firstElementChild as HTMLElement | null;
+    if (firstCard) observer.observe(firstCard);
+
+    return () => observer.disconnect();
+  }, [reelItems, updateSpinnerMeasurements]);
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -749,34 +794,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const getCenteredTranslate = useCallback((winnerIndex: number, landingOffset = 0) => {
     const viewport = scrollViewportRef.current;
     const container = scrollContainerRef.current;
-    const winnerCard = winningCardRef.current;
 
     if (!viewport || !container) {
       return null;
     }
 
-    const firstCard = container.firstElementChild as HTMLElement | null;
-    const cardWidth = firstCard?.offsetWidth ?? CARD_WIDTH;
-    const containerStyle = window.getComputedStyle(container);
-    const measuredGap = Number.parseFloat(containerStyle.columnGap || containerStyle.gap || `${GAP_WIDTH}`) || GAP_WIDTH;
-
-    // Fallback for first-frame races: compute center using known card geometry.
-    if (!winnerCard) {
-      const viewportCenterX = viewport.clientWidth / 2;
-      const winnerCenterX = (winnerIndex * (cardWidth + measuredGap)) + (cardWidth / 2);
-      return viewportCenterX - winnerCenterX + landingOffset;
-    }
-
-    const viewportRect = viewport.getBoundingClientRect();
-    const cardRect = winnerCard.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-
-    const viewportCenterX = viewportRect.left + (viewportRect.width / 2);
-    const winnerCenterX = cardRect.left + (cardRect.width / 2);
-    const delta = viewportCenterX - winnerCenterX;
-
-    return containerRect.left + delta - viewportRect.left + landingOffset;
-  }, []);
+    updateSpinnerMeasurements();
+    const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
+    const resolvedViewportWidth = viewportWidth || viewport.clientWidth;
+    const viewportCenterX = resolvedViewportWidth / 2;
+    const winnerCenterX = (winnerIndex * stepWidth) + (cardWidth / 2);
+    return viewportCenterX - winnerCenterX + landingOffset;
+  }, [updateSpinnerMeasurements]);
 
   const resolveCenteredTranslate = useCallback(async (winnerIndex: number, landingOffset = 0) => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -792,7 +821,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const container = scrollContainerRef.current;
     if (!viewport || !container) return null;
 
-    const minTranslate = Math.min(0, viewport.clientWidth - container.scrollWidth);
+    const measuredViewport = spinnerMeasurementsRef.current.viewportWidth || viewport.clientWidth;
+    const minTranslate = Math.min(0, measuredViewport - container.scrollWidth);
     return { minTranslate, maxTranslate: 0 };
   }, []);
 
@@ -865,11 +895,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const overshootDirection = approachOffset >= 0 ? -1 : 1;
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
-    const firstCard = container.firstElementChild as HTMLElement | null;
-    const cardWidth = firstCard?.offsetWidth ?? CARD_WIDTH;
-    const containerStyle = window.getComputedStyle(container);
-    const measuredGap = Number.parseFloat(containerStyle.columnGap || containerStyle.gap || `${GAP_WIDTH}`) || GAP_WIDTH;
-    const stepWidth = Math.max(1, cardWidth + measuredGap);
+    updateSpinnerMeasurements();
 
     const trackTickSound = () => {
       const viewport = scrollViewportRef.current;
@@ -889,16 +915,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         }
       }
 
-      const centerIndex = Math.floor(((viewport.clientWidth / 2) - translateX - (cardWidth / 2)) / stepWidth);
+      const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
+      const resolvedViewportWidth = viewportWidth || viewport.clientWidth;
+      const centerIndex = Math.floor(((resolvedViewportWidth / 2) - translateX - (cardWidth / 2)) / stepWidth);
       const maxIndex = Math.max(0, activeContainer.childElementCount - 1);
       const boundedCenterIndex = clamp(centerIndex, 0, maxIndex);
       const previousIndex = spinTickLastIndexRef.current;
 
       if (previousIndex >= 0 && boundedCenterIndex > previousIndex) {
-        const passedCount = Math.min(5, boundedCenterIndex - previousIndex);
-        for (let i = 0; i < passedCount; i += 1) {
-          playSound('spin-tick');
-        }
+        // One tick per frame avoids stacked plays that mobile browsers may throttle/drop.
+        playSound('spin-tick');
       }
 
       spinTickLastIndexRef.current = boundedCenterIndex;
@@ -981,7 +1007,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, playSound, resetSpinnerAnimation, resolveCenteredTranslate]);
+  }, [clampTranslate, getApproachOffset, playSound, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1808,8 +1834,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
             {/* Spinner Window */}
             <div
+              className="relative mx-auto w-full max-w-[1000px]"
+              style={{ height: `${Math.round(SPINNER_VIEWPORT_HEIGHT * (isMobileViewport ? MOBILE_SPINNER_SCALE : 1))}px` }}
+            >
+            <div
               ref={scrollViewportRef}
-              className="relative mx-auto flex h-[240px] w-full max-w-[1000px] items-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.02)] shadow-[inset_0_0_30px_rgba(0,0,0,0.5)]"
+              className="absolute left-1/2 top-1/2 flex h-[240px] w-full max-w-[1000px] -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.02)] shadow-[inset_0_0_30px_rgba(0,0,0,0.5)]"
+              style={{
+                transform: `translate(-50%, -50%) scale(${isMobileViewport ? MOBILE_SPINNER_SCALE : 1})`,
+                transformOrigin: 'center center'
+              }}
             >
                 {spinnerBackgroundImage && (
                   <>
@@ -1891,7 +1925,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === SPINNER_MOTION.preWinnerItems ? winningCardRef : null}
-                            className={`group relative flex h-[168px] w-[132px] flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.03)] p-2 transition-all duration-300 hover:border-cyan-200/35 hover:shadow-[0_0_18px_rgba(0,234,255,0.22)] sm:h-[210px] sm:w-[170px] sm:p-2.5 ${item.id === 'golden-ticket' ? 'border-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.35)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? 'ring-2 ring-white/50' : ''}`}
+                            className={`group relative flex h-[210px] w-[170px] flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.03)] p-2.5 transition-all duration-300 hover:border-cyan-200/35 hover:shadow-[0_0_18px_rgba(0,234,255,0.22)] ${item.id === 'golden-ticket' ? 'border-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.35)]' : ''} ${isLandingFlashActive && idx === SPINNER_MOTION.preWinnerItems ? 'ring-2 ring-white/50' : ''}`}
                             style={{
                                 transform: 'translateZ(0)',
                                 WebkitTransform: 'translateZ(0)',
@@ -1904,7 +1938,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                                className={`pointer-events-none absolute left-1/2 top-1/2 h-20 w-16 -translate-x-1/2 -translate-y-1/2 rounded-[999px] opacity-90 ${shouldSimplifyReelEffects ? 'blur-md' : 'blur-xl'} sm:h-28 sm:w-24`}
+                                className={`pointer-events-none absolute left-1/2 top-1/2 h-28 w-24 -translate-x-1/2 -translate-y-1/2 rounded-[999px] opacity-90 ${shouldSimplifyReelEffects ? 'blur-md' : 'blur-xl'}`}
                                 style={{
                                   background: `${item.color}66`,
                                   boxShadow: shouldSimplifyReelEffects ? `0 0 24px ${item.color}70` : `0 0 38px ${item.color}88`
@@ -1913,7 +1947,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             <img loading="eager" decoding="async" 
                                 src={item.image} 
                                 alt={item.name} 
-                                className={`relative z-10 mb-1 h-[6.4rem] w-[6.4rem] object-contain sm:h-32 sm:w-32 ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
+                                className={`relative z-10 mb-1 h-32 w-32 object-contain ${item.id === 'golden-ticket' ? 'animate-pulse scale-110' : ''}`} 
                                 style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                             />
                             <div 
@@ -1923,6 +1957,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         </div>
                     ))}
                 </div>
+            </div>
             </div>
 
             {/* Action Bar */}

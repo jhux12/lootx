@@ -26,10 +26,45 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const audioContextRef = useRef<AudioContext | null>(null);
   const lastTickAtRef = useRef(0);
   const didInitRef = useRef(false);
+  const didWarmupRef = useRef(false);
+
+  const ensureAudioContextReady = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return null;
+
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContextCtor();
+    }
+
+    const audioContext = audioContextRef.current;
+    if (audioContext.state === 'suspended') {
+      void audioContext.resume().catch(() => undefined);
+    }
+
+    if (!didWarmupRef.current) {
+      didWarmupRef.current = true;
+      try {
+        // Prime audio graph on the first allowed gesture so mobile playback starts reliably.
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.00001, audioContext.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.01);
+      } catch {
+        // ignore warm-up failures
+      }
+    }
+
+    return audioContext;
+  }, []);
 
   const initializeAudio = useCallback(() => {
     if (didInitRef.current || typeof window === 'undefined') return;
     didInitRef.current = true;
+    ensureAudioContextReady();
 
     (Object.entries(SOUND_URLS) as [SoundType, string][]).forEach(([key, url]) => {
       if (!url) return;
@@ -42,14 +77,16 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.warn('Sound init failed', key, error);
       }
     });
-  }, []);
+  }, [ensureAudioContextReady]);
 
   useEffect(() => {
     const bootstrap = () => initializeAudio();
     window.addEventListener('pointerdown', bootstrap, { once: true, passive: true });
+    window.addEventListener('touchstart', bootstrap, { once: true, passive: true });
     window.addEventListener('keydown', bootstrap, { once: true });
     return () => {
       window.removeEventListener('pointerdown', bootstrap);
+      window.removeEventListener('touchstart', bootstrap);
       window.removeEventListener('keydown', bootstrap);
     };
   }, [initializeAudio]);
@@ -63,21 +100,12 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (type === 'spin-tick') {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      if (now - lastTickAtRef.current < 28) return;
+      if (now - lastTickAtRef.current < 18) return;
       lastTickAtRef.current = now;
 
       try {
-        const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-        if (!AudioContextCtor) return;
-
-        if (!audioContextRef.current) {
-          audioContextRef.current = new AudioContextCtor();
-        }
-
-        const audioContext = audioContextRef.current;
-        if (audioContext.state === 'suspended') {
-          void audioContext.resume().catch(() => undefined);
-        }
+        const audioContext = ensureAudioContextReady();
+        if (!audioContext) return;
 
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
@@ -110,7 +138,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {
       // ignore playback errors
     }
-  }, [initializeAudio, muted]);
+  }, [ensureAudioContextReady, initializeAudio, muted]);
 
   return <SoundContext.Provider value={{ muted, toggleMute, playSound }}>{children}</SoundContext.Provider>;
 };
