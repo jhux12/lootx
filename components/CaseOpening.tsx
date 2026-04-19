@@ -899,8 +899,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       tickTimerRef.current = null;
     }
 
-    const { stepWidth } = spinnerMeasurementsRef.current;
-    if (!Number.isFinite(stepWidth) || stepWidth <= 0) return;
+    const { stepWidth, cardWidth } = spinnerMeasurementsRef.current;
+    if (!Number.isFinite(stepWidth) || stepWidth <= 0 || !Number.isFinite(cardWidth) || cardWidth <= 0) return;
 
     const segmentOneDuration = durationMs * 0.8;
     const segmentTwoDuration = durationMs - segmentOneDuration;
@@ -930,7 +930,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const maxX = Math.max(fromX, toX);
 
       for (let index = 1; index <= winnerIndex + 2; index += 1) {
-        const crossingX = -(index * stepWidth);
+        // Fire the tick when a card first touches the center marker (leading edge),
+        // not when the card center reaches it.
+        const crossingX = -(index * stepWidth) + (cardWidth / 2);
         if (crossingX < minX || crossingX > maxX) continue;
         const range = toX - fromX;
         if (Math.abs(range) < 1e-6) continue;
