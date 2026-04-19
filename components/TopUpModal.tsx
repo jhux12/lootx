@@ -6,6 +6,7 @@ import { useSound } from '../context/SoundContext';
 import { auth } from '../firebase';
 import { CoinAmount } from './CoinAmount';
 import { readCookieValue, trackMetaEvent } from '../utils/trackEvent';
+import { toast } from '../src/ui/toast/toast';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -24,6 +25,7 @@ export const TopUpModal: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [recommendedPackageId, setRecommendedPackageId] = useState<string | null>(null);
   const autoSelectAppliedRef = React.useRef(false);
+  const isPostFreeBoxFlow = topUpModalIntent?.source === 'post_free_box';
   const activePackages = useMemo(() => {
     return coinPackages
       .filter((pkg) => pkg.active)
@@ -118,6 +120,10 @@ export const TopUpModal: React.FC = () => {
     if (activePackages.length <= 1) return 0;
     return index / (activePackages.length - 1);
   };
+  const parseDisplayPrice = (value: string) => {
+    const parsed = Number(value.replace(/[^0-9.]/g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
 
   React.useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
@@ -145,6 +151,23 @@ export const TopUpModal: React.FC = () => {
   }, [defaultPackage, selectedPackageId]);
 
   React.useEffect(() => {
+    if (!isPostFreeBoxFlow || activePackages.length === 0) {
+      return;
+    }
+
+    const preferredUsd = Number(topUpModalIntent?.preferredPackageUsd ?? 50);
+    const preferredPackage = activePackages.find((pkg) => Math.abs(parseDisplayPrice(pkg.displayPrice) - preferredUsd) < 0.001);
+    if (!preferredPackage) return;
+    setRecommendedPackageId(preferredPackage.id);
+    setSelectedPackageId(preferredPackage.id);
+    setHasUserSelectedPackage(false);
+    autoSelectAppliedRef.current = true;
+  }, [activePackages, isPostFreeBoxFlow, topUpModalIntent?.preferredPackageUsd]);
+
+  React.useEffect(() => {
+    if (isPostFreeBoxFlow) {
+      return;
+    }
     if (!isInsufficientBalanceFlow || normalizedPackages.length === 0) {
       autoSelectAppliedRef.current = false;
       setRecommendedPackageId(null);
@@ -163,9 +186,12 @@ export const TopUpModal: React.FC = () => {
 
     autoSelectAppliedRef.current = true;
     setSelectedPackageId(recommended.id);
-  }, [isInsufficientBalanceFlow, normalizedPackages, missingCoins, hasUserSelectedPackage]);
+  }, [isInsufficientBalanceFlow, normalizedPackages, missingCoins, hasUserSelectedPackage, isPostFreeBoxFlow]);
 
   const handleClose = () => {
+    if (isPostFreeBoxFlow && missingCoins > 0) {
+      toast.info(`You’re still ${missingCoins.toLocaleString()} coins away from your first box`);
+    }
     setTopUpModalIntent(null);
     setShowTopUpModal(false);
   };
@@ -263,6 +289,11 @@ export const TopUpModal: React.FC = () => {
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-5 [-webkit-overflow-scrolling:touch] sm:px-6 sm:py-6">
+                    {isPostFreeBoxFlow && (
+                      <p className="mb-3 rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100">
+                        Covers your first box + extra spins
+                      </p>
+                    )}
                     {/* Amount Selector */}
                     <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-gray-500">Select a pack</label>
                     <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

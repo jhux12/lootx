@@ -609,6 +609,8 @@ export type TopUpModalIntent = {
   requiredCoins: number;
   currentBalance: number;
   missingCoins: number;
+  source?: 'post_free_box';
+  preferredPackageUsd?: number;
 };
 
 interface GameContextType {
