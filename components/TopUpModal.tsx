@@ -86,7 +86,33 @@ export const TopUpModal: React.FC = () => {
     const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
     if (!baseCoins || bonusCoins <= 0) return '';
     const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
-    return `+${bonusPercent}% MORE COINS`;
+    return `+${bonusPercent}% BONUS${bonusPercent === 50 ? ' 🔥' : ''}`;
+  };
+  const getBonusSummaryLabel = (pack?: typeof activePackages[number]) => {
+    if (!pack) return '';
+    const baseCoins = Math.max(0, Number(pack.coins ?? 0));
+    const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
+    if (!baseCoins || bonusCoins <= 0) return '';
+    const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
+    return `(+${bonusPercent}% BONUS)`;
+  };
+  const getTierStyles = (index: number) => {
+    switch (index) {
+      case 0:
+        return 'opacity-90 border-white/10';
+      case 1:
+        return 'border-white/20 hover:scale-[1.02]';
+      case 2:
+        return 'scale-[1.06] border-emerald-300 shadow-[0_0_30px_rgba(16,185,129,0.5)] z-10';
+      case 3:
+        return 'border-blue-400/40 shadow-[0_0_15px_rgba(59,130,246,0.3)]';
+      case 4:
+        return 'bg-gradient-to-br from-purple-900/40 to-black border-purple-400/40';
+      case 5:
+        return 'bg-gradient-to-br from-yellow-500/20 to-black border-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.4)]';
+      default:
+        return '';
+    }
   };
   const getTierVisualWeight = (index: number) => {
     if (activePackages.length <= 1) return 0;
@@ -247,6 +273,13 @@ export const TopUpModal: React.FC = () => {
                         ) : (
                           activePackages.map((pack, index) => {
                             const isSelected = selectedPackage?.id === pack.id;
+                            const isFocal = index === 2;
+                            const tierStyles = getTierStyles(index);
+                            const selectedStyles = isSelected
+                              ? 'ring-2 ring-emerald-400 scale-[1.08]'
+                              : isFocal
+                                ? 'scale-[1.06]'
+                                : '';
                             const bonusCoins = pack.bonusCoins ?? 0;
                             const bonusLabel = getBonusLabel(pack);
                             const tierWeight = getTierVisualWeight(index);
@@ -259,7 +292,13 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative rounded-xl border bg-[#15171c] p-3.5 text-left transition-all ${isSelected ? getSelectedClasses(pack.badge) : `${getBadgeClasses(pack.badge)} hover:border-white/30`}`}
+                                  className={`relative rounded-xl border bg-[#15171c] p-3.5 text-left transition-all duration-300
+                                    hover:scale-[1.03] hover:shadow-lg hover:brightness-110
+                                    ${!isSelected ? getBadgeClasses(pack.badge) : ''}
+                                    ${isSelected ? getSelectedClasses(pack.badge) : ''}
+                                    ${tierStyles}
+                                    ${selectedStyles}
+                                    ${isFocal ? 'hover:scale-[1.1]' : ''}`}
                                   style={!isSelected ? { borderColor: `rgba(148, 163, 184, ${0.1 + tierWeight * 0.22})` } : undefined}
                               >
                                   {badgeText && (
@@ -326,8 +365,8 @@ export const TopUpModal: React.FC = () => {
                       iconClassName="h-5 w-5"
                     />
                     <span className="text-sm font-semibold text-cyan-300">
-                      {selectedPackage?.coins?.toLocaleString() ?? 0}
-                      {Number(selectedPackage?.bonusCoins ?? 0) > 0 && selectedPackage ? ` • ${getBonusLabel(selectedPackage)}` : ''}
+                      You get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} coins{' '}
+                      {getBonusSummaryLabel(selectedPackage)}
                     </span>
                   </div>
                   <button
@@ -341,7 +380,7 @@ export const TopUpModal: React.FC = () => {
                       </>
                     ) : (
                       <span>
-                        Get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} Coins → {formattedDepositAmount}
+                        Get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} Coins for {formattedDepositAmount}
                       </span>
                     )}
                   </button>
