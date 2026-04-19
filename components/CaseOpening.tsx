@@ -88,6 +88,37 @@ const createSeededRng = (seed: string) => {
 
 const pickFromPool = <T,>(pool: T[], rng: () => number): T => pool[Math.floor(rng() * pool.length)];
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const createBezierEasing = (x1: number, y1: number, x2: number, y2: number) => {
+  const sampleCurveX = (t: number) => ((1 - 3 * x2 + 3 * x1) * t + (3 * x2 - 6 * x1)) * t * t + (3 * x1) * t;
+  const sampleCurveY = (t: number) => ((1 - 3 * y2 + 3 * y1) * t + (3 * y2 - 6 * y1)) * t * t + (3 * y1) * t;
+  const sampleDerivativeX = (t: number) => (3 * (1 - 3 * x2 + 3 * x1) * t + 2 * (3 * x2 - 6 * x1)) * t + (3 * x1);
+
+  const solveCurveX = (x: number) => {
+    let t2 = x;
+    for (let i = 0; i < 8; i += 1) {
+      const x2AtT = sampleCurveX(t2) - x;
+      if (Math.abs(x2AtT) < 1e-6) return t2;
+      const derivative = sampleDerivativeX(t2);
+      if (Math.abs(derivative) < 1e-6) break;
+      t2 -= x2AtT / derivative;
+    }
+
+    let t0 = 0;
+    let t1 = 1;
+    t2 = x;
+    while (t0 < t1) {
+      const x2AtT = sampleCurveX(t2);
+      if (Math.abs(x2AtT - x) < 1e-6) return t2;
+      if (x > x2AtT) t0 = t2;
+      else t1 = t2;
+      t2 = (t1 - t0) * 0.5 + t0;
+      if (Math.abs(t1 - t0) < 1e-6) break;
+    }
+    return t2;
+  };
+
+  return (x: number) => sampleCurveY(solveCurveX(x));
+};
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -856,36 +887,84 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setAnimationPhase('idle');
   }, []);
 
-  const scheduleTickSounds = useCallback((distancePx: number, durationMs: number) => {
+  const scheduleTickSounds = useCallback((options: {
+    durationMs: number;
+    winnerIndex: number;
+    overshootTranslate: number;
+    finalTranslate: number;
+  }) => {
+    const { durationMs, winnerIndex, overshootTranslate, finalTranslate } = options;
     if (tickTimerRef.current !== null) {
       window.clearTimeout(tickTimerRef.current);
       tickTimerRef.current = null;
     }
 
-    const steps = Math.max(1, Math.floor(distancePx / Math.max(1, spinnerMeasurementsRef.current.stepWidth)));
-    if (steps < 2) return;
+    const { stepWidth } = spinnerMeasurementsRef.current;
+    if (!Number.isFinite(stepWidth) || stepWidth <= 0) return;
 
-    let currentStep = 0;
+    const segmentOneDuration = durationMs * 0.8;
+    const segmentTwoDuration = durationMs - segmentOneDuration;
+    const easeMain = createBezierEasing(0.1, 0.9, 0.25, 1);
+    const easeSettle = createBezierEasing(0.14, 0.9, 0.22, 1);
+    const invertEasing = (target: number, easing: (t: number) => number) => {
+      let low = 0;
+      let high = 1;
+      for (let i = 0; i < 22; i += 1) {
+        const mid = (low + high) / 2;
+        const value = easing(mid);
+        if (value < target) low = mid;
+        else high = mid;
+      }
+      return (low + high) / 2;
+    };
+
+    const times: number[] = [];
+    const pushCrossingTimes = (
+      fromX: number,
+      toX: number,
+      easing: (t: number) => number,
+      segmentStartMs: number,
+      segmentDurationMs: number
+    ) => {
+      const minX = Math.min(fromX, toX);
+      const maxX = Math.max(fromX, toX);
+
+      for (let index = 1; index <= winnerIndex + 2; index += 1) {
+        const crossingX = -(index * stepWidth);
+        if (crossingX < minX || crossingX > maxX) continue;
+        const range = toX - fromX;
+        if (Math.abs(range) < 1e-6) continue;
+        const normalized = (crossingX - fromX) / range;
+        if (normalized <= 0 || normalized >= 1) continue;
+        const easedTime = invertEasing(normalized, easing);
+        times.push(segmentStartMs + (easedTime * segmentDurationMs));
+      }
+    };
+
+    pushCrossingTimes(0, overshootTranslate, easeMain, 0, segmentOneDuration);
+    pushCrossingTimes(overshootTranslate, finalTranslate, easeSettle, segmentOneDuration, segmentTwoDuration);
+
+    const scheduled = times
+      .map((value) => Math.max(16, Math.floor(value)))
+      .sort((a, b) => a - b)
+      .filter((value, index, array) => index === 0 || value - array[index - 1] >= 18);
+
+    if (!scheduled.length) return;
+
+    const startAt = performance.now();
+    let cursor = 0;
     const loop = () => {
-      currentStep += 1;
       playSound('spin-tick');
-      if (currentStep >= steps) {
+      cursor += 1;
+      if (cursor >= scheduled.length) {
         tickTimerRef.current = null;
         return;
       }
-
-      // Ease-out timing without DOM reads keeps iOS and low-end devices stable.
-      const progress = currentStep / steps;
-      const slowed = 1 - Math.pow(1 - progress, 2.2);
-      const elapsedTarget = Math.floor(durationMs * slowed);
-      const nextProgress = (currentStep + 1) / steps;
-      const nextSlowed = 1 - Math.pow(1 - nextProgress, 2.2);
-      const nextElapsed = Math.floor(durationMs * nextSlowed);
-      const delay = Math.max(22, nextElapsed - elapsedTarget);
-      tickTimerRef.current = window.setTimeout(loop, delay);
+      const elapsed = performance.now() - startAt;
+      const nextDelay = Math.max(12, scheduled[cursor] - elapsed);
+      tickTimerRef.current = window.setTimeout(loop, nextDelay);
     };
-
-    tickTimerRef.current = window.setTimeout(loop, 24);
+    tickTimerRef.current = window.setTimeout(loop, scheduled[0]);
   }, [playSound]);
 
   const animateSpin = useCallback(async (
@@ -926,7 +1005,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
     updateSpinnerMeasurements();
     setAnimationPhase('spinning');
-    scheduleTickSounds(Math.abs(centeredTranslate), resolvedDuration);
+    scheduleTickSounds({
+      durationMs: resolvedDuration,
+      winnerIndex,
+      overshootTranslate: overshootTarget,
+      finalTranslate: centeredTranslate
+    });
 
     const animation = container.animate(
       [
