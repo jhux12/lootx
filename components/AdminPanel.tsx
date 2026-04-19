@@ -308,6 +308,7 @@ export const AdminPanel: React.FC = () => {
       name: '',
       coins: 0,
       bonusCoins: 0,
+      defaultSelected: false,
       imageUrl: '',
       displayPrice: '',
       stripePriceId: '',
@@ -1510,6 +1511,7 @@ export const AdminPanel: React.FC = () => {
           name: '',
           coins: 0,
           bonusCoins: 0,
+          defaultSelected: false,
           imageUrl: '',
           displayPrice: '',
           stripePriceId: '',
@@ -1541,7 +1543,8 @@ export const AdminPanel: React.FC = () => {
       const stripePriceId = packageDraft.stripePriceId?.trim() ?? '';
       const sortOrder = Number.isFinite(Number(packageDraft.sortOrder)) ? Number(packageDraft.sortOrder) : 0;
       const active = packageDraft.active ?? true;
-      const badge = packageDraft.badge ?? undefined;
+      const defaultSelected = packageDraft.defaultSelected ?? false;
+      const badge = packageDraft.badge?.trim() ?? '';
 
       if (!name) {
           setPackageError('Package name is required.');
@@ -1576,6 +1579,7 @@ export const AdminPanel: React.FC = () => {
                   name,
                   coins,
                   bonusCoins,
+                  defaultSelected,
                   imageUrl,
                   displayPrice,
                   stripePriceId,
@@ -1588,6 +1592,7 @@ export const AdminPanel: React.FC = () => {
                   name,
                   coins,
                   bonusCoins,
+                  defaultSelected,
                   imageUrl,
                   displayPrice,
                   stripePriceId,
@@ -3996,6 +4001,7 @@ export const AdminPanel: React.FC = () => {
                                         <th className="px-4 py-3">Stripe Price ID</th>
                                         <th className="px-4 py-3">Badge</th>
                                         <th className="px-4 py-3">Active</th>
+                                        <th className="px-4 py-3">Default</th>
                                         <th className="px-4 py-3">Sort</th>
                                         <th className="px-4 py-3">Updated</th>
                                         <th className="px-4 py-3 text-right">Actions</th>
@@ -4039,13 +4045,7 @@ export const AdminPanel: React.FC = () => {
                                                     <span className="rounded bg-black/30 px-2 py-1 font-mono">{pkg.stripePriceId}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-xs text-gray-300">
-                                                    {pkg.badge ? (
-                                                        <span className={`rounded-full px-2 py-1 font-semibold ${pkg.badge === 'best' ? 'bg-amber-500/20 text-amber-200' : 'bg-sky-500/20 text-sky-200'}`}>
-                                                            {pkg.badge === 'best' ? 'Best value' : 'Good value'}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-gray-500">—</span>
-                                                    )}
+                                                    {pkg.badge?.trim() ? <span className="rounded-full bg-white/10 px-2 py-1 font-semibold text-white">{pkg.badge}</span> : <span className="text-gray-500">—</span>}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <button
@@ -4059,6 +4059,13 @@ export const AdminPanel: React.FC = () => {
                                                     >
                                                         {pkg.active ? 'Active' : 'Inactive'}
                                                     </button>
+                                                </td>
+                                                <td className="px-4 py-3 text-xs text-gray-300">
+                                                    {pkg.defaultSelected ? (
+                                                        <span className="rounded-full bg-cyan-500/20 px-2 py-1 font-semibold text-cyan-200">Preselected</span>
+                                                    ) : (
+                                                        <span className="text-gray-500">—</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-300">{pkg.sortOrder}</td>
                                                 <td className="px-4 py-3 text-gray-400 text-xs">
@@ -6004,6 +6011,16 @@ export const AdminPanel: React.FC = () => {
                               className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                           />
                       </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Badge (optional)</label>
+                          <Input
+                              type="text"
+                              placeholder="Most Popular"
+                              value={packageDraft.badge ?? ''}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, badge: event.target.value }))}
+                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                          />
+                      </div>
                       <div className="sm:col-span-2">
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Custom Image URL (optional)</label>
                           <Input
@@ -6026,23 +6043,6 @@ export const AdminPanel: React.FC = () => {
                           />
                       </div>
                       <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Badge</label>
-                          <Select
-                              value={packageDraft.badge ?? ''}
-                              onChange={(event) =>
-                                  setPackageDraft((prev) => ({
-                                      ...prev,
-                                      badge: event.target.value ? (event.target.value as CoinPackage['badge']) : undefined
-                                  }))
-                              }
-                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
-                          >
-                              <option value="">None</option>
-                              <option value="good">Good value</option>
-                              <option value="best">Best value</option>
-                          </Select>
-                      </div>
-                      <div>
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sort Order</label>
                           <Input
                               type="number"
@@ -6062,6 +6062,18 @@ export const AdminPanel: React.FC = () => {
                           />
                           <label htmlFor="package-active" className="text-sm text-gray-300">
                               Active
+                          </label>
+                      </div>
+                      <div className="flex items-center gap-2 mt-6">
+                          <Input
+                              id="package-default-selected"
+                              type="checkbox"
+                              checked={packageDraft.defaultSelected ?? false}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, defaultSelected: event.target.checked }))}
+                              className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-cyan-500 focus:ring-cyan-500"
+                          />
+                          <label htmlFor="package-default-selected" className="text-sm text-gray-300">
+                              Preselect by default
                           </label>
                       </div>
                   </div>

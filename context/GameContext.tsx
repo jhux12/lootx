@@ -1869,10 +1869,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           coins,
           bonusCoins,
           totalCoins: coins + bonusCoins,
+          defaultSelected: Boolean(data.defaultSelected),
           imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
           displayPrice: data.displayPrice ?? '',
           stripePriceId: data.stripePriceId ?? '',
-          badge: data.badge ?? undefined,
+          badge: typeof data.badge === 'string' ? data.badge : undefined,
           active: data.active ?? false,
           sortOrder: Number(data.sortOrder ?? 0),
           createdAt: normalizeTimestamp(data.createdAt, 0),
@@ -2972,6 +2973,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...rawData,
       coins: Math.max(0, Number(rawData.coins ?? 0)),
       bonusCoins: Math.max(0, Number(rawData.bonusCoins ?? 0)),
+      defaultSelected: !!rawData.defaultSelected,
+      badge: typeof rawData.badge === 'string' ? rawData.badge.trim() : undefined,
       sortOrder: Number(rawData.sortOrder ?? 0),
       active: !!rawData.active,
       createdAt: serverTimestamp(),
@@ -2979,10 +2982,36 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     try {
+      const now = Date.now();
+      const nextPackageBase: CoinPackage = {
+        id: id ?? '',
+        name: String(rawData.name ?? ''),
+        coins: Math.max(0, Number(rawData.coins ?? 0)),
+        bonusCoins: Math.max(0, Number(rawData.bonusCoins ?? 0)),
+        totalCoins: Math.max(0, Number(rawData.coins ?? 0)) + Math.max(0, Number(rawData.bonusCoins ?? 0)),
+        imageUrl: String(rawData.imageUrl ?? ''),
+        displayPrice: String(rawData.displayPrice ?? ''),
+        stripePriceId: String(rawData.stripePriceId ?? ''),
+        badge: typeof rawData.badge === 'string' ? rawData.badge.trim() : undefined,
+        active: !!rawData.active,
+        sortOrder: Number(rawData.sortOrder ?? 0),
+        defaultSelected: !!rawData.defaultSelected,
+        createdAt: now,
+        updatedAt: now
+      };
       if (id) {
         await setDoc(doc(db, 'coin_packages', id), packageData, { merge: true });
+        const nextPackage = { ...nextPackageBase, id };
+        setCoinPackages((prev) => {
+          const next = prev.some((entry) => entry.id === id)
+            ? prev.map((entry) => (entry.id === id ? { ...entry, ...nextPackage } : entry))
+            : [...prev, nextPackage];
+          return [...next].sort((a, b) => a.sortOrder - b.sortOrder);
+        });
       } else {
-        await addDoc(collection(db, 'coin_packages'), packageData);
+        const newDocRef = await addDoc(collection(db, 'coin_packages'), packageData);
+        const nextPackage = { ...nextPackageBase, id: newDocRef.id };
+        setCoinPackages((prev) => [...prev, nextPackage].sort((a, b) => a.sortOrder - b.sortOrder));
       }
     } catch (error) {
       console.error('Failed to save coin package in Firebase', error);
@@ -3001,6 +3030,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...updates,
       coins: updates.coins !== undefined ? Math.max(0, Number(updates.coins ?? 0)) : undefined,
       bonusCoins: updates.bonusCoins !== undefined ? Math.max(0, Number(updates.bonusCoins ?? 0)) : undefined,
+      defaultSelected: updates.defaultSelected !== undefined ? !!updates.defaultSelected : undefined,
+      badge: updates.badge !== undefined ? String(updates.badge ?? '').trim() : undefined,
       sortOrder: updates.sortOrder !== undefined ? Number(updates.sortOrder ?? 0) : undefined,
       active: updates.active !== undefined ? !!updates.active : undefined,
       updatedAt: serverTimestamp()
@@ -3008,6 +3039,24 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       await setDoc(doc(db, 'coin_packages', id), packageData, { merge: true });
+      setCoinPackages((prev) =>
+        prev
+          .map((entry) => {
+            if (entry.id !== id) return entry;
+            const nextCoins = updates.coins !== undefined ? Math.max(0, Number(updates.coins ?? 0)) : entry.coins;
+            const nextBonusCoins = updates.bonusCoins !== undefined ? Math.max(0, Number(updates.bonusCoins ?? 0)) : (entry.bonusCoins ?? 0);
+            return {
+              ...entry,
+              ...updates,
+              coins: nextCoins,
+              bonusCoins: nextBonusCoins,
+              totalCoins: nextCoins + nextBonusCoins,
+              badge: updates.badge !== undefined ? String(updates.badge ?? '').trim() : entry.badge,
+              updatedAt: Date.now()
+            };
+          })
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+      );
     } catch (error) {
       console.error('Failed to update coin package in Firebase', error);
       throw error;
