@@ -59,19 +59,21 @@ export const TopUpModal: React.FC = () => {
   }, [topUpModalIntent?.currentBalance, topUpModalIntent?.missingCoins, topUpModalIntent?.requiredCoins]);
   const isInsufficientBalanceFlow = topUpModalIntent?.reason === 'insufficient_balance' && missingCoins > 0;
   const getBadgeClasses = (badge?: string) => {
-    if (badge === 'best') {
+    const normalizedBadge = badge?.toLowerCase() ?? '';
+    if (normalizedBadge.includes('best')) {
       return 'border-amber-400/80 bg-amber-500/10 text-amber-100';
     }
-    if (badge === 'good') {
+    if (normalizedBadge.includes('good')) {
       return 'border-sky-400/80 bg-sky-500/10 text-sky-100';
     }
     return 'border-white/10 bg-[#0b0e14] text-gray-300';
   };
   const getSelectedClasses = (badge?: string) => {
-    if (badge === 'best') {
+    const normalizedBadge = badge?.toLowerCase() ?? '';
+    if (normalizedBadge.includes('best')) {
       return 'border-amber-400 bg-amber-500/20 text-white shadow-lg shadow-amber-900/20';
     }
-    if (badge === 'good') {
+    if (normalizedBadge.includes('good')) {
       return 'border-sky-400 bg-sky-500/20 text-white shadow-lg shadow-sky-900/20';
     }
     return 'border-emerald-400 bg-emerald-500/10 text-white shadow-lg shadow-emerald-900/20';
@@ -248,7 +250,7 @@ export const TopUpModal: React.FC = () => {
                             const bonusCoins = pack.bonusCoins ?? 0;
                             const bonusLabel = getBonusLabel(pack);
                             const tierWeight = getTierVisualWeight(index);
-                            const badgeText = pack.customBadgeLabel?.trim() || (pack.badge ? (pack.badge === 'best' ? 'Best value' : 'Good value') : '');
+                            const badgeText = pack.badge?.trim() ?? '';
                             return (
                               <button
                                   key={pack.id}
@@ -263,9 +265,9 @@ export const TopUpModal: React.FC = () => {
                                   {badgeText && (
                                     <span
                                       className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
-                                        pack.badge === 'best'
+                                        badgeText.toLowerCase().includes('best')
                                           ? 'bg-amber-500 text-black'
-                                          : pack.badge === 'good'
+                                          : badgeText.toLowerCase().includes('good')
                                             ? 'bg-sky-500 text-black'
                                             : 'bg-zinc-200 text-black'
                                       }`}

@@ -309,7 +309,6 @@ export const AdminPanel: React.FC = () => {
       coins: 0,
       bonusCoins: 0,
       defaultSelected: false,
-      customBadgeLabel: '',
       imageUrl: '',
       displayPrice: '',
       stripePriceId: '',
@@ -1513,7 +1512,6 @@ export const AdminPanel: React.FC = () => {
           coins: 0,
           bonusCoins: 0,
           defaultSelected: false,
-          customBadgeLabel: '',
           imageUrl: '',
           displayPrice: '',
           stripePriceId: '',
@@ -1546,8 +1544,7 @@ export const AdminPanel: React.FC = () => {
       const sortOrder = Number.isFinite(Number(packageDraft.sortOrder)) ? Number(packageDraft.sortOrder) : 0;
       const active = packageDraft.active ?? true;
       const defaultSelected = packageDraft.defaultSelected ?? false;
-      const customBadgeLabel = packageDraft.customBadgeLabel?.trim() ?? '';
-      const badge = packageDraft.badge ?? undefined;
+      const badge = packageDraft.badge?.trim() ?? '';
 
       if (!name) {
           setPackageError('Package name is required.');
@@ -1583,7 +1580,6 @@ export const AdminPanel: React.FC = () => {
                   coins,
                   bonusCoins,
                   defaultSelected,
-                  customBadgeLabel,
                   imageUrl,
                   displayPrice,
                   stripePriceId,
@@ -1597,7 +1593,6 @@ export const AdminPanel: React.FC = () => {
                   coins,
                   bonusCoins,
                   defaultSelected,
-                  customBadgeLabel,
                   imageUrl,
                   displayPrice,
                   stripePriceId,
@@ -4002,7 +3997,6 @@ export const AdminPanel: React.FC = () => {
                                         <th className="px-4 py-3">Bonus Coins</th>
                                         <th className="px-4 py-3">Total</th>
                                         <th className="px-4 py-3">Display Price</th>
-                                        <th className="px-4 py-3">Custom Badge Label</th>
                                         <th className="px-4 py-3">Image URL</th>
                                         <th className="px-4 py-3">Stripe Price ID</th>
                                         <th className="px-4 py-3">Badge</th>
@@ -4038,7 +4032,6 @@ export const AdminPanel: React.FC = () => {
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-300">{pkg.displayPrice}</td>
-                                                <td className="px-4 py-3 text-xs text-gray-300">{pkg.customBadgeLabel?.trim() || '—'}</td>
                                                 <td className="px-4 py-3 text-xs text-gray-400">
                                                     {pkg.imageUrl ? (
                                                         <a href={pkg.imageUrl} target="_blank" rel="noreferrer" className="font-mono underline decoration-dotted underline-offset-2 hover:text-white">
@@ -4052,13 +4045,7 @@ export const AdminPanel: React.FC = () => {
                                                     <span className="rounded bg-black/30 px-2 py-1 font-mono">{pkg.stripePriceId}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-xs text-gray-300">
-                                                    {pkg.badge ? (
-                                                        <span className={`rounded-full px-2 py-1 font-semibold ${pkg.badge === 'best' ? 'bg-amber-500/20 text-amber-200' : 'bg-sky-500/20 text-sky-200'}`}>
-                                                            {pkg.badge === 'best' ? 'Best value' : 'Good value'}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-gray-500">—</span>
-                                                    )}
+                                                    {pkg.badge?.trim() ? <span className="rounded-full bg-white/10 px-2 py-1 font-semibold text-white">{pkg.badge}</span> : <span className="text-gray-500">—</span>}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <button
@@ -6025,12 +6012,12 @@ export const AdminPanel: React.FC = () => {
                           />
                       </div>
                       <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Custom Badge Label (optional)</label>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Badge (optional)</label>
                           <Input
                               type="text"
                               placeholder="Most Popular"
-                              value={packageDraft.customBadgeLabel ?? ''}
-                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, customBadgeLabel: event.target.value }))}
+                              value={packageDraft.badge ?? ''}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, badge: event.target.value }))}
                               className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                           />
                       </div>
@@ -6054,23 +6041,6 @@ export const AdminPanel: React.FC = () => {
                               onChange={(event) => setPackageDraft((prev) => ({ ...prev, stripePriceId: event.target.value }))}
                               className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white font-mono text-sm"
                           />
-                      </div>
-                      <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Badge</label>
-                          <Select
-                              value={packageDraft.badge ?? ''}
-                              onChange={(event) =>
-                                  setPackageDraft((prev) => ({
-                                      ...prev,
-                                      badge: event.target.value ? (event.target.value as CoinPackage['badge']) : undefined
-                                  }))
-                              }
-                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
-                          >
-                              <option value="">None</option>
-                              <option value="good">Good value</option>
-                              <option value="best">Best value</option>
-                          </Select>
                       </div>
                       <div>
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sort Order</label>

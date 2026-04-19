@@ -112,11 +112,10 @@ export interface CoinPackage {
   bonusCoins?: number;
   totalCoins?: number;
   defaultSelected?: boolean;
-  customBadgeLabel?: string;
   imageUrl?: string;
   displayPrice: string;
   stripePriceId: string;
-  badge?: 'best' | 'good';
+  badge?: string;
   active: boolean;
   sortOrder: number;
   createdAt?: number;
