@@ -108,6 +108,7 @@ const deriveRollValue = (hash: string) => {
 
 const LAST_ROLL_STORAGE_KEY = 'pullz:last-provably-fair-roll';
 const LAST_REVEAL_STORAGE_KEY = 'pullz:last-provably-fair-reveal';
+const AUTO_OPEN_BOX_STORAGE_KEY = 'pullz:auto-open-box-id';
 
 
 const loadImageElement = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
@@ -263,6 +264,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const isReady = Boolean(box) && hasItems;
   const isAdmin = Boolean(user?.isAdmin);
   const spinnerBackgroundImage = (box?.spinnerBackgroundImage ?? '').trim();
+  const cheapestPaidBox = useMemo(() => {
+    const paidBoxes = boxes.filter((entry) => {
+      const coinPrice = toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE);
+      return entry.isDaily !== true && (entry.currencyType ?? 'COIN') !== 'XP' && coinPrice > 0;
+    });
+    if (!paidBoxes.length) return null;
+    return paidBoxes.reduce((lowest, next) => {
+      const lowestPrice = toCoins(Number(lowest.price ?? 0), PRICE_UNIT_MODE);
+      const nextPrice = toCoins(Number(next.price ?? 0), PRICE_UNIT_MODE);
+      return nextPrice < lowestPrice ? next : lowest;
+    });
+  }, [boxes]);
+  const cheapestPaidBoxPrice = useMemo(
+    () => (cheapestPaidBox ? toCoins(Number(cheapestPaidBox.price ?? 0), PRICE_UNIT_MODE) : 0),
+    [cheapestPaidBox]
+  );
 
   // Sort items high to low for display purposes
   const displayItems = [...items].sort(
@@ -302,6 +319,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isInitialMotionBlurActive, setIsInitialMotionBlurActive] = useState(false);
   const [isReelDecelerating, setIsReelDecelerating] = useState(false);
   const [isLandingFlashActive, setIsLandingFlashActive] = useState(false);
+  const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
+  const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
+  const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -321,6 +341,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const bodyOverflowRef = useRef<string>('');
   const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
+  const preFreeSpinBalanceRef = useRef<number | null>(null);
+  const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
   const spinRequestLockRef = useRef(false);
   const canFreeSpin = !user.lastFreeBoxClaim;
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1087,6 +1109,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         toast.info("Free signup box already claimed.");
         return;
       }
+      preFreeSpinBalanceRef.current = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
     }
 
     if (isBoxPreviewVisible) {
@@ -1194,7 +1217,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           await claimFreeBox(data.freeBoxClaimedAt, { persist: false });
         }
         if ((data.currencyType ?? 'COIN') === 'COIN') {
-          syncBalance(Number(data.newCoinBalance ?? data.newCoins ?? 0));
+          const updatedCoinBalance = Number(data.newCoinBalance ?? data.newCoins ?? 0);
+          syncBalance(updatedCoinBalance);
+          if (isFree) {
+            const baselineBalance = Number(preFreeSpinBalanceRef.current ?? balance ?? user.balance ?? 0);
+            const coinsWon = Math.max(0, Math.floor(updatedCoinBalance - baselineBalance));
+            pendingPostFreeBoxFlowRef.current = { coinsWon };
+          }
           if (!isFree) {
             const spentAmount = toCoins(Number(data.price ?? box?.price ?? 0), PRICE_UNIT_MODE);
             registerSpend(spentAmount);
@@ -1400,7 +1429,48 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     resetReelTrackPosition();
     setWonInventoryItem(null);
     setSellOfferGenerated(false);
+
+    const pendingPostFreeBoxFlow = pendingPostFreeBoxFlowRef.current;
+    if (pendingPostFreeBoxFlow) {
+      const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
+      setPostFreeBoxCoinsWon(pendingPostFreeBoxFlow.coinsWon);
+      setPostFreeBoxCoinsShort(Math.max(0, Math.ceil(cheapestPaidBoxPrice - availableCoins)));
+      setShowPostFreeBoxModal(true);
+      pendingPostFreeBoxFlowRef.current = null;
+    }
   };
+
+  const handlePostFreePrimaryAction = () => {
+    playSound('click');
+    setShowPostFreeBoxModal(false);
+    const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
+    if (cheapestPaidBox && availableCoins >= cheapestPaidBoxPrice) {
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem(AUTO_OPEN_BOX_STORAGE_KEY, cheapestPaidBox.id);
+      }
+      setView({ type: 'CASE_OPENING', boxId: cheapestPaidBox.id });
+      return;
+    }
+
+    setTopUpModalIntent({
+      reason: 'insufficient_balance',
+      requiredCoins: cheapestPaidBoxPrice,
+      currentBalance: availableCoins,
+      missingCoins: Math.max(0, cheapestPaidBoxPrice - availableCoins),
+      source: 'post_free_box',
+      preferredPackageUsd: 50
+    });
+    setShowTopUpModal(true);
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isReady || isSpinning || isFree || !box) return;
+    const queuedBoxId = window.sessionStorage.getItem(AUTO_OPEN_BOX_STORAGE_KEY);
+    if (!queuedBoxId || queuedBoxId !== box.id) return;
+    window.sessionStorage.removeItem(AUTO_OPEN_BOX_STORAGE_KEY);
+    void handleSpin();
+  }, [box, handleSpin, isFree, isReady, isSpinning]);
 
   const handleSell = async () => {
     playSound('click');
@@ -1492,11 +1562,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (wonItem && !rewardResolved) {
         setRewardResolved(true);
       }
-      setShowWinModal(false);
-      setWonInventoryItem(null);
-      setSellOfferGenerated(false);
       setIsGeneratingSellOffer(false);
       setIsSellingItem(false);
+      closeWinModal();
   };
 
   const handleCopyProof = useCallback(async () => {
@@ -2045,6 +2113,41 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
           )}
         </div>
+
+        {showPostFreeBoxModal && (
+          <div className="fixed inset-0 z-[125] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+            <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#111725] p-5 shadow-2xl sm:p-6">
+              <h3 className="text-xl font-black text-white sm:text-2xl">
+                You got {postFreeBoxCoinsWon.toLocaleString()} coins 🎉
+              </h3>
+              <p className="mt-2 text-sm text-slate-300">
+                {postFreeBoxCoinsShort > 0
+                  ? `You’re only ${postFreeBoxCoinsShort.toLocaleString()} coins away from your first box`
+                  : 'You have enough to open your first box'}
+              </p>
+              <div className="mt-5 flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={handlePostFreePrimaryAction}
+                  className="min-h-12 w-full rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-black uppercase tracking-[0.08em] text-[#03131a] transition hover:brightness-110 active:scale-[0.99]"
+                >
+                  Unlock your first box
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click');
+                    setShowPostFreeBoxModal(false);
+                  }}
+                  className="mx-auto text-xs font-semibold text-slate-400 transition hover:text-slate-200"
+                >
+                  Maybe later
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <style>{`
           .ambient-pulse { animation: ambientPulse 3s ease-in-out infinite; }
           @keyframes ambientPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 rgba(34,211,238,0.2);} 50% { transform: scale(1.02); box-shadow: 0 0 22px rgba(34,211,238,0.32);} }
