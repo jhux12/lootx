@@ -315,13 +315,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [itemModalActive, setItemModalActive] = useState(false);
   const [animatedModalCoins, setAnimatedModalCoins] = useState(0);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
-  const [isReelInFastMotion, setIsReelInFastMotion] = useState(false);
   const [isInitialMotionBlurActive, setIsInitialMotionBlurActive] = useState(false);
   const [isReelDecelerating, setIsReelDecelerating] = useState(false);
   const [isLandingFlashActive, setIsLandingFlashActive] = useState(false);
-  const [isMobileViewport, setIsMobileViewport] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false
-  );
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
   const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
   const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
@@ -338,6 +334,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const initialBlurTimerRef = useRef<number | null>(null);
   const spinTickFrameRef = useRef<number | null>(null);
   const spinTickLastIndexRef = useRef<number>(-1);
+  const spinTickLastProgressRef = useRef<number | null>(null);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const itemModalRevealFrameRef = useRef<number | null>(null);
@@ -374,17 +371,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const xpRingRadius = 14;
   const xpRingCircumference = 2 * Math.PI * xpRingRadius;
   const xpRingOffset = xpRingCircumference * (1 - xpProgress);
-  const shouldSimplifyReelEffects = isMobileViewport && isReelInFastMotion;
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const updateViewportMode = () => {
-      setIsMobileViewport(window.innerWidth < 768);
-    };
-    updateViewportMode();
-    window.addEventListener('resize', updateViewportMode);
-    return () => window.removeEventListener('resize', updateViewportMode);
-  }, []);
+  const shouldSimplifyReelEffects = false;
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -823,9 +810,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinTickFrameRef.current = null;
     }
     spinTickLastIndexRef.current = -1;
+    spinTickLastProgressRef.current = null;
 
     setIsInitialMotionBlurActive(false);
-    setIsReelInFastMotion(false);
     setIsReelDecelerating(false);
   }, []);
 
@@ -871,6 +858,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const measuredGap = Number.parseFloat(containerStyle.columnGap || containerStyle.gap || `${GAP_WIDTH}`) || GAP_WIDTH;
     const stepWidth = Math.max(1, cardWidth + measuredGap);
 
+    const getTranslateX = (transform: string) => {
+      if (!transform || transform === 'none') return 0;
+      try {
+        return new DOMMatrixReadOnly(transform).m41;
+      } catch {
+        const matrix3dMatch = transform.match(/matrix3d\((.+)\)/);
+        if (matrix3dMatch?.[1]) {
+          const values = matrix3dMatch[1].split(',').map((value) => Number.parseFloat(value.trim()));
+          return Number.isFinite(values[12]) ? values[12] : 0;
+        }
+        const matrixMatch = transform.match(/matrix\((.+)\)/);
+        if (matrixMatch?.[1]) {
+          const values = matrixMatch[1].split(',').map((value) => Number.parseFloat(value.trim()));
+          return Number.isFinite(values[4]) ? values[4] : 0;
+        }
+        return 0;
+      }
+    };
+
     const trackTickSound = () => {
       const viewport = scrollViewportRef.current;
       const activeContainer = scrollContainerRef.current;
@@ -880,32 +886,35 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
 
       const transform = window.getComputedStyle(activeContainer).transform;
-      let translateX = 0;
-      if (transform && transform !== 'none') {
-        try {
-          translateX = new DOMMatrixReadOnly(transform).m41;
-        } catch {
-          translateX = 0;
-        }
-      }
+      const translateX = getTranslateX(transform);
 
-      const centerIndex = Math.floor(((viewport.clientWidth / 2) - translateX - (cardWidth / 2)) / stepWidth);
+      const centerProgress = ((viewport.clientWidth / 2) - translateX - (cardWidth / 2)) / stepWidth;
+      const centerIndex = Math.floor(centerProgress);
       const maxIndex = Math.max(0, activeContainer.childElementCount - 1);
       const boundedCenterIndex = clamp(centerIndex, 0, maxIndex);
       const previousIndex = spinTickLastIndexRef.current;
+      const previousProgress = spinTickLastProgressRef.current;
 
       if (previousIndex >= 0 && boundedCenterIndex > previousIndex) {
         const passedCount = Math.min(5, boundedCenterIndex - previousIndex);
         for (let i = 0; i < passedCount; i += 1) {
           playSound('spin-tick');
         }
+      } else if (previousProgress !== null) {
+        const traversedSteps = Math.abs(centerProgress - previousProgress);
+        if (traversedSteps >= 1) {
+          const passedCount = Math.min(5, Math.floor(traversedSteps));
+          for (let i = 0; i < passedCount; i += 1) {
+            playSound('spin-tick');
+          }
+        }
       }
 
       spinTickLastIndexRef.current = boundedCenterIndex;
+      spinTickLastProgressRef.current = centerProgress;
       spinTickFrameRef.current = window.requestAnimationFrame(trackTickSound);
     };
 
-    setIsReelInFastMotion(true);
     setIsInitialMotionBlurActive(true);
     setIsReelDecelerating(false);
 
@@ -929,6 +938,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     spinnerAnimationRef.current = animation;
     spinTickLastIndexRef.current = -1;
+    spinTickLastProgressRef.current = null;
     spinTickFrameRef.current = window.requestAnimationFrame(trackTickSound);
 
     const decelerationTimer = window.setTimeout(() => {
@@ -947,6 +957,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         spinTickFrameRef.current = null;
       }
       spinTickLastIndexRef.current = -1;
+      spinTickLastProgressRef.current = null;
 
       if (typeof animation.commitStyles === 'function') {
         animation.commitStyles();
@@ -955,7 +966,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       container.style.transition = 'none';
       container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
 
-      setIsReelInFastMotion(false);
       setIsReelDecelerating(false);
       setIsLandingFlashActive(true);
       window.setTimeout(() => setIsLandingFlashActive(false), SPINNER_MOTION.settleDurationMs);
@@ -976,7 +986,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         spinTickFrameRef.current = null;
       }
       spinTickLastIndexRef.current = -1;
-      setIsReelInFastMotion(false);
+      spinTickLastProgressRef.current = null;
       setIsReelDecelerating(false);
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
@@ -1077,7 +1087,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[]) => {
     resetSpinnerAnimation();
-    setIsReelInFastMotion(false);
     setIsReelDecelerating(false);
     setIsLandingFlashActive(false);
     winningCardRef.current = null;
