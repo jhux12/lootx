@@ -111,8 +111,8 @@ export interface CoinPackage {
   coins: number;
   bonusCoins?: number;
   totalCoins?: number;
-  bonusLabel?: string;
   defaultSelected?: boolean;
+  customBadgeLabel?: string;
   imageUrl?: string;
   displayPrice: string;
   stripePriceId: string;

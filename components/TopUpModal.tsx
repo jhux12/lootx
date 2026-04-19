@@ -80,8 +80,6 @@ export const TopUpModal: React.FC = () => {
     pack.imageUrl?.trim() ||
     'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2F12.png?alt=media&token=a82f5343-7e3e-4cb9-9d7a-b0451d4e49b0';
   const getBonusLabel = (pack: typeof activePackages[number]) => {
-    const customLabel = pack.bonusLabel?.trim();
-    if (customLabel) return customLabel;
     const baseCoins = Math.max(0, Number(pack.coins ?? 0));
     const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
     if (!baseCoins || bonusCoins <= 0) return '';
@@ -250,6 +248,7 @@ export const TopUpModal: React.FC = () => {
                             const bonusCoins = pack.bonusCoins ?? 0;
                             const bonusLabel = getBonusLabel(pack);
                             const tierWeight = getTierVisualWeight(index);
+                            const badgeText = pack.customBadgeLabel?.trim() || (pack.badge ? (pack.badge === 'best' ? 'Best value' : 'Good value') : '');
                             return (
                               <button
                                   key={pack.id}
@@ -261,15 +260,17 @@ export const TopUpModal: React.FC = () => {
                                   className={`relative rounded-xl border bg-[#15171c] p-3.5 text-left transition-all ${isSelected ? getSelectedClasses(pack.badge) : `${getBadgeClasses(pack.badge)} hover:border-white/30`}`}
                                   style={!isSelected ? { borderColor: `rgba(148, 163, 184, ${0.1 + tierWeight * 0.22})` } : undefined}
                               >
-                                  {pack.badge && (
+                                  {badgeText && (
                                     <span
                                       className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
                                         pack.badge === 'best'
                                           ? 'bg-amber-500 text-black'
-                                          : 'bg-sky-500 text-black'
+                                          : pack.badge === 'good'
+                                            ? 'bg-sky-500 text-black'
+                                            : 'bg-zinc-200 text-black'
                                       }`}
                                     >
-                                      {pack.badge === 'best' ? 'Best value' : 'Good value'}
+                                      {badgeText}
                                     </span>
                                   )}
                                   <div className="mb-3 overflow-hidden rounded-lg border border-white/5 bg-black/20 p-2.5">
