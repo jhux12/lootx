@@ -850,20 +850,31 @@ const buildBaseUsername = (displayName: string | null | undefined, email: string
   return fromEmail || 'player';
 };
 
-const ensureUniqueUsername = async (base: string) => {
-  const usersRef = collection(db, 'users');
-  let attempt = 1;
-  let candidate = base;
+const reserveUniqueUsername = async (uid: string, base: string) => {
+  let attempt = 0;
 
   while (true) {
-    const [usernameSnapshot, nameSnapshot] = await Promise.all([
-      getDocs(query(usersRef, where('username', '==', candidate), limit(1))),
-      getDocs(query(usersRef, where('name', '==', candidate), limit(1)))
-    ]);
+    const suffix = attempt === 0 ? '' : `_${attempt + 1}`;
+    const candidate = clampFirestoreUsernameLower(`${base}${suffix}`);
 
-    if (usernameSnapshot.empty && nameSnapshot.empty) return candidate;
-    attempt += 1;
-    candidate = `${base}_${attempt}`;
+    if (!isValidFirestoreUsernameLower(candidate)) {
+      attempt += 1;
+      continue;
+    }
+
+    const usernameRef = doc(db, 'usernames', candidate);
+    const usernameDoc = await getDoc(usernameRef);
+    if (usernameDoc.exists()) {
+      attempt += 1;
+      continue;
+    }
+
+    try {
+      await setDoc(usernameRef, { uid, createdAt: Date.now() });
+      return candidate;
+    } catch (error) {
+      attempt += 1;
+    }
   }
 };
 
@@ -2246,7 +2257,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setPendingEmailVerification(redirectPath);
       await sendCustomVerificationEmail(credential.user);
       const createdAt = Date.now();
-      const username = await ensureUniqueUsername(buildBaseUsername(name, email));
+      const username = await reserveUniqueUsername(credential.user.uid, buildBaseUsername(name, email));
       const newUser: User = {
         id: credential.user.uid,
         createdAt,
