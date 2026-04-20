@@ -575,8 +575,7 @@ export default function UpgraderPage() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_20%_-10%,rgba(79,70,229,0.32),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(56,189,248,0.16),transparent_35%),linear-gradient(180deg,#02050e_0%,#040712_40%,#02040d_100%)] pb-44 font-sans text-slate-200 lg:pb-32">
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-indigo-300/10 bg-[#050916]/86 px-4 backdrop-blur-xl lg:px-8">
-        <h1 className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-300">Elite Upgrader</h1>
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-end border-b border-indigo-300/10 bg-[#050916]/86 px-4 backdrop-blur-xl sm:hidden">
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 hover:text-white" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
             {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
