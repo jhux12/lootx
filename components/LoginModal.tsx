@@ -279,9 +279,9 @@ export const LoginModal: React.FC = () => {
           </div>
 
           {isRegisterMode && (
-            <div className="mb-4 overflow-hidden rounded-2xl border border-indigo-400/35 bg-gradient-to-r from-indigo-500/10 via-violet-500/5 to-transparent p-3 sm:p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
+            <div className="mb-4 rounded-2xl border border-indigo-400/35 bg-gradient-to-r from-indigo-500/10 via-violet-500/5 to-transparent p-3 sm:p-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                <div className="min-w-0">
                   <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-indigo-300/40 bg-indigo-500/20 text-indigo-200">
                     <Gift className="h-4 w-4" />
                   </div>
@@ -291,7 +291,7 @@ export const LoginModal: React.FC = () => {
                 <img
                   src={registerBonusImage}
                   alt="Free signup box"
-                  className="h-20 w-auto shrink-0 object-contain sm:h-24"
+                  className="mx-auto hidden h-20 w-auto shrink-0 object-contain sm:block sm:h-24"
                 />
               </div>
             </div>
