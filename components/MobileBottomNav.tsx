@@ -80,6 +80,7 @@ export const MobileBottomNav: React.FC = () => {
               key={item.id}
               type="button"
               onClick={() => handleNav(item)}
+              data-free-box-mobile-anchor={item.id === 'INVENTORY' ? 'true' : undefined}
               className={`flex flex-col items-center gap-0.5 rounded-lg py-1 text-[11px] font-medium ${
                 isActive ? 'text-white' : 'text-gray-500'
               }`}
