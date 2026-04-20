@@ -228,15 +228,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     </>
   ), [openAuthModal, playSound]);
 
-  const dailySpinDesktopClass = `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white transition-all ${
+  const dailySpinDesktopClass = `group relative flex w-full items-center gap-2 overflow-hidden rounded-lg px-3 py-2 text-left text-sm font-semibold text-white transition-all ${
     showDailySpinReady
-      ? 'border border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
+      ? 'border border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] hover:bg-blue-500/20'
       : 'hover:bg-white/5'
   }`;
 
-  const dailySpinMobileClass = `${drawerCardClass} transition-all ${
+  const dailySpinMobileClass = `${drawerCardClass} group relative overflow-hidden transition-all ${
     showDailySpinReady
-      ? 'border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
+      ? 'border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] hover:bg-blue-500/20'
       : ''
   }`;
 
@@ -315,9 +315,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 </button>
                 <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
                   <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass}>
-                    <RefreshCw className={`h-4 w-4 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
-                    Daily Spin
-                    {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
+                    {showDailySpinReady ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(96,165,250,0.24)_48%,transparent_76%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]" /> : null}
+                    <RefreshCw className={`relative z-10 h-4 w-4 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-[spin_2.6s_linear_infinite]' : ''}`} />
+                    <span className="relative z-10">Daily Spin</span>
+                    {showDailySpinReady ? <span className="relative z-10 ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-[0_0_14px_rgba(16,185,129,0.55)]">Ready</span> : null}
                   </button>
                   <button type="button" onClick={() => navigate('POLLS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><BarChart3 className="h-4 w-4 text-cyan-300" />Polls</button>
                   <button type="button" onClick={() => navigate('REFERRALS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Users className="h-4 w-4 text-indigo-300" />Referrals</button>
@@ -513,9 +514,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             {openMobileSections.rewards ? (
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => navigate('BONUSES')} className={dailySpinMobileClass}>
-                  <RefreshCw className={`h-5 w-5 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
-                  <span className="text-sm font-bold text-white">Daily Spin</span>
-                  {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
+                  {showDailySpinReady ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_24%,rgba(96,165,250,0.24)_50%,transparent_78%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]" /> : null}
+                  <RefreshCw className={`relative z-10 h-5 w-5 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-[spin_2.6s_linear_infinite]' : ''}`} />
+                  <span className="relative z-10 text-sm font-bold text-white">Daily Spin</span>
+                  {showDailySpinReady ? <span className="relative z-10 ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-[0_0_14px_rgba(16,185,129,0.55)]">Ready</span> : null}
                 </button>
                 <button onClick={() => navigate('POLLS')} className={drawerCardClass}><BarChart3 className="h-5 w-5 text-cyan-300" /><span className="text-sm font-bold text-white">Polls</span></button>
                 <button onClick={() => navigate('REFERRALS')} className={drawerCardClass}><Users className="h-5 w-5 text-indigo-300" /><span className="text-sm font-bold text-white">Referrals</span></button>
