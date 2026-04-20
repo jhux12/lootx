@@ -14,6 +14,7 @@ type BrandLockupProps = {
   enableSignatureAnimation?: boolean;
   signatureIntervalRangeMs?: [number, number];
   signatureDurationMs?: number;
+  initialSignatureDelayMs?: number;
 };
 
 export const BrandLockup: React.FC<BrandLockupProps> = ({
@@ -28,17 +29,23 @@ export const BrandLockup: React.FC<BrandLockupProps> = ({
   enableSignatureAnimation = false,
   signatureIntervalRangeMs = [6000, 12000],
   signatureDurationMs = 1450,
+  initialSignatureDelayMs = 1400,
 }) => {
   const [isSignatureActive, setIsSignatureActive] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     const syncPreference = () => setReduceMotion(mediaQuery.matches);
     syncPreference();
-    mediaQuery.addEventListener('change', syncPreference);
-    return () => mediaQuery.removeEventListener('change', syncPreference);
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', syncPreference);
+      return () => mediaQuery.removeEventListener('change', syncPreference);
+    }
+
+    mediaQuery.addListener(syncPreference);
+    return () => mediaQuery.removeListener(syncPreference);
   }, []);
 
   useEffect(() => {
@@ -55,12 +62,18 @@ export const BrandLockup: React.FC<BrandLockupProps> = ({
     let settleTimer: number | null = null;
     let cancelled = false;
 
-    const scheduleActivation = () => {
+    const scheduleActivation = (delayOverride?: number) => {
       if (cancelled) return;
-      const delay = Math.floor(Math.random() * (safeMax - safeMin + 1)) + safeMin;
+      const delay = typeof delayOverride === 'number'
+        ? Math.max(0, delayOverride)
+        : Math.floor(Math.random() * (safeMax - safeMin + 1)) + safeMin;
 
       triggerTimer = window.setTimeout(() => {
         if (cancelled) return;
+        if (typeof document !== 'undefined' && document.hidden) {
+          scheduleActivation();
+          return;
+        }
         setIsSignatureActive(true);
         settleTimer = window.setTimeout(() => {
           if (cancelled) return;
@@ -70,14 +83,14 @@ export const BrandLockup: React.FC<BrandLockupProps> = ({
       }, delay);
     };
 
-    scheduleActivation();
+    scheduleActivation(initialSignatureDelayMs);
 
     return () => {
       cancelled = true;
       if (triggerTimer !== null) window.clearTimeout(triggerTimer);
       if (settleTimer !== null) window.clearTimeout(settleTimer);
     };
-  }, [enableSignatureAnimation, reduceMotion, signatureDurationMs, signatureIntervalRangeMs]);
+  }, [enableSignatureAnimation, reduceMotion, signatureDurationMs, signatureIntervalRangeMs, initialSignatureDelayMs]);
 
   return (
     <div className={`flex items-center justify-center gap-3 ${className}`.trim()}>
