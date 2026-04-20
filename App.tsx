@@ -170,8 +170,11 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
             return;
           }
 
+          console.log('[Meta] Purchase candidate data:', purchase);
+
+          const normalizedCurrency = 'USD';
           const purchaseEventData: Record<string, unknown> = {
-            currency: typeof purchase.currency === 'string' ? purchase.currency : 'USD',
+            currency: normalizedCurrency,
             value: purchaseValue,
             content_name: typeof purchase.content_name === 'string' ? purchase.content_name : 'Top Up',
             content_ids: Array.isArray(purchase.content_ids) ? purchase.content_ids : undefined,
@@ -185,7 +188,16 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
             purchaseEventData.external_id = user.id;
           }
 
-          trackMetaEvent('Purchase', purchaseEventData, { eventID: eventId });
+          try {
+            trackMetaEvent('Purchase', purchaseEventData, { eventID: eventId });
+            console.log('[Meta] Purchase fired:', {
+              value: purchaseValue,
+              currency: normalizedCurrency,
+              eventID: eventId
+            });
+          } catch (err) {
+            console.warn('Meta Purchase tracking failed', err);
+          }
 
           await fetch('/api/topup-purchase', {
             method: 'PATCH',
