@@ -256,7 +256,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
       <style>{fairValueBannerKeyframes}</style>
-      <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-hidden border-y border-white/10 bg-[#070b14] shadow-[0_35px_70px_-50px_rgba(0,0,0,1)] animate-[fairHeroEnter_650ms_cubic-bezier(0.2,0.8,0.2,1)_both]">
+      <section className="relative w-full overflow-hidden rounded-[30px] border border-white/10 bg-[#070b14] shadow-[0_35px_70px_-50px_rgba(0,0,0,1)] animate-[fairHeroEnter_650ms_cubic-bezier(0.2,0.8,0.2,1)_both]">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,#070b16_0%,#0c1222_35%,#0a1020_58%,#070b14_100%)]" />
         <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(123,139,255,0.08)_0,rgba(123,139,255,0.08)_1px,transparent_1px,transparent_32px),repeating-linear-gradient(-58deg,rgba(236,104,200,0.08)_0,rgba(236,104,200,0.08)_1px,transparent_1px,transparent_32px)] opacity-20 sm:opacity-25" />
         <div className="pointer-events-none absolute left-[-8%] top-[-18%] h-[140%] w-[44%] bg-[radial-gradient(circle,rgba(66,117,255,0.28)_0%,rgba(55,108,255,0.11)_40%,transparent_72%)] sm:bg-[radial-gradient(circle,rgba(66,117,255,0.34)_0%,rgba(55,108,255,0.13)_40%,transparent_72%)] sm:animate-[fairValueGlow_10s_ease-in-out_infinite]" />
@@ -264,9 +264,9 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         <div className="pointer-events-none absolute inset-x-[30%] top-[18%] h-[45%] bg-[radial-gradient(circle,rgba(101,219,255,0.16)_0%,rgba(153,76,255,0.16)_48%,transparent_74%)] sm:inset-x-[28%] sm:top-[12%] sm:h-[58%] sm:bg-[radial-gradient(circle,rgba(101,219,255,0.22)_0%,rgba(153,76,255,0.22)_46%,transparent_74%)]" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_38%,rgba(3,6,12,0.66)_100%)]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-        <div className="relative mx-auto w-full max-w-[1240px] px-4 py-7 text-left sm:px-6 sm:py-9 lg:px-8 lg:py-11">
-          <div className="relative z-10 grid items-end gap-3 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
-            <div className="flex min-w-0 flex-col items-start">
+        <div className="relative mx-auto w-full px-4 py-7 text-left sm:px-6 sm:py-9 lg:px-8 lg:py-11">
+          <div className="relative z-10 grid items-end gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,440px)] lg:items-center">
+            <div className="flex min-w-0 flex-col items-start lg:pr-4">
               <div className="relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-[#5966a2] bg-[#11182f]/75 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.19em] text-slate-100 shadow-[0_0_26px_rgba(94,92,230,0.42)] backdrop-blur-md animate-[badgeReveal_900ms_ease-out_both] sm:text-[11px]">
                 <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-[#4f86ff] to-[#d34dd8] text-[10px] text-white">✓</span>
                 <span>Provably Fair</span>
@@ -305,7 +305,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
               </div>
             </div>
 
-            <div className="relative flex items-end justify-center pt-2 lg:justify-end lg:pt-0">
+            <div className="relative flex min-h-[220px] items-end justify-center pt-2 sm:min-h-[280px] lg:min-h-[360px] lg:justify-end lg:pt-0">
               <div className="pointer-events-none absolute bottom-[14%] h-[220px] w-[220px] rounded-full bg-[radial-gradient(circle,rgba(52,203,255,0.38)_0%,rgba(148,65,246,0.22)_45%,transparent_72%)] blur-2xl animate-[fairValuePulse_7.8s_ease-in-out_infinite] sm:h-[330px] sm:w-[330px] sm:bg-[radial-gradient(circle,rgba(52,203,255,0.5)_0%,rgba(148,65,246,0.28)_43%,transparent_72%)] lg:bottom-[12%] lg:h-[460px] lg:w-[460px]" />
               <div className="pointer-events-none absolute bottom-[18%] h-[180px] w-[180px] rounded-full bg-[radial-gradient(circle,rgba(121,76,255,0.28)_0%,rgba(33,189,255,0.2)_48%,transparent_76%)] blur-[38px] sm:h-[260px] sm:w-[260px] lg:h-[340px] lg:w-[340px]" />
               <div className="pointer-events-none absolute bottom-[8%] h-[100px] w-[62%] rounded-full bg-cyan-300/20 blur-2xl" />
