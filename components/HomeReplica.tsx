@@ -57,7 +57,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   onViewAllBoxes,
   onSignUp
 }) => {
-  const { stripeSettings, setView } = useGame();
+  const { stripeSettings, setView, isAuthenticated } = useGame();
   const [openFaq, setOpenFaq] = useState(0);
 
   const featuredBoxes = useMemo(() => boxes.slice(0, 8), [boxes]);
@@ -263,25 +263,25 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                 <span className="pointer-events-none absolute inset-y-0 w-[38%] bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[fairValueShimmer_3.4s_ease-in-out_infinite]" />
               </div>
 
-              <h1 className="relative mt-2.5 max-w-4xl text-[2.55rem] font-black uppercase italic leading-[0.82] tracking-tight text-white sm:text-[3.7rem] lg:text-[4.75rem]">
+              <h1 className="relative mt-3 max-w-4xl text-[2.55rem] font-black uppercase italic leading-[0.85] tracking-tight text-white sm:mt-3.5 sm:text-[3.7rem] lg:mt-4 lg:text-[4.75rem]">
                 <span className="inline-block">Fair Value</span>{' '}
                 <span className="relative inline-block bg-gradient-to-r from-[#6f93ff] via-[#9a73ff] to-[#ff59dc] bg-clip-text text-transparent [text-shadow:0_0_20px_rgba(167,139,250,0.35)]">Guarantee</span>
               </h1>
-              <p className="relative mt-2 max-w-md text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300 sm:text-sm lg:text-[15px]">
+              <p className="relative mt-2.5 max-w-md text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300 sm:mt-3 sm:text-sm lg:mt-3.5 lg:text-[15px]">
                 Discover, open &amp; collect on Pullz
               </p>
-              <div className="mt-2.5 flex max-w-full items-center gap-x-4 gap-y-1 overflow-hidden whitespace-nowrap text-[11px] font-medium text-slate-300 sm:text-sm">
+              <div className="mt-3 flex max-w-full items-center gap-x-4 gap-y-1 overflow-hidden whitespace-nowrap text-[11px] font-medium text-slate-300 sm:mt-3.5 sm:text-sm lg:mt-4">
                 <span className="inline-flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />Provably Fair</span>
                 <span className="inline-flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-violet-300" />Real Items</span>
                 <span className="hidden items-center gap-2 sm:inline-flex"><span className="h-1.5 w-1.5 rounded-full bg-fuchsia-300" />Instant Payouts</span>
               </div>
-              <div className="mt-3.5 flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row">
+              <div className="mt-4 flex w-full flex-col gap-2.5 sm:mt-[18px] sm:w-auto sm:flex-row lg:mt-5">
                 <button
                   type="button"
-                  onClick={onSignUp}
+                  onClick={isAuthenticated ? onViewAllBoxes : onSignUp}
                   className="inline-flex min-h-12 items-center justify-center rounded-xl bg-gradient-to-r from-[#4f67ff] via-[#7a57ff] to-[#cc42d4] px-8 py-3 text-sm font-extrabold uppercase tracking-[0.1em] text-white shadow-[0_16px_46px_-18px_rgba(124,58,237,0.94)] transition duration-300 hover:scale-[1.03] hover:brightness-110 hover:shadow-[0_24px_58px_-18px_rgba(124,58,237,0.98)]"
                 >
-                  Sign Up &amp; Get Free Box
+                  {isAuthenticated ? 'Open Boxes' : 'Sign Up & Get Free Box'}
                 </button>
                 <button
                   type="button"
