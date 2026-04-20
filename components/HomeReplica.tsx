@@ -49,6 +49,15 @@ const FAQ_ITEMS: FaqItem[] = [
 
 const CATEGORIES = ['Trading Cards', 'Collectibles', 'Tech & Gaming'];
 
+const normalizeRarity = (rarity?: string) => {
+  const value = String(rarity ?? 'common').toLowerCase();
+  if (value.includes('legend')) return 'legendary';
+  if (value.includes('epic')) return 'epic';
+  if (value.includes('rare')) return 'rare';
+  if (value.includes('uncommon')) return 'uncommon';
+  return 'common';
+};
+
 export const HomeReplica: React.FC<HomeReplicaProps> = ({
   boxes,
   demoBoxId,
@@ -81,7 +90,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const spinnerCardRef = useRef<HTMLDivElement | null>(null);
 
   const SPINNER_CARD_WIDTH = 170;
-  const SPINNER_CARD_GAP = 4;
+  const SPINNER_CARD_GAP = 2;
   const SPINNER_DURATION_MS = 5200;
   const SPINNER_REPLAY_DELAY_MS = 800;
   const SPINNER_TRAVEL_MIN = 18;
@@ -359,45 +368,58 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                 >
                   {demoReelItems.map((item, idx) => {
                     const isLandedWinner = landedIndex === idx && !isSpinAnimating;
-                    const isLegendary = String(item.rarity ?? '').toLowerCase() === 'legendary';
+                    const rarity = normalizeRarity(item.rarity);
+                    const rarityGlow =
+                      rarity === 'legendary'
+                        ? 'rgba(255,191,71,0.58)'
+                        : rarity === 'epic'
+                          ? 'rgba(196,125,255,0.52)'
+                          : rarity === 'rare'
+                            ? 'rgba(96,165,250,0.48)'
+                            : rarity === 'uncommon'
+                              ? 'rgba(74,222,128,0.42)'
+                              : 'rgba(100,116,139,0.35)';
                     return (
                       <div
                         ref={idx === 0 ? spinnerCardRef : null}
                         key={`${item.id}-${idx}`}
-                        className={`group relative flex h-[168px] w-[132px] flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.03)] p-2 transition-all duration-300 hover:border-cyan-200/35 hover:shadow-[0_0_18px_rgba(0,234,255,0.22)] sm:h-[210px] sm:w-[170px] sm:p-2.5 ${
+                        className={`group relative flex h-[168px] w-[132px] flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-[18px] border border-[#2b3961]/85 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] px-2 pb-2.5 pt-2 transition-all duration-300 hover:border-cyan-200/40 sm:h-[210px] sm:w-[170px] sm:px-2.5 sm:pb-3 sm:pt-2.5 ${
                           isLandedWinner
-                            ? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.34)]'
+                            ? 'border-[#f5c34a] shadow-[0_0_26px_rgba(245,195,74,0.32)]'
                             : ''
                         }`}
                         style={{
                           boxShadow: isLandedWinner
-                            ? `${isLegendary ? '0 0 18px rgba(251,191,36,0.28), ' : ''}0 0 24px rgba(34,211,238,0.34)`
-                            : (isLegendary ? '0 0 18px rgba(251,191,36,0.28)' : '0 8px 24px rgba(0,0,0,0.45)')
+                            ? `0 0 0 1px rgba(245,195,74,0.42), 0 0 30px ${rarityGlow}, inset 0 0 0 1px rgba(255,255,255,0.12)`
+                            : `0 0 18px ${rarityGlow}, inset 0 0 0 1px rgba(255,255,255,0.06)`
                         }}
                       >
                         <div
-                          className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-16 -translate-x-1/2 -translate-y-1/2 rounded-[999px] opacity-90 blur-xl sm:h-28 sm:w-24"
+                          className="pointer-events-none absolute left-1/2 top-[44%] h-20 w-16 -translate-x-1/2 -translate-y-1/2 rounded-[999px] opacity-90 blur-xl sm:h-28 sm:w-24"
                           style={{
                             background: `${item.color}66`,
                             boxShadow: `0 0 38px ${item.color}88`
                           }}
                         ></div>
-                        <img
-                          loading="lazy"
-                          decoding="async"
-                          src={item.image}
-                          alt={item.name}
-                          className="relative z-10 h-[104px] w-[104px] object-contain sm:h-32 sm:w-32"
-                        />
-                        <div className="relative z-10 mt-2 flex items-center justify-center px-1 text-xs font-semibold text-emerald-100 sm:text-sm">
+                        <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch pt-2 sm:pt-3">
+                          <img
+                            loading="lazy"
+                            decoding="async"
+                            src={item.image}
+                            alt={item.name}
+                            className="h-[108px] w-[108px] translate-y-1 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:h-[132px] sm:w-[132px] sm:translate-y-1.5"
+                          />
+                        </div>
+                        <div className="relative z-10 mt-1 flex items-center justify-center px-1 text-[13px] font-extrabold leading-none text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] sm:text-[16px]">
                           <CoinAmount
                             amount={item.price}
                             formatOptions={{ maximumFractionDigits: 0 }}
-                            className="text-emerald-100"
-                            iconClassName="h-4 w-4"
+                            className="text-white"
+                            iconClassName="h-[11px] w-[11px] sm:h-[13px] sm:w-[13px]"
+                            animated={false}
                           />
                         </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-[2px] rounded-b-2xl opacity-60" style={{ backgroundColor: item.color }}></div>
+                        <div className="pointer-events-none absolute inset-x-3 bottom-0 h-px opacity-55" style={{ backgroundColor: item.color }}></div>
                       </div>
                     );
                   })}

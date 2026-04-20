@@ -48,8 +48,8 @@ const DESKTOP_CARD_WIDTH = 170;
 const MOBILE_CARD_WIDTH = 124;
 const DESKTOP_CARD_HEIGHT = 210;
 const MOBILE_CARD_HEIGHT = 158;
-const DESKTOP_GAP_WIDTH = 8;
-const MOBILE_GAP_WIDTH = 6;
+const DESKTOP_GAP_WIDTH = 6;
+const MOBILE_GAP_WIDTH = 4;
 const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
 const MOBILE_SPINNER_VIEWPORT_HEIGHT = 186;
 
@@ -1972,10 +1972,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     }}
                 >
                     {reelItems.map((item, idx) => (
+                        (() => {
+                          const rarityValue = String(item.rarity ?? 'common').toLowerCase();
+                          const rarityGlow = rarityValue.includes('legend')
+                            ? 'rgba(255,191,71,0.58)'
+                            : rarityValue.includes('epic')
+                              ? 'rgba(196,125,255,0.52)'
+                              : rarityValue.includes('rare')
+                                ? 'rgba(96,165,250,0.48)'
+                                : rarityValue.includes('uncommon')
+                                  ? 'rgba(74,222,128,0.42)'
+                                  : 'rgba(100,116,139,0.35)';
+                          const isIdleWinner = animationPhase === 'idle' && idx === reelWinnerIndex;
+                          return (
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className={`group relative flex flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(160deg,rgba(16,24,38,0.95),rgba(8,12,22,0.96))] p-2 transition-colors duration-300 md:hover:scale-[1.015] md:hover:border-cyan-200/35 ${item.id === 'golden-ticket' ? 'border-yellow-500/60' : ''} ${animationPhase === 'idle' && idx === reelWinnerIndex ? 'ring-1 ring-white/40' : ''}`}
+                            className={`group relative flex flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-[18px] border border-[#2b3961]/85 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] px-2 pb-2 pt-2 transition-colors duration-300 md:hover:scale-[1.015] md:hover:border-cyan-200/35 ${item.id === 'golden-ticket' ? 'border-yellow-500/60' : ''} ${isIdleWinner ? 'border-[#f5c34a]' : ''}`}
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
@@ -1983,7 +1996,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 WebkitTransform: 'translateZ(0)',
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
-                                boxShadow: animationPhase === 'idle' ? '0 8px 20px rgba(2,6,23,0.45)' : 'none'
+                                boxShadow: isIdleWinner
+                                  ? `0 0 0 1px rgba(245,195,74,0.42), 0 0 30px ${rarityGlow}, inset 0 0 0 1px rgba(255,255,255,0.12)`
+                                  : `0 0 18px ${rarityGlow}, inset 0 0 0 1px rgba(255,255,255,0.06)`
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
@@ -1996,17 +2011,30 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   boxShadow: animationPhase === 'idle' ? `0 0 24px ${item.color}50` : 'none'
                                 }}
                             ></div>
-                            <img loading="eager" decoding="async" 
-                                src={item.image} 
-                                alt={item.name} 
-                                className={`relative z-10 mb-1 object-contain ${isMobileViewport ? 'h-24 w-24' : 'h-32 w-32'} ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
-                                style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
-                            />
+                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch pt-2 sm:pt-3">
+                              <img loading="eager" decoding="async" 
+                                  src={item.image} 
+                                  alt={item.name} 
+                                  className={`translate-y-1 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] ${isMobileViewport ? 'h-[104px] w-[104px]' : 'h-[132px] w-[132px] sm:translate-y-1.5'} ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
+                                  style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
+                              />
+                            </div>
+                            <div className={`relative z-10 mt-0.5 inline-flex items-center justify-center text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] ${isMobileViewport ? 'text-[12px]' : 'text-[16px]'} font-extrabold leading-none`}>
+                              <CoinAmount
+                                amount={item.price}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="text-white"
+                                iconClassName={isMobileViewport ? 'h-[10px] w-[10px]' : 'h-[12px] w-[12px]'}
+                                animated={false}
+                              />
+                            </div>
                             <div 
-                                className="absolute bottom-0 left-0 right-0 h-[2px] opacity-60 rounded-b-2xl"
+                                className="absolute bottom-0 left-3 right-3 h-px opacity-55"
                                 style={{ backgroundColor: item.color }}
                             ></div>
                         </div>
+                          );
+                        })()
                     ))}
                 </div>
             </div>
