@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LucideHistory,
   LucideSearch,
+  CircleHelp,
   LucideSettings2,
   LucideVolume2,
   LucideVolumeX
@@ -142,25 +143,25 @@ const Toolbar = ({
   onCategory: (value: CategoryFilter) => void;
   onUpgradePreset?: (value: RiskPreset) => void;
 }) => (
-  <div className="grid grid-cols-2 gap-2 rounded-xl border border-indigo-300/20 bg-[#090f20] p-2 md:grid-cols-[90px_90px_130px_130px_minmax(0,1fr)_36px]">
-    <input value={min} onChange={(e) => onMin(e.target.value)} placeholder="Min" className="h-8 rounded-md border border-indigo-300/20 bg-[#060b19] px-2 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-indigo-300/50" />
-    <input value={max} onChange={(e) => onMax(e.target.value)} placeholder="Max" className="h-8 rounded-md border border-indigo-300/20 bg-[#060b19] px-2 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-indigo-300/50" />
-    <select value={sort} onChange={(e) => onSort(e.target.value as SortMode)} className="h-8 rounded-md border border-indigo-300/20 bg-[#060b19] px-2 text-xs text-slate-200 outline-none focus:border-indigo-300/50">
+  <div className="grid grid-cols-2 gap-2 rounded-xl border border-indigo-300/20 bg-[#070d1d]/95 p-2 md:grid-cols-[90px_90px_130px_130px_minmax(0,1fr)_36px]">
+    <input value={min} onChange={(e) => onMin(e.target.value)} placeholder="Min" className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-violet-300/60 ${min ? 'border-violet-300/45 bg-violet-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`} />
+    <input value={max} onChange={(e) => onMax(e.target.value)} placeholder="Max" className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-violet-300/60 ${max ? 'border-violet-300/45 bg-violet-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`} />
+    <select value={sort} onChange={(e) => onSort(e.target.value as SortMode)} className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none focus:border-violet-300/60 ${sort !== 'value_desc' && sort !== 'best_match' ? 'border-cyan-300/45 bg-cyan-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`}>
       {includeBestMatch && <option value="best_match">Best Match</option>}
       <option value="value_desc">High Value</option>
       <option value="value_asc">Low Value</option>
       <option value="name_asc">Name</option>
     </select>
-    <select value={category} onChange={(e) => onCategory(e.target.value as CategoryFilter)} className="h-8 rounded-md border border-indigo-300/20 bg-[#060b19] px-2 text-xs text-slate-200 outline-none focus:border-indigo-300/50">
+    <select value={category} onChange={(e) => onCategory(e.target.value as CategoryFilter)} className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none focus:border-violet-300/60 ${category !== 'all' ? 'border-cyan-300/45 bg-cyan-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`}>
       {CATEGORY_OPTIONS.map((option) => (
         <option key={option.value} value={option.value}>{option.label}</option>
       ))}
     </select>
     <div className="relative col-span-2 md:col-span-1">
       <LucideSearch className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
-      <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search item" className="h-8 w-full rounded-md border border-indigo-300/20 bg-[#060b19] pl-7 pr-2 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-indigo-300/50" />
+      <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search item" className={`h-9 w-full rounded-lg border pl-7 pr-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-violet-300/60 ${search ? 'border-violet-300/45 bg-violet-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`} />
     </div>
-    <button type="button" className="hidden h-8 items-center justify-center rounded-md border border-indigo-300/25 bg-[#0b1328] text-slate-300 md:flex" aria-label="Filters">
+    <button type="button" className="hidden h-9 items-center justify-center rounded-lg border border-indigo-300/25 bg-[#0b1328] text-slate-300 md:flex" aria-label="Filters">
       <LucideSettings2 className="h-3.5 w-3.5" />
     </button>
     {onUpgradePreset && (
@@ -186,8 +187,8 @@ const Toolbar = ({
   </div>
 );
 
-const SelectedPreview = ({ label, item, emptyText }: { label: string; item: EliteItem | null; emptyText: string }) => (
-  <div className="rounded-2xl border border-indigo-300/20 bg-gradient-to-b from-[#0d142b] to-[#070c18] p-4 sm:p-5">
+const SelectedPreview = ({ label, item, emptyText, actionLabel, onActivate }: { label: string; item: EliteItem | null; emptyText: string; actionLabel: string; onActivate: () => void }) => (
+  <div className="rounded-2xl border border-indigo-300/15 bg-gradient-to-b from-[#0a1122] to-[#060b15] p-4 sm:p-5">
     <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
     <div className="relative mt-4 flex h-[240px] flex-col items-center justify-between overflow-hidden rounded-xl border border-indigo-300/15 bg-[#050914] px-3 pb-3 pt-4 sm:h-[250px]">
       <div className="absolute top-4 h-28 w-40 bg-indigo-300/15 blur-3xl" />
@@ -208,6 +209,9 @@ const SelectedPreview = ({ label, item, emptyText }: { label: string; item: Elit
           <p className="mt-3 px-4 text-xs text-slate-400">{emptyText}</p>
         </div>
       )}
+      <button type="button" onClick={onActivate} className="relative z-10 mt-4 h-10 w-full max-w-[220px] rounded-full border border-indigo-300/35 bg-[#152343] text-xs font-bold uppercase tracking-[0.16em] text-slate-200 transition duration-200 hover:scale-[1.02] hover:border-indigo-200/55 hover:text-white">
+        {actionLabel}
+      </button>
     </div>
   </div>
 );
@@ -329,7 +333,7 @@ export default function UpgraderPage() {
       }
     })();
 
-    const handleResize = () => setSpinnerSize(window.innerWidth < 640 ? 220 : 290);
+    const handleResize = () => setSpinnerSize(window.innerWidth < 640 ? 245 : 330);
     handleResize();
     window.addEventListener('resize', handleResize);
 
@@ -571,23 +575,43 @@ export default function UpgraderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#04070f] pb-44 font-sans text-slate-200 lg:pb-32">
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-indigo-300/10 bg-[#070b17]/90 px-4 backdrop-blur-xl lg:px-8">
-        <h1 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-300">Elite Upgrader</h1>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_20%_-10%,rgba(79,70,229,0.32),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(56,189,248,0.16),transparent_35%),linear-gradient(180deg,#02050e_0%,#040712_40%,#02040d_100%)] pb-44 font-sans text-slate-200 lg:pb-32">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-end border-b border-indigo-300/10 bg-[#050916]/86 px-4 backdrop-blur-xl sm:hidden">
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 hover:text-white" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
             {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
           </button>
-          <button type="button" onClick={() => setIsHelpOpen(true)} className="h-9 rounded-lg border border-indigo-300/20 bg-[#0c1430] px-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-200">Help</button>
+          <button type="button" onClick={() => setIsHelpOpen(true)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 transition duration-200 hover:scale-[1.03] hover:text-white" aria-label="Upgrader help">
+            <CircleHelp className="h-4 w-4" />
+          </button>
         </div>
       </header>
 
       <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 p-3 sm:gap-6 sm:p-4 lg:p-8">
-        <section className="rounded-2xl border border-indigo-300/15 bg-[#080d1c] p-3 sm:p-5">
-          <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1fr_minmax(320px,460px)_1fr] lg:gap-6">
-            <SelectedPreview label="Your Item" item={sourcePreview} emptyText="Choose an item to upgrade" />
+        <section className="relative overflow-hidden rounded-3xl border border-indigo-300/20 bg-[#080d1c]/90 p-3 sm:p-4">
+          <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[70%] -translate-x-1/2 bg-[radial-gradient(circle,rgba(124,58,237,0.32),rgba(59,130,246,0.04)_65%,transparent)] blur-2xl" />
+          <div className="relative mb-3 flex flex-wrap items-end justify-between gap-2 border-b border-indigo-300/15 pb-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Upgrader</p>
+              <h2 className="mt-0.5 text-2xl font-black uppercase tracking-tight text-white sm:text-4xl">
+                ELITE <span className="bg-gradient-to-r from-sky-300 via-violet-300 to-fuchsia-300 bg-clip-text text-transparent">UPGRADER</span>
+              </h2>
+              <p className="mt-0.5 text-sm text-slate-300">Upgrade your items. Higher risk. Higher rewards.</p>
+            </div>
+            <div className="hidden items-center gap-2 sm:flex">
+              <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 hover:text-white" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
+                {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
+              </button>
+              <button type="button" onClick={() => setIsHelpOpen(true)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 transition duration-200 hover:scale-[1.03] hover:text-white" aria-label="Upgrader help">
+                <CircleHelp className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          <div className="relative grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1fr_minmax(320px,460px)_1fr] lg:gap-6">
+            <SelectedPreview label="Your Item" item={sourcePreview} emptyText="Choose an item to upgrade" actionLabel="Select Item" onActivate={() => setActiveTab('inventory')} />
 
-            <div className="flex flex-col items-center rounded-2xl border border-indigo-300/20 bg-gradient-to-b from-[#0b1228] to-[#060b17] p-4">
+            <div className="relative flex flex-col items-center rounded-2xl border border-violet-300/35 bg-gradient-to-b from-[#0f1a3b] to-[#070d1b] p-4 shadow-[0_0_44px_rgba(76,29,149,0.26)]">
+              <div className="pointer-events-none absolute -inset-y-12 -left-6 -right-6 bg-[radial-gradient(circle,rgba(139,92,246,0.24),transparent_70%)]" />
               <UpgraderSpinner
                 chance={chance}
                 hasSource={Boolean(source)}
@@ -615,15 +639,15 @@ export default function UpgraderPage() {
                 </div>
               )}
 
-              <div className="mt-3 flex w-full max-w-[340px] items-center justify-center gap-2">
-                <button onClick={handleUpgrade} disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting} className={`h-11 flex-1 rounded-xl border px-4 text-xs font-black uppercase tracking-[0.17em] transition duration-200 ${status === 'idle' && source && target && settings?.enabled ? 'border-violet-300/80 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-500 text-white shadow-[0_0_26px_rgba(139,92,246,0.35)] hover:brightness-110' : 'cursor-not-allowed border-indigo-300/20 bg-[#0a1124] text-slate-500'}`}>
+              <div className="mt-3 flex w-full max-w-[340px] flex-col items-center justify-center gap-2 sm:flex-row">
+                <button onClick={handleUpgrade} disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting} className={`h-11 w-full flex-1 rounded-xl border px-4 text-xs font-black uppercase tracking-[0.17em] transition duration-200 ${status === 'idle' && source && target && settings?.enabled ? 'border-violet-200/70 bg-gradient-to-r from-[#6d2eff] via-[#9444ff] to-[#4177ff] text-white shadow-[0_0_28px_rgba(139,92,246,0.4)] hover:brightness-110' : 'cursor-not-allowed border-indigo-300/20 bg-[#0a1124] text-slate-500'}`}>
                   {status === 'spinning' ? 'Upgrading...' : 'Upgrade'}
                 </button>
-                <button type="button" disabled={!source || !target || status === 'spinning'} onClick={handleDemoSpin} className={`h-9 rounded-lg border px-3 text-[10px] font-semibold uppercase tracking-[0.12em] transition ${source && target && status !== 'spinning' ? 'border-indigo-300/20 bg-[#0b1430]/60 text-slate-300 hover:border-indigo-300/40 hover:text-white' : 'cursor-not-allowed border-indigo-300/15 bg-[#0a1124] text-slate-500'}`}>Demo Spin</button>
+                <button type="button" disabled={!source || !target || status === 'spinning'} onClick={handleDemoSpin} className={`h-10 w-full rounded-xl border px-3 text-[10px] font-semibold uppercase tracking-[0.12em] transition sm:w-auto ${source && target && status !== 'spinning' ? 'border-indigo-300/25 bg-[#0b1430]/80 text-slate-300 hover:border-indigo-300/50 hover:text-white' : 'cursor-not-allowed border-indigo-300/15 bg-[#0a1124] text-slate-500'}`}>Demo Spin</button>
               </div>
             </div>
 
-            <SelectedPreview label="Item You Want" item={targetPreview} emptyText="Select your target item" />
+            <SelectedPreview label="Item You Want" item={targetPreview} emptyText="Select your target item" actionLabel="Select Target" onActivate={() => setActiveTab('targets')} />
           </div>
         </section>
 
@@ -633,7 +657,7 @@ export default function UpgraderPage() {
         </div>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-          <div className={`${activeTab === 'inventory' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/10 bg-[#070c19] p-3 sm:p-4 lg:flex`}>
+          <div className={`${activeTab === 'inventory' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/20 bg-[#070c19]/95 p-3 sm:p-4 lg:flex`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Your Items</h2>
               <span className="rounded-md border border-indigo-300/20 bg-[#101837] px-2 py-0.5 text-[10px] text-slate-300">{filteredInventoryItems.length}</span>
@@ -657,6 +681,11 @@ export default function UpgraderPage() {
                 />
               ))}
             </div>
+            {filteredInventoryItems.length === 0 && (
+              <div className="mt-4 rounded-xl border border-dashed border-indigo-300/25 bg-[#090f20] p-4 text-center text-xs text-slate-400">
+                No items match your filters. Adjust your search or range.
+              </div>
+            )}
             {filteredInventoryItems.length > visibleInventoryItems.length && (
               <button
                 type="button"
@@ -668,7 +697,7 @@ export default function UpgraderPage() {
             )}
           </div>
 
-          <div className={`${activeTab === 'targets' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/20 bg-[#0a1022] p-3 sm:p-4 lg:flex`}>
+          <div className={`${activeTab === 'targets' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/25 bg-[#0a1022]/95 p-3 sm:p-4 lg:flex`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">Site Items</h2>
               <span className="rounded-md border border-indigo-300/20 bg-[#101837] px-2 py-0.5 text-[10px] text-slate-300">{filteredTargetItems.length}</span>
@@ -721,6 +750,11 @@ export default function UpgraderPage() {
                 />
               ))}
             </div>
+            {filteredTargetItems.length === 0 && (
+              <div className="mt-4 rounded-xl border border-dashed border-indigo-300/25 bg-[#090f20] p-4 text-center text-xs text-slate-400">
+                No target items match your filters right now.
+              </div>
+            )}
             {filteredTargetItems.length > visibleTargetItems.length && (
               <button
                 type="button"
