@@ -256,10 +256,12 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
           <div className="relative z-10 grid items-end gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,440px)] lg:items-center">
             <div className="flex min-w-0 flex-col items-start lg:pr-4">
               <div className="relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-[#5f72b4] bg-[#11182f]/75 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.19em] text-slate-100 shadow-[0_0_22px_rgba(94,92,230,0.36)] backdrop-blur-md sm:text-[11px]">
-                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-[#4f86ff] to-[#d34dd8] text-[10px] text-white">✓</span>
+                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-[#4f86ff] to-[#d34dd8] text-white">
+                  <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" aria-hidden>
+                    <path d="M12 3l7 3v5c0 4.4-2.98 8.5-7 9.5-4.02-1-7-5.1-7-9.5V6l7-3z" stroke="currentColor" strokeWidth="2" />
+                  </svg>
+                </span>
                 <span>Provably Fair</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.95)]" />
-                <span className="text-emerald-300">Verified</span>
                 <span className="pointer-events-none absolute inset-y-0 w-[38%] bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[fairValueShimmer_3.4s_ease-in-out_infinite]" />
               </div>
 
