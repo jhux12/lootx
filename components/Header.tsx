@@ -321,7 +321,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   {showDailySpinReady ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_18%,rgba(96,165,250,0.25)_50%,transparent_82%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]" /> : null}
                   <Sparkles className={`relative z-10 h-4 w-4 ${showDailySpinReady ? 'motion-safe:animate-pulse text-blue-200' : ''}`} />
                   Rewards
-                  {showDailySpinReady ? <span className="relative z-10 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">Spin ready</span> : null}
                   <ChevronDown className={`h-4 w-4 transition-transform ${isRewardsMenuOpen ? 'rotate-180' : ''}`} />
                   {questReadyCount > 0 ? <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}
                 </button>
@@ -522,7 +521,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
               {showDailySpinReady ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(96,165,250,0.25)_50%,transparent_82%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]" /> : null}
               <h3 className={`relative z-10 text-xs font-bold uppercase tracking-wider ${showDailySpinReady ? 'text-blue-100' : 'text-neutral-500'}`}>Rewards</h3>
               <div className="relative z-10 flex items-center gap-2">
-                {showDailySpinReady ? <span className="rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">Spin ready</span> : null}
                 <ChevronDown className={`h-4 w-4 transition-transform ${openMobileSections.rewards ? 'rotate-180' : ''} ${showDailySpinReady ? 'text-blue-200' : 'text-neutral-400'}`} />
               </div>
             </button>
