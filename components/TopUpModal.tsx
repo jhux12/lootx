@@ -60,26 +60,6 @@ export const TopUpModal: React.FC = () => {
     return Math.max(0, computedMissing);
   }, [topUpModalIntent?.currentBalance, topUpModalIntent?.missingCoins, topUpModalIntent?.requiredCoins]);
   const isInsufficientBalanceFlow = topUpModalIntent?.reason === 'insufficient_balance' && missingCoins > 0;
-  const getBadgeClasses = (badge?: string) => {
-    const normalizedBadge = badge?.toLowerCase() ?? '';
-    if (normalizedBadge.includes('best')) {
-      return 'border-amber-400/80 bg-amber-500/10 text-amber-100';
-    }
-    if (normalizedBadge.includes('good')) {
-      return 'border-sky-400/80 bg-sky-500/10 text-sky-100';
-    }
-    return 'border-white/10 bg-[#0b0e14] text-gray-300';
-  };
-  const getSelectedClasses = (badge?: string) => {
-    const normalizedBadge = badge?.toLowerCase() ?? '';
-    if (normalizedBadge.includes('best')) {
-      return 'border-amber-400 bg-amber-500/20 text-white shadow-lg shadow-amber-900/20';
-    }
-    if (normalizedBadge.includes('good')) {
-      return 'border-sky-400 bg-sky-500/20 text-white shadow-lg shadow-sky-900/20';
-    }
-    return 'border-emerald-400 bg-emerald-500/10 text-white shadow-lg shadow-emerald-900/20';
-  };
   const getPackageImage = (pack: typeof activePackages[number]) =>
     pack.imageUrl?.trim() ||
     'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2F12.png?alt=media&token=a82f5343-7e3e-4cb9-9d7a-b0451d4e49b0';
@@ -88,7 +68,7 @@ export const TopUpModal: React.FC = () => {
     const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
     if (!baseCoins || bonusCoins <= 0) return '';
     const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
-    return `+${bonusPercent}% BONUS${bonusPercent === 50 ? ' 🔥' : ''}`;
+    return `+${bonusPercent}% BONUS`;
   };
   const getBonusSummaryLabel = (pack?: typeof activePackages[number]) => {
     if (!pack) return '';
@@ -98,27 +78,44 @@ export const TopUpModal: React.FC = () => {
     const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
     return `(+${bonusPercent}% BONUS)`;
   };
-  const getTierStyles = (index: number) => {
-    switch (index) {
-      case 0:
-        return 'opacity-90 border-white/10';
-      case 1:
-        return 'border-white/20 hover:scale-[1.02]';
-      case 2:
-        return 'scale-[1.06] border-emerald-300 shadow-[0_0_30px_rgba(16,185,129,0.5)] z-10';
-      case 3:
-        return 'border-blue-400/40 shadow-[0_0_15px_rgba(59,130,246,0.3)]';
-      case 4:
-        return 'bg-gradient-to-br from-purple-900/40 to-black border-purple-400/40';
-      case 5:
-        return 'bg-gradient-to-br from-yellow-500/20 to-black border-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.4)]';
-      default:
-        return '';
+  const getBadgeClasses = (badge?: string) => {
+    const normalizedBadge = badge?.toLowerCase() ?? '';
+    if (normalizedBadge.includes('best')) {
+      return 'bg-[#f7b733] text-[#15120a]';
     }
+    if (normalizedBadge.includes('popular')) {
+      return 'bg-[#6652ff] text-[#e8e6ff]';
+    }
+    return 'bg-white/15 text-white';
   };
-  const getTierVisualWeight = (index: number) => {
-    if (activePackages.length <= 1) return 0;
-    return index / (activePackages.length - 1);
+  const getCardAccentClasses = (badge?: string, isSelected?: boolean) => {
+    const normalizedBadge = badge?.toLowerCase() ?? '';
+    if (isSelected) {
+      return 'border-[#f7b733] shadow-[0_0_0_1px_rgba(247,183,51,0.6)]';
+    }
+    if (normalizedBadge.includes('best')) {
+      return 'border-[#9a7b22]';
+    }
+    if (normalizedBadge.includes('popular')) {
+      return 'border-[#5446c8]';
+    }
+    return 'border-[#2d2e7c]';
+  };
+  const getCardSurface = (badge?: string, isSelected?: boolean) => {
+    const normalizedBadge = badge?.toLowerCase() ?? '';
+    if (isSelected || normalizedBadge.includes('best')) {
+      return 'bg-[linear-gradient(180deg,#0a0a28_0%,#0b0d24_42%,#1a1023_100%)]';
+    }
+    return 'bg-[linear-gradient(180deg,#080b2e_0%,#070a24_55%,#060918_100%)]';
+  };
+  const getBadgeLabel = (badgeText: string) => {
+    if (badgeText.toLowerCase().includes('best')) {
+      return `★ ${badgeText}`;
+    }
+    if (badgeText.toLowerCase().includes('popular')) {
+      return `★ ${badgeText}`;
+    }
+    return badgeText;
   };
   const parseDisplayPrice = (value: string) => {
     const parsed = Number(value.replace(/[^0-9.]/g, ''));
@@ -296,24 +293,16 @@ export const TopUpModal: React.FC = () => {
                     )}
                     {/* Amount Selector */}
                     <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-gray-500">Select a pack</label>
-                    <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <div className="mb-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                         {activePackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             No packages available right now.
                           </div>
                         ) : (
-                          activePackages.map((pack, index) => {
+                          activePackages.map((pack) => {
                             const isSelected = selectedPackage?.id === pack.id;
-                            const isFocal = index === 2;
-                            const tierStyles = getTierStyles(index);
-                            const selectedStyles = isSelected
-                              ? 'ring-2 ring-emerald-400 scale-[1.08]'
-                              : isFocal
-                                ? 'scale-[1.06]'
-                                : '';
                             const bonusCoins = pack.bonusCoins ?? 0;
                             const bonusLabel = getBonusLabel(pack);
-                            const tierWeight = getTierVisualWeight(index);
                             const badgeText = pack.badge?.trim() ?? '';
                             return (
                               <button
@@ -323,53 +312,47 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative rounded-xl border bg-[#15171c] p-3.5 text-left transition-all duration-300
-                                    hover:scale-[1.03] hover:shadow-lg hover:brightness-110
-                                    ${!isSelected ? getBadgeClasses(pack.badge) : ''}
-                                    ${isSelected ? getSelectedClasses(pack.badge) : ''}
-                                    ${tierStyles}
-                                    ${selectedStyles}
-                                    ${isFocal ? 'hover:scale-[1.1]' : ''}`}
-                                  style={!isSelected ? { borderColor: `rgba(148, 163, 184, ${0.1 + tierWeight * 0.22})` } : undefined}
+                                  className={`relative overflow-hidden rounded-xl border p-2.5 text-left transition-colors duration-200 sm:p-3
+                                    ${getCardSurface(pack.badge, isSelected)}
+                                    ${getCardAccentClasses(pack.badge, isSelected)}
+                                    ${isSelected ? 'ring-1 ring-[#f7b733]/35' : ''}`}
                               >
                                   {badgeText && (
                                     <span
-                                      className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
-                                        badgeText.toLowerCase().includes('best')
-                                          ? 'bg-amber-500 text-black'
-                                          : badgeText.toLowerCase().includes('good')
-                                            ? 'bg-sky-500 text-black'
-                                            : 'bg-zinc-200 text-black'
-                                      }`}
+                                      className={`absolute right-2 top-2 rounded-full px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${getBadgeClasses(pack.badge)}`}
                                     >
-                                      {badgeText}
+                                      {getBadgeLabel(badgeText)}
                                     </span>
                                   )}
-                                  <div className="mb-3 overflow-hidden rounded-lg border border-white/5 bg-black/20 p-2.5">
+                                  <div className="relative z-10 flex items-start justify-between gap-2">
+                                    <div>
+                                      <CoinAmount
+                                        amount={pack.coins}
+                                        formatOptions={{ maximumFractionDigits: 0 }}
+                                        className="text-2xl font-black text-white sm:text-3xl"
+                                        iconClassName="h-5 w-5"
+                                      />
+                                      <p className="mt-0.5 text-sm font-bold uppercase tracking-wide text-[#8f97bf] sm:text-base">
+                                        Coins
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="relative z-10 mb-1.5 mt-1 overflow-hidden rounded-xl p-0.5">
                                     <img
                                       src={getPackageImage(pack)}
                                       alt={pack.name}
-                                      className="h-28 w-full object-contain sm:h-32"
+                                      className="h-36 w-full object-contain sm:h-40"
                                       loading="lazy"
                                       decoding="async"
                                     />
                                   </div>
-                                  <div className="flex flex-col gap-1.5">
-                                    <CoinAmount
-                                      amount={pack.coins}
-                                      formatOptions={{ maximumFractionDigits: 0 }}
-                                      className={`font-black text-white ${tierWeight > 0.66 ? 'text-2xl' : tierWeight > 0.33 ? 'text-xl' : 'text-lg'}`}
-                                      iconClassName="w-3.5 h-3.5"
-                                    />
-                                    <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500">
-                                      <span className="text-xs font-semibold text-gray-300">{pack.name}</span>
-                                      {bonusCoins > 0 && bonusLabel && (
-                                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
-                                          {bonusLabel}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="mt-1.5 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-center text-lg font-black text-white">
+                                  <div className="relative z-10 flex flex-col gap-1">
+                                    {bonusCoins > 0 && bonusLabel && (
+                                      <span className="text-center text-lg font-black tracking-wide text-[#7a4bff] sm:text-xl">
+                                        {bonusLabel}
+                                      </span>
+                                    )}
+                                    <div className={`rounded-lg px-3 py-1.5 text-center text-2xl font-black leading-none sm:text-3xl ${isSelected ? 'bg-gradient-to-r from-[#4f63ff] via-[#6f4dff] to-[#d64dd8] text-white' : 'border border-[#2f356a] bg-[#0a0d2f] text-[#eceffd]'}`}>
                                       {pack.displayPrice}
                                     </div>
                                   </div>
