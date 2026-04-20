@@ -90,7 +90,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   const spinnerCardRef = useRef<HTMLDivElement | null>(null);
 
   const SPINNER_CARD_WIDTH = 170;
-  const SPINNER_CARD_GAP = 4;
+  const SPINNER_CARD_GAP = 2;
   const SPINNER_DURATION_MS = 5200;
   const SPINNER_REPLAY_DELAY_MS = 800;
   const SPINNER_TRAVEL_MIN = 18;
@@ -383,7 +383,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                       <div
                         ref={idx === 0 ? spinnerCardRef : null}
                         key={`${item.id}-${idx}`}
-                        className={`group relative flex h-[168px] w-[132px] flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-[18px] border border-[#2b3961]/85 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] px-2.5 pb-3 pt-2.5 transition-all duration-300 hover:border-cyan-200/40 sm:h-[210px] sm:w-[170px] sm:px-3 sm:pb-3.5 sm:pt-3 ${
+                        className={`group relative flex h-[168px] w-[132px] flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-[18px] border border-[#2b3961]/85 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] px-2 pb-2.5 pt-2 transition-all duration-300 hover:border-cyan-200/40 sm:h-[210px] sm:w-[170px] sm:px-2.5 sm:pb-3 sm:pt-2.5 ${
                           isLandedWinner
                             ? 'border-[#f5c34a] shadow-[0_0_26px_rgba(245,195,74,0.32)]'
                             : ''
@@ -406,14 +406,14 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                           decoding="async"
                           src={item.image}
                           alt={item.name}
-                          className="relative z-10 mt-1 h-[96px] w-[96px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:mt-1.5 sm:h-[118px] sm:w-[118px]"
+                          className="relative z-10 mt-1 h-[96px] w-[96px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:h-[118px] sm:w-[118px]"
                         />
-                        <div className="relative z-10 mt-2 flex items-center justify-center px-1 text-[22px] font-extrabold leading-none text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] sm:text-[30px]">
+                        <div className="relative z-10 mt-1 flex items-center justify-center px-1 text-[13px] font-extrabold leading-none text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] sm:text-[16px]">
                           <CoinAmount
                             amount={item.price}
                             formatOptions={{ maximumFractionDigits: 0 }}
                             className="text-white"
-                            iconClassName="h-[15px] w-[15px] sm:h-[18px] sm:w-[18px]"
+                            iconClassName="h-[11px] w-[11px] sm:h-[13px] sm:w-[13px]"
                             animated={false}
                           />
                         </div>

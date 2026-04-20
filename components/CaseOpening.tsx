@@ -48,8 +48,8 @@ const DESKTOP_CARD_WIDTH = 170;
 const MOBILE_CARD_WIDTH = 124;
 const DESKTOP_CARD_HEIGHT = 210;
 const MOBILE_CARD_HEIGHT = 158;
-const DESKTOP_GAP_WIDTH = 8;
-const MOBILE_GAP_WIDTH = 6;
+const DESKTOP_GAP_WIDTH = 6;
+const MOBILE_GAP_WIDTH = 4;
 const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
 const MOBILE_SPINNER_VIEWPORT_HEIGHT = 186;
 
@@ -1988,7 +1988,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className={`group relative flex flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-[18px] border border-[#2b3961]/85 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] px-2.5 pb-2.5 pt-2 transition-colors duration-300 md:hover:scale-[1.015] md:hover:border-cyan-200/35 ${item.id === 'golden-ticket' ? 'border-yellow-500/60' : ''} ${isIdleWinner ? 'border-[#f5c34a]' : ''}`}
+                            className={`group relative flex flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-[18px] border border-[#2b3961]/85 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] px-2 pb-2 pt-2 transition-colors duration-300 md:hover:scale-[1.015] md:hover:border-cyan-200/35 ${item.id === 'golden-ticket' ? 'border-yellow-500/60' : ''} ${isIdleWinner ? 'border-[#f5c34a]' : ''}`}
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
@@ -2017,12 +2017,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 className={`relative z-10 mt-1 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] ${isMobileViewport ? 'h-[92px] w-[92px]' : 'h-[116px] w-[116px]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
                                 style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                             />
-                            <div className={`relative z-10 mt-1 inline-flex items-center justify-center text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] ${isMobileViewport ? 'text-[20px]' : 'text-[27px]'} font-extrabold leading-none`}>
+                            <div className={`relative z-10 mt-0.5 inline-flex items-center justify-center text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] ${isMobileViewport ? 'text-[12px]' : 'text-[16px]'} font-extrabold leading-none`}>
                               <CoinAmount
                                 amount={item.price}
                                 formatOptions={{ maximumFractionDigits: 0 }}
                                 className="text-white"
-                                iconClassName={isMobileViewport ? 'h-[14px] w-[14px]' : 'h-[17px] w-[17px]'}
+                                iconClassName={isMobileViewport ? 'h-[10px] w-[10px]' : 'h-[12px] w-[12px]'}
                                 animated={false}
                               />
                             </div>
