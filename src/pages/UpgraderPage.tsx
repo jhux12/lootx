@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LucideHistory,
   LucideSearch,
-  LucideCircleHelp,
+  CircleHelp,
   LucideSettings2,
   LucideVolume2,
   LucideVolumeX
@@ -582,7 +582,7 @@ export default function UpgraderPage() {
             {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
           </button>
           <button type="button" onClick={() => setIsHelpOpen(true)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 transition duration-200 hover:scale-[1.03] hover:text-white" aria-label="Upgrader help">
-            <LucideCircleHelp className="h-4 w-4" />
+            <CircleHelp className="h-4 w-4" />
           </button>
         </div>
       </header>
@@ -603,7 +603,7 @@ export default function UpgraderPage() {
                 {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
               </button>
               <button type="button" onClick={() => setIsHelpOpen(true)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 transition duration-200 hover:scale-[1.03] hover:text-white" aria-label="Upgrader help">
-                <LucideCircleHelp className="h-4 w-4" />
+                <CircleHelp className="h-4 w-4" />
               </button>
             </div>
           </div>
