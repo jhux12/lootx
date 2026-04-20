@@ -19,6 +19,7 @@ import {
   Twitter,
   User as UserIcon,
   Users,
+  X,
   Youtube
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
