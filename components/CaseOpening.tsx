@@ -2011,11 +2011,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   boxShadow: animationPhase === 'idle' ? `0 0 24px ${item.color}50` : 'none'
                                 }}
                             ></div>
-                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
+                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch pt-2 sm:pt-3">
                               <img loading="eager" decoding="async" 
                                   src={item.image} 
                                   alt={item.name} 
-                                  className={`object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] ${isMobileViewport ? 'h-[104px] w-[104px]' : 'h-[132px] w-[132px]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
+                                  className={`translate-y-1 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] ${isMobileViewport ? 'h-[104px] w-[104px]' : 'h-[132px] w-[132px] sm:translate-y-1.5'} ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
                                   style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                               />
                             </div>
