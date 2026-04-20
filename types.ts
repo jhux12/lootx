@@ -117,6 +117,8 @@ export interface CoinPackage {
   totalCoins?: number;
   defaultSelected?: boolean;
   imageUrl?: string;
+  walletImageUrl?: string;
+  secureImageUrl?: string;
   displayPrice: string;
   stripePriceId: string;
   badge?: string;
