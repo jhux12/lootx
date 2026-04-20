@@ -3054,6 +3054,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         bonusCoins: Math.max(0, Number(rawData.bonusCoins ?? 0)),
         totalCoins: Math.max(0, Number(rawData.coins ?? 0)) + Math.max(0, Number(rawData.bonusCoins ?? 0)),
         imageUrl: String(rawData.imageUrl ?? ''),
+        walletImageUrl: String(rawData.walletImageUrl ?? ''),
+        secureImageUrl: String(rawData.secureImageUrl ?? ''),
         displayPrice: String(rawData.displayPrice ?? ''),
         stripePriceId: String(rawData.stripePriceId ?? ''),
         badge: typeof rawData.badge === 'string' ? rawData.badge.trim() : undefined,

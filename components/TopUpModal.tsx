@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, Wallet, Loader2, CheckCircle } from 'lucide-react';
+import { X, Wallet, Loader2, CheckCircle, Shield, Lock, Sparkles, ArrowRight } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -83,6 +83,8 @@ export const TopUpModal: React.FC = () => {
   const getPackageImage = (pack: typeof activePackages[number]) =>
     pack.imageUrl?.trim() ||
     'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2F12.png?alt=media&token=a82f5343-7e3e-4cb9-9d7a-b0451d4e49b0';
+  const getWalletImage = (pack?: typeof activePackages[number]) => pack?.walletImageUrl?.trim() || '';
+  const getSecureImage = (pack?: typeof activePackages[number]) => pack?.secureImageUrl?.trim() || '';
   const getBonusLabel = (pack: typeof activePackages[number]) => {
     const baseCoins = Math.max(0, Number(pack.coins ?? 0));
     const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
@@ -254,13 +256,13 @@ export const TopUpModal: React.FC = () => {
   };
 
   return (
-    <div data-disable-pull-refresh="true" className="fixed inset-0 z-[100] flex items-start justify-center overflow-hidden overscroll-none p-3 py-4 sm:p-4 sm:py-6 sm:items-center">
+    <div data-disable-pull-refresh="true" className="fixed inset-0 z-[100] flex items-start justify-center overflow-hidden overscroll-none p-2 py-3 sm:p-4 sm:items-center">
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in" 
         onClick={handleClose}
       ></div>
       
-      <div className="relative flex max-h-[calc(100dvh-2rem)] min-h-0 w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-amber-500/20 bg-[#08090d] shadow-2xl shadow-black/60 animate-in zoom-in-95">
+      <div className="relative flex max-h-[96dvh] min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-violet-500/20 bg-[#060b1a] shadow-2xl shadow-black/60 animate-in zoom-in-95">
         
         {success ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -270,14 +272,29 @@ export const TopUpModal: React.FC = () => {
             </div>
         ) : (
             <>
-                <div className="flex items-start justify-between border-b border-white/10 px-4 py-4 sm:px-6">
+                <div className="flex items-start justify-between border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
                     <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10">
-                        <Wallet className="h-5 w-5 text-amber-300" />
+                      <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-violet-400/25 bg-violet-500/10">
+                        {getWalletImage(selectedPackage) ? (
+                          <img src={getWalletImage(selectedPackage)} alt="Wallet" className="h-7 w-7 object-contain" />
+                        ) : (
+                          <Wallet className="h-5 w-5 text-violet-300" />
+                        )}
                       </div>
                       <div>
-                        <h2 className="text-xl font-black text-white sm:text-3xl">Get Coins</h2>
-                        <p className="mt-1 text-xs text-gray-400 sm:text-sm">Select a coin package</p>
+                        <h2 className="text-2xl font-black uppercase tracking-wide text-white sm:text-4xl">Top Up</h2>
+                        <p className="mt-1 text-xs text-gray-400 sm:text-sm">Add coins to your balance instantly</p>
+                      </div>
+                    </div>
+                    <div className="mr-3 hidden items-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-xs text-gray-200 sm:flex">
+                      {getSecureImage(selectedPackage) ? (
+                        <img src={getSecureImage(selectedPackage)} alt="100% Secure" className="h-5 w-5 object-contain" />
+                      ) : (
+                        <Shield className="h-4 w-4 text-emerald-300" />
+                      )}
+                      <div className="leading-tight">
+                        <p className="font-semibold text-white">100% Secure</p>
+                        <p className="text-[11px] text-gray-400">Encrypted Payments</p>
                       </div>
                     </div>
                     <button 
@@ -288,15 +305,26 @@ export const TopUpModal: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-5 [-webkit-overflow-scrolling:touch] sm:px-6 sm:py-6">
+                <div className="flex-1 min-h-0 overflow-hidden px-4 py-4 sm:px-6 sm:py-5">
                     {isPostFreeBoxFlow && (
                       <p className="mb-3 rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100">
                         Covers your first box + extra spins
                       </p>
                     )}
-                    {/* Amount Selector */}
-                    <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-gray-500">Select a pack</label>
-                    <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <div className="mb-4 flex items-center gap-3 rounded-2xl border border-violet-400/25 bg-gradient-to-r from-violet-500/15 via-[#2f1f52]/20 to-violet-500/10 px-3 py-3 sm:px-4">
+                      <img src={getPackageImage(selectedPackage ?? activePackages[0])} alt="Bonus" className="h-12 w-12 rounded-lg object-contain sm:h-14 sm:w-14" />
+                      <div className="flex-1">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-violet-300 sm:text-xs">First time bonus</p>
+                        <p className="text-sm font-semibold text-white sm:text-xl">Get +10% extra coins on your first top up!</p>
+                      </div>
+                      <button className="hidden rounded-xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-violet-900/40 sm:block">
+                        Apply Bonus
+                      </button>
+                    </div>
+                    <div className="mb-4 grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                      <div className="min-h-0">
+                        <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">Select a coin package</label>
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
                         {activePackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             No packages available right now.
@@ -323,13 +351,13 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative rounded-xl border bg-[#15171c] p-3.5 text-left transition-all duration-300
-                                    hover:scale-[1.03] hover:shadow-lg hover:brightness-110
+                                  className={`relative rounded-xl border bg-[#10172a] p-2.5 text-left transition-all duration-300
+                                    hover:scale-[1.02] hover:shadow-lg hover:brightness-110
                                     ${!isSelected ? getBadgeClasses(pack.badge) : ''}
                                     ${isSelected ? getSelectedClasses(pack.badge) : ''}
                                     ${tierStyles}
                                     ${selectedStyles}
-                                    ${isFocal ? 'hover:scale-[1.1]' : ''}`}
+                                    ${isFocal ? 'hover:scale-[1.04]' : ''}`}
                                   style={!isSelected ? { borderColor: `rgba(148, 163, 184, ${0.1 + tierWeight * 0.22})` } : undefined}
                               >
                                   {badgeText && (
@@ -345,31 +373,31 @@ export const TopUpModal: React.FC = () => {
                                       {badgeText}
                                     </span>
                                   )}
-                                  <div className="mb-3 overflow-hidden rounded-lg border border-white/5 bg-black/20 p-2.5">
+                                  <div className="mb-2 overflow-hidden rounded-lg border border-white/5 bg-black/20 p-2">
                                     <img
                                       src={getPackageImage(pack)}
                                       alt={pack.name}
-                                      className="h-28 w-full object-contain sm:h-32"
+                                      className="h-16 w-full object-contain sm:h-20"
                                       loading="lazy"
                                       decoding="async"
                                     />
                                   </div>
-                                  <div className="flex flex-col gap-1.5">
+                                  <div className="flex flex-col gap-1">
                                     <CoinAmount
                                       amount={pack.coins}
                                       formatOptions={{ maximumFractionDigits: 0 }}
-                                      className={`font-black text-white ${tierWeight > 0.66 ? 'text-2xl' : tierWeight > 0.33 ? 'text-xl' : 'text-lg'}`}
-                                      iconClassName="w-3.5 h-3.5"
+                                      className="font-black text-lg text-white sm:text-2xl"
+                                      iconClassName="h-3 w-3 sm:h-3.5 sm:w-3.5"
                                     />
                                     <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500">
-                                      <span className="text-xs font-semibold text-gray-300">{pack.name}</span>
+                                      <span className="text-[11px] font-semibold text-gray-300">{pack.name}</span>
                                       {bonusCoins > 0 && bonusLabel && (
                                         <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
                                           {bonusLabel}
                                         </span>
                                       )}
                                     </div>
-                                    <div className="mt-1.5 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-center text-lg font-black text-white">
+                                    <div className="mt-1 rounded-lg border border-white/10 bg-white/10 px-2 py-1.5 text-center text-lg font-black text-white">
                                       {pack.displayPrice}
                                     </div>
                                   </div>
@@ -377,6 +405,26 @@ export const TopUpModal: React.FC = () => {
                             );
                           })
                         )}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-[#0b1326] p-3 sm:p-4">
+                        <p className="mb-3 text-lg font-black uppercase text-gray-200">Your Order</p>
+                        <div className="space-y-2 text-sm text-gray-300">
+                          <div className="flex items-center justify-between"><span>Coins Package</span><span className="font-semibold text-white">{Math.round(selectedPackage?.coins ?? 0).toLocaleString()}</span></div>
+                          <div className="flex items-center justify-between"><span>Bonus</span><span className="font-semibold text-emerald-300">+{Math.round(selectedPackage?.bonusCoins ?? 0).toLocaleString()} {getBonusSummaryLabel(selectedPackage)}</span></div>
+                          <div className="my-2 h-px bg-white/10"></div>
+                          <div className="flex items-center justify-between text-base"><span>You Pay</span><span className="text-2xl font-black text-white">{formattedDepositAmount}</span></div>
+                          <div className="rounded-xl bg-gradient-to-r from-violet-500/15 to-fuchsia-500/15 p-3 text-center">
+                            <p className="text-sm font-semibold text-violet-200">You Receive</p>
+                            <CoinAmount amount={totalCoins} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 text-3xl font-black text-white" iconClassName="h-5 w-5" />
+                          </div>
+                        </div>
+                        <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-[#0d162d] p-3 text-xs">
+                          <div className="flex items-center gap-2 text-gray-200"><Sparkles className="h-3.5 w-3.5 text-cyan-300" />Instant Delivery</div>
+                          <div className="flex items-center gap-2 text-gray-200"><Lock className="h-3.5 w-3.5 text-violet-300" />Secure Payment</div>
+                          <div className="flex items-center gap-2 text-gray-200"><Shield className="h-3.5 w-3.5 text-fuchsia-300" />Best Prices</div>
+                        </div>
+                      </div>
                     </div>
 
                     {errorMessage && (
@@ -386,36 +434,28 @@ export const TopUpModal: React.FC = () => {
                     )}
 
                 </div>
-                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#10131c]/95 px-4 py-3.5 backdrop-blur-md sm:px-6 sm:py-4">
-                  <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-gray-400">Total Amount</p>
-                  <div className="mb-3.5 flex items-center justify-between rounded-xl border border-white/10 bg-[#1a2030] px-3 py-3 sm:px-4">
-                    <CoinAmount
-                      amount={selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))}
-                      formatOptions={{ maximumFractionDigits: 0 }}
-                      className="text-xl font-black text-white"
-                      iconClassName="h-5 w-5"
-                    />
-                    <span className="text-sm font-semibold text-cyan-300">
-                      You get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} coins{' '}
-                      {getBonusSummaryLabel(selectedPackage)}
-                    </span>
-                  </div>
+                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#10131c]/95 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-4">
                   <button
                     onClick={handleDeposit}
                     disabled={isLoading || !selectedPackage}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 py-3.5 text-base font-black uppercase tracking-wide text-white shadow-lg shadow-violet-900/30 transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isLoading ? (
                       <>
                         <Loader2 className="h-5 w-5 animate-spin" /> Processing...
                       </>
                     ) : (
-                      <span>
-                        Get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} Coins for {formattedDepositAmount}
+                      <span className="flex items-center gap-2">
+                        <Lock className="h-4 w-4" />
+                        Continue to Payment
+                        <ArrowRight className="h-4 w-4" />
                       </span>
                     )}
                   </button>
-                  <p className="mt-2 text-center text-[10px] text-gray-500">
+                  {effectiveRate ? (
+                    <p className="mt-2 text-center text-[10px] text-cyan-300">≈ {effectiveRate.toLocaleString()} coins per $1</p>
+                  ) : null}
+                  <p className="mt-1 text-center text-[10px] text-gray-500">
                     By depositing you agree to our Terms of Service.
                   </p>
                 </div>
