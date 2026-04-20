@@ -54,7 +54,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     isAuthenticated,
     openAuthModal,
     setShowTopUpModal,
-    logout
+    logout,
+    boxes
   } = useGame();
   const { playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -64,6 +65,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const [claimedTodayCount, setClaimedTodayCount] = useState(0);
   const [locallyClaimedQuestIds, setLocallyClaimedQuestIds] = useState<Record<string, string>>({});
   const [showActivity, setShowActivity] = useState(false);
+  const [isFreeBoxTooltipDismissed, setIsFreeBoxTooltipDismissed] = useState(false);
   const [openMobileSections, setOpenMobileSections] = useState({
     games: true,
     rewards: false,
@@ -79,6 +81,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const dailyCooldownMs = 24 * 60 * 60 * 1000;
   const isDailySpinReady = !lastDailyClaim || (lastDailyClaim + dailyCooldownMs) <= Date.now();
   const showDailySpinReady = isAuthenticated && isDailySpinReady;
+  const hasFreeSignupBox = isAuthenticated && boxes.some((box) => box.isDaily) && !user.lastFreeBoxClaim;
+  const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsFreeBoxTooltipDismissed(window.sessionStorage.getItem('pullz:free-box-tooltip-dismissed') === '1');
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -234,6 +243,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     setOpenMobileSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
+  const dismissFreeBoxTooltip = () => {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('pullz:free-box-tooltip-dismissed', '1');
+    }
+    setIsFreeBoxTooltipDismissed(true);
+  };
+
   return (
     <>
     <div className="relative z-50">
@@ -370,9 +386,26 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   <button onClick={() => navigate('PROFILE')} className="text-right">
                     <span className="block text-sm font-bold text-white hover:text-indigo-400">{user.name}</span>
                   </button>
-                  <button type="button" onClick={() => navigate('PROFILE')}>
-                    <img src={user.avatar} alt={user.name} className="h-9 w-9 rounded-lg border border-white/10 object-cover" />
-                  </button>
+                  <div className="relative flex items-center">
+                    <button type="button" onClick={() => navigate('PROFILE')}>
+                      <img src={user.avatar} alt={user.name} className="h-9 w-9 rounded-lg border border-white/10 object-cover" />
+                    </button>
+                    {showFreeBoxTooltip ? (
+                      <div className="absolute left-1/2 top-full z-30 mt-2 w-max -translate-x-1/2 rounded-md border border-emerald-400/35 bg-[#0f1517] px-2 py-1 text-[10px] font-semibold text-emerald-200 shadow-lg">
+                        <div className="flex items-center gap-1.5">
+                          <span>Free box available</span>
+                          <button
+                            type="button"
+                            onClick={dismissFreeBoxTooltip}
+                            className="rounded p-0.5 text-emerald-100/80 transition-colors hover:bg-white/10 hover:text-white"
+                            aria-label="Dismiss free box tooltip"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                   <button
                     onClick={() => {
                       playSound('click');
