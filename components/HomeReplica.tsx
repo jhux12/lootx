@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, ShieldCheck } from 'lucide-react';
 import { CaseItem, MysteryBox } from '../types';
 import { TopDropsSlider } from './TopDropsSlider';
 import { CoinAmount } from './CoinAmount';
@@ -209,6 +209,22 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 
 
   const fairValueBannerKeyframes = `
+    @keyframes provablyBadgeEntrance {
+      0% { opacity: 0; transform: translate3d(0, 6px, 0) scale(0.98); }
+      100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    @keyframes provablyBadgePulse {
+      0% { box-shadow: 0 0 0 rgba(111,125,255,0); }
+      45% { box-shadow: 0 0 26px rgba(111,125,255,0.32), 0 0 14px rgba(34,211,238,0.2); }
+      100% { box-shadow: 0 0 0 rgba(111,125,255,0); }
+    }
+
+    @keyframes provablyBadgeShimmer {
+      0% { transform: translateX(-130%); }
+      100% { transform: translateX(130%); }
+    }
+
     @keyframes fairValueGlow {
       0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.7; }
       50% { transform: translate3d(6%, -2%, 0) scale(1.08); opacity: 1; }
@@ -238,6 +254,11 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
     setView({ type: 'BOXES' });
   };
 
+  const handleProvablyFairClick = () => {
+    window.history.replaceState({}, '', '/provably-fair#verify');
+    setView({ type: 'PROVABLY_FAIR' });
+  };
+
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
       <style>{fairValueBannerKeyframes}</style>
@@ -250,6 +271,18 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         <div className="relative mx-auto flex w-full max-w-[1240px] px-4 pt-8 text-left sm:px-6 sm:pt-10 lg:px-8">
           <div className="relative z-10 flex w-full items-end justify-between gap-3 sm:gap-5 lg:min-h-[360px] lg:items-center lg:pr-[18rem]">
             <div className="flex min-w-0 flex-1 flex-col items-start pb-6 sm:pb-8 lg:pb-10">
+              <button
+                type="button"
+                onClick={handleProvablyFairClick}
+                className="group relative mb-4 inline-flex items-center gap-2 overflow-hidden rounded-full border border-white/15 bg-[linear-gradient(135deg,rgba(12,17,30,0.88),rgba(20,24,38,0.82))] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-100 backdrop-blur-sm transition hover:border-cyan-200/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/65 sm:mb-5 sm:px-3.5 sm:py-2 sm:text-[11px] sm:tracking-[0.18em] motion-safe:animate-[provablyBadgeEntrance_500ms_ease-out_both,provablyBadgePulse_1200ms_ease-out_520ms_1]"
+                aria-label="View provably fair verification"
+              >
+                <span className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-inset ring-[#8f67ff]/35" />
+                <span className="pointer-events-none absolute inset-y-[1px] left-[-50%] hidden w-[28%] bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-30 sm:block sm:motion-safe:animate-[provablyBadgeShimmer_900ms_ease-out_1.6s_1,provablyBadgeShimmer_900ms_ease-out_11.5s_infinite]" />
+                <ShieldCheck className="h-3.5 w-3.5 text-cyan-300 sm:h-4 sm:w-4" />
+                <span>Provably Fair ✓</span>
+                <span className="hidden text-[9px] tracking-[0.2em] text-emerald-300/85 sm:inline">Verified</span>
+              </button>
               <h1 className="relative max-w-4xl text-[2.15rem] font-black uppercase italic leading-[0.9] tracking-tight text-white sm:pt-1 sm:text-5xl lg:text-7xl">
                 <span className="inline-block">Fair Value</span>{' '}
                 <span className="relative inline-block bg-gradient-to-r from-[#6f7dff] via-[#8f67ff] to-[#ec68c8] bg-clip-text text-transparent before:absolute before:inset-x-0 before:bottom-1 before:h-[0.18em] before:rounded-full before:bg-gradient-to-r before:from-[#6f7dff]/0 before:via-[#8f67ff]/60 before:to-[#ec68c8]/0 before:blur-md before:content-['']">Guarantee</span>
@@ -257,6 +290,14 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
               <p className="relative mt-4 max-w-[13rem] text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-300 sm:max-w-md sm:text-sm sm:tracking-[0.2em] lg:max-w-3xl lg:text-base lg:tracking-[0.22em]">
                 Discover, open &amp; collect on Pullz
               </p>
+              <div className="mt-3 hidden items-center gap-5 text-[11px] font-medium text-gray-300/70 sm:flex lg:gap-7">
+                <span>✓ Provably Fair</span>
+                <span>✓ Real Items</span>
+                <span>✓ Instant Payouts</span>
+              </div>
+              <div className="mt-2 text-[11px] font-medium text-gray-300/65 sm:hidden">
+                ✓ Provably Fair
+              </div>
             </div>
 
             <img
