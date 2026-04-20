@@ -228,15 +228,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     </>
   ), [openAuthModal, playSound]);
 
+  const dailySpinReadyAnimationClass =
+    'relative isolate overflow-hidden motion-safe:animate-[rewardReadyFloat_2.8s_ease-in-out_infinite] before:pointer-events-none before:absolute before:inset-0 before:rounded-inherit before:bg-[linear-gradient(120deg,transparent_10%,rgba(255,255,255,0.14)_45%,transparent_80%)] before:opacity-0 before:motion-safe:animate-[rewardReadyShimmer_2.8s_ease-in-out_infinite]';
+
   const dailySpinDesktopClass = `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white transition-all ${
     showDailySpinReady
-      ? 'border border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
+      ? `${dailySpinReadyAnimationClass} border border-blue-400/70 bg-blue-500/10 shadow-[0_0_22px_rgba(59,130,246,0.35)] hover:bg-blue-500/20`
       : 'hover:bg-white/5'
   }`;
 
   const dailySpinMobileClass = `${drawerCardClass} transition-all ${
     showDailySpinReady
-      ? 'border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
+      ? `${dailySpinReadyAnimationClass} border-blue-400/70 bg-blue-500/10 shadow-[0_0_22px_rgba(59,130,246,0.35)] hover:bg-blue-500/20`
       : ''
   }`;
 
@@ -597,7 +600,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       </div>
     </div>
     <ActivityDrawer open={showActivity} onClose={() => setShowActivity(false)} />
-    <style>{`@media (prefers-reduced-motion: reduce){.ambient-pulse{animation:none!important;}}`}</style>
+    <style>{`
+      @keyframes rewardReadyFloat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-2px); }
+      }
+      @keyframes rewardReadyShimmer {
+        0% { opacity: 0; transform: translateX(-115%); }
+        20% { opacity: 1; }
+        60% { opacity: 0; }
+        100% { opacity: 0; transform: translateX(115%); }
+      }
+      @media (prefers-reduced-motion: reduce){
+        .ambient-pulse{animation:none!important;}
+      }
+    `}</style>
     </>
   );
 };
