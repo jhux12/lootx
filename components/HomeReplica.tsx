@@ -223,6 +223,11 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       0% { transform: translateX(-140%); }
       100% { transform: translateX(140%); }
     }
+
+    @keyframes fairValuePulse {
+      0%, 100% { opacity: 0.6; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.04); }
+    }
   `;
 
   const handleCategoryCardClick = (index: number) => {
@@ -241,31 +246,66 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
       <style>{fairValueBannerKeyframes}</style>
-      <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-hidden border-y border-white/10 bg-[#11151f] shadow-[0_35px_70px_-50px_rgba(0,0,0,1)]">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,#121827_0%,#171b2b_32%,#11151f_58%,#0f1320_100%)]" />
-        <div className="pointer-events-none absolute inset-y-0 left-[-10%] hidden w-[38%] bg-[radial-gradient(circle,rgba(111,125,255,0.32)_0%,rgba(111,125,255,0.08)_42%,transparent_72%)] sm:block sm:animate-[fairValueGlow_8s_ease-in-out_infinite]" />
-        <div className="pointer-events-none absolute right-[-8%] top-[-15%] hidden h-[150%] w-[38%] bg-[radial-gradient(circle,rgba(236,104,200,0.24)_0%,rgba(236,104,200,0.08)_38%,transparent_70%)] sm:block sm:animate-[fairValueFloat_10s_ease-in-out_infinite]" />
-        <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(255,255,255,0.05)_0,rgba(255,255,255,0.05)_2px,transparent_2px,transparent_44px),repeating-linear-gradient(-58deg,rgba(255,255,255,0.045)_0,rgba(255,255,255,0.045)_2px,transparent_2px,transparent_44px)] opacity-20" />
+      <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-hidden border-y border-white/10 bg-[#070b14] shadow-[0_35px_70px_-50px_rgba(0,0,0,1)]">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,#070b16_0%,#0c1222_35%,#0a1020_58%,#070b14_100%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(123,139,255,0.08)_0,rgba(123,139,255,0.08)_1px,transparent_1px,transparent_32px),repeating-linear-gradient(-58deg,rgba(236,104,200,0.08)_0,rgba(236,104,200,0.08)_1px,transparent_1px,transparent_32px)] opacity-25" />
+        <div className="pointer-events-none absolute left-[-8%] top-[-18%] h-[140%] w-[44%] bg-[radial-gradient(circle,rgba(66,117,255,0.34)_0%,rgba(55,108,255,0.13)_40%,transparent_72%)] sm:animate-[fairValueGlow_10s_ease-in-out_infinite]" />
+        <div className="pointer-events-none absolute right-[-12%] top-[-24%] h-[160%] w-[46%] bg-[radial-gradient(circle,rgba(241,76,193,0.30)_0%,rgba(170,86,255,0.14)_38%,transparent_74%)] sm:animate-[fairValueFloat_11s_ease-in-out_infinite]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_38%,rgba(3,6,12,0.66)_100%)]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-        <div className="relative mx-auto flex w-full max-w-[1240px] px-4 pt-8 text-left sm:px-6 sm:pt-10 lg:px-8">
-          <div className="relative z-10 flex w-full items-end justify-between gap-3 sm:gap-5 lg:min-h-[360px] lg:items-center lg:pr-[18rem]">
-            <div className="flex min-w-0 flex-1 flex-col items-start pb-6 sm:pb-8 lg:pb-10">
-              <h1 className="relative max-w-4xl text-[2.15rem] font-black uppercase italic leading-[0.9] tracking-tight text-white sm:pt-1 sm:text-5xl lg:text-7xl">
+        <div className="relative mx-auto w-full max-w-[1240px] px-4 py-7 text-left sm:px-6 sm:py-9 lg:px-8 lg:py-11">
+          <div className="relative z-10 grid items-end gap-3 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
+            <div className="flex min-w-0 flex-col items-start">
+              <div className="relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-[#3f4e7f] bg-[#11182f]/75 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.19em] text-slate-100 shadow-[0_0_24px_rgba(94,92,230,0.4)] backdrop-blur-md sm:text-[11px]">
+                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-[#4f86ff] to-[#d34dd8] text-[10px] text-white">✓</span>
+                <span>Provably Fair</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.95)]" />
+                <span className="text-emerald-300">Verified</span>
+                <span className="pointer-events-none absolute inset-y-0 w-[38%] bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[fairValueShimmer_3.4s_ease-in-out_infinite]" />
+              </div>
+
+              <h1 className="relative mt-4 max-w-4xl text-[2.3rem] font-black uppercase italic leading-[0.9] tracking-tight text-white sm:text-6xl lg:text-[5.25rem]">
                 <span className="inline-block">Fair Value</span>{' '}
-                <span className="relative inline-block bg-gradient-to-r from-[#6f7dff] via-[#8f67ff] to-[#ec68c8] bg-clip-text text-transparent before:absolute before:inset-x-0 before:bottom-1 before:h-[0.18em] before:rounded-full before:bg-gradient-to-r before:from-[#6f7dff]/0 before:via-[#8f67ff]/60 before:to-[#ec68c8]/0 before:blur-md before:content-['']">Guarantee</span>
+                <span className="relative inline-block bg-gradient-to-r from-[#5d7dff] via-[#8e68ff] to-[#f44ad4] bg-clip-text text-transparent">Guarantee</span>
               </h1>
-              <p className="relative mt-4 max-w-[13rem] text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-300 sm:max-w-md sm:text-sm sm:tracking-[0.2em] lg:max-w-3xl lg:text-base lg:tracking-[0.22em]">
+              <p className="relative mt-3 max-w-md text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 sm:text-sm lg:text-base">
                 Discover, open &amp; collect on Pullz
               </p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] font-medium text-slate-300 sm:text-sm">
+                <span className="inline-flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />Provably Fair</span>
+                <span className="inline-flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-violet-300" />Real Items</span>
+                <span className="hidden items-center gap-2 sm:inline-flex"><span className="h-1.5 w-1.5 rounded-full bg-fuchsia-300" />Instant Payouts</span>
+              </div>
+              <div className="mt-5 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+                <button
+                  type="button"
+                  onClick={onSignUp}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-[#4f67ff] via-[#7a57ff] to-[#cc42d4] px-6 text-sm font-extrabold uppercase tracking-[0.1em] text-white shadow-[0_12px_36px_-20px_rgba(124,58,237,0.85)] transition hover:brightness-110"
+                >
+                  Sign Up &amp; Get Free Box
+                </button>
+                <button
+                  type="button"
+                  onClick={onViewAllBoxes}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/20 bg-[#090d19]/70 px-6 text-sm font-semibold uppercase tracking-[0.1em] text-slate-100 transition hover:border-violet-300/50 hover:bg-white/10"
+                >
+                  Learn More
+                </button>
+              </div>
             </div>
 
-            <img
-              src="/heroperson.png"
-              alt="Pullz fair value guarantee hero"
-              loading="lazy"
-              decoding="async"
-              className="pointer-events-none relative z-0 h-auto w-[98px] shrink-0 self-end object-contain sm:w-[132px] lg:absolute lg:bottom-0 lg:right-8 lg:w-[220px] xl:right-12 xl:w-[250px]"
-            />
+            <div className="relative flex items-end justify-center pt-2 lg:justify-end lg:pt-0">
+              <div className="pointer-events-none absolute bottom-[14%] h-[230px] w-[230px] rounded-full bg-[radial-gradient(circle,rgba(52,203,255,0.5)_0%,rgba(148,65,246,0.28)_43%,transparent_72%)] blur-2xl animate-[fairValuePulse_6s_ease-in-out_infinite] sm:h-[330px] sm:w-[330px] lg:bottom-[12%] lg:h-[440px] lg:w-[440px]" />
+              <div className="pointer-events-none absolute bottom-[8%] h-[100px] w-[62%] rounded-full bg-cyan-300/20 blur-2xl" />
+              <img
+                src="/heroperson.png"
+                alt="Pullz fair value guarantee hero"
+                loading="lazy"
+                decoding="async"
+                className="pointer-events-none relative z-10 h-auto w-[170px] max-w-full object-contain drop-shadow-[0_0_22px_rgba(56,189,248,0.45)] sm:w-[240px] lg:w-[340px] xl:w-[390px]"
+                style={{ filter: 'drop-shadow(0 0 28px rgba(99,102,241,0.35)) drop-shadow(0 0 58px rgba(236,72,153,0.25))' }}
+              />
+            </div>
           </div>
         </div>
       </section>
