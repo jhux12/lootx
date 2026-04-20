@@ -252,7 +252,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(123,139,255,0.07)_0,rgba(123,139,255,0.07)_1px,transparent_1px,transparent_34px),repeating-linear-gradient(-58deg,rgba(236,104,200,0.07)_0,rgba(236,104,200,0.07)_1px,transparent_1px,transparent_34px)] opacity-20 sm:opacity-24" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_38%,rgba(3,6,12,0.66)_100%)]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-        <div className="relative mx-auto w-full px-4 pb-3 pt-4 text-left sm:px-6 sm:pb-[14px] sm:pt-[18px] lg:px-8 lg:pb-3 lg:pt-4">
+        <div className="relative mx-auto w-full px-4 pb-1 pt-4 text-left sm:px-6 sm:pb-2 sm:pt-[18px] lg:px-8 lg:pb-1 lg:pt-4">
           <div className="relative z-10 grid items-end gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,440px)] lg:items-center">
             <div className="flex min-w-0 flex-col items-start lg:pr-4">
               <div className="relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-[#5f72b4] bg-[#11182f]/75 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.19em] text-slate-100 shadow-[0_0_22px_rgba(94,92,230,0.36)] backdrop-blur-md sm:text-[11px]">
@@ -295,17 +295,17 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
               </div>
             </div>
 
-            <div className="relative flex min-h-[152px] items-end justify-center pt-0 sm:min-h-[182px] lg:min-h-[240px] lg:justify-end">
-              <div className="pointer-events-none absolute bottom-[11%] h-[210px] w-[240px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(52,203,255,0.4)_0%,rgba(148,65,246,0.24)_44%,transparent_78%)] blur-[42px] animate-[fairValuePulse_9s_ease-in-out_infinite] sm:h-[270px] sm:w-[320px] sm:bg-[radial-gradient(ellipse_at_center,rgba(52,203,255,0.5)_0%,rgba(148,65,246,0.28)_42%,transparent_78%)] lg:bottom-[10%] lg:h-[360px] lg:w-[460px]" />
-              <div className="pointer-events-none absolute bottom-[16%] h-[140px] w-[180px] rounded-full bg-[radial-gradient(circle,rgba(121,76,255,0.26)_0%,rgba(33,189,255,0.19)_48%,transparent_76%)] blur-[34px] sm:h-[180px] sm:w-[230px] lg:h-[280px] lg:w-[320px]" />
-              <div className="pointer-events-none absolute bottom-[8%] h-[100px] w-[62%] rounded-full bg-cyan-300/20 blur-2xl" />
+            <div className="relative -mb-1 flex min-h-[185px] items-end justify-center pt-0 sm:min-h-[240px] lg:min-h-[300px] lg:justify-end">
+              <div className="pointer-events-none absolute bottom-[8%] h-[260px] w-[300px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(52,203,255,0.45)_0%,rgba(148,65,246,0.28)_44%,transparent_78%)] blur-[46px] animate-[fairValuePulse_9s_ease-in-out_infinite] sm:h-[320px] sm:w-[390px] sm:bg-[radial-gradient(ellipse_at_center,rgba(52,203,255,0.56)_0%,rgba(148,65,246,0.34)_42%,transparent_78%)] lg:bottom-[7%] lg:h-[440px] lg:w-[560px]" />
+              <div className="pointer-events-none absolute bottom-[13%] h-[170px] w-[220px] rounded-full bg-[radial-gradient(circle,rgba(121,76,255,0.3)_0%,rgba(33,189,255,0.22)_48%,transparent_76%)] blur-[36px] sm:h-[220px] sm:w-[280px] lg:h-[320px] lg:w-[380px]" />
+              <div className="pointer-events-none absolute bottom-[4%] h-[110px] w-[68%] rounded-full bg-cyan-300/25 blur-2xl" />
               <img
                 src="/heroperson.png"
                 alt="Pullz fair value guarantee hero"
                 loading="lazy"
                 decoding="async"
-                className="pointer-events-none relative z-10 block h-auto w-[170px] max-w-full object-contain drop-shadow-[0_0_22px_rgba(56,189,248,0.45)] sm:w-[236px] lg:w-[320px] xl:w-[360px]"
-                style={{ filter: 'contrast(1.08) saturate(1.12) drop-shadow(0 0 30px rgba(99,102,241,0.5)) drop-shadow(0 0 64px rgba(236,72,153,0.3))' }}
+                className="pointer-events-none relative z-10 block h-auto w-[230px] max-w-full object-contain drop-shadow-[0_0_26px_rgba(56,189,248,0.52)] sm:w-[310px] lg:w-[400px] xl:w-[460px]"
+                style={{ filter: 'contrast(1.1) saturate(1.16) drop-shadow(0 0 36px rgba(99,102,241,0.56)) drop-shadow(0 0 78px rgba(236,72,153,0.36))' }}
               />
               <div className="pointer-events-none absolute inset-y-[20%] right-[16%] hidden w-[14%] rounded-full bg-[linear-gradient(90deg,rgba(255,255,255,0.0),rgba(175,219,255,0.5),rgba(255,255,255,0.0))] opacity-55 blur-md sm:block" />
             </div>
