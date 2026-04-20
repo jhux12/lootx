@@ -2044,6 +2044,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       registrationData.em = firebaseUser.email;
     }
 
+    console.log('[Meta] fbq available:', typeof window !== 'undefined' ? typeof (window as any).fbq : 'no-window');
+    console.log('[Meta] CompleteRegistration payload:', registrationData);
     trackMetaEvent('CompleteRegistration', registrationData, {
       eventID: `complete_registration_${firebaseUser.uid}`
     });
@@ -2253,9 +2255,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (name: string, email: string, pass: string) => {
     try {
       const credential = await createUserWithEmailAndPassword(auth, email, pass);
+
+      try {
+        trackCompleteRegistrationForNewUser(credential.user);
+        console.log('[Meta] CompleteRegistration fired for uid:', credential.user.uid);
+      } catch (err) {
+        console.warn('Meta registration tracking failed', err);
+      }
+
       const redirectPath = getCurrentPath();
       setPendingEmailVerification(redirectPath);
-      await sendCustomVerificationEmail(credential.user);
+      try {
+        await sendCustomVerificationEmail(credential.user);
+      } catch (err) {
+        console.error('Verification email failed after account creation', err);
+      }
       const createdAt = Date.now();
       const username = await reserveUniqueUsername(credential.user.uid, buildBaseUsername(name, email));
       const newUser: User = {
@@ -2289,12 +2303,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser), { merge: true });
 
       await tryApplyPendingReferralAttribution();
-
-      try {
-        trackCompleteRegistrationForNewUser(credential.user);
-      } catch (err) {
-        console.warn('Meta registration tracking failed', err);
-      }
 
       setShowLoginModal(false);
       setEmailVerificationStatus('pending');
