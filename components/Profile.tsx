@@ -37,6 +37,19 @@ interface ProfileProps {
   initialTab?: ProfileTab;
 }
 
+const getEmailPrefix = (email?: string) => {
+  if (!email) return '';
+  const [prefix] = email.trim().split('@');
+  return prefix?.trim() ?? '';
+};
+
+const getProfileUsername = (profile: { provider?: string; username?: string; name?: string; email?: string }) => {
+  if (profile.provider === 'google') {
+    return getEmailPrefix(profile.email) || profile.username || profile.name || 'Player';
+  }
+  return profile.username || profile.name || getEmailPrefix(profile.email) || 'Player';
+};
+
 export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const { user, users, inventory, boxes, updateAddress, updateUserInfo, updateUserFlags, logout, view, setView, followUser, unfollowUser, sellItem, shipItem, stripeSettings, openAuthModal } = useGame();
   const { playSound } = useSound();
@@ -74,6 +87,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
   const viewedFollowing = users.filter((u) => Array.isArray(u.followers) && u.followers.includes(displayUser.id));
   
   const isFollowing = !!(!isOwnProfile && profileUser && Array.isArray(profileUser.followers) && profileUser.followers.includes(user.id));
+  const displayUsername = getProfileUsername(displayUser);
   
   const activePeople = activePeopleTab === 'followers' ? viewedFollowers : viewedFollowing;
   const activePeopleEmptyMessage =
@@ -408,7 +422,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
 
   const trimmedSearch = communitySearch.trim().toLowerCase();
   const communitySearchResults = trimmedSearch
-    ? users.filter((u) => u.name.toLowerCase().includes(trimmedSearch))
+    ? users.filter((u) => getProfileUsername(u).toLowerCase().includes(trimmedSearch))
     : [];
 
   const getSellBackRate = (item: typeof normalizedInventory[number]) => {
@@ -680,7 +694,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                   <div className="relative shrink-0">
                     <div className="absolute inset-1 rounded-full bg-[radial-gradient(circle,rgba(110,92,255,0.42),rgba(56,189,248,0.14)_55%,transparent_74%)] blur-xl" />
                     <div className="relative rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.04))] p-1 shadow-[0_16px_34px_rgba(12,17,29,0.34),inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-lg">
-                      <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUser.name} className="h-24 w-24 rounded-[20px] object-cover bg-[#0b0e14]/90 sm:h-[104px] sm:w-[104px]" />
+                      <img loading="lazy" decoding="async" src={displayUser.avatar} alt={displayUsername} className="h-24 w-24 rounded-[20px] object-cover bg-[#0b0e14]/90 sm:h-[104px] sm:w-[104px]" />
                     </div>
                   </div>
 
@@ -688,7 +702,7 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                     <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#9099b2] sm:text-[11px]">Player Profile</p>
                     <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <h2 className="truncate text-[1.7rem] font-black tracking-[-0.02em] text-white sm:text-[1.9rem]">{displayUser.name}</h2>
+                        <h2 className="truncate text-[1.7rem] font-black tracking-[-0.02em] text-white sm:text-[1.9rem]">{displayUsername}</h2>
                         <div className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,rgba(56,189,248,0.16),rgba(124,58,237,0.12))] px-2.5 py-1 text-[13px] font-medium text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_10px_24px_rgba(7,12,22,0.16)] backdrop-blur-md">
                           <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
                           <span className="text-[#9ba3ba]">XP Points:</span>
@@ -1583,9 +1597,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                             className="flex items-center gap-4 cursor-pointer"
                                             onClick={() => setView({ type: 'PROFILE', userId: p.id })}
                                           >
-                                              <img loading="lazy" decoding="async" src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
+                                              <img loading="lazy" decoding="async" src={p.avatar} alt={getProfileUsername(p)} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
                                               <div>
-                                                  <div className="text-white font-bold">{p.name}</div>
+                                                  <div className="text-white font-bold">{getProfileUsername(p)}</div>
                                                   <div className="text-xs text-gray-500">XP {(p.xpBalance ?? p.xp ?? 0).toLocaleString()}</div>
                                               </div>
                                           </div>
@@ -1631,9 +1645,9 @@ export const Profile: React.FC<ProfileProps> = ({ initialTab }) => {
                                         className="flex items-center gap-4 cursor-pointer"
                                         onClick={() => setView({ type: 'PROFILE', userId: p.id })}
                                       >
-                                          <img loading="lazy" decoding="async" src={p.avatar} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
+                                          <img loading="lazy" decoding="async" src={p.avatar} alt={getProfileUsername(p)} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
                                           <div>
-                                              <div className="text-white font-bold">{p.name}</div>
+                                              <div className="text-white font-bold">{getProfileUsername(p)}</div>
                                               <div className="text-xs text-gray-500">XP {(p.xpBalance ?? p.xp ?? 0).toLocaleString()}</div>
                                           </div>
                                       </div>
