@@ -57,7 +57,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   onViewAllBoxes,
   onSignUp
 }) => {
-  const { stripeSettings, setView } = useGame();
+  const { stripeSettings, setView, isAuthenticated } = useGame();
   const [openFaq, setOpenFaq] = useState(0);
 
   const featuredBoxes = useMemo(() => boxes.slice(0, 8), [boxes]);
@@ -223,6 +223,12 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
       0% { transform: translateX(-140%); }
       100% { transform: translateX(140%); }
     }
+
+    @keyframes fairValuePulse {
+      0%, 100% { opacity: 0.6; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.04); }
+    }
+
   `;
 
   const handleCategoryCardClick = (index: number) => {
@@ -241,31 +247,68 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
       <style>{fairValueBannerKeyframes}</style>
-      <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-hidden border-y border-white/10 bg-[#11151f] shadow-[0_35px_70px_-50px_rgba(0,0,0,1)]">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,#121827_0%,#171b2b_32%,#11151f_58%,#0f1320_100%)]" />
-        <div className="pointer-events-none absolute inset-y-0 left-[-10%] hidden w-[38%] bg-[radial-gradient(circle,rgba(111,125,255,0.32)_0%,rgba(111,125,255,0.08)_42%,transparent_72%)] sm:block sm:animate-[fairValueGlow_8s_ease-in-out_infinite]" />
-        <div className="pointer-events-none absolute right-[-8%] top-[-15%] hidden h-[150%] w-[38%] bg-[radial-gradient(circle,rgba(236,104,200,0.24)_0%,rgba(236,104,200,0.08)_38%,transparent_70%)] sm:block sm:animate-[fairValueFloat_10s_ease-in-out_infinite]" />
-        <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(255,255,255,0.05)_0,rgba(255,255,255,0.05)_2px,transparent_2px,transparent_44px),repeating-linear-gradient(-58deg,rgba(255,255,255,0.045)_0,rgba(255,255,255,0.045)_2px,transparent_2px,transparent_44px)] opacity-20" />
+      <section className="relative w-full min-h-[44vh] overflow-hidden rounded-[30px] border border-white/10 bg-[#070b14] shadow-[0_35px_70px_-50px_rgba(0,0,0,1)] sm:min-h-[47vh] lg:min-h-[48vh]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(125%_90%_at_16%_24%,rgba(52,102,255,0.28)_0%,rgba(52,102,255,0.08)_42%,transparent_74%),radial-gradient(130%_95%_at_82%_28%,rgba(212,74,255,0.24)_0%,rgba(136,72,255,0.08)_46%,transparent_76%),radial-gradient(90%_70%_at_52%_42%,rgba(78,137,255,0.12)_0%,transparent_70%),linear-gradient(125deg,#070b16_0%,#0b1120_46%,#070b14_100%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(123,139,255,0.07)_0,rgba(123,139,255,0.07)_1px,transparent_1px,transparent_34px),repeating-linear-gradient(-58deg,rgba(236,104,200,0.07)_0,rgba(236,104,200,0.07)_1px,transparent_1px,transparent_34px)] opacity-20 sm:opacity-24" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_38%,rgba(3,6,12,0.66)_100%)]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-        <div className="relative mx-auto flex w-full max-w-[1240px] px-4 pt-8 text-left sm:px-6 sm:pt-10 lg:px-8">
-          <div className="relative z-10 flex w-full items-end justify-between gap-3 sm:gap-5 lg:min-h-[360px] lg:items-center lg:pr-[18rem]">
-            <div className="flex min-w-0 flex-1 flex-col items-start pb-6 sm:pb-8 lg:pb-10">
-              <h1 className="relative max-w-4xl text-[2.15rem] font-black uppercase italic leading-[0.9] tracking-tight text-white sm:pt-1 sm:text-5xl lg:text-7xl">
+        <div className="relative mx-auto w-full px-4 pb-3 pt-4 text-left sm:px-6 sm:pb-[14px] sm:pt-[18px] lg:px-8 lg:pb-3 lg:pt-4">
+          <div className="relative z-10 grid items-end gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,440px)] lg:items-center">
+            <div className="flex min-w-0 flex-col items-start lg:pr-4">
+              <div className="relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-[#5f72b4] bg-[#11182f]/75 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.19em] text-slate-100 shadow-[0_0_22px_rgba(94,92,230,0.36)] backdrop-blur-md sm:text-[11px]">
+                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-[#4f86ff] to-[#d34dd8] text-white">
+                  <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" aria-hidden>
+                    <path d="M12 3l7 3v5c0 4.4-2.98 8.5-7 9.5-4.02-1-7-5.1-7-9.5V6l7-3z" stroke="currentColor" strokeWidth="2" />
+                  </svg>
+                </span>
+                <span>Provably Fair</span>
+                <span className="pointer-events-none absolute inset-y-0 w-[38%] bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[fairValueShimmer_3.4s_ease-in-out_infinite]" />
+              </div>
+
+              <h1 className="relative mt-3 max-w-4xl text-[2.55rem] font-black uppercase italic leading-[0.85] tracking-tight text-white sm:mt-3.5 sm:text-[3.7rem] lg:mt-4 lg:text-[4.75rem]">
                 <span className="inline-block">Fair Value</span>{' '}
-                <span className="relative inline-block bg-gradient-to-r from-[#6f7dff] via-[#8f67ff] to-[#ec68c8] bg-clip-text text-transparent before:absolute before:inset-x-0 before:bottom-1 before:h-[0.18em] before:rounded-full before:bg-gradient-to-r before:from-[#6f7dff]/0 before:via-[#8f67ff]/60 before:to-[#ec68c8]/0 before:blur-md before:content-['']">Guarantee</span>
+                <span className="relative inline-block bg-gradient-to-r from-[#6f93ff] via-[#9a73ff] to-[#ff59dc] bg-clip-text text-transparent [text-shadow:0_0_20px_rgba(167,139,250,0.35)]">Guarantee</span>
               </h1>
-              <p className="relative mt-4 max-w-[13rem] text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-300 sm:max-w-md sm:text-sm sm:tracking-[0.2em] lg:max-w-3xl lg:text-base lg:tracking-[0.22em]">
+              <p className="relative mt-2.5 max-w-md text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300 sm:mt-3 sm:text-sm lg:mt-3.5 lg:text-[15px]">
                 Discover, open &amp; collect on Pullz
               </p>
+              <div className="mt-3 flex max-w-full items-center gap-x-4 gap-y-1 overflow-hidden whitespace-nowrap text-[11px] font-medium text-slate-300 sm:mt-3.5 sm:text-sm lg:mt-4">
+                <span className="inline-flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />Provably Fair</span>
+                <span className="inline-flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-violet-300" />Real Items</span>
+                <span className="hidden items-center gap-2 sm:inline-flex"><span className="h-1.5 w-1.5 rounded-full bg-fuchsia-300" />Instant Payouts</span>
+              </div>
+              <div className="mt-4 flex w-full flex-col gap-2.5 sm:mt-[18px] sm:w-auto sm:flex-row lg:mt-5">
+                <button
+                  type="button"
+                  onClick={isAuthenticated ? onViewAllBoxes : onSignUp}
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-gradient-to-r from-[#4f67ff] via-[#7a57ff] to-[#cc42d4] px-8 py-3 text-sm font-extrabold uppercase tracking-[0.1em] text-white shadow-[0_16px_46px_-18px_rgba(124,58,237,0.94)] transition duration-300 hover:scale-[1.03] hover:brightness-110 hover:shadow-[0_24px_58px_-18px_rgba(124,58,237,0.98)]"
+                >
+                  {isAuthenticated ? 'Open Boxes' : 'Sign Up & Get Free Box'}
+                </button>
+                <button
+                  type="button"
+                  onClick={onViewAllBoxes}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/20 bg-[#090d19]/70 px-6 text-sm font-semibold uppercase tracking-[0.1em] text-slate-100 transition hover:border-violet-300/50 hover:bg-white/10"
+                >
+                  Learn More
+                </button>
+              </div>
             </div>
 
-            <img
-              src="/heroperson.png"
-              alt="Pullz fair value guarantee hero"
-              loading="lazy"
-              decoding="async"
-              className="pointer-events-none relative z-0 h-auto w-[98px] shrink-0 self-end object-contain sm:w-[132px] lg:absolute lg:bottom-0 lg:right-8 lg:w-[220px] xl:right-12 xl:w-[250px]"
-            />
+            <div className="relative flex min-h-[152px] items-end justify-center pt-0 sm:min-h-[182px] lg:min-h-[240px] lg:justify-end">
+              <div className="pointer-events-none absolute bottom-[11%] h-[210px] w-[240px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(52,203,255,0.4)_0%,rgba(148,65,246,0.24)_44%,transparent_78%)] blur-[42px] animate-[fairValuePulse_9s_ease-in-out_infinite] sm:h-[270px] sm:w-[320px] sm:bg-[radial-gradient(ellipse_at_center,rgba(52,203,255,0.5)_0%,rgba(148,65,246,0.28)_42%,transparent_78%)] lg:bottom-[10%] lg:h-[360px] lg:w-[460px]" />
+              <div className="pointer-events-none absolute bottom-[16%] h-[140px] w-[180px] rounded-full bg-[radial-gradient(circle,rgba(121,76,255,0.26)_0%,rgba(33,189,255,0.19)_48%,transparent_76%)] blur-[34px] sm:h-[180px] sm:w-[230px] lg:h-[280px] lg:w-[320px]" />
+              <div className="pointer-events-none absolute bottom-[8%] h-[100px] w-[62%] rounded-full bg-cyan-300/20 blur-2xl" />
+              <img
+                src="/heroperson.png"
+                alt="Pullz fair value guarantee hero"
+                loading="lazy"
+                decoding="async"
+                className="pointer-events-none relative z-10 block h-auto w-[170px] max-w-full object-contain drop-shadow-[0_0_22px_rgba(56,189,248,0.45)] sm:w-[236px] lg:w-[320px] xl:w-[360px]"
+                style={{ filter: 'contrast(1.08) saturate(1.12) drop-shadow(0 0 30px rgba(99,102,241,0.5)) drop-shadow(0 0 64px rgba(236,72,153,0.3))' }}
+              />
+              <div className="pointer-events-none absolute inset-y-[20%] right-[16%] hidden w-[14%] rounded-full bg-[linear-gradient(90deg,rgba(255,255,255,0.0),rgba(175,219,255,0.5),rgba(255,255,255,0.0))] opacity-55 blur-md sm:block" />
+            </div>
           </div>
         </div>
       </section>
