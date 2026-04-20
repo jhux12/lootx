@@ -28,6 +28,7 @@ import { HomeBanners } from './components/HomeBanners';
 import { CaseLabPromo } from './components/CaseLabPromo';
 import { ContactSupport } from './components/ContactSupport';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { FreeBoxNudge } from './components/FreeBoxNudge';
 import { LegendaryShowcase } from './components/LegendaryShowcase';
 import { ReferralsPage } from './components/ReferralsPage';
 import { PollsPage } from './components/PollsPage';
@@ -567,6 +568,7 @@ const AppShell = () => {
           onOpenInbox={() => undefined}
           isSticky={shouldUseStickyHeader}
         />
+        <FreeBoxNudge />
         <AppLayout hasStickyHeader={shouldUseStickyHeader} />
         <MobileBottomNav />
         <InstallPrompt />

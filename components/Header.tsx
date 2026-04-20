@@ -370,7 +370,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   <button onClick={() => navigate('PROFILE')} className="text-right">
                     <span className="block text-sm font-bold text-white hover:text-indigo-400">{user.name}</span>
                   </button>
-                  <button type="button" onClick={() => navigate('PROFILE')}>
+                  <button type="button" onClick={() => navigate('PROFILE')} data-free-box-desktop-anchor="true">
                     <img src={user.avatar} alt={user.name} className="h-9 w-9 rounded-lg border border-white/10 object-cover" />
                   </button>
                   <button
