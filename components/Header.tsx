@@ -228,16 +228,26 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     </>
   ), [openAuthModal, playSound]);
 
-  const dailySpinDesktopClass = `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white transition-all ${
+  const dailySpinDesktopClass = `group relative flex w-full items-center gap-2 overflow-hidden rounded-lg px-3 py-2 text-left text-sm font-semibold text-white transition-all ${
     showDailySpinReady
-      ? 'border border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
+      ? 'border border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] hover:bg-blue-500/20'
       : 'hover:bg-white/5'
   }`;
 
-  const dailySpinMobileClass = `${drawerCardClass} transition-all ${
+  const dailySpinMobileClass = `${drawerCardClass} group relative overflow-hidden transition-all ${
     showDailySpinReady
-      ? 'border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
+      ? 'border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] hover:bg-blue-500/20'
       : ''
+  }`;
+  const rewardsDesktopTabClass = `group relative flex items-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all ${
+    showDailySpinReady
+      ? 'border-blue-400/70 bg-blue-500/10 text-blue-100 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:bg-blue-500/20'
+      : 'border-transparent bg-zinc-900/50 text-purple-400 hover:border-white/5 hover:bg-neutral-800'
+  }`;
+  const rewardsMobileTabClass = `group relative flex w-full items-center justify-between overflow-hidden rounded-xl border px-3 py-3 text-left transition-all ${
+    showDailySpinReady
+      ? 'border-blue-400/70 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.25)] hover:bg-blue-500/20'
+      : 'border-white/5 bg-[#111114]'
   }`;
 
   const toggleMobileSection = (section: keyof typeof openMobileSections) => {
@@ -307,15 +317,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 <button type="button" onClick={() => {
                   setIsRewardsMenuOpen((prev) => !prev);
                   setIsGamesMenuOpen(false);
-                }} className="relative flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-purple-400 transition-colors hover:border-white/5 hover:bg-neutral-800" aria-expanded={isRewardsMenuOpen}>
-                  <Sparkles className="h-4 w-4" />
+                }} className={rewardsDesktopTabClass} aria-expanded={isRewardsMenuOpen}>
+                  {showDailySpinReady ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_18%,rgba(96,165,250,0.25)_50%,transparent_82%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]" /> : null}
+                  <Sparkles className={`relative z-10 h-4 w-4 ${showDailySpinReady ? 'motion-safe:animate-pulse text-blue-200' : ''}`} />
                   Rewards
                   <ChevronDown className={`h-4 w-4 transition-transform ${isRewardsMenuOpen ? 'rotate-180' : ''}`} />
                   {questReadyCount > 0 ? <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}
                 </button>
                 <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
                   <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass}>
-                    <RefreshCw className={`h-4 w-4 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
+                    <RefreshCw className="h-4 w-4 text-blue-500" />
                     Daily Spin
                     {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
                   </button>
@@ -506,14 +517,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           </section>
 
           <section className="space-y-3">
-            <button type="button" onClick={() => toggleMobileSection('rewards')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Rewards</h3>
-              <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.rewards ? 'rotate-180' : ''}`} />
+            <button type="button" onClick={() => toggleMobileSection('rewards')} className={rewardsMobileTabClass}>
+              {showDailySpinReady ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(96,165,250,0.25)_50%,transparent_82%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]" /> : null}
+              <h3 className={`relative z-10 text-xs font-bold uppercase tracking-wider ${showDailySpinReady ? 'text-blue-100' : 'text-neutral-500'}`}>Rewards</h3>
+              <div className="relative z-10 flex items-center gap-2">
+                <ChevronDown className={`h-4 w-4 transition-transform ${openMobileSections.rewards ? 'rotate-180' : ''} ${showDailySpinReady ? 'text-blue-200' : 'text-neutral-400'}`} />
+              </div>
             </button>
             {openMobileSections.rewards ? (
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => navigate('BONUSES')} className={dailySpinMobileClass}>
-                  <RefreshCw className={`h-5 w-5 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
+                  <RefreshCw className="h-5 w-5 text-blue-500" />
                   <span className="text-sm font-bold text-white">Daily Spin</span>
                   {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
                 </button>
