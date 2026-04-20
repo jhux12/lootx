@@ -60,26 +60,6 @@ export const TopUpModal: React.FC = () => {
     return Math.max(0, computedMissing);
   }, [topUpModalIntent?.currentBalance, topUpModalIntent?.missingCoins, topUpModalIntent?.requiredCoins]);
   const isInsufficientBalanceFlow = topUpModalIntent?.reason === 'insufficient_balance' && missingCoins > 0;
-  const getBadgeClasses = (badge?: string) => {
-    const normalizedBadge = badge?.toLowerCase() ?? '';
-    if (normalizedBadge.includes('best')) {
-      return 'border-amber-400/80 bg-amber-500/10 text-amber-100';
-    }
-    if (normalizedBadge.includes('good')) {
-      return 'border-sky-400/80 bg-sky-500/10 text-sky-100';
-    }
-    return 'border-white/10 bg-[#0b0e14] text-gray-300';
-  };
-  const getSelectedClasses = (badge?: string) => {
-    const normalizedBadge = badge?.toLowerCase() ?? '';
-    if (normalizedBadge.includes('best')) {
-      return 'border-amber-400 bg-amber-500/20 text-white shadow-lg shadow-amber-900/20';
-    }
-    if (normalizedBadge.includes('good')) {
-      return 'border-sky-400 bg-sky-500/20 text-white shadow-lg shadow-sky-900/20';
-    }
-    return 'border-emerald-400 bg-emerald-500/10 text-white shadow-lg shadow-emerald-900/20';
-  };
   const getPackageImage = (pack: typeof activePackages[number]) =>
     pack.imageUrl?.trim() ||
     'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2F12.png?alt=media&token=a82f5343-7e3e-4cb9-9d7a-b0451d4e49b0';
@@ -98,27 +78,31 @@ export const TopUpModal: React.FC = () => {
     const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
     return `(+${bonusPercent}% BONUS)`;
   };
-  const getTierStyles = (index: number) => {
-    switch (index) {
-      case 0:
-        return 'opacity-90 border-white/10';
-      case 1:
-        return 'border-white/20 hover:scale-[1.02]';
-      case 2:
-        return 'scale-[1.06] border-emerald-300 shadow-[0_0_30px_rgba(16,185,129,0.5)] z-10';
-      case 3:
-        return 'border-blue-400/40 shadow-[0_0_15px_rgba(59,130,246,0.3)]';
-      case 4:
-        return 'bg-gradient-to-br from-purple-900/40 to-black border-purple-400/40';
-      case 5:
-        return 'bg-gradient-to-br from-yellow-500/20 to-black border-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.4)]';
-      default:
-        return '';
+  const getBadgeClasses = (badge?: string) => {
+    const normalizedBadge = badge?.toLowerCase() ?? '';
+    if (normalizedBadge.includes('best')) {
+      return 'bg-amber-400 text-black';
     }
+    if (normalizedBadge.includes('popular')) {
+      return 'bg-violet-500 text-white';
+    }
+    return 'bg-white/20 text-white';
   };
-  const getTierVisualWeight = (index: number) => {
-    if (activePackages.length <= 1) return 0;
-    return index / (activePackages.length - 1);
+  const getCardAccentClasses = (badge?: string, isSelected?: boolean) => {
+    const normalizedBadge = badge?.toLowerCase() ?? '';
+    if (normalizedBadge.includes('best')) {
+      return isSelected
+        ? 'border-amber-300 shadow-[0_0_0_1px_rgba(251,191,36,0.6),0_0_24px_rgba(245,158,11,0.45)]'
+        : 'border-amber-300/70';
+    }
+    if (normalizedBadge.includes('popular')) {
+      return isSelected
+        ? 'border-violet-300 shadow-[0_0_0_1px_rgba(196,181,253,0.5),0_0_24px_rgba(139,92,246,0.35)]'
+        : 'border-violet-300/50';
+    }
+    return isSelected
+      ? 'border-cyan-300 shadow-[0_0_0_1px_rgba(125,211,252,0.5),0_0_20px_rgba(34,211,238,0.3)]'
+      : 'border-indigo-400/40';
   };
   const parseDisplayPrice = (value: string) => {
     const parsed = Number(value.replace(/[^0-9.]/g, ''));
@@ -296,24 +280,16 @@ export const TopUpModal: React.FC = () => {
                     )}
                     {/* Amount Selector */}
                     <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-gray-500">Select a pack</label>
-                    <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {activePackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             No packages available right now.
                           </div>
                         ) : (
-                          activePackages.map((pack, index) => {
+                          activePackages.map((pack) => {
                             const isSelected = selectedPackage?.id === pack.id;
-                            const isFocal = index === 2;
-                            const tierStyles = getTierStyles(index);
-                            const selectedStyles = isSelected
-                              ? 'ring-2 ring-emerald-400 scale-[1.08]'
-                              : isFocal
-                                ? 'scale-[1.06]'
-                                : '';
                             const bonusCoins = pack.bonusCoins ?? 0;
                             const bonusLabel = getBonusLabel(pack);
-                            const tierWeight = getTierVisualWeight(index);
                             const badgeText = pack.badge?.trim() ?? '';
                             return (
                               <button
@@ -323,29 +299,33 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative rounded-xl border bg-[#15171c] p-3.5 text-left transition-all duration-300
-                                    hover:scale-[1.03] hover:shadow-lg hover:brightness-110
-                                    ${!isSelected ? getBadgeClasses(pack.badge) : ''}
-                                    ${isSelected ? getSelectedClasses(pack.badge) : ''}
-                                    ${tierStyles}
-                                    ${selectedStyles}
-                                    ${isFocal ? 'hover:scale-[1.1]' : ''}`}
-                                  style={!isSelected ? { borderColor: `rgba(148, 163, 184, ${0.1 + tierWeight * 0.22})` } : undefined}
+                                  className={`group relative overflow-hidden rounded-2xl border bg-[radial-gradient(circle_at_55%_70%,rgba(82,31,173,0.5),rgba(7,8,17,0.92)_58%)] p-4 text-left transition-all duration-300
+                                    hover:-translate-y-0.5
+                                    ${getCardAccentClasses(pack.badge, isSelected)}
+                                    ${isSelected ? 'scale-[1.015]' : ''}`}
                               >
+                                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_15%,rgba(129,140,248,0.15),transparent_45%)]" />
                                   {badgeText && (
                                     <span
-                                      className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
-                                        badgeText.toLowerCase().includes('best')
-                                          ? 'bg-amber-500 text-black'
-                                          : badgeText.toLowerCase().includes('good')
-                                            ? 'bg-sky-500 text-black'
-                                            : 'bg-zinc-200 text-black'
-                                      }`}
+                                      className={`absolute right-3 top-3 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide shadow-lg ${getBadgeClasses(pack.badge)}`}
                                     >
                                       {badgeText}
                                     </span>
                                   )}
-                                  <div className="mb-3 overflow-hidden rounded-lg border border-white/5 bg-black/20 p-2.5">
+                                  <div className="relative z-10 flex items-start justify-between gap-2">
+                                    <div>
+                                      <CoinAmount
+                                        amount={pack.coins}
+                                        formatOptions={{ maximumFractionDigits: 0 }}
+                                        className="text-3xl font-black text-white sm:text-[2.1rem]"
+                                        iconClassName="h-6 w-6"
+                                      />
+                                      <p className="mt-1 text-lg font-bold uppercase tracking-wide text-slate-300/90">
+                                        Coins
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="relative z-10 mb-3 mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/10 p-2.5">
                                     <img
                                       src={getPackageImage(pack)}
                                       alt={pack.name}
@@ -354,22 +334,13 @@ export const TopUpModal: React.FC = () => {
                                       decoding="async"
                                     />
                                   </div>
-                                  <div className="flex flex-col gap-1.5">
-                                    <CoinAmount
-                                      amount={pack.coins}
-                                      formatOptions={{ maximumFractionDigits: 0 }}
-                                      className={`font-black text-white ${tierWeight > 0.66 ? 'text-2xl' : tierWeight > 0.33 ? 'text-xl' : 'text-lg'}`}
-                                      iconClassName="w-3.5 h-3.5"
-                                    />
-                                    <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500">
-                                      <span className="text-xs font-semibold text-gray-300">{pack.name}</span>
-                                      {bonusCoins > 0 && bonusLabel && (
-                                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
-                                          {bonusLabel}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="mt-1.5 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-center text-lg font-black text-white">
+                                  <div className="relative z-10 flex flex-col gap-2">
+                                    {bonusCoins > 0 && bonusLabel && (
+                                      <span className="text-center text-2xl font-black tracking-wide text-violet-300">
+                                        {bonusLabel}
+                                      </span>
+                                    )}
+                                    <div className={`rounded-xl px-3 py-2 text-center text-3xl font-black leading-none sm:text-4xl ${isSelected ? 'bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 text-white' : 'border border-white/20 bg-[#0f1230] text-white'}`}>
                                       {pack.displayPrice}
                                     </div>
                                   </div>
