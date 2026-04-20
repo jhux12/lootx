@@ -323,8 +323,6 @@ export const AdminPanel: React.FC = () => {
       bonusCoins: 0,
       defaultSelected: false,
       imageUrl: '',
-      walletImageUrl: '',
-      secureImageUrl: '',
       displayPrice: '',
       stripePriceId: '',
       badge: undefined,
@@ -1552,8 +1550,6 @@ export const AdminPanel: React.FC = () => {
           bonusCoins: 0,
           defaultSelected: false,
           imageUrl: '',
-          walletImageUrl: '',
-          secureImageUrl: '',
           displayPrice: '',
           stripePriceId: '',
           badge: undefined,
@@ -1580,8 +1576,6 @@ export const AdminPanel: React.FC = () => {
       const coins = Number(packageDraft.coins ?? 0);
       const bonusCoins = Number(packageDraft.bonusCoins ?? 0);
       const imageUrl = packageDraft.imageUrl?.trim() ?? '';
-      const walletImageUrl = packageDraft.walletImageUrl?.trim() ?? '';
-      const secureImageUrl = packageDraft.secureImageUrl?.trim() ?? '';
       const displayPrice = packageDraft.displayPrice?.trim() ?? '';
       const stripePriceId = packageDraft.stripePriceId?.trim() ?? '';
       const sortOrder = Number.isFinite(Number(packageDraft.sortOrder)) ? Number(packageDraft.sortOrder) : 0;
@@ -1609,14 +1603,6 @@ export const AdminPanel: React.FC = () => {
           setPackageError('Image URL must start with http:// or https://');
           return;
       }
-      if (walletImageUrl && !/^https?:\/\//i.test(walletImageUrl)) {
-          setPackageError('Wallet image URL must start with http:// or https://');
-          return;
-      }
-      if (secureImageUrl && !/^https?:\/\//i.test(secureImageUrl)) {
-          setPackageError('100% secure image URL must start with http:// or https://');
-          return;
-      }
       if (!editingPackageId && !stripePriceId.startsWith('price_')) {
           setPackageError('Stripe price ID must start with "price_".');
           return;
@@ -1632,8 +1618,6 @@ export const AdminPanel: React.FC = () => {
                   bonusCoins,
                   defaultSelected,
                   imageUrl,
-                  walletImageUrl,
-                  secureImageUrl,
                   displayPrice,
                   stripePriceId,
                   badge,
@@ -1647,8 +1631,6 @@ export const AdminPanel: React.FC = () => {
                   bonusCoins,
                   defaultSelected,
                   imageUrl,
-                  walletImageUrl,
-                  secureImageUrl,
                   displayPrice,
                   stripePriceId,
                   badge,
@@ -6165,28 +6147,6 @@ export const AdminPanel: React.FC = () => {
                               className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                           />
                           <p className="mt-1 text-[11px] text-gray-500">Shown in the top-up modal card. Leave blank to use the default package art.</p>
-                      </div>
-                      <div className="sm:col-span-2">
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Wallet Image URL (optional)</label>
-                          <Input
-                              type="url"
-                              placeholder="https://cdn.example.com/topup/wallet.png"
-                              value={packageDraft.walletImageUrl ?? ''}
-                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, walletImageUrl: event.target.value }))}
-                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
-                          />
-                          <p className="mt-1 text-[11px] text-gray-500">Shown in the top-up header icon area.</p>
-                      </div>
-                      <div className="sm:col-span-2">
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">100% Secure Image URL (optional)</label>
-                          <Input
-                              type="url"
-                              placeholder="https://cdn.example.com/topup/secure.png"
-                              value={packageDraft.secureImageUrl ?? ''}
-                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, secureImageUrl: event.target.value }))}
-                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
-                          />
-                          <p className="mt-1 text-[11px] text-gray-500">Shown next to the "100% Secure" callout in the top-up popup.</p>
                       </div>
                       <div className="sm:col-span-2">
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Stripe Price ID</label>
