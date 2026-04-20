@@ -63,6 +63,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   const [spinBounceOffset, setSpinBounceOffset] = useState(0);
   const [isTrailing, setIsTrailing] = useState(false);
   const [animatedChance, setAnimatedChance] = useState(chance);
+  const [sweepNonce, setSweepNonce] = useState(0);
 
   const chanceGlowRgb = useMemo(() => {
     if (chance >= 70) return '34, 197, 94';
@@ -105,6 +106,11 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
     raf = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(raf);
   }, [chance, reducedMotion]);
+
+  useEffect(() => {
+    if (!hasSource || !hasTarget) return;
+    setSweepNonce((previous) => previous + 1);
+  }, [chance, hasSource, hasTarget]);
 
   const updateRotationFromEvent = (clientX: number, clientY: number) => {
     const wheelElement = wheelRef.current;
@@ -191,7 +197,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
     <div className="relative flex flex-col items-center">
       <div
         ref={wheelRef}
-        className={`relative touch-none rounded-full border border-violet-300/35 bg-[#050a16] shadow-[0_0_40px_rgba(79,70,229,0.22),inset_0_0_0_1px_rgba(255,255,255,0.05)] ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        className={`relative touch-none rounded-full border border-violet-300/40 bg-[#050a16] shadow-[0_0_58px_rgba(79,70,229,0.3),inset_0_0_0_1px_rgba(255,255,255,0.08)] transition-all duration-200 ${status === 'success' ? 'shadow-[0_0_70px_rgba(16,185,129,0.28),inset_0_0_0_1px_rgba(255,255,255,0.08)]' : ''} ${status === 'fail' ? 'shadow-[0_0_70px_rgba(244,63,94,0.24),inset_0_0_0_1px_rgba(255,255,255,0.08)]' : ''} ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
         style={{ width: size, height: size, ['--reactor-glow-rgb' as string]: chanceGlowRgb, ['--reactor-risk-color' as string]: riskColor }}
         onPointerDown={(event) => {
           if (!canRotateWinZone || status !== 'idle') return;
@@ -214,9 +220,19 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           event.currentTarget.releasePointerCapture(event.pointerId);
         }}
       >
-        <div className="pointer-events-none absolute -inset-6 rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.25),rgba(56,189,248,0.05)_45%,transparent_70%)] blur-xl" />
+        <div className="pointer-events-none absolute -inset-8 rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.3),rgba(56,189,248,0.08)_45%,transparent_70%)] blur-xl" />
         <div className="pointer-events-none absolute inset-4 rounded-full bg-[radial-gradient(circle_at_50%_35%,rgba(139,92,246,0.24),rgba(7,12,25,0.95)_70%)]" />
         <div className="pointer-events-none absolute inset-8 rounded-full border border-indigo-300/20 opacity-75" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)', backgroundSize: '14px 14px' }} />
+        {hasSource && hasTarget && (
+          <div
+            key={sweepNonce}
+            className="pointer-events-none absolute inset-2 rounded-full opacity-45"
+            style={{
+              background: 'conic-gradient(from 0deg, transparent 0%, transparent 65%, rgba(147,197,253,0.6) 78%, transparent 90%)',
+              animation: reducedMotion ? 'none' : 'upgraderSweep 520ms ease-out'
+            }}
+          />
+        )}
 
         <svg width={size} height={size} className="absolute inset-0 -rotate-90">
           <circle cx={size / 2} cy={size / 2} r={(size - 20) / 2} fill="transparent" stroke="rgba(255,255,255,0.09)" strokeWidth={16} />
@@ -247,7 +263,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
               {hasSource && hasTarget ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Upgrade Chance</p>
-                  <span className={`mt-1 text-4xl font-black tracking-tight sm:text-5xl ${riskBand.className}`}>{animatedChance.toFixed(2)}%</span>
+                  <span className={`mt-1 text-5xl font-black tracking-tight sm:text-6xl ${riskBand.className}`}>{animatedChance.toFixed(2)}%</span>
                   <p className={`mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${riskBand.className}`}>{riskBand.label}</p>
                 </>
               ) : (
@@ -320,6 +336,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           </div>
         )}
       </div>
+      <style>{`@keyframes upgraderSweep{from{transform:rotate(-22deg);opacity:.7}to{transform:rotate(18deg);opacity:0}}`}</style>
     </div>
   );
 });
