@@ -228,15 +228,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     </>
   ), [openAuthModal, playSound]);
 
-  const dailySpinDesktopClass = `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white transition-all ${
+  const dailySpinDesktopClass = `daily-spin-ready-tab flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white transition-all ${
     showDailySpinReady
-      ? 'border border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
+      ? 'border border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] hover:bg-blue-500/20'
       : 'hover:bg-white/5'
   }`;
 
-  const dailySpinMobileClass = `${drawerCardClass} transition-all ${
+  const dailySpinMobileClass = `daily-spin-ready-tab ${drawerCardClass} transition-all ${
     showDailySpinReady
-      ? 'border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
+      ? 'border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] hover:bg-blue-500/20'
       : ''
   }`;
 
@@ -253,6 +253,35 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
 
   return (
     <>
+    <style>{`
+      @keyframes dailySpinReadyGlow {
+        0%, 100% { box-shadow: 0 0 0 rgba(59,130,246,0.15), 0 0 0 rgba(16,185,129,0.12); }
+        50% { box-shadow: 0 0 20px rgba(59,130,246,0.35), 0 0 10px rgba(16,185,129,0.28); }
+      }
+      @keyframes dailySpinIconWiggle {
+        0%, 100% { transform: rotate(0deg) scale(1); }
+        20% { transform: rotate(-18deg) scale(1.03); }
+        40% { transform: rotate(18deg) scale(1.06); }
+        60% { transform: rotate(-10deg) scale(1.04); }
+        80% { transform: rotate(10deg) scale(1.02); }
+      }
+      @keyframes dailySpinBadgePop {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-1px) scale(1.06); }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .daily-spin-ready-tab {
+          animation: dailySpinReadyGlow 2.8s ease-in-out infinite;
+        }
+        .daily-spin-ready-icon {
+          transform-origin: center;
+          animation: dailySpinIconWiggle 2.4s ease-in-out infinite;
+        }
+        .daily-spin-ready-badge {
+          animation: dailySpinBadgePop 1.6s ease-in-out infinite;
+        }
+      }
+    `}</style>
     <div className="relative z-50">
       <header
         ref={headerRef}
@@ -315,9 +344,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 </button>
                 <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
                   <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass}>
-                    <RefreshCw className={`h-4 w-4 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
+                    <RefreshCw className={`h-4 w-4 text-blue-500 ${showDailySpinReady ? 'daily-spin-ready-icon' : ''}`} />
                     Daily Spin
-                    {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
+                    {showDailySpinReady ? <span className="daily-spin-ready-badge ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
                   </button>
                   <button type="button" onClick={() => navigate('POLLS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><BarChart3 className="h-4 w-4 text-cyan-300" />Polls</button>
                   <button type="button" onClick={() => navigate('REFERRALS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Users className="h-4 w-4 text-indigo-300" />Referrals</button>
@@ -513,9 +542,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             {openMobileSections.rewards ? (
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => navigate('BONUSES')} className={dailySpinMobileClass}>
-                  <RefreshCw className={`h-5 w-5 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
+                  <RefreshCw className={`h-5 w-5 text-blue-500 ${showDailySpinReady ? 'daily-spin-ready-icon' : ''}`} />
                   <span className="text-sm font-bold text-white">Daily Spin</span>
-                  {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
+                  {showDailySpinReady ? <span className="daily-spin-ready-badge ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
                 </button>
                 <button onClick={() => navigate('POLLS')} className={drawerCardClass}><BarChart3 className="h-5 w-5 text-cyan-300" /><span className="text-sm font-bold text-white">Polls</span></button>
                 <button onClick={() => navigate('REFERRALS')} className={drawerCardClass}><Users className="h-5 w-5 text-indigo-300" /><span className="text-sm font-bold text-white">Referrals</span></button>
