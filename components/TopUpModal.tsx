@@ -293,7 +293,7 @@ export const TopUpModal: React.FC = () => {
                     )}
                     {/* Amount Selector */}
                     <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-gray-500">Select a pack</label>
-                    <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="mb-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                         {activePackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             No packages available right now.
@@ -312,14 +312,14 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative overflow-hidden rounded-2xl border p-4 text-left transition-colors duration-200
+                                  className={`relative overflow-hidden rounded-xl border p-2.5 text-left transition-colors duration-200 sm:p-3
                                     ${getCardSurface(pack.badge, isSelected)}
                                     ${getCardAccentClasses(pack.badge, isSelected)}
                                     ${isSelected ? 'ring-1 ring-[#f7b733]/35' : ''}`}
                               >
                                   {badgeText && (
                                     <span
-                                      className={`absolute right-3 top-3 rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide ${getBadgeClasses(pack.badge)}`}
+                                      className={`absolute right-2 top-2 rounded-full px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${getBadgeClasses(pack.badge)}`}
                                     >
                                       {getBadgeLabel(badgeText)}
                                     </span>
@@ -329,30 +329,30 @@ export const TopUpModal: React.FC = () => {
                                       <CoinAmount
                                         amount={pack.coins}
                                         formatOptions={{ maximumFractionDigits: 0 }}
-                                        className="text-3xl font-black text-white sm:text-[2.1rem]"
-                                        iconClassName="h-6 w-6"
+                                        className="text-2xl font-black text-white sm:text-3xl"
+                                        iconClassName="h-5 w-5"
                                       />
-                                      <p className="mt-1 text-lg font-bold uppercase tracking-wide text-[#8f97bf]">
+                                      <p className="mt-0.5 text-sm font-bold uppercase tracking-wide text-[#8f97bf] sm:text-base">
                                         Coins
                                       </p>
                                     </div>
                                   </div>
-                                  <div className="relative z-10 mb-3 mt-4 overflow-hidden rounded-xl p-2.5">
+                                  <div className="relative z-10 mb-1.5 mt-1 overflow-hidden rounded-xl p-0.5">
                                     <img
                                       src={getPackageImage(pack)}
                                       alt={pack.name}
-                                      className="h-28 w-full object-contain sm:h-32"
+                                      className="h-36 w-full object-contain sm:h-40"
                                       loading="lazy"
                                       decoding="async"
                                     />
                                   </div>
-                                  <div className="relative z-10 flex flex-col gap-2">
+                                  <div className="relative z-10 flex flex-col gap-1">
                                     {bonusCoins > 0 && bonusLabel && (
-                                      <span className="text-center text-[1.85rem] font-black tracking-wide text-[#7a4bff]">
+                                      <span className="text-center text-lg font-black tracking-wide text-[#7a4bff] sm:text-xl">
                                         {bonusLabel}
                                       </span>
                                     )}
-                                    <div className={`rounded-xl px-3 py-2 text-center text-3xl font-black leading-none sm:text-4xl ${isSelected ? 'bg-gradient-to-r from-[#4f63ff] via-[#6f4dff] to-[#d64dd8] text-white' : 'border border-[#2f356a] bg-[#0a0d2f] text-[#eceffd]'}`}>
+                                    <div className={`rounded-lg px-3 py-1.5 text-center text-2xl font-black leading-none sm:text-3xl ${isSelected ? 'bg-gradient-to-r from-[#4f63ff] via-[#6f4dff] to-[#d64dd8] text-white' : 'border border-[#2f356a] bg-[#0a0d2f] text-[#eceffd]'}`}>
                                       {pack.displayPrice}
                                     </div>
                                   </div>
