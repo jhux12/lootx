@@ -191,7 +191,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
     <div className="relative flex flex-col items-center">
       <div
         ref={wheelRef}
-        className={`relative touch-none rounded-full border border-indigo-300/30 bg-[#060b18] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        className={`relative touch-none rounded-full border border-violet-300/35 bg-[#050a16] shadow-[0_0_40px_rgba(79,70,229,0.22),inset_0_0_0_1px_rgba(255,255,255,0.05)] ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
         style={{ width: size, height: size, ['--reactor-glow-rgb' as string]: chanceGlowRgb, ['--reactor-risk-color' as string]: riskColor }}
         onPointerDown={(event) => {
           if (!canRotateWinZone || status !== 'idle') return;
@@ -214,8 +214,9 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           event.currentTarget.releasePointerCapture(event.pointerId);
         }}
       >
-        <div className="pointer-events-none absolute inset-4 rounded-full bg-[radial-gradient(circle_at_50%_35%,rgba(99,102,241,0.2),rgba(7,12,25,0.95)_70%)]" />
-        <div className="pointer-events-none absolute inset-8 rounded-full border border-indigo-300/15 opacity-70" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)', backgroundSize: '14px 14px' }} />
+        <div className="pointer-events-none absolute -inset-6 rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.25),rgba(56,189,248,0.05)_45%,transparent_70%)] blur-xl" />
+        <div className="pointer-events-none absolute inset-4 rounded-full bg-[radial-gradient(circle_at_50%_35%,rgba(139,92,246,0.24),rgba(7,12,25,0.95)_70%)]" />
+        <div className="pointer-events-none absolute inset-8 rounded-full border border-indigo-300/20 opacity-75" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)', backgroundSize: '14px 14px' }} />
 
         <svg width={size} height={size} className="absolute inset-0 -rotate-90">
           <circle cx={size / 2} cy={size / 2} r={(size - 20) / 2} fill="transparent" stroke="rgba(255,255,255,0.09)" strokeWidth={16} />
@@ -233,8 +234,9 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           </g>
           <defs>
             <linearGradient id="win-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#818cf8" />
-              <stop offset="100%" stopColor="#22d3ee" />
+              <stop offset="0%" stopColor="#60a5fa" />
+              <stop offset="45%" stopColor="#a78bfa" />
+              <stop offset="100%" stopColor="#e879f9" />
             </linearGradient>
           </defs>
         </svg>
@@ -244,14 +246,14 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
             <>
               {hasSource && hasTarget ? (
                 <>
-                  <span className={`text-4xl font-bold tracking-tight sm:text-5xl ${riskBand.className}`}>{animatedChance.toFixed(2)}%</span>
-                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Chance to upgrade</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Upgrade Chance</p>
+                  <span className={`mt-1 text-4xl font-black tracking-tight sm:text-5xl ${riskBand.className}`}>{animatedChance.toFixed(2)}%</span>
                   <p className={`mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${riskBand.className}`}>{riskBand.label}</p>
                 </>
               ) : (
                 <>
-                  <span className="px-8 text-center text-base font-semibold leading-relaxed text-slate-300">
-                    Pick both items to see your upgrade chance
+                  <span className="px-8 text-center text-sm font-semibold leading-relaxed text-slate-300 sm:text-base">
+                    Select items to see your chance
                   </span>
                   <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Awaiting selections</p>
                 </>

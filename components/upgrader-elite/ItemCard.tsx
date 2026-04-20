@@ -40,15 +40,16 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, o
       onClick={onClick}
       disabled={disabled}
       className={`group relative flex w-full flex-col overflow-hidden rounded-xl border p-2.5 text-left transition duration-300 sm:p-3
-        ${isSelected ? 'scale-[1.015] border-cyan-300/80 bg-[#151f46] ring-2 ring-cyan-300/40 shadow-[0_0_20px_rgba(34,211,238,0.22)]' : tone === 'source' ? 'border-indigo-300/15 bg-gradient-to-b from-[#0e152f] to-[#0a1024] hover:scale-[1.006] hover:border-indigo-300/30' : 'border-indigo-200/30 bg-gradient-to-b from-[#131d3f] to-[#0d1530] hover:scale-[1.012] hover:border-cyan-200/55 hover:shadow-[0_0_20px_rgba(34,211,238,0.15)]'}
+        ${isSelected ? 'scale-[1.01] border-cyan-300/75 bg-[#141b37] shadow-[0_0_24px_rgba(56,189,248,0.24)]' : tone === 'source' ? 'border-violet-300/20 bg-gradient-to-b from-[#0e1329] to-[#090f1f] hover:border-violet-300/35' : 'border-indigo-200/20 bg-gradient-to-b from-[#111731] to-[#0a0f22] hover:border-cyan-200/40 hover:shadow-[0_0_16px_rgba(103,232,249,0.16)]'}
         ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer active:scale-[0.99]'}
       `}
     >
-      <p className="truncate pr-8 text-[11px] font-semibold text-slate-100">{item.name}</p>
-      <p className={`mt-0.5 text-[9px] font-bold uppercase tracking-[0.16em] ${RARITY_COLORS[item.rarity]}`}>{item.rarity}</p>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(139,92,246,0.16),transparent_55%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <p className="relative truncate pr-8 text-[11px] font-semibold text-slate-100">{item.name}</p>
+      <p className={`relative mt-0.5 text-[9px] font-bold uppercase tracking-[0.16em] ${RARITY_COLORS[item.rarity]}`}>{item.rarity}</p>
 
       <div className="relative mt-2 flex h-20 items-center justify-center rounded-lg border border-indigo-300/15 bg-[#050914] sm:h-24">
-        <div className="pointer-events-none absolute inset-x-8 bottom-2 h-4 rounded-[999px] bg-indigo-400/20 blur-md" />
+        <div className="pointer-events-none absolute inset-x-8 bottom-2 h-4 rounded-[999px] bg-indigo-400/25 blur-md" />
         <img
           src={item.image}
           alt={item.name}
@@ -57,7 +58,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, o
         />
       </div>
 
-      <div className="mt-2 rounded-md border border-indigo-300/20 bg-[#0b132d] px-2 py-1">
+      <div className="mt-2 rounded-md border border-indigo-300/25 bg-[#0b132d] px-2 py-1">
         <CoinAmount amount={Math.round(item.price)} className="text-[11px] font-semibold text-slate-100" iconClassName="h-3 w-3" />
       </div>
       {hintLabel && (
