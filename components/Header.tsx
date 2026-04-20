@@ -79,6 +79,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const dailyCooldownMs = 24 * 60 * 60 * 1000;
   const isDailySpinReady = !lastDailyClaim || (lastDailyClaim + dailyCooldownMs) <= Date.now();
   const showDailySpinReady = isAuthenticated && isDailySpinReady;
+  const readyRewardsTabClass = showDailySpinReady
+    ? 'border-violet-400/60 bg-violet-500/10 shadow-[0_0_24px_rgba(139,92,246,0.32)] motion-safe:animate-[pullz-ready-tab_2.6s_ease-in-out_infinite]'
+    : '';
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -218,15 +221,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     </>
   ), [openAuthModal, playSound]);
 
-  const dailySpinDesktopClass = `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white transition-all ${
+  const dailySpinDesktopClass = `group relative isolate overflow-hidden flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white transition-all ${
     showDailySpinReady
-      ? 'border border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
+      ? 'border border-blue-400/60 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.34)] hover:bg-blue-500/20 before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(120deg,transparent_20%,rgba(147,197,253,0.34)_50%,transparent_80%)] before:opacity-0 motion-safe:before:animate-[pullz-ready-shimmer_2.8s_ease-in-out_infinite]'
       : 'hover:bg-white/5'
   }`;
 
-  const dailySpinMobileClass = `${drawerCardClass} transition-all ${
+  const dailySpinMobileClass = `${drawerCardClass} group relative isolate overflow-hidden transition-all ${
     showDailySpinReady
-      ? 'border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.35)] motion-safe:animate-pulse hover:bg-blue-500/20'
+      ? 'border-blue-400/60 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.34)] hover:bg-blue-500/20 before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(120deg,transparent_20%,rgba(147,197,253,0.34)_50%,transparent_80%)] before:opacity-0 motion-safe:before:animate-[pullz-ready-shimmer_2.8s_ease-in-out_infinite]'
       : ''
   }`;
 
@@ -290,7 +293,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 <button type="button" onClick={() => {
                   setIsRewardsMenuOpen((prev) => !prev);
                   setIsGamesMenuOpen(false);
-                }} className="relative flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-purple-400 transition-colors hover:border-white/5 hover:bg-neutral-800" aria-expanded={isRewardsMenuOpen}>
+                }} className={`relative flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-purple-400 transition-colors hover:border-white/5 hover:bg-neutral-800 ${readyRewardsTabClass}`} aria-expanded={isRewardsMenuOpen}>
                   <Sparkles className="h-4 w-4" />
                   Rewards
                   <ChevronDown className={`h-4 w-4 transition-transform ${isRewardsMenuOpen ? 'rotate-180' : ''}`} />
@@ -298,7 +301,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 </button>
                 <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
                   <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass}>
-                    <RefreshCw className={`h-4 w-4 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
+                    <RefreshCw className={`relative z-[1] h-4 w-4 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-[spin_2.8s_linear_infinite]' : ''}`} />
                     Daily Spin
                     {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
                   </button>
@@ -472,14 +475,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           </section>
 
           <section className="space-y-3">
-            <button type="button" onClick={() => toggleMobileSection('rewards')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left">
+            <button type="button" onClick={() => toggleMobileSection('rewards')} className={`flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left transition-all ${readyRewardsTabClass}`}>
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Rewards</h3>
               <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.rewards ? 'rotate-180' : ''}`} />
             </button>
             {openMobileSections.rewards ? (
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => navigate('BONUSES')} className={dailySpinMobileClass}>
-                  <RefreshCw className={`h-5 w-5 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-spin' : ''}`} />
+                  <RefreshCw className={`relative z-[1] h-5 w-5 text-blue-500 ${showDailySpinReady ? 'motion-safe:animate-[spin_2.8s_linear_infinite]' : ''}`} />
                   <span className="text-sm font-bold text-white">Daily Spin</span>
                   {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
                 </button>
@@ -561,6 +564,35 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           </section>
         </div>
       </div>
+      <style>{`
+        @keyframes pullz-ready-tab {
+          0%, 100% {
+            transform: translateY(0);
+            box-shadow: 0 0 0 rgba(139,92,246,0);
+          }
+          50% {
+            transform: translateY(-1px);
+            box-shadow: 0 0 28px rgba(139,92,246,0.42);
+          }
+        }
+
+        @keyframes pullz-ready-shimmer {
+          0% {
+            transform: translateX(-115%);
+            opacity: 0;
+          }
+          25% {
+            opacity: 1;
+          }
+          70% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateX(115%);
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
     <ActivityDrawer open={showActivity} onClose={() => setShowActivity(false)} />
     <style>{`@media (prefers-reduced-motion: reduce){.ambient-pulse{animation:none!important;}}`}</style>
