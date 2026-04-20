@@ -386,7 +386,7 @@ export const TopUpModal: React.FC = () => {
                   <button
                     onClick={handleDeposit}
                     disabled={isLoading || !selectedPackage}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#4f63ff] via-[#6f4dff] to-[#d64dd8] py-3.5 text-base font-semibold text-white shadow-lg shadow-[#4f63ff]/20 transition-all hover:brightness-110 active:scale-95 sm:py-4 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isLoading ? (
                       <>
