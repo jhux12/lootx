@@ -401,13 +401,15 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                             boxShadow: `0 0 38px ${item.color}88`
                           }}
                         ></div>
-                        <img
-                          loading="lazy"
-                          decoding="async"
-                          src={item.image}
-                          alt={item.name}
-                          className="relative z-10 mt-1 h-[96px] w-[96px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:h-[118px] sm:w-[118px]"
-                        />
+                        <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
+                          <img
+                            loading="lazy"
+                            decoding="async"
+                            src={item.image}
+                            alt={item.name}
+                            className="h-[108px] w-[108px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:h-[132px] sm:w-[132px]"
+                          />
+                        </div>
                         <div className="relative z-10 mt-1 flex items-center justify-center px-1 text-[13px] font-extrabold leading-none text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] sm:text-[16px]">
                           <CoinAmount
                             amount={item.price}

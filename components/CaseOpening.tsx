@@ -2011,12 +2011,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   boxShadow: animationPhase === 'idle' ? `0 0 24px ${item.color}50` : 'none'
                                 }}
                             ></div>
-                            <img loading="eager" decoding="async" 
-                                src={item.image} 
-                                alt={item.name} 
-                                className={`relative z-10 mt-1 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] ${isMobileViewport ? 'h-[92px] w-[92px]' : 'h-[116px] w-[116px]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
-                                style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
-                            />
+                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
+                              <img loading="eager" decoding="async" 
+                                  src={item.image} 
+                                  alt={item.name} 
+                                  className={`object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] ${isMobileViewport ? 'h-[104px] w-[104px]' : 'h-[132px] w-[132px]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
+                                  style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
+                              />
+                            </div>
                             <div className={`relative z-10 mt-0.5 inline-flex items-center justify-center text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] ${isMobileViewport ? 'text-[12px]' : 'text-[16px]'} font-extrabold leading-none`}>
                               <CoinAmount
                                 amount={item.price}
