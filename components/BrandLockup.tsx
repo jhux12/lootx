@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import pullzLogo from '../assets/pullz-p.PNG';
+import './brandLockup.css';
 
 type BrandLockupProps = {
   className?: string;
@@ -10,6 +11,9 @@ type BrandLockupProps = {
   dotClassName?: string;
   showText?: boolean;
   showTextOnMobile?: boolean;
+  enableSignatureAnimation?: boolean;
+  signatureIntervalRangeMs?: [number, number];
+  signatureDurationMs?: number;
 };
 
 export const BrandLockup: React.FC<BrandLockupProps> = ({
@@ -21,27 +25,88 @@ export const BrandLockup: React.FC<BrandLockupProps> = ({
   dotClassName = 'text-sm md:text-base',
   showText = true,
   showTextOnMobile = false,
-}) => (
-  <div className={`flex items-center justify-center gap-3 ${className}`.trim()}>
-    <img
-      src={pullzLogo}
-      alt="PULLZ Logo"
-      width={logoWidth}
-      height={logoHeight}
-      className={`${logoClassName} shrink-0 object-contain`}
-      loading="lazy"
-      decoding="async"
-      style={{ aspectRatio: '2 / 1' }}
-    />
-    {showText && (
+  enableSignatureAnimation = false,
+  signatureIntervalRangeMs = [6000, 12000],
+  signatureDurationMs = 1450,
+}) => {
+  const [isSignatureActive, setIsSignatureActive] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncPreference = () => setReduceMotion(mediaQuery.matches);
+    syncPreference();
+    mediaQuery.addEventListener('change', syncPreference);
+    return () => mediaQuery.removeEventListener('change', syncPreference);
+  }, []);
+
+  useEffect(() => {
+    if (!enableSignatureAnimation || reduceMotion) {
+      setIsSignatureActive(false);
+      return;
+    }
+
+    const [minDelay, maxDelay] = signatureIntervalRangeMs;
+    const safeMin = Math.max(1000, Math.min(minDelay, maxDelay));
+    const safeMax = Math.max(safeMin, Math.max(minDelay, maxDelay));
+
+    let triggerTimer: number | null = null;
+    let settleTimer: number | null = null;
+    let cancelled = false;
+
+    const scheduleActivation = () => {
+      if (cancelled) return;
+      const delay = Math.floor(Math.random() * (safeMax - safeMin + 1)) + safeMin;
+
+      triggerTimer = window.setTimeout(() => {
+        if (cancelled) return;
+        setIsSignatureActive(true);
+        settleTimer = window.setTimeout(() => {
+          if (cancelled) return;
+          setIsSignatureActive(false);
+          scheduleActivation();
+        }, signatureDurationMs);
+      }, delay);
+    };
+
+    scheduleActivation();
+
+    return () => {
+      cancelled = true;
+      if (triggerTimer !== null) window.clearTimeout(triggerTimer);
+      if (settleTimer !== null) window.clearTimeout(settleTimer);
+    };
+  }, [enableSignatureAnimation, reduceMotion, signatureDurationMs, signatureIntervalRangeMs]);
+
+  return (
+    <div className={`flex items-center justify-center gap-3 ${className}`.trim()}>
       <span
-        className={`items-center font-black uppercase leading-none tracking-[0.18em] text-white ${showTextOnMobile ? 'inline-flex' : 'hidden sm:inline-flex'} ${textClassName}`.trim()}
+        className={`pullz-logo-shell ${enableSignatureAnimation && !reduceMotion ? 'pullz-logo-shell--interactive' : ''} ${isSignatureActive ? 'pullz-logo-shell--active' : ''}`.trim()}
+        style={{ ['--pullz-logo-signature-duration' as string]: `${signatureDurationMs}ms` }}
       >
-        <span className="block">PULLZ</span>
-        <span className={`ml-1 inline-block translate-y-[1px] font-semibold tracking-[0.02em] text-white/90 ${dotClassName}`.trim()}>
-          .gg
-        </span>
+        <img
+          src={pullzLogo}
+          alt="PULLZ Logo"
+          width={logoWidth}
+          height={logoHeight}
+          className={`pullz-logo-image ${logoClassName} shrink-0 object-contain`}
+          loading="lazy"
+          decoding="async"
+          style={{ aspectRatio: '2 / 1' }}
+        />
+        {enableSignatureAnimation && !reduceMotion ? <span aria-hidden="true" className="pullz-logo-sweep" /> : null}
       </span>
-    )}
-  </div>
-);
+      {showText && (
+        <span
+          className={`items-center font-black uppercase leading-none tracking-[0.18em] text-white ${showTextOnMobile ? 'inline-flex' : 'hidden sm:inline-flex'} ${textClassName}`.trim()}
+        >
+          <span className="block">PULLZ</span>
+          <span className={`ml-1 inline-block translate-y-[1px] font-semibold tracking-[0.02em] text-white/90 ${dotClassName}`.trim()}>
+            .gg
+          </span>
+        </span>
+      )}
+    </div>
+  );
+};
