@@ -15,7 +15,32 @@ interface InventoryCardProps {
   onAction: () => void;
 }
 
+const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: string }> = {
+  common: {
+    card: 'border-slate-400/30 bg-gradient-to-b from-slate-500/20 to-slate-900/40',
+    badge: 'border-slate-300/40 bg-slate-500/20 text-slate-100'
+  },
+  uncommon: {
+    card: 'border-emerald-400/40 bg-gradient-to-b from-emerald-500/20 to-emerald-950/40',
+    badge: 'border-emerald-300/50 bg-emerald-500/20 text-emerald-100'
+  },
+  rare: {
+    card: 'border-blue-400/45 bg-gradient-to-b from-blue-500/20 to-blue-950/40',
+    badge: 'border-blue-300/50 bg-blue-500/20 text-blue-100'
+  },
+  epic: {
+    card: 'border-purple-400/45 bg-gradient-to-b from-purple-500/20 to-purple-950/45',
+    badge: 'border-purple-300/50 bg-purple-500/20 text-purple-100'
+  },
+  legendary: {
+    card: 'border-amber-400/55 bg-gradient-to-b from-amber-400/25 to-amber-950/45',
+    badge: 'border-amber-300/60 bg-amber-500/20 text-amber-100'
+  }
+};
+
 export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, selectable, onToggleSelect, actionLabel, actionDisabled, onAction }) => {
+  const rarityStyle = RARITY_STYLES[item.rarity] ?? RARITY_STYLES.common;
+
   return (
     <div
       role="button"
@@ -27,13 +52,13 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           onToggleSelect();
         }
       }}
-      className={`group rounded-2xl border bg-gradient-to-b from-[#141a2c] to-[#101626] p-3 transition ${
-        selected ? 'border-purple-400 bg-purple-500/10' : 'border-white/10 hover:border-purple-300/40 hover:shadow-[0_0_20px_rgba(124,58,237,0.2)]'
+      className={`group rounded-2xl border p-3 transition ${rarityStyle.card} ${
+        selected ? 'ring-2 ring-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.35)]' : 'hover:shadow-[0_0_18px_rgba(255,255,255,0.08)]'
       } ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
     >
       <div className="mb-3 flex items-center justify-between">
-        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase text-gray-200">{item.rarity}</span>
-        <button type="button" className="rounded-md p-1 text-gray-400 hover:bg-white/5 hover:text-white" onClick={(e) => e.stopPropagation()}>
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${rarityStyle.badge}`}>{item.rarity}</span>
+        <button type="button" className="rounded-md p-1 text-gray-300 hover:bg-white/10 hover:text-white" onClick={(e) => e.stopPropagation()}>
           <MoreHorizontal className="h-4 w-4" />
         </button>
       </div>
