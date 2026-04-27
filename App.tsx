@@ -42,6 +42,7 @@ import { AdminGate } from './components/AdminGate';
 import { trackEvent, trackMetaEvent } from './utils/trackEvent';
 import { auth } from './firebase';
 import PullToRefresh from './components/PullToRefresh';
+import { setPostSignupRedirect } from './utils/postSignupRedirect';
 import {
   ShowcaseRow,
   ShowcaseRowBoxes,
@@ -122,6 +123,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
   const trackedPurchaseSessionsRef = useRef<Set<string>>(new Set());
+  const [showHomePrompt, setShowHomePrompt] = useState(false);
+  const [homePromptVariant, setHomePromptVariant] = useState<'default' | 'returning'>('default');
+  const homePromptTrackedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -194,6 +198,58 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       path: window.location.pathname
     });
   }, [view.type]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (view.type !== 'HOME' || isAuthenticated) return;
+    if (window.sessionStorage.getItem('homePromptShown') === 'true' || window.sessionStorage.getItem('homePromptDismissed') === 'true') return;
+
+    let timeoutId: number | null = window.setTimeout(() => {
+      setShowHomePrompt(true);
+      setHomePromptVariant('default');
+    }, 22000);
+
+    const showPrompt = (variant: 'default' | 'returning') => {
+      if (window.sessionStorage.getItem('homePromptShown') === 'true' || window.sessionStorage.getItem('homePromptDismissed') === 'true') return;
+      setHomePromptVariant(variant);
+      setShowHomePrompt(true);
+    };
+
+    const onScroll = () => {
+      const doc = document.documentElement;
+      const maxScrollable = doc.scrollHeight - window.innerHeight;
+      if (maxScrollable <= 0) return;
+      const depth = (window.scrollY / maxScrollable) * 100;
+      if (depth >= 45) {
+        showPrompt('returning');
+      }
+    };
+
+    const onExitIntent = (event: MouseEvent) => {
+      if (window.innerWidth < 1024) return;
+      if (event.clientY <= 6) {
+        showPrompt('default');
+      }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('mouseout', onExitIntent);
+
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      window.removeEventListener('scroll', onScroll);
+      document.removeEventListener('mouseout', onExitIntent);
+    };
+  }, [isAuthenticated, view.type]);
+
+  useEffect(() => {
+    if (!showHomePrompt || homePromptTrackedRef.current) return;
+    homePromptTrackedRef.current = true;
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('homePromptShown', 'true');
+    }
+    trackEvent('homepage_idle_prompt_shown', { variant: homePromptVariant });
+  }, [homePromptVariant, showHomePrompt]);
 
   useEffect(() => {
     switch (view.type) {
@@ -444,9 +500,44 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           }}
           onSignUp={() => {
             playSound('click');
+            trackEvent('signup_cta_clicked', { placement: 'home_hero' });
+            setPostSignupRedirect('/case/free-box');
             openAuthModal('register');
           }}
         />
+      )}
+      {view.type === 'HOME' && showHomePrompt && !isAuthenticated && (
+        <div className="fixed bottom-4 left-1/2 z-[130] w-[calc(100%-1rem)] max-w-md -translate-x-1/2 rounded-2xl border border-white/10 bg-[#11131d]/95 p-4 shadow-2xl backdrop-blur-md">
+          <p className="text-base font-bold text-white">{homePromptVariant === 'returning' ? 'Finish your free pull' : 'Your first pull is free 🎁'}</p>
+          <p className="mt-1 text-sm text-slate-300">{homePromptVariant === 'returning' ? 'You’re one step away from opening your first box' : 'Open your first box — no deposit needed'}</p>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                trackEvent('homepage_idle_prompt_clicked', { action: 'primary' });
+                trackEvent('signup_cta_clicked', { placement: 'home_prompt' });
+                setPostSignupRedirect('/case/free-box');
+                setShowHomePrompt(false);
+                openAuthModal('register');
+              }}
+              className="flex-1 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
+            >
+              Open Free Box
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.sessionStorage.setItem('homePromptDismissed', 'true');
+                }
+                setShowHomePrompt(false);
+              }}
+              className="rounded-xl border border-white/15 px-4 py-2.5 text-sm text-slate-200 hover:bg-white/5"
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
       )}
       
       {view.type === 'BOXES' && (
