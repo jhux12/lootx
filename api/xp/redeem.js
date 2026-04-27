@@ -1,5 +1,6 @@
 import { admin, adminAuth, firestore } from '../_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from '../_lib/http.js';
+import { recordBalanceChange } from '../_lib/balanceAudit.js';
 
 const toInt = (value, fallback = 0) => {
   const num = Math.floor(Number(value));
@@ -125,12 +126,43 @@ export default async function handler(req, res) {
         throw { status: 400, error: 'Rakeback is already unlocked for this account' };
       }
 
-      const nextXp = currentXp - xpCost;
+      let caseRef = null;
+      if (fulfillmentType === 'XP_BOX') {
+        if (!metadataSnapshot.caseId) {
+          throw { status: 400, error: 'XP box reward is missing caseId' };
+        }
+
+        if (metadataSnapshot.xpPriceOverride != null) {
+          caseRef = firestore.collection('boxes').doc(metadataSnapshot.caseId);
+          const caseSnap = await transaction.get(caseRef);
+          if (!caseSnap.exists) {
+            throw { status: 404, error: 'Referenced XP box not found' };
+          }
+          const caseData = caseSnap.data() ?? {};
+          const inferredXpLegacy = Number.isFinite(Number(caseData.priceXP)) && Number(caseData.priceXP) > 0;
+          if ((caseData.currencyType === 'XP' || inferredXpLegacy ? 'XP' : 'COIN') !== 'XP') {
+            throw { status: 400, error: 'Referenced case is not configured as XP box' };
+          }
+        }
+      }
+
+      const { balanceAfter: nextXp } = await recordBalanceChange({
+        transaction,
+        uid: decoded.uid,
+        userRef,
+        userData,
+        currency: 'xp',
+        amount: -xpCost,
+        reason: 'xp_shop_purchase',
+        actorType: 'user',
+        actorUid: decoded.uid,
+        source: 'api/xp/redeem',
+        relatedId: itemId,
+        metadata: { redemptionRequestId, fulfillmentType: itemData.fulfillmentType ?? 'DIGITAL' }
+      });
       const nextStock = hasLimitedStock ? Number(stockValue) - 1 : null;
 
       transaction.set(userRef, {
-        xpBalance: nextXp,
-        xp: nextXp,
         xpSpentLifetime: Math.max(0, toInt(userData.xpSpentLifetime, 0)) + xpCost,
         lastXpRedemptionAt: admin.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
@@ -147,24 +179,8 @@ export default async function handler(req, res) {
         }), { merge: true });
       }
 
-      if (fulfillmentType === 'XP_BOX') {
-        if (!metadataSnapshot.caseId) {
-          throw { status: 400, error: 'XP box reward is missing caseId' };
-        }
-
-        if (metadataSnapshot.xpPriceOverride != null) {
-          const caseRef = firestore.collection('boxes').doc(metadataSnapshot.caseId);
-          const caseSnap = await transaction.get(caseRef);
-          if (!caseSnap.exists) {
-            throw { status: 404, error: 'Referenced XP box not found' };
-          }
-          const caseData = caseSnap.data() ?? {};
-          const inferredXpLegacy = Number.isFinite(Number(caseData.priceXP)) && Number(caseData.priceXP) > 0;
-          if ((caseData.currencyType === 'XP' || inferredXpLegacy ? 'XP' : 'COIN') !== 'XP') {
-            throw { status: 400, error: 'Referenced case is not configured as XP box' };
-          }
-          transaction.set(caseRef, { priceXP: metadataSnapshot.xpPriceOverride }, { merge: true });
-        }
+      if (caseRef && metadataSnapshot.xpPriceOverride != null) {
+        transaction.set(caseRef, { priceXP: metadataSnapshot.xpPriceOverride }, { merge: true });
       }
 
       const shouldCreateInventoryReward = (fulfillmentType === 'DIGITAL' && !isDigitalRakebackUnlock) || fulfillmentType === 'PHYSICAL_SHIP';

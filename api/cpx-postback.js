@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { admin, firestore } from './_lib/firebaseAdmin.js';
 import { readJsonBody, sendJson } from './_lib/http.js';
+import { recordBalanceChange } from './_lib/balanceAudit.js';
 
 /**
  * CPX secure hash:
@@ -94,11 +95,8 @@ export default async function handler(req, res) {
   await firestore.runTransaction(async (tx) => {
     const txSnap = await tx.get(transactionRef);
     const existing = txSnap.exists ? txSnap.data() : null;
-
     const userSnap = await tx.get(userRef);
-    const user = userSnap.exists ? userSnap.data() : {};
-    const currentCoins = Number(user.coins ?? 0);
-    const currentBalance = Number(user.balance ?? 0);
+    const userData = userSnap.exists ? userSnap.data() ?? {} : {};
 
     if (existing) {
       if (status === 1 && existing.credited) {
@@ -113,14 +111,20 @@ export default async function handler(req, res) {
 
     // ---- CREDIT ----
     if (status === 1) {
-      tx.set(
+      await recordBalanceChange({
+        transaction: tx,
+        uid: userId,
         userRef,
-        {
-          coins: currentCoins + coins,
-          balance: currentBalance + balanceUsd
-        },
-        { merge: true }
-      );
+        userData,
+        currency: 'coins',
+        amount: coins,
+        reason: 'offerwall_cpx_credit',
+        actorType: 'system',
+        actorUid: null,
+        source: 'api/cpx-postback',
+        relatedId: transId,
+        metadata: { status, amountUsd: balanceUsd, amountLocal }
+      });
 
       tx.set(
         transactionRef,
@@ -146,17 +150,22 @@ export default async function handler(req, res) {
     // ---- REVERSAL ----
     if (status === 2) {
       const prevCoins = Number(existing?.coins ?? 0);
-      const prevUsd = Number(existing?.amount_usd ?? 0);
 
       if (existing?.credited && !existing?.reversed) {
-        tx.set(
+        await recordBalanceChange({
+          transaction: tx,
+          uid: userId,
           userRef,
-          {
-            coins: Math.max(0, currentCoins - prevCoins),
-            balance: Math.max(0, currentBalance - prevUsd)
-          },
-          { merge: true }
-        );
+          userData,
+          currency: 'coins',
+          amount: -Math.max(0, Math.floor(prevCoins)),
+          reason: 'offerwall_cpx_reversal',
+          actorType: 'system',
+          actorUid: null,
+          source: 'api/cpx-postback',
+          relatedId: transId,
+          metadata: { status, originalAmountUsd: Number(existing?.amount_usd ?? 0) }
+        });
 
         tx.set(
           transactionRef,

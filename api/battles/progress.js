@@ -1,5 +1,6 @@
 import { admin, firestore } from '../_lib/firebaseAdmin.js';
 import { readJsonBody, sendJson } from '../_lib/http.js';
+import { recordBalanceChange } from '../_lib/balanceAudit.js';
 import { consumeRateLimit, getRateLimitKey } from '../_utils/ratelimit.js';
 import {
   BATTLE_STATES,
@@ -161,16 +162,31 @@ export default async function handler(req, res) {
 
         const entryCostCoins = Number(fresh.entryCostCoins ?? 0);
         const freshPlayers = Array.isArray(fresh.players) ? fresh.players : [];
+        const realPlayers = freshPlayers.filter((entry) => entry.isHouseBot !== true);
+        const userRefs = realPlayers.map((player) => firestore.collection('users').doc(player.uid));
+        const userSnaps = await Promise.all(userRefs.map((userRef) => transaction.get(userRef)));
+        const userDataByUid = new Map(
+          realPlayers.map((player, index) => [player.uid, userSnaps[index]?.data() ?? {}])
+        );
 
-        freshPlayers
-          .filter((player) => player.isHouseBot !== true)
-          .forEach((player) => {
-            const userRef = firestore.collection('users').doc(player.uid);
-            transaction.set(userRef, {
-              coinsLocked: admin.firestore.FieldValue.increment(-entryCostCoins),
-              coins: admin.firestore.FieldValue.increment(Number(settlement.payoutsByUid[player.uid] ?? 0))
-            }, { merge: true });
+        for (const player of realPlayers) {
+          const userRef = firestore.collection('users').doc(player.uid);
+          transaction.set(userRef, { coinsLocked: admin.firestore.FieldValue.increment(-entryCostCoins) }, { merge: true });
+          await recordBalanceChange({
+            transaction,
+            uid: player.uid,
+            userRef,
+            userData: userDataByUid.get(player.uid) ?? {},
+            currency: 'coins',
+            amount: Number(settlement.payoutsByUid[player.uid] ?? 0),
+            reason: 'battle_payout',
+            actorType: 'system',
+            actorUid: null,
+            source: 'api/battles/progress',
+            relatedId: battleId,
+            metadata: { winnerTeam: settlement.winnerTeam, mode: fresh.mode, format: fresh.format }
           });
+        }
 
         transaction.set(battleRef, {
           totalsByUid: settlement.totalsByUid,

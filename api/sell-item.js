@@ -2,6 +2,7 @@ import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { appendLedgerEntry } from './_lib/ledger.js';
 import { computeXpAward, getXpSettings } from './_lib/xp.js';
+import { recordBalanceChange } from './_lib/balanceAudit.js';
 
 const isXpPurchasedInventoryItem = (inventoryItem = {}) => (
   inventoryItem.source === 'xpShop'
@@ -150,7 +151,6 @@ export default async function handler(req, res) {
       const creditCoins = Math.floor(coinValue * sellBackRate);
 
       const currentCoins = toFiniteNumber(userSnap.data()?.coins ?? userSnap.data()?.balance ?? 0, 0);
-      const newCoins = currentCoins + creditCoins;
 
       const settings = await getXpSettings(transaction);
       const userData = userSnap.exists ? userSnap.data() ?? {} : {};
@@ -163,20 +163,12 @@ export default async function handler(req, res) {
           })
           : 0;
 
-      if (!userSnap.exists) {
-        transaction.set(userRef, {
-          coins: 0,
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      }
-
       const today = new Date().toISOString().slice(0, 10);
       const priorDay = typeof userData.challengeStatsDay === 'string' ? userData.challengeStatsDay : '';
       const priorStats = priorDay === today && userData.challengeStats && typeof userData.challengeStats === 'object'
         ? userData.challengeStats
         : {};
       const userPatch = {
-        coins: newCoins,
         challengeStatsDay: today,
         challengeStats: {
           boxesOpened: Math.max(0, Number(priorStats.boxesOpened ?? 0)),
@@ -202,6 +194,24 @@ export default async function handler(req, res) {
       }
 
       const transactionRef = userRef.collection('transactions').doc();
+      const { balanceAfter: newCoins } = await recordBalanceChange({
+        transaction,
+        uid: decoded.uid,
+        userRef,
+        userData,
+        currency: 'coins',
+        amount: creditCoins,
+        reason: 'sell_back_credit',
+        actorType: 'user',
+        actorUid: decoded.uid,
+        source: 'api/sell-item',
+        relatedId: inventoryRef.id,
+        metadata: {
+          itemName: inventoryItem.name ?? 'inventory item',
+          sellBackRate,
+          coinValue
+        }
+      });
       transaction.set(userRef, userPatch, { merge: true });
       appendLedgerEntry({
         transaction,

@@ -4,6 +4,7 @@ import { sendJson } from './_lib/http.js';
 import { appendLedgerEntry } from './_lib/ledger.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
 import { markReferralDepositQualified } from './_lib/referrals.js';
+import { recordBalanceChange } from './_lib/balanceAudit.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -156,13 +157,20 @@ export default async function handler(req, res) {
 
         const userSnap = await transaction.get(userRef);
         const userData = userSnap.exists ? userSnap.data() ?? {} : {};
-        const currentCoins = Number(userData.coins ?? userData.balance ?? 0) || 0;
-        const nextCoins = currentCoins + totalCoins;
-
-        transaction.set(userRef, {
-          coins: admin.firestore.FieldValue.increment(totalCoins),
-          balance: admin.firestore.FieldValue.increment(totalCoins)
-        }, { merge: true });
+        const { balanceAfter: nextCoins } = await recordBalanceChange({
+          transaction,
+          uid,
+          userRef,
+          userData,
+          currency: 'coins',
+          amount: totalCoins,
+          reason: 'stripe_topup_credit',
+          actorType: 'system',
+          actorUid: null,
+          source: 'api/stripe-webhook',
+          relatedId: session.id,
+          metadata: { packageId, baseCoins, bonusCoins, paymentIntentId: session.payment_intent ?? null }
+        });
         appendLedgerEntry({
           transaction,
           userRef,

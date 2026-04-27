@@ -1,6 +1,7 @@
 import { admin, firestore } from '../_lib/firebaseAdmin.js';
 import { readJsonBody, sendJson } from '../_lib/http.js';
 import { requireUser } from '../_utils/auth.js';
+import { recordBalanceChange } from '../_lib/balanceAudit.js';
 
 const SAFE_ACTION_XP = {
   DAILY_LOGIN: 25,
@@ -31,9 +32,23 @@ export default async function handler(req, res) {
     const dateKey = new Date().toISOString().slice(0, 10);
 
     await firestore.runTransaction(async (transaction) => {
+      const userSnap = await transaction.get(userRef);
+      const userData = userSnap.exists ? userSnap.data() ?? {} : {};
+      await recordBalanceChange({
+        transaction,
+        uid: decoded.uid,
+        userRef,
+        userData,
+        currency: 'xp',
+        amount: awarded,
+        reason: 'xp_award',
+        actorType: 'system',
+        actorUid: null,
+        source: 'api/xp/award',
+        relatedId: action,
+        metadata: { action }
+      });
       transaction.set(userRef, {
-        xpBalance: admin.firestore.FieldValue.increment(awarded),
-        xp: admin.firestore.FieldValue.increment(awarded),
         xpEarnedLifetime: admin.firestore.FieldValue.increment(awarded),
         [`xpDailyEarned.${dateKey}`]: admin.firestore.FieldValue.increment(awarded),
         lastXpAwardAction: action,

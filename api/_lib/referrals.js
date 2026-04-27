@@ -1,4 +1,5 @@
 import { admin, firestore } from './firebaseAdmin.js';
+import { recordBalanceChange } from './balanceAudit.js';
 
 export const REFERRAL_SETTINGS_DOC = 'referral-settings';
 
@@ -211,14 +212,10 @@ export const maybeCompleteReferralReward = async ({ referredUid }) => {
     const friendRewardCoins = liveSettings.friendRewardCoins;
     const rewardPatch = {
       referralRewardsEarned: admin.firestore.FieldValue.increment(referrerRewardCoins),
-      coins: admin.firestore.FieldValue.increment(referrerRewardCoins),
-      balance: admin.firestore.FieldValue.increment(referrerRewardCoins),
       updatedAt: Date.now()
     };
     const friendPatch = {
       referralRewardsReceived: admin.firestore.FieldValue.increment(friendRewardCoins),
-      coins: admin.firestore.FieldValue.increment(friendRewardCoins),
-      balance: admin.firestore.FieldValue.increment(friendRewardCoins),
       updatedAt: Date.now()
     };
 
@@ -227,6 +224,34 @@ export const maybeCompleteReferralReward = async ({ referredUid }) => {
       friendPatch.rewardPointsBalance = admin.firestore.FieldValue.increment(liveSettings.friendLeaderboardPoints);
     }
 
+    await recordBalanceChange({
+      transaction: tx,
+      uid: referralData.referrerUid,
+      userRef: referrerRef,
+      userData: referrerSnap.data() ?? {},
+      currency: 'coins',
+      amount: referrerRewardCoins,
+      reason: 'referral_reward',
+      actorType: 'system',
+      actorUid: null,
+      source: 'api/_lib/referrals',
+      relatedId: referralRef.id,
+      metadata: { role: 'referrer' }
+    });
+    await recordBalanceChange({
+      transaction: tx,
+      uid: referralData.referredUid,
+      userRef: referredRef,
+      userData: referredSnap.data() ?? {},
+      currency: 'coins',
+      amount: friendRewardCoins,
+      reason: 'referral_reward',
+      actorType: 'system',
+      actorUid: null,
+      source: 'api/_lib/referrals',
+      relatedId: referralRef.id,
+      metadata: { role: 'friend' }
+    });
     tx.set(referrerRef, rewardPatch, { merge: true });
     tx.set(referredRef, friendPatch, { merge: true });
 
