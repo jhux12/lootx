@@ -366,7 +366,7 @@ export const LoginModal: React.FC = () => {
                   <div className="w-full border-t border-white/10" />
                 </div>
                 <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
-                  <span className="bg-[#0F0F11] px-3 text-neutral-300">Use email instead (recommended on in-app browsers)</span>
+                  <span className="bg-[#0F0F11] px-3 text-neutral-300">Or continue with email</span>
                 </div>
               </div>
             </>
