@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>Pullz.gg Mystery Boxes</title>
     <meta name="description" content="Open premium mystery boxes on Pullz.gg with provably fair outcomes, live drops, and instant rewards." />
     <meta name="robots" content="index, follow" />
@@ -79,12 +79,19 @@
     </script>
     <!-- End Meta Pixel Code -->
     <style>
+      :root {
+        --app-height: 100vh;
+      }
       html, body {
         overflow-x: hidden;
       }
       body {
         background-color: #0b0e14;
         color: white;
+        min-height: var(--app-height);
+      }
+      #root {
+        min-height: var(--app-height);
       }
       /* Custom scrollbar for chat */
       .scrollbar-thin::-webkit-scrollbar {
