@@ -18,20 +18,22 @@ export const VerifyEmailPage: React.FC = () => {
   }, [setView]);
 
   const clearVerificationParams = useCallback(() => {
-    window.history.replaceState({}, '', '/verify');
+    window.history.replaceState({}, '', '/verify-email');
   }, []);
   const [status, setStatus] = useState<VerificationState>('loading');
   const [message, setMessage] = useState('Confirming your email now...');
 
   const verificationParams = useMemo(() => {
     if (typeof window === 'undefined') {
-      return { mode: '', oobCode: '' };
+      return { mode: '', oobCode: '', continueUrl: '', apiKey: '' };
     }
 
     const url = new URL(window.location.href);
     return {
       mode: url.searchParams.get('mode') || '',
-      oobCode: url.searchParams.get('oobCode') || ''
+      oobCode: url.searchParams.get('oobCode') || '',
+      continueUrl: url.searchParams.get('continueUrl') || '',
+      apiKey: url.searchParams.get('apiKey') || ''
     };
   }, []);
 
@@ -40,7 +42,7 @@ export const VerifyEmailPage: React.FC = () => {
     let redirectTimer: number | null = null;
 
     const finalizeVerification = async () => {
-      const { mode, oobCode } = verificationParams;
+      const { mode, oobCode, continueUrl } = verificationParams;
       if (mode !== 'verifyEmail' || !oobCode) {
         if (!isMounted) return;
         setStatus('error');
@@ -64,6 +66,10 @@ export const VerifyEmailPage: React.FC = () => {
           : 'Your email is verified. You can sign in now. Redirecting you home...');
 
         redirectTimer = window.setTimeout(() => {
+          if (continueUrl) {
+            window.location.assign(continueUrl);
+            return;
+          }
           if (auth.currentUser) {
             setView({ type: 'PROFILE' });
             return;

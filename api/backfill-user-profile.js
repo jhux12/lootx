@@ -10,6 +10,7 @@ const USER_PROFILE_SAFE_KEYS = [
   'updatedAt',
   'photoURL',
   'displayName',
+  'emailVerified',
   'lastLogin',
   'shippingAddress',
   'topPullsPublic'
@@ -65,6 +66,7 @@ const buildLegacyUserProfileBackfill = (userRecord, data = {}) => {
   if (data.createdAt === undefined) patch.createdAt = fallbackCreatedAt;
   if (data.updatedAt === undefined) patch.updatedAt = Date.now();
   if (data.lastLogin === undefined) patch.lastLogin = Date.now();
+  if (data.emailVerified !== userRecord.emailVerified) patch.emailVerified = userRecord.emailVerified;
   if (data.photoURL === undefined && userRecord.photoURL) patch.photoURL = userRecord.photoURL;
   if (data.displayName === undefined && (userRecord.displayName || typeof data.username === 'string')) {
     patch.displayName = userRecord.displayName || (typeof data.username === 'string' ? data.username : username);
