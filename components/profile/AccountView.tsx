@@ -28,11 +28,7 @@ interface AccountViewProps {
   memberSince: string;
   xp: number;
   balance: number;
-  level: number;
-  boxesOpened: number;
-  totalValueUnboxed: number;
   quickActions: QuickAction[];
-  recentActivity: string[];
   activePanel: AccountPanel;
   addressForm: ShippingAddress;
   setAddressForm: (next: ShippingAddress) => void;
@@ -50,11 +46,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
   memberSince,
   xp,
   balance,
-  level,
-  boxesOpened,
-  totalValueUnboxed,
   quickActions,
-  recentActivity,
   activePanel,
   addressForm,
   setAddressForm,
@@ -86,14 +78,6 @@ export const AccountView: React.FC<AccountViewProps> = ({
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-[#101523] p-4">
-        <div className="grid grid-cols-3 gap-2 text-center text-xs">
-          <div><p className="text-gray-500">Level</p><p className="font-bold text-white">{level}</p></div>
-          <div><p className="text-gray-500">Boxes</p><p className="font-bold text-white">{boxesOpened}</p></div>
-          <div><p className="text-gray-500">Value</p><p className="font-bold text-white">{Math.round(totalValueUnboxed)}</p></div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-white/10 bg-[#101523] p-4">
         <p className="mb-2 text-xs font-semibold uppercase text-gray-400">Quick Actions</p>
         <div className="space-y-2">
           {quickActions.map((action) => (
@@ -111,7 +95,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
           <div className="grid grid-cols-1 gap-2">
             <input value={securityForm.username} onChange={(e) => setSecurityForm({ ...securityForm, username: e.target.value })} placeholder="Username" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
             <input value={securityForm.email} onChange={(e) => setSecurityForm({ ...securityForm, email: e.target.value })} placeholder="Email" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
-            <input type="password" value={securityForm.currentPassword} onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })} placeholder="Current Password (required for email/password updates)" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
+            <input type="password" value={securityForm.currentPassword} onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })} placeholder="Current Password" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
             <input type="password" value={securityForm.newPassword} onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })} placeholder="New Password" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
             <input type="password" value={securityForm.confirmPassword} onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })} placeholder="Confirm New Password" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
           </div>
@@ -133,27 +117,12 @@ export const AccountView: React.FC<AccountViewProps> = ({
               ['zipCode', 'Zip Code'],
               ['country', 'Country']
             ] as Array<[keyof ShippingAddress, string]>).map(([key, label]) => (
-              <input
-                key={key}
-                value={addressForm[key]}
-                onChange={(event) => setAddressForm({ ...addressForm, [key]: event.target.value })}
-                placeholder={label}
-                className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white"
-              />
+              <input key={key} value={addressForm[key]} onChange={(event) => setAddressForm({ ...addressForm, [key]: event.target.value })} placeholder={label} className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
             ))}
           </div>
           <button onClick={onSaveAddress} disabled={isSavingAddress} className="mt-3 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white">
             {isSavingAddress ? 'Saving...' : 'Save Address'}
           </button>
-        </section>
-      )}
-
-      {activePanel === 'overview' && (
-        <section className="rounded-2xl border border-white/10 bg-[#101523] p-4">
-          <p className="mb-2 text-xs font-semibold uppercase text-gray-400">Recent Activity</p>
-          {recentActivity.length === 0 ? <p className="text-sm text-gray-500">No recent activity yet.</p> : (
-            <ul className="space-y-2 text-sm text-gray-300">{recentActivity.map((activity, idx) => <li key={`${activity}-${idx}`}>• {activity}</li>)}</ul>
-          )}
         </section>
       )}
     </div>

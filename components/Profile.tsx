@@ -9,7 +9,7 @@ import { getSellBackValue } from '../utils/sellBack';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { resolveUserDisplayName } from '../utils/userIdentity';
-import { InventoryItem, ShippingAddress, User } from '../types';
+import { InventoryItem, ShippingAddress } from '../types';
 import { AccountSidebar } from './profile/AccountSidebar';
 import { AccountView } from './profile/AccountView';
 import { InventoryView } from './profile/InventoryView';
@@ -350,13 +350,8 @@ export const Profile: React.FC = () => {
   };
 
   const joinedDate = user.createdAt ? new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(user.createdAt) : 'Recently';
-  const boxesOpened = Number(user.challengeStats?.boxesOpened ?? 0);
-  const totalValueUnboxed = normalizedInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
-  const level = Number(user.level ?? 1) || 1;
   const xp = Number(user.xpBalance ?? user.xp ?? 0);
   const balance = Number(user.balance ?? 0);
-
-  const recentActivity = ((user as User).ledger ?? []).slice(-5).reverse().map((entry) => `${entry.type.replaceAll('_', ' ')} ${Math.round(entry.amount).toLocaleString()}`);
 
   const quickActions = [
     { label: 'Rewards', primary: true, onClick: () => setView({ type: 'BONUSES' as const }) },
@@ -391,11 +386,16 @@ export const Profile: React.FC = () => {
           memberSince={joinedDate}
           xp={xp}
           balance={balance}
-          level={level}
-          boxesOpened={boxesOpened}
-          totalValueUnboxed={totalValueUnboxed}
           quickActions={quickActions}
-          recentActivity={recentActivity}
+          activePanel={activeAccountPanel}
+          addressForm={addressForm}
+          setAddressForm={setAddressForm}
+          onSaveAddress={handleSaveAddress}
+          isSavingAddress={isSavingAddress}
+          securityForm={securityForm}
+          setSecurityForm={setSecurityForm}
+          onSaveSecurity={handleSaveSecurity}
+          isSavingSecurity={isSavingSecurity}
         />
 
         <div className="flex-1">
@@ -432,11 +432,7 @@ export const Profile: React.FC = () => {
                 memberSince={joinedDate}
                 xp={xp}
                 balance={balance}
-                level={level}
-                boxesOpened={boxesOpened}
-                totalValueUnboxed={totalValueUnboxed}
                 quickActions={quickActions}
-                recentActivity={recentActivity}
                 activePanel={activeAccountPanel}
                 addressForm={addressForm}
                 setAddressForm={setAddressForm}

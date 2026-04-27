@@ -1,5 +1,5 @@
 import React from 'react';
-import { User } from '../../types';
+import { User, ShippingAddress } from '../../types';
 import { UserAvatar } from '../UserAvatar';
 import { XP_ICON } from '../../constants';
 import { AnimatedNumber } from '../../src/ui/numbers/AnimatedNumber';
@@ -12,17 +12,32 @@ interface QuickAction {
   isNew?: boolean;
 }
 
+type AccountPanel = 'overview' | 'security' | 'settings';
+
+interface SecurityForm {
+  username: string;
+  email: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 interface AccountSidebarProps {
   user: User;
   username: string;
   memberSince: string;
   xp: number;
   balance: number;
-  level: number;
-  boxesOpened: number;
-  totalValueUnboxed: number;
   quickActions: QuickAction[];
-  recentActivity: string[];
+  activePanel: AccountPanel;
+  addressForm: ShippingAddress;
+  setAddressForm: (next: ShippingAddress) => void;
+  onSaveAddress: () => void;
+  isSavingAddress: boolean;
+  securityForm: SecurityForm;
+  setSecurityForm: (next: SecurityForm) => void;
+  onSaveSecurity: () => void;
+  isSavingSecurity: boolean;
 }
 
 export const AccountSidebar: React.FC<AccountSidebarProps> = ({
@@ -31,11 +46,16 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
   memberSince,
   xp,
   balance,
-  level,
-  boxesOpened,
-  totalValueUnboxed,
   quickActions,
-  recentActivity
+  activePanel,
+  addressForm,
+  setAddressForm,
+  onSaveAddress,
+  isSavingAddress,
+  securityForm,
+  setSecurityForm,
+  onSaveSecurity,
+  isSavingSecurity
 }) => {
   return (
     <aside className="hidden w-[280px] shrink-0 space-y-4 md:block">
@@ -58,14 +78,6 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-[#101523] p-4">
-        <div className="grid grid-cols-3 gap-2 text-center text-xs">
-          <div><p className="text-gray-500">Level</p><p className="font-bold text-white">{level}</p></div>
-          <div><p className="text-gray-500">Boxes</p><p className="font-bold text-white">{boxesOpened}</p></div>
-          <div><p className="text-gray-500">Value</p><p className="font-bold text-white">{Math.round(totalValueUnboxed)}</p></div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-white/10 bg-[#101523] p-4">
         <p className="mb-2 text-xs font-semibold uppercase text-gray-400">Quick Actions</p>
         <div className="space-y-2">
           {quickActions.map((action) => (
@@ -77,12 +89,42 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-[#101523] p-4">
-        <p className="mb-2 text-xs font-semibold uppercase text-gray-400">Recent Activity</p>
-        {recentActivity.length === 0 ? <p className="text-sm text-gray-500">No recent activity yet.</p> : (
-          <ul className="space-y-2 text-sm text-gray-300">{recentActivity.map((activity, idx) => <li key={`${activity}-${idx}`}>• {activity}</li>)}</ul>
-        )}
-      </section>
+      {activePanel === 'security' && (
+        <section className="rounded-2xl border border-white/10 bg-[#101523] p-4">
+          <p className="mb-3 text-xs font-semibold uppercase text-gray-400">Security</p>
+          <div className="grid grid-cols-1 gap-2">
+            <input value={securityForm.username} onChange={(e) => setSecurityForm({ ...securityForm, username: e.target.value })} placeholder="Username" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
+            <input value={securityForm.email} onChange={(e) => setSecurityForm({ ...securityForm, email: e.target.value })} placeholder="Email" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
+            <input type="password" value={securityForm.currentPassword} onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })} placeholder="Current Password" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
+            <input type="password" value={securityForm.newPassword} onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })} placeholder="New Password" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
+            <input type="password" value={securityForm.confirmPassword} onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })} placeholder="Confirm New Password" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
+          </div>
+          <button onClick={onSaveSecurity} disabled={isSavingSecurity} className="mt-3 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white">
+            {isSavingSecurity ? 'Saving...' : 'Save Security Changes'}
+          </button>
+        </section>
+      )}
+
+      {activePanel === 'settings' && (
+        <section className="rounded-2xl border border-white/10 bg-[#101523] p-4">
+          <p className="mb-3 text-xs font-semibold uppercase text-gray-400">Settings: Shipping Address</p>
+          <div className="grid grid-cols-1 gap-2">
+            {([
+              ['fullName', 'Full Name'],
+              ['street', 'Street'],
+              ['city', 'City'],
+              ['state', 'State'],
+              ['zipCode', 'Zip Code'],
+              ['country', 'Country']
+            ] as Array<[keyof ShippingAddress, string]>).map(([key, label]) => (
+              <input key={key} value={addressForm[key]} onChange={(e) => setAddressForm({ ...addressForm, [key]: e.target.value })} placeholder={label} className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
+            ))}
+          </div>
+          <button onClick={onSaveAddress} disabled={isSavingAddress} className="mt-3 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white">
+            {isSavingAddress ? 'Saving...' : 'Save Address'}
+          </button>
+        </section>
+      )}
     </aside>
   );
 };
