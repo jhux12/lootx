@@ -19,6 +19,8 @@ import {
   signInWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   linkWithCredential,
@@ -603,8 +605,14 @@ type PersistUserData = Partial<{
 
 type GoogleAuthResult =
   | { status: 'success' }
+  | { status: 'redirect-started' }
   | { status: 'link-required'; email: string; credential: AuthCredential }
   | { status: 'error'; message: string };
+
+type GoogleAuthOptions = {
+  remember?: boolean;
+  isRetry?: boolean;
+};
 
 type AuthModalMode = 'login' | 'register';
 
@@ -645,7 +653,7 @@ interface GameContextType {
   
   // Actions
   login: (email: string, pass: string, remember?: boolean) => Promise<void>;
-  loginWithGoogle: (remember?: boolean) => Promise<GoogleAuthResult>;
+  loginWithGoogle: (options?: GoogleAuthOptions) => Promise<GoogleAuthResult>;
   linkGoogleAccount: (email: string, password: string, credential: AuthCredential) => Promise<GoogleAuthResult>;
   register: (name: string, email: string, pass: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -1634,6 +1642,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
+    void (async () => {
+      try {
+        const redirectResult = await getRedirectResult(auth);
+        if (!redirectResult?.user) return;
+        await ensureGoogleUserProfile(redirectResult.user);
+        trackEvent('google_oauth_success');
+        setShowLoginModal(false);
+        const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
+        resolveEmailRedirect(redirectPath);
+      } catch (error: any) {
+        trackEvent('google_oauth_error', { code: error?.code || 'redirect_unknown' });
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     void checkEmailVerificationStatus(auth.currentUser);
   }, []);
 
@@ -2232,15 +2256,33 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setShowLoginModal(false);
   };
 
-  const loginWithGoogle = async (remember: boolean = true): Promise<GoogleAuthResult> => {
+  const shouldUseRedirectGoogleAuth = () => {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const isMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua);
+    const isInAppBrowser = /(FBAN|FBAV|Instagram|Line|Twitter|TikTok|Snapchat)/i.test(ua);
+    return isMobile || isInAppBrowser;
+  };
+
+  const loginWithGoogle = async (options: GoogleAuthOptions = {}): Promise<GoogleAuthResult> => {
+    const { remember = true, isRetry = false } = options;
     const provider = new GoogleAuthProvider();
 
     try {
       await setAuthPersistence(remember);
+      if (isRetry) {
+        trackEvent('google_oauth_retry');
+      }
       trackEvent('google_oauth_started');
+
+      if (shouldUseRedirectGoogleAuth()) {
+        await signInWithRedirect(auth, provider);
+        return { status: 'redirect-started' };
+      }
+
       const credential = await signInWithPopup(auth, provider);
       await ensureGoogleUserProfile(credential.user);
-      trackEvent('google_oauth_completed');
+      trackEvent('google_oauth_success');
 
       setShowLoginModal(false);
       const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
@@ -2260,12 +2302,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         }
 
+        trackEvent('google_oauth_error', { code: errorCode });
         return {
           status: 'error',
           message: 'That email already has an account. Please sign in using the original provider to link Google.'
         };
       }
 
+      trackEvent('google_oauth_error', { code: errorCode || 'unknown' });
       return { status: 'error', message: error?.message || 'Google sign-in failed.' };
     }
   };
