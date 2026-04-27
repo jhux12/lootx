@@ -31,6 +31,8 @@ export const LoginModal: React.FC = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+  const [showOAuthFallback, setShowOAuthFallback] = useState(false);
+  const [googleAttemptCount, setGoogleAttemptCount] = useState(0);
   const isLinkingGoogle = Boolean(googleLinkCredential);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,22 +64,37 @@ export const LoginModal: React.FC = () => {
   };
 
   const handleGoogleSignIn = async () => {
+    if (isOAuthLoading || isLoading) {
+      return;
+    }
+
     if (mode === 'register' && (!confirmAdult || !acceptTerms)) {
       setShowGoogleRequirementsTooltip(true);
       return;
     }
 
+    if (googleAttemptCount > 0) {
+      setMessage('Retrying Google sign-in…');
+    }
+
+    setGoogleAttemptCount((prev) => prev + 1);
+    setShowOAuthFallback(false);
     setIsLoading(true);
     setIsOAuthLoading(true);
     setUserError(null);
-    setMessage(null);
+    setMessage('Opening Google sign-in…');
     playSound('click');
 
     try {
       if (mode === 'register') {
         setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
       }
-      const result = await loginWithGoogle(rememberMe);
+      const result = await loginWithGoogle({ remember: rememberMe, isRetry: googleAttemptCount > 0 });
+      if (result.status === 'redirect-started') {
+        setMessage('Opening Google sign-in…');
+        return;
+      }
+
       if (result.status === 'link-required') {
         setGoogleLinkEmail(result.email);
         setGoogleLinkCredential(result.credential);
@@ -88,10 +105,12 @@ export const LoginModal: React.FC = () => {
 
       if (result.status === 'error') {
         setUserError(getAuthErrorMessage(result.message));
+        setMessage('Having trouble? Open in browser or use email sign-up.');
       }
     } catch (err: any) {
       console.error(err);
       setUserError(getAuthErrorMessage(err));
+      setMessage('Having trouble? Open in browser or use email sign-up.');
     } finally {
       setIsLoading(false);
       setIsOAuthLoading(false);
@@ -154,6 +173,8 @@ export const LoginModal: React.FC = () => {
     setGoogleLinkPassword('');
     setGoogleLinkCredential(null);
     setRememberMe(true);
+    setGoogleAttemptCount(0);
+    setShowOAuthFallback(false);
     playSound('click');
   };
 
@@ -167,6 +188,8 @@ export const LoginModal: React.FC = () => {
     setGoogleLinkCredential(null);
     setUserError(null);
     setMessage(null);
+    setGoogleAttemptCount(0);
+    setShowOAuthFallback(false);
   };
 
   useEffect(() => {
@@ -200,6 +223,19 @@ export const LoginModal: React.FC = () => {
       setShowGoogleRequirementsTooltip(false);
     }
   }, [mode, acceptTerms, confirmAdult]);
+
+  useEffect(() => {
+    if (!isOAuthLoading) {
+      setShowOAuthFallback(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowOAuthFallback(true);
+    }, 4000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isOAuthLoading]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -297,15 +333,30 @@ export const LoginModal: React.FC = () => {
                   type="button"
                   onClick={handleGoogleSignIn}
                   disabled={isLoading}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isOAuthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" />}
-                  {isOAuthLoading ? 'Signing you in…' : 'Continue with Google'}
+                  {isOAuthLoading ? 'Opening Google sign-in…' : 'Continue with Google'}
                 </button>
 
                 {mode === 'register' && showGoogleRequirementsTooltip && (
                   <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-200">
                     Check both boxes to continue with Google.
+                  </div>
+                )}
+
+                {showOAuthFallback && (
+                  <div className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-100">
+                    <p className="font-semibold">Having trouble?</p>
+                    <p className="mt-1 text-indigo-100/90">Open in browser or use email sign-up.</p>
+                    <a
+                      href={typeof window === 'undefined' ? '/' : window.location.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex text-xs font-semibold text-indigo-300 underline-offset-2 hover:underline"
+                    >
+                      Open in browser
+                    </a>
                   </div>
                 )}
               </div>
@@ -315,7 +366,7 @@ export const LoginModal: React.FC = () => {
                   <div className="w-full border-t border-white/10" />
                 </div>
                 <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
-                  <span className="bg-[#0F0F11] px-3 text-neutral-500">Or continue with email</span>
+                  <span className="bg-[#0F0F11] px-3 text-neutral-300">Or continue with email</span>
                 </div>
               </div>
             </>
