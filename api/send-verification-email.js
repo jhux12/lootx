@@ -8,12 +8,12 @@ const getVerificationHandlerUrl = () => {
 
   try {
     const url = new URL(configuredBaseUrl);
-    url.pathname = '/verify';
+    url.pathname = '/verify-email';
     url.search = '';
     url.hash = '';
     return url.toString();
   } catch {
-    return 'https://pullz.gg/verify';
+    return 'https://pullz.gg/verify-email';
   }
 };
 

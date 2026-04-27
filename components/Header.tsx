@@ -33,6 +33,7 @@ import { useActivity } from '../src/lib/activity/useActivity';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getClaimReadyQuestCount, normalizeQuestRules } from '../src/lib/quests';
+import { UserAvatar } from './UserAvatar';
 
 type HeaderProps = {
   onOpenInbox: () => void;
@@ -53,6 +54,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     balance,
     setView,
     isAuthenticated,
+    authInitialized,
     openAuthModal,
     setShowTopUpModal,
     logout,
@@ -344,7 +346,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {isAuthenticated ? (
+            {!authInitialized ? (
+              <div className="hidden h-9 w-24 animate-pulse rounded-lg bg-white/10 lg:block" />
+            ) : isAuthenticated ? (
               <>
                 <div className="hidden items-center gap-2 lg:flex">
                   <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5">
@@ -400,7 +404,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   </button>
                   <div className="relative flex items-center">
                     <button type="button" onClick={() => navigate('PROFILE')}>
-                      <img src={user.avatar} alt={user.name} className="h-9 w-9 rounded-lg border border-white/10 object-cover" />
+                      <UserAvatar
+                        username={user.username}
+                        displayName={user.displayName ?? user.name}
+                        email={user.email}
+                        photoURL={user.photoURL}
+                        avatar={user.avatar}
+                        alt={user.name}
+                        className="h-9 w-9 rounded-lg border border-white/10 object-cover"
+                        initialsClassName="text-xs"
+                      />
                     </button>
                     {showFreeBoxTooltip ? (
                       <div className="absolute left-1/2 top-full z-30 mt-2 w-max -translate-x-1/2 rounded-md border border-emerald-400/35 bg-[#0f1517] px-2 py-1 text-[10px] font-semibold text-emerald-200 shadow-lg">
@@ -434,7 +447,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
               <div className="hidden items-center gap-3 lg:flex">{authButtons}</div>
             )}
 
-            {!isAuthenticated && <div className="flex items-center gap-2 lg:hidden">{authButtons}</div>}
+            {!authInitialized ? (
+              <div className="h-8 w-16 animate-pulse rounded-md bg-white/10 lg:hidden" />
+            ) : !isAuthenticated ? (
+              <div className="flex items-center gap-2 lg:hidden">{authButtons}</div>
+            ) : null}
 
             {isAuthenticated && (
               <div className="flex items-center gap-2 lg:hidden">
