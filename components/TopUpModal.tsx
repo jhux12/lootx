@@ -51,6 +51,8 @@ export const TopUpModal: React.FC = () => {
     return Number.isFinite(parsed) ? parsed : 0;
   }, [formattedDepositAmount]);
   const totalCoins = (selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0)));
+  const roundedTotalCoins = Math.round(totalCoins);
+  const summaryLine = `You get ${roundedTotalCoins.toLocaleString()} coins ${getBonusSummaryLabel(selectedPackage)}`.trim();
   const effectiveRate = priceValue > 0 ? Math.round(totalCoins / priceValue) : null;
   const missingCoins = useMemo(() => {
     const requiredCoins = Number(topUpModalIntent?.requiredCoins ?? 0);
@@ -371,17 +373,23 @@ export const TopUpModal: React.FC = () => {
                 </div>
                 <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#10131c]/95 px-4 py-3.5 backdrop-blur-md sm:px-6 sm:py-4">
                   <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-gray-400">Total Amount</p>
-                  <div className="mb-3.5 flex items-center justify-between rounded-xl border border-white/10 bg-[#1a2030] px-3 py-3 sm:px-4">
-                    <CoinAmount
-                      amount={selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))}
-                      formatOptions={{ maximumFractionDigits: 0 }}
-                      className="text-xl font-black text-white"
-                      iconClassName="h-5 w-5"
-                    />
-                    <span className="text-sm font-semibold text-cyan-300">
-                      You get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} coins{' '}
-                      {getBonusSummaryLabel(selectedPackage)}
-                    </span>
+                  <div className="mb-3.5 rounded-xl border border-white/10 bg-[#1a2030] px-3 py-3 sm:px-4">
+                    <div className="flex items-center justify-center sm:hidden">
+                      <span className="text-center text-sm font-semibold leading-relaxed text-cyan-300">
+                        {summaryLine}
+                      </span>
+                    </div>
+                    <div className="hidden items-center justify-between sm:flex">
+                      <CoinAmount
+                        amount={selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))}
+                        formatOptions={{ maximumFractionDigits: 0 }}
+                        className="text-xl font-black text-white"
+                        iconClassName="h-5 w-5"
+                      />
+                      <span className="text-sm font-semibold text-cyan-300">
+                        {summaryLine}
+                      </span>
+                    </div>
                   </div>
                   <button
                     onClick={handleDeposit}
@@ -394,7 +402,7 @@ export const TopUpModal: React.FC = () => {
                       </>
                     ) : (
                       <span>
-                        Get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} Coins for {formattedDepositAmount}
+                        Get {roundedTotalCoins.toLocaleString()} Coins for {formattedDepositAmount}
                       </span>
                     )}
                   </button>
