@@ -3,6 +3,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
+import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
 import { toast } from '../src/ui/toast/toast';
 import { getSellBackValue } from '../utils/sellBack';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
@@ -18,6 +19,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 const SHIPPING_BATCH_STORAGE_KEY = 'pullzgg_shipping_batch';
 
 type MobileTab = 'inventory' | 'account';
+type AccountPanel = 'overview' | 'security' | 'settings';
 
 const getProfileUsername = (profile: { provider?: string; username?: string; name?: string; email?: string }) => resolveUserDisplayName(profile);
 
@@ -36,7 +38,7 @@ const normalizeItems = (items: InventoryItem[]) =>
   });
 
 export const Profile: React.FC = () => {
-  const { user, inventory, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, updateAddress } = useGame();
+  const { user, inventory, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, updateAddress, updateUserInfo } = useGame();
 
   const [activeTab, setActiveTab] = useState<MobileTab>('inventory');
   const [search, setSearch] = useState('');
@@ -52,6 +54,17 @@ export const Profile: React.FC = () => {
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
+
+  const [activeAccountPanel, setActiveAccountPanel] = useState<AccountPanel>('overview');
+  const [isSavingSecurity, setIsSavingSecurity] = useState(false);
+  const [securityForm, setSecurityForm] = useState({
+    username: user.name ?? '',
+    email: user.email ?? auth.currentUser?.email ?? '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
   const [addressForm, setAddressForm] = useState<ShippingAddress>(
     user.shippingAddress || { fullName: '', street: '', city: '', state: '', zipCode: '', country: '' }
   );
@@ -61,6 +74,15 @@ export const Profile: React.FC = () => {
       setAddressForm(user.shippingAddress);
     }
   }, [user.shippingAddress]);
+
+
+  useEffect(() => {
+    setSecurityForm((prev) => ({
+      ...prev,
+      username: user.name ?? '',
+      email: user.email ?? auth.currentUser?.email ?? ''
+    }));
+  }, [user.name, user.email]);
 
   const displayUsername = getProfileUsername(user);
 
@@ -208,6 +230,58 @@ export const Profile: React.FC = () => {
     }
   };
 
+
+  const handleSaveSecurity = async () => {
+    if (securityForm.newPassword && securityForm.newPassword !== securityForm.confirmPassword) {
+      toast.error('New passwords do not match.');
+      return;
+    }
+
+    setIsSavingSecurity(true);
+    try {
+      if (securityForm.username.trim() && securityForm.username.trim() !== user.name) {
+        await updateUserInfo(securityForm.username.trim(), user.avatar);
+      }
+
+      if (!auth.currentUser) {
+        toast.error('Please sign in again to update security details.');
+        return;
+      }
+
+      const emailChanged = securityForm.email.trim() && securityForm.email.trim() !== (auth.currentUser.email ?? user.email ?? '');
+      const passwordChanged = Boolean(securityForm.newPassword.trim());
+
+      if ((emailChanged || passwordChanged) && !securityForm.currentPassword.trim()) {
+        toast.error('Current password is required to update email or password.');
+        return;
+      }
+
+      if (emailChanged || passwordChanged) {
+        if (!auth.currentUser.email) {
+          toast.error('Email/password updates are unavailable for this account type.');
+          return;
+        }
+        const credential = EmailAuthProvider.credential(auth.currentUser.email, securityForm.currentPassword.trim());
+        await reauthenticateWithCredential(auth.currentUser, credential);
+      }
+
+      if (emailChanged) {
+        await updateFirebaseEmail(auth.currentUser, securityForm.email.trim());
+      }
+      if (passwordChanged) {
+        await updateFirebasePassword(auth.currentUser, securityForm.newPassword.trim());
+      }
+
+      setSecurityForm((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
+      toast.success('Security settings updated.');
+    } catch (error) {
+      console.error('Failed to update security settings', error);
+      toast.error('Could not update security settings. Please verify your current password.');
+    } finally {
+      setIsSavingSecurity(false);
+    }
+  };
+
   const handleConfirmTradeIn = async () => {
     const tradeItem = normalizedInventory.find((item) => item.instanceId === tradeInModalItemId);
     if (!tradeItem || isSellingItems[tradeItem.instanceId]) return;
@@ -224,6 +298,7 @@ export const Profile: React.FC = () => {
     if (!user.shippingAddress) {
       toast.info('Please add a shipping address before requesting shipment.');
       setActiveTab('account');
+      setActiveAccountPanel('settings');
       return;
     }
     const itemsToShip = selectedShipmentItems.filter((item) => canSelectShipment(item));
@@ -247,6 +322,7 @@ export const Profile: React.FC = () => {
     if (!user.shippingAddress) {
       toast.info('Please add a shipping address before requesting shipment.');
       setActiveTab('account');
+      setActiveAccountPanel('settings');
       return;
     }
     const itemsToShip = selectedShipmentItems.filter((item) => canSelectShipment(item));
@@ -283,14 +359,9 @@ export const Profile: React.FC = () => {
   const recentActivity = ((user as User).ledger ?? []).slice(-5).reverse().map((entry) => `${entry.type.replaceAll('_', ' ')} ${Math.round(entry.amount).toLocaleString()}`);
 
   const quickActions = [
-    { label: 'Deposit', primary: true, onClick: () => setView({ type: 'BONUSES' as const }) },
-    { label: 'Withdraw', onClick: () => setActiveTab('inventory') },
-    { label: 'Rewards', onClick: () => setView({ type: 'BONUSES' as const }) },
-    { label: 'Trade History', onClick: () => { setType('shipped'); setActiveTab('inventory'); } },
-    { label: 'Settings', onClick: () => setActiveTab('account') },
-    { label: 'Security', onClick: () => setActiveTab('account') },
-    { label: 'Payment Methods', onClick: () => setView({ type: 'BONUSES' as const }) },
-    { label: 'Notifications', onClick: () => setActiveTab('account') },
+    { label: 'Rewards', primary: true, onClick: () => setView({ type: 'BONUSES' as const }) },
+    { label: 'Settings', onClick: () => { setActiveTab('account'); setActiveAccountPanel('settings'); } },
+    { label: 'Security', onClick: () => { setActiveTab('account'); setActiveAccountPanel('security'); } },
     { label: 'Referrals', onClick: () => setView({ type: 'REFERRALS' as const }), isNew: true }
   ];
 
@@ -330,7 +401,7 @@ export const Profile: React.FC = () => {
         <div className="flex-1">
           <div className="mb-3 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-[#101523] p-1 md:hidden">
             <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'inventory' ? 'bg-purple-600 text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('inventory')}>Inventory</button>
-            <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'account' ? 'bg-purple-600 text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('account')}>Profile</button>
+            <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'account' ? 'bg-purple-600 text-white' : 'text-gray-400'}`} onClick={() => { setActiveTab('account'); setActiveAccountPanel('overview'); }}>Profile</button>
           </div>
 
           <div className="md:hidden">
@@ -366,10 +437,15 @@ export const Profile: React.FC = () => {
                 totalValueUnboxed={totalValueUnboxed}
                 quickActions={quickActions}
                 recentActivity={recentActivity}
+                activePanel={activeAccountPanel}
                 addressForm={addressForm}
                 setAddressForm={setAddressForm}
                 onSaveAddress={handleSaveAddress}
                 isSavingAddress={isSavingAddress}
+                securityForm={securityForm}
+                setSecurityForm={setSecurityForm}
+                onSaveSecurity={handleSaveSecurity}
+                isSavingSecurity={isSavingSecurity}
               />
             )}
           </div>
