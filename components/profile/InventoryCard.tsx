@@ -13,6 +13,9 @@ interface InventoryCardProps {
   actionLabel: string;
   actionDisabled: boolean;
   onAction: () => void;
+  secondaryActionLabel?: string;
+  secondaryActionDisabled?: boolean;
+  onSecondaryAction?: () => void;
 }
 
 const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: string }> = {
@@ -38,7 +41,7 @@ const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: stri
   }
 };
 
-export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, selectable, onToggleSelect, actionLabel, actionDisabled, onAction }) => {
+export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, selectable, onToggleSelect, actionLabel, actionDisabled, onAction, secondaryActionLabel, secondaryActionDisabled = false, onSecondaryAction }) => {
   const rarityStyle = RARITY_STYLES[item.rarity] ?? RARITY_STYLES.common;
 
   return (
@@ -82,6 +85,25 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
       >
         {actionLabel}
       </button>
+
+      {secondaryActionLabel && onSecondaryAction && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onSecondaryAction();
+          }}
+          disabled={secondaryActionDisabled}
+          className={`mt-2 w-full rounded-xl px-2 py-2 text-xs font-bold ${
+            secondaryActionDisabled
+              ? 'cursor-not-allowed border border-white/10 bg-[#0b0f1a] text-gray-500'
+              : 'border border-emerald-400/40 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20'
+          }`}
+        >
+          {secondaryActionLabel}
+        </button>
+      )}
+
     </div>
   );
 };

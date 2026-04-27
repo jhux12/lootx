@@ -18,7 +18,7 @@ interface InventoryViewProps {
   setType: (value: string) => void;
   sort: string;
   setSort: (value: string) => void;
-  getAction: (item: InventoryItem) => { label: string; disabled: boolean; onClick: () => void };
+  getAction: (item: InventoryItem) => { label: string; disabled: boolean; onClick: () => void; secondaryLabel?: string; secondaryDisabled?: boolean; onSecondaryClick?: () => void };
   isSelectable: (item: InventoryItem) => boolean;
   totalValue: number;
   availableToShip: number;
@@ -83,6 +83,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 actionLabel={action.label}
                 actionDisabled={action.disabled}
                 onAction={action.onClick}
+                secondaryActionLabel={action.secondaryLabel}
+                secondaryActionDisabled={action.secondaryDisabled}
+                onSecondaryAction={action.onSecondaryClick}
               />
             );
           })}

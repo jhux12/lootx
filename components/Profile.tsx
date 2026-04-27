@@ -371,7 +371,22 @@ export const Profile: React.FC = () => {
     const canShip = isAvailable && !isLocked && !!user.shippingAddress;
     const canSell = isAvailable && !isLocked && item.redeemable !== false && !isXpPurchasedItem(item);
 
-    if (canShip) return { label: 'Ship Item', disabled: false, onClick: () => { if (!hasMadeDeposit) { setWithdrawLockedModalOpen(true); return; } handleOpenShippingReview([item.instanceId]); } };
+    if (canShip) {
+      return {
+        label: 'Ship Item',
+        disabled: false,
+        onClick: () => {
+          if (!hasMadeDeposit) {
+            setWithdrawLockedModalOpen(true);
+            return;
+          }
+          handleOpenShippingReview([item.instanceId]);
+        },
+        secondaryLabel: canSell ? 'Trade In' : undefined,
+        secondaryDisabled: canSell ? !!isSellingItems[item.instanceId] : undefined,
+        onSecondaryClick: canSell ? () => setTradeInModalItemId(item.instanceId) : undefined
+      };
+    }
     if (canSell) return { label: 'Trade In', disabled: !!isSellingItems[item.instanceId], onClick: () => setTradeInModalItemId(item.instanceId) };
     return { label: 'Not Tradable', disabled: true, onClick: () => undefined };
   };
