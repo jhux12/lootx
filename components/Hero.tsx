@@ -2,6 +2,8 @@ import React from 'react';
 import heroImage from '../assets/hero.png';
 import pullzPattern from '../assets/pullz-p.PNG';
 import { useGame } from '../context/GameContext';
+import { setPostSignupRedirect } from '../utils/postSignupRedirect';
+import { trackEvent } from '../utils/trackEvent';
 
 export const Hero: React.FC = () => {
   const { isAuthenticated, openAuthModal } = useGame();
@@ -15,7 +17,9 @@ export const Hero: React.FC = () => {
 
   const handleGetStarted = () => {
     if (!isAuthenticated) {
-      openAuthModal('login');
+      trackEvent('signup_cta_clicked', { placement: 'hero' });
+      setPostSignupRedirect('/case/free-box');
+      openAuthModal('register');
       return;
     }
     scrollToSection('popular-boxes');

@@ -3,8 +3,10 @@ import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, Vi
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
-import { trackMetaEvent } from '../utils/trackEvent';
+import { trackEvent, trackMetaEvent } from '../utils/trackEvent';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { consumePostSignupRedirect, DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
+import { resolveUserDisplayName } from '../utils/userIdentity';
 import { 
   User as FirebaseUser,
   AuthCredential,
@@ -207,6 +209,7 @@ const clearPendingEmailVerification = () => {
   window.localStorage.removeItem(EMAIL_VERIFICATION_REDIRECT_KEY);
   window.localStorage.removeItem(EMAIL_VERIFICATION_COMPLETED_KEY);
 };
+
 
 interface BonusSettings {
   xpPer100Coins: number;
@@ -415,6 +418,10 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
       };
     }
     return { type: 'HOME' };
+  }
+
+  if (primary === 'case' && secondary === 'free-box') {
+    return { type: 'SPIN' };
   }
 
   if (primary === 'battles') {
@@ -703,6 +710,25 @@ const getDayStart = (timestamp: number = Date.now()) => {
   return date.getTime();
 };
 
+const AUTH_LOADING_USER: User = {
+  id: 'loading',
+  name: 'Loading...',
+  avatar: '',
+  balance: 0,
+  level: 0,
+  xp: 0,
+  totalSpent: 0,
+  rakebackBalance: 0,
+  rakebackEarnedToday: 0,
+  rakebackEarnedAt: getDayStart(),
+  rakebackUnlocked: false,
+  rakebackPercent: undefined,
+  rakebackTier: null,
+  followers: [],
+  isAdmin: false,
+  termsFlagged: false
+};
+
 const GameContext = createContext<GameContextType | undefined>(undefined);
 const AuthContext = createContext<Pick<GameContextType, 'user' | 'isAuthenticated' | 'authInitialized' | 'openAuthModal' | 'login' | 'loginWithGoogle' | 'linkGoogleAccount' | 'register' | 'resetPassword' | 'logout' | 'authModalMode' | 'setAuthModalMode' | 'showLoginModal' | 'setShowLoginModal' | 'showEmailVerificationModal' | 'setShowEmailVerificationModal' | 'showEmailVerifiedModal' | 'setShowEmailVerifiedModal' | 'emailVerificationStatus' | 'resendEmailVerification' | 'refreshEmailVerification' | 'dismissEmailVerificationModal'> | undefined>(undefined);
 const WalletContext = createContext<Pick<GameContextType, 'balance' | 'user' | 'syncBalance' | 'syncXpBalance' | 'addBalance' | 'deductBalance' | 'registerSpend' | 'awardCaseOpenXp'> | undefined>(undefined);
@@ -713,8 +739,8 @@ const UIContext = createContext<Pick<GameContextType, 'view' | 'setView' | 'noti
 // Guest / Loading User
 const GUEST_USER: User = {
   id: 'guest',
-  name: 'Guest',
-  avatar: 'https://picsum.photos/id/64/100/100',
+  name: 'User',
+  avatar: '',
   balance: 0,
   level: 0,
   xp: 0,
@@ -893,8 +919,12 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
       : [];
   const balance = Number(data.coins ?? data.balance ?? 0);
 
-  const fallbackName = data.displayName || data.username || data.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Player';
-  const fallbackAvatar = data.photoURL || data.avatar || firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName)}&background=111827&color=10b981`;
+  const fallbackName = resolveUserDisplayName({
+    username: data.username ?? data.name,
+    displayName: data.displayName ?? firebaseUser.displayName ?? undefined,
+    email: data.email ?? firebaseUser.email ?? undefined
+  });
+  const fallbackAvatar = data.photoURL || firebaseUser.photoURL || '';
 
   return {
     id: firebaseUser.uid,
@@ -951,8 +981,12 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
       ? data.friends
       : [];
   const balance = Number(data.coins ?? data.balance ?? 0);
-  const name = data.displayName || data.username || data.name || (data.email ? data.email.split('@')[0] : 'Player');
-  const avatar = data.photoURL || data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`;
+  const name = resolveUserDisplayName({
+    username: data.username ?? data.name,
+    displayName: data.displayName,
+    email: data.email
+  });
+  const avatar = data.photoURL || '';
 
   return {
     id: userId,
@@ -1011,25 +1045,19 @@ type AdminDirectoryUserRecord = {
 
 const buildUserProfileFromAdminDirectory = (record: AdminDirectoryUserRecord) => {
   const data = record.firestoreData ?? {};
-  const fallbackName =
-    data.displayName ||
-    data.username ||
-    data.name ||
-    record.displayName ||
-    record.email?.split('@')[0] ||
-    'Player';
-  const fallbackAvatar =
-    data.photoURL ||
-    data.avatar ||
-    record.photoURL ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName)}&background=111827&color=10b981`;
+  const fallbackName = resolveUserDisplayName({
+    username: data.username ?? data.name,
+    displayName: data.displayName ?? record.displayName,
+    email: data.email ?? record.email
+  });
+  const fallbackAvatar = data.photoURL || record.photoURL || '';
 
   const profile = buildUserProfileFromDoc(record.id, {
     ...data,
     email: data.email ?? record.email ?? '',
     displayName: data.displayName ?? record.displayName,
     photoURL: data.photoURL ?? record.photoURL,
-    avatar: data.avatar ?? fallbackAvatar,
+    avatar: fallbackAvatar,
     provider: data.provider ?? record.provider,
     createdAt: data.createdAt ?? record.createdAt ?? Date.now(),
     status: data.status ?? (record.disabled ? 'suspended' : 'active')
@@ -1192,7 +1220,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // 1. Initialize User State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [user, setUser] = useState<User>(GUEST_USER);
+  const [user, setUser] = useState<User>(AUTH_LOADING_USER);
   const [users, setUsers] = useState<User[]>([]);
   const [adminDirectoryUsers, setAdminDirectoryUsers] = useState<AdminDirectoryUserRecord[]>([]);
   const [balance, setBalance] = useState<number>(0);
@@ -1254,6 +1282,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const openAuthModal = (mode: AuthModalMode = 'login') => {
+    if (mode === 'register') {
+      setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
+      trackEvent('signup_cta_clicked', { entrypoint: 'auth_modal' });
+    }
     setAuthModalMode(mode);
     setShowLoginModal(true);
   };
@@ -1266,7 +1298,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const resolveEmailRedirect = (targetPath?: string | null) => {
     if (typeof window === 'undefined') return;
-    const resolvedPath = targetPath || '/';
+    const resolvedPath = targetPath || consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
     const url = new URL(resolvedPath, window.location.origin);
     const nextPath = `${url.pathname}${url.search}`;
     const currentPath = `${window.location.pathname}${window.location.search}`;
@@ -1421,6 +1453,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     if (firebaseUser.emailVerified) {
+      trackEvent('email_verification_completed');
       clearPendingEmailVerification();
       emailVerificationDismissedRef.current = false;
       setEmailVerificationStatus('idle');
@@ -1561,7 +1594,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
       const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified);
       if (requiresVerification && !hasPendingEmailVerification()) {
-        setPendingEmailVerification(getCurrentPath());
+        setPendingEmailVerification(consumePostSignupRedirect() || getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT);
       }
 
       void checkEmailVerificationStatus(firebaseUser);
@@ -2062,8 +2095,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const baseUsername = buildBaseUsername(displayName, email);
       const username = await ensureUniqueUsername(baseUsername);
       const createdAt = Date.now();
-      const avatarName = displayName || username;
-      const avatar = photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&background=111827&color=10b981`;
+      const avatar = photoURL || '';
       const newUser: User = {
         id: firebaseUser.uid,
         createdAt,
@@ -2188,7 +2220,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await setAuthPersistence(remember);
       const credential = await signInWithEmailAndPassword(auth, email, pass);
       if (!credential.user.emailVerified) {
-        const redirectPath = getCurrentPath();
+        const redirectPath = consumePostSignupRedirect() || getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT;
         setPendingEmailVerification(redirectPath);
         await sendCustomVerificationEmail(credential.user);
         setEmailVerificationStatus('pending');
@@ -2205,10 +2237,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       await setAuthPersistence(remember);
+      trackEvent('google_oauth_started');
       const credential = await signInWithPopup(auth, provider);
       await ensureGoogleUserProfile(credential.user);
+      trackEvent('google_oauth_completed');
 
       setShowLoginModal(false);
+      const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
+      resolveEmailRedirect(redirectPath);
       return { status: 'success' };
     } catch (error: any) {
       const errorCode = error?.code;
@@ -2255,6 +2291,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (name: string, email: string, pass: string) => {
     try {
       const credential = await createUserWithEmailAndPassword(auth, email, pass);
+      trackEvent('email_signup_completed');
 
       try {
         trackCompleteRegistrationForNewUser(credential.user);
@@ -2263,7 +2300,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.warn('Meta registration tracking failed', err);
       }
 
-      const redirectPath = getCurrentPath();
+      const redirectPath = consumePostSignupRedirect() || getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT;
       setPendingEmailVerification(redirectPath);
       try {
         await sendCustomVerificationEmail(credential.user);
@@ -2313,7 +2350,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
           const signInCredential = await signInWithEmailAndPassword(auth, email, pass);
           if (!signInCredential.user.emailVerified) {
-            const redirectPath = getCurrentPath();
+            const redirectPath = consumePostSignupRedirect() || getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT;
             setPendingEmailVerification(redirectPath);
             await sendCustomVerificationEmail(signInCredential.user);
             setEmailVerificationStatus('pending');

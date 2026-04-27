@@ -1,6 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Gift, ShieldCheck, Sparkles, User, Zap } from 'lucide-react';
 import { useGame } from '../context/GameContext';
+import { setPostSignupRedirect } from '../utils/postSignupRedirect';
+import { trackEvent } from '../utils/trackEvent';
 
 const REWARD_IMAGE =
   'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
@@ -27,8 +29,14 @@ export const SpinLandingPage: React.FC = () => {
       return;
     }
 
+    trackEvent('signup_cta_clicked', { placement: 'spin_landing' });
+    setPostSignupRedirect('/case/free-box');
     openAuthModal('register');
   };
+
+  useEffect(() => {
+    trackEvent('free_box_page_viewed', { page: '/spin' });
+  }, []);
 
   return (
     <section className="relative min-h-[calc(100vh-64px)] overflow-hidden px-4 py-8 sm:px-6 sm:py-10">
@@ -142,7 +150,11 @@ export const SpinLandingPage: React.FC = () => {
           <h2 className="text-2xl font-black text-white sm:text-3xl">Your First Pull Is Waiting</h2>
           <button
             type="button"
-            onClick={() => openAuthModal('register')}
+            onClick={() => {
+              trackEvent('signup_cta_clicked', { placement: 'spin_landing_footer' });
+              setPostSignupRedirect('/case/free-box');
+              openAuthModal('register');
+            }}
             className="mt-4 inline-flex min-h-12 w-full max-w-xs items-center justify-center rounded-xl bg-gradient-to-r from-cyan-300 via-sky-400 to-indigo-400 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-110 active:scale-[0.99]"
           >
             Get Free Box

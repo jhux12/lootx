@@ -1,12 +1,16 @@
 import React from 'react';
 import { useGame } from '../context/GameContext';
+import { setPostSignupRedirect } from '../utils/postSignupRedirect';
+import { trackEvent } from '../utils/trackEvent';
 
 export const FinalCTA: React.FC = () => {
   const { isAuthenticated, openAuthModal } = useGame();
 
   const handleGetStarted = () => {
     if (!isAuthenticated) {
-      openAuthModal('login');
+      trackEvent('signup_cta_clicked', { placement: 'final_cta' });
+      setPostSignupRedirect('/case/free-box');
+      openAuthModal('register');
       return;
     }
     const target = document.getElementById('popular-boxes');
