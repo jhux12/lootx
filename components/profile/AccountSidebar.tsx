@@ -3,6 +3,7 @@ import { User } from '../../types';
 import { UserAvatar } from '../UserAvatar';
 import { XP_ICON } from '../../constants';
 import { AnimatedNumber } from '../../src/ui/numbers/AnimatedNumber';
+import { CoinAmount } from '../CoinAmount';
 
 interface QuickAction {
   label: string;
@@ -16,6 +17,7 @@ interface AccountSidebarProps {
   username: string;
   memberSince: string;
   xp: number;
+  balance: number;
   level: number;
   boxesOpened: number;
   totalValueUnboxed: number;
@@ -28,6 +30,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
   username,
   memberSince,
   xp,
+  balance,
   level,
   boxesOpened,
   totalValueUnboxed,
@@ -44,9 +47,13 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
             <p className="text-xs text-gray-400">Member since {memberSince}</p>
           </div>
         </div>
-        <div className="mt-3 inline-flex items-center gap-1 rounded-full border border-purple-400/30 bg-purple-500/10 px-2 py-1 text-xs text-white">
-          <img src={XP_ICON} alt="XP" className="h-3.5 w-3.5" />
-          <AnimatedNumber value={xp} /> XP
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full border border-purple-400/30 bg-purple-500/10 px-2 py-1 text-xs text-white">
+            <img src={XP_ICON} alt="XP" className="h-3.5 w-3.5" /> <AnimatedNumber value={xp} /> XP
+          </span>
+          <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-white">
+            <CoinAmount amount={balance} formatOptions={{ maximumFractionDigits: 0 }} className="text-xs font-semibold text-white" iconClassName="h-3.5 w-3.5" />
+          </span>
         </div>
       </section>
 

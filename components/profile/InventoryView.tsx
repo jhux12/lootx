@@ -19,6 +19,7 @@ interface InventoryViewProps {
   sort: string;
   setSort: (value: string) => void;
   getAction: (item: InventoryItem) => { label: string; disabled: boolean; onClick: () => void };
+  isSelectable: (item: InventoryItem) => boolean;
   totalValue: number;
   availableToShip: number;
   selectedValue: number;
@@ -38,6 +39,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   sort,
   setSort,
   getAction,
+  isSelectable,
   totalValue,
   availableToShip,
   selectedValue
@@ -76,6 +78,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 key={item.instanceId}
                 item={item}
                 selected={selectedIds.includes(item.instanceId)}
+                selectable={isSelectable(item)}
                 onToggleSelect={() => onToggleSelect(item.instanceId)}
                 actionLabel={action.label}
                 actionDisabled={action.disabled}

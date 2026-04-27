@@ -8,7 +8,7 @@ import { getSellBackValue } from '../utils/sellBack';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { resolveUserDisplayName } from '../utils/userIdentity';
-import { InventoryItem, User } from '../types';
+import { InventoryItem, ShippingAddress, User } from '../types';
 import { AccountSidebar } from './profile/AccountSidebar';
 import { AccountView } from './profile/AccountView';
 import { InventoryView } from './profile/InventoryView';
@@ -36,7 +36,7 @@ const normalizeItems = (items: InventoryItem[]) =>
   });
 
 export const Profile: React.FC = () => {
-  const { user, users, inventory, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView } = useGame();
+  const { user, inventory, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, updateAddress } = useGame();
 
   const [activeTab, setActiveTab] = useState<MobileTab>('inventory');
   const [search, setSearch] = useState('');
@@ -51,9 +51,18 @@ export const Profile: React.FC = () => {
   const [isSellingItems, setIsSellingItems] = useState<Record<string, boolean>>({});
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [addressForm, setAddressForm] = useState<ShippingAddress>(
+    user.shippingAddress || { fullName: '', street: '', city: '', state: '', zipCode: '', country: '' }
+  );
 
-  const displayUser = user;
-  const displayUsername = getProfileUsername(displayUser);
+  useEffect(() => {
+    if (user.shippingAddress) {
+      setAddressForm(user.shippingAddress);
+    }
+  }, [user.shippingAddress]);
+
+  const displayUsername = getProfileUsername(user);
 
   const xpBoxIds = useMemo(
     () => new Set(boxes.filter((box) => box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0).map((box) => box.id)),
@@ -68,19 +77,15 @@ export const Profile: React.FC = () => {
     || item.openCurrencyType === 'XP'
     || (item.provenance?.sourceType === 'case_open' && typeof item.provenance.sourceId === 'string' && xpBoxIds.has(item.provenance.sourceId));
 
-  const normalizedInventory = useMemo(
-    () => normalizeItems(inventory as InventoryItem[]).sort((a, b) => b.obtainedAt - a.obtainedAt),
-    [inventory]
-  );
+  const normalizedInventory = useMemo(() => normalizeItems(inventory as InventoryItem[]).sort((a, b) => b.obtainedAt - a.obtainedAt), [inventory]);
 
   const filteredInventory = useMemo(() => {
     const term = search.trim().toLowerCase();
     const byFilters = normalizedInventory.filter((item) => {
       const itemType = item.status === 'shipping' || item.status === 'shipping_requested' ? 'shipping' : item.status === 'shipped' ? 'shipped' : 'available';
-      const matchesSearch = !term || item.name.toLowerCase().includes(term);
-      const matchesRarity = rarity === 'all' || item.rarity === rarity;
-      const matchesType = type === 'all' || itemType === type;
-      return matchesSearch && matchesRarity && matchesType;
+      return (!term || item.name.toLowerCase().includes(term))
+        && (rarity === 'all' || item.rarity === rarity)
+        && (type === 'all' || itemType === type);
     });
 
     return byFilters.sort((a, b) => {
@@ -91,19 +96,12 @@ export const Profile: React.FC = () => {
     });
   }, [normalizedInventory, search, rarity, type, sort]);
 
-  const hasMadeDeposit = Number(user.totalSpent ?? 0) > 0;
   const shippingCoinEnabled = stripeSettings.shippingCoinEnabled;
   const shippingCoinCostCoins = Math.max(0, stripeSettings.shippingCoinCostCoins);
   const shippingCashEnabled = stripeSettings.shippingCashEnabled && stripeSettings.shippingFlatRateCents > 0;
   const shippingFlatRateCents = Math.max(0, stripeSettings.shippingFlatRateCents);
 
-  const isFreeShippingItem = (item: InventoryItem) => (
-    item.freeShipping === true
-    || Number(item.shippingCostOverrideCoins ?? NaN) === 0
-    || Number(item.shippingCostOverrideCents ?? NaN) === 0
-    || isXpPurchasedItem(item)
-  );
-
+  const isFreeShippingItem = (item: InventoryItem) => item.freeShipping === true || Number(item.shippingCostOverrideCoins ?? NaN) === 0 || Number(item.shippingCostOverrideCents ?? NaN) === 0 || isXpPurchasedItem(item);
   const getCoinShippingCostForItem = (item: InventoryItem) => (isFreeShippingItem(item) ? 0 : shippingCoinCostCoins);
   const getCashShippingCostForItemCents = (item: InventoryItem) => (isFreeShippingItem(item) ? 0 : shippingFlatRateCents);
 
@@ -167,7 +165,6 @@ export const Profile: React.FC = () => {
   const selectedShipmentValue = selectedShipmentItems.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   const shippingCoinTotal = selectedShipmentItems.reduce((sum, item) => sum + getCoinShippingCostForItem(item), 0);
   const shippingCashTotalCents = selectedShipmentItems.reduce((sum, item) => sum + getCashShippingCostForItemCents(item), 0);
-
   const freeShippingItemCount = selectedShipmentItems.filter((item) => isFreeShippingItem(item)).length;
   const paidShippingItemCount = Math.max(0, selectedShipmentItems.length - freeShippingItemCount);
   const isFreeOnlySelection = selectedShipmentItems.length > 0 && paidShippingItemCount === 0;
@@ -179,11 +176,7 @@ export const Profile: React.FC = () => {
 
   useEffect(() => {
     if (canUseCoinShipping && canUseCashShipping) return;
-    if (canUseCashShipping) {
-      setShippingPaymentMethod('cash');
-      return;
-    }
-    setShippingPaymentMethod('coins');
+    setShippingPaymentMethod(canUseCashShipping ? 'cash' : 'coins');
   }, [canUseCoinShipping, canUseCashShipping]);
 
   const getSellBackRate = (item: InventoryItem) => {
@@ -197,22 +190,22 @@ export const Profile: React.FC = () => {
     return 0.82;
   };
 
-  const handleToggleShipment = (instanceId: string) => {
-    setSelectedShipments((prev) => (prev.includes(instanceId) ? prev.filter((id) => id !== instanceId) : [...prev, instanceId]));
-  };
-
   const handleOpenShippingReview = (instanceIds: string[]) => {
     setSelectedShipments(instanceIds);
     setShippingPaymentMethod(shippingCoinEnabled ? 'coins' : 'cash');
     setShowShippingReview(true);
   };
 
-  const handleWithdrawClick = (instanceId: string) => {
-    if (!hasMadeDeposit) {
-      setWithdrawLockedModalOpen(true);
-      return;
+  const handleSaveAddress = async () => {
+    setIsSavingAddress(true);
+    try {
+      await updateAddress(addressForm);
+      toast.success('Shipping address saved!');
+    } catch {
+      toast.error('Could not save your shipping address.');
+    } finally {
+      setIsSavingAddress(false);
     }
-    handleOpenShippingReview([instanceId]);
   };
 
   const handleConfirmTradeIn = async () => {
@@ -230,6 +223,7 @@ export const Profile: React.FC = () => {
   const handleConfirmShipping = async () => {
     if (!user.shippingAddress) {
       toast.info('Please add a shipping address before requesting shipment.');
+      setActiveTab('account');
       return;
     }
     const itemsToShip = selectedShipmentItems.filter((item) => canSelectShipment(item));
@@ -252,6 +246,7 @@ export const Profile: React.FC = () => {
     }
     if (!user.shippingAddress) {
       toast.info('Please add a shipping address before requesting shipment.');
+      setActiveTab('account');
       return;
     }
     const itemsToShip = selectedShipmentItems.filter((item) => canSelectShipment(item));
@@ -278,32 +273,28 @@ export const Profile: React.FC = () => {
     }
   };
 
-  const joinedDate = displayUser.createdAt
-    ? new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(displayUser.createdAt)
-    : 'Recently';
-
-  const boxesOpened = Number(displayUser.challengeStats?.boxesOpened ?? 0);
+  const joinedDate = user.createdAt ? new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(user.createdAt) : 'Recently';
+  const boxesOpened = Number(user.challengeStats?.boxesOpened ?? 0);
   const totalValueUnboxed = normalizedInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
-  const level = Number(displayUser.level ?? 1) || 1;
-  const xp = Number(displayUser.xpBalance ?? displayUser.xp ?? 0);
+  const level = Number(user.level ?? 1) || 1;
+  const xp = Number(user.xpBalance ?? user.xp ?? 0);
+  const balance = Number(user.balance ?? 0);
 
-  const recentActivity = ((displayUser as User).ledger ?? [])
-    .slice(-5)
-    .reverse()
-    .map((entry) => `${entry.type.replaceAll('_', ' ')} ${Math.round(entry.amount).toLocaleString()}`);
+  const recentActivity = ((user as User).ledger ?? []).slice(-5).reverse().map((entry) => `${entry.type.replaceAll('_', ' ')} ${Math.round(entry.amount).toLocaleString()}`);
 
   const quickActions = [
     { label: 'Deposit', primary: true, onClick: () => setView({ type: 'BONUSES' as const }) },
     { label: 'Withdraw', onClick: () => setActiveTab('inventory') },
     { label: 'Rewards', onClick: () => setView({ type: 'BONUSES' as const }) },
-    { label: 'Trade History', onClick: () => setType('shipped') },
-    { label: 'Settings', onClick: () => toast.info('Settings are managed in your account preferences.') },
-    { label: 'Security', onClick: () => toast.info('Security settings are coming soon.') },
-    { label: 'Payment Methods', onClick: () => toast.info('Payment methods are managed in checkout.') },
-    { label: 'Notifications', onClick: () => toast.info('Notification settings are coming soon.') },
+    { label: 'Trade History', onClick: () => { setType('shipped'); setActiveTab('inventory'); } },
+    { label: 'Settings', onClick: () => setActiveTab('account') },
+    { label: 'Security', onClick: () => setActiveTab('account') },
+    { label: 'Payment Methods', onClick: () => setView({ type: 'BONUSES' as const }) },
+    { label: 'Notifications', onClick: () => setActiveTab('account') },
     { label: 'Referrals', onClick: () => setView({ type: 'REFERRALS' as const }), isNew: true }
   ];
 
+  const hasMadeDeposit = Number(user.totalSpent ?? 0) > 0;
   const inventoryTotalValue = filteredInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   const availableToShip = filteredInventory.filter((item) => canSelectShipment(item)).length;
 
@@ -313,12 +304,8 @@ export const Profile: React.FC = () => {
     const canShip = isAvailable && !isLocked && !!user.shippingAddress;
     const canSell = isAvailable && !isLocked && item.redeemable !== false && !isXpPurchasedItem(item);
 
-    if (canShip) {
-      return { label: 'Ship Item', disabled: false, onClick: () => handleWithdrawClick(item.instanceId) };
-    }
-    if (canSell) {
-      return { label: 'Trade In', disabled: !!isSellingItems[item.instanceId], onClick: () => setTradeInModalItemId(item.instanceId) };
-    }
+    if (canShip) return { label: 'Ship Item', disabled: false, onClick: () => { if (!hasMadeDeposit) { setWithdrawLockedModalOpen(true); return; } handleOpenShippingReview([item.instanceId]); } };
+    if (canSell) return { label: 'Trade In', disabled: !!isSellingItems[item.instanceId], onClick: () => setTradeInModalItemId(item.instanceId) };
     return { label: 'Not Tradable', disabled: true, onClick: () => undefined };
   };
 
@@ -328,10 +315,11 @@ export const Profile: React.FC = () => {
     <div className="min-h-screen bg-[#0B0F1A] px-4 py-4 md:px-6 md:py-6">
       <div className="mx-auto flex max-w-[1280px] gap-6 pb-20 md:pb-4">
         <AccountSidebar
-          user={displayUser}
+          user={user}
           username={displayUsername}
           memberSince={joinedDate}
           xp={xp}
+          balance={balance}
           level={level}
           boxesOpened={boxesOpened}
           totalValueUnboxed={totalValueUnboxed}
@@ -340,12 +328,17 @@ export const Profile: React.FC = () => {
         />
 
         <div className="flex-1">
+          <div className="mb-3 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-[#101523] p-1 md:hidden">
+            <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'inventory' ? 'bg-purple-600 text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('inventory')}>Inventory</button>
+            <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'account' ? 'bg-purple-600 text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('account')}>Profile</button>
+          </div>
+
           <div className="md:hidden">
             {activeTab === 'inventory' ? (
               <InventoryView
                 items={filteredInventory}
                 selectedIds={selectedShipments}
-                onToggleSelect={handleToggleShipment}
+                onToggleSelect={(id) => setSelectedShipments((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))}
                 onReviewShipping={() => handleOpenShippingReview(selectedShipments)}
                 search={search}
                 setSearch={setSearch}
@@ -356,21 +349,27 @@ export const Profile: React.FC = () => {
                 sort={sort}
                 setSort={setSort}
                 getAction={getActionForItem}
+                isSelectable={canSelectShipment}
                 totalValue={inventoryTotalValue}
                 availableToShip={availableToShip}
                 selectedValue={selectedShipmentValue}
               />
             ) : (
               <AccountView
-                user={displayUser}
+                user={user}
                 username={displayUsername}
                 memberSince={joinedDate}
                 xp={xp}
+                balance={balance}
                 level={level}
                 boxesOpened={boxesOpened}
                 totalValueUnboxed={totalValueUnboxed}
                 quickActions={quickActions}
                 recentActivity={recentActivity}
+                addressForm={addressForm}
+                setAddressForm={setAddressForm}
+                onSaveAddress={handleSaveAddress}
+                isSavingAddress={isSavingAddress}
               />
             )}
           </div>
@@ -379,7 +378,7 @@ export const Profile: React.FC = () => {
             <InventoryView
               items={filteredInventory}
               selectedIds={selectedShipments}
-              onToggleSelect={handleToggleShipment}
+              onToggleSelect={(id) => setSelectedShipments((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))}
               onReviewShipping={() => handleOpenShippingReview(selectedShipments)}
               search={search}
               setSearch={setSearch}
@@ -390,6 +389,7 @@ export const Profile: React.FC = () => {
               sort={sort}
               setSort={setSort}
               getAction={getActionForItem}
+              isSelectable={canSelectShipment}
               totalValue={inventoryTotalValue}
               availableToShip={availableToShip}
               selectedValue={selectedShipmentValue}
@@ -398,12 +398,7 @@ export const Profile: React.FC = () => {
         </div>
       </div>
 
-      <MobileBottomNav
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onGames={() => setView({ type: 'BOXES' })}
-        onRewards={() => setView({ type: 'BONUSES' })}
-      />
+      <MobileBottomNav activeTab={activeTab} onTabChange={setActiveTab} onGames={() => setView({ type: 'BOXES' })} onRewards={() => setView({ type: 'BONUSES' })} />
 
       {tradeInModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
@@ -417,22 +412,7 @@ export const Profile: React.FC = () => {
             <CoinAmount amount={getSellBackValue(toCoins(tradeInModalItem.price, PRICE_UNIT_MODE), getSellBackRate(tradeInModalItem))} formatOptions={{ maximumFractionDigits: 0 }} className="text-xl font-bold text-emerald-400" iconClassName="h-5 w-5" />
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-200" onClick={() => setTradeInModalItemId(null)}>Cancel</button>
-              <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={handleConfirmTradeIn}>
-                {isSellingItems[tradeInModalItem.instanceId] ? 'Trading In...' : 'Trade In'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {withdrawLockedModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#101523] p-4">
-            <h3 className="text-lg font-bold text-white">Withdrawals Locked</h3>
-            <p className="mt-2 text-sm text-gray-300">Make your first deposit to unlock withdrawals.</p>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-200" onClick={() => setWithdrawLockedModalOpen(false)}>Not now</button>
-              <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={() => { setWithdrawLockedModalOpen(false); setView({ type: 'BONUSES' }); }}>Add Coins</button>
+              <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={handleConfirmTradeIn}>{isSellingItems[tradeInModalItem.instanceId] ? 'Trading In...' : 'Trade In'}</button>
             </div>
           </div>
         </div>
@@ -460,15 +440,24 @@ export const Profile: React.FC = () => {
             )}
             <div className="mt-4 grid grid-cols-1 gap-2">
               {activeShippingMethod === 'cash' && canUseCashShipping ? (
-                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={handleCashShipping} disabled={isSubmittingCashShipping}>
-                  {isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}
-                </button>
+                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={handleCashShipping} disabled={isSubmittingCashShipping}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
               ) : (
-                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={handleConfirmShipping} disabled={isSubmittingShipment}>
-                  {isSubmittingShipment ? 'Submitting...' : 'Confirm Shipping'}
-                </button>
+                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={handleConfirmShipping} disabled={isSubmittingShipment}>{isSubmittingShipment ? 'Submitting...' : 'Confirm Shipping'}</button>
               )}
               <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-300" onClick={() => setShowShippingReview(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {withdrawLockedModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#101523] p-4">
+            <h3 className="text-lg font-bold text-white">Withdrawals Locked</h3>
+            <p className="mt-2 text-sm text-gray-300">Make your first deposit to unlock withdrawals.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-200" onClick={() => setWithdrawLockedModalOpen(false)}>Not now</button>
+              <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={() => { setWithdrawLockedModalOpen(false); setView({ type: 'BONUSES' }); }}>Add Coins</button>
             </div>
           </div>
         </div>

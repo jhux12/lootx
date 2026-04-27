@@ -8,27 +8,28 @@ import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
 interface InventoryCardProps {
   item: InventoryItem;
   selected: boolean;
+  selectable: boolean;
   onToggleSelect: () => void;
   actionLabel: string;
   actionDisabled: boolean;
   onAction: () => void;
 }
 
-export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, onToggleSelect, actionLabel, actionDisabled, onAction }) => {
+export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, selectable, onToggleSelect, actionLabel, actionDisabled, onAction }) => {
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={onToggleSelect}
+      onClick={() => selectable && onToggleSelect()}
       onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
+        if ((event.key === 'Enter' || event.key === ' ') && selectable) {
           event.preventDefault();
           onToggleSelect();
         }
       }}
       className={`group rounded-2xl border bg-gradient-to-b from-[#141a2c] to-[#101626] p-3 transition ${
         selected ? 'border-purple-400 bg-purple-500/10' : 'border-white/10 hover:border-purple-300/40 hover:shadow-[0_0_20px_rgba(124,58,237,0.2)]'
-      }`}
+      } ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
     >
       <div className="mb-3 flex items-center justify-between">
         <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase text-gray-200">{item.rarity}</span>
