@@ -50,6 +50,32 @@ import {
   subscribeHomepageConfig
 } from './utils/homepageShowcase';
 
+type ClarityWindow = Window &
+  typeof globalThis & {
+    clarity?: (...args: unknown[]) => void;
+    __pullzClarityInitialized?: boolean;
+    __pullzClarityNavigationTrackingInstalled?: boolean;
+  };
+
+const CLARITY_PROJECT_ID = 'wie0qmjc7c';
+
+const getClarity = () => {
+  if (typeof window === 'undefined') return undefined;
+  return (window as ClarityWindow).clarity;
+};
+
+const trackClarityEvent = (eventName: string) => {
+  const clarity = getClarity();
+  if (!clarity) return;
+  clarity('event', eventName);
+};
+
+const trackClarityPageView = () => {
+  if (typeof window === 'undefined') return;
+  const pagePath = window.location.pathname || '/';
+  const normalized = pagePath.replace(/[^a-z0-9/_-]/gi, '_') || '/';
+  trackClarityEvent(`page_view_${normalized}`);
+};
 
 const AdminPanel = lazy(() => import('./components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
 const CaseOpening = lazy(() => import('./components/CaseOpening').then((module) => ({ default: module.CaseOpening })));
@@ -98,6 +124,54 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const trackedPurchaseSessionsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    const clarityWindow = window as ClarityWindow;
+    if (!clarityWindow.__pullzClarityInitialized) {
+      clarityWindow.__pullzClarityInitialized = true;
+      clarityWindow.clarity =
+        clarityWindow.clarity ||
+        ((...args: unknown[]) => {
+          const queue = ((clarityWindow.clarity as unknown as { q?: unknown[][] }).q ??= []);
+          queue.push(args);
+        });
+      const existingScript = document.querySelector<HTMLScriptElement>(`script[data-clarity-project-id="${CLARITY_PROJECT_ID}"]`);
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = `https://www.clarity.ms/tag/${CLARITY_PROJECT_ID}`;
+        script.setAttribute('data-clarity-project-id', CLARITY_PROJECT_ID);
+        document.head.appendChild(script);
+      }
+    }
+
+    if (!clarityWindow.__pullzClarityNavigationTrackingInstalled) {
+      clarityWindow.__pullzClarityNavigationTrackingInstalled = true;
+
+      const pushState = history.pushState.bind(history);
+      const replaceState = history.replaceState.bind(history);
+
+      history.pushState = function (...args) {
+        pushState(...args);
+        window.setTimeout(trackClarityPageView, 300);
+      };
+
+      history.replaceState = function (...args) {
+        replaceState(...args);
+        window.setTimeout(trackClarityPageView, 300);
+      };
+
+      window.addEventListener('popstate', () => {
+        window.setTimeout(trackClarityPageView, 300);
+      });
+
+      window.addEventListener('load', trackClarityPageView);
+    }
+
+    trackClarityPageView();
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
       (config) => {
         const rows = normalizeShowcaseRows(config?.showcaseRows);
@@ -120,6 +194,52 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       path: window.location.pathname
     });
   }, [view.type]);
+
+  useEffect(() => {
+    switch (view.type) {
+      case 'CASE_OPENING':
+        trackClarityEvent('view_case_page');
+        break;
+      case 'INVENTORY':
+        trackClarityEvent('view_inventory');
+        break;
+      case 'PLINKO':
+      case 'ADMIN_UPGRADER_SETTINGS':
+      case 'ADMIN_UPGRADER_TARGETS':
+        trackClarityEvent('view_upgrader');
+        break;
+      case 'BOXES':
+      case 'CUSTOM_CREATOR':
+        trackClarityEvent('view_marketplace');
+        break;
+      default:
+        break;
+    }
+  }, [view.type]);
+
+  useEffect(() => {
+    if (showLoginModal) {
+      trackClarityEvent('view_login_modal');
+    }
+  }, [showLoginModal]);
+
+  useEffect(() => {
+    if (showTopUpModal) {
+      trackClarityEvent('view_topup_modal');
+    }
+  }, [showTopUpModal]);
+
+  useEffect(() => {
+    if (showEmailVerificationModal) {
+      trackClarityEvent('view_email_verification_modal');
+    }
+  }, [showEmailVerificationModal]);
+
+  useEffect(() => {
+    if (showEmailVerifiedModal) {
+      trackClarityEvent('view_email_verified_modal');
+    }
+  }, [showEmailVerifiedModal]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
