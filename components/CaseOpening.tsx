@@ -386,6 +386,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const topUpTriggerLockRef = useRef(false);
   const preFreeSpinBalanceRef = useRef<number | null>(null);
   const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
+  const hasTrackedFreeBoxViewRef = useRef(false);
   const spinRequestLockRef = useRef(false);
   const canFreeSpin = !user.lastFreeBoxClaim;
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1175,7 +1176,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
   const handleSpin = async ({ isDemo = false, forceGold = false, paymentMethod = 'coins' }: { isDemo?: boolean; forceGold?: boolean; paymentMethod?: 'coins' | 'xp' } = {}) => {
-    if (isSpinning || spinRequestLockRef.current) return;
+    if (isSpinning || spinRequestLockRef.current) {
+      if (isFree) {
+        trackEvent('free_spin_duplicate_click_blocked', { box_id: box?.id ?? boxId });
+      }
+      return;
+    }
     if (!box || items.length === 0) return;
 
     spinRequestLockRef.current = true;
@@ -1246,6 +1252,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     if (!isDemo && isFree) {
+      trackEvent('free_spin_clicked', { box_id: box.id });
       if (!isAuthenticated) {
         spinRequestLockRef.current = false;
         openAuthModal('login');
@@ -1267,6 +1274,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
     
     setIsSpinning(true);
+    if (!isDemo && isFree) {
+      trackEvent('free_spin_started', { box_id: box.id });
+    }
     setShowWinModal(false);
     setIsGoldMode(false);
     setWonItem(null);
@@ -1362,6 +1372,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         addInventoryItemFromServer(inventoryItem);
         if (isFree && Number.isFinite(data.freeBoxClaimedAt)) {
           await claimFreeBox(data.freeBoxClaimedAt, { persist: false });
+          trackEvent('free_spin_completed', {
+            box_id: box.id,
+            value: toCoins(Number(data.prize.price ?? 0), PRICE_UNIT_MODE),
+            currency: 'COIN'
+          });
         }
         if ((data.currencyType ?? 'COIN') === 'COIN') {
           const updatedCoinBalance = Number(data.newCoinBalance ?? data.newCoins ?? 0);
@@ -1524,6 +1539,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [boxId]);
 
   useEffect(() => {
+    if (!isFree || !box || hasTrackedFreeBoxViewRef.current) return;
+    hasTrackedFreeBoxViewRef.current = true;
+    trackEvent('free_box_page_viewed', { box_id: box.id, box_name: box.name });
+  }, [box, isFree]);
+
+  useEffect(() => {
     if (!showXpOpenUi) {
       setShowXpConfirmSheet(false);
     }
@@ -1563,7 +1584,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
 
-  const closeWinModal = () => {
+  const closeWinModal = ({ redirectToBoxesCatalog = false }: { redirectToBoxesCatalog?: boolean } = {}) => {
     if (sellOfferTimerRef.current) {
       window.clearTimeout(sellOfferTimerRef.current);
       sellOfferTimerRef.current = null;
@@ -1577,6 +1598,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     resetReelTrackPosition();
     setWonInventoryItem(null);
     setSellOfferGenerated(false);
+
+    const shouldRedirectToCatalog = redirectToBoxesCatalog && isFree;
+    if (shouldRedirectToCatalog) {
+      setShowPostFreeBoxModal(false);
+      pendingPostFreeBoxFlowRef.current = null;
+      setView({ type: 'BOXES' });
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/boxes');
+      }
+      return;
+    }
 
     const pendingPostFreeBoxFlow = pendingPostFreeBoxFlowRef.current;
     if (pendingPostFreeBoxFlow) {
@@ -1646,6 +1678,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         try {
           await sellItem(wonInventoryItem.instanceId);
           setRewardResolved(true);
+          if (isFree) {
+            trackEvent('free_box_item_sold_back', {
+              item_id: wonInventoryItem.id,
+              value: getSellBackValue(toCoins(wonInventoryItem.price, PRICE_UNIT_MODE), sellBackRate),
+              currency: 'COIN'
+            });
+          }
         } finally {
           setIsSellingItem(false);
         }
@@ -1654,7 +1693,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       window.clearTimeout(sellOfferTimerRef.current);
       sellOfferTimerRef.current = null;
     }
-    closeWinModal();
+    closeWinModal({ redirectToBoxesCatalog: true });
     setIsGeneratingSellOffer(false);
     setIsSellingItem(false);
   };
@@ -1709,10 +1748,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       if (wonItem && !rewardResolved) {
         setRewardResolved(true);
+        if (isFree) {
+          trackEvent('free_box_item_kept', {
+            item_id: wonItem.id,
+            value: toCoins(wonItem.price, PRICE_UNIT_MODE),
+            currency: 'COIN'
+          });
+        }
       }
       setIsGeneratingSellOffer(false);
       setIsSellingItem(false);
-      closeWinModal();
+      closeWinModal({ redirectToBoxesCatalog: true });
   };
 
   const handleCopyProof = useCallback(async () => {
@@ -2051,7 +2097,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       {isSyncingFair ? (
                         'Syncing server...'
                       ) : isSpinning ? (
-                        'Spinning...'
+                        <span className="inline-flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />Spinning...</span>
                       ) : isBalanceLoading ? (
                         'Loading balance...'
                       ) : isFree ? (

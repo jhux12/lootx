@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Mail, Lock, User } from 'lucide-react';
+import { X, Mail, Lock, User, Loader2 } from 'lucide-react';
 import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -8,6 +8,7 @@ import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { getAuthErrorMessage } from '../utils/authErrors';
 import { toast } from '../src/ui/toast/toast';
+import { DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 
 export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
@@ -29,6 +30,7 @@ export const LoginModal: React.FC = () => {
   const [userError, setUserError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const isLinkingGoogle = Boolean(googleLinkCredential);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,6 +42,7 @@ export const LoginModal: React.FC = () => {
 
     try {
       if (mode === 'register') {
+        setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
         if (!confirmAdult || !acceptTerms) {
           setUserError('Please confirm you are 18+ and accept the terms to continue.');
           setIsLoading(false);
@@ -65,11 +68,15 @@ export const LoginModal: React.FC = () => {
     }
 
     setIsLoading(true);
+    setIsOAuthLoading(true);
     setUserError(null);
     setMessage(null);
     playSound('click');
 
     try {
+      if (mode === 'register') {
+        setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
+      }
       const result = await loginWithGoogle(rememberMe);
       if (result.status === 'link-required') {
         setGoogleLinkEmail(result.email);
@@ -87,6 +94,7 @@ export const LoginModal: React.FC = () => {
       setUserError(getAuthErrorMessage(err));
     } finally {
       setIsLoading(false);
+      setIsOAuthLoading(false);
     }
   };
 
@@ -291,8 +299,8 @@ export const LoginModal: React.FC = () => {
                   disabled={isLoading}
                   className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <img src={googleLogo} alt="Google" className="h-5 w-5" />
-                  Continue with Google
+                  {isOAuthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" />}
+                  {isOAuthLoading ? 'Signing you in…' : 'Continue with Google'}
                 </button>
 
                 {mode === 'register' && showGoogleRequirementsTooltip && (

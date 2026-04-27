@@ -33,6 +33,8 @@ import { useActivity } from '../src/lib/activity/useActivity';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getClaimReadyQuestCount, normalizeQuestRules } from '../src/lib/quests';
+import { UserAvatar } from './UserAvatar';
+import { resolveUserDisplayName } from '../utils/userIdentity';
 
 type HeaderProps = {
   onOpenInbox: () => void;
@@ -50,6 +52,7 @@ const drawerCardClass =
 export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unreadChatCount: _unreadChatCount, isSticky = true }) => {
   const {
     user,
+    authInitialized,
     balance,
     setView,
     isAuthenticated,
@@ -76,6 +79,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   });
   const headerRef = useRef<HTMLElement | null>(null);
   const targetXp = Math.floor(user.xpBalance ?? user.xp ?? 0);
+  const resolvedDisplayName = authInitialized ? resolveUserDisplayName(user) : 'Loading...';
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
   const { unreadCount } = useActivity();
   const lastDailyClaim = Number.isFinite(user.lastDailyClaim ?? NaN) ? Number(user.lastDailyClaim) : 0;
@@ -396,11 +400,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     </button>
                   )}
                   <button onClick={() => navigate('PROFILE')} className="text-right">
-                    <span className="block text-sm font-bold text-white hover:text-indigo-400">{user.name}</span>
+                    <span className="block text-sm font-bold text-white hover:text-indigo-400">{resolvedDisplayName}</span>
                   </button>
                   <div className="relative flex items-center">
                     <button type="button" onClick={() => navigate('PROFILE')}>
-                      <img src={user.avatar} alt={user.name} className="h-9 w-9 rounded-lg border border-white/10 object-cover" />
+                      <UserAvatar user={user} className="h-9 w-9 rounded-lg object-cover" initialsClassName="text-xs" />
                     </button>
                     {showFreeBoxTooltip ? (
                       <div className="absolute left-1/2 top-full z-30 mt-2 w-max -translate-x-1/2 rounded-md border border-emerald-400/35 bg-[#0f1517] px-2 py-1 text-[10px] font-semibold text-emerald-200 shadow-lg">
