@@ -1,6 +1,7 @@
 import { admin, firestore } from '../_lib/firebaseAdmin.js';
 import { applySpendAndRewards, getRewardsSettings } from '../_lib/rewards.js';
 import { readJsonBody, sendJson } from '../_lib/http.js';
+import { recordBalanceChange } from '../_lib/balanceAudit.js';
 import { consumeRateLimit, getRateLimitKey } from '../_utils/ratelimit.js';
 import {
   BATTLE_ENGINE_VERSION,
@@ -76,10 +77,19 @@ export default async function handler(req, res) {
         throw { status: 402, error: 'INSUFFICIENT_FUNDS', message: 'Not enough coins for battle entry.' };
       }
 
-      transaction.set(userRef, {
-        coins: admin.firestore.FieldValue.increment(-entryCostCoins),
-        coinsLocked: admin.firestore.FieldValue.increment(entryCostCoins)
-      }, { merge: true });
+      await recordBalanceChange({
+        transaction,
+        uid: decoded.uid,
+        currency: 'coins',
+        amount: -entryCostCoins,
+        reason: 'battle_entry_fee',
+        actorType: 'user',
+        actorUid: decoded.uid,
+        source: 'api/battles/create',
+        relatedId: battleRef.id,
+        metadata: { format, mode }
+      });
+      transaction.set(userRef, { coinsLocked: admin.firestore.FieldValue.increment(entryCostCoins) }, { merge: true });
 
       await applySpendAndRewards({
         transaction,

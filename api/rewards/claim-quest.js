@@ -1,5 +1,6 @@
 import { admin, adminAuth, firestore } from '../_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from '../_lib/http.js';
+import { recordBalanceChange } from '../_lib/balanceAudit.js';
 
 const dayKey = () => new Date().toISOString().slice(0, 10);
 const toClaimDocId = (today, questId) => {
@@ -56,11 +57,20 @@ export default async function handler(req, res) {
       if (claimMap?.[questId] === today) throw new Error('Already claimed');
 
       const rewardCoins = Math.max(0, Math.floor(Number(quest.rewardCoins ?? 0)));
-      const currentCoins = Number(userData.coins ?? userData.balance ?? 0);
-      const newCoins = currentCoins + rewardCoins;
+      const { balanceAfter: newCoins } = await recordBalanceChange({
+        transaction: tx,
+        uid: decoded.uid,
+        currency: 'coins',
+        amount: rewardCoins,
+        reason: 'quest_reward',
+        actorType: 'system',
+        actorUid: null,
+        source: 'api/rewards/claim-quest',
+        relatedId: questId,
+        metadata: { questId, day: today }
+      });
 
       tx.set(userRef, {
-        coins: newCoins,
         questClaims: {
           [questId]: today
         },

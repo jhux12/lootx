@@ -1,5 +1,6 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, sendJson } from './_lib/http.js';
+import { recordBalanceChange } from './_lib/balanceAudit.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -42,14 +43,23 @@ export default async function handler(req, res) {
         throw { status: 400, error: 'No rakeback available' };
       }
 
-      const currentCoins = Number(userData.coins ?? userData.balance ?? 0);
-      const newCoins = currentCoins + payout;
+      const { balanceAfter: newCoins } = await recordBalanceChange({
+        transaction,
+        uid: decoded.uid,
+        currency: 'coins',
+        amount: payout,
+        reason: 'rakeback_reward',
+        actorType: 'system',
+        actorUid: null,
+        source: 'api/claim-rakeback',
+        relatedId: null,
+        metadata: { capAmount, available, payout }
+      });
       const remainingRakeback = Math.max(0, available - payout);
 
       transaction.set(
         userRef,
         {
-          coins: newCoins,
           rakebackBalance: remainingRakeback,
           lastRakebackClaimAt: admin.firestore.FieldValue.serverTimestamp()
         },

@@ -4,6 +4,7 @@ import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { normalizeEconomySettings, getXpCost } from './_lib/economy.js';
 import { appendLedgerEntry } from './_lib/ledger.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
+import { recordBalanceChange } from './_lib/balanceAudit.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
 import { markReferralFirstGameQualified } from './_lib/referrals.js';
@@ -260,18 +261,45 @@ export default async function handler(req, res) {
       const prizeValue = Number(prize.value ?? prize.price ?? 0);
       const resolvedXpCost = currencyType === 'XP' ? priceXP : xpCostForCoinCase;
       const coinCost = currencyType === 'COIN' && !isFree && !shouldUseXpForOpen ? price : 0;
-      const newCoins = currencyType === 'COIN' ? currentCoins - coinCost : currentCoins;
-      const spentXpBalance = paidWithXp ? currentXp - resolvedXpCost : currentXp;
-      const newXpBalance = Math.max(0, Math.floor(spentXpBalance + totalXpAward));
-      const updatedXpBalance = Math.max(0, Math.floor(currentXp + totalXpAward));
+      let newCoins = currentCoins;
+      let newXpBalance = currentXp;
 
       const freeBoxClaimedAt = isFree ? Date.now() : null;
       const nextUserPatch = sanitizeForFirestore({
-        ...(paidWithXp
-          ? { xpBalance: newXpBalance, xp: newXpBalance }
-          : { coins: newCoins }),
         ...(isFree ? { lastFreeBoxClaim: freeBoxClaimedAt } : {})
       });
+
+      if (coinCost > 0) {
+        const result = await recordBalanceChange({
+          transaction,
+          uid: decoded.uid,
+          currency: 'coins',
+          amount: -coinCost,
+          reason: 'case_open_cost',
+          actorType: 'user',
+          actorUid: decoded.uid,
+          source: 'api/open-case',
+          relatedId: openRef.id,
+          metadata: { boxId, paymentMethod: 'coins', caseName: boxData.name ?? 'Mystery Box' }
+        });
+        newCoins = result.balanceAfter;
+      }
+
+      if (paidWithXp) {
+        const spendResult = await recordBalanceChange({
+          transaction,
+          uid: decoded.uid,
+          currency: 'xp',
+          amount: -resolvedXpCost,
+          reason: 'case_open_cost',
+          actorType: 'user',
+          actorUid: decoded.uid,
+          source: 'api/open-case',
+          relatedId: openRef.id,
+          metadata: { boxId, paymentMethod: 'xp', caseName: boxData.name ?? 'Mystery Box' }
+        });
+        newXpBalance = spendResult.balanceAfter;
+      }
 
       transaction.set(userRef, nextUserPatch, { merge: true });
       const today = new Date().toISOString().slice(0, 10);
@@ -324,10 +352,21 @@ export default async function handler(req, res) {
       }
 
       if (totalXpAward > 0) {
+        const xpAwardResult = await recordBalanceChange({
+          transaction,
+          uid: decoded.uid,
+          currency: 'xp',
+          amount: totalXpAward,
+          reason: 'case_open_xp_reward',
+          actorType: 'system',
+          actorUid: null,
+          source: 'api/open-case',
+          relatedId: openRef.id,
+          metadata: { boxId, coinCost, xpCost: paidWithXp ? resolvedXpCost : 0 }
+        });
+        newXpBalance = xpAwardResult.balanceAfter;
         const dateKey = new Date().toISOString().slice(0, 10);
         transaction.update(userRef, {
-          xpBalance: admin.firestore.FieldValue.increment(totalXpAward),
-          xp: admin.firestore.FieldValue.increment(totalXpAward),
           xpEarnedLifetime: admin.firestore.FieldValue.increment(totalXpAward),
           [`xpDailyEarned.${dateKey}`]: admin.firestore.FieldValue.increment(totalXpAward),
           lastXpAwardAction: 'openCase',
@@ -433,7 +472,7 @@ export default async function handler(req, res) {
         sellBackRate: appliedSellBackRate,
         newCoinBalance: newCoins,
         newCoins,
-        newXpBalance: paidWithXp ? newXpBalance : updatedXpBalance,
+        newXpBalance,
         xpAwarded: totalXpAward,
         xpSettingsUsed: {
           xpPer100: xpPer100CoinsWagered,

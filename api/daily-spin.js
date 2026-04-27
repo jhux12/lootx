@@ -1,4 +1,5 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
+import { recordBalanceChange } from './_lib/balanceAudit.js';
 
 const BONUS_SETTINGS_DOC = 'bonus-settings';
 const SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -109,10 +110,21 @@ export default async function handler(req, res) {
 
         const prizeAmount = pendingSpin.amount;
 
+        await recordBalanceChange({
+          transaction,
+          uid,
+          currency: 'coins',
+          amount: prizeAmount,
+          reason: 'daily_spin_reward',
+          actorType: 'system',
+          actorUid: null,
+          source: 'api/daily-spin',
+          relatedId: null,
+          metadata: { action: 'claim' }
+        });
         transaction.set(
           userRef,
           {
-            coins: admin.firestore.FieldValue.increment(prizeAmount),
             lastDailyClaim: now,
             dailySpinPending: admin.firestore.FieldValue.delete(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()

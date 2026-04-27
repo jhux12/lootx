@@ -1,5 +1,6 @@
 import { admin, adminAuth, firestore } from '../_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from '../_lib/http.js';
+import { recordBalanceChange } from '../_lib/balanceAudit.js';
 
 const normalizeOptions = (options) => {
   if (!Array.isArray(options)) return [];
@@ -97,8 +98,19 @@ export default async function handler(req, res) {
         createdAtServer: admin.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
 
+      await recordBalanceChange({
+        transaction: tx,
+        uid: decoded.uid,
+        currency: 'coins',
+        amount: rewardCoins,
+        reason: 'poll_reward',
+        actorType: 'system',
+        actorUid: null,
+        source: 'api/polls/vote',
+        relatedId: pollId,
+        metadata: { pollId, optionId }
+      });
       tx.set(userRef, {
-        coins: admin.firestore.FieldValue.increment(rewardCoins),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
 

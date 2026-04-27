@@ -1,5 +1,6 @@
 import { admin, adminAuth, firestore } from '../_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from '../_lib/http.js';
+import { recordBalanceChange } from '../_lib/balanceAudit.js';
 
 const toInt = (value, fallback = 0) => {
   const num = Math.floor(Number(value));
@@ -125,12 +126,21 @@ export default async function handler(req, res) {
         throw { status: 400, error: 'Rakeback is already unlocked for this account' };
       }
 
-      const nextXp = currentXp - xpCost;
+      const { balanceAfter: nextXp } = await recordBalanceChange({
+        transaction,
+        uid: decoded.uid,
+        currency: 'xp',
+        amount: -xpCost,
+        reason: 'xp_shop_purchase',
+        actorType: 'user',
+        actorUid: decoded.uid,
+        source: 'api/xp/redeem',
+        relatedId: itemId,
+        metadata: { redemptionRequestId, fulfillmentType: itemData.fulfillmentType ?? 'DIGITAL' }
+      });
       const nextStock = hasLimitedStock ? Number(stockValue) - 1 : null;
 
       transaction.set(userRef, {
-        xpBalance: nextXp,
-        xp: nextXp,
         xpSpentLifetime: Math.max(0, toInt(userData.xpSpentLifetime, 0)) + xpCost,
         lastXpRedemptionAt: admin.firestore.FieldValue.serverTimestamp()
       }, { merge: true });

@@ -167,6 +167,21 @@ type AdminXpRedemption = {
     metadata?: Record<string, unknown>;
 };
 
+type BalanceAuditEntry = {
+    id: string;
+    currency: 'coins' | 'xp';
+    reason: string;
+    amount: number;
+    balanceBefore?: number;
+    balanceAfter?: number;
+    actorType?: 'user' | 'admin' | 'system';
+    actorUid?: string | null;
+    source?: string;
+    relatedId?: string | null;
+    metadata?: Record<string, unknown>;
+    createdAt?: Timestamp;
+};
+
 
 
 type EconomySettingsDraft = {
@@ -480,6 +495,12 @@ export const AdminPanel: React.FC = () => {
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [timelineFilter, setTimelineFilter] = useState<'all' | 'ledger' | 'inventory' | 'admin' | 'shipment' | 'support'>('all');
   const [timelineSearch, setTimelineSearch] = useState('');
+  const [balanceAuditEntries, setBalanceAuditEntries] = useState<Record<string, BalanceAuditEntry[]>>({});
+  const [balanceAuditCurrencyFilter, setBalanceAuditCurrencyFilter] = useState<'all' | 'coins' | 'xp'>('all');
+  const [balanceAuditDirectionFilter, setBalanceAuditDirectionFilter] = useState<'all' | 'positive' | 'negative'>('all');
+  const [balanceAuditReasonFilter, setBalanceAuditReasonFilter] = useState('all');
+  const [balanceAuditSearch, setBalanceAuditSearch] = useState('');
+  const [expandedAuditRows, setExpandedAuditRows] = useState<Record<string, boolean>>({});
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
   const [rewardsDraft, setRewardsDraft] = useState(DEFAULT_REWARDS_SETTINGS);
   const [rewardsSettingsNotice, setRewardsSettingsNotice] = useState(false);
@@ -2442,6 +2463,50 @@ export const AdminPanel: React.FC = () => {
       return normalizeLedgerEntries(ledgerEntries[selectedUserId] ?? [], selectedUser?.balance ?? 0);
   }, [ledgerEntries, selectedUser, selectedUserId]);
   const selectedInventory = selectedUserId ? inventoryState[selectedUserId] ?? [] : [];
+  useEffect(() => {
+      if (!selectedUserId) return;
+      const run = async () => {
+          const auditsQuery = query(collection(db, 'users', selectedUserId, 'balanceAudit'), orderBy('createdAt', 'desc'), limit(300));
+          const snap = await getDocs(auditsQuery);
+          const parsed: BalanceAuditEntry[] = snap.docs.map((docSnap) => {
+              const data = docSnap.data() as Record<string, unknown>;
+              return {
+                  id: docSnap.id,
+                  currency: data.currency === 'xp' ? 'xp' : 'coins',
+                  reason: String(data.reason ?? 'balance_change'),
+                  amount: Number(data.amount ?? 0),
+                  balanceBefore: data.balanceBefore == null ? undefined : Number(data.balanceBefore),
+                  balanceAfter: data.balanceAfter == null ? undefined : Number(data.balanceAfter),
+                  actorType: data.actorType === 'admin' || data.actorType === 'system' || data.actorType === 'user'
+                      ? data.actorType
+                      : undefined,
+                  actorUid: data.actorUid == null ? null : String(data.actorUid),
+                  source: typeof data.source === 'string' ? data.source : '',
+                  relatedId: data.relatedId == null ? null : String(data.relatedId),
+                  metadata: data.metadata && typeof data.metadata === 'object' ? data.metadata as Record<string, unknown> : {},
+                  createdAt: data.createdAt instanceof Timestamp ? data.createdAt : undefined
+              };
+          });
+          setBalanceAuditEntries((prev) => ({ ...prev, [selectedUserId]: parsed }));
+      };
+      void run();
+  }, [selectedUserId]);
+  const selectedBalanceAudits = useMemo(() => {
+      if (!selectedUserId) return [];
+      const searchValue = balanceAuditSearch.trim().toLowerCase();
+      return (balanceAuditEntries[selectedUserId] ?? []).filter((entry) => {
+          if (balanceAuditCurrencyFilter !== 'all' && entry.currency !== balanceAuditCurrencyFilter) return false;
+          if (balanceAuditDirectionFilter === 'positive' && entry.amount <= 0) return false;
+          if (balanceAuditDirectionFilter === 'negative' && entry.amount >= 0) return false;
+          if (balanceAuditReasonFilter !== 'all' && entry.reason !== balanceAuditReasonFilter) return false;
+          if (!searchValue) return true;
+          return [entry.relatedId ?? '', entry.source ?? ''].join(' ').toLowerCase().includes(searchValue);
+      });
+  }, [balanceAuditCurrencyFilter, balanceAuditDirectionFilter, balanceAuditEntries, balanceAuditReasonFilter, balanceAuditSearch, selectedUserId]);
+  const balanceAuditReasons = useMemo(
+      () => Array.from(new Set(selectedBalanceAudits.map((entry) => entry.reason))).sort((a, b) => a.localeCompare(b)),
+      [selectedBalanceAudits]
+  );
   const selectedAdminLogs = selectedUserId ? adminLogs[selectedUserId] ?? [] : [];
   const ledgerNetChange = selectedLedgerEntries.reduce((sum, entry) => sum + entry.amount, 0);
   const ledgerSearchValue = ledgerSearch.trim().toLowerCase();
@@ -4517,6 +4582,43 @@ export const AdminPanel: React.FC = () => {
                                                 <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Immutable Ledger</h4>
                                                 <div className="flex gap-2"><Select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)} className="w-40 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="all">All</option><option value="deposit">Deposit</option><option value="case_open">Box open</option><option value="sell_back">Sell back</option><option value="bonus">Bonus</option><option value="admin_adjustment">Admin adjustment</option><option value="chargeback_reversal">Chargeback reversal</option><option value="reversal">Reversal</option></Select><Input type="text" value={ledgerSearch} onChange={(event) => setLedgerSearch(event.target.value)} placeholder="Search" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /></div>
                                                 <div className="max-h-60 space-y-2 overflow-auto pr-1">{filteredLedgerEntries.length === 0 ? <div className="text-xs text-gray-500">No ledger entries.</div> : filteredLedgerEntries.map((entry) => (<div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><div className="flex items-center justify-between gap-2"><span className="text-xs uppercase text-gray-400">{entry.type.replace('_', ' ')}</span><CoinAmount amount={entry.amount} formatOptions={{ maximumFractionDigits: 0 }} showSign className={`text-xs font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`} iconClassName="w-3.5 h-3.5" /></div><div className="text-xs text-gray-300">{entry.memo || 'Balance update'}</div><div className="text-[10px] text-gray-500">{entry.sourceId || 'Manual'} • {formatTimestamp(entry.createdAt)}</div></div>))}</div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-5 space-y-3">
+                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Balance Audit</h4>
+                                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                                                    <Select value={balanceAuditCurrencyFilter} onChange={(event) => setBalanceAuditCurrencyFilter(event.target.value as 'all' | 'coins' | 'xp')} className="bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200"><option value="all">All currencies</option><option value="coins">Coins</option><option value="xp">XP</option></Select>
+                                                    <Select value={balanceAuditDirectionFilter} onChange={(event) => setBalanceAuditDirectionFilter(event.target.value as 'all' | 'positive' | 'negative')} className="bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200"><option value="all">All directions</option><option value="positive">Positive</option><option value="negative">Negative</option></Select>
+                                                    <Select value={balanceAuditReasonFilter} onChange={(event) => setBalanceAuditReasonFilter(event.target.value)} className="bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200"><option value="all">All reasons</option>{balanceAuditReasons.map((reason) => <option key={reason} value={reason}>{reason}</option>)}</Select>
+                                                    <Input value={balanceAuditSearch} onChange={(event) => setBalanceAuditSearch(event.target.value)} placeholder="Search source / relatedId" className="bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200" />
+                                                </div>
+                                                <div className="max-h-72 space-y-2 overflow-auto pr-1">
+                                                    {selectedBalanceAudits.length === 0 ? <div className="text-xs text-gray-500">No balance audit entries.</div> : selectedBalanceAudits.map((entry) => {
+                                                        const delta = (entry.balanceAfter ?? 0) - (entry.balanceBefore ?? 0);
+                                                        const hasWarning = (entry.balanceAfter ?? 0) < 0
+                                                            || entry.balanceBefore == null
+                                                            || delta !== entry.amount
+                                                            || !entry.source
+                                                            || !entry.actorType;
+                                                        const expandedKey = `${selectedUser.id}_${entry.id}`;
+                                                        return (
+                                                            <div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
+                                                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                                                    <div className="text-[10px] text-gray-500">{entry.createdAt ? formatTimestamp(entry.createdAt.toMillis()) : '—'} • {entry.currency.toUpperCase()} • {entry.reason}</div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={`text-xs font-bold ${entry.amount >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>{entry.amount >= 0 ? '+' : ''}{entry.amount.toLocaleString()}</span>
+                                                                        {hasWarning && <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">⚠ warning</span>}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="mt-1 text-[11px] text-gray-300 break-all">{entry.balanceBefore ?? '—'} → {entry.balanceAfter ?? '—'} • {entry.actorType ?? 'missing-actor'} • {entry.actorUid ?? 'null'} • {entry.source || 'missing-source'} • {entry.relatedId ?? 'null'}</div>
+                                                                <button onClick={() => setExpandedAuditRows((prev) => ({ ...prev, [expandedKey]: !prev[expandedKey] }))} className="mt-2 rounded bg-gray-700/40 px-2 py-1 text-[10px] text-gray-300">{expandedAuditRows[expandedKey] ? 'Hide metadata' : 'Show metadata'}</button>
+                                                                {expandedAuditRows[expandedKey] && (
+                                                                    <pre className="mt-2 overflow-x-auto rounded-lg border border-gray-800 bg-[#131720] p-2 text-[10px] text-gray-300">{JSON.stringify(entry.metadata ?? {}, null, 2)}</pre>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
 
                                             <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-2">
