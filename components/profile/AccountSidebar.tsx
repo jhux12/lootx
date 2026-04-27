@@ -10,6 +10,7 @@ interface QuickAction {
   onClick: () => void;
   primary?: boolean;
   isNew?: boolean;
+  active?: boolean;
 }
 
 type AccountPanel = 'overview' | 'security' | 'settings';
@@ -81,7 +82,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
         <p className="mb-2 text-xs font-semibold uppercase text-gray-400">Quick Actions</p>
         <div className="space-y-2">
           {quickActions.map((action) => (
-            <button key={action.label} onClick={action.onClick} className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm ${action.primary ? 'bg-gradient-to-r from-purple-600 to-violet-500 text-white' : 'border border-white/10 text-gray-200 hover:bg-white/5'}`}>
+            <button key={action.label} onClick={action.onClick} className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm ${action.active ? 'border border-purple-400/60 bg-purple-500/20 text-white' : action.primary ? 'bg-gradient-to-r from-purple-600 to-violet-500 text-white' : 'border border-white/10 text-gray-200 hover:bg-white/5'}`}>
               <span>{action.label}</span>
               {action.isNew && <span className="rounded-full bg-purple-500 px-2 py-0.5 text-[10px] font-bold">NEW</span>}
             </button>

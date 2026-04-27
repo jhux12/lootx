@@ -354,9 +354,10 @@ export const Profile: React.FC = () => {
   const balance = Number(user.balance ?? 0);
 
   const quickActions = [
+    { label: 'Inventory', active: activeTab === 'inventory', onClick: () => { setActiveTab('inventory'); setActiveAccountPanel('overview'); } },
+    { label: 'Settings', active: activeTab === 'account' && activeAccountPanel === 'settings', onClick: () => { setActiveTab('account'); setActiveAccountPanel('settings'); } },
+    { label: 'Security', active: activeTab === 'account' && activeAccountPanel === 'security', onClick: () => { setActiveTab('account'); setActiveAccountPanel('security'); } },
     { label: 'Rewards', primary: true, onClick: () => setView({ type: 'BONUSES' as const }) },
-    { label: 'Settings', onClick: () => { setActiveTab('account'); setActiveAccountPanel('settings'); } },
-    { label: 'Security', onClick: () => { setActiveTab('account'); setActiveAccountPanel('security'); } },
     { label: 'Referrals', onClick: () => setView({ type: 'REFERRALS' as const }), isNew: true }
   ];
 
