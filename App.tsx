@@ -733,7 +733,30 @@ const AppShell = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+
+    const setAppHeight = () => {
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+    };
+
+    setAppHeight();
+    window.addEventListener('resize', setAppHeight);
+    window.visualViewport?.addEventListener('resize', setAppHeight);
+    window.visualViewport?.addEventListener('scroll', setAppHeight);
+
+    return () => {
+      window.removeEventListener('resize', setAppHeight);
+      window.visualViewport?.removeEventListener('resize', setAppHeight);
+      window.visualViewport?.removeEventListener('scroll', setAppHeight);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
     if (!window.matchMedia('(pointer: coarse)').matches) return undefined;
+    const userAgent = navigator.userAgent || '';
+    const isInAppBrowser = /(FBAN|FBAV|Instagram|Line\/|MiuiBrowser|wv)/i.test(userAgent);
+    if (isInAppBrowser) return undefined;
 
     let lastTouchEnd = 0;
 
@@ -772,7 +795,7 @@ const AppShell = () => {
 
   return (
     <PullToRefresh>
-      <div className="min-h-screen bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+      <div className="min-h-[var(--app-height,100vh)] bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
         <SeoHead view={view} />
         <Header
           onOpenInbox={() => undefined}

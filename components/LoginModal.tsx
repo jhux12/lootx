@@ -267,13 +267,16 @@ export const LoginModal: React.FC = () => {
   }, []);
 
   return (
-    <div data-disable-pull-refresh="true" className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden overscroll-none p-2 sm:p-4">
+    <div
+      data-disable-pull-refresh="true"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-hidden overscroll-none p-2 pt-[calc(env(safe-area-inset-top)+8px)] sm:items-center sm:p-4"
+    >
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={() => setShowLoginModal(false)}
       />
 
-      <div className="relative flex max-h-[95dvh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0F0F11] shadow-2xl">
+      <div className="relative flex max-h-[calc(var(--app-height,100vh)-1rem)] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0F0F11] shadow-2xl sm:max-h-[95dvh]">
         <button
           onClick={() => setShowLoginModal(false)}
           className="absolute right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
