@@ -349,7 +349,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
                 </p>
                 <div className="relative z-10 mt-3 flex flex-wrap items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] xl:justify-start">
                   <span className="rounded bg-[#5f64ff] px-2 py-1 text-white">New arrival</span>
-                  <span className="text-gray-400">Sneakers</span>
+                  <span className="text-gray-400">Pokemon</span>
                 </div>
               </button>
 
