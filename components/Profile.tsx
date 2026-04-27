@@ -18,6 +18,20 @@ import { MobileBottomNav } from './profile/MobileBottomNav';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 const SHIPPING_BATCH_STORAGE_KEY = 'pullzgg_shipping_batch';
 
+
+const AVATAR_PRESETS = [
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Preston',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Cyber',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Robo',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Gamer',
+  'https://api.dicebear.com/7.x/adventurer/svg?seed=Midnight',
+  'https://api.dicebear.com/7.x/adventurer/svg?seed=Dusty',
+  'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Happy',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=Loot'
+];
+
 type MobileTab = 'inventory' | 'account';
 type AccountPanel = 'overview' | 'security' | 'settings';
 
@@ -62,7 +76,8 @@ export const Profile: React.FC = () => {
     email: user.email ?? auth.currentUser?.email ?? '',
     currentPassword: '',
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    avatar: user.avatar
   });
 
   const [addressForm, setAddressForm] = useState<ShippingAddress>(
@@ -80,7 +95,8 @@ export const Profile: React.FC = () => {
     setSecurityForm((prev) => ({
       ...prev,
       username: user.name ?? '',
-      email: user.email ?? auth.currentUser?.email ?? ''
+      email: user.email ?? auth.currentUser?.email ?? '',
+      avatar: user.avatar
     }));
   }, [user.name, user.email]);
 
@@ -239,8 +255,13 @@ export const Profile: React.FC = () => {
 
     setIsSavingSecurity(true);
     try {
-      if (securityForm.username.trim() && securityForm.username.trim() !== user.name) {
-        await updateUserInfo(securityForm.username.trim(), user.avatar);
+      const nextUsername = securityForm.username.trim() || user.name;
+      const nextAvatar = securityForm.avatar || user.avatar;
+      const usernameChanged = nextUsername !== user.name;
+      const avatarChanged = nextAvatar !== user.avatar;
+
+      if (usernameChanged || avatarChanged) {
+        await updateUserInfo(nextUsername, nextAvatar);
       }
 
       if (!auth.currentUser) {
@@ -412,6 +433,7 @@ export const Profile: React.FC = () => {
           setSecurityForm={setSecurityForm}
           onSaveSecurity={handleSaveSecurity}
           isSavingSecurity={isSavingSecurity}
+          avatarOptions={AVATAR_PRESETS}
         />
 
         <div className="flex-1">
@@ -458,6 +480,7 @@ export const Profile: React.FC = () => {
                 setSecurityForm={setSecurityForm}
                 onSaveSecurity={handleSaveSecurity}
                 isSavingSecurity={isSavingSecurity}
+                avatarOptions={AVATAR_PRESETS}
               />
             )}
           </div>
