@@ -1584,7 +1584,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
 
-  const closeWinModal = () => {
+  const closeWinModal = ({ redirectToBoxesCatalog = false }: { redirectToBoxesCatalog?: boolean } = {}) => {
     if (sellOfferTimerRef.current) {
       window.clearTimeout(sellOfferTimerRef.current);
       sellOfferTimerRef.current = null;
@@ -1598,6 +1598,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     resetReelTrackPosition();
     setWonInventoryItem(null);
     setSellOfferGenerated(false);
+
+    const shouldRedirectToCatalog = redirectToBoxesCatalog && isFree;
+    if (shouldRedirectToCatalog) {
+      setShowPostFreeBoxModal(false);
+      pendingPostFreeBoxFlowRef.current = null;
+      setView({ type: 'BOXES' });
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/boxes');
+      }
+      return;
+    }
 
     const pendingPostFreeBoxFlow = pendingPostFreeBoxFlowRef.current;
     if (pendingPostFreeBoxFlow) {
@@ -1682,7 +1693,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       window.clearTimeout(sellOfferTimerRef.current);
       sellOfferTimerRef.current = null;
     }
-    closeWinModal();
+    closeWinModal({ redirectToBoxesCatalog: true });
     setIsGeneratingSellOffer(false);
     setIsSellingItem(false);
   };
@@ -1747,7 +1758,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       setIsGeneratingSellOffer(false);
       setIsSellingItem(false);
-      closeWinModal();
+      closeWinModal({ redirectToBoxesCatalog: true });
   };
 
   const handleCopyProof = useCallback(async () => {
