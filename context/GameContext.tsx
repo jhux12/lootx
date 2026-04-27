@@ -675,6 +675,7 @@ interface GameContextType {
   deductBalance: (amount: number, options?: { trackRewards?: boolean }) => boolean;
   addToInventory: (item: CaseItem, provenance?: InventoryProvenance) => InventoryItem;
   addInventoryItemFromServer: (item: InventoryItem) => void;
+  removeInventoryItemFromServer: (instanceId: string) => void;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string) => Promise<{ creditCoins?: number } | void>;
@@ -741,7 +742,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 const AuthContext = createContext<Pick<GameContextType, 'user' | 'isAuthenticated' | 'authInitialized' | 'openAuthModal' | 'login' | 'loginWithGoogle' | 'linkGoogleAccount' | 'register' | 'resetPassword' | 'logout' | 'authModalMode' | 'setAuthModalMode' | 'showLoginModal' | 'setShowLoginModal' | 'showEmailVerificationModal' | 'setShowEmailVerificationModal' | 'showEmailVerifiedModal' | 'setShowEmailVerifiedModal' | 'emailVerificationStatus' | 'resendEmailVerification' | 'refreshEmailVerification' | 'dismissEmailVerificationModal'> | undefined>(undefined);
 const WalletContext = createContext<Pick<GameContextType, 'balance' | 'user' | 'syncBalance' | 'syncXpBalance' | 'addBalance' | 'deductBalance' | 'registerSpend' | 'awardCaseOpenXp'> | undefined>(undefined);
 const BoxesContext = createContext<Pick<GameContextType, 'boxes' | 'items' | 'createBox' | 'createUserBox' | 'updateBox' | 'deleteBox' | 'view' | 'setView'> | undefined>(undefined);
-const InventoryContext = createContext<Pick<GameContextType, 'inventory' | 'shipments' | 'addToInventory' | 'addInventoryItemFromServer' | 'sellItem' | 'shipItem'> | undefined>(undefined);
+const InventoryContext = createContext<Pick<GameContextType, 'inventory' | 'shipments' | 'addToInventory' | 'addInventoryItemFromServer' | 'removeInventoryItemFromServer' | 'sellItem' | 'shipItem'> | undefined>(undefined);
 const UIContext = createContext<Pick<GameContextType, 'view' | 'setView' | 'notifications' | 'addNotification' | 'dismissNotification' | 'clearNotifications' | 'showTopUpModal' | 'setShowTopUpModal' | 'topUpModalIntent' | 'setTopUpModalIntent'> | undefined>(undefined);
 
 // Guest / Loading User
@@ -2555,6 +2556,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const removeInventoryItemFromServer = (instanceId: string) => {
+    if (!instanceId) return;
+    setInventory((prev) => {
+      const nextInventory = prev.filter((item) => item.instanceId !== instanceId);
+      const nextTopPulls = rankTopPullsByValue(nextInventory);
+      setUser((current) => ({ ...current, topPulls: nextTopPulls }));
+      setUsers((current) => current.map((u) => (u.id === auth.currentUser?.uid ? { ...u, topPulls: nextTopPulls } : u)));
+      return nextInventory;
+    });
+  };
+
   const addNotification = (
     notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>
   ) => {
@@ -3473,6 +3485,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       deductBalance,
       addToInventory,
       addInventoryItemFromServer,
+      removeInventoryItemFromServer,
       followUser,
       unfollowUser,
       sellItem,
@@ -3516,7 +3529,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       linkGoogleAccount, register, resetPassword, logout, setShowLoginModal, setShowTopUpModal, setTopUpModalIntent,
       setAuthModalMode, openAuthModal, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal, setShowEmailVerifiedModal,
       setShowEmailVerificationModal, setView, addBalance, syncBalance, syncXpBalance, deductBalance, addToInventory,
-      addInventoryItemFromServer, followUser, unfollowUser, sellItem, shipItem, updateAddress, updateUserInfo,
+      addInventoryItemFromServer, removeInventoryItemFromServer, followUser, unfollowUser, sellItem, shipItem, updateAddress, updateUserInfo,
       addNotification, dismissNotification, clearNotifications, sendAdminNotification, updateUserFlags,
       updateUserAdminData, updateUserBalance, createBattle, joinBattle, updateBattle, createItem, updateItem,
       deleteItem, createCoinPackage, updateCoinPackage, deleteCoinPackage, createBox, createUserBox, updateBox,
@@ -3533,7 +3546,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const walletContextValue = useMemo(() => ({ user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp }), [user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp]);
   const boxesContextValue = useMemo(() => ({ boxes, items, createBox, createUserBox, updateBox, deleteBox, view, setView }), [boxes, items, createBox, createUserBox, updateBox, deleteBox, view, setView]);
-  const inventoryContextValue = useMemo(() => ({ inventory, shipments, addToInventory, addInventoryItemFromServer, sellItem, shipItem }), [inventory, shipments, addToInventory, addInventoryItemFromServer, sellItem, shipItem]);
+  const inventoryContextValue = useMemo(() => ({ inventory, shipments, addToInventory, addInventoryItemFromServer, removeInventoryItemFromServer, sellItem, shipItem }), [inventory, shipments, addToInventory, addInventoryItemFromServer, removeInventoryItemFromServer, sellItem, shipItem]);
   const uiContextValue = useMemo(() => ({ view, setView, notifications, addNotification, dismissNotification, clearNotifications, showTopUpModal, setShowTopUpModal, topUpModalIntent, setTopUpModalIntent }), [view, setView, notifications, addNotification, dismissNotification, clearNotifications, showTopUpModal, topUpModalIntent]);
 
   return (

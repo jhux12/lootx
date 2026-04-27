@@ -119,7 +119,14 @@ export const getUpgraderTargets = async () => {
 };
 
 export const attemptUpgrade = async (payload: { sourceItemInstanceId: string; targetItemId: string; clientSeed?: string }) => {
-  const response = await authedFetch<any>('/api/attempt-upgrade', {
+  const response = await authedFetch<{
+    win: boolean;
+    roll: number;
+    chance: number;
+    expectedPayout: number;
+    attemptId: string;
+    awardedItem?: { id: string; name: string; imageUrl: string };
+  }>('/api/attempt-upgrade', {
     method: 'POST',
     body: JSON.stringify(payload)
   });

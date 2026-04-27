@@ -18,6 +18,7 @@ import { UpgraderSpinner } from '../../components/upgrader-elite/UpgraderSpinner
 import { Item as EliteItem, UpgradeStatus } from '../../components/upgrader-elite/types';
 import upgraderSoundUrl from '../../assets/upgrader.mp3';
 import { toast } from '../ui/toast/toast';
+import type { InventoryItem as UserInventoryItem } from '../../types';
 
 const rarityMap: Record<string, Rarity> = {
   common: 'Common',
@@ -33,6 +34,12 @@ const normalizeEliteRarity = (rarity?: string): EliteItem['rarity'] => {
   if (value === 'uncommon' || value === 'rare' || value === 'epic' || value === 'legendary' || value === 'mythic') {
     return value;
   }
+  return 'common';
+};
+
+const normalizeInventoryRarity = (rarity?: string): UserInventoryItem['rarity'] => {
+  const value = String(rarity ?? '').toLowerCase();
+  if (value === 'uncommon' || value === 'rare' || value === 'epic' || value === 'legendary') return value;
   return 'common';
 };
 
@@ -217,7 +224,7 @@ const SelectedPreview = ({ label, item, emptyText, actionLabel, onActivate }: { 
 );
 
 export default function UpgraderPage() {
-  const { inventory, isAuthenticated, openAuthModal } = useGame();
+  const { inventory, isAuthenticated, openAuthModal, addInventoryItemFromServer, removeInventoryItemFromServer } = useGame();
   const [source, setSource] = useState<InventoryItem | null>(null);
   const [target, setTarget] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
@@ -518,6 +525,24 @@ export default function UpgraderPage() {
     try {
       const response = await attemptUpgrade({ sourceItemInstanceId: source.id, targetItemId: target.id, clientSeed: `${Date.now()}` });
       const success = Boolean(response.win);
+      removeInventoryItemFromServer(source.id);
+      if (success) {
+        const awarded: UserInventoryItem = {
+          id: target.id,
+          instanceId: String(response.awardedItem?.id ?? `upgrade-${Date.now()}`),
+          name: target.name,
+          image: target.imageUrl,
+          price: Number(target.coinValue ?? 0),
+          chance: 0,
+          color: '#22d3ee',
+          rarity: normalizeInventoryRarity(String(target.rarity ?? 'common')),
+          category: target.category,
+          obtainedAt: Date.now(),
+          status: 'available',
+          source: 'upgrader'
+        };
+        addInventoryItemFromServer(awarded);
+      }
       setSpinResult(success);
       setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
       setSpinNonce((previous) => previous + 1);
