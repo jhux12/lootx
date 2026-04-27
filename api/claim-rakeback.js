@@ -46,6 +46,8 @@ export default async function handler(req, res) {
       const { balanceAfter: newCoins } = await recordBalanceChange({
         transaction,
         uid: decoded.uid,
+        userRef,
+        userData,
         currency: 'coins',
         amount: payout,
         reason: 'rakeback_reward',

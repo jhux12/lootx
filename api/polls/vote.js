@@ -50,7 +50,7 @@ export default async function handler(req, res) {
       const userVoteRef = firestore.collection('userVotes').doc(decoded.uid).collection('polls').doc(pollId);
       const userRef = firestore.collection('users').doc(decoded.uid);
 
-      const [pollSnap, userVoteSnap] = await Promise.all([tx.get(pollRef), tx.get(userVoteRef)]);
+      const [pollSnap, userVoteSnap, userSnap] = await Promise.all([tx.get(pollRef), tx.get(userVoteRef), tx.get(userRef)]);
       if (!pollSnap.exists) throw new Error('Poll not found.');
 
       const pollData = pollSnap.data() ?? {};
@@ -101,6 +101,8 @@ export default async function handler(req, res) {
       await recordBalanceChange({
         transaction: tx,
         uid: decoded.uid,
+        userRef,
+        userData: userSnap.exists ? userSnap.data() ?? {} : {},
         currency: 'coins',
         amount: rewardCoins,
         reason: 'poll_reward',

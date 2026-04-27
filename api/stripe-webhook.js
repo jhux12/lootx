@@ -160,6 +160,8 @@ export default async function handler(req, res) {
         const { balanceAfter: nextCoins } = await recordBalanceChange({
           transaction,
           uid,
+          userRef,
+          userData,
           currency: 'coins',
           amount: totalCoins,
           reason: 'stripe_topup_credit',

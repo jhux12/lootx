@@ -14,7 +14,7 @@ const sanitizeMetadata = (metadata) => {
   return metadata;
 };
 
-const writeBalanceChange = async ({ transaction, uid, currency, amount, reason, actorType, actorUid = null, source, relatedId = null, metadata = {} }) => {
+const writeBalanceChange = async ({ transaction, uid, userRef: inputUserRef, userData: inputUserData = null, currency, amount, reason, actorType, actorUid = null, source, relatedId = null, metadata = {} }) => {
   if (!uid || typeof uid !== 'string') throw new Error('uid is required');
   const normalizedCurrency = String(currency ?? '').toLowerCase();
   if (!ALLOWED_CURRENCIES.has(normalizedCurrency)) throw new Error('currency must be coins or xp');
@@ -27,9 +27,10 @@ const writeBalanceChange = async ({ transaction, uid, currency, amount, reason, 
     return { balanceBefore: null, balanceAfter: null, skipped: true };
   }
 
-  const userRef = firestore.collection('users').doc(uid);
-  const userSnap = await transaction.get(userRef);
-  const userData = userSnap.exists ? userSnap.data() ?? {} : {};
+  const userRef = inputUserRef ?? firestore.collection('users').doc(uid);
+  const userData = inputUserData ?? (() => {
+    throw new Error('userData is required when using recordBalanceChange inside an existing transaction');
+  })();
 
   const balanceField = normalizedCurrency === 'xp' ? 'xpBalance' : 'coins';
   const legacyField = normalizedCurrency === 'xp' ? 'xp' : 'balance';
@@ -57,6 +58,7 @@ const writeBalanceChange = async ({ transaction, uid, currency, amount, reason, 
     ? { xpBalance: nextBalance, xp: nextBalance }
     : { coins: nextBalance, balance: nextBalance };
   transaction.set(userRef, patch, { merge: true });
+  const mergedUserData = { ...userData, ...patch };
 
   const auditRef = userRef.collection('balanceAudit').doc();
   transaction.set(auditRef, {
@@ -73,7 +75,7 @@ const writeBalanceChange = async ({ transaction, uid, currency, amount, reason, 
     createdAt: admin.firestore.FieldValue.serverTimestamp()
   });
 
-  return { balanceBefore: currentBalance, balanceAfter: nextBalance, auditId: auditRef.id, userData };
+  return { balanceBefore: currentBalance, balanceAfter: nextBalance, auditId: auditRef.id, userData: mergedUserData };
 };
 
 export const recordBalanceChange = async (params) => {
@@ -81,5 +83,10 @@ export const recordBalanceChange = async (params) => {
     return writeBalanceChange(params);
   }
 
-  return firestore.runTransaction(async (transaction) => writeBalanceChange({ ...params, transaction }));
+  return firestore.runTransaction(async (transaction) => {
+    const userRef = params?.userRef ?? firestore.collection('users').doc(params.uid);
+    const userSnap = await transaction.get(userRef);
+    const userData = userSnap.exists ? userSnap.data() ?? {} : {};
+    return writeBalanceChange({ ...params, transaction, userRef, userData });
+  });
 };

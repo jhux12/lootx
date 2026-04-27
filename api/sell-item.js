@@ -163,13 +163,6 @@ export default async function handler(req, res) {
           })
           : 0;
 
-      if (!userSnap.exists) {
-        transaction.set(userRef, {
-          coins: 0,
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      }
-
       const today = new Date().toISOString().slice(0, 10);
       const priorDay = typeof userData.challengeStatsDay === 'string' ? userData.challengeStatsDay : '';
       const priorStats = priorDay === today && userData.challengeStats && typeof userData.challengeStats === 'object'
@@ -204,6 +197,8 @@ export default async function handler(req, res) {
       const { balanceAfter: newCoins } = await recordBalanceChange({
         transaction,
         uid: decoded.uid,
+        userRef,
+        userData,
         currency: 'coins',
         amount: creditCoins,
         reason: 'sell_back_credit',

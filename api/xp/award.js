@@ -32,9 +32,13 @@ export default async function handler(req, res) {
     const dateKey = new Date().toISOString().slice(0, 10);
 
     await firestore.runTransaction(async (transaction) => {
+      const userSnap = await transaction.get(userRef);
+      const userData = userSnap.exists ? userSnap.data() ?? {} : {};
       await recordBalanceChange({
         transaction,
         uid: decoded.uid,
+        userRef,
+        userData,
         currency: 'xp',
         amount: awarded,
         reason: 'xp_award',

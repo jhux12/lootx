@@ -227,6 +227,8 @@ export const maybeCompleteReferralReward = async ({ referredUid }) => {
     await recordBalanceChange({
       transaction: tx,
       uid: referralData.referrerUid,
+      userRef: referrerRef,
+      userData: referrerSnap.data() ?? {},
       currency: 'coins',
       amount: referrerRewardCoins,
       reason: 'referral_reward',
@@ -239,6 +241,8 @@ export const maybeCompleteReferralReward = async ({ referredUid }) => {
     await recordBalanceChange({
       transaction: tx,
       uid: referralData.referredUid,
+      userRef: referredRef,
+      userData: referredSnap.data() ?? {},
       currency: 'coins',
       amount: friendRewardCoins,
       reason: 'referral_reward',

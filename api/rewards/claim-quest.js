@@ -60,6 +60,8 @@ export default async function handler(req, res) {
       const { balanceAfter: newCoins } = await recordBalanceChange({
         transaction: tx,
         uid: decoded.uid,
+        userRef,
+        userData,
         currency: 'coins',
         amount: rewardCoins,
         reason: 'quest_reward',

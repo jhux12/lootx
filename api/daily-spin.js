@@ -113,6 +113,8 @@ export default async function handler(req, res) {
         await recordBalanceChange({
           transaction,
           uid,
+          userRef,
+          userData,
           currency: 'coins',
           amount: prizeAmount,
           reason: 'daily_spin_reward',

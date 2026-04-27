@@ -162,13 +162,21 @@ export default async function handler(req, res) {
 
         const entryCostCoins = Number(fresh.entryCostCoins ?? 0);
         const freshPlayers = Array.isArray(fresh.players) ? fresh.players : [];
+        const realPlayers = freshPlayers.filter((entry) => entry.isHouseBot !== true);
+        const userRefs = realPlayers.map((player) => firestore.collection('users').doc(player.uid));
+        const userSnaps = await Promise.all(userRefs.map((userRef) => transaction.get(userRef)));
+        const userDataByUid = new Map(
+          realPlayers.map((player, index) => [player.uid, userSnaps[index]?.data() ?? {}])
+        );
 
-        for (const player of freshPlayers.filter((entry) => entry.isHouseBot !== true)) {
+        for (const player of realPlayers) {
           const userRef = firestore.collection('users').doc(player.uid);
           transaction.set(userRef, { coinsLocked: admin.firestore.FieldValue.increment(-entryCostCoins) }, { merge: true });
           await recordBalanceChange({
             transaction,
             uid: player.uid,
+            userRef,
+            userData: userDataByUid.get(player.uid) ?? {},
             currency: 'coins',
             amount: Number(settlement.payoutsByUid[player.uid] ?? 0),
             reason: 'battle_payout',

@@ -86,6 +86,8 @@ export default async function handler(req, res) {
         await recordBalanceChange({
           transaction,
           uid: decoded.uid,
+          userRef,
+          userData: userSnap.data() ?? {},
           currency: 'coins',
           amount: -entryCostCoins,
           reason: 'battle_entry_fee',

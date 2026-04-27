@@ -95,6 +95,8 @@ export default async function handler(req, res) {
   await firestore.runTransaction(async (tx) => {
     const txSnap = await tx.get(transactionRef);
     const existing = txSnap.exists ? txSnap.data() : null;
+    const userSnap = await tx.get(userRef);
+    const userData = userSnap.exists ? userSnap.data() ?? {} : {};
 
     if (existing) {
       if (status === 1 && existing.credited) {
@@ -112,6 +114,8 @@ export default async function handler(req, res) {
       await recordBalanceChange({
         transaction: tx,
         uid: userId,
+        userRef,
+        userData,
         currency: 'coins',
         amount: coins,
         reason: 'offerwall_cpx_credit',
@@ -151,6 +155,8 @@ export default async function handler(req, res) {
         await recordBalanceChange({
           transaction: tx,
           uid: userId,
+          userRef,
+          userData,
           currency: 'coins',
           amount: -Math.max(0, Math.floor(prevCoins)),
           reason: 'offerwall_cpx_reversal',

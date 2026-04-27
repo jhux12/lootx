@@ -219,15 +219,6 @@ export default async function handler(req, res) {
         ? Math.max(0, Math.floor((xpFromSpend + xpFromOpen + baseXpBonus) * xpMultiplier))
         : 0;
 
-      if (!userSnap.exists) {
-        transaction.set(userRef, {
-          coins: currentCoins,
-          xpBalance: 0,
-          xp: 0,
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      }
-
       if (currencyType === 'XP' || shouldUseXpForOpen) {
         const requiredXp = currencyType === 'XP' ? priceXP : xpCostForCoinCase;
         if (!Number.isInteger(priceXP) || priceXP <= 0) {
@@ -263,9 +254,17 @@ export default async function handler(req, res) {
       const coinCost = currencyType === 'COIN' && !isFree && !shouldUseXpForOpen ? price : 0;
       let newCoins = currentCoins;
       let newXpBalance = currentXp;
+      let balanceState = {
+        ...userData,
+        coins: currentCoins,
+        balance: currentCoins,
+        xpBalance: currentXp,
+        xp: currentXp
+      };
 
       const freeBoxClaimedAt = isFree ? Date.now() : null;
       const nextUserPatch = sanitizeForFirestore({
+        ...(!userSnap.exists ? { createdAt: admin.firestore.FieldValue.serverTimestamp() } : {}),
         ...(isFree ? { lastFreeBoxClaim: freeBoxClaimedAt } : {})
       });
 
@@ -273,6 +272,8 @@ export default async function handler(req, res) {
         const result = await recordBalanceChange({
           transaction,
           uid: decoded.uid,
+          userRef,
+          userData: balanceState,
           currency: 'coins',
           amount: -coinCost,
           reason: 'case_open_cost',
@@ -283,12 +284,15 @@ export default async function handler(req, res) {
           metadata: { boxId, paymentMethod: 'coins', caseName: boxData.name ?? 'Mystery Box' }
         });
         newCoins = result.balanceAfter;
+        balanceState = result.userData;
       }
 
       if (paidWithXp) {
         const spendResult = await recordBalanceChange({
           transaction,
           uid: decoded.uid,
+          userRef,
+          userData: balanceState,
           currency: 'xp',
           amount: -resolvedXpCost,
           reason: 'case_open_cost',
@@ -299,6 +303,7 @@ export default async function handler(req, res) {
           metadata: { boxId, paymentMethod: 'xp', caseName: boxData.name ?? 'Mystery Box' }
         });
         newXpBalance = spendResult.balanceAfter;
+        balanceState = spendResult.userData;
       }
 
       transaction.set(userRef, nextUserPatch, { merge: true });
@@ -355,6 +360,8 @@ export default async function handler(req, res) {
         const xpAwardResult = await recordBalanceChange({
           transaction,
           uid: decoded.uid,
+          userRef,
+          userData: balanceState,
           currency: 'xp',
           amount: totalXpAward,
           reason: 'case_open_xp_reward',
@@ -365,6 +372,7 @@ export default async function handler(req, res) {
           metadata: { boxId, coinCost, xpCost: paidWithXp ? resolvedXpCost : 0 }
         });
         newXpBalance = xpAwardResult.balanceAfter;
+        balanceState = xpAwardResult.userData;
         const dateKey = new Date().toISOString().slice(0, 10);
         transaction.update(userRef, {
           xpEarnedLifetime: admin.firestore.FieldValue.increment(totalXpAward),
