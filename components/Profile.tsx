@@ -71,6 +71,7 @@ export const Profile: React.FC = () => {
 
   const [activeAccountPanel, setActiveAccountPanel] = useState<AccountPanel>('overview');
   const [isSavingSecurity, setIsSavingSecurity] = useState(false);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [securityForm, setSecurityForm] = useState({
     username: user.name ?? '',
     email: user.email ?? auth.currentUser?.email ?? '',
@@ -246,6 +247,19 @@ export const Profile: React.FC = () => {
     }
   };
 
+
+
+  const handleSaveAvatar = async () => {
+    setIsSavingAvatar(true);
+    try {
+      await updateUserInfo(user.name, securityForm.avatar || user.avatar);
+      toast.success('Profile picture updated.');
+    } catch {
+      toast.error('Could not update profile picture.');
+    } finally {
+      setIsSavingAvatar(false);
+    }
+  };
 
   const handleSaveSecurity = async () => {
     if (securityForm.newPassword && securityForm.newPassword !== securityForm.confirmPassword) {
@@ -434,6 +448,8 @@ export const Profile: React.FC = () => {
           onSaveSecurity={handleSaveSecurity}
           isSavingSecurity={isSavingSecurity}
           avatarOptions={AVATAR_PRESETS}
+          onSaveAvatar={handleSaveAvatar}
+          isSavingAvatar={isSavingAvatar}
         />
 
         <div className="flex-1">
@@ -481,6 +497,8 @@ export const Profile: React.FC = () => {
                 onSaveSecurity={handleSaveSecurity}
                 isSavingSecurity={isSavingSecurity}
                 avatarOptions={AVATAR_PRESETS}
+                onSaveAvatar={handleSaveAvatar}
+                isSavingAvatar={isSavingAvatar}
               />
             )}
           </div>

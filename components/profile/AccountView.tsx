@@ -41,6 +41,8 @@ interface AccountViewProps {
   onSaveSecurity: () => void;
   isSavingSecurity: boolean;
   avatarOptions: string[];
+  onSaveAvatar: () => void;
+  isSavingAvatar: boolean;
 }
 
 export const AccountView: React.FC<AccountViewProps> = ({
@@ -59,7 +61,9 @@ export const AccountView: React.FC<AccountViewProps> = ({
   setSecurityForm,
   onSaveSecurity,
   isSavingSecurity,
-  avatarOptions
+  avatarOptions,
+  onSaveAvatar,
+  isSavingAvatar
 }) => {
   return (
     <div className="space-y-4 md:hidden">
@@ -137,6 +141,9 @@ export const AccountView: React.FC<AccountViewProps> = ({
               </button>
             ))}
           </div>
+          <button onClick={onSaveAvatar} disabled={isSavingAvatar} className="mt-3 w-full rounded-xl border border-purple-400/40 bg-purple-500/15 px-3 py-2 text-sm font-bold text-purple-100">
+            {isSavingAvatar ? 'Saving...' : 'Save Profile Picture'}
+          </button>
           <button onClick={onSaveAddress} disabled={isSavingAddress} className="mt-3 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white">
             {isSavingAddress ? 'Saving...' : 'Save Address'}
           </button>
