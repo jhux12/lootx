@@ -13,7 +13,7 @@ interface SpinnerItemProps {
   transitionMs: number;
   animationPhase: 'idle' | 'spinning' | 'settling';
   itemWidth: number;
-  gap: number;
+  itemFullWidth: number;
 }
 
 const getRarityGlow = (item: CaseItem) => {
@@ -34,17 +34,15 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
   transitionMs,
   animationPhase,
   itemWidth,
-  gap
+  itemFullWidth
 }) => {
   const glow = getRarityGlow(item);
 
   return (
     <div
-      className={`spinner-item absolute left-1/2 top-1/2 flex items-center justify-center rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] ${isCenter ? 'active z-30' : 'z-10'}`}
+      className={`spinner-item ${isCenter ? 'active z-30' : 'z-10'}`}
       style={{
-        width: `${itemWidth}px`,
-        height: `${itemWidth}px`,
-        transform: getSpinnerItemTranslate(index, currentCenterIndex, itemWidth, gap),
+        transform: getSpinnerItemTranslate(index, currentCenterIndex, itemFullWidth),
         transitionProperty: 'transform',
         transitionDuration: `${transitionMs}ms`,
         transitionTimingFunction: 'cubic-bezier(0.1, 0.7, 0.1, 1)',
@@ -52,10 +50,8 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
       }}
     >
       <div
-        className="glow absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+        className="spinner-glow"
         style={{
-          width: '60%',
-          height: '60%',
           background: `radial-gradient(circle, ${glow.color}, transparent 70%)`,
           filter: isMobileViewport ? 'blur(14px)' : 'blur(20px)',
           opacity: isCenter ? 1 : glow.opacity
@@ -63,27 +59,32 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
       />
 
       <div
-        className="relative z-10 flex h-full w-full flex-col items-center justify-between px-2 pb-2 pt-2"
+        className="spinner-card relative z-10 flex flex-col items-center justify-between px-2 pb-2 pt-2 transition-transform duration-300"
         style={{
+          width: `${itemWidth}px`,
+          height: `${itemWidth}px`,
           transform: `scale(${isCenter ? 1.25 : 1})`,
           transition: 'transform 260ms ease, opacity 260ms ease'
         }}
       >
-        <div className="relative flex min-h-0 flex-1 items-center justify-center self-stretch pt-2">
+        <div className="spinner-image-wrap relative min-h-0 flex-1 self-stretch pt-2">
           <BlurImage
             src={item.image}
             alt={item.name}
-            className={`object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.58)] ${isMobileViewport ? 'h-[90px] w-[90px]' : 'h-[112px] w-[112px]'}`}
+            className="object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.58)]"
             loading="eager"
             decoding="async"
             fallbackClassName="bg-slate-900/40"
-            style={{ width: isMobileViewport ? 90 : 112, height: isMobileViewport ? 90 : 112 }}
+            style={{
+              width: `${Math.round(itemWidth * (isMobileViewport ? 0.6 : 0.64))}px`,
+              height: `${Math.round(itemWidth * (isMobileViewport ? 0.6 : 0.64))}px`
+            }}
           />
         </div>
 
         <div
-          className="relative z-10 inline-flex items-center justify-center text-sm font-extrabold leading-none text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] transition-opacity duration-300"
-          style={{ opacity: isCenter && animationPhase === 'idle' ? 1 : 0 }}
+          className="spinner-value relative z-10 inline-flex items-center justify-center text-sm font-extrabold leading-none text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] transition-opacity duration-300"
+          style={{ opacity: animationPhase === 'spinning' ? 0.94 : 1 }}
         >
           <CoinAmount
             amount={item.price}
@@ -100,10 +101,10 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
         />
 
         <div
-          className="absolute -bottom-8 left-1/2 w-max max-w-[195px] -translate-x-1/2 text-center transition-opacity duration-300"
+          className="spinner-name transition-opacity duration-300"
           style={{ opacity: isCenter && animationPhase === 'idle' ? 1 : 0 }}
         >
-          <div className="truncate text-xs font-semibold text-white">{item.name}</div>
+          {item.name}
         </div>
       </div>
     </div>
