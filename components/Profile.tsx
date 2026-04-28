@@ -102,10 +102,8 @@ export const Profile: React.FC = () => {
   }, [user.name, user.email]);
 
   const displayUsername = getProfileUsername(user);
-  const hasDailyFreeBoxAvailable = useMemo(
-    () => boxes.some((box) => box.isDaily) && !user.lastFreeBoxClaim,
-    [boxes, user.lastFreeBoxClaim]
-  );
+  const dailyFreeBox = useMemo(() => boxes.find((box) => box.isDaily) ?? null, [boxes]);
+  const hasDailyFreeBoxAvailable = Boolean(dailyFreeBox) && !user.lastFreeBoxClaim;
 
   const xpBoxIds = useMemo(
     () => new Set(boxes.filter((box) => box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0).map((box) => box.id)),
@@ -467,7 +465,10 @@ export const Profile: React.FC = () => {
             {hasDailyFreeBoxAvailable ? (
               <button
                 className="rounded-xl bg-emerald-500/20 px-1 py-2 text-xs font-semibold text-emerald-200"
-                onClick={() => setView({ type: 'BONUSES' })}
+                onClick={() => {
+                  if (!dailyFreeBox) return;
+                  setView({ type: 'CASE_OPENING', boxId: dailyFreeBox.id, isFree: true });
+                }}
               >
                 Free Box
               </button>
