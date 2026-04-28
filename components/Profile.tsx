@@ -102,6 +102,8 @@ export const Profile: React.FC = () => {
   }, [user.name, user.email]);
 
   const displayUsername = getProfileUsername(user);
+  const dailyFreeBox = useMemo(() => boxes.find((box) => box.isDaily) ?? null, [boxes]);
+  const hasDailyFreeBoxAvailable = Boolean(dailyFreeBox) && !user.lastFreeBoxClaim;
 
   const xpBoxIds = useMemo(
     () => new Set(boxes.filter((box) => box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0).map((box) => box.id)),
@@ -453,9 +455,24 @@ export const Profile: React.FC = () => {
         />
 
         <div className="flex-1">
-          <div className="mb-3 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-[#101523] p-1 md:hidden">
+          <div
+            className={`mb-3 grid gap-2 rounded-2xl border border-white/10 bg-[#101523] p-1 md:hidden ${
+              hasDailyFreeBoxAvailable ? 'grid-cols-3' : 'grid-cols-2'
+            }`}
+          >
             <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'inventory' ? 'bg-purple-600 text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('inventory')}>Inventory</button>
             <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'account' ? 'bg-purple-600 text-white' : 'text-gray-400'}`} onClick={() => { setActiveTab('account'); setActiveAccountPanel('overview'); }}>Profile</button>
+            {hasDailyFreeBoxAvailable ? (
+              <button
+                className="rounded-xl bg-emerald-500/20 px-1 py-2 text-xs font-semibold text-emerald-200"
+                onClick={() => {
+                  if (!dailyFreeBox) return;
+                  setView({ type: 'CASE_OPENING', boxId: dailyFreeBox.id, isFree: true });
+                }}
+              >
+                Free Box
+              </button>
+            ) : null}
           </div>
 
           <div className="md:hidden">
