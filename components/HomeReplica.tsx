@@ -15,8 +15,8 @@ type HomeReplicaProps = {
 type FaqItem = { question: string; answer: string };
 
 const FAQ_ITEMS: FaqItem[] = [
-  { question: 'What is PackDraw?', answer: 'PackDraw is an online pack opening experience where you can open packs, win items, and either keep or cash out your rewards.' },
-  { question: 'How do I open a pack?', answer: 'Choose any pack, click it, and confirm the opening. Your result appears immediately with full transparency.' },
+  { question: 'What is PackDraw?', answer: 'PackDraw is an online box opening experience where you can open boxes, win items, and either keep or cash out your rewards.' },
+  { question: 'How do I open a box?', answer: 'Choose any box, click it, and confirm the opening. Your result appears immediately with full transparency.' },
   { question: 'How do I deposit?', answer: 'Use the top-up flow and pick your preferred payment method to add balance to your account.' },
   { question: 'Missing crypto deposit?', answer: 'Blockchain confirmation times vary. If it does not arrive, contact support with your transaction hash.' },
   { question: 'What are Battles?', answer: 'Battles are head-to-head openings where players compete based on the value of their pulls.' },
@@ -51,7 +51,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, isChatCollapsed
 
           <section className="rounded-xl bg-[#141d2a] p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">New Packs</h2>
+              <h2 className="text-xl font-semibold text-white">New Boxes</h2>
               <button className="text-sm text-white/70">View All</button>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -71,11 +71,11 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, isChatCollapsed
           <section className="rounded-xl bg-[#141d2a] p-4">
             <h3 className="mb-4 text-2xl font-semibold text-white">How It Works</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {['01. Open Packs', '02. Win Items', '03. Cash or Claim'].map((title, index) => (
+              {['01. Open Boxes', '02. Win Items', '03. Cash or Claim'].map((title, index) => (
                 <div key={title} className="rounded-xl border border-white/10 bg-[#1b2536] p-4 text-center">
                   <div className={`mx-auto mb-3 h-24 w-full rounded-lg ${index === 0 ? 'bg-sky-500/20' : index === 1 ? 'bg-indigo-500/20' : 'bg-cyan-400/20'}`} />
                   <h4 className="font-bold text-white">{title}</h4>
-                  <p className="mt-1 text-sm text-white/60">Find your perfect packs and experience the thrill on any screen.</p>
+                  <p className="mt-1 text-sm text-white/60">Find your perfect boxes and experience the thrill on any screen.</p>
                 </div>
               ))}
             </div>
