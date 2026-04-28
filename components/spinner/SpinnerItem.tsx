@@ -18,11 +18,11 @@ interface SpinnerItemProps {
 
 const getRarityGlow = (item: CaseItem) => {
   const rarity = String(item.rarity ?? 'common').toLowerCase();
-  if (rarity.includes('legend')) return { color: 'rgba(255,191,71,0.65)', opacity: 0.9 };
-  if (rarity.includes('epic')) return { color: 'rgba(196,125,255,0.58)', opacity: 0.75 };
-  if (rarity.includes('rare')) return { color: 'rgba(96,165,250,0.52)', opacity: 0.68 };
-  if (rarity.includes('uncommon')) return { color: 'rgba(74,222,128,0.46)', opacity: 0.58 };
-  return { color: 'rgba(100,116,139,0.4)', opacity: 0.45 };
+  if (rarity.includes('legend')) return { color: '#d97706', border: 'rgba(250,204,21,0.6)', subtitle: 'Legendary' };
+  if (rarity.includes('epic')) return { color: '#9333ea', border: 'rgba(196,125,255,0.62)', subtitle: 'Epic' };
+  if (rarity.includes('rare')) return { color: '#2563eb', border: 'rgba(96,165,250,0.62)', subtitle: 'Rare' };
+  if (rarity.includes('uncommon')) return { color: '#16a34a', border: 'rgba(74,222,128,0.58)', subtitle: 'Uncommon' };
+  return { color: '#475569', border: 'rgba(148,163,184,0.45)', subtitle: 'Common' };
 };
 
 export const SpinnerItem: React.FC<SpinnerItemProps> = ({
@@ -54,7 +54,7 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
         style={{
           background: `radial-gradient(circle, ${glow.color}, transparent 70%)`,
           filter: isMobileViewport ? 'blur(14px)' : 'blur(20px)',
-          opacity: isCenter ? 1 : glow.opacity
+          opacity: isCenter ? 0.95 : 0.5
         }}
       />
 
@@ -64,6 +64,11 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
           width: `${itemWidth}px`,
           height: `${itemWidth}px`,
           transform: `scale(${isCenter ? 1.25 : 1})`,
+          borderColor: isCenter ? 'rgba(216,180,254,0.95)' : glow.border,
+          boxShadow: isCenter
+            ? `0 0 26px ${glow.border}, inset 0 0 0 1px rgba(255,255,255,0.22)`
+            : `0 0 16px ${glow.border}`,
+          opacity: isCenter ? 1 : 0.86,
           transition: 'transform 260ms ease, opacity 260ms ease'
         }}
       >
@@ -82,29 +87,28 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
           />
         </div>
 
-        <div
-          className="spinner-value relative z-10 inline-flex items-center justify-center text-sm font-extrabold leading-none text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] transition-opacity duration-300"
-          style={{ opacity: animationPhase === 'spinning' ? 0.94 : 1 }}
-        >
-          <CoinAmount
-            amount={item.price}
-            formatOptions={{ maximumFractionDigits: 0 }}
-            className="text-white"
-            iconClassName="h-[11px] w-[11px]"
-            animated={false}
-          />
-        </div>
-
-        <div
-          className="absolute bottom-0 left-3 right-3 h-px opacity-70"
-          style={{ backgroundColor: item.color }}
-        />
-
-        <div
-          className="spinner-name transition-opacity duration-300"
-          style={{ opacity: isCenter && animationPhase === 'idle' ? 1 : 0 }}
-        >
-          {item.name}
+        <div className="spinner-info">
+          <div className="spinner-name transition-opacity duration-300">
+            {item.name}
+          </div>
+          <div
+            className="spinner-rarity transition-opacity duration-300"
+            style={{ opacity: isCenter ? 1 : 0.72, color: isCenter ? '#c084fc' : '#93c5fd' }}
+          >
+            {glow.subtitle}
+          </div>
+          <div
+            className="spinner-value relative z-10 inline-flex items-center justify-center text-sm font-extrabold leading-none text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] transition-opacity duration-300"
+            style={{ opacity: animationPhase === 'spinning' ? 0.94 : 1 }}
+          >
+            <CoinAmount
+              amount={item.price}
+              formatOptions={{ maximumFractionDigits: 0 }}
+              className="text-white"
+              iconClassName={isCenter ? 'h-[16px] w-[16px]' : 'h-[13px] w-[13px]'}
+              animated={false}
+            />
+          </div>
         </div>
       </div>
     </div>
