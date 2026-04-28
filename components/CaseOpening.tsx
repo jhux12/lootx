@@ -326,6 +326,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   
   const spinTimerRef = useRef<number | null>(null);
   const settleTimerRef = useRef<number | null>(null);
+  const tickSoundTimersRef = useRef<number[]>([]);
+  const currentCenterIndexRef = useRef(0);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const itemModalRevealFrameRef = useRef<number | null>(null);
@@ -364,6 +366,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const xpRingCircumference = 2 * Math.PI * xpRingRadius;
   const xpRingOffset = xpRingCircumference * (1 - xpProgress);
   const spinnerViewportHeight = isMobileViewport ? MOBILE_SPINNER_VIEWPORT_HEIGHT : DESKTOP_SPINNER_VIEWPORT_HEIGHT;
+
+  useEffect(() => {
+    currentCenterIndexRef.current = currentCenterIndex;
+  }, [currentCenterIndex]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -733,8 +739,45 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       window.clearTimeout(settleTimerRef.current);
       settleTimerRef.current = null;
     }
+    tickSoundTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    tickSoundTimersRef.current = [];
     setAnimationPhase('idle');
   }, []);
+
+  const getEasingProgressAt = useCallback((targetProgress: number) => {
+    const x1 = 0.1;
+    const y1 = 0.7;
+    const x2 = 0.1;
+    const y2 = 1;
+    const sampleCurveX = (t: number) => ((1 - 3 * x2 + 3 * x1) * t + (3 * x2 - 6 * x1)) * t * t + (3 * x1) * t;
+    const sampleCurveY = (t: number) => ((1 - 3 * y2 + 3 * y1) * t + (3 * y2 - 6 * y1)) * t * t + (3 * y1) * t;
+
+    let low = 0;
+    let high = 1;
+    for (let i = 0; i < 18; i += 1) {
+      const mid = (low + high) / 2;
+      if (sampleCurveY(mid) < targetProgress) low = mid;
+      else high = mid;
+    }
+    const solved = (low + high) / 2;
+    return sampleCurveX(solved);
+  }, []);
+
+  const scheduleTickSounds = useCallback((startIndex: number, targetIndex: number, durationMs: number) => {
+    tickSoundTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    tickSoundTimersRef.current = [];
+
+    const steps = Math.abs(targetIndex - startIndex);
+    if (steps <= 0) return;
+
+    for (let step = 1; step <= steps; step += 1) {
+      const progress = step / steps;
+      const easedTime = getEasingProgressAt(progress);
+      const delay = Math.max(16, Math.round(durationMs * easedTime));
+      const timer = window.setTimeout(() => playSound('spin-tick'), delay);
+      tickSoundTimersRef.current.push(timer);
+    }
+  }, [getEasingProgressAt, playSound]);
 
   const animateSpin = useCallback(async (
     winnerIndex: number,
@@ -746,10 +789,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const durationVariance = Math.round((rng() - 0.5) * SPINNER_MOTION.durationVarianceMs * 2);
     const resolvedDuration = Math.max(3000, duration + durationVariance);
     const settleDuration = Math.min(420, Math.max(220, Math.round(resolvedDuration * 0.11)));
+    const startIndex = currentCenterIndexRef.current;
 
     resetSpinnerAnimation();
     setAnimationPhase('spinning');
     setSpinnerTransitionMs(resolvedDuration);
+    scheduleTickSounds(startIndex, winnerIndex, resolvedDuration);
     await waitForNextPaint();
     setCurrentCenterIndex(winnerIndex);
 
@@ -762,7 +807,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinRequestLockRef.current = false;
       onComplete();
     }, resolvedDuration + 20);
-  }, [resetSpinnerAnimation]);
+  }, [resetSpinnerAnimation, scheduleTickSounds]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();

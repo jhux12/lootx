@@ -59,7 +59,7 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
       />
 
       <div
-        className="spinner-card relative z-10 flex flex-col items-center justify-between px-2 pb-2 pt-2 transition-transform duration-300"
+        className="spinner-card relative z-10 flex flex-col items-center justify-center px-2 transition-transform duration-300"
         style={{
           width: `${itemWidth}px`,
           height: `${itemWidth}px`,
@@ -67,7 +67,7 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
           transition: 'transform 260ms ease, opacity 260ms ease'
         }}
       >
-        <div className="spinner-image-wrap relative min-h-0 flex-1 self-stretch pt-2">
+        <div className="spinner-image-wrap relative min-h-0 self-stretch">
           <BlurImage
             src={item.image}
             alt={item.name}
