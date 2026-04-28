@@ -103,19 +103,6 @@ export const AccountView: React.FC<AccountViewProps> = ({
             <input type="password" value={securityForm.newPassword} onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })} placeholder="New Password" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
             <input type="password" value={securityForm.confirmPassword} onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })} placeholder="Confirm New Password" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
           </div>
-          <p className="mt-3 mb-2 text-xs font-semibold uppercase text-gray-400">Profile Picture</p>
-          <div className="grid grid-cols-5 gap-2">
-            {avatarOptions.map((avatar) => (
-              <button
-                type="button"
-                key={avatar}
-                onClick={() => setSecurityForm({ ...securityForm, avatar })}
-                className={`overflow-hidden rounded-xl border-2 ${securityForm.avatar === avatar ? 'border-purple-400' : 'border-white/10'}`}
-              >
-                <img src={avatar} alt="avatar option" className="h-10 w-full object-cover" />
-              </button>
-            ))}
-          </div>
           <button onClick={onSaveSecurity} disabled={isSavingSecurity} className="mt-3 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white">
             {isSavingSecurity ? 'Saving...' : 'Save Security Changes'}
           </button>
@@ -135,6 +122,19 @@ export const AccountView: React.FC<AccountViewProps> = ({
               ['country', 'Country']
             ] as Array<[keyof ShippingAddress, string]>).map(([key, label]) => (
               <input key={key} value={addressForm[key]} onChange={(event) => setAddressForm({ ...addressForm, [key]: event.target.value })} placeholder={label} className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
+            ))}
+          </div>
+          <p className="mt-3 mb-2 text-xs font-semibold uppercase text-gray-400">Profile Picture</p>
+          <div className="grid grid-cols-5 gap-2">
+            {avatarOptions.map((avatar) => (
+              <button
+                type="button"
+                key={avatar}
+                onClick={() => setSecurityForm({ ...securityForm, avatar })}
+                className={`overflow-hidden rounded-xl border-2 ${securityForm.avatar === avatar ? 'border-purple-400' : 'border-white/10'}`}
+              >
+                <img src={avatar} alt="avatar option" className="h-10 w-full object-cover" />
+              </button>
             ))}
           </div>
           <button onClick={onSaveAddress} disabled={isSavingAddress} className="mt-3 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white">
