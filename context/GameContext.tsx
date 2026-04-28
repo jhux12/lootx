@@ -19,8 +19,6 @@ import {
   signInWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   linkWithCredential,
@@ -171,6 +169,10 @@ const setStoredReferralCode = (code: string) => {
 const EMAIL_VERIFICATION_PENDING_KEY = 'pendingEmailVerification';
 const EMAIL_VERIFICATION_REDIRECT_KEY = 'pendingEmailRedirect';
 const EMAIL_VERIFICATION_COMPLETED_KEY = 'emailVerificationCompleted';
+const AUTH_CTA_COOLDOWN_MS = 2500;
+const VERIFIED_REFRESH_DONE_KEY = 'verified_refresh_done';
+const GOOGLE_SIGNIN_REFRESH_DONE_KEY = 'google_signin_refresh_done';
+
 
 const hasPendingEmailVerification = () => {
   if (typeof window === 'undefined') return false;
@@ -1274,6 +1276,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
 
+
+  const authCtaCooldownRef = useRef(0);
+  const googlePopupActiveRef = useRef(false);
+
+  const isAuthCtaCoolingDown = () => Date.now() - authCtaCooldownRef.current < AUTH_CTA_COOLDOWN_MS;
+
+  const startAuthCtaCooldown = () => {
+    authCtaCooldownRef.current = Date.now();
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
@@ -1290,6 +1302,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const openAuthModal = (mode: AuthModalMode = 'login') => {
+    if (isAuthCtaCoolingDown() || showLoginModal) {
+      return;
+    }
+
+    startAuthCtaCooldown();
     if (mode === 'register') {
       setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
       trackEvent('signup_cta_clicked', { entrypoint: 'auth_modal' });
@@ -1616,6 +1633,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setNotifications([]);
         hasInventorySubcollectionRef.current = false;
         activeUserIdRef.current = null;
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.removeItem(GOOGLE_SIGNIN_REFRESH_DONE_KEY);
+          window.sessionStorage.removeItem(VERIFIED_REFRESH_DONE_KEY);
+        }
         return;
       }
 
@@ -1641,24 +1662,32 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const redirectResult = await getRedirectResult(auth);
-        if (!redirectResult?.user) return;
-        await ensureGoogleUserProfile(redirectResult.user);
-        trackEvent('google_oauth_success');
-        setShowLoginModal(false);
-        const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
-        resolveEmailRedirect(redirectPath);
-      } catch (error: any) {
-        trackEvent('google_oauth_error', { code: error?.code || 'redirect_unknown' });
-      }
-    })();
-  }, []);
 
   useEffect(() => {
     void checkEmailVerificationStatus(auth.currentUser);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const refreshAfterVerifiedReturn = async () => {
+      const currentUser = auth.currentUser;
+      if (!currentUser || window.sessionStorage.getItem(VERIFIED_REFRESH_DONE_KEY) === 'true') {
+        return;
+      }
+
+      try {
+        await currentUser.reload();
+        if (currentUser.emailVerified) {
+          window.sessionStorage.setItem(VERIFIED_REFRESH_DONE_KEY, 'true');
+          window.setTimeout(() => window.location.reload(), 300);
+        }
+      } catch (error) {
+        console.error('Failed to refresh verified email state', error);
+      }
+    };
+
+    void refreshAfterVerifiedReturn();
   }, []);
 
   useEffect(() => {
@@ -2266,30 +2295,45 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const loginWithGoogle = async (options: GoogleAuthOptions = {}): Promise<GoogleAuthResult> => {
     const { remember = true, isRetry = false } = options;
+
+    if (isAuthCtaCoolingDown()) {
+      return { status: 'error', message: 'Please wait a moment before trying again.' };
+    }
+
+    if (googlePopupActiveRef.current) {
+      return { status: 'error', message: 'Google sign-in is already opening. Please finish that popup first.' };
+    }
+
     const provider = new GoogleAuthProvider();
 
     try {
+      startAuthCtaCooldown();
+      googlePopupActiveRef.current = true;
       await setAuthPersistence(remember);
       if (isRetry) {
         trackEvent('google_oauth_retry');
       }
       trackEvent('google_oauth_started');
 
-      if (shouldUseRedirectGoogleAuth()) {
-        await signInWithRedirect(auth, provider);
-        return { status: 'redirect-started' };
-      }
-
       const credential = await signInWithPopup(auth, provider);
       await ensureGoogleUserProfile(credential.user);
-      trackEvent('google_oauth_success');
+      await credential.user.reload();
 
+      trackEvent('google_oauth_success');
       setShowLoginModal(false);
-      const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
-      resolveEmailRedirect(redirectPath);
+
+      if (typeof window !== 'undefined' && window.sessionStorage.getItem(GOOGLE_SIGNIN_REFRESH_DONE_KEY) !== 'true') {
+        window.sessionStorage.setItem(GOOGLE_SIGNIN_REFRESH_DONE_KEY, 'true');
+        window.setTimeout(() => window.location.reload(), 300);
+      }
+
       return { status: 'success' };
     } catch (error: any) {
       const errorCode = error?.code;
+      if (errorCode === 'auth/popup-closed-by-user' || errorCode === 'auth/cancelled-popup-request') {
+        return { status: 'error', message: 'Google sign-in was canceled.' };
+      }
+
       if (errorCode === 'auth/account-exists-with-different-credential') {
         const pendingCredential = GoogleAuthProvider.credentialFromError(error);
         const email = error?.customData?.email ?? error?.email;
@@ -2297,7 +2341,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (pendingCredential && email) {
           const methods = await fetchSignInMethodsForEmail(auth, email);
           if (methods.includes('password')) {
-            // Account linking: prompt for password before linking Google.
             return { status: 'link-required', email, credential: pendingCredential };
           }
         }
@@ -2311,6 +2354,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       trackEvent('google_oauth_error', { code: errorCode || 'unknown' });
       return { status: 'error', message: error?.message || 'Google sign-in failed.' };
+    } finally {
+      googlePopupActiveRef.current = false;
     }
   };
 
