@@ -311,6 +311,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [currentCenterIndex, setCurrentCenterIndex] = useState(0);
+  const [animatedCenterIndex, setAnimatedCenterIndex] = useState(0);
   const [spinnerTransitionMs, setSpinnerTransitionMs] = useState(SPINNER_MOTION.spinDurationMs);
   const [isMobileViewport, setIsMobileViewport] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
@@ -328,6 +329,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const settleTimerRef = useRef<number | null>(null);
   const tickSoundTimersRef = useRef<number[]>([]);
   const currentCenterIndexRef = useRef(0);
+  const centerAnimationFrameRef = useRef<number | null>(null);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const itemModalRevealFrameRef = useRef<number | null>(null);
@@ -369,6 +371,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   useEffect(() => {
     currentCenterIndexRef.current = currentCenterIndex;
+  }, [currentCenterIndex]);
+
+  useEffect(() => {
+    setAnimatedCenterIndex(currentCenterIndex);
   }, [currentCenterIndex]);
 
   useEffect(() => {
@@ -741,6 +747,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
     tickSoundTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     tickSoundTimersRef.current = [];
+    if (centerAnimationFrameRef.current !== null) {
+      window.cancelAnimationFrame(centerAnimationFrameRef.current);
+      centerAnimationFrameRef.current = null;
+    }
     setAnimationPhase('idle');
   }, []);
 
@@ -795,6 +805,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setAnimationPhase('spinning');
     setSpinnerTransitionMs(resolvedDuration);
     scheduleTickSounds(startIndex, winnerIndex, resolvedDuration);
+
+    const animationStart = performance.now();
+    const animateCenter = (now: number) => {
+      const elapsed = now - animationStart;
+      const t = Math.max(0, Math.min(1, elapsed / resolvedDuration));
+      const eased = getEasingProgressAt(t);
+      setAnimatedCenterIndex(startIndex + ((winnerIndex - startIndex) * eased));
+      if (t < 1) {
+        centerAnimationFrameRef.current = window.requestAnimationFrame(animateCenter);
+      } else {
+        centerAnimationFrameRef.current = null;
+        setAnimatedCenterIndex(winnerIndex);
+      }
+    };
+    centerAnimationFrameRef.current = window.requestAnimationFrame(animateCenter);
+
     await waitForNextPaint();
     setCurrentCenterIndex(winnerIndex);
 
@@ -807,7 +833,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinRequestLockRef.current = false;
       onComplete();
     }, resolvedDuration + 20);
-  }, [resetSpinnerAnimation, scheduleTickSounds]);
+  }, [getEasingProgressAt, resetSpinnerAnimation, scheduleTickSounds]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1751,6 +1777,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <PremiumCaseSpinner
                   items={reelItems}
                   currentCenterIndex={currentCenterIndex}
+                  animatedCenterIndex={animatedCenterIndex}
                   winnerIndex={reelWinnerIndex}
                   transitionMs={spinnerTransitionMs}
                   animationPhase={animationPhase}

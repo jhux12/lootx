@@ -13,6 +13,7 @@ import './premiumSpinner.css';
 interface PremiumCaseSpinnerProps {
   items: CaseItem[];
   currentCenterIndex: number;
+  animatedCenterIndex: number;
   winnerIndex: number;
   transitionMs: number;
   animationPhase: 'idle' | 'spinning' | 'settling';
@@ -26,6 +27,7 @@ const SPINNER_DEBUG_KEY = 'pullz:spinner-debug';
 export const PremiumCaseSpinner: React.FC<PremiumCaseSpinnerProps> = ({
   items,
   currentCenterIndex,
+  animatedCenterIndex,
   winnerIndex,
   transitionMs,
   animationPhase,
@@ -101,6 +103,7 @@ export const PremiumCaseSpinner: React.FC<PremiumCaseSpinnerProps> = ({
             item={item}
             index={index}
             currentCenterIndex={currentCenterIndex}
+            animatedCenterIndex={animatedCenterIndex}
             isCenter={animationPhase === 'idle' && index === winnerIndex}
             transitionMs={transitionMs}
             animationPhase={animationPhase}

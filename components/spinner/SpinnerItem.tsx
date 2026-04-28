@@ -8,6 +8,7 @@ interface SpinnerItemProps {
   item: CaseItem;
   index: number;
   currentCenterIndex: number;
+  animatedCenterIndex: number;
   isCenter: boolean;
   isMobileViewport: boolean;
   transitionMs: number;
@@ -29,6 +30,7 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
   item,
   index,
   currentCenterIndex,
+  animatedCenterIndex,
   isCenter,
   isMobileViewport,
   transitionMs,
@@ -37,6 +39,9 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
   itemFullWidth
 }) => {
   const glow = getRarityGlow(item);
+  const centerDistance = Math.abs(index - animatedCenterIndex);
+  const proximity = Math.max(0, 1 - Math.min(1, centerDistance));
+  const passThroughScale = 1 + (proximity * 0.2);
 
   return (
     <div
@@ -82,7 +87,9 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
             fallbackClassName="bg-slate-900/40"
             style={{
               width: `${Math.round(itemWidth * (isMobileViewport ? 0.6 : 0.64))}px`,
-              height: `${Math.round(itemWidth * (isMobileViewport ? 0.6 : 0.64))}px`
+              height: `${Math.round(itemWidth * (isMobileViewport ? 0.6 : 0.64))}px`,
+              transform: `scale(${isCenter ? 1.08 : passThroughScale})`,
+              transition: 'transform 120ms linear'
             }}
           />
         </div>
