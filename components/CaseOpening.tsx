@@ -299,6 +299,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       : 0.82);
   const isReady = Boolean(box) && hasItems;
   const isAdmin = Boolean(user?.isAdmin);
+  const hideDropTableOdds = Boolean(isFree && box?.isDaily);
   const spinnerBackgroundImage = (box?.spinnerBackgroundImage ?? '').trim();
   const cheapestPaidBox = useMemo(() => {
     const paidBoxes = boxes.filter((entry) => {
@@ -2407,10 +2408,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   <h3 className="text-xl font-bold text-white">Drop Table</h3>
                   <p className="text-xs text-gray-400">Tap an item to inspect details.</p>
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] font-medium text-gray-400">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/20 bg-white/10 text-[9px] font-bold text-gray-200">%</span>
-                      Drop rate
-                    </span>
+                    {!hideDropTableOdds && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/20 bg-white/10 text-[9px] font-bold text-gray-200">%</span>
+                        Drop rate
+                      </span>
+                    )}
                     <span className="inline-flex items-center gap-1.5">
                       <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[9px] font-black text-amber-100">i</span>
                       Not redeemable for coins
@@ -2445,12 +2448,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   className="text-sm font-bold text-gray-200"
                                   iconClassName="w-3.5 h-3.5"
                                 />
-                                <span
-                                  className="rounded border px-1.5 py-0.5 text-[10px] font-bold"
-                                  style={{ color: item.color, borderColor: `${item.color}66`, backgroundColor: `${item.color}1a` }}
-                                >
-                                  {item.chance}%
-                                </span>
+                                {!hideDropTableOdds && (
+                                  <span
+                                    className="rounded border px-1.5 py-0.5 text-[10px] font-bold"
+                                    style={{ color: item.color, borderColor: `${item.color}66`, backgroundColor: `${item.color}1a` }}
+                                  >
+                                    {item.chance}%
+                                  </span>
+                                )}
                             </div>
                         </div>
                     </button>
