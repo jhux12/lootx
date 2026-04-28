@@ -2,7 +2,7 @@ import React from 'react';
 import { CaseItem } from '../../types';
 import { CoinAmount } from '../CoinAmount';
 import { BlurImage } from '../../src/ui/images/BlurImage';
-import { getSpinnerItemTranslate, SPINNER_ITEM_WIDTH } from './positioning';
+import { getSpinnerItemTranslate } from './positioning';
 
 interface SpinnerItemProps {
   item: CaseItem;
@@ -12,6 +12,8 @@ interface SpinnerItemProps {
   isMobileViewport: boolean;
   transitionMs: number;
   animationPhase: 'idle' | 'spinning' | 'settling';
+  itemWidth: number;
+  gap: number;
 }
 
 const getRarityGlow = (item: CaseItem) => {
@@ -30,15 +32,19 @@ export const SpinnerItem: React.FC<SpinnerItemProps> = ({
   isCenter,
   isMobileViewport,
   transitionMs,
-  animationPhase
+  animationPhase,
+  itemWidth,
+  gap
 }) => {
   const glow = getRarityGlow(item);
 
   return (
     <div
-      className={`spinner-item absolute left-1/2 top-1/2 flex h-[195px] w-[195px] items-center justify-center rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] ${isCenter ? 'active z-30' : 'z-10'}`}
+      className={`spinner-item absolute left-1/2 top-1/2 flex items-center justify-center rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] ${isCenter ? 'active z-30' : 'z-10'}`}
       style={{
-        transform: getSpinnerItemTranslate(index, currentCenterIndex),
+        width: `${itemWidth}px`,
+        height: `${itemWidth}px`,
+        transform: getSpinnerItemTranslate(index, currentCenterIndex, itemWidth, gap),
         transitionProperty: 'transform',
         transitionDuration: `${transitionMs}ms`,
         transitionTimingFunction: 'cubic-bezier(0.1, 0.7, 0.1, 1)',
