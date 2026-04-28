@@ -275,11 +275,11 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
               </div>
 
               <h1 className="relative mt-3 max-w-4xl text-[2.55rem] font-black uppercase italic leading-[0.85] tracking-tight text-white sm:mt-3.5 sm:text-[3.7rem] lg:mt-4 lg:text-[4.75rem]">
-                <span className="inline-block">Fair Value</span>{' '}
-                <span className="relative inline-block bg-gradient-to-r from-[#6f93ff] via-[#9a73ff] to-[#ff59dc] bg-clip-text text-transparent [text-shadow:0_0_20px_rgba(167,139,250,0.35)]">Guarantee</span>
+                <span className="inline-block">Open Mystery</span>{' '}
+                <span className="relative inline-block bg-gradient-to-r from-[#6f93ff] via-[#9a73ff] to-[#ff59dc] bg-clip-text text-transparent [text-shadow:0_0_20px_rgba(167,139,250,0.35)]">Boxes</span>
               </h1>
               <p className="relative mt-2.5 max-w-md text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300 sm:mt-3 sm:text-sm lg:mt-3.5 lg:text-[15px]">
-                Discover, open &amp; collect on Pullz
+                Win real sneakers, iPhones, PS5s &amp; more
               </p>
               <div className="mt-3 flex max-w-full items-center gap-x-4 gap-y-1 overflow-hidden whitespace-nowrap text-[11px] font-medium text-slate-300 sm:mt-3.5 sm:text-sm lg:mt-4">
                 <span className="inline-flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />Provably Fair</span>
