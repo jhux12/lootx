@@ -21,6 +21,7 @@ import { createMicroConfetti, MicroConfettiParticle } from '../src/ui/feedback/m
 import { ProvablyFairModal } from '../src/ui/provably/ProvablyFairModal';
 import { trackEvent } from '../utils/trackEvent';
 import pullzLogo from '../assets/pullz-p.PNG';
+import { PremiumCaseSpinner } from './spinner/PremiumCaseSpinner';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -44,12 +45,6 @@ interface RevealData {
   rotatedAt: number;
 }
 
-const DESKTOP_CARD_WIDTH = 170;
-const MOBILE_CARD_WIDTH = 124;
-const DESKTOP_CARD_HEIGHT = 210;
-const MOBILE_CARD_HEIGHT = 158;
-const DESKTOP_GAP_WIDTH = 6;
-const MOBILE_GAP_WIDTH = 4;
 const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
 const MOBILE_SPINNER_VIEWPORT_HEIGHT = 186;
 
@@ -60,12 +55,6 @@ const SPINNER_MOTION = {
   spinDurationMs: 4600,
   goldTicketDurationMs: 4200,
   goldFinalDurationMs: 3800,
-  settleDurationMs: 360,
-  overshootPx: 18,
-  approachOffsetSoftMaxPx: 16,
-  approachOffsetNearMissMinPx: 34,
-  approachOffsetNearMissMaxPx: 58,
-  nearMissChance: 0.42,
   durationVarianceMs: 420,
   initialBlurDurationMs: 260
 } as const;
@@ -87,38 +76,6 @@ const createSeededRng = (seed: string) => {
 };
 
 const pickFromPool = <T,>(pool: T[], rng: () => number): T => pool[Math.floor(rng() * pool.length)];
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-const createBezierEasing = (x1: number, y1: number, x2: number, y2: number) => {
-  const sampleCurveX = (t: number) => ((1 - 3 * x2 + 3 * x1) * t + (3 * x2 - 6 * x1)) * t * t + (3 * x1) * t;
-  const sampleCurveY = (t: number) => ((1 - 3 * y2 + 3 * y1) * t + (3 * y2 - 6 * y1)) * t * t + (3 * y1) * t;
-  const sampleDerivativeX = (t: number) => (3 * (1 - 3 * x2 + 3 * x1) * t + 2 * (3 * x2 - 6 * x1)) * t + (3 * x1);
-
-  const solveCurveX = (x: number) => {
-    let t2 = x;
-    for (let i = 0; i < 8; i += 1) {
-      const x2AtT = sampleCurveX(t2) - x;
-      if (Math.abs(x2AtT) < 1e-6) return t2;
-      const derivative = sampleDerivativeX(t2);
-      if (Math.abs(derivative) < 1e-6) break;
-      t2 -= x2AtT / derivative;
-    }
-
-    let t0 = 0;
-    let t1 = 1;
-    t2 = x;
-    while (t0 < t1) {
-      const x2AtT = sampleCurveX(t2);
-      if (Math.abs(x2AtT - x) < 1e-6) return t2;
-      if (x > x2AtT) t0 = t2;
-      else t1 = t2;
-      t2 = (t1 - t0) * 0.5 + t0;
-      if (Math.abs(t1 - t0) < 1e-6) break;
-    }
-    return t2;
-  };
-
-  return (x: number) => sampleCurveY(solveCurveX(x));
-};
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -353,6 +310,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [animatedModalCoins, setAnimatedModalCoins] = useState(0);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
+  const [currentCenterIndex, setCurrentCenterIndex] = useState(0);
+  const [spinnerTransitionMs, setSpinnerTransitionMs] = useState(SPINNER_MOTION.spinDurationMs);
   const [isMobileViewport, setIsMobileViewport] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
   );
@@ -365,17 +324,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isBoxPreviewVisible, setIsBoxPreviewVisible] = useState(true);
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
   
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const winningCardRef = useRef<HTMLDivElement>(null);
-  const spinnerAnimationRef = useRef<Animation | null>(null);
-  const tickTimerRef = useRef<number | null>(null);
-  const spinnerMeasurementsRef = useRef({
-    cardWidth: DESKTOP_CARD_WIDTH,
-    reelGap: DESKTOP_GAP_WIDTH,
-    viewportWidth: 0,
-    stepWidth: DESKTOP_CARD_WIDTH + DESKTOP_GAP_WIDTH
-  });
+  const spinTimerRef = useRef<number | null>(null);
+  const settleTimerRef = useRef<number | null>(null);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const itemModalRevealFrameRef = useRef<number | null>(null);
@@ -413,11 +363,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const xpRingRadius = 14;
   const xpRingCircumference = 2 * Math.PI * xpRingRadius;
   const xpRingOffset = xpRingCircumference * (1 - xpProgress);
-  const spinnerCardWidth = isMobileViewport ? MOBILE_CARD_WIDTH : DESKTOP_CARD_WIDTH;
-  const spinnerCardHeight = isMobileViewport ? MOBILE_CARD_HEIGHT : DESKTOP_CARD_HEIGHT;
-  const spinnerGap = isMobileViewport ? MOBILE_GAP_WIDTH : DESKTOP_GAP_WIDTH;
   const spinnerViewportHeight = isMobileViewport ? MOBILE_SPINNER_VIEWPORT_HEIGHT : DESKTOP_SPINNER_VIEWPORT_HEIGHT;
-  const shouldSimplifyReelEffects = isMobileViewport && animationPhase === 'spinning';
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -428,42 +374,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     window.addEventListener('resize', updateViewportMode);
     return () => window.removeEventListener('resize', updateViewportMode);
   }, []);
-
-  const updateSpinnerMeasurements = useCallback(() => {
-    const viewport = scrollViewportRef.current;
-    const container = scrollContainerRef.current;
-    if (!viewport || !container) return;
-
-    const firstCard = container.firstElementChild as HTMLElement | null;
-    const cardWidth = firstCard?.offsetWidth ?? spinnerCardWidth;
-    const reelGap = spinnerGap;
-    const viewportWidth = viewport.clientWidth;
-
-    spinnerMeasurementsRef.current = {
-      cardWidth,
-      reelGap,
-      viewportWidth,
-      stepWidth: Math.max(1, cardWidth + reelGap)
-    };
-  }, [spinnerCardWidth, spinnerGap]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const viewport = scrollViewportRef.current;
-    const container = scrollContainerRef.current;
-    if (!viewport || !container) return;
-
-    updateSpinnerMeasurements();
-
-    const observer = new ResizeObserver(() => updateSpinnerMeasurements());
-    observer.observe(viewport);
-    observer.observe(container);
-
-    const firstCard = container.firstElementChild as HTMLElement | null;
-    if (firstCard) observer.observe(firstCard);
-
-    return () => observer.disconnect();
-  }, [reelItems, updateSpinnerMeasurements]);
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -771,20 +681,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
   }, [nonce]);
 
-  const getApproachOffset = useCallback((rng: () => number) => {
-    const direction = rng() < 0.5 ? -1 : 1;
-
-    if (rng() < SPINNER_MOTION.nearMissChance) {
-      const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
-      const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
-      const magnitude = min + Math.round(rng() * (max - min));
-      return direction * magnitude;
-    }
-
-    const softMagnitude = Math.round(rng() * SPINNER_MOTION.approachOffsetSoftMaxPx);
-    return direction * softMagnitude;
-  }, []);
-
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
@@ -828,145 +724,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return { items: newReel, winnerIndex };
   }, [isMobileViewport]);
 
-  const getCenteredTranslate = useCallback((winnerIndex: number, landingOffset = 0) => {
-    const viewport = scrollViewportRef.current;
-    const container = scrollContainerRef.current;
-
-    if (!viewport || !container) {
-      return null;
-    }
-
-    updateSpinnerMeasurements();
-    const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
-    const resolvedViewportWidth = viewportWidth || viewport.clientWidth;
-    const viewportCenterX = resolvedViewportWidth / 2;
-    const winnerCenterX = (winnerIndex * stepWidth) + (cardWidth / 2);
-    return viewportCenterX - winnerCenterX + landingOffset;
-  }, [updateSpinnerMeasurements]);
-
-  const resolveCenteredTranslate = useCallback(async (winnerIndex: number, landingOffset = 0) => {
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const next = getCenteredTranslate(winnerIndex, landingOffset);
-      if (next !== null) return next;
-      await waitForNextPaint();
-    }
-    return null;
-  }, [getCenteredTranslate]);
-
-  const getTranslateBounds = useCallback(() => {
-    const viewport = scrollViewportRef.current;
-    const container = scrollContainerRef.current;
-    if (!viewport || !container) return null;
-
-    const measuredViewport = spinnerMeasurementsRef.current.viewportWidth || viewport.clientWidth;
-    const minTranslate = Math.min(0, measuredViewport - container.scrollWidth);
-    return { minTranslate, maxTranslate: 0 };
-  }, []);
-
-  const clampTranslate = useCallback((translateX: number) => {
-    const bounds = getTranslateBounds();
-    if (!bounds) return translateX;
-    return clamp(translateX, bounds.minTranslate, bounds.maxTranslate);
-  }, [getTranslateBounds]);
-
   const resetSpinnerAnimation = useCallback(() => {
-    if (spinnerAnimationRef.current) {
-      spinnerAnimationRef.current.cancel();
-      spinnerAnimationRef.current = null;
+    if (spinTimerRef.current !== null) {
+      window.clearTimeout(spinTimerRef.current);
+      spinTimerRef.current = null;
     }
-
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.getAnimations().forEach((animation) => animation.cancel());
-      scrollContainerRef.current.style.transition = 'none';
-      scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
-    }
-
-    if (tickTimerRef.current !== null) {
-      window.clearTimeout(tickTimerRef.current);
-      tickTimerRef.current = null;
+    if (settleTimerRef.current !== null) {
+      window.clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = null;
     }
     setAnimationPhase('idle');
   }, []);
-
-  const scheduleTickSounds = useCallback((options: {
-    durationMs: number;
-    winnerIndex: number;
-    overshootTranslate: number;
-    finalTranslate: number;
-  }) => {
-    const { durationMs, winnerIndex, overshootTranslate, finalTranslate } = options;
-    if (tickTimerRef.current !== null) {
-      window.clearTimeout(tickTimerRef.current);
-      tickTimerRef.current = null;
-    }
-
-    const { stepWidth } = spinnerMeasurementsRef.current;
-    if (!Number.isFinite(stepWidth) || stepWidth <= 0) return;
-
-    const segmentOneDuration = durationMs * 0.8;
-    const segmentTwoDuration = durationMs - segmentOneDuration;
-    const easeMain = createBezierEasing(0.1, 0.9, 0.25, 1);
-    const easeSettle = createBezierEasing(0.14, 0.9, 0.22, 1);
-    const invertEasing = (target: number, easing: (t: number) => number) => {
-      let low = 0;
-      let high = 1;
-      for (let i = 0; i < 22; i += 1) {
-        const mid = (low + high) / 2;
-        const value = easing(mid);
-        if (value < target) low = mid;
-        else high = mid;
-      }
-      return (low + high) / 2;
-    };
-
-    const times: number[] = [];
-    const pushCrossingTimes = (
-      fromX: number,
-      toX: number,
-      easing: (t: number) => number,
-      segmentStartMs: number,
-      segmentDurationMs: number
-    ) => {
-      const minX = Math.min(fromX, toX);
-      const maxX = Math.max(fromX, toX);
-
-      for (let index = 1; index <= winnerIndex + 2; index += 1) {
-        const crossingX = -(index * stepWidth);
-        if (crossingX < minX || crossingX > maxX) continue;
-        const range = toX - fromX;
-        if (Math.abs(range) < 1e-6) continue;
-        const normalized = (crossingX - fromX) / range;
-        if (normalized <= 0 || normalized >= 1) continue;
-        const easedTime = invertEasing(normalized, easing);
-        times.push(segmentStartMs + (easedTime * segmentDurationMs));
-      }
-    };
-
-    pushCrossingTimes(0, overshootTranslate, easeMain, 0, segmentOneDuration);
-    pushCrossingTimes(overshootTranslate, finalTranslate, easeSettle, segmentOneDuration, segmentTwoDuration);
-
-    const scheduled = times
-      .map((value) => Math.max(16, Math.floor(value)))
-      .sort((a, b) => a - b)
-      .filter((value, index, array) => index === 0 || value - array[index - 1] >= 18);
-
-    if (!scheduled.length) return;
-
-    const startAt = performance.now();
-    let cursor = 0;
-    const loop = () => {
-      playSound('spin-tick');
-      cursor += 1;
-      if (cursor >= scheduled.length) {
-        tickTimerRef.current = null;
-        return;
-      }
-      const elapsed = performance.now() - startAt;
-      const nextDelay = Math.max(12, scheduled[cursor] - elapsed);
-      tickTimerRef.current = window.setTimeout(loop, nextDelay);
-    };
-    tickTimerRef.current = window.setTimeout(loop, scheduled[0]);
-  }, [playSound]);
 
   const animateSpin = useCallback(async (
     winnerIndex: number,
@@ -974,92 +742,27 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     onComplete: () => void,
     options?: { seed?: string }
   ) => {
-    const container = scrollContainerRef.current;
-    if (!container) {
-      onComplete();
-      return;
-    }
-
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const approachOffset = getApproachOffset(rng);
     const durationVariance = Math.round((rng() - 0.5) * SPINNER_MOTION.durationVarianceMs * 2);
     const resolvedDuration = Math.max(3000, duration + durationVariance);
+    const settleDuration = Math.min(420, Math.max(220, Math.round(resolvedDuration * 0.11)));
 
     resetSpinnerAnimation();
-
-    container.style.transition = 'none';
-    container.style.transform = 'translate3d(0px, 0, 0)';
-    container.style.backfaceVisibility = 'hidden';
-
-    await waitForNextPaint();
-
-    const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
-    const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null) {
-      spinRequestLockRef.current = false;
-      setIsSpinning(false);
-      return;
-    }
-
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
-    updateSpinnerMeasurements();
     setAnimationPhase('spinning');
-    scheduleTickSounds({
-      durationMs: resolvedDuration,
-      winnerIndex,
-      overshootTranslate: overshootTarget,
-      finalTranslate: centeredTranslate
-    });
+    setSpinnerTransitionMs(resolvedDuration);
+    await waitForNextPaint();
+    setCurrentCenterIndex(winnerIndex);
 
-    const animation = container.animate(
-      [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.1, 0.9, 0.25, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.8, easing: 'cubic-bezier(0.2, 1, 0.18, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.14, 0.9, 0.22, 1)' }
-      ],
-      {
-        duration: resolvedDuration,
-        fill: 'forwards',
-        composite: 'replace'
-      }
-    );
+    settleTimerRef.current = window.setTimeout(() => {
+      setAnimationPhase('settling');
+    }, Math.max(0, resolvedDuration - settleDuration));
 
-    spinnerAnimationRef.current = animation;
-    const decelerationTimer = window.setTimeout(() => setAnimationPhase('settling'), Math.max(0, resolvedDuration - 850));
-
-    animation.onfinish = () => {
-      window.clearTimeout(decelerationTimer);
-      if (tickTimerRef.current !== null) {
-        window.clearTimeout(tickTimerRef.current);
-        tickTimerRef.current = null;
-      }
-
-      if (typeof animation.commitStyles === 'function') {
-        animation.commitStyles();
-      }
-      animation.cancel();
-      container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
-
+    spinTimerRef.current = window.setTimeout(() => {
       setAnimationPhase('idle');
-      spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
       onComplete();
-    };
-
-    animation.oncancel = () => {
-      window.clearTimeout(decelerationTimer);
-      if (tickTimerRef.current !== null) {
-        window.clearTimeout(tickTimerRef.current);
-        tickTimerRef.current = null;
-      }
-      setAnimationPhase('idle');
-      spinnerAnimationRef.current = null;
-      spinRequestLockRef.current = false;
-    };
-  }, [clampTranslate, getApproachOffset, resetSpinnerAnimation, resolveCenteredTranslate, scheduleTickSounds, updateSpinnerMeasurements]);
+    }, resolvedDuration + 20);
+  }, [resetSpinnerAnimation]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1161,17 +864,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[], winnerIndex: number) => {
     resetSpinnerAnimation();
     setAnimationPhase('idle');
-    winningCardRef.current = null;
-
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
-      scrollContainerRef.current.style.transition = 'none';
-    }
+    setSpinnerTransitionMs(0);
 
     setReelItems(nextReelItems);
     setReelWinnerIndex(winnerIndex);
+    const travelItems = isMobileViewport ? 22 : 30;
+    const startJitter = Math.floor(Math.random() * 5);
+    const startIndex = Math.max(0, winnerIndex - travelItems - startJitter);
+    setCurrentCenterIndex(startIndex);
     await waitForNextPaint();
-  }, [resetSpinnerAnimation]);
+  }, [isMobileViewport, resetSpinnerAnimation]);
 
 
 
@@ -1575,12 +1277,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const resetReelTrackPosition = useCallback(() => {
     window.requestAnimationFrame(() => {
-      if (!scrollContainerRef.current) return;
-      scrollContainerRef.current.style.transition = 'none';
-      scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
-      scrollContainerRef.current.getAnimations().forEach((animation) => animation.cancel());
+      setSpinnerTransitionMs(0);
+      setCurrentCenterIndex(reelWinnerIndex);
     });
-  }, []);
+  }, [reelWinnerIndex]);
 
 
 
@@ -1938,7 +1638,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               style={{ height: `${spinnerViewportHeight}px` }}
             >
             <div
-              ref={scrollViewportRef}
               className="absolute left-1/2 top-1/2 flex w-full max-w-[1000px] -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.02)]"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
@@ -2004,85 +1703,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   aria-hidden="true"
                 />
 
-                {/* The Moving Reel */}
-                <div 
-                    ref={scrollContainerRef}
-                    className={`flex will-change-transform transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`} 
-                    style={{
-                      gap: `${spinnerGap}px`,
-                      transform: 'translate3d(0,0,0)',
-                      backfaceVisibility: 'hidden',
-                      WebkitBackfaceVisibility: 'hidden',
-                      transformStyle: 'preserve-3d',
-                      WebkitTransformStyle: 'preserve-3d'
-                    }}
-                >
-                    {reelItems.map((item, idx) => (
-                        (() => {
-                          const rarityValue = String(item.rarity ?? 'common').toLowerCase();
-                          const rarityGlow = rarityValue.includes('legend')
-                            ? 'rgba(255,191,71,0.58)'
-                            : rarityValue.includes('epic')
-                              ? 'rgba(196,125,255,0.52)'
-                              : rarityValue.includes('rare')
-                                ? 'rgba(96,165,250,0.48)'
-                                : rarityValue.includes('uncommon')
-                                  ? 'rgba(74,222,128,0.42)'
-                                  : 'rgba(100,116,139,0.35)';
-                          const isIdleWinner = animationPhase === 'idle' && idx === reelWinnerIndex;
-                          return (
-                        <div 
-                            key={`${item.id}-${idx}`}
-                            ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className={`group relative flex flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-[18px] border border-[#2b3961]/85 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] px-2 pb-2 pt-2 transition-colors duration-300 md:hover:scale-[1.015] md:hover:border-cyan-200/35 ${item.id === 'golden-ticket' ? 'border-yellow-500/60' : ''} ${isIdleWinner ? 'border-[#f5c34a]' : ''}`}
-                            style={{
-                                width: `${spinnerCardWidth}px`,
-                                height: `${spinnerCardHeight}px`,
-                                transform: 'translateZ(0)',
-                                WebkitTransform: 'translateZ(0)',
-                                backfaceVisibility: 'hidden',
-                                WebkitBackfaceVisibility: 'hidden',
-                                boxShadow: isIdleWinner
-                                  ? `0 0 0 1px rgba(245,195,74,0.42), 0 0 30px ${rarityGlow}, inset 0 0 0 1px rgba(255,255,255,0.12)`
-                                  : `0 0 18px ${rarityGlow}, inset 0 0 0 1px rgba(255,255,255,0.06)`
-                            }}
-                            onMouseEnter={() => !isSpinning && playSound('hover')}
-                        >
-                            <div
-                                className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[999px] opacity-70 ${shouldSimplifyReelEffects ? 'blur-sm' : 'blur-md'}`}
-                                style={{
-                                  width: isMobileViewport ? '64px' : '92px',
-                                  height: isMobileViewport ? '76px' : '108px',
-                                  background: `${item.color}66`,
-                                  boxShadow: animationPhase === 'idle' ? `0 0 24px ${item.color}50` : 'none'
-                                }}
-                            ></div>
-                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch pt-2 sm:pt-3">
-                              <img loading="eager" decoding="async" 
-                                  src={item.image} 
-                                  alt={item.name} 
-                                  className={`translate-y-1 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] ${isMobileViewport ? 'h-[104px] w-[104px]' : 'h-[132px] w-[132px] sm:translate-y-1.5'} ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
-                                  style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
-                              />
-                            </div>
-                            <div className={`relative z-10 mt-0.5 inline-flex items-center justify-center text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] ${isMobileViewport ? 'text-[12px]' : 'text-[16px]'} font-extrabold leading-none`}>
-                              <CoinAmount
-                                amount={item.price}
-                                formatOptions={{ maximumFractionDigits: 0 }}
-                                className="text-white"
-                                iconClassName={isMobileViewport ? 'h-[10px] w-[10px]' : 'h-[12px] w-[12px]'}
-                                animated={false}
-                              />
-                            </div>
-                            <div 
-                                className="absolute bottom-0 left-3 right-3 h-px opacity-55"
-                                style={{ backgroundColor: item.color }}
-                            ></div>
-                        </div>
-                          );
-                        })()
-                    ))}
-                </div>
+                <PremiumCaseSpinner
+                  items={reelItems}
+                  currentCenterIndex={currentCenterIndex}
+                  winnerIndex={reelWinnerIndex}
+                  transitionMs={spinnerTransitionMs}
+                  animationPhase={animationPhase}
+                  isMobileViewport={isMobileViewport}
+                  spinnerViewportHeight={spinnerViewportHeight}
+                  isBoxPreviewVisible={isBoxPreviewVisible}
+                />
             </div>
             </div>
 
