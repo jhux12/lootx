@@ -32,7 +32,6 @@ export const LoginModal: React.FC = () => {
   const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [showOAuthFallback, setShowOAuthFallback] = useState(false);
-  const [googleAttemptCount, setGoogleAttemptCount] = useState(0);
   const isLinkingGoogle = Boolean(googleLinkCredential);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,11 +72,6 @@ export const LoginModal: React.FC = () => {
       return;
     }
 
-    if (googleAttemptCount > 0) {
-      setMessage('Retrying Google sign-in…');
-    }
-
-    setGoogleAttemptCount((prev) => prev + 1);
     setShowOAuthFallback(false);
     setIsLoading(true);
     setIsOAuthLoading(true);
@@ -89,7 +83,7 @@ export const LoginModal: React.FC = () => {
       if (mode === 'register') {
         setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
       }
-      const result = await loginWithGoogle({ remember: rememberMe, isRetry: googleAttemptCount > 0 });
+      const result = await loginWithGoogle({ remember: rememberMe, isRetry: false });
       if (result.status === 'redirect-started') {
         setMessage('Opening Google sign-in…');
         return;
@@ -173,7 +167,6 @@ export const LoginModal: React.FC = () => {
     setGoogleLinkPassword('');
     setGoogleLinkCredential(null);
     setRememberMe(true);
-    setGoogleAttemptCount(0);
     setShowOAuthFallback(false);
     playSound('click');
   };
@@ -188,7 +181,6 @@ export const LoginModal: React.FC = () => {
     setGoogleLinkCredential(null);
     setUserError(null);
     setMessage(null);
-    setGoogleAttemptCount(0);
     setShowOAuthFallback(false);
   };
 
