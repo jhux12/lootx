@@ -1,165 +1,210 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 export interface ReelItem {
-  itemId?: string;
-  itemName: string;
-  value: number;
-  rarity?: string;
-  imageUrl?: string;
+    itemId?: string;
+    itemName: string;
+    value: number;
+    rarity?: string;
+    imageUrl?: string;
 }
 
 interface SpinnerReelProps {
-  items: ReelItem[];
-  winningItem: ReelItem | null;
-  spinKey: string;
-  state: 'IDLE' | 'SPIN' | 'STOPPED';
-  durationMs: number;
-  onSpinComplete?: () => void;
+    items: ReelItem[];
+    winningItem: ReelItem | null;
+    spinKey: string;
+    state: 'IDLE' | 'SPIN' | 'STOPPED';
+    durationMs: number;
+    onSpinComplete?: () => void;
 }
 
 const REEL_LENGTH = 40;
 const STOP_INDEX = 32;
-const CARD_WIDTH = 128;
-const CARD_GAP = 12;
-const STEP = CARD_WIDTH + CARD_GAP;
+// PackDraw-style: 195px items with 0 gap (items are absolutely positioned)
+const CARD_SIZE = 195;
+const VISIBLE_CARDS = 5; // number of visible cards in the viewport
 
 const fallbackItem: ReelItem = {
-  itemId: 'placeholder-item',
-  itemName: 'Mystery Drop',
-  value: 0,
-  rarity: 'common',
-  imageUrl: ''
+    itemId: 'placeholder-item',
+    itemName: 'Mystery Drop',
+    value: 0,
+    rarity: 'common',
+    imageUrl: ''
 };
 
-const normalizeRarity = (rarity?: string) => {
-  const value = String(rarity ?? 'common').toLowerCase();
-  if (value.includes('legend')) return 'legendary';
-  if (value.includes('epic')) return 'epic';
-  if (value.includes('rare')) return 'rare';
-  if (value.includes('uncommon')) return 'uncommon';
-  return 'common';
+/** Map rarity string -> glow color hex */
+const rarityColor = (rarity?: string): string => {
+    const r = (rarity ?? 'common').toLowerCase();
+    if (r.includes('legend')) return '#E4AE33';
+    if (r.includes('epic')) return '#8847FF';
+    if (r.includes('rare')) return '#4B69FF';
+    if (r.includes('uncommon')) return '#5E98D9';
+    if (r.includes('special') || r.includes('covert')) return '#EB4B4B';
+    if (r.includes('classified') || r.includes('mythical')) return '#D32CE6';
+    return '#829DBB'; // common / base
 };
 
-const itemKey = (item: ReelItem, index: number) => `${item.itemId ?? item.itemName}-${index}`;
-
-const pickDeterministic = (pool: ReelItem[], seed: number, index: number) => {
-  if (!pool.length) return fallbackItem;
-  const position = Math.abs((seed + index * 13) % pool.length);
-  return pool[position];
-};
-
-const hashSeed = (input: string) => {
-  let hash = 0;
-  for (let i = 0; i < input.length; i += 1) {
-    hash = (hash * 31 + input.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash);
-};
-
-export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, spinKey, state, durationMs, onSpinComplete }) => {
-  const [transitionEnabled, setTransitionEnabled] = useState(false);
-  const [translateX, setTranslateX] = useState(0);
-
-  const pool = useMemo(() => (items.length ? items : [fallbackItem]), [items]);
-
-  const reelItems = useMemo(() => {
-    const seed = hashSeed(spinKey);
-    const nextReel = Array.from({ length: REEL_LENGTH }, (_, index) => pickDeterministic(pool, seed, index));
-    if (winningItem) {
-      nextReel[STOP_INDEX] = winningItem;
+const hashSeed = (input: string): number => {
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+          hash = (hash * 31 + input.charCodeAt(i)) | 0;
     }
-    return nextReel;
-  }, [pool, spinKey, winningItem]);
+    return Math.abs(hash);
+};
 
-  useEffect(() => {
-    const uniqueImageUrls = Array.from(new Set(reelItems.map((item) => item.imageUrl).filter((imageUrl): imageUrl is string => !!imageUrl)));
-    uniqueImageUrls.forEach((imageUrl) => {
-      const image = new Image();
-      image.src = imageUrl;
-    });
-  }, [reelItems]);
+const itemKey = (item: ReelItem, index: number) =>
+    `${item.itemId ?? item.itemName}-${index}`;
 
-  const centerOffset = useMemo(() => `calc(50% - ${CARD_WIDTH / 2}px)`, []);
-  const targetTranslateX = useMemo(() => -(STOP_INDEX * STEP), []);
+const pickDeterministic = (pool: ReelItem[], seed: number, index: number): ReelItem =>
+    pool[(seed + index * 7) % pool.length];
 
-  useEffect(() => {
-    if (state === 'IDLE') {
-      setTransitionEnabled(false);
-      setTranslateX(0);
-      return;
-    }
+export const SpinnerReel: React.FC<SpinnerReelProps> = ({
+    items,
+    winningItem,
+    spinKey,
+    state,
+    durationMs,
+    onSpinComplete,
+}) => {
+    const [transitionEnabled, setTransitionEnabled] = useState(false);
+    const [offsetX, setOffsetX] = useState(0);
+    const containerRef = useRef<HTMLDivElement>(null);
 
-    if (state === 'STOPPED') {
-      setTransitionEnabled(false);
-      setTranslateX(targetTranslateX);
-      return;
-    }
+    const pool = useMemo(() => (items.length ? items : [fallbackItem]), [items]);
 
-    setTransitionEnabled(false);
-    setTranslateX(0);
+    const reelItems = useMemo(() => {
+          const seed = hashSeed(spinKey);
+          const nextReel = Array.from({ length: REEL_LENGTH }, (_, index) =>
+                  pickDeterministic(pool, seed, index)
+                                          );
+          if (winningItem) {
+                  nextReel[STOP_INDEX] = winningItem;
+          }
+          return nextReel;
+    }, [pool, spinKey, winningItem]);
 
-    const frame = window.requestAnimationFrame(() => {
-      setTransitionEnabled(true);
-      setTranslateX(targetTranslateX);
-    });
+    // Preload images
+    useEffect(() => {
+          const uniqueImageUrls = Array.from(new Set(reelItems.map((item) => item.imageUrl).filter(Boolean)));
+          uniqueImageUrls.forEach((imageUrl) => {
+                  const image = new Image();
+                  image.src = imageUrl as string;
+          });
+    }, [reelItems]);
 
-    const timer = window.setTimeout(() => {
-      onSpinComplete?.();
-    }, durationMs + 80);
+    // Target offset: stop at STOP_INDEX item centered in the viewport
+    // Each item is CARD_SIZE wide. Center of viewport = 0 (items positioned relative to center).
+    // Item at index i has its center at: (i - STOP_INDEX) * CARD_SIZE
+    // We want that center at 0, so offsetX = -(STOP_INDEX * CARD_SIZE)
+    const targetOffsetX = useMemo(() => -(STOP_INDEX * CARD_SIZE), []);
 
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(timer);
-    };
-  }, [durationMs, onSpinComplete, state, spinKey, targetTranslateX]);
+    useEffect(() => {
+          if (state === 'IDLE') {
+                  setTransitionEnabled(false);
+                  setOffsetX(0);
+                  return;
+          }
 
-  return (
-    <div className="relative w-full overflow-hidden rounded-xl border border-gray-700/70 bg-[#0b0f18] h-[124px] sm:h-[132px]">
-      <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-brand-purple to-transparent" />
+                  if (state === 'STOPPED') {
+                          setTransitionEnabled(false);
+                          setOffsetX(targetOffsetX);
+                          return;
+                  }
 
-      <div className="absolute left-0 top-1/2 -translate-y-1/2" style={{ transform: `translate(${centerOffset}, -50%)` }}>
-        <div
-          className={`flex gap-3 ${state === 'IDLE' ? 'animate-reel-idle' : ''}`}
-          style={{
-            transform: state === 'IDLE' ? undefined : `translateX(${translateX}px)`,
-            transition: transitionEnabled ? `transform ${durationMs}ms cubic-bezier(0.08, 0.78, 0.22, 1)` : 'none'
-          }}
-        >
-          {reelItems.map((item, index) => {
-            const rarity = normalizeRarity(item.rarity);
-            const isWinner = !!winningItem && index === STOP_INDEX;
+                  // SPIN state
+                  setTransitionEnabled(false);
+          setOffsetX(0);
 
-            return (
-              <div
-                key={itemKey(item, index)}
-                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 transition-colors ${isWinner && state === 'STOPPED' ? 'border-brand-purple bg-brand-purple/15 shadow-[0_0_24px_rgba(139,92,246,0.45)]' : 'border-gray-700 bg-[#111827]'} ${rarity === 'legendary' ? 'shadow-[0_0_18px_rgba(251,191,36,0.2)]' : ''}`}
-              >
-                <div className="h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
-                  {item.imageUrl ? (
-                    <img
-                      src={item.imageUrl}
-                      alt={item.itemName}
-                      className="w-full h-full object-contain"
-                      loading="eager"
-                      decoding="sync"
-                      draggable={false}
-                    />
-                  ) : (
-                    <div className="text-[10px] text-gray-500">No image</div>
-                  )}
+                  const frame = window.requestAnimationFrame(() => {
+                          setTransitionEnabled(true);
+                          setOffsetX(targetOffsetX);
+                  });
+
+                  const timer = window.setTimeout(() => {
+                          onSpinComplete?.();
+                  }, durationMs + 80);
+
+                  return () => {
+                          window.cancelAnimationFrame(frame);
+                          window.clearTimeout(timer);
+                  };
+    }, [durationMs, onSpinComplete, state, spinKey, targetOffsetX]);
+
+    const containerWidth = CARD_SIZE * VISIBLE_CARDS;
+
+    return (
+          <div
+                  className="relative overflow-hidden rounded-xl border border-gray-700 bg-[#0b1020]"
+                  style={{ width: '100%', height: `${CARD_SIZE}px` }}
+                >
+            {/* Center selector line - left */}
+                <div
+                          className="pointer-events-none absolute inset-y-0 z-10 w-[2px] bg-white/30"
+                          style={{ left: '50%', transform: 'translateX(-50%) translateX(-97.5px)' }}
+                        />
+            {/* Center selector line - right */}
+                <div
+                          className="pointer-events-none absolute inset-y-0 z-10 w-[2px] bg-white/30"
+                          style={{ left: '50%', transform: 'translateX(-50%) translateX(97.5px)' }}
+                        />
+          
+            {/* Left fade gradient */}
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-[#0b1020] to-transparent" />
+            {/* Right fade gradient */}
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-[#0b1020] to-transparent" />
+          
+            {/* Reel track */}
+                <div
+                          className="absolute top-0 left-1/2"
+                          style={{ height: `${CARD_SIZE}px` }}
+                        >
+                  {reelItems.map((item, index) => {
+                                    const color = rarityColor(item.rarity);
+                                    const isCenter = index === STOP_INDEX;
+                                    const itemOffsetX = (index - STOP_INDEX) * CARD_SIZE;
+                                    const glowSize = isCenter && state !== 'IDLE' ? '80%' : '60%';
+                          
+                                    return (
+                                                  <div
+                                                                  key={itemKey(item, index)}
+                                                                  className="absolute flex items-center justify-center"
+                                                                  style={{
+                                                                                    width: `${CARD_SIZE}px`,
+                                                                                    height: `${CARD_SIZE}px`,
+                                                                                    transform: transitionEnabled
+                                                                                                        ? `translateX(calc(${itemOffsetX}px + ${offsetX}px)) translateY(-50%)`
+                                                                                                        : `translateX(${itemOffsetX}px) translateY(-50%)`,
+                                                                                    top: '50%',
+                                                                                    transition: transitionEnabled
+                                                                                                        ? `transform ${durationMs}ms cubic-bezier(0.15, 0, 0.25, 1)`
+                                                                                                        : 'none',
+                                                                  }}
+                                                                >
+                                                    {/* Rarity glow background */}
+                                                                <div
+                                                                                  className="absolute rounded-full"
+                                                                                  style={{
+                                                                                                      width: glowSize,
+                                                                                                      height: glowSize,
+                                                                                                      background: `radial-gradient(circle, ${color}55 0%, ${color}22 50%, transparent 70%)`,
+                                                                                                      filter: `blur(12px)`,
+                                                                                  }}
+                                                                                />
+                                                    {/* Item image */}
+                                                    {item.imageUrl ? (
+                                                                                  <img
+                                                                                                      src={item.imageUrl}
+                                                                                                      alt={item.itemName}
+                                                                                                      className="relative z-10 w-[70%] h-[70%] object-contain drop-shadow-lg"
+                                                                                                      draggable={false}
+                                                                                                      decoding="async"
+                                                                                                    />
+                                                                                ) : (
+                                                                                  <div className="relative z-10 text-[10px] text-gray-500">No image</div>
+                                                                )}
+                                                  </div>
+                                                );
+                        })}
                 </div>
-                <div className="text-[10px] sm:text-xs text-gray-100 truncate">{item.itemName}</div>
-                <div className="flex items-center justify-between mt-1">
-                  <div className="text-[10px] text-green-300 font-semibold">{item.value.toLocaleString()}</div>
-                  <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-black/35 text-gray-300">{rarity}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <style>{`@keyframes reelIdle { 0% { transform: translateX(0); } 100% { transform: translateX(-280px); } } .animate-reel-idle { animation: reelIdle 7s linear infinite; }`}</style>
-    </div>
-  );
+          </div>
+        );
 };
