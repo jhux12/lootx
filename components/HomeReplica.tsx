@@ -66,23 +66,23 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             {[
               {
                 title: 'Open your first box',
-                image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/home3.png?alt=media&token=ba67d8b5-0d06-4015-8c7d-81f10c9850b3'
+                image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/open.png?alt=media&token=34515af9-0309-412b-95fe-fb22837fd060'
               },
               {
                 title: 'Upgrade your items',
-                image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/home4.png?alt=media&token=fafa82b9-e617-4008-aaaa-e9b7cf36be19'
+                image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/upgrade.png?alt=media&token=41935126-5d8f-4430-ae63-e6e47713e793'
               },
               {
                 title: 'Climb Leaderboards',
-                image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/home5.png?alt=media&token=681b50f1-e864-4933-96ca-f41d0c4445b9'
+                image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/leader.png?alt=media&token=d1904a5a-5b16-4b67-b23d-4b307dc72136'
               }
             ].map((tile, index) => (
-              <div key={`${tile.title}-${index}`} className="relative min-h-[110px] overflow-hidden rounded-xl bg-[#21282c] p-4">
+              <div key={`${tile.title}-${index}`} className="relative min-h-[120px] overflow-hidden rounded-xl bg-[#21282c] p-4">
                 <p className="max-w-[140px] text-sm font-black uppercase leading-5 text-slate-100">{tile.title}</p>
                 <img
                   src={tile.image}
                   alt={`${tile.title} artwork`}
-                  className="pointer-events-none absolute -right-2 bottom-0 h-24 w-24 object-contain opacity-90 sm:h-28 sm:w-28"
+                  className="pointer-events-none absolute right-2 bottom-2 h-[96px] w-[96px] shrink-0 object-contain opacity-95"
                   loading="lazy"
                   width={500}
                   height={500}
