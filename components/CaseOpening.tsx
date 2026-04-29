@@ -2059,11 +2059,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="bg-[#0b0e14] px-3 pb-4 pt-3 sm:p-4 flex flex-col items-center justify-center gap-2.5 border-t border-gray-800 relative z-20">
+            <div className="relative z-20 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:px-4">
                  <button 
                     onClick={() => handleSpin()}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
-                    className={`w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
+                    className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20')}`}
                 >
                     <span>
                       {isSyncingFair ? (
@@ -2101,15 +2101,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       )}
                     </span>
                  </button>
-                 {!isFree && (
-                   <button
-                     onClick={handleTryFree}
-                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed}
-                     className="inline-flex max-w-full items-center justify-center px-2 py-1 text-xs sm:text-sm font-semibold text-white transition hover:text-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-                   >
-                     Demo Spin
-                   </button>
-                 )}
+                {!isFree && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleTryFree}
+                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed}
+                      className="inline-flex items-center justify-center rounded-lg border border-white/10 bg-[#303741] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#39424d] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Demo Spin
+                    </button>
+                    <button
+                      type="button"
+                      disabled
+                      className="inline-flex h-[46px] w-[46px] items-center justify-center rounded-lg border border-white/10 bg-[#303741] text-white/80"
+                      aria-label="Quick action"
+                    >
+                      ⚡
+                    </button>
+                  </div>
+                )}
             </div>
             {spinFeedbackMessage && (
               <div className="px-2 pb-4">
