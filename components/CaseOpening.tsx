@@ -1934,13 +1934,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Spinner Window */}
-            <div
-              className="relative w-full"
-              style={{ height: `${spinnerViewportHeight}px` }}
-            >
+            <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
             <div
               ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex w-[calc(100vw-1rem)] max-w-none -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden rounded-2xl border border-white/10 bg-[#171f2a]"
+              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
                 {spinnerBackgroundImage && (
@@ -1992,8 +1989,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 />
                 
                 {/* Fade Gradients */}
-                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#171f2a] via-[#171f2a]/80 to-transparent sm:w-14"></div>
-                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#171f2a] via-[#171f2a]/80 to-transparent sm:w-14"></div>
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
 
                 <div
                   className={`absolute inset-0 z-[21] pointer-events-none transition-opacity duration-200 ${animationPhase === 'spinning' ? 'opacity-70' : 'opacity-0'}`}
