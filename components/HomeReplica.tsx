@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, HelpCircle, Package, TrendingUp, Zap } from 'lucide-react';
 import { CaseItem, MysteryBox } from '../types';
 import { TopDropsSlider } from './TopDropsSlider';
 import { CoinAmount } from './CoinAmount';
