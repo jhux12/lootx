@@ -2021,7 +2021,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className={`group relative flex flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-[18px] border border-[#2b3961]/85 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] px-2 pb-2 pt-2 transition-colors duration-300 md:hover:scale-[1.015] md:hover:border-cyan-200/35 ${item.id === 'golden-ticket' ? 'border-yellow-500/60' : ''} ${isIdleWinner ? 'border-[#f5c34a]' : ''}`}
+                            className="group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 transition-transform duration-300 md:hover:scale-[1.015]"
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
@@ -2029,13 +2029,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 WebkitTransform: 'translateZ(0)',
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
-                                boxShadow: isIdleWinner
-                                  ? `0 0 0 1px rgba(245,195,74,0.42), 0 0 30px ${rarityGlow}, inset 0 0 0 1px rgba(255,255,255,0.12)`
-                                  : `0 0 18px ${rarityGlow}, inset 0 0 0 1px rgba(255,255,255,0.06)`
+                                boxShadow: 'none'
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
-                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch pt-2 sm:pt-3">
+                            <div
+                              className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[999px] ${shouldSimplifyReelEffects ? 'blur-sm' : 'blur-md'}`}
+                              style={{
+                                width: isMobileViewport ? '84px' : '124px',
+                                height: isMobileViewport ? '104px' : '154px',
+                                background: `${item.color}66`,
+                                boxShadow: isIdleWinner ? `0 0 28px ${item.color}88` : `0 0 18px ${item.color}66`
+                              }}
+                            />
+                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <img loading="eager" decoding="async" 
                                   src={item.image} 
                                   alt={item.name} 
@@ -2043,19 +2050,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                               />
                             </div>
-                            <div className={`relative z-10 mt-0.5 inline-flex items-center justify-center text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] ${isMobileViewport ? 'text-[12px]' : 'text-[16px]'} font-extrabold leading-none`}>
-                              <CoinAmount
-                                amount={item.price}
-                                formatOptions={{ maximumFractionDigits: 0 }}
-                                className="text-white"
-                                iconClassName={isMobileViewport ? 'h-[10px] w-[10px]' : 'h-[12px] w-[12px]'}
-                                animated={false}
-                              />
-                            </div>
-                            <div 
-                                className="absolute bottom-0 left-3 right-3 h-px opacity-55"
-                                style={{ backgroundColor: item.color }}
-                            ></div>
                         </div>
                           );
                         })()
