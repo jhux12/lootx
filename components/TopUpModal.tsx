@@ -257,7 +257,7 @@ export const TopUpModal: React.FC = () => {
         onClick={handleClose}
       ></div>
       
-      <div className="relative flex max-h-[100dvh] min-h-0 w-full max-w-[380px] flex-col overflow-hidden rounded-t-[18px] border border-[rgba(124,92,255,0.2)] bg-[#0B0F1A] shadow-[0_0_40px_rgba(124,92,255,0.15)] animate-in zoom-in-95 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[18px]">
+      <div className="relative flex max-h-[100dvh] min-h-0 w-full max-w-[380px] flex-col overflow-hidden rounded-t-[18px] border border-[rgba(124,92,255,0.2)] bg-[#1b2024] shadow-[0_0_40px_rgba(124,92,255,0.15)] animate-in zoom-in-95 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[18px]">
         
         {success ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -340,7 +340,7 @@ export const TopUpModal: React.FC = () => {
                     )}
 
                 </div>
-                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#0B0F1A]/95 px-5 py-4 backdrop-blur-md">
+                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#1b2024]/95 px-5 py-4 backdrop-blur-md">
                   <button
                     onClick={handleDeposit}
                     disabled={isLoading || !selectedPackage}
