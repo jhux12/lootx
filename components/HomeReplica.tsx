@@ -42,7 +42,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, isChatCollapsed
         <div className="space-y-5">
           <section className="grid grid-cols-1 gap-2 md:grid-cols-3">
             {['YOUR FIRST BATTLE WIN', 'OPEN YOUR FIRST PACK!', 'YOUR BEST DEAL'].map((t, i) => (
-              <article key={t} className="relative min-h-[118px] overflow-hidden rounded-xl border border-white/10 bg-[#1a2433] p-4">
+              <article key={t} className="relative min-h-[118px] overflow-hidden rounded-xl border border-white/15 bg-white/[0.04] p-4 backdrop-blur-xl">
                 <div className="absolute inset-0 bg-gradient-to-r from-[#1a2537] via-[#182131] to-[#121a27]" />
                 <div className="absolute -right-3 top-0 h-28 w-28 rounded-full blur-2xl" style={{ background: i === 0 ? 'rgba(255,185,72,0.45)' : i === 1 ? 'rgba(88,93,255,0.38)' : 'rgba(132,193,255,0.35)' }} />
                 <p className="relative z-10 mt-8 max-w-[140px] text-sm font-extrabold leading-4 text-white">{t}</p>
@@ -50,7 +50,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, isChatCollapsed
             ))}
           </section>
 
-          <section className="rounded-xl border border-white/5 bg-[#141d2b] p-3 sm:p-4">
+          <section className="rounded-xl border border-white/15 bg-white/[0.04] p-3 backdrop-blur-xl sm:p-4">
             <header className="mb-3 flex items-center justify-between">
               <h2 className="text-[30px] font-semibold leading-none text-white sm:text-[32px]">New Packs</h2>
               <button className="text-sm text-white/70">View All</button>
@@ -58,7 +58,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, isChatCollapsed
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
               {cards.slice(0, 5).map((box) => (
                 <button key={box.id} onClick={() => onOpenBox(box.id)} className="text-center">
-                  <div className="overflow-hidden rounded-[10px] bg-[#212e43]">
+                  <div className="overflow-hidden rounded-[10px] bg-white/[0.06] backdrop-blur-md">
                     <img src={box.image} alt={box.name} className="h-44 w-full object-cover sm:h-64" />
                   </div>
                   <p className="mt-2 text-xl font-semibold text-white"><CoinAmount amount={box.price ?? 0} /></p>
@@ -70,12 +70,12 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, isChatCollapsed
           <section className="space-y-3">
             <div className="flex items-center justify-between"><h3 className="text-[34px] font-semibold text-white">Battle Highlights</h3><button className="text-sm text-white/70">View All</button></div>
             {[1,2,3].map((row) => (
-              <div key={row} className="flex flex-col gap-3 rounded-xl bg-[#182332] p-3 md:flex-row md:items-center md:justify-between">
+              <div key={row} className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-lg md:flex-row md:items-center md:justify-between">
                 <div className="flex-1">
                   <div className="mb-2 flex items-center gap-2 text-white/80">NORMAL MODE</div>
-                  <div className="h-16 rounded-lg bg-[#0f1725]" />
+                  <div className="h-16 rounded-lg bg-white/[0.04]" />
                 </div>
-                <div className="w-full md:w-[210px]"><p className="mb-2 text-white/70">unboxed: $32,365.35</p><button className="w-full rounded-lg bg-[#2a3444] py-2 font-semibold text-white">View Results</button></div>
+                <div className="w-full md:w-[210px]"><p className="mb-2 text-white/70">unboxed: $32,365.35</p><button className="w-full rounded-lg border border-white/15 bg-white/[0.08] py-2 font-semibold text-white backdrop-blur-md">View Results</button></div>
               </div>
             ))}
           </section>
@@ -84,9 +84,9 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, isChatCollapsed
             <div className="flex items-center justify-between"><h3 className="text-[34px] font-semibold text-white">Deal Highlights</h3><button className="text-sm text-white/70">View All</button></div>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
               {deals.map((d) => (
-                <div key={d.title+d.mult} className="rounded-lg bg-[#182333] p-3">
+                <div key={d.title+d.mult} className="rounded-lg border border-white/10 bg-white/[0.05] p-3 backdrop-blur-lg">
                   <p className="text-sm font-bold text-yellow-300">{d.mult}</p>
-                  <div className="my-2 h-20 rounded bg-[#101827]" />
+                  <div className="my-2 h-20 rounded bg-white/[0.04]" />
                   <p className="truncate text-sm text-white/70">{d.title}</p>
                   <p className="text-2xl font-semibold text-white">{d.price}</p>
                 </div>
@@ -94,12 +94,12 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, isChatCollapsed
             </div>
           </section>
 
-          <section className="space-y-3 rounded-xl bg-[#141d2b] p-4">
+          <section className="space-y-3 rounded-xl border border-white/15 bg-white/[0.04] p-4 backdrop-blur-xl">
             <h3 className="text-[34px] font-semibold text-white">How It Works</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {['01. Open Packs', '02. Win Items', '03. Cash or Claim'].map((t) => (
-                <article key={t} className="rounded-xl bg-[#1b2638] p-4 text-center">
-                  <div className="mb-3 h-28 rounded-lg bg-[#263651]" />
+                <article key={t} className="rounded-xl border border-white/10 bg-white/[0.05] p-4 text-center backdrop-blur-md">
+                  <div className="mb-3 h-28 rounded-lg bg-white/[0.05]" />
                   <p className="text-2xl font-semibold text-white">{t}</p>
                   <p className="mt-1 text-sm text-white/60">Find your perfect packs & experience the online excitement!</p>
                 </article>
@@ -111,7 +111,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, isChatCollapsed
             {faqs.map((q, idx) => {
               const open = openFaq === idx;
               return (
-                <div key={q} className="rounded-lg bg-[#1a2433]">
+                <div key={q} className="rounded-lg border border-white/10 bg-white/[0.05] backdrop-blur-md">
                   <button onClick={() => setOpenFaq(open ? null : idx)} className="flex w-full items-center justify-between px-4 py-4 text-left text-white"><span className="font-semibold">{q}</span><ChevronDown className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} /></button>
                   {open && <p className="px-4 pb-4 text-sm text-white/70">Support articles and guides are available for this topic.</p>}
                 </div>
@@ -124,8 +124,8 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, isChatCollapsed
           <div className="space-y-3">
             <h3 className="text-[30px] font-semibold text-white">Top Opens</h3>
             {side.map((price, i) => (
-              <div key={price+i} className="rounded-xl bg-[#172232] p-3">
-                <div className="h-24 rounded-md bg-[#101828]" />
+              <div key={price+i} className="rounded-xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-lg">
+                <div className="h-24 rounded-md bg-white/[0.04]" />
                 <p className="mt-2 text-sm text-white/70">Item name</p>
                 <p className="text-3xl font-semibold text-white">{price}</p>
               </div>
