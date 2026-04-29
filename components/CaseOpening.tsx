@@ -1033,9 +1033,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const transform = window.getComputedStyle(container).transform;
       const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
       const x = matrix ? matrix.m41 : 0;
-      const { stepWidth } = spinnerMeasurementsRef.current;
-      if (Number.isFinite(stepWidth) && stepWidth > 0) {
-        const index = Math.max(0, Math.round(-x / stepWidth));
+      const { stepWidth, cardWidth, viewportWidth } = spinnerMeasurementsRef.current;
+      if (Number.isFinite(stepWidth) && stepWidth > 0 && Number.isFinite(cardWidth) && Number.isFinite(viewportWidth)) {
+        const viewportCenter = viewportWidth / 2;
+        const index = Math.max(0, Math.round((viewportCenter - x - (cardWidth / 2)) / stepWidth));
         setCurrentCenterIndex(index);
       }
       frameId = window.requestAnimationFrame(syncCenterItem);
