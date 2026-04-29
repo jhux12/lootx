@@ -127,8 +127,9 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 <div key={item.id} className="group relative overflow-hidden rounded-2xl bg-[#1f2730] p-3 text-center sm:p-4">
                   <div className={`pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.14),transparent_58%)] ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`} />
                   <div className="relative z-10 flex min-h-[185px] flex-col items-center justify-center gap-3 transition-transform duration-500 ease-out group-hover:translate-y-[120%] group-focus-within:translate-y-[120%] sm:min-h-[210px]">
-                    <div className={`grid h-24 w-24 place-items-center rounded-full sm:h-28 sm:w-28 ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`}>
-                      <img src={item.itemImage} alt={item.itemName} className="h-20 w-20 bg-transparent object-contain mix-blend-lighten sm:h-24 sm:w-24" loading="lazy" />
+                    <div className="relative flex h-40 w-full items-center justify-center sm:h-48">
+                      <div className={`pointer-events-none absolute inset-x-8 top-8 bottom-8 blur-3xl opacity-70 ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`} />
+                      <img src={item.itemImage} alt={item.itemName} className="relative z-10 max-h-32 max-w-[85%] object-contain drop-shadow-2xl sm:max-h-40" loading="lazy" />
                     </div>
                     <p className="max-w-[180px] truncate text-sm text-slate-300 sm:max-w-[200px]">{item.itemName}</p>
                     <CoinAmount amount={Math.round(item.itemPrice)} className="justify-center text-xl font-black text-white" iconClassName="h-4 w-4 sm:h-5 sm:w-5" />
