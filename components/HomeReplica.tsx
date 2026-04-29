@@ -125,7 +125,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             <div className="space-y-3">
               {topPullz.map((item) => (
                 <div key={item.id} className="group relative overflow-hidden rounded-2xl bg-[#1f2730] p-3 text-center sm:p-4">
-                  <div className={`pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.14),transparent_58%)] ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`} />
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_60%)]" />
                   <div className="relative z-10 flex min-h-[185px] flex-col items-center justify-center gap-3 transition-transform duration-500 ease-out group-hover:translate-y-[120%] group-focus-within:translate-y-[120%] sm:min-h-[210px]">
                     <div className="relative flex h-40 w-full items-center justify-center sm:h-48">
                       <div className={`pointer-events-none absolute inset-x-8 top-8 bottom-8 rounded-[40%] blur-3xl opacity-70 ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`} />
