@@ -216,7 +216,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           playSound('click');
           openAuthModal('login');
         }}
-        className="rounded-xl border border-white/10 bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800"
+        className="rounded-xl border border-white/10 bg-[#22282c] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#2a3138]"
       >
         Sign in
       </button>
@@ -246,12 +246,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const rewardsDesktopTabClass = `group relative flex items-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all ${
     showDailySpinReady
       ? 'border-blue-400/70 bg-blue-500/10 text-blue-100 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:bg-blue-500/20'
-      : 'border-transparent bg-zinc-900/50 text-purple-400 hover:border-white/5 hover:bg-neutral-800'
+      : 'border-transparent bg-[#22282c]/50 text-purple-400 hover:border-white/5 hover:bg-[#2a3138]'
   }`;
   const rewardsMobileTabClass = `group relative flex w-full items-center justify-between overflow-hidden rounded-xl border px-3 py-3 text-left transition-all ${
     showDailySpinReady
       ? 'border-blue-400/70 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.25)] hover:bg-blue-500/20'
-      : 'border-white/5 bg-[#111114]'
+      : 'border-white/5 bg-[#22282c]'
   }`;
 
   const toggleMobileSection = (section: keyof typeof openMobileSections) => {
@@ -270,7 +270,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     <div className="relative z-50">
       <header
         ref={headerRef}
-        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/5 bg-neutral-950 md:bg-neutral-950/90 md:backdrop-blur-md`}
+        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/5 bg-[#1b2024] md:bg-[#1b2024]/95 md:backdrop-blur-md`}
       >
         <div className="pt-[env(safe-area-inset-top,0px)]">
           <nav className="mx-auto flex h-[88px] sm:h-[96px] max-w-7xl items-center justify-between px-4 lg:px-8">
@@ -294,7 +294,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     setIsGamesMenuOpen((prev) => !prev);
                     setIsRewardsMenuOpen(false);
                   }}
-                  className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition-colors hover:border-white/5 hover:bg-neutral-800 hover:text-white"
+                  className="flex items-center gap-2 rounded-xl border border-transparent bg-[#22282c]/50 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition-colors hover:border-white/5 hover:bg-[#2a3138] hover:text-white"
                   aria-expanded={isGamesMenuOpen}
                   aria-haspopup="menu"
                 >
@@ -340,7 +340,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   <button type="button" onClick={() => navigate('QUESTS')} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5"><Sparkles className="h-4 w-4 text-violet-300" />Quests {questReadyCount > 0 ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : claimedTodayCount > 0 ? <span className="ml-auto rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
                 </div>
               </div>
-              <button onClick={() => navigate('LEADERBOARD')} className="flex items-center gap-2 rounded-xl border border-transparent bg-zinc-900/50 px-4 py-2.5 text-sm font-semibold text-neutral-400 transition-colors hover:border-white/5 hover:bg-neutral-800 hover:text-white">
+              <button onClick={() => navigate('LEADERBOARD')} className="flex items-center gap-2 rounded-xl border border-transparent bg-[#22282c]/50 px-4 py-2.5 text-sm font-semibold text-neutral-400 transition-colors hover:border-white/5 hover:bg-[#2a3138] hover:text-white">
                 <Trophy className="h-4 w-4" />
                 Leaderboard
               </button>
@@ -384,7 +384,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   <button
                     type="button"
                     onClick={() => setShowActivity(true)}
-                    className="relative rounded-lg border border-white/10 bg-zinc-900 p-2 text-gray-200 hover:text-white"
+                    className="relative rounded-lg border border-white/10 bg-[#22282c] p-2 text-gray-200 hover:text-white"
                     aria-label="Open activity"
                   >
                     <Clock3 className="h-4 w-4" />
@@ -427,7 +427,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                       playSound('click');
                       logout();
                     }}
-                    className="rounded-lg border border-white/10 bg-zinc-900 p-2 text-gray-300 hover:bg-zinc-800 hover:text-white"
+                    className="rounded-lg border border-white/10 bg-[#22282c] p-2 text-gray-300 hover:bg-[#2a3138] hover:text-white"
                     aria-label="Log out"
                   >
                     <LogOut className="h-4 w-4" />
@@ -484,7 +484,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       />
 
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 w-full overflow-y-auto bg-[#09090b] px-4 py-4 transition-all duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-50 w-full overflow-y-auto bg-[#1b2024] px-4 py-4 transition-all duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${
           isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
@@ -508,7 +508,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           )}
 
           <section className="space-y-3">
-            <button type="button" onClick={() => toggleMobileSection('games')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left">
+            <button type="button" onClick={() => toggleMobileSection('games')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#22282c] px-3 py-3 text-left">
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Games</h3>
               <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.games ? 'rotate-180' : ''}`} />
             </button>
@@ -544,7 +544,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           </section>
 
           <section className="space-y-3">
-            <button type="button" onClick={() => toggleMobileSection('learn')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left">
+            <button type="button" onClick={() => toggleMobileSection('learn')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#22282c] px-3 py-3 text-left">
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Learn</h3>
               <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.learn ? 'rotate-180' : ''}`} />
             </button>
@@ -557,7 +557,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           </section>
 
           <section className="space-y-3">
-            <button type="button" onClick={() => toggleMobileSection('support')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left">
+            <button type="button" onClick={() => toggleMobileSection('support')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#22282c] px-3 py-3 text-left">
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Info and Support</h3>
               <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.support ? 'rotate-180' : ''}`} />
             </button>
@@ -588,7 +588,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           </section>
 
           <section className="mt-2 flex flex-col items-center gap-6">
-            <button type="button" onClick={() => toggleMobileSection('social')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#111114] px-3 py-3 text-left">
+            <button type="button" onClick={() => toggleMobileSection('social')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#22282c] px-3 py-3 text-left">
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Social Media</h3>
               <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.social ? 'rotate-180' : ''}`} />
             </button>

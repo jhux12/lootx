@@ -82,7 +82,7 @@ export const MobileBottomNav: React.FC = () => {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-[70] border-t border-white/10 bg-[#080b10]/95 px-2.5 pb-[calc(env(safe-area-inset-bottom)+6px)] pt-2 backdrop-blur lg:hidden"
+      className="fixed bottom-0 left-0 right-0 z-[70] border-t border-white/10 bg-[#1b2024]/95 px-2.5 pb-[calc(env(safe-area-inset-bottom)+6px)] pt-2 backdrop-blur lg:hidden"
       aria-label="Primary navigation"
     >
       <nav className="grid grid-cols-5 gap-0.5">
@@ -111,7 +111,7 @@ export const MobileBottomNav: React.FC = () => {
                 type="button"
                 onClick={() => handleNav(item)}
                 className={`flex flex-col items-center gap-0.5 rounded-lg py-1 text-[11px] font-medium ${
-                  isActive ? 'text-white' : 'text-gray-500'
+                  isActive ? 'text-white' : 'text-slate-400'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -137,7 +137,7 @@ export const MobileBottomNav: React.FC = () => {
                   <span className="relative">
                     <Icon className={item.iconClassName ?? iconClassName} />
                     {item.id === 'INVENTORY' && hasFreeSignupBox && (
-                      <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#080b10]" aria-hidden="true" />
+                      <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#1b2024]" aria-hidden="true" />
                     )}
                   </span>
                 ) : null}
