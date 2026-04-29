@@ -4,6 +4,7 @@ import { CaseItem, MysteryBox } from '../types';
 import { TopDropsSlider } from './TopDropsSlider';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
+import { useActivity } from '../src/lib/activity/useActivity';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -67,6 +68,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   onSignUp
 }) => {
   const { stripeSettings, setView, isAuthenticated } = useGame();
+  const { entries } = useActivity();
   const [openFaq, setOpenFaq] = useState(0);
 
   const featuredBoxes = useMemo(() => boxes.slice(0, 8), [boxes]);
@@ -77,6 +79,19 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
     }
     return featuredBoxes[0];
   }, [boxes, demoBoxId, featuredBoxes]);
+  const openEntries = useMemo(() => entries.filter((entry) => entry.type === 'open'), [entries]);
+  const topOpens = useMemo(
+    () =>
+      [...openEntries]
+        .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+        .slice(0, 4),
+    [openEntries]
+  );
+  const liveOpens = useMemo(() => openEntries.slice(0, 8), [openEntries]);
+  const upgraderHighlights = useMemo(
+    () => [...boxes].sort((a, b) => b.price - a.price).slice(0, 6),
+    [boxes]
+  );
 
   const [demoSpinIndex, setDemoSpinIndex] = useState(14);
   const [isSpinAnimating, setIsSpinAnimating] = useState(false);
@@ -457,8 +472,65 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         </button>
       </section>
 
-      <section className="w-full">
-        <TopDropsSlider boxes={boxes} onOpenBox={onOpenBox} />
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start">
+        <div className="min-w-0 rounded-2xl border border-white/10 bg-[#0d121c] p-3 sm:p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-black uppercase text-white sm:text-xl">Featured Boxes</h2>
+            <button
+              type="button"
+              onClick={onViewAllBoxes}
+              className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400 hover:text-white"
+            >
+              View all
+            </button>
+          </div>
+          <TopDropsSlider boxes={boxes} onOpenBox={onOpenBox} />
+        </div>
+
+        <aside className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1">
+          <section className="rounded-2xl border border-white/10 bg-[#0f141d] p-3">
+            <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-white">Top Opens</h3>
+            <div className="space-y-2">
+              {topOpens.length ? topOpens.map((entry) => (
+                <div key={entry.id} className="rounded-xl bg-[#171e2a] p-2.5">
+                  <p className="truncate text-xs font-semibold text-slate-300">{entry.title}</p>
+                  <p className="mt-1 text-sm font-black text-white"><CoinAmount amount={entry.value ?? 0} animated={false} /></p>
+                </div>
+              )) : <p className="text-xs text-gray-400">No top opens yet.</p>}
+            </div>
+          </section>
+          <section className="rounded-2xl border border-white/10 bg-[#0f141d] p-3">
+            <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-white">Live Opens</h3>
+            <div className="space-y-2">
+              {liveOpens.length ? liveOpens.map((entry) => (
+                <div key={entry.id} className="rounded-xl bg-[#171e2a] p-2.5">
+                  <p className="truncate text-xs font-semibold text-slate-300">{entry.title}</p>
+                  <p className="mt-1 text-sm font-black text-white"><CoinAmount amount={entry.value ?? 0} animated={false} /></p>
+                </div>
+              )) : <p className="text-xs text-gray-400">No live opens yet.</p>}
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xl font-black uppercase text-white">Upgrader Highlights</h2>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          {upgraderHighlights.map((box) => (
+            <button
+              key={box.id}
+              type="button"
+              onClick={() => onOpenBox(box.id)}
+              className="rounded-xl border border-white/10 bg-[#111826] p-3 text-left transition hover:border-white/30"
+            >
+              <img src={box.image} alt={box.name} className="h-20 w-full object-contain" loading="lazy" />
+              <p className="mt-2 line-clamp-1 text-xs font-semibold text-slate-300">{box.name}</p>
+              <p className="mt-1 text-sm font-black text-white"><CoinAmount amount={box.price} animated={false} /></p>
+            </button>
+          ))}
+        </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
