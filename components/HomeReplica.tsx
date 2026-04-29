@@ -127,7 +127,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 <div key={item.id} className="group relative overflow-hidden rounded-2xl bg-[#1f2730] p-3 text-center sm:p-4">
                   <div className={`pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.14),transparent_58%)] ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`} />
                   <div className="relative z-10 flex min-h-[185px] flex-col items-center justify-center gap-3 transition-transform duration-500 ease-out group-hover:translate-y-[120%] group-focus-within:translate-y-[120%] sm:min-h-[210px]">
-                    <div className={`grid h-24 w-24 place-items-center rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.2),transparent_68%)] sm:h-28 sm:w-28 ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`}>
+                    <div className={`grid h-24 w-24 place-items-center sm:h-28 sm:w-28 ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`}>
                       <img src={item.itemImage} alt={item.itemName} className="h-20 w-20 object-contain sm:h-24 sm:w-24" loading="lazy" />
                     </div>
                     <p className="max-w-[180px] truncate text-sm text-slate-300 sm:max-w-[200px]">{item.itemName}</p>
