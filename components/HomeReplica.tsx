@@ -32,11 +32,11 @@ const deals = [
 ];
 
 const rarityGlowClass: Record<string, string> = {
-  legendary: 'from-amber-300/30 via-yellow-300/10 to-transparent shadow-[0_0_45px_rgba(250,204,21,0.25)]',
-  epic: 'from-fuchsia-400/25 via-purple-400/10 to-transparent shadow-[0_0_40px_rgba(192,132,252,0.24)]',
-  rare: 'from-cyan-300/25 via-sky-300/10 to-transparent shadow-[0_0_35px_rgba(56,189,248,0.22)]',
-  uncommon: 'from-emerald-300/25 via-green-300/10 to-transparent shadow-[0_0_30px_rgba(74,222,128,0.2)]',
-  common: 'from-slate-300/15 via-slate-300/5 to-transparent shadow-[0_0_20px_rgba(148,163,184,0.14)]'
+  legendary: 'bg-amber-300/35',
+  epic: 'bg-fuchsia-400/30',
+  rare: 'bg-cyan-300/28',
+  uncommon: 'bg-emerald-300/24',
+  common: 'bg-slate-300/18'
 };
 
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onViewAllBoxes, onSignUp }) => {
@@ -128,7 +128,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                   <div className={`pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.14),transparent_58%)] ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`} />
                   <div className="relative z-10 flex min-h-[185px] flex-col items-center justify-center gap-3 transition-transform duration-500 ease-out group-hover:translate-y-[120%] group-focus-within:translate-y-[120%] sm:min-h-[210px]">
                     <div className="relative flex h-40 w-full items-center justify-center sm:h-48">
-                      <div className={`pointer-events-none absolute inset-x-8 top-8 bottom-8 blur-3xl opacity-70 ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`} />
+                      <div className={`pointer-events-none absolute inset-x-8 top-8 bottom-8 rounded-[40%] blur-3xl opacity-70 ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`} />
                       <img src={item.itemImage} alt={item.itemName} className="relative z-10 max-h-32 max-w-[85%] object-contain drop-shadow-2xl sm:max-h-40" loading="lazy" />
                     </div>
                     <p className="max-w-[180px] truncate text-sm text-slate-300 sm:max-w-[200px]">{item.itemName}</p>
