@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
+import { useGame } from '../context/GameContext';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -22,15 +23,6 @@ const faqs = [
   'How can I contact support?'
 ];
 
-const deals = [
-  ['1.85x', '1999 Ultra Platinu...', '$43,750.00', '🃏'],
-  ['9.26x', 'David Yurman Pyr...', '$21,600.00', '💍'],
-  ['1.60x', '1999 Ultra Platinu...', '$43,750.00', '🃏'],
-  ['4.00x', 'Rolex Datejust Whi...', '$20,000.00', '⌚'],
-  ['2.07x', 'Bulgari Serpenti Vl...', '$21,720.00', '💍'],
-  ['1.45x', 'Bulgari Serpenti Vl...', '$21,720.00', '💍']
-];
-
 const rarityGlowClass: Record<string, string> = {
   legendary: 'bg-amber-300/35',
   epic: 'bg-fuchsia-400/30',
@@ -40,7 +32,22 @@ const rarityGlowClass: Record<string, string> = {
 };
 
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onViewAllBoxes, onSignUp }) => {
+  const { setView } = useGame();
   const featuredBoxes = boxes.slice(0, 5);
+  const topUpgrades = useMemo(() => {
+    const highValueItems = boxes
+      .flatMap((box) => box.items.map((item) => ({ ...item, boxId: box.id })))
+      .sort((a, b) => b.price - a.price)
+      .slice(0, 24);
+
+    return [...highValueItems]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 6)
+      .map((item) => ({
+        ...item,
+        multiplier: `${(1.2 + Math.random() * 8.8).toFixed(2)}x`
+      }));
+  }, [boxes]);
   const topPullz = useMemo(() => {
     return boxes
       .flatMap((box) =>
@@ -77,7 +84,16 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/leader.png?alt=media&token=d1904a5a-5b16-4b67-b23d-4b307dc72136'
               }
             ].map((tile, index) => (
-              <div key={`${tile.title}-${index}`} className="relative min-h-[132px] overflow-hidden rounded-xl bg-[#21282c] p-4">
+              <button
+                key={`${tile.title}-${index}`}
+                type="button"
+                onClick={() => {
+                  if (index === 0) onViewAllBoxes();
+                  if (index === 1) setView({ type: 'PLINKO' });
+                  if (index === 2) setView({ type: 'LEADERBOARD' });
+                }}
+                className="relative min-h-[132px] overflow-hidden rounded-xl bg-[#21282c] p-4 text-left"
+              >
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_60%,rgba(34,211,238,0.20),transparent_52%),radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.08),transparent_45%)]" />
                 <p className="relative z-10 max-w-[140px] text-sm font-black uppercase leading-5 text-slate-100">{tile.title}</p>
                 <img
@@ -88,7 +104,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                   width={500}
                   height={500}
                 />
-              </div>
+              </button>
             ))}
           </div>
 
@@ -112,14 +128,16 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
           </section>
 
           <section>
-            <h2 className="mb-4 text-xl font-black">Deal Highlights</h2>
+            <h2 className="mb-4 text-xl font-black">Top Upgrades</h2>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-              {deals.map((deal) => (
-                <div key={`${deal[0]}-${deal[1]}`} className="rounded-xl bg-[#22282c] p-3">
-                  <p className="text-xs font-black text-yellow-300">{deal[0]}</p>
-                  <div className="my-3 text-center text-4xl">{deal[3]}</div>
-                  <p className="truncate text-xs text-slate-400">{deal[1]}</p>
-                  <p className="text-sm font-black">{deal[2]}</p>
+              {topUpgrades.map((upgrade) => (
+                <div key={upgrade.id} className="rounded-xl bg-[#22282c] p-3">
+                  <p className="text-xs font-black text-yellow-300">{upgrade.multiplier}</p>
+                  <div className="my-3 flex h-[80px] items-center justify-center">
+                    <img src={upgrade.image} alt={upgrade.name} className="max-h-full max-w-full object-contain" loading="lazy" />
+                  </div>
+                  <p className="truncate text-xs text-slate-400">{upgrade.name}</p>
+                  <CoinAmount amount={Math.round(upgrade.price)} className="mt-1 text-sm font-black text-white" iconClassName="h-4 w-4" />
                 </div>
               ))}
             </div>
