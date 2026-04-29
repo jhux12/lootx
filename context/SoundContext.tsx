@@ -93,10 +93,28 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toggleMute = useCallback(() => setMuted((prev) => !prev), []);
 
+  const playSpinTickTone = useCallback((audioContext: AudioContext) => {
+    const now = audioContext.currentTime;
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(1320, now);
+    gainNode.gain.setValueAtTime(0.0001, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.07, now + 0.004);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.start(now);
+    oscillator.stop(now + 0.045);
+  }, []);
+
   const playSound = useCallback((type: SoundType) => {
     if (muted) return;
 
     initializeAudio();
+    const audioContext = ensureAudioContextReady();
 
     if (type === 'spin-tick') {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -104,22 +122,20 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       lastTickAtRef.current = now;
 
       try {
-        const audioContext = ensureAudioContextReady();
         if (!audioContext) return;
 
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(1320, audioContext.currentTime);
-        gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.07, audioContext.currentTime + 0.004);
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.04);
+        if (audioContext.state === 'running') {
+          playSpinTickTone(audioContext);
+          return;
+        }
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.045);
+        void audioContext.resume()
+          .then(() => {
+            if (audioContext.state === 'running') {
+              playSpinTickTone(audioContext);
+            }
+          })
+          .catch(() => undefined);
       } catch {
         // ignore playback errors
       }
@@ -138,7 +154,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {
       // ignore playback errors
     }
-  }, [ensureAudioContextReady, initializeAudio, muted]);
+  }, [ensureAudioContextReady, initializeAudio, muted, playSpinTickTone]);
 
   return <SoundContext.Provider value={{ muted, toggleMute, playSound }}>{children}</SoundContext.Provider>;
 };
