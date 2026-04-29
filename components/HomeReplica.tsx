@@ -77,12 +77,13 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/leader.png?alt=media&token=d1904a5a-5b16-4b67-b23d-4b307dc72136'
               }
             ].map((tile, index) => (
-              <div key={`${tile.title}-${index}`} className="relative min-h-[120px] overflow-hidden rounded-xl bg-[#21282c] p-4">
-                <p className="max-w-[140px] text-sm font-black uppercase leading-5 text-slate-100">{tile.title}</p>
+              <div key={`${tile.title}-${index}`} className="relative min-h-[132px] overflow-hidden rounded-xl bg-[#21282c] p-4">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_60%,rgba(34,211,238,0.20),transparent_52%),radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.08),transparent_45%)]" />
+                <p className="relative z-10 max-w-[140px] text-sm font-black uppercase leading-5 text-slate-100">{tile.title}</p>
                 <img
                   src={tile.image}
                   alt={`${tile.title} artwork`}
-                  className="pointer-events-none absolute right-2 bottom-2 h-[96px] w-[96px] shrink-0 object-contain opacity-95"
+                  className="pointer-events-none absolute right-1 bottom-0 z-10 h-[122px] w-[122px] shrink-0 object-contain opacity-100"
                   loading="lazy"
                   width={500}
                   height={500}
