@@ -300,7 +300,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const isReady = Boolean(box) && hasItems;
   const isAdmin = Boolean(user?.isAdmin);
   const hideDropTableOdds = Boolean(isFree && box?.isDaily);
-  const spinnerBackgroundImage = (box?.spinnerBackgroundImage ?? '').trim();
   const cheapestPaidBox = useMemo(() => {
     const paidBoxes = boxes.filter((entry) => {
       const coinPrice = toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE);
@@ -1940,17 +1939,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
-                {spinnerBackgroundImage && (
-                  <>
-                    <img
-                      src={spinnerBackgroundImage}
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/45" aria-hidden="true" />
-                  </>
-                )}
+                
                 {isBoxPreviewVisible && (
                   <div
                     className={`absolute inset-0 z-30 flex items-start justify-center px-3 pt-3 transition-opacity duration-500 sm:items-center sm:px-6 sm:pt-0 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
