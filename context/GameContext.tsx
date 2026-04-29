@@ -1646,12 +1646,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const redirectResult = await getRedirectResult(auth);
         if (!redirectResult?.user) return;
+        const refreshedAfterRedirect = typeof window !== 'undefined' && window.sessionStorage.getItem(GOOGLE_REDIRECT_REFRESH_KEY) === '1';
+        await redirectResult.user.reload();
         await ensureGoogleUserProfile(redirectResult.user);
         trackEvent('google_oauth_success');
         setShowLoginModal(false);
+        if (typeof window !== 'undefined' && !refreshedAfterRedirect) {
+          window.sessionStorage.setItem(GOOGLE_REDIRECT_REFRESH_KEY, '1');
+          window.location.reload();
+          return;
+        }
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
+        }
         const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
         resolveEmailRedirect(redirectPath);
       } catch (error: any) {
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
+        }
+        console.error('Firebase Google redirect error', { code: error?.code, message: error?.message, error });
         trackEvent('google_oauth_error', { code: error?.code || 'redirect_unknown' });
       }
     })();
@@ -2259,14 +2273,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const shouldUseRedirectGoogleAuth = () => {
     if (typeof navigator === 'undefined') return false;
     const ua = navigator.userAgent || '';
-    const isMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua);
-    const isInAppBrowser = /(FBAN|FBAV|Instagram|Line|Twitter|TikTok|Snapchat)/i.test(ua);
-    return isMobile || isInAppBrowser;
+    return /(Instagram|FBAN|FBAV|FBIOS|FB_IAB|TikTok|Snapchat|Line)/i.test(ua);
   };
+
+  const googleAuthInProgressRef = useRef(false);
+  const GOOGLE_REDIRECT_REFRESH_KEY = 'google_redirect_refresh_done';
 
   const loginWithGoogle = async (options: GoogleAuthOptions = {}): Promise<GoogleAuthResult> => {
     const { remember = true, isRetry = false } = options;
     const provider = new GoogleAuthProvider();
+    if (googleAuthInProgressRef.current) {
+      return { status: 'error', message: 'Google sign-in is already in progress.' };
+    }
+    googleAuthInProgressRef.current = true;
 
     try {
       await setAuthPersistence(remember);
@@ -2276,6 +2295,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       trackEvent('google_oauth_started');
 
       if (shouldUseRedirectGoogleAuth()) {
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
+        }
         await signInWithRedirect(auth, provider);
         return { status: 'redirect-started' };
       }
@@ -2289,6 +2311,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       resolveEmailRedirect(redirectPath);
       return { status: 'success' };
     } catch (error: any) {
+      console.error('Firebase Google auth error', { code: error?.code, message: error?.message, error });
       const errorCode = error?.code;
       if (errorCode === 'auth/account-exists-with-different-credential') {
         const pendingCredential = GoogleAuthProvider.credentialFromError(error);
@@ -2311,6 +2334,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       trackEvent('google_oauth_error', { code: errorCode || 'unknown' });
       return { status: 'error', message: error?.message || 'Google sign-in failed.' };
+    } finally {
+      googleAuthInProgressRef.current = false;
     }
   };
 
