@@ -47,7 +47,7 @@ const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const drawerCardClass =
-  'flex items-center gap-3 rounded-xl border border-white/5 bg-[#18181b] p-3 text-left transition-colors hover:bg-[#202023]';
+  'flex items-center gap-3 rounded-xl border border-white/10 bg-[#25313a] p-3 text-left transition-colors hover:bg-[#2f3d47]';
 
 export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unreadChatCount: _unreadChatCount, isSticky = true }) => {
   const {
@@ -270,7 +270,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     <div className="relative z-50">
       <header
         ref={headerRef}
-        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/5 bg-[#1b2024] md:bg-[#1b2024]/95 md:backdrop-blur-md`}
+        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-cyan-400/15 bg-[#141b22] md:bg-[#141b22]/95 md:backdrop-blur-md`}
       >
         <div className="pt-[env(safe-area-inset-top,0px)]">
           <nav className="mx-auto flex h-[88px] sm:h-[96px] max-w-7xl items-center justify-between px-4 lg:px-8">
@@ -303,7 +303,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   <ChevronDown className={`h-4 w-4 transition-transform ${isGamesMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
                 <div
-                  className={`absolute left-0 top-full mt-2 w-44 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${
+                  className={`absolute left-0 top-full mt-2 w-44 rounded-xl border border-cyan-400/20 bg-[#202b33] p-1.5 shadow-2xl transition-all ${
                     isGamesMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'
                   }`}
                 >
@@ -328,7 +328,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   <ChevronDown className={`h-4 w-4 transition-transform ${isRewardsMenuOpen ? 'rotate-180' : ''}`} />
                   {questReadyCount > 0 ? <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}
                 </button>
-                <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#101216] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
+                <div className={`absolute left-0 top-full mt-2 w-48 rounded-xl border border-cyan-400/20 bg-[#202b33] p-1.5 shadow-2xl transition-all ${isRewardsMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'}`}>
                   <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass}>
                     <RefreshCw className="h-4 w-4 text-blue-500" />
                     Daily Spin
@@ -484,7 +484,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       />
 
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 w-full overflow-y-auto bg-[#1b2024] px-4 py-4 transition-all duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-50 w-full overflow-y-auto bg-[#141b22] px-4 py-4 transition-all duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${
           isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
