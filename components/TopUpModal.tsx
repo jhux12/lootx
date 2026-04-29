@@ -251,13 +251,13 @@ export const TopUpModal: React.FC = () => {
   };
 
   return (
-    <div data-disable-pull-refresh="true" className="fixed inset-0 z-[100] flex items-start justify-center overflow-hidden overscroll-none p-3 py-4 sm:p-4 sm:py-6 sm:items-center">
+    <div data-disable-pull-refresh="true" className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden overscroll-none p-0 sm:items-center sm:p-4">
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in" 
         onClick={handleClose}
       ></div>
       
-      <div className="relative flex max-h-[calc(100dvh-2rem)] min-h-0 w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-amber-500/20 bg-[#08090d] shadow-2xl shadow-black/60 animate-in zoom-in-95">
+      <div className="relative flex max-h-[100dvh] min-h-0 w-full max-w-[380px] flex-col overflow-hidden rounded-t-[18px] border border-[rgba(124,92,255,0.2)] bg-[#0B0F1A] shadow-[0_0_40px_rgba(124,92,255,0.15)] animate-in zoom-in-95 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[18px]">
         
         {success ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -267,14 +267,14 @@ export const TopUpModal: React.FC = () => {
             </div>
         ) : (
             <>
-                <div className="flex items-start justify-between border-b border-white/10 px-4 py-4 sm:px-6">
+                <div className="flex items-start justify-between border-b border-white/10 px-5 py-5">
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10">
                         <Wallet className="h-5 w-5 text-amber-300" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-black text-white sm:text-3xl">Get Coins</h2>
-                        <p className="mt-1 text-xs text-gray-400 sm:text-sm">Select a coin package</p>
+                        <h2 className="text-xl font-semibold text-white">Add Coins</h2>
+                        <p className="mt-1 text-xs text-slate-400">Select a coin package</p>
                       </div>
                     </div>
                     <button 
@@ -285,15 +285,15 @@ export const TopUpModal: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-5 [-webkit-overflow-scrolling:touch] sm:px-6 sm:py-6">
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 [-webkit-overflow-scrolling:touch]">
                     {isPostFreeBoxFlow && (
                       <p className="mb-3 rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100">
                         Covers your first box + extra spins
                       </p>
                     )}
                     {/* Amount Selector */}
-                    <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-gray-500">Select a pack</label>
-                    <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-slate-500">Select a pack</label>
+                    <div className="mb-4 flex flex-col gap-3">
                         {activePackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             No packages available right now.
@@ -312,50 +312,21 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative overflow-hidden rounded-xl border p-2 text-left transition-colors duration-200 sm:p-2.5
-                                    ${getCardSurface(pack.badge, isSelected)}
-                                    ${getCardAccentClasses(pack.badge, isSelected)}
-                                    ${isSelected ? 'ring-1 ring-[#f7b733]/35' : ''}`}
+                                  className={`relative flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-all duration-200 bg-[#12182A] hover:bg-[#18213A]
+                                    ${isSelected ? 'scale-[1.02] border-[#7C5CFF] shadow-[0_0_12px_rgba(124,92,255,0.4)]' : 'border-white/10'}`}
                               >
                                   {badgeText && (
                                     <span
-                                      className={`absolute right-1.5 top-1.5 rounded-full px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide sm:text-[9px] ${getBadgeClasses(pack.badge)}`}
+                                      className={`absolute -top-2 right-3 rounded-md px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${getBadgeClasses(pack.badge)}`}
                                     >
                                       {getBadgeLabel(badgeText)}
                                     </span>
                                   )}
-                                  <div className="relative z-10 flex items-start justify-between gap-1.5">
-                                    <div>
-                                      <CoinAmount
-                                        amount={pack.coins}
-                                        formatOptions={{ maximumFractionDigits: 0 }}
-                                        className="text-lg font-black text-white sm:text-2xl"
-                                        iconClassName="h-4 w-4 sm:h-5 sm:w-5"
-                                      />
-                                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-[#8f97bf] sm:text-xs">
-                                        Coins
-                                      </p>
-                                    </div>
+                                  <div className="flex flex-col">
+                                    <CoinAmount amount={pack.coins} formatOptions={{ maximumFractionDigits: 0 }} className="text-lg font-bold text-white" iconClassName="h-4 w-4" />
+                                    {bonusCoins > 0 && bonusLabel && <span className="mt-1 text-[10px] font-bold uppercase tracking-wide text-cyan-300">{bonusLabel}</span>}
                                   </div>
-                                  <div className="relative z-10 mb-1 mt-0.5 overflow-hidden rounded-lg p-0.5">
-                                    <img
-                                      src={getPackageImage(pack)}
-                                      alt={pack.name}
-                                      className="h-20 w-full object-contain sm:h-28"
-                                      loading="lazy"
-                                      decoding="async"
-                                    />
-                                  </div>
-                                  <div className="relative z-10 flex flex-col gap-0.5">
-                                    {bonusCoins > 0 && bonusLabel && (
-                                      <span className="text-center text-sm font-black tracking-wide text-[#7a4bff] sm:text-base">
-                                        {bonusLabel}
-                                      </span>
-                                    )}
-                                    <div className={`rounded-md px-2 py-1 text-center text-base font-black leading-none sm:rounded-lg sm:px-2.5 sm:py-1.5 sm:text-xl ${isSelected ? 'bg-gradient-to-r from-[#4f63ff] via-[#6f4dff] to-[#d64dd8] text-white' : 'border border-[#2f356a] bg-[#0a0d2f] text-[#eceffd]'}`}>
-                                      {pack.displayPrice}
-                                    </div>
-                                  </div>
+                                  <span className="text-base font-bold text-white">{pack.displayPrice}</span>
                               </button>
                             );
                           })
@@ -369,24 +340,11 @@ export const TopUpModal: React.FC = () => {
                     )}
 
                 </div>
-                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#10131c]/95 px-4 py-3.5 backdrop-blur-md sm:px-6 sm:py-4">
-                  <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-gray-400">Total Amount</p>
-                  <div className="mb-3.5 flex items-center justify-between rounded-xl border border-white/10 bg-[#1a2030] px-3 py-3 sm:px-4">
-                    <CoinAmount
-                      amount={selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))}
-                      formatOptions={{ maximumFractionDigits: 0 }}
-                      className="text-xl font-black text-white"
-                      iconClassName="h-5 w-5"
-                    />
-                    <span className="text-sm font-semibold text-cyan-300">
-                      You get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} coins{' '}
-                      {getBonusSummaryLabel(selectedPackage)}
-                    </span>
-                  </div>
+                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#0B0F1A]/95 px-5 py-4 backdrop-blur-md">
                   <button
                     onClick={handleDeposit}
                     disabled={isLoading || !selectedPackage}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#4f63ff] via-[#6f4dff] to-[#d64dd8] py-3.5 text-base font-semibold text-white shadow-lg shadow-[#4f63ff]/20 transition-all hover:brightness-110 active:scale-95 sm:py-4 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,#7C5CFF,#00E5FF)] text-base font-semibold text-white transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isLoading ? (
                       <>
@@ -398,9 +356,7 @@ export const TopUpModal: React.FC = () => {
                       </span>
                     )}
                   </button>
-                  <p className="mt-2 text-center text-[10px] text-gray-500">
-                    By depositing you agree to our Terms of Service.
-                  </p>
+                  <p className="mt-3 text-center text-xs text-white/60">Secure checkout • Instant delivery</p>
                 </div>
             </>
         )}
