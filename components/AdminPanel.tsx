@@ -5859,7 +5859,7 @@ export const AdminPanel: React.FC = () => {
                                     return (
                                         <label
                                             key={box.id}
-                                            className="flex items-center gap-3 rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200"
+                                            className="flex items-center gap-3 rounded-lg border border-gray-800 bg-[#0f1420] px-3 py-2 text-sm text-gray-200 transition-colors hover:border-gray-700"
                                         >
                                             <Input
                                                 type="checkbox"
@@ -5874,7 +5874,9 @@ export const AdminPanel: React.FC = () => {
                                                 }
                                                 className="h-4 w-4 rounded border-gray-700 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
                                             />
-                                            <img src={box.image} alt={box.name} className="h-8 w-8 rounded object-cover bg-black/30" />
+                                            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md bg-transparent">
+                                                <img src={box.image} alt={box.name} className="h-full w-full object-contain" />
+                                            </div>
                                             <div className="min-w-0">
                                                 <p className="truncate font-semibold text-white">{box.name}</p>
                                                 <p className="text-[11px] text-gray-400">{box.items.length} items</p>
@@ -5999,7 +6001,7 @@ export const AdminPanel: React.FC = () => {
                                     {[0, 1, 2].map((index) => (
                                         <Input
                                             key={`auth-popup-image-${index}`}
-                                            type="url"
+                                            type="text"
                                             value={stripeSettingsDraft.authPopupImageUrls[index] ?? ''}
                                             onChange={(event) => {
                                                 const nextUrls = [...stripeSettingsDraft.authPopupImageUrls];
@@ -6007,14 +6009,14 @@ export const AdminPanel: React.FC = () => {
                                                 setStripeSettingsDraft((prev) => ({ ...prev, authPopupImageUrls: nextUrls, authPopupImageUrl: nextUrls[0] ?? '' }));
                                                 setStripeSettingsNotice(false);
                                             }}
-                                            placeholder={`Auth popup image ${index + 1} URL`}
+                                            placeholder={`Auth popup image ${index + 1} link`}
                                             className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
                                         />
                                     ))}
                                     {[0, 1, 2].map((index) => (
                                         <Input
                                             key={`home-category-image-${index}`}
-                                            type="url"
+                                            type="text"
                                             value={stripeSettingsDraft.homeCategoryImageUrls[index] ?? ''}
                                             onChange={(event) => {
                                                 const nextUrls = [...stripeSettingsDraft.homeCategoryImageUrls];
@@ -6022,7 +6024,7 @@ export const AdminPanel: React.FC = () => {
                                                 setStripeSettingsDraft((prev) => ({ ...prev, homeCategoryImageUrls: nextUrls }));
                                                 setStripeSettingsNotice(false);
                                             }}
-                                            placeholder={`Homepage category image ${index + 1} URL`}
+                                            placeholder={`Homepage category image ${index + 1} link`}
                                             className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
                                         />
                                     ))}
@@ -6056,7 +6058,7 @@ export const AdminPanel: React.FC = () => {
                                     {[0, 1, 2].map((index) => (
                                         <Input
                                             key={`how-it-works-image-${index}`}
-                                            type="url"
+                                            type="text"
                                             value={stripeSettingsDraft.howItWorksStepImageUrls[index] ?? ''}
                                             onChange={(event) => {
                                                 const nextUrls = [...stripeSettingsDraft.howItWorksStepImageUrls];
@@ -6064,7 +6066,7 @@ export const AdminPanel: React.FC = () => {
                                                 setStripeSettingsDraft((prev) => ({ ...prev, howItWorksStepImageUrls: nextUrls }));
                                                 setStripeSettingsNotice(false);
                                             }}
-                                            placeholder={`How it works step ${index + 1} image URL`}
+                                            placeholder={`How it works step ${index + 1} image link`}
                                             className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
                                         />
                                     ))}
