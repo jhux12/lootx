@@ -63,19 +63,30 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
       <main className="mx-auto grid max-w-[1250px] grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_240px]">
         <section className="min-w-0 space-y-10">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {['Open your first box', 'Open your first box', 'Your best deal'].map((title, index) => (
-              <div key={`${title}-${index}`} className="relative min-h-[110px] overflow-hidden rounded-xl bg-[#21282c] p-4">
-                <p className="max-w-[140px] text-sm font-black uppercase leading-5 text-slate-100">{title}</p>
-                {index === 0 ? (
-                  <img
-                    src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/home.png?alt=media&token=0821ed15-6924-4714-b93c-62fc4ca6f04b"
-                    alt="Open your first box artwork"
-                    className="pointer-events-none absolute -right-2 bottom-0 h-24 w-24 object-contain opacity-90 sm:h-28 sm:w-28"
-                    loading="lazy"
-                    width={500}
-                    height={500}
-                  />
-                ) : null}
+            {[
+              {
+                title: 'Open your first box',
+                image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/home3.png?alt=media&token=ba67d8b5-0d06-4015-8c7d-81f10c9850b3'
+              },
+              {
+                title: 'Upgrade your items',
+                image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/home4.png?alt=media&token=fafa82b9-e617-4008-aaaa-e9b7cf36be19'
+              },
+              {
+                title: 'Climb Leaderboards',
+                image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/home5.png?alt=media&token=681b50f1-e864-4933-96ca-f41d0c4445b9'
+              }
+            ].map((tile, index) => (
+              <div key={`${tile.title}-${index}`} className="relative min-h-[110px] overflow-hidden rounded-xl bg-[#21282c] p-4">
+                <p className="max-w-[140px] text-sm font-black uppercase leading-5 text-slate-100">{tile.title}</p>
+                <img
+                  src={tile.image}
+                  alt={`${tile.title} artwork`}
+                  className="pointer-events-none absolute -right-2 bottom-0 h-24 w-24 object-contain opacity-90 sm:h-28 sm:w-28"
+                  loading="lazy"
+                  width={500}
+                  height={500}
+                />
               </div>
             ))}
           </div>
