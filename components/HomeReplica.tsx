@@ -124,16 +124,16 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             <h3 className="mb-3 text-sm font-black uppercase text-slate-300">Top Pullz</h3>
             <div className="space-y-3">
               {topPullz.map((item) => (
-                <div key={item.id} className="group relative overflow-hidden rounded-2xl bg-[#1f2730] p-3 sm:p-4 text-center">
+                <div key={item.id} className="group relative overflow-hidden rounded-2xl bg-[#1f2730] p-3 text-center sm:p-4">
                   <div className={`pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.14),transparent_58%)] ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`} />
-                  <div className="relative z-10 flex min-h-[185px] flex-col items-center justify-center gap-3 sm:min-h-[210px]">
+                  <div className="relative z-10 flex min-h-[185px] flex-col items-center justify-center gap-3 transition-transform duration-500 ease-out group-hover:translate-y-[120%] group-focus-within:translate-y-[120%] sm:min-h-[210px]">
                     <img src={item.itemImage} alt={item.itemName} className="h-20 w-20 object-contain sm:h-24 sm:w-24" loading="lazy" />
                     <p className="max-w-[180px] truncate text-sm text-slate-300 sm:max-w-[200px]">{item.itemName}</p>
                     <CoinAmount amount={Math.round(item.itemPrice)} className="justify-center text-xl font-black text-white" iconClassName="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <div className="absolute inset-x-3 bottom-3 z-20 translate-y-[115%] rounded-xl border border-white/10 bg-[#101722]/95 p-2 opacity-0 transition-all duration-500 ease-out group-hover:translate-y-0 group-hover:-translate-y-1 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-                    <p className="mb-1 text-[11px] font-semibold text-slate-300">Pulled from {item.boxName}</p>
-                    <img src={item.boxImage} alt={item.boxName} className="mx-auto h-16 w-16 rounded-lg object-cover" loading="lazy" />
+                  <div className="absolute inset-x-3 bottom-3 z-20 translate-y-[125%] rounded-xl border border-white/10 bg-[#101722]/95 p-3 opacity-0 transition-all duration-500 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:-translate-y-1 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                    <img src={item.boxImage} alt={item.boxName} className="mx-auto h-20 w-20 rounded-lg object-cover sm:h-24 sm:w-24" loading="lazy" />
+                    <p className="mt-2 text-[11px] font-semibold text-slate-300">Pulled from {item.boxName}</p>
                   </div>
                 </div>
               ))}
