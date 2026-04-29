@@ -6,7 +6,7 @@ import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
 import { useActivity } from '../src/lib/activity/useActivity';
 
-type HomeReplicaProps = {
+type PullzHomepageProps = {
   boxes: MysteryBox[];
   demoBoxId?: string | null;
   isChatCollapsed: boolean;
@@ -58,7 +58,7 @@ const normalizeRarity = (rarity?: string) => {
   return 'common';
 };
 
-export const HomeReplica: React.FC<HomeReplicaProps> = ({
+export const PullzHomepage: React.FC<PullzHomepageProps> = ({
   boxes,
   demoBoxId,
   isChatCollapsed,
