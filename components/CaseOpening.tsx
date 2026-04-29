@@ -1945,7 +1945,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     className={`absolute inset-0 z-30 flex items-start justify-center px-3 pt-3 transition-opacity duration-500 sm:items-center sm:px-6 sm:pt-0 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
                     aria-live="polite"
                   >
-                    <div className={`pullz-box-preview relative w-full max-w-[320px] sm:max-w-[380px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
+                    <div className="pullz-box-preview relative w-full max-w-[320px] sm:max-w-[380px] border-0 bg-transparent p-4 sm:p-5">
                       <div className="pullz-box-preview__shimmer" aria-hidden="true"></div>
                       <div className="pullz-box-preview__image-wrap relative z-10 mx-auto w-full max-w-[240px] sm:max-w-[280px]">
                         <span className="pullz-box-spark pullz-box-spark--one" aria-hidden="true" />
@@ -1962,34 +1962,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   </div>
                 )}
 
-                <div
-                  className={`absolute inset-y-0 left-1/2 z-[26] w-[2px] -translate-x-1/2 pointer-events-none ${isGoldMode ? 'bg-gradient-to-b from-transparent via-yellow-300/80 to-transparent' : 'bg-gradient-to-b from-transparent via-cyan-300/80 to-transparent'}`}
-                  style={{ boxShadow: isGoldMode ? '0 0 14px rgba(250,204,21,0.55)' : '0 0 14px rgba(0,234,255,0.55)' }}
-                  aria-hidden="true"
-                />
-                <div
-                  className={`absolute inset-y-0 left-1/2 z-[24] w-14 -translate-x-1/2 pointer-events-none transition-opacity duration-500 sm:w-20 ${isSpinning ? (animationPhase === 'settling' ? 'opacity-85' : 'opacity-55') : 'opacity-35'}`}
-                  style={{
-                    background: isGoldMode
-                      ? 'radial-gradient(ellipse at center, rgba(250,204,21,0.24) 0%, rgba(250,204,21,0.08) 42%, rgba(250,204,21,0) 75%)'
-                      : 'radial-gradient(ellipse at center, rgba(34,211,238,0.24) 0%, rgba(34,211,238,0.08) 42%, rgba(34,211,238,0) 75%)'
-                  }}
-                  aria-hidden="true"
-                />
+                
                 
                 {/* Fade Gradients */}
                 <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
                 <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
 
-                <div
-                  className={`absolute inset-0 z-[21] pointer-events-none transition-opacity duration-200 ${animationPhase === 'spinning' ? 'opacity-70' : 'opacity-0'}`}
-                  style={{
-                    background: isGoldMode
-                      ? 'linear-gradient(100deg, rgba(0,0,0,0) 0%, rgba(250,204,21,0.08) 35%, rgba(255,255,255,0.14) 50%, rgba(250,204,21,0.08) 65%, rgba(0,0,0,0) 100%)'
-                      : 'linear-gradient(100deg, rgba(0,0,0,0) 0%, rgba(34,211,238,0.06) 35%, rgba(255,255,255,0.12) 50%, rgba(34,211,238,0.06) 65%, rgba(0,0,0,0) 100%)'
-                  }}
-                  aria-hidden="true"
-                />
+                
 
                 {/* The Moving Reel */}
                 <div 
@@ -2059,7 +2038,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="relative z-20 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:px-4">
+            <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
                  <button 
                     onClick={() => handleSpin()}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
