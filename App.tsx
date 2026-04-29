@@ -33,7 +33,7 @@ import { ReferralsPage } from './components/ReferralsPage';
 import { PollsPage } from './components/PollsPage';
 import { SpinLandingPage } from './components/SpinLandingPage';
 import { getBoxTags } from './utils/boxTags';
-import { HomeReplica } from './components/HomeReplica';
+import { HomeMhtmlPage } from './components/HomeMhtmlPage';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
 import { InstallPrompt } from './src/ui/pwa/InstallPrompt';
@@ -485,19 +485,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     <main className="flex-1 min-w-0 pb-[90px] sm:pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
       <Suspense fallback={<LoadingSpinner />}>
       {view.type === 'HOME' && (
-        <HomeReplica
-          boxes={baseHomeBoxes}
-          demoBoxId={homepageDemoBoxId}
-          isChatCollapsed={isChatCollapsed}
-          onOpenBox={(boxId) => {
-            playSound('click');
-            setView({ type: 'CASE_OPENING', boxId });
-          }}
-          onViewAllBoxes={() => {
-            playSound('click');
-            setView({ type: 'BOXES' });
-            window.history.replaceState({}, '', '/boxes');
-          }}
+        <HomeMhtmlPage
           onSignUp={() => {
             playSound('click');
             trackEvent('signup_cta_clicked', { placement: 'home_hero' });
