@@ -312,7 +312,7 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-all duration-200 bg-[#12182A] hover:bg-[#18213A]
+                                  className={`relative flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-all duration-200 bg-[#1b2024] hover:bg-[#222a30]
                                     ${isSelected ? 'scale-[1.02] border-[#7C5CFF] shadow-[0_0_12px_rgba(124,92,255,0.4)]' : 'border-white/10'}`}
                               >
                                   {badgeText && (
