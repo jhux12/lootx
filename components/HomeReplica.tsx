@@ -57,15 +57,14 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
               <h2 className="flex items-center gap-2 text-xl font-black"><span className="text-slate-400">▣</span>Available Boxes</h2>
               <button onClick={onViewAllBoxes} className="px-1 py-2 text-xs font-bold text-white/90 hover:text-white">View All</button>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-5">
               {featuredBoxes.map((box) => (
-                <button key={box.id} onClick={() => onOpenBox(box.id)} className="overflow-hidden rounded-xl bg-[#22282c] text-left">
-                  <div className="flex h-[170px] items-center justify-center bg-gradient-to-br from-cyan-600/30 to-purple-700/30 p-2">
+                <button key={box.id} onClick={() => onOpenBox(box.id)} className="text-center">
+                  <div className="flex h-[170px] items-center justify-center p-2">
                     <img src={box.image} alt={box.name} className="max-h-full w-auto object-contain" loading="lazy" />
                   </div>
-                  <div className="p-3">
-                    <p className="truncate text-sm font-black">{box.name}</p>
-                    <CoinAmount amount={Math.round(box.price)} className="mt-1 text-xs font-semibold text-slate-200" iconClassName="h-3.5 w-3.5" />
+                  <div className="mt-2 flex justify-center">
+                    <CoinAmount amount={Math.round(box.price)} className="text-sm font-semibold text-slate-200" iconClassName="h-4 w-4" />
                   </div>
                 </button>
               ))}
