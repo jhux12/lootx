@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 
@@ -31,14 +31,32 @@ const deals = [
   ['1.45x', 'Bulgari Serpenti Vl...', '$21,720.00', '💍']
 ];
 
-const topOpens = [
-  ['Cadillac Escalade-V', '$200,000.00', '🏎️'],
-  ['Ferrari Anniversary', '$100,000.00', '⌚'],
-  ['Rolex Daytona White', '$86,350.00', '⌚']
-];
+const rarityGlowClass: Record<string, string> = {
+  legendary: 'from-amber-300/30 via-yellow-300/10 to-transparent shadow-[0_0_45px_rgba(250,204,21,0.25)]',
+  epic: 'from-fuchsia-400/25 via-purple-400/10 to-transparent shadow-[0_0_40px_rgba(192,132,252,0.24)]',
+  rare: 'from-cyan-300/25 via-sky-300/10 to-transparent shadow-[0_0_35px_rgba(56,189,248,0.22)]',
+  uncommon: 'from-emerald-300/25 via-green-300/10 to-transparent shadow-[0_0_30px_rgba(74,222,128,0.2)]',
+  common: 'from-slate-300/15 via-slate-300/5 to-transparent shadow-[0_0_20px_rgba(148,163,184,0.14)]'
+};
 
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onViewAllBoxes, onSignUp }) => {
   const featuredBoxes = boxes.slice(0, 5);
+  const topPullz = useMemo(() => {
+    return boxes
+      .flatMap((box) =>
+        box.items.map((item) => ({
+          id: `${box.id}-${item.id}`,
+          itemName: item.name,
+          itemImage: item.image,
+          itemPrice: item.price,
+          rarity: item.rarity,
+          boxImage: box.image,
+          boxName: box.name
+        }))
+      )
+      .sort((a, b) => b.itemPrice - a.itemPrice)
+      .slice(0, 3);
+  }, [boxes]);
 
   return (
     <div className="min-h-screen bg-[#1b2024] text-white">
@@ -103,13 +121,20 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
 
         <aside className="space-y-6 lg:sticky lg:top-20 lg:block">
           <section>
-            <h3 className="mb-3 text-sm font-black uppercase text-slate-300">Top Opens</h3>
+            <h3 className="mb-3 text-sm font-black uppercase text-slate-300">Top Pullz</h3>
             <div className="space-y-3">
-              {topOpens.map((item) => (
-                <div key={item[0]} className="rounded-xl bg-[#22282c] p-3 text-center">
-                  <div className="text-3xl">{item[2]}</div>
-                  <p className="mt-2 truncate text-xs text-slate-300">{item[0]}</p>
-                  <p className="text-sm font-black">{item[1]}</p>
+              {topPullz.map((item) => (
+                <div key={item.id} className="group relative overflow-hidden rounded-2xl bg-[#1f2730] p-3 sm:p-4 text-center">
+                  <div className={`pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.14),transparent_58%)] ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`} />
+                  <div className="relative z-10 flex min-h-[185px] flex-col items-center justify-center gap-3 sm:min-h-[210px]">
+                    <img src={item.itemImage} alt={item.itemName} className="h-20 w-20 object-contain sm:h-24 sm:w-24" loading="lazy" />
+                    <p className="max-w-[180px] truncate text-sm text-slate-300 sm:max-w-[200px]">{item.itemName}</p>
+                    <CoinAmount amount={Math.round(item.itemPrice)} className="justify-center text-xl font-black text-white" iconClassName="h-4 w-4 sm:h-5 sm:w-5" />
+                  </div>
+                  <div className="absolute inset-x-3 bottom-3 z-20 translate-y-[115%] rounded-xl border border-white/10 bg-[#101722]/95 p-2 opacity-0 transition-all duration-500 ease-out group-hover:translate-y-0 group-hover:-translate-y-1 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                    <p className="mb-1 text-[11px] font-semibold text-slate-300">Pulled from {item.boxName}</p>
+                    <img src={item.boxImage} alt={item.boxName} className="mx-auto h-16 w-16 rounded-lg object-cover" loading="lazy" />
+                  </div>
                 </div>
               ))}
             </div>
