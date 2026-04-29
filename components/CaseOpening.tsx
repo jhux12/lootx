@@ -2035,15 +2035,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
-                            <div
-                                className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[999px] opacity-70 ${shouldSimplifyReelEffects ? 'blur-sm' : 'blur-md'}`}
-                                style={{
-                                  width: isMobileViewport ? '64px' : '92px',
-                                  height: isMobileViewport ? '76px' : '108px',
-                                  background: `${item.color}66`,
-                                  boxShadow: animationPhase === 'idle' ? `0 0 24px ${item.color}50` : 'none'
-                                }}
-                            ></div>
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch pt-2 sm:pt-3">
                               <img loading="eager" decoding="async" 
                                   src={item.image} 
