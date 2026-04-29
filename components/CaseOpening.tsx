@@ -325,6 +325,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isSpinning, setIsSpinning] = useState(false);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
   const [reelWinnerIndex, setReelWinnerIndex] = useState(SPINNER_MOTION.preWinnerItems);
+  const [currentCenterIndex, setCurrentCenterIndex] = useState(SPINNER_MOTION.preWinnerItems);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
@@ -982,8 +983,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const approachOffset = getApproachOffset(rng);
-    const durationVariance = Math.round((rng() - 0.5) * SPINNER_MOTION.durationVarianceMs * 2);
-    const resolvedDuration = Math.max(3000, duration + durationVariance);
+    const durationVariance = Math.round((rng() - 0.5) * Math.min(220, SPINNER_MOTION.durationVarianceMs) * 2);
+    const resolvedDuration = Math.max(2400, duration + durationVariance);
 
     resetSpinnerAnimation();
 
@@ -1027,6 +1028,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     );
 
     spinnerAnimationRef.current = animation;
+    let frameId: number | null = null;
+    const syncCenterItem = () => {
+      const transform = window.getComputedStyle(container).transform;
+      const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
+      const x = matrix ? matrix.m41 : 0;
+      const { stepWidth } = spinnerMeasurementsRef.current;
+      if (Number.isFinite(stepWidth) && stepWidth > 0) {
+        const index = Math.max(0, Math.round(-x / stepWidth));
+        setCurrentCenterIndex(index);
+      }
+      frameId = window.requestAnimationFrame(syncCenterItem);
+    };
+    frameId = window.requestAnimationFrame(syncCenterItem);
     const decelerationTimer = window.setTimeout(() => setAnimationPhase('settling'), Math.max(0, resolvedDuration - 850));
 
     animation.onfinish = () => {
@@ -1042,6 +1056,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       animation.cancel();
       container.style.transition = 'none';
       container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      setCurrentCenterIndex(winnerIndex);
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
 
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
@@ -1055,6 +1071,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         window.clearTimeout(tickTimerRef.current);
         tickTimerRef.current = null;
       }
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
@@ -1996,6 +2013,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   ? 'rgba(74,222,128,0.42)'
                                   : 'rgba(100,116,139,0.35)';
                           const isIdleWinner = animationPhase === 'idle' && idx === reelWinnerIndex;
+                          const isCenteredDuringSpin = animationPhase !== 'idle' && idx === currentCenterIndex;
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
@@ -2008,7 +2026,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 WebkitTransform: 'translateZ(0)',
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
-                                boxShadow: 'none'
+                                boxShadow: 'none',
+                                opacity: isCenteredDuringSpin || isIdleWinner ? 1 : 0.35
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
