@@ -48,6 +48,7 @@ const FAQ_ITEMS: FaqItem[] = [
 ];
 
 const CATEGORIES = ['Trading Cards', 'Collectibles', 'Tech & Gaming'];
+const QUICK_NAV_ITEMS = ['Packs', 'Battles', 'Deals', 'Draw', 'Events', 'Rewards'];
 
 const normalizeRarity = (rarity?: string) => {
   const value = String(rarity ?? 'common').toLowerCase();
@@ -256,6 +257,23 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
       <style>{fairValueBannerKeyframes}</style>
+
+      <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 border-y border-white/10 bg-[#0b0d13]/95">
+        <div className="mx-auto w-full max-w-[1400px] px-3 py-2.5 sm:px-5 lg:px-7">
+          <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {QUICK_NAV_ITEMS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={onViewAllBoxes}
+                className="shrink-0 rounded-lg border border-white/12 bg-[#111625] px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-200 transition hover:border-white/30 hover:bg-[#171d30] sm:px-4 sm:text-sm"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
       <section className="relative w-full min-h-[44vh] overflow-hidden rounded-[30px] border border-white/10 bg-[#070b14] shadow-[0_35px_70px_-50px_rgba(0,0,0,1)] sm:min-h-[47vh] lg:min-h-[48vh]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(125%_90%_at_16%_24%,rgba(52,102,255,0.28)_0%,rgba(52,102,255,0.08)_42%,transparent_74%),radial-gradient(130%_95%_at_82%_28%,rgba(212,74,255,0.24)_0%,rgba(136,72,255,0.08)_46%,transparent_76%),radial-gradient(90%_70%_at_52%_42%,rgba(78,137,255,0.12)_0%,transparent_70%),linear-gradient(125deg,#070b16_0%,#0b1120_46%,#070b14_100%)]" />
         <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(58deg,rgba(123,139,255,0.07)_0,rgba(123,139,255,0.07)_1px,transparent_1px,transparent_34px),repeating-linear-gradient(-58deg,rgba(236,104,200,0.07)_0,rgba(236,104,200,0.07)_1px,transparent_1px,transparent_34px)] opacity-20 sm:opacity-24" />
@@ -451,7 +469,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         <button
           type="button"
           onClick={onSignUp}
-          className="text-center text-2xl font-black uppercase text-white sm:text-4xl"
+          className="text-center text-xl font-black uppercase leading-tight text-white sm:text-4xl"
         >
           Sign up now and get a <span className="text-[#6962ff]">free</span> mystery box!
         </button>
