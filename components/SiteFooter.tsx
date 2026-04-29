@@ -13,7 +13,7 @@ export const SiteFooter: React.FC = () => {
   const { setView } = useGame();
 
   return (
-    <footer className="mt-20 border-t border-cyan-400/15 bg-[#141b22] py-10 text-sm text-slate-300">
+    <footer className="mt-20 border-t border-cyan-400/15 bg-transparent py-10 text-sm text-slate-300">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6">
         <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
           <BrandLockup

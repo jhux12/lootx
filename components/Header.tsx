@@ -270,7 +270,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     <div className="relative z-50">
       <header
         ref={headerRef}
-        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-cyan-400/15 bg-[#141b22] md:bg-[#141b22]/95 md:backdrop-blur-md`}
+        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-cyan-400/15 bg-transparent md:backdrop-blur-md`}
       >
         <div className="pt-[env(safe-area-inset-top,0px)]">
           <nav className="mx-auto flex h-[88px] sm:h-[96px] max-w-7xl items-center justify-between px-4 lg:px-8">
