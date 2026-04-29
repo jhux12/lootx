@@ -4,8 +4,9 @@ import { CaseItem, MysteryBox } from '../types';
 import { TopDropsSlider } from './TopDropsSlider';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
+import { useActivity } from '../src/lib/activity/useActivity';
 
-type HomeReplicaProps = {
+type PullzHomepageProps = {
   boxes: MysteryBox[];
   demoBoxId?: string | null;
   isChatCollapsed: boolean;
@@ -47,7 +48,6 @@ const FAQ_ITEMS: FaqItem[] = [
   }
 ];
 
-const CATEGORIES = ['Trading Cards', 'Collectibles', 'Tech & Gaming'];
 
 const normalizeRarity = (rarity?: string) => {
   const value = String(rarity ?? 'common').toLowerCase();
@@ -58,7 +58,7 @@ const normalizeRarity = (rarity?: string) => {
   return 'common';
 };
 
-export const HomeReplica: React.FC<HomeReplicaProps> = ({
+export const PullzHomepage: React.FC<PullzHomepageProps> = ({
   boxes,
   demoBoxId,
   isChatCollapsed,
@@ -66,7 +66,8 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
   onViewAllBoxes,
   onSignUp
 }) => {
-  const { stripeSettings, setView, isAuthenticated } = useGame();
+  const { isAuthenticated } = useGame();
+  const { entries } = useActivity();
   const [openFaq, setOpenFaq] = useState(0);
 
   const featuredBoxes = useMemo(() => boxes.slice(0, 8), [boxes]);
@@ -77,6 +78,19 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
     }
     return featuredBoxes[0];
   }, [boxes, demoBoxId, featuredBoxes]);
+  const openEntries = useMemo(() => entries.filter((entry) => entry.type === 'open'), [entries]);
+  const topOpens = useMemo(
+    () =>
+      [...openEntries]
+        .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+        .slice(0, 4),
+    [openEntries]
+  );
+  const liveOpens = useMemo(() => openEntries.slice(0, 8), [openEntries]);
+  const upgraderHighlights = useMemo(
+    () => [...boxes].sort((a, b) => b.price - a.price).slice(0, 6),
+    [boxes]
+  );
 
   const [demoSpinIndex, setDemoSpinIndex] = useState(14);
   const [isSpinAnimating, setIsSpinAnimating] = useState(false);
@@ -240,18 +254,6 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
 
   `;
 
-  const handleCategoryCardClick = (index: number) => {
-    const slug = stripeSettings.homeCategorySlugs[index]?.trim();
-    if (!slug) {
-      onViewAllBoxes();
-      return;
-    }
-
-    const params = new URLSearchParams();
-    params.set('category', slug);
-    window.history.replaceState({}, '', `/boxes?${params.toString()}`);
-    setView({ type: 'BOXES' });
-  };
 
   return (
     <div className={`mx-auto flex w-full flex-col gap-10 px-3 pb-14 pt-6 sm:px-5 lg:px-7 ${isChatCollapsed ? 'max-w-[1240px]' : 'max-w-[1160px]'}`}>
@@ -457,68 +459,64 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({
         </button>
       </section>
 
-      <section className="w-full">
-        <TopDropsSlider boxes={boxes} onOpenBox={onOpenBox} />
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-3">
-        {CATEGORIES.map((category, index) => {
-          const categoryImage = stripeSettings.homeCategoryImageUrls[index]?.trim();
-          return (
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start">
+        <div className="min-w-0 rounded-2xl border border-white/10 bg-[#0d121c] p-3 sm:p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-black uppercase text-white sm:text-xl">Featured Boxes</h2>
             <button
-              key={category}
               type="button"
-              onClick={() => handleCategoryCardClick(index)}
-              className="group relative flex min-h-[200px] w-full flex-col justify-end overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#121520] to-[#0a0c12] p-5 text-left transition hover:border-white/30"
+              onClick={onViewAllBoxes}
+              className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400 hover:text-white"
             >
-              {categoryImage ? (
-                <img src={categoryImage} alt={category} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-              ) : null}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-transparent" />
-              <p className="relative z-10 flex items-center gap-2 text-2xl font-black uppercase italic text-white">
-                {category}
-                <span className="rounded-full border border-white/20 p-1 text-gray-300 transition group-hover:border-white/50 group-hover:text-white">
-                  <ChevronRight size={14} />
-                </span>
-              </p>
+              View all
             </button>
-          );
-        })}
+          </div>
+          <TopDropsSlider boxes={boxes} onOpenBox={onOpenBox} />
+        </div>
+
+        <aside className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1">
+          <section className="rounded-2xl border border-white/10 bg-[#0f141d] p-3">
+            <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-white">Top Opens</h3>
+            <div className="space-y-2">
+              {topOpens.length ? topOpens.map((entry) => (
+                <div key={entry.id} className="rounded-xl bg-[#171e2a] p-2.5">
+                  <p className="truncate text-xs font-semibold text-slate-300">{entry.title}</p>
+                  <p className="mt-1 text-sm font-black text-white"><CoinAmount amount={entry.value ?? 0} animated={false} /></p>
+                </div>
+              )) : <p className="text-xs text-gray-400">No top opens yet.</p>}
+            </div>
+          </section>
+          <section className="rounded-2xl border border-white/10 bg-[#0f141d] p-3">
+            <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-white">Live Opens</h3>
+            <div className="space-y-2">
+              {liveOpens.length ? liveOpens.map((entry) => (
+                <div key={entry.id} className="rounded-xl bg-[#171e2a] p-2.5">
+                  <p className="truncate text-xs font-semibold text-slate-300">{entry.title}</p>
+                  <p className="mt-1 text-sm font-black text-white"><CoinAmount amount={entry.value ?? 0} animated={false} /></p>
+                </div>
+              )) : <p className="text-xs text-gray-400">No live opens yet.</p>}
+            </div>
+          </section>
+        </aside>
       </section>
 
-      <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 border-y border-white/10 bg-[#0d0f16]">
-        <div className="mx-auto w-full max-w-[1400px] px-3 py-10 sm:px-5 sm:py-12 lg:px-7">
-          <h2 className="text-center text-3xl font-black uppercase text-white sm:text-4xl">
-            How it <span className="text-[#6962ff]">works</span>
-          </h2>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            {[
-              ['01', 'Pick a box', 'Choose a category you love'],
-              ['02', 'Open it', 'Reveal your pull instantly'],
-              ['03', 'Keep or trade', 'Ship items or convert to coins']
-            ].map(([num, title, description], index) => {
-              const stepImage = stripeSettings.howItWorksStepImageUrls[index]?.trim();
-              return (
-                <article
-                  key={num}
-                  className="rounded-2xl border border-white/10 bg-[#111520] p-6 text-center"
-                >
-                  {stepImage ? (
-                    <img
-                      src={stepImage}
-                      alt={`Step ${index + 1}`}
-                      className="mx-auto h-24 w-full max-w-[180px] rounded-xl object-cover sm:h-28 sm:max-w-[210px]"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <p className="text-5xl font-black text-white/10">{num}</p>
-                  )}
-                  <p className="mt-5 text-2xl font-extrabold uppercase text-white">{title}</p>
-                  <p className="mt-2 text-sm text-gray-400">{description}</p>
-                </article>
-              );
-            })}
-          </div>
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xl font-black uppercase text-white">Upgrader Highlights</h2>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          {upgraderHighlights.map((box) => (
+            <button
+              key={box.id}
+              type="button"
+              onClick={() => onOpenBox(box.id)}
+              className="rounded-xl border border-white/10 bg-[#111826] p-3 text-left transition hover:border-white/30"
+            >
+              <img src={box.image} alt={box.name} className="h-20 w-full object-contain" loading="lazy" />
+              <p className="mt-2 line-clamp-1 text-xs font-semibold text-slate-300">{box.name}</p>
+              <p className="mt-1 text-sm font-black text-white"><CoinAmount amount={box.price} animated={false} /></p>
+            </button>
+          ))}
         </div>
       </section>
 
