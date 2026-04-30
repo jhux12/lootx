@@ -388,7 +388,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
   const spinnerCardWidth = ITEM_SIZE;
   const spinnerCardHeight = ITEM_SIZE;
-  const spinnerGap = 0;
   const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
 
   const updateSpinnerMeasurements = useCallback(() => {
@@ -397,16 +396,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (!viewport || !container) return;
 
     const cardWidth = ITEM_SIZE;
-    const reelGap = 0;
     const viewportWidth = viewport.clientWidth;
 
     spinnerMeasurementsRef.current = {
       cardWidth,
-      reelGap,
+      reelGap: 0,
       viewportWidth,
       stepWidth: STEP_WIDTH
     };
-  }, [spinnerCardWidth, spinnerGap]);
+  }, [spinnerCardWidth]);
 
   const getViewportCenterX = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -1084,6 +1082,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     reelLengthRef.current = nextReelItems.length;
     setReelItems(nextReelItems);
     setReelWinnerIndex(winnerIndex);
+    await waitForNextPaint();
     await waitForNextPaint();
     updateSpinnerMeasurements();
     applyVirtualTranslate(0);
@@ -1789,12 +1788,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     style={{
                       width: `${Math.max(1, reelItems.length * STEP_WIDTH)}px`,
                       height: `${ITEM_SIZE}px`,
-                      transform: 'none',
+                      transform: 'translate3d(0,0,0)',
                       backfaceVisibility: 'hidden',
                       WebkitBackfaceVisibility: 'hidden',
                       willChange: isSpinning ? 'transform' : 'auto',
-                      transformStyle: 'flat',
-                      WebkitTransformStyle: 'flat'
+                      position: 'relative'
                     }}
                 >
                     {reelItems.map((item, idx) => (
@@ -1829,7 +1827,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 minHeight: `${ITEM_SIZE}px`,
                                 maxWidth: `${ITEM_SIZE}px`,
                                 maxHeight: `${ITEM_SIZE}px`,
-                                transform: `translate(${(spinnerMeasurementsRef.current.viewportWidth / 2) + (idx * STEP_WIDTH) + virtualTranslateXRef.current - (ITEM_SIZE / 2)}px, -${ITEM_SIZE / 2}px)`,
+                                position: 'absolute',
+                                top: '50%',
+                                transform: `translate(0px, -${ITEM_SIZE / 2}px)`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem ? `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55` : 'none',
