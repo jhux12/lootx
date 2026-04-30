@@ -1196,7 +1196,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
 
-  const handleSpin = async ({ isDemo = false, forceGold = false, paymentMethod = 'coins' }: { isDemo?: boolean; forceGold?: boolean; paymentMethod?: 'coins' | 'xp' } = {}) => {
+  const handleSpin = async ({ isDemo = false, forceGold = false, paymentMethod = 'coins', isQuick = false }: { isDemo?: boolean; forceGold?: boolean; paymentMethod?: 'coins' | 'xp'; isQuick?: boolean } = {}) => {
     if (isSpinning || spinRequestLockRef.current) {
       if (isFree) {
         trackEvent('free_spin_duplicate_click_blocked', { box_id: box?.id ?? boxId });
@@ -1511,7 +1511,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const ticketReelResult = generateReel(GOLDEN_TICKET_ITEM, items, { sprinkleGold: true, seed: ticketSeed });
         await prepareReelForSpin(ticketReelResult.items, ticketReelResult.winnerIndex);
 
-        animateSpin(ticketReelResult.winnerIndex, SPINNER_MOTION.goldTicketDurationMs, () => {
+        const quickFactor = isQuick ? 0.58 : 1;
+        animateSpin(ticketReelResult.winnerIndex, SPINNER_MOTION.goldTicketDurationMs * quickFactor, () => {
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
             setIsGoldMode(true);
@@ -1523,7 +1524,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 const goldSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-final');
                 const goldReelResult = generateReel(winner, pool, { sprinkleGold: true, seed: goldSeed });
                 void prepareReelForSpin(goldReelResult.items, goldReelResult.winnerIndex).then(() => {
-                  animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs, () => {
+                  animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs * quickFactor, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
                   });
@@ -1537,7 +1538,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const normalReelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
         await prepareReelForSpin(normalReelResult.items, normalReelResult.winnerIndex);
 
-        animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs, () => {
+        animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.58 : 1), () => {
             finishSpin(winner);
         });
     }
@@ -1819,21 +1820,26 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       ) : (
         <>
         {/* Breadcrumb */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex items-center justify-between gap-3">
             <div className="flex items-center gap-4">
                 <button 
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
-                    className="min-h-11 flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
+                    className="min-h-11 flex items-center gap-2 rounded px-3 py-1.5 text-gray-400 text-sm font-medium transition-colors hover:text-white"
                 >
                     <ChevronLeft className="w-4 h-4" /> All boxes
                 </button>
                 <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-bold text-white">{box!.name}</h2>
                     {isFree && <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded">FREE SPIN</span>}
                     <span className="bg-[#131825] text-gray-300 text-xs font-semibold px-2 py-0.5 rounded border border-gray-700">
                       {getRiskLabel(box!.riskLevel ?? 50)}
                     </span>
                 </div>
+            </div>
+            <div className="flex items-center justify-end gap-1">
+              <button type="button" onClick={() => { playSound('click'); setShowFairModal(true); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)] sm:h-9 sm:w-9" aria-label="Open provably fair details" title="View fairness verification"><ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></button>
+              <button type="button" onClick={() => { playSound('click'); void handleCopyPageLink(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)] sm:h-9 sm:w-9" aria-label="Copy server seed" title="Copy server seed"><Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></button>
+              <button type="button" onClick={() => { playSound('click'); setShowInfoModal(true); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)] sm:h-9 sm:w-9" aria-label="Open item availability disclaimer" title="View case details"><Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></button>
+              <button type="button" onClick={() => { playSound('click'); toggleMute(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)] sm:h-9 sm:w-9" aria-label={muted ? 'Unmute sounds' : 'Mute sounds'} title="Toggle sound effects">{muted ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}</button>
             </div>
     </div>
 
@@ -1890,66 +1896,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   )}
                 </div>
 
-                <div className="ml-auto">
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        setShowFairModal(true);
-                      }}
-                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)] sm:h-9 sm:w-9"
-                      aria-label="Open provably fair details"
-                      title="View fairness verification"
-                    >
-                      <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        void handleCopyPageLink();
-                      }}
-                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)] sm:h-9 sm:w-9"
-                      aria-label="Copy server seed"
-                      title="Copy server seed"
-                    >
-                      <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        setShowInfoModal(true);
-                      }}
-                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)] sm:h-9 sm:w-9"
-                      aria-label="Open item availability disclaimer"
-                      title="View case details"
-                    >
-                      <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        toggleMute();
-                      }}
-                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)] sm:h-9 sm:w-9"
-                      aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
-                      title="Toggle sound effects"
-                    >
-                      {muted ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-                    </button>
-                  </div>
-                  {copyStatusMessage && (
-                    <p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
-                      {copyStatusMessage}
-                    </p>
-                  )}
-                </div>
+                <div className="ml-auto">{copyStatusMessage && (<p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}</div>
               </div>
             </div>
 
@@ -1966,13 +1913,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     className={`absolute inset-0 z-30 flex items-start justify-center px-3 pt-3 transition-opacity duration-500 sm:items-center sm:px-6 sm:pt-0 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
                     aria-live="polite"
                   >
-                    <div className="pullz-box-preview relative w-full max-w-[320px] sm:max-w-[380px] border-0 bg-transparent p-4 sm:p-5">
-                      <div className="pullz-box-preview__shimmer" aria-hidden="true"></div>
-                      <div className="pullz-box-preview__image-wrap relative z-10 mx-auto w-full max-w-[240px] sm:max-w-[280px]">
-                        <span className="pullz-box-spark pullz-box-spark--one" aria-hidden="true" />
-                        <span className="pullz-box-spark pullz-box-spark--two" aria-hidden="true" />
-                        <span className="pullz-box-spark pullz-box-spark--three" aria-hidden="true" />
-                        <span className="pullz-box-spark pullz-box-spark--four" aria-hidden="true" />
+                    <div className="relative w-full max-w-[320px] sm:max-w-[380px] border-0 bg-transparent p-2 sm:p-3">
+                      <div className="relative z-10 mx-auto w-full max-w-[240px] sm:max-w-[280px]">
                         <img
                           src={box!.image}
                           alt={`${box!.name} box`}
@@ -2114,7 +2056,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </button>
                     <button
                       type="button"
-                      disabled
+                      onClick={() => handleSpin({ isQuick: true })}
+                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
                       className="inline-flex h-[46px] w-[46px] items-center justify-center rounded-lg border border-white/10 bg-[#303741] text-white/80"
                       aria-label="Quick action"
                     >
