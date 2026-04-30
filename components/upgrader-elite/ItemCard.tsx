@@ -48,8 +48,8 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, o
       <p className="relative truncate pr-8 text-[11px] font-semibold text-slate-100">{item.name}</p>
       <p className={`relative mt-0.5 text-[9px] font-bold uppercase tracking-[0.16em] ${RARITY_COLORS[item.rarity]}`}>{item.rarity}</p>
 
-      <div className="relative mt-2 flex h-20 items-center justify-center rounded-lg border border-indigo-300/15 bg-[#050914] sm:h-24">
-        <div className="pointer-events-none absolute inset-x-8 bottom-2 h-4 rounded-[999px] bg-indigo-400/25 blur-md" />
+      <div className="relative mt-2 flex h-20 items-center justify-center rounded-lg border border-white/10 bg-transparent sm:h-24">
+        <div className="pointer-events-none absolute inset-x-8 bottom-2 h-4 rounded-[999px] bg-white/10 blur-md" />
         {item.rarity === 'legendary' && (
           <div className="pointer-events-none absolute inset-2 rounded-lg bg-[radial-gradient(circle,rgba(251,191,36,0.22),transparent_68%)]" />
         )}

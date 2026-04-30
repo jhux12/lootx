@@ -143,25 +143,25 @@ const Toolbar = ({
   onCategory: (value: CategoryFilter) => void;
   onUpgradePreset?: (value: RiskPreset) => void;
 }) => (
-  <div className="grid grid-cols-2 gap-2 rounded-xl border border-indigo-300/20 bg-[#070d1d]/95 p-2 md:grid-cols-[90px_90px_130px_130px_minmax(0,1fr)_36px]">
-    <input value={min} onChange={(e) => onMin(e.target.value)} placeholder="Min" className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-violet-300/60 ${min ? 'border-violet-300/45 bg-violet-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`} />
-    <input value={max} onChange={(e) => onMax(e.target.value)} placeholder="Max" className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-violet-300/60 ${max ? 'border-violet-300/45 bg-violet-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`} />
-    <select value={sort} onChange={(e) => onSort(e.target.value as SortMode)} className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none focus:border-violet-300/60 ${sort !== 'value_desc' && sort !== 'best_match' ? 'border-cyan-300/45 bg-cyan-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`}>
+  <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#222a32] p-2 md:grid-cols-[90px_90px_130px_130px_minmax(0,1fr)_36px]">
+    <input value={min} onChange={(e) => onMin(e.target.value)} placeholder="Min" className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-white/35 ${min ? 'border-white/30 bg-[#2a323b]' : 'border-white/15 bg-[#1f252c]'}`} />
+    <input value={max} onChange={(e) => onMax(e.target.value)} placeholder="Max" className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-white/35 ${max ? 'border-white/30 bg-[#2a323b]' : 'border-white/15 bg-[#1f252c]'}`} />
+    <select value={sort} onChange={(e) => onSort(e.target.value as SortMode)} className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none focus:border-white/35 ${sort !== 'value_desc' && sort !== 'best_match' ? 'border-white/30 bg-[#2a323b]' : 'border-white/15 bg-[#1f252c]'}`}>
       {includeBestMatch && <option value="best_match">Best Match</option>}
       <option value="value_desc">High Value</option>
       <option value="value_asc">Low Value</option>
       <option value="name_asc">Name</option>
     </select>
-    <select value={category} onChange={(e) => onCategory(e.target.value as CategoryFilter)} className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none focus:border-violet-300/60 ${category !== 'all' ? 'border-cyan-300/45 bg-cyan-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`}>
+    <select value={category} onChange={(e) => onCategory(e.target.value as CategoryFilter)} className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none focus:border-white/35 ${category !== 'all' ? 'border-white/30 bg-[#2a323b]' : 'border-white/15 bg-[#1f252c]'}`}>
       {CATEGORY_OPTIONS.map((option) => (
         <option key={option.value} value={option.value}>{option.label}</option>
       ))}
     </select>
     <div className="relative col-span-2 md:col-span-1">
       <LucideSearch className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
-      <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search item" className={`h-9 w-full rounded-lg border pl-7 pr-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-violet-300/60 ${search ? 'border-violet-300/45 bg-violet-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`} />
+      <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search item" className={`h-9 w-full rounded-lg border pl-7 pr-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-white/35 ${search ? 'border-white/30 bg-[#2a323b]' : 'border-white/15 bg-[#1f252c]'}`} />
     </div>
-    <button type="button" className="hidden h-9 items-center justify-center rounded-lg border border-indigo-300/25 bg-[#0b1328] text-slate-300 md:flex" aria-label="Filters">
+    <button type="button" className="hidden h-9 items-center justify-center rounded-lg border border-white/15 bg-[#1f252c] text-slate-300 md:flex" aria-label="Filters">
       <LucideSettings2 className="h-3.5 w-3.5" />
     </button>
     {onUpgradePreset && (
