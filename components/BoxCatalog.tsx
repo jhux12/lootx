@@ -4,6 +4,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { CoinAmount } from './CoinAmount';
 import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
 import type { MysteryBox } from '../types';
 
@@ -236,18 +237,22 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           )}
 
           {!isLoadingBoxes && (
-            <div className="grid justify-items-center grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10">
+            <div className="grid justify-items-center grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 lg:grid-cols-5">
               {groupedBoxes.map((box) => (
                 <button key={box.id} type="button" onClick={() => openBox(box.id)} className="w-full max-w-[220px] text-center">
-                  <div className="relative aspect-[0.72] w-full overflow-hidden rounded-[14px] border border-[#2c3340] bg-[#20262f] shadow-[0_12px_24px_-20px_rgba(0,0,0,0.9)]">
+                  <div className="relative aspect-[0.72] w-full overflow-hidden rounded-[14px] bg-[#20262f] shadow-[0_12px_24px_-20px_rgba(0,0,0,0.9)]">
                     <img src={box.image} alt={box.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
-                    <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/55 to-transparent" />
-                    <h3 className="absolute left-0 right-0 top-3 px-2 text-center text-[clamp(0.85rem,2.8vw,1.9rem)] font-extrabold uppercase tracking-tight text-white drop-shadow">
-                      {box.name}
-                    </h3>
                   </div>
-                  <div className="mt-3 text-lg font-extrabold text-white">
-                    ${Number(getBoxPrice(box)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <div className="mt-3 line-clamp-2 min-h-[2.5rem] text-sm font-extrabold text-white sm:text-base">
+                    {box.name}
+                  </div>
+                  <div className="mt-1 flex justify-center">
+                    <CoinAmount
+                      amount={Math.round(getBoxPrice(box))}
+                      formatOptions={{ maximumFractionDigits: 0 }}
+                      className="justify-center text-lg font-extrabold text-white"
+                      iconClassName="h-4 w-4"
+                    />
                   </div>
                 </button>
               ))}
