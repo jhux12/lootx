@@ -243,7 +243,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
                     <img
                       src={targetImage}
                       alt={targetName ?? 'Target item'}
-                      className="mt-1 h-16 w-16 object-contain sm:h-20 sm:w-20"
+                      className="mt-1 h-20 w-20 object-contain sm:h-24 sm:w-24"
                       referrerPolicy="no-referrer"
                     />
                   )}

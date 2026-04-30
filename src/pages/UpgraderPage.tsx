@@ -605,9 +605,11 @@ export default function UpgraderPage() {
             </div>
           </div>
           <div className="relative grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1fr_minmax(320px,460px)_1fr] lg:gap-6">
-            <SelectedPreview label="Your Item" item={sourcePreview} emptyText="Choose an item to upgrade" onActivate={() => jumpToPanel('inventory')} />
+            <div className="order-2 lg:order-1">
+              <SelectedPreview label="Your Item" item={sourcePreview} emptyText="Choose an item to upgrade" onActivate={() => jumpToPanel('inventory')} />
+            </div>
 
-            <div className="relative flex flex-col items-center rounded-2xl border border-white/5 bg-[#1f252c] p-4">
+            <div className="relative order-1 flex flex-col items-center rounded-2xl border border-white/5 bg-[#1f252c] p-4 lg:order-2">
               <UpgraderSpinner
                 chance={chance}
                 hasSource={Boolean(source)}
@@ -634,7 +636,9 @@ export default function UpgraderPage() {
               </div>
             </div>
 
-            <SelectedPreview label="Item You Want" item={targetPreview} emptyText="Select your target item" onActivate={() => jumpToPanel('targets')} />
+            <div className="order-3 lg:order-3">
+              <SelectedPreview label="Item You Want" item={targetPreview} emptyText="Select your target item" onActivate={() => jumpToPanel('targets')} />
+            </div>
           </div>
         </section>
 
