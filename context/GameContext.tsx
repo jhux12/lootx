@@ -1630,6 +1630,28 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
+      const hasPendingGoogleRedirect =
+        typeof window !== 'undefined' &&
+        window.sessionStorage.getItem(GOOGLE_REDIRECT_PENDING_KEY) === '1';
+
+      const isGoogleUser =
+        firebaseUser.providerData.some((provider) => provider.providerId === 'google.com');
+
+      console.info('Google redirect pending:', hasPendingGoogleRedirect);
+      console.info('Google user from auth listener:', isGoogleUser);
+
+      if (hasPendingGoogleRedirect && isGoogleUser) {
+        console.info('Completing Google redirect from auth state listener...');
+        window.sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
+
+        setShowLoginModal(false);
+
+        const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
+        resolveEmailRedirect(redirectPath);
+
+        trackEvent('google_oauth_success');
+      }
+
       void syncAdminClaim(firebaseUser);
       startAuthenticatedSession(firebaseUser);
     });
@@ -1664,6 +1686,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setShowLoginModal(false);
           const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
           resolveEmailRedirect(redirectPath);
+          if (typeof window !== 'undefined') {
+            window.sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
+          }
           return;
         }
 
@@ -1674,6 +1699,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setAuthInitialized(true);
         if (typeof window !== 'undefined') {
           window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
+          window.sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
         }
         console.error('Google redirect error:', error?.code, error?.message);
         console.error('Firebase Google redirect error', { code: error?.code, message: error?.message, error });
@@ -2295,6 +2321,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const googleAuthInProgressRef = useRef(false);
   const GOOGLE_REDIRECT_REFRESH_KEY = 'google_redirect_refresh_done';
+  const GOOGLE_REDIRECT_PENDING_KEY = 'google_redirect_pending';
 
   const loginWithGoogle = async (options: GoogleAuthOptions = {}): Promise<GoogleAuthResult> => {
     const { remember = true, isRetry = false } = options;
@@ -2320,6 +2347,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (useRedirectFlow) {
         if (typeof window !== 'undefined') {
           window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
+          window.sessionStorage.setItem(GOOGLE_REDIRECT_PENDING_KEY, '1');
         }
         await signInWithRedirect(auth, provider);
         return { status: 'redirect-started' };
@@ -2345,6 +2373,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
           if (typeof window !== 'undefined') {
             window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
+            window.sessionStorage.setItem(GOOGLE_REDIRECT_PENDING_KEY, '1');
           }
           trackEvent('google_oauth_popup_fallback_to_redirect', { code: errorCode });
           await signInWithRedirect(auth, provider);
