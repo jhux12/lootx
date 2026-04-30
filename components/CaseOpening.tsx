@@ -1979,7 +1979,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       ) : isFree ? (
                         'Free Spin'
                       ) : (
-                        <span className="inline-flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                    <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-[11px] sm:gap-3 sm:text-sm">
                           <span className="inline-flex items-center gap-2">
                             Open for
                             {caseCurrencyType === 'XP' ? (
@@ -2010,7 +2010,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     <button
                       onClick={handleTryFree}
                       disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed}
-                      className="inline-flex items-center justify-center rounded-lg border border-white/10 bg-[#303741] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#39424d] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-white/10 bg-[#303741] px-3 py-3 text-[11px] font-semibold text-white transition hover:bg-[#39424d] disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
                     >
                       Demo Spin
                     </button>
@@ -2164,11 +2164,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               <div className="overflow-y-auto p-5 sm:p-6">
                 <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-white/10 bg-black/25 p-4 text-center">
                   <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
-                  <BlurImage
-                    src={wonItem.image || box?.image || ''}
+                  <img
+                    src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
                     alt={wonItem.name}
-                    ratioClassName="relative z-10 mb-3 mx-auto h-32 w-32 shrink-0 sm:h-36 sm:w-36"
-                    className="object-contain"
+                    className="relative z-10 mb-3 mx-auto h-32 w-32 shrink-0 object-contain sm:h-36 sm:w-36"
+                    loading="eager"
+                    decoding="async"
+                    draggable={false}
                   />
                   <h4 className="relative z-10 text-lg font-bold text-white">{wonItem.name}</h4>
                   <CoinAmount
