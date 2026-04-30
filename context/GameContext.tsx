@@ -1219,11 +1219,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const setAuthPersistence = async (remember: boolean) => {
-    const persistence = remember ? browserLocalPersistence : browserSessionPersistence;
-    await setPersistence(auth, persistence);
-  };
-  
   // -- PERSISTENT STATE INITIALIZATION --
   
   // 1. Initialize User State
@@ -2296,7 +2291,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, pass: string, remember: boolean = true) => {
       const useRedirectFlow = shouldUseRedirectGoogleAuth();
-      await setAuthPersistence(useRedirectFlow ? true : remember);
+      await setPersistence(
+        auth,
+        useRedirectFlow
+          ? browserLocalPersistence
+          : (remember ? browserLocalPersistence : browserSessionPersistence)
+      );
       const credential = await signInWithEmailAndPassword(auth, email, pass);
       if (!credential.user.emailVerified) {
         const redirectPath = consumePostSignupRedirect() || getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT;
@@ -2336,7 +2336,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       const useRedirectFlow = shouldUseRedirectGoogleAuth();
-      await setAuthPersistence(useRedirectFlow ? true : remember);
+      await setPersistence(
+        auth,
+        useRedirectFlow
+          ? browserLocalPersistence
+          : (remember ? browserLocalPersistence : browserSessionPersistence)
+      );
       if (isRetry) {
         trackEvent('google_oauth_retry');
       }
