@@ -1601,6 +1601,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubscribe = onIdTokenChanged(auth, (firebaseUser) => {
       if (!redirectResolvedRef.current) {
         console.info('Waiting for redirect resolution...');
+        setTimeout(() => {
+          if (auth.currentUser) {
+            console.info('Retrying auth session after redirect...');
+            startAuthenticatedSession(auth.currentUser);
+          }
+        }, 100);
         return;
       }
 
@@ -1663,6 +1669,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           await ensureGoogleUserProfile(result.user);
 
           redirectResolvedRef.current = true;
+
+          if (result?.user) {
+            console.info('Forcing session after redirect...');
+            startAuthenticatedSession(result.user);
+          }
 
           trackEvent('google_oauth_success');
           setShowLoginModal(false);
