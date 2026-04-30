@@ -1782,7 +1782,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 
                 
                 
-                {/* Fade Gradients */}                {/* Center Indicator */}                <div className="pointer-events-none absolute bottom-0 top-0 z-10 w-0.5 left-1/2 -translate-x-1/2 bg-white/20" />                {/* Center Indicator */}                <div className="pointer-events-none absolute bottom-0 top-0 z-10 w-0.5 left-1/2 -translate-x-1/2 bg-white/20" />
+                {/* Fade Gradients */}                {/* Center Indicator */}                <div className="pointer-events-none absolute bottom-0 top-0 z-10 w-0.5 left-1/2 -translate-x-1/2 bg-white/20" />
                 <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
                 <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
 
