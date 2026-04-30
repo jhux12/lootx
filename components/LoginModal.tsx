@@ -32,6 +32,7 @@ export const LoginModal: React.FC = () => {
   const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [showOAuthFallback, setShowOAuthFallback] = useState(false);
+  const [showEmailFields, setShowEmailFields] = useState(false);
   const isLinkingGoogle = Boolean(googleLinkCredential);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -167,6 +168,7 @@ export const LoginModal: React.FC = () => {
     setGoogleLinkPassword('');
     setGoogleLinkCredential(null);
     setRememberMe(true);
+    setShowEmailFields(false);
     setShowOAuthFallback(false);
     playSound('click');
   };
@@ -268,7 +270,7 @@ export const LoginModal: React.FC = () => {
         onClick={() => setShowLoginModal(false)}
       />
 
-      <div className="relative flex max-h-[calc(var(--app-height,100vh)-1rem)] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0F0F11] shadow-2xl sm:max-h-[95dvh]">
+      <div className="relative flex max-h-[calc(var(--app-height,100vh)-1rem)] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#18181b] shadow-2xl sm:max-h-[95dvh]">
         <button
           onClick={() => setShowLoginModal(false)}
           className="absolute right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
@@ -276,7 +278,7 @@ export const LoginModal: React.FC = () => {
           <X className="h-5 w-5" />
         </button>
 
-        <div className="flex w-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[#0F0F11] p-4 pr-3 sm:p-6 sm:pr-5">
+        <div className="flex w-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[#18181b] p-4 pr-3 sm:p-6 sm:pr-5">
           {!isLinkingGoogle && (
             <div className="mb-5 flex w-full rounded-xl border border-white/5 bg-[#18181b] p-1">
               <button
@@ -361,7 +363,7 @@ export const LoginModal: React.FC = () => {
                   <div className="w-full border-t border-white/10" />
                 </div>
                 <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
-                  <span className="bg-[#0F0F11] px-3 text-neutral-300">Or continue with email</span>
+                  <span className="bg-[#18181b] px-3 text-neutral-300">Or continue with email</span>
                 </div>
               </div>
             </>
@@ -413,7 +415,7 @@ export const LoginModal: React.FC = () => {
                 Back to login
               </button>
             </form>
-          ) : (
+          ) : showEmailFields ? (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {mode === 'register' && (
                 <div className="flex flex-col gap-1.5">
@@ -518,6 +520,19 @@ export const LoginModal: React.FC = () => {
                 {isLoading ? 'Please wait...' : mode === 'login' ? 'Login with Password' : 'Register with Password'}
               </button>
             </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setShowEmailFields(true);
+                setUserError(null);
+                setMessage(null);
+                playSound('click');
+              }}
+              className="w-full rounded-xl border border-white/10 bg-[#27272a] px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#323237] active:scale-[0.99]"
+            >
+              {mode === 'login' ? 'Sign in with Email' : 'Continue with Email'}
+            </button>
           )}
 
           {!isLinkingGoogle && (
