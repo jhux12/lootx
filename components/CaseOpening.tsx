@@ -565,7 +565,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   useEffect(() => {
     reelLengthRef.current = reelItems.length;    if (!isSpinning && reelItems.length > 0) {      applyVirtualTranslate(virtualTranslateXRef.current);    }
-  }, [reelItems.length]);
+      applyVirtualTranslate(virtualTranslateXRef.current);  }, [reelItems, applyVirtualTranslate]);
 
   useEffect(() => {
     if (!selectedCaseItem) return;
@@ -1249,7 +1249,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             message: string;
           };
         }>('/api/open-case', {
-          method: 'POST',h
+          method: 'POST',hh
           body: JSON.stringify({ boxId: box.id, isFree, operationId, paymentMethod })
         });
 
