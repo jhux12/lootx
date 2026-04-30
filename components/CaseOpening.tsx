@@ -998,8 +998,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     container.style.transition = 'none';
     container.style.transform = 'translate3d(0px, 0, 0)';
     container.style.backfaceVisibility = 'hidden';
+    container.style.willChange = 'transform';
 
+    // Two paint frames + layout read prevents mobile browsers from skipping early keyframes.
     await waitForNextPaint();
+    await waitForNextPaint();
+    // Force style/layout flush before starting WAAPI timeline.
+    void container.getBoundingClientRect();
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
@@ -1066,6 +1071,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       animation.cancel();
       container.style.transition = 'none';
       container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.willChange = 'auto';
       setCurrentCenterIndex(winnerIndex);
       if (frameId !== null) window.cancelAnimationFrame(frameId);
 
@@ -1083,6 +1089,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       if (frameId !== null) window.cancelAnimationFrame(frameId);
       setAnimationPhase('idle');
+      container.style.willChange = 'auto';
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
@@ -1583,7 +1590,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsBoxPreviewVisible(false);
     setIsBoxPreviewFading(false);
 
-    playSound('spin-start');
+    const rarity = String(item.rarity ?? 'common').toLowerCase();
+    if (rarity.includes('legend')) playSound('win-gold');
+    else if (rarity.includes('epic')) playSound('win-epic');
+    else if (rarity.includes('rare')) playSound('win-rare');
+    else if (rarity.includes('uncommon')) playSound('win-uncommon');
+    else playSound('win-common');
     setShowWinModal(true);
     if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
       const particles = createMicroConfetti(18);
