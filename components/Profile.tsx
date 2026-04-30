@@ -431,7 +431,7 @@ export const Profile: React.FC = () => {
   const tradeInModalItem = normalizedInventory.find((item) => item.instanceId === tradeInModalItemId) ?? null;
 
   return (
-    <div className="min-h-screen bg-[#0B0F1A] px-4 py-4 md:px-6 md:py-6">
+    <div className="min-h-screen bg-[#1b2024] px-4 py-4 md:px-6 md:py-6">
       <div className="mx-auto flex max-w-[1280px] gap-6 pb-20 md:pb-4">
         <AccountSidebar
           user={user}
@@ -456,7 +456,7 @@ export const Profile: React.FC = () => {
 
         <div className="flex-1">
           <div
-            className={`mb-3 grid gap-2 rounded-2xl border border-white/10 bg-[#101523] p-1 md:hidden ${
+            className={`mb-3 grid gap-2 rounded-2xl border border-white/10 bg-[#1f252c] p-1 md:hidden ${
               hasDailyFreeBoxAvailable ? 'grid-cols-3' : 'grid-cols-2'
             }`}
           >
@@ -548,7 +548,7 @@ export const Profile: React.FC = () => {
 
       {tradeInModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#101523] p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1f252c] p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white">Trade In Item</h3>
               <button onClick={() => setTradeInModalItemId(null)}><X className="h-5 w-5 text-gray-400" /></button>
@@ -566,7 +566,7 @@ export const Profile: React.FC = () => {
 
       {showShippingReview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#101523] p-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#1f252c] p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white">Review Shipping</h3>
               <button onClick={() => setShowShippingReview(false)}><X className="h-5 w-5 text-gray-400" /></button>
@@ -598,7 +598,7 @@ export const Profile: React.FC = () => {
 
       {withdrawLockedModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#101523] p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1f252c] p-4">
             <h3 className="text-lg font-bold text-white">Withdrawals Locked</h3>
             <p className="mt-2 text-sm text-gray-300">Make your first deposit to unlock withdrawals.</p>
             <div className="mt-4 grid grid-cols-2 gap-2">

@@ -134,7 +134,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
       </div>
 
       <div className="relative z-10 w-full flex flex-col items-center max-w-6xl mx-auto px-4 py-6 md:py-8">
-        <div className="w-full flex justify-start lg:hidden mb-4">
+        <div className="mb-4 flex w-full justify-start">
           <button onClick={onBack} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors">
             <ChevronLeft className="h-5 w-5" />
             <span className="font-bold text-sm">Back</span>

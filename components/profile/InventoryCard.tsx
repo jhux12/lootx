@@ -65,7 +65,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           <MoreHorizontal className="h-4 w-4" />
         </button>
       </div>
-      <div className="mb-3 aspect-square rounded-xl bg-[#0c111d] p-3">
+      <div className="mb-3 aspect-square rounded-xl bg-[#2a323b] p-3">
         <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain" />
       </div>
       <p className="line-clamp-1 text-sm font-semibold text-white">{item.name}</p>
@@ -79,7 +79,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
         disabled={actionDisabled}
         className={`mt-3 w-full rounded-xl px-2 py-2 text-xs font-bold ${
           actionDisabled
-            ? 'cursor-not-allowed border border-white/10 bg-[#0b0f1a] text-gray-500'
+            ? 'cursor-not-allowed border border-white/10 bg-[#2a323b] text-gray-500'
             : 'border border-purple-400/40 bg-purple-500/15 text-purple-100 hover:bg-purple-500/25'
         }`}
       >
@@ -96,7 +96,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           disabled={secondaryActionDisabled}
           className={`mt-2 w-full rounded-xl px-2 py-2 text-xs font-bold ${
             secondaryActionDisabled
-              ? 'cursor-not-allowed border border-white/10 bg-[#0b0f1a] text-gray-500'
+              ? 'cursor-not-allowed border border-white/10 bg-[#2a323b] text-gray-500'
               : 'border border-emerald-400/40 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20'
           }`}
         >
