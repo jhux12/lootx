@@ -90,6 +90,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [minPriceQuery, setMinPriceQuery] = useState('');
   const [maxPriceQuery, setMaxPriceQuery] = useState('');
   const [onlyAffordable, setOnlyAffordable] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   const minPrice = minPriceQuery.trim() ? Number(minPriceQuery) : null;
   const maxPrice = maxPriceQuery.trim() ? Number(maxPriceQuery) : null;
@@ -193,7 +194,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   return (
     <div className="w-full bg-[#1a1f26] pb-20">
 
-      <div className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#1a1f26]/95 shadow-xl backdrop-blur">
+      <div className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#1a1f26]/95 shadow-xl backdrop-blur">
         <div className="mx-auto max-w-[980px] px-3 py-3 sm:px-4">
           <div className="mb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
             <button onClick={() => setActiveCategory('all')} className="flex items-center gap-2 whitespace-nowrap rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white">
@@ -209,18 +210,23 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             <div className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-[#222833] px-3 py-3">
               <Search className="h-4 w-4 shrink-0 text-neutral-500" />
               <input type="text" placeholder="Search" className="w-full min-w-0 border-none bg-transparent text-sm text-white placeholder-neutral-600 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <button
+                type="button"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-white/15 text-white sm:hidden"
+                onClick={() => setIsMobileFiltersOpen((current) => !current)}
+                aria-label="Toggle filters"
+              >
+                <i className="fa-solid fa-angles-down text-sm" />
+              </button>
               <button type="button" className="text-[#4ea8ff] text-sm font-semibold" onClick={() => setSearchQuery('')}>Reset</button>
             </div>
-            <button type="button" onClick={clearFilters} className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#4ea8ff] px-4 py-2.5 text-base font-bold text-white">
-              + Create Pack
-            </button>
-            <label className="relative">
+            <label className={`relative ${isMobileFiltersOpen ? 'block' : 'hidden'} sm:block`}>
               <select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)} className="appearance-none w-full rounded-xl border border-white/10 bg-[#1d232e] px-4 py-3 pr-9 text-sm font-bold text-white outline-none">
                 {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
               </select>
               <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid grid-cols-2 gap-2 ${isMobileFiltersOpen ? 'grid' : 'hidden'} sm:grid`}>
               <input inputMode="numeric" placeholder="Min" value={minPriceQuery} onChange={(event) => setMinPriceQuery(event.target.value.replace(/[^\d]/g, ''))} className="w-full rounded-xl border border-white/10 bg-[#1d232e] px-3 py-3 text-sm font-semibold text-white placeholder-neutral-500 outline-none" />
               <input inputMode="numeric" placeholder="Max" value={maxPriceQuery} onChange={(event) => setMaxPriceQuery(event.target.value.replace(/[^\d]/g, ''))} className="w-full rounded-xl border border-white/10 bg-[#1d232e] px-3 py-3 text-sm font-semibold text-white placeholder-neutral-500 outline-none" />
             </div>
