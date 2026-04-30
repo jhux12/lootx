@@ -939,17 +939,40 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       return;
     }
 
+    const { stepWidth } = spinnerMeasurementsRef.current;
+    const scaledOvershootPx = Math.min(
+      stepWidth * 1.5,
+      SPINNER_MOTION.overshootPx
+    );
+
     const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
+    const overshootTarget = clampTranslate(
+      approachTranslate + (scaledOvershootPx * overshootDirection)
+    );
     setAnimationPhase('spinning');
-    lastCenterIndexRef.current = 0;
 
     const animation = container.animate(
       [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.1, 0.9, 0.25, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.78, easing: 'cubic-bezier(0.2, 1, 0.18, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: 0.94, easing: 'cubic-bezier(0.16, 0.95, 0.3, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.14, 0.9, 0.22, 1)' }
+        {
+          transform: 'translate3d(0px, 0, 0)',
+          offset: 0,
+          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)'
+        },
+        {
+          transform: `translate3d(${overshootTarget}px, 0, 0)`,
+          offset: 0.7,
+          easing: 'cubic-bezier(0.1, 1, 0.2, 1)'
+        },
+        {
+          transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`,
+          offset: 0.9,
+          easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)'
+        },
+        {
+          transform: `translate3d(${centeredTranslate}px, 0, 0)`,
+          offset: 1,
+          easing: 'ease-out'
+        }
       ],
       {
         duration: resolvedDuration,
