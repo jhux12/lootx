@@ -52,6 +52,8 @@ const DESKTOP_GAP_WIDTH = 6;
 const MOBILE_GAP_WIDTH = 4;
 const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
 const MOBILE_SPINNER_VIEWPORT_HEIGHT = 186;
+const DESKTOP_STEP_WIDTH = DESKTOP_CARD_WIDTH + DESKTOP_GAP_WIDTH;
+const MOBILE_STEP_WIDTH = MOBILE_CARD_WIDTH + MOBILE_GAP_WIDTH;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -404,7 +406,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     updateViewportMode();
     window.addEventListener('resize', updateViewportMode);
     return () => window.removeEventListener('resize', updateViewportMode);
-  }, []);
+  }, [isMobileViewport]);
 
   const updateSpinnerMeasurements = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -769,7 +771,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
-    const preWinnerItems = SPINNER_MOTION.preWinnerItems;
+    const desktopTravelPx = SPINNER_MOTION.preWinnerItems * DESKTOP_STEP_WIDTH;
+    const mobilePreWinnerItems = Math.ceil(desktopTravelPx / MOBILE_STEP_WIDTH);
+    const preWinnerItems = isMobileViewport ? mobilePreWinnerItems : SPINNER_MOTION.preWinnerItems;
     const postWinnerItems = SPINNER_MOTION.postWinnerItems;
     const winnerIndex = preWinnerItems;
     const reelLength = preWinnerItems + 1 + postWinnerItems;
@@ -914,12 +918,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     container.style.transform = 'translate3d(0px, 0, 0)';
     container.style.backfaceVisibility = 'hidden';
     container.style.willChange = 'transform';
+    const startingCenterIndex = getCenteredIndexFromTranslate(0);
+    lastCenterIndexRef.current = startingCenterIndex;
+    setCurrentCenterIndex(startingCenterIndex);
 
     // Two paint frames + layout read prevents mobile browsers from skipping early keyframes.
     await waitForNextPaint();
     await waitForNextPaint();
     // Force style/layout flush before starting WAAPI timeline.
+    void container.offsetWidth;
     void container.getBoundingClientRect();
+    updateSpinnerMeasurements();
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
@@ -953,7 +962,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     spinnerAnimationRef.current = animation;
     let frameId: number | null = null;
-    const startingCenterIndex = getCenteredIndexFromTranslate(0);
     lastCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
 
@@ -1120,7 +1128,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setReelItems(nextReelItems);
     setReelWinnerIndex(winnerIndex);
     await waitForNextPaint();
-  }, [resetSpinnerAnimation]);
+    updateSpinnerMeasurements();
+    const startingCenterIndex = getCenteredIndexFromTranslate(0);
+    lastCenterIndexRef.current = startingCenterIndex;
+    setCurrentCenterIndex(startingCenterIndex);
+  }, [getCenteredIndexFromTranslate, resetSpinnerAnimation, updateSpinnerMeasurements]);
 
 
 
