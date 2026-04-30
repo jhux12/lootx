@@ -12,14 +12,9 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-console.log('FIREBASE CONFIG DEBUG', {
-  apiKeyPresent: !!firebaseConfig.apiKey,
-  authDomain: firebaseConfig.authDomain,
-  projectId: firebaseConfig.projectId,
-  storageBucket: firebaseConfig.storageBucket,
-  messagingSenderId: firebaseConfig.messagingSenderId,
-  appId: firebaseConfig.appId,
-});
+if (import.meta.env.DEV) {
+  console.info('Firebase auth domain:', firebaseConfig.authDomain);
+}
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
