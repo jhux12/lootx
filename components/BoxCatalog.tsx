@@ -240,7 +240,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             <div className="grid justify-items-center grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 lg:grid-cols-5">
               {groupedBoxes.map((box) => (
                 <button key={box.id} type="button" onClick={() => openBox(box.id)} className="w-full max-w-[220px] text-center">
-                  <img src={box.image} alt={box.name} loading="lazy" decoding="async" className="aspect-[0.72] w-full object-cover" />
+                  <img src={box.image} alt={box.name} loading="lazy" decoding="async" className="mx-auto aspect-[0.72] w-[88%] object-contain sm:w-[86%]" />
                   <div className="mt-3 line-clamp-2 min-h-[2.5rem] text-sm font-extrabold text-white sm:text-base">
                     {box.name}
                   </div>
