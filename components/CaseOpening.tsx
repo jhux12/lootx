@@ -897,10 +897,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     container.style.transform = 'translate3d(0px, 0, 0)';
     container.style.backfaceVisibility = 'hidden';
     container.style.willChange = 'transform';
-    const startingCenterIndex = getCenteredIndexFromTranslate(0);
-    lastCenterIndexRef.current = startingCenterIndex;
-    setCurrentCenterIndex(startingCenterIndex);
-
     // Two paint frames + layout read prevents mobile browsers from skipping early keyframes.
     await waitForNextPaint();
     await waitForNextPaint();
@@ -908,6 +904,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     void container.offsetWidth;
     void container.getBoundingClientRect();
     updateSpinnerMeasurements();
+    const startingCenterIndex = getCenteredIndexFromTranslate(0);
+    lastCenterIndexRef.current = startingCenterIndex;
+    setCurrentCenterIndex(startingCenterIndex);
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
@@ -957,8 +956,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     spinnerAnimationRef.current = animation;
     let frameId: number | null = null;
-    lastCenterIndexRef.current = startingCenterIndex;
-    setCurrentCenterIndex(startingCenterIndex);
 
     const syncCenterItem = () => {
       const transform = window.getComputedStyle(container).transform;
@@ -1833,8 +1830,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       backfaceVisibility: 'hidden',
                       WebkitBackfaceVisibility: 'hidden',
                       willChange: isSpinning ? 'transform' : 'auto',
-                      transformStyle: 'preserve-3d',
-                      WebkitTransformStyle: 'preserve-3d'
+                      transformStyle: 'flat',
+                      WebkitTransformStyle: 'flat'
                     }}
                 >
                     {reelItems.map((item, idx) => (
@@ -1860,12 +1857,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
-                                transform: 'translate3d(0px, 0, 0)',
-                                WebkitTransform: 'translate3d(0px, 0, 0)',
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem ? `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55` : 'none',
                                 opacity: isFocusedItem ? 1 : 0.42,
+                                filter: isFocusedItem ? 'brightness(1.12)' : 'brightness(0.82)',
                                 zIndex: isFocusedItem ? 4 : 1
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
@@ -1874,18 +1870,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] opacity-65 blur-3xl ${rarityGlow}`}
                               style={{ boxShadow: isFocusedItem ? `0 0 20px ${item.color}40` : 'none' }}
                             />
-                            <div
-                              className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch transition-transform duration-200"
-                              style={{
-                                transform: `scale(${isFocusedItem ? 1.03 : 0.975})`,
-                                WebkitTransform: `scale(${isFocusedItem ? 1.03 : 0.975})`
-                              }}
-                            >
+                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <img loading="eager" decoding="async" 
                                   src={item.image} 
                                   alt={item.name} 
-                                  className={`h-[132px] w-[132px] translate-y-1 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:translate-y-1.5 ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
-                                  style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
+                                  className={`h-[132px] w-[132px] translate-y-1 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:translate-y-1.5 ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse' : ''}`} 
                               />
                             </div>
                         </div>
