@@ -1602,11 +1602,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!redirectResolvedRef.current) {
         console.info('Waiting for redirect resolution...');
         setTimeout(() => {
-          if (auth.currentUser) {
+          const currentUser = auth.currentUser;
+          if (currentUser) {
             console.info('Retrying auth session after redirect...');
-            startAuthenticatedSession(auth.currentUser);
+            void syncAdminClaim(currentUser);
+            startAuthenticatedSession(currentUser);
+          } else {
+            setAuthInitialized(true);
           }
-        }, 100);
+        }, 250);
         return;
       }
 
@@ -1672,7 +1676,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
           if (result?.user) {
             console.info('Forcing session after redirect...');
+            void syncAdminClaim(result.user);
             startAuthenticatedSession(result.user);
+            setAuthInitialized(true);
           }
 
           trackEvent('google_oauth_success');
@@ -1684,9 +1690,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         redirectResolvedRef.current = true;
         console.info('No Google redirect result.');
+        setAuthInitialized(true);
       })
       .catch((error: any) => {
         redirectResolvedRef.current = true;
+        setAuthInitialized(true);
         if (typeof window !== 'undefined') {
           window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
         }
