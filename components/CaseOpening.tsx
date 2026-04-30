@@ -43,6 +43,18 @@ interface RevealData {
   serverSeedHash: string;
   rotatedAt: number;
 }
+interface SpinnerReelCardProps {
+  item: CaseItem;
+  idx: number;
+  reelWinnerIndex: number;
+  spinnerCardWidth: number;
+  spinnerCardHeight: number;
+  isFocusedItem: boolean;
+  isSpinning: boolean;
+  animationPhase: 'idle' | 'spinning' | 'settling';
+  playSound: (soundId: string) => void;
+  setWinningRef: (node: HTMLDivElement | null, idx: number) => void;
+}
 
 const DESKTOP_CARD_WIDTH = 170;
 const DESKTOP_CARD_HEIGHT = 210;
@@ -73,6 +85,77 @@ const rarityGlowClass: Record<string, string> = {
   uncommon: 'bg-emerald-300/24',
   common: 'bg-slate-300/18'
 };
+
+const SpinnerReelCard = React.memo(({
+  item,
+  idx,
+  reelWinnerIndex,
+  spinnerCardWidth,
+  spinnerCardHeight,
+  isFocusedItem,
+  isSpinning,
+  animationPhase,
+  playSound,
+  setWinningRef
+}: SpinnerReelCardProps) => {
+  const rarityValue = String(item.rarity ?? 'common').toLowerCase();
+  const rarityGlow = rarityValue.includes('legend')
+    ? rarityGlowClass.legendary
+    : rarityValue.includes('epic')
+      ? rarityGlowClass.epic
+      : rarityValue.includes('rare')
+        ? rarityGlowClass.rare
+        : rarityValue.includes('uncommon')
+          ? rarityGlowClass.uncommon
+          : rarityGlowClass.common;
+
+  return (
+    <div
+      key={`${item.id}-${idx}`}
+      ref={(node) => setWinningRef(node, idx)}
+      className="group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 transition-opacity duration-100"
+      style={{
+        width: `${spinnerCardWidth}px`,
+        height: `${spinnerCardHeight}px`,
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        boxShadow: isFocusedItem
+          ? (isSpinning
+            ? `0 0 18px ${item.color}55`
+            : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
+          : 'none',
+        opacity: isFocusedItem ? 1 : 0.38,
+        zIndex: isFocusedItem ? 4 : 1
+      }}
+      onMouseEnter={() => !isSpinning && playSound('hover')}
+    >
+      <div
+        className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] opacity-65 ${isSpinning ? 'blur-lg' : 'blur-3xl'} ${rarityGlow}`}
+        style={{ boxShadow: isFocusedItem ? `0 0 20px ${item.color}40` : 'none' }}
+      />
+      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
+        <img
+          loading="eager"
+          decoding="async"
+          src={item.image}
+          alt={item.name}
+          className={`mt-1 h-[132px] w-[132px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:mt-1.5 ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse' : ''}`}
+        />
+      </div>
+    </div>
+  );
+}, (prev, next) => (
+  prev.item.id === next.item.id
+  && prev.item.image === next.item.image
+  && prev.item.color === next.item.color
+  && prev.idx === next.idx
+  && prev.reelWinnerIndex === next.reelWinnerIndex
+  && prev.spinnerCardWidth === next.spinnerCardWidth
+  && prev.spinnerCardHeight === next.spinnerCardHeight
+  && prev.isFocusedItem === next.isFocusedItem
+  && prev.isSpinning === next.isSpinning
+  && prev.animationPhase === next.animationPhase
+));
 
 const createSeededRng = (seed: string) => {
   let h = 2166136261;
@@ -1528,6 +1611,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     });
   }, []);
 
+  const setWinningRef = useCallback((node: HTMLDivElement | null, idx: number) => {
+    if (idx === reelWinnerIndex) {
+      winningCardRef.current = node;
+    }
+  }, [reelWinnerIndex]);
+
 
 
   const closeWinModal = ({ redirectToBoxesCatalog = false }: { redirectToBoxesCatalog?: boolean } = {}) => {
@@ -1825,57 +1914,26 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       WebkitTransformStyle: 'flat'
                     }}
                 >
-                    {reelItems.map((item, idx) => (
-                        (() => {
-                          const rarityValue = String(item.rarity ?? 'common').toLowerCase();
-                          const rarityGlow = rarityValue.includes('legend')
-                            ? rarityGlowClass.legendary
-                            : rarityValue.includes('epic')
-                              ? rarityGlowClass.epic
-                              : rarityValue.includes('rare')
-                                ? rarityGlowClass.rare
-                                : rarityValue.includes('uncommon')
-                                  ? rarityGlowClass.uncommon
-                                  : rarityGlowClass.common;
-                          const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && idx === reelWinnerIndex;
-                          const isCenteredItem = idx === currentCenterIndex;
-                          const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
-                          return (
-                        <div 
-                            key={`${item.id}-${idx}`}
-                            ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className="group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 transition-opacity duration-150"
-                            style={{
-                                width: `${spinnerCardWidth}px`,
-                                height: `${spinnerCardHeight}px`,
-                                backfaceVisibility: 'hidden',
-                                WebkitBackfaceVisibility: 'hidden',
-                                boxShadow: isFocusedItem
-                                  ? (isSpinning
-                                    ? `0 0 18px ${item.color}55`
-                                    : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
-                                  : 'none',
-                                opacity: isFocusedItem ? 1 : 0.35,
-                                filter: isFocusedItem ? 'brightness(1.14)' : 'brightness(0.78)',
-                                zIndex: isFocusedItem ? 4 : 1
-                            }}
-                            onMouseEnter={() => !isSpinning && playSound('hover')}
-                        >
-                            <div
-                              className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] opacity-65 ${isSpinning ? 'blur-xl' : 'blur-3xl'} ${rarityGlow}`}
-                              style={{ boxShadow: isFocusedItem ? `0 0 20px ${item.color}40` : 'none' }}
-                            />
-                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
-                              <img loading="eager" decoding="async" 
-                                  src={item.image} 
-                                  alt={item.name} 
-                                  className={`mt-1 h-[132px] w-[132px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:mt-1.5 ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse' : ''}`} 
-                              />
-                            </div>
-                        </div>
-                          );
-                        })()
-                    ))}
+                    {reelItems.map((item, idx) => {
+                      const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && idx === reelWinnerIndex;
+                      const isCenteredItem = idx === currentCenterIndex;
+                      const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
+                      return (
+                        <SpinnerReelCard
+                          key={`${item.id}-${idx}`}
+                          item={item}
+                          idx={idx}
+                          reelWinnerIndex={reelWinnerIndex}
+                          spinnerCardWidth={spinnerCardWidth}
+                          spinnerCardHeight={spinnerCardHeight}
+                          isFocusedItem={isFocusedItem}
+                          isSpinning={isSpinning}
+                          animationPhase={animationPhase}
+                          playSound={playSound}
+                          setWinningRef={setWinningRef}
+                        />
+                      );
+                    })}
                 </div>
             </div>
             </div>
