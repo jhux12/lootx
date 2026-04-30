@@ -1188,6 +1188,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [showEmailVerifiedModal, setShowEmailVerifiedModal] = useState(false);
   const [emailVerificationStatus, setEmailVerificationStatus] = useState<EmailVerificationStatus>('idle');
   const [authInitialized, setAuthInitialized] = useState(false);
+  const redirectResolvedRef = useRef(false);
   const hasInventorySubcollectionRef = useRef(false);
   const pendingSoldIdsRef = useRef<Set<string>>(new Set());
   const pendingBalanceRef = useRef<number | null>(null);
@@ -1598,6 +1599,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, (firebaseUser) => {
+      if (!redirectResolvedRef.current) {
+        console.info('Waiting for redirect resolution...');
+        setTimeout(() => {
+          if (auth.currentUser) {
+            console.info('Retrying auth session after redirect...');
+            startAuthenticatedSession(auth.currentUser);
+          }
+        }, 100);
+        return;
+      }
+
       setAuthInitialized(true);
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
       const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified);
@@ -1642,24 +1654,50 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const redirectResult = await getRedirectResult(auth);
-        if (!redirectResult?.user) return;
-        await redirectResult.user.reload();
-        await ensureGoogleUserProfile(redirectResult.user);
-        trackEvent('google_oauth_success');
-        setShowLoginModal(false);
-        const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
-        resolveEmailRedirect(redirectPath);
-      } catch (error: any) {
+    let mounted = true;
+
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (!mounted) {
+          redirectResolvedRef.current = true;
+          return;
+        }
+
+        if (result?.user) {
+          console.info('Google redirect completed:', result.user.uid);
+          await result.user.reload();
+          await ensureGoogleUserProfile(result.user);
+
+          redirectResolvedRef.current = true;
+
+          if (result?.user) {
+            console.info('Forcing session after redirect...');
+            startAuthenticatedSession(result.user);
+          }
+
+          trackEvent('google_oauth_success');
+          setShowLoginModal(false);
+          const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
+          resolveEmailRedirect(redirectPath);
+          return;
+        }
+
+        redirectResolvedRef.current = true;
+        console.info('No Google redirect result.');
+      })
+      .catch((error: any) => {
+        redirectResolvedRef.current = true;
         if (typeof window !== 'undefined') {
           window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
         }
+        console.error('Google redirect error:', error?.code, error?.message);
         console.error('Firebase Google redirect error', { code: error?.code, message: error?.message, error });
         trackEvent('google_oauth_error', { code: error?.code || 'redirect_unknown' });
-      }
-    })();
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -2291,6 +2329,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         trackEvent('google_oauth_retry');
       }
       trackEvent('google_oauth_started');
+      console.info('Firebase authDomain:', auth.app.options.authDomain);
+      console.info('User agent:', navigator.userAgent);
 
       if (useRedirectFlow) {
         if (typeof window !== 'undefined') {
