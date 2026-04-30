@@ -575,7 +575,7 @@ export default function UpgraderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_20%_-10%,rgba(79,70,229,0.32),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(56,189,248,0.16),transparent_35%),linear-gradient(180deg,#02050e_0%,#040712_40%,#02040d_100%)] pb-44 font-sans text-slate-200 lg:pb-32">
+    <div className="min-h-screen bg-[#1b2024] pb-44 font-sans text-slate-200 lg:pb-32">
       <header className="sticky top-0 z-40 flex h-14 items-center justify-end border-b border-indigo-300/10 bg-[#050916]/86 px-4 backdrop-blur-xl sm:hidden">
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 hover:text-white" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
@@ -588,15 +588,11 @@ export default function UpgraderPage() {
       </header>
 
       <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 p-3 sm:gap-6 sm:p-4 lg:p-8">
-        <section className="relative overflow-hidden rounded-3xl border border-indigo-300/20 bg-[#080d1c]/90 p-3 sm:p-4">
-          <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[70%] -translate-x-1/2 bg-[radial-gradient(circle,rgba(124,58,237,0.32),rgba(59,130,246,0.04)_65%,transparent)] blur-2xl" />
-          <div className="relative mb-3 flex flex-wrap items-end justify-between gap-2 border-b border-indigo-300/15 pb-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Upgrader</p>
-              <h2 className="mt-0.5 text-2xl font-black uppercase tracking-tight text-white sm:text-4xl">
-                ELITE <span className="bg-gradient-to-r from-sky-300 via-violet-300 to-fuchsia-300 bg-clip-text text-transparent">UPGRADER</span>
-              </h2>
-              <p className="mt-0.5 text-sm text-slate-300">Upgrade your items. Higher risk. Higher rewards.</p>
+        <section className="relative overflow-hidden rounded-2xl border border-white/5 bg-[#20262d] p-3 sm:p-4">
+          <div className="relative mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-3 w-3 rotate-12 rounded-[2px] bg-white/90" />
+              <p className="text-xl font-black text-white">PullzDraw</p>
             </div>
             <div className="hidden items-center gap-2 sm:flex">
               <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 hover:text-white" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
@@ -610,8 +606,7 @@ export default function UpgraderPage() {
           <div className="relative grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1fr_minmax(320px,460px)_1fr] lg:gap-6">
             <SelectedPreview label="Your Item" item={sourcePreview} emptyText="Choose an item to upgrade" actionLabel="Select Item" onActivate={() => setActiveTab('inventory')} />
 
-            <div className="relative flex flex-col items-center rounded-2xl border border-violet-300/35 bg-gradient-to-b from-[#0f1a3b] to-[#070d1b] p-4 shadow-[0_0_44px_rgba(76,29,149,0.26)]">
-              <div className="pointer-events-none absolute -inset-y-12 -left-6 -right-6 bg-[radial-gradient(circle,rgba(139,92,246,0.24),transparent_70%)]" />
+            <div className="relative flex flex-col items-center rounded-2xl border border-white/5 bg-[#1f252c] p-4">
               <UpgraderSpinner
                 chance={chance}
                 hasSource={Boolean(source)}
@@ -639,11 +634,11 @@ export default function UpgraderPage() {
                 </div>
               )}
 
-              <div className="mt-3 flex w-full max-w-[340px] flex-col items-center justify-center gap-2 sm:flex-row">
-                <button onClick={handleUpgrade} disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting} className={`h-11 w-full flex-1 rounded-xl border px-4 text-xs font-black uppercase tracking-[0.17em] transition duration-200 ${status === 'idle' && source && target && settings?.enabled ? 'border-violet-200/70 bg-gradient-to-r from-[#6d2eff] via-[#9444ff] to-[#4177ff] text-white shadow-[0_0_28px_rgba(139,92,246,0.4)] hover:brightness-110' : 'cursor-not-allowed border-indigo-300/20 bg-[#0a1124] text-slate-500'}`}>
+              <div className="mt-3 flex w-full max-w-[460px] flex-col items-center justify-center gap-2 sm:flex-row">
+                <button onClick={handleUpgrade} disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting} className={`h-11 w-full flex-1 rounded-lg border px-4 text-base font-bold transition duration-200 ${status === 'idle' && source && target && settings?.enabled ? 'border-emerald-300/40 bg-[#49b879] text-white hover:brightness-105' : 'cursor-not-allowed border-white/10 bg-[#24313b] text-slate-500'}`}>
                   {status === 'spinning' ? 'Upgrading...' : 'Upgrade'}
                 </button>
-                <button type="button" disabled={!source || !target || status === 'spinning'} onClick={handleDemoSpin} className={`h-10 w-full rounded-xl border px-3 text-[10px] font-semibold uppercase tracking-[0.12em] transition sm:w-auto ${source && target && status !== 'spinning' ? 'border-indigo-300/25 bg-[#0b1430]/80 text-slate-300 hover:border-indigo-300/50 hover:text-white' : 'cursor-not-allowed border-indigo-300/15 bg-[#0a1124] text-slate-500'}`}>Demo Spin</button>
+                <button type="button" disabled={!source || !target || status === 'spinning'} onClick={handleDemoSpin} className={`h-11 w-full rounded-lg border px-4 text-lg font-bold transition sm:w-auto ${source && target && status !== 'spinning' ? 'border-white/10 bg-[#343c46] text-white hover:bg-[#3b4551]' : 'cursor-not-allowed border-white/10 bg-[#24313b] text-slate-500'}`}>Demo Spin</button>
               </div>
             </div>
 
