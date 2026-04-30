@@ -831,7 +831,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const getCenteredIndexFromTranslate = useCallback((translateX: number) => {
     const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
-    const resolvedViewportWidth = scrollViewportRef.current?.clientWidth ?? viewportWidth;
+    const resolvedViewportWidth = scrollViewportRef.current?.getBoundingClientRect().width ?? scrollViewportRef.current?.clientWidth ?? viewportWidth;
     const viewportCenter = resolvedViewportWidth / 2;
 
     if (!Number.isFinite(stepWidth) || stepWidth <= 0 || !Number.isFinite(cardWidth) || viewportCenter <= 0) {
@@ -969,6 +969,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const transform = window.getComputedStyle(container).transform;
       const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
       const currentX = matrix ? matrix.m41 : 0;
+      updateSpinnerMeasurements();
       const index = getCenteredIndexFromTranslate(currentX);
       setCurrentCenterIndex(index);
       if (index !== lastCenterIndexRef.current) {
@@ -1125,6 +1126,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       scrollContainerRef.current.style.transition = 'none';
     }
 
+    reelLengthRef.current = nextReelItems.length;
     setReelItems(nextReelItems);
     setReelWinnerIndex(winnerIndex);
     await waitForNextPaint();
