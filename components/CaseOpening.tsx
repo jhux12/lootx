@@ -347,7 +347,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
   const spinnerMeasurementsRef = useRef({
     cardWidth: ITEM_SIZE,
-    reelGap: ITEM_GAP,
+    reelGap: 0,
     viewportWidth: 0,
     stepWidth: STEP_WIDTH
   });
