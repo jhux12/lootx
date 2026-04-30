@@ -413,6 +413,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     };
   }, [spinnerCardWidth, spinnerGap]);
 
+  const getViewportCenterX = useCallback(() => {
+    const viewport = scrollViewportRef.current;
+    if (!viewport) return 0;
+    return viewport.clientWidth / 2;
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const viewport = scrollViewportRef.current;
@@ -798,31 +804,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return { items: newReel, winnerIndex };
   }, []);
 
-  const getCenteredTranslate = useCallback((winnerIndex: number, landingOffset = 0) => {
-    const viewport = scrollViewportRef.current;
-    const container = scrollContainerRef.current;
-
-    if (!viewport || !container) {
-      return null;
-    }
-
-    updateSpinnerMeasurements();
-    const { viewportWidth } = spinnerMeasurementsRef.current;
-    const resolvedViewportWidth = viewportWidth || viewport.clientWidth;
-    const viewportCenterX = resolvedViewportWidth / 2;
-    const winnerCenterX = (winnerIndex * STEP_WIDTH) + (ITEM_SIZE / 2);
-    return viewportCenterX - winnerCenterX + landingOffset;
-  }, [updateSpinnerMeasurements]);
+  const getCenteredTranslate = useCallback((winnerIndex: number, landingOffset = 0) => (
+    -(winnerIndex * STEP_WIDTH) + landingOffset
+  ), []);
 
   const getCenteredIndexFromTranslate = useCallback((translateX: number) => {
-    const { viewportWidth } = spinnerMeasurementsRef.current;
-    const resolvedViewportWidth = scrollViewportRef.current?.getBoundingClientRect().width ?? scrollViewportRef.current?.clientWidth ?? viewportWidth;
-    const viewportCenter = resolvedViewportWidth / 2;
-
-    if (viewportCenter <= 0) {
-      return 0;
-    }
-
     const reelLength = reelLengthRef.current;
     if (reelLength <= 0) return 0;
 
@@ -830,7 +816,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       0,
       Math.min(
         reelLength - 1,
-        Math.round((viewportCenter - translateX - (ITEM_SIZE / 2)) / STEP_WIDTH)
+        Math.round(-translateX / STEP_WIDTH)
       )
     );
   }, []);
@@ -866,9 +852,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const applyVirtualTranslate = useCallback((nextX: number) => {
     virtualTranslateXRef.current = nextX;
+    const viewportCenter = spinnerMeasurementsRef.current.viewportWidth / 2;
     itemRefs.current.forEach((node, idx) => {
       if (!node) return;
-      node.style.transform = `translate(${(idx * STEP_WIDTH) + nextX}px, -${ITEM_SIZE / 2}px)`;
+      const x = viewportCenter + (idx * STEP_WIDTH) + nextX - (ITEM_SIZE / 2);
+      node.style.transform = `translate(${x}px, -${ITEM_SIZE / 2}px)`;
     });
   }, []);
 
@@ -1106,8 +1094,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setReelItems(nextReelItems);
     setReelWinnerIndex(winnerIndex);
     await waitForNextPaint();
-    applyVirtualTranslate(0);
     updateSpinnerMeasurements();
+    applyVirtualTranslate(0);
     const startingCenterIndex = getCenteredIndexFromTranslate(0);
     lastCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
@@ -1851,7 +1839,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 minHeight: `${ITEM_SIZE}px`,
                                 maxWidth: `${ITEM_SIZE}px`,
                                 maxHeight: `${ITEM_SIZE}px`,
-                                transform: `translate(${(idx * STEP_WIDTH) + virtualTranslateXRef.current}px, -97.5px)`,
+                                transform: `translate(${(spinnerMeasurementsRef.current.viewportWidth / 2) + (idx * STEP_WIDTH) + virtualTranslateXRef.current - (ITEM_SIZE / 2)}px, -${ITEM_SIZE / 2}px)`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem ? `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55` : 'none',
