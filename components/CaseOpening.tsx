@@ -420,11 +420,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && (currentXpBalance > 0 || xpProgress > 0);
   const canOpenMain = isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
-  const spinnerCardWidth = isMobileViewport ? MOBILE_CARD_WIDTH : DESKTOP_CARD_WIDTH;
-  const spinnerCardHeight = isMobileViewport ? MOBILE_CARD_HEIGHT : DESKTOP_CARD_HEIGHT;
-  const spinnerGap = isMobileViewport ? MOBILE_GAP_WIDTH : DESKTOP_GAP_WIDTH;
-  const spinnerViewportHeight = isMobileViewport ? MOBILE_SPINNER_VIEWPORT_HEIGHT : DESKTOP_SPINNER_VIEWPORT_HEIGHT;
-  const shouldSimplifyReelEffects = isMobileViewport && animationPhase === 'spinning';
+  const spinnerCardWidth = DESKTOP_CARD_WIDTH;
+  const spinnerCardHeight = DESKTOP_CARD_HEIGHT;
+  const spinnerGap = DESKTOP_GAP_WIDTH;
+  const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -592,13 +591,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   useEffect(() => {
     // Fill the static view with random items from the specific box
     if (items.length > 0) {
-        const staticItems = Array.from({ length: isMobileViewport ? 11 : 15 }, () => 
+        const staticItems = Array.from({ length: 15 }, () => 
           items[Math.floor(Math.random() * items.length)]
         );
         setReelItems(staticItems);
         setReelWinnerIndex(Math.floor(staticItems.length / 2));
     }
-  }, [isMobileViewport, items]);
+  }, [items]);
 
   useEffect(() => {
     if (!selectedCaseItem) return;
@@ -795,8 +794,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
-    const preWinnerItems = isMobileViewport ? 42 : SPINNER_MOTION.preWinnerItems;
-    const postWinnerItems = isMobileViewport ? 9 : SPINNER_MOTION.postWinnerItems;
+    const preWinnerItems = SPINNER_MOTION.preWinnerItems;
+    const postWinnerItems = SPINNER_MOTION.postWinnerItems;
     const winnerIndex = preWinnerItems;
     const reelLength = preWinnerItems + 1 + postWinnerItems;
     const newReel: CaseItem[] = [];
@@ -833,7 +832,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     return { items: newReel, winnerIndex };
-  }, [isMobileViewport]);
+  }, []);
 
   const getCenteredTranslate = useCallback((winnerIndex: number, landingOffset = 0) => {
     const viewport = scrollViewportRef.current;
@@ -1943,14 +1942,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                              className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] opacity-65 ${shouldSimplifyReelEffects ? 'blur-2xl' : 'blur-3xl'} ${rarityGlow}`}
+                              className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] opacity-65 blur-3xl ${rarityGlow}`}
                               style={{ boxShadow: isIdleWinner ? `0 0 16px ${item.color}33` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <img loading="eager" decoding="async" 
                                   src={item.image} 
                                   alt={item.name} 
-                                  className={`translate-y-1 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] ${isMobileViewport ? 'h-[104px] w-[104px]' : 'h-[132px] w-[132px] sm:translate-y-1.5'} ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
+                                  className={`h-[132px] w-[132px] translate-y-1 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:translate-y-1.5 ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse scale-105' : ''}`} 
                                   style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                               />
                             </div>
@@ -1997,7 +1996,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             )}
                           </span>
                           {previewTotalXp > 0 && (
-                            <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-200">
+                            <span className="hidden items-center rounded-full border border-emerald-300/40 bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-200 sm:inline-flex">
                               +{previewTotalXp.toLocaleString()} XP
                             </span>
                           )}
