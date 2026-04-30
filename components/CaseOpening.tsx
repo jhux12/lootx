@@ -390,10 +390,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && (currentXpBalance > 0 || xpProgress > 0);
   const canOpenMain = isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
-  const spinnerCardWidth = DESKTOP_CARD_WIDTH;
-  const spinnerCardHeight = DESKTOP_CARD_HEIGHT;
-  const spinnerGap = DESKTOP_GAP_WIDTH;
-  const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
+  const spinnerCardWidth = isMobileViewport ? MOBILE_CARD_WIDTH : DESKTOP_CARD_WIDTH;
+  const spinnerCardHeight = isMobileViewport ? MOBILE_CARD_HEIGHT : DESKTOP_CARD_HEIGHT;
+  const spinnerGap = isMobileViewport ? MOBILE_GAP_WIDTH : DESKTOP_GAP_WIDTH;
+  const spinnerViewportHeight = isMobileViewport ? MOBILE_SPINNER_VIEWPORT_HEIGHT : DESKTOP_SPINNER_VIEWPORT_HEIGHT;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -878,7 +878,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = (rng() - 0.5) * 18;
+    const landingJitterPx = 0;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(220, SPINNER_MOTION.durationVarianceMs) * 2);
     const resolvedDuration = Math.max(2400, duration + durationVariance);
 
@@ -927,20 +927,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     spinnerAnimationRef.current = animation;
     let frameId: number | null = null;
+    const estimatedStartCenterIndex = Math.max(0, Math.round(Math.abs(overshootTarget) / spinnerMeasurementsRef.current.stepWidth));
+    lastCenterIndexRef.current = estimatedStartCenterIndex;
+    setCurrentCenterIndex(estimatedStartCenterIndex);
+
     const syncCenterItem = () => {
-      const transform = window.getComputedStyle(container).transform;
-      const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
-      const x = matrix ? matrix.m41 : 0;
-      const { stepWidth, cardWidth } = spinnerMeasurementsRef.current;
-      const viewportCenter = scrollViewportRef.current?.clientWidth ? scrollViewportRef.current.clientWidth / 2 : 0;
-      if (Number.isFinite(stepWidth) && stepWidth > 0 && Number.isFinite(cardWidth) && viewportCenter > 0) {
-        const index = Math.max(0, Math.round((viewportCenter - x - (cardWidth / 2)) / stepWidth));
+      const timing = animation.effect?.getComputedTiming();
+      const progress = typeof timing?.progress === 'number' ? timing.progress : null;
+      const { stepWidth } = spinnerMeasurementsRef.current;
+
+      if (progress !== null && Number.isFinite(progress) && stepWidth > 0) {
+        const currentTranslate = overshootTarget + (centeredTranslate - overshootTarget) * progress;
+        const index = Math.max(0, Math.round(Math.abs(currentTranslate) / stepWidth));
         setCurrentCenterIndex(index);
         if (index !== lastCenterIndexRef.current) {
           playSound('spin-tick');
           lastCenterIndexRef.current = index;
         }
       }
+
       frameId = window.requestAnimationFrame(syncCenterItem);
     };
     frameId = window.requestAnimationFrame(syncCenterItem);
@@ -1811,28 +1816,30 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 : rarityValue.includes('uncommon')
                                   ? rarityGlowClass.uncommon
                                   : rarityGlowClass.common;
-                          const isIdleWinner = animationPhase === 'idle' && idx === reelWinnerIndex;
-                          const isCenteredDuringSpin = animationPhase !== 'idle' && idx === currentCenterIndex;
+                          const isSettledWinner = animationPhase === 'idle' && idx === reelWinnerIndex;
+                          const isCenteredItem = idx === currentCenterIndex;
+                          const isFocusedItem = animationPhase === 'idle' ? isSettledWinner : isCenteredItem;
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className="group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 transition-transform duration-300 md:hover:scale-[1.015]"
+                            className="group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 transition-all duration-200 md:hover:scale-[1.015]"
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
-                                transform: 'translateZ(0)',
-                                WebkitTransform: 'translateZ(0)',
+                                transform: `translateZ(0) scale(${isFocusedItem ? 1.03 : 0.975})`,
+                                WebkitTransform: `translateZ(0) scale(${isFocusedItem ? 1.03 : 0.975})`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
-                                boxShadow: 'none',
-                                opacity: isCenteredDuringSpin || isIdleWinner ? 1 : 0.35
+                                boxShadow: isFocusedItem ? `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55` : 'none',
+                                opacity: isFocusedItem ? 1 : 0.42,
+                                zIndex: isFocusedItem ? 4 : 1
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
                               className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] opacity-65 blur-3xl ${rarityGlow}`}
-                              style={{ boxShadow: isIdleWinner ? `0 0 16px ${item.color}33` : 'none' }}
+                              style={{ boxShadow: isFocusedItem ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <img loading="eager" decoding="async" 
