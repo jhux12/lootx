@@ -45,15 +45,10 @@ interface RevealData {
 }
 
 const DESKTOP_CARD_WIDTH = 170;
-const MOBILE_CARD_WIDTH = 124;
 const DESKTOP_CARD_HEIGHT = 210;
-const MOBILE_CARD_HEIGHT = 158;
 const DESKTOP_GAP_WIDTH = 6;
-const MOBILE_GAP_WIDTH = 4;
 const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
-const MOBILE_SPINNER_VIEWPORT_HEIGHT = 186;
 const DESKTOP_STEP_WIDTH = DESKTOP_CARD_WIDTH + DESKTOP_GAP_WIDTH;
-const MOBILE_STEP_WIDTH = MOBILE_CARD_WIDTH + MOBILE_GAP_WIDTH;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -334,9 +329,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [hasSpinSettled, setHasSpinSettled] = useState(false);
-  const [isMobileViewport, setIsMobileViewport] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false
-  );
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
   const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
   const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
@@ -394,20 +386,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && (currentXpBalance > 0 || xpProgress > 0);
   const canOpenMain = isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
-  const spinnerCardWidth = isMobileViewport ? MOBILE_CARD_WIDTH : DESKTOP_CARD_WIDTH;
-  const spinnerCardHeight = isMobileViewport ? MOBILE_CARD_HEIGHT : DESKTOP_CARD_HEIGHT;
-  const spinnerGap = isMobileViewport ? MOBILE_GAP_WIDTH : DESKTOP_GAP_WIDTH;
-  const spinnerViewportHeight = isMobileViewport ? MOBILE_SPINNER_VIEWPORT_HEIGHT : DESKTOP_SPINNER_VIEWPORT_HEIGHT;
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const updateViewportMode = () => {
-      setIsMobileViewport(window.innerWidth < 768);
-    };
-    updateViewportMode();
-    window.addEventListener('resize', updateViewportMode);
-    return () => window.removeEventListener('resize', updateViewportMode);
-  }, []);
+  const spinnerCardWidth = DESKTOP_CARD_WIDTH;
+  const spinnerCardHeight = DESKTOP_CARD_HEIGHT;
+  const spinnerGap = DESKTOP_GAP_WIDTH;
+  const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
 
   const updateSpinnerMeasurements = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -772,9 +754,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
-    const desktopTravelPx = SPINNER_MOTION.preWinnerItems * DESKTOP_STEP_WIDTH;
-    const mobilePreWinnerItems = Math.ceil(desktopTravelPx / MOBILE_STEP_WIDTH);
-    const preWinnerItems = isMobileViewport ? mobilePreWinnerItems : SPINNER_MOTION.preWinnerItems;
+    const preWinnerItems = SPINNER_MOTION.preWinnerItems;
     const postWinnerItems = SPINNER_MOTION.postWinnerItems;
     const winnerIndex = preWinnerItems;
     const reelLength = preWinnerItems + 1 + postWinnerItems;
@@ -812,7 +792,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     return { items: newReel, winnerIndex };
-  }, [isMobileViewport]);
+  }, []);
 
   const getCenteredTranslate = useCallback((winnerIndex: number, landingOffset = 0) => {
     const viewport = scrollViewportRef.current;
@@ -939,15 +919,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       return;
     }
 
-    const { stepWidth } = spinnerMeasurementsRef.current;
-    const scaledOvershootPx = Math.min(
-      stepWidth * 1.5,
-      SPINNER_MOTION.overshootPx
-    );
-
     const overshootDirection = approachOffset >= 0 ? -1 : 1;
     const overshootTarget = clampTranslate(
-      approachTranslate + (scaledOvershootPx * overshootDirection)
+      approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection)
     );
     setAnimationPhase('spinning');
 
@@ -1855,9 +1829,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     className="flex will-change-transform transition-opacity duration-300 opacity-100" 
                     style={{
                       gap: `${spinnerGap}px`,
-                      transform: 'translate3d(0,0,0)',
+                      transform: 'translate3d(0px, 0, 0)',
                       backfaceVisibility: 'hidden',
                       WebkitBackfaceVisibility: 'hidden',
+                      willChange: isSpinning ? 'transform' : 'auto',
                       transformStyle: 'preserve-3d',
                       WebkitTransformStyle: 'preserve-3d'
                     }}
@@ -1885,8 +1860,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
-                                transform: `translateZ(0) scale(${isFocusedItem ? 1.03 : 0.975})`,
-                                WebkitTransform: `translateZ(0) scale(${isFocusedItem ? 1.03 : 0.975})`,
+                                transform: 'translate3d(0px, 0, 0)',
+                                WebkitTransform: 'translate3d(0px, 0, 0)',
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem ? `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55` : 'none',
@@ -1899,7 +1874,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] opacity-65 blur-3xl ${rarityGlow}`}
                               style={{ boxShadow: isFocusedItem ? `0 0 20px ${item.color}40` : 'none' }}
                             />
-                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
+                            <div
+                              className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch transition-transform duration-200"
+                              style={{
+                                transform: `scale(${isFocusedItem ? 1.03 : 0.975})`,
+                                WebkitTransform: `scale(${isFocusedItem ? 1.03 : 0.975})`
+                              }}
+                            >
                               <img loading="eager" decoding="async" 
                                   src={item.image} 
                                   alt={item.name} 
