@@ -187,7 +187,7 @@ const Toolbar = ({
   </div>
 );
 
-const SelectedPreview = ({ label, item, emptyText, actionLabel, onActivate }: { label: string; item: EliteItem | null; emptyText: string; actionLabel: string; onActivate: () => void }) => (
+const SelectedPreview = ({ label, item, emptyText, onActivate }: { label: string; item: EliteItem | null; emptyText: string; onActivate: () => void }) => (
   <div className="rounded-2xl border border-white/10 bg-[#1f252c] p-4 sm:p-5">
     <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
     <button type="button" onClick={onActivate} className="relative mt-4 flex h-[240px] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-white/20 bg-transparent px-3 pb-3 pt-4 transition hover:border-white/35 sm:h-[250px]">
@@ -196,8 +196,7 @@ const SelectedPreview = ({ label, item, emptyText, actionLabel, onActivate }: { 
           <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center">
             <img src={item.image} alt={item.name} className="max-h-[140px] w-auto max-w-[140px] object-contain sm:max-h-[155px] sm:max-w-[155px]" referrerPolicy="no-referrer" />
           </div>
-          <div className="relative z-10 w-full rounded-lg border border-indigo-300/20 bg-[#0b1228]/90 px-2 py-1 text-center">
-            <p className="truncate text-xs font-semibold text-white">{item.name}</p>
+          <div className="relative z-10 w-full rounded-lg border border-white/10 bg-[#2a323b] px-2 py-1 text-center">
             <CoinAmount amount={Math.round(item.price)} className="justify-center text-[11px] text-slate-200" iconClassName="h-3 w-3" />
           </div>
         </>
@@ -207,9 +206,6 @@ const SelectedPreview = ({ label, item, emptyText, actionLabel, onActivate }: { 
           <p className="mt-3 px-4 text-sm text-slate-300">{emptyText}</p>
         </div>
       )}
-      <span className="relative z-10 mt-4 inline-flex h-10 w-full max-w-[220px] items-center justify-center rounded-full border border-white/15 bg-[#2a323b] text-xs font-bold uppercase tracking-[0.16em] text-slate-100">
-        {actionLabel}
-      </span>
     </button>
   </div>
 );
@@ -609,7 +605,7 @@ export default function UpgraderPage() {
             </div>
           </div>
           <div className="relative grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1fr_minmax(320px,460px)_1fr] lg:gap-6">
-            <SelectedPreview label="Your Item" item={sourcePreview} emptyText="Choose an item to upgrade" actionLabel="Select Item" onActivate={() => jumpToPanel('inventory')} />
+            <SelectedPreview label="Your Item" item={sourcePreview} emptyText="Choose an item to upgrade" onActivate={() => jumpToPanel('inventory')} />
 
             <div className="relative flex flex-col items-center rounded-2xl border border-white/5 bg-[#1f252c] p-4">
               <UpgraderSpinner
@@ -636,20 +632,20 @@ export default function UpgraderPage() {
               </div>
             </div>
 
-            <SelectedPreview label="Item You Want" item={targetPreview} emptyText="Select your target item" actionLabel="Select Target" onActivate={() => jumpToPanel('targets')} />
+            <SelectedPreview label="Item You Want" item={targetPreview} emptyText="Select your target item" onActivate={() => jumpToPanel('targets')} />
           </div>
         </section>
 
-        <div className="flex rounded-xl border border-indigo-300/15 bg-[#080d1c] p-1 lg:hidden">
-          <button onClick={() => setActiveTab('inventory')} className={`flex-1 rounded-lg py-2 text-xs font-semibold uppercase tracking-[0.14em] ${activeTab === 'inventory' ? 'bg-indigo-500 text-white' : 'text-slate-400'}`}>Your Items</button>
-          <button onClick={() => setActiveTab('targets')} className={`flex-1 rounded-lg py-2 text-xs font-semibold uppercase tracking-[0.14em] ${activeTab === 'targets' ? 'bg-indigo-500 text-white' : 'text-slate-400'}`}>Site Items</button>
+        <div className="flex rounded-xl border border-white/10 bg-[#1f252c] p-1 lg:hidden">
+          <button onClick={() => setActiveTab('inventory')} className={`flex-1 rounded-lg py-2 text-xs font-semibold uppercase tracking-[0.14em] ${activeTab === 'inventory' ? 'bg-[#343c46] text-white' : 'text-slate-400'}`}>Your Items</button>
+          <button onClick={() => setActiveTab('targets')} className={`flex-1 rounded-lg py-2 text-xs font-semibold uppercase tracking-[0.14em] ${activeTab === 'targets' ? 'bg-[#343c46] text-white' : 'text-slate-400'}`}>Site Items</button>
         </div>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
           <div ref={inventoryPanelRef} className={`${activeTab === 'inventory' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-white/10 bg-[#1f252c] p-3 sm:p-4 lg:flex`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Your Items</h2>
-              <span className="rounded-md border border-indigo-300/20 bg-[#101837] px-2 py-0.5 text-[10px] text-slate-300">{filteredInventoryItems.length}</span>
+              <span className="rounded-md border border-white/15 bg-[#2a323b] px-2 py-0.5 text-[10px] text-slate-300">{filteredInventoryItems.length}</span>
             </div>
             <Toolbar min={inventoryMin} max={inventoryMax} search={inventorySearch} sort={inventorySort} category={inventoryCategory} onMin={setInventoryMin} onMax={setInventoryMax} onSearch={setInventorySearch} onSort={setInventorySort} onCategory={setInventoryCategory} />
             <div className="mt-3 grid flex-1 grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3 custom-scrollbar">
@@ -671,7 +667,7 @@ export default function UpgraderPage() {
               ))}
             </div>
             {filteredInventoryItems.length === 0 && (
-              <div className="mt-4 rounded-xl border border-dashed border-indigo-300/25 bg-[#090f20] p-4 text-center text-xs text-slate-400">
+              <div className="mt-4 rounded-xl border border-dashed border-white/20 bg-[#222a32] p-4 text-center text-xs text-slate-400">
                 No items match your filters. Adjust your search or range.
               </div>
             )}
@@ -679,7 +675,7 @@ export default function UpgraderPage() {
               <button
                 type="button"
                 onClick={() => setInventoryVisibleCount((previous) => previous + PANEL_INCREMENT)}
-                className="mt-3 h-9 rounded-lg border border-indigo-300/25 bg-[#0d1732] text-xs font-semibold uppercase tracking-[0.14em] text-slate-200 transition hover:border-indigo-300/50 hover:text-white"
+                className="mt-3 h-9 rounded-lg border border-white/20 bg-[#2a323b] text-xs font-semibold uppercase tracking-[0.14em] text-slate-200 transition hover:border-white/35 hover:text-white"
               >
                 Load More ({filteredInventoryItems.length - visibleInventoryItems.length} left)
               </button>
@@ -689,16 +685,16 @@ export default function UpgraderPage() {
           <div ref={targetPanelRef} className={`${activeTab === 'targets' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-white/10 bg-[#1f252c] p-3 sm:p-4 lg:flex`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">Site Items</h2>
-              <span className="rounded-md border border-indigo-300/20 bg-[#101837] px-2 py-0.5 text-[10px] text-slate-300">{filteredTargetItems.length}</span>
+              <span className="rounded-md border border-white/15 bg-[#2a323b] px-2 py-0.5 text-[10px] text-slate-300">{filteredTargetItems.length}</span>
             </div>
             <Toolbar min={targetMin} max={targetMax} search={targetSearch} sort={targetSort} category={targetCategory} includeBestMatch upgradePreset={targetRiskPreset} sourceSelected={Boolean(source)} onUpgradePreset={setTargetRiskPreset} onMin={setTargetMin} onMax={setTargetMax} onSearch={setTargetSearch} onSort={setTargetSort} onCategory={setTargetCategory} />
             {!source && (
-              <div className="mt-3 rounded-xl border border-dashed border-indigo-300/30 bg-[#0a1228] p-3 text-xs text-slate-400">
+              <div className="mt-3 rounded-xl border border-dashed border-white/20 bg-[#222a32] p-3 text-xs text-slate-400">
                 Select your source item on the left to unlock best-match sorting, suggested targets, and risk presets.
               </div>
             )}
             {source && suggestedTargets.length > 0 && (
-              <div className="mt-3 rounded-xl border border-indigo-300/25 bg-[#0a1430] p-2.5">
+              <div className="mt-3 rounded-xl border border-white/15 bg-[#222a32] p-2.5">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-200">Suggested Upgrades</p>
                   <p className="text-[10px] text-slate-400">Safe · Balanced · High Risk</p>
@@ -712,7 +708,7 @@ export default function UpgraderPage() {
                         const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
                         setTarget(match);
                       }}
-                      className="rounded-lg border border-indigo-300/25 bg-[#0f1a3b] p-2 text-left transition hover:border-cyan-300/55 hover:bg-[#182857]"
+                      className="rounded-lg border border-white/15 bg-[#2a323b] p-2 text-left transition hover:border-white/30 hover:bg-[#343c46]"
                     >
                       <p className="truncate text-[10px] font-semibold text-slate-100">{item.name}</p>
                       <p className="mt-1 text-[9px] uppercase tracking-[0.14em] text-cyan-200">{label}</p>
