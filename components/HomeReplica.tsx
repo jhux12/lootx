@@ -92,14 +92,14 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                   if (index === 1) setView({ type: 'PLINKO' });
                   if (index === 2) setView({ type: 'LEADERBOARD' });
                 }}
-                className="relative min-h-[132px] overflow-hidden rounded-xl bg-[#21282c] p-4 text-left"
+                className="group relative min-h-[132px] overflow-hidden rounded-xl border border-white/5 bg-[#21282c] p-4 text-left transition-all duration-300 ease-out hover:-translate-y-1 hover:border-slate-400/35 hover:shadow-[0_12px_28px_rgba(5,8,12,0.45)] focus-visible:-translate-y-1 focus-visible:border-slate-400/35"
               >
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_60%,rgba(34,211,238,0.20),transparent_52%),radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.08),transparent_45%)]" />
                 <p className="relative z-10 max-w-[140px] text-sm font-black uppercase leading-5 text-slate-100">{tile.title}</p>
                 <img
                   src={tile.image}
                   alt={`${tile.title} artwork`}
-                  className="pointer-events-none absolute right-1 bottom-0 z-10 h-[122px] w-[122px] shrink-0 object-contain opacity-100"
+                  className="pointer-events-none absolute right-1 bottom-0 z-10 h-[96px] w-[96px] shrink-0 object-contain opacity-100 transition-transform duration-300 ease-out group-hover:scale-105 sm:h-[112px] sm:w-[112px] md:h-[122px] md:w-[122px]"
                   loading="lazy"
                   width={500}
                   height={500}
@@ -115,9 +115,9 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-5">
               {featuredBoxes.map((box) => (
-                <button key={box.id} onClick={() => onOpenBox(box.id)} className="text-center">
-                  <div className="flex h-[170px] items-center justify-center p-2">
-                    <img src={box.image} alt={box.name} className="max-h-full w-auto object-contain" loading="lazy" />
+                <button key={box.id} onClick={() => onOpenBox(box.id)} className="group rounded-xl border border-transparent bg-transparent p-2 text-center transition-all duration-300 ease-out hover:-translate-x-1 hover:-translate-y-1 hover:rotate-[-1.1deg] hover:border-slate-500/35 hover:bg-[#21282c]/70 hover:shadow-[0_14px_30px_rgba(5,8,12,0.45)] focus-visible:-translate-x-1 focus-visible:border-slate-500/35">
+                  <div className="flex h-[145px] items-center justify-center p-2 sm:h-[170px]">
+                    <img src={box.image} alt={box.name} className="max-h-full w-auto object-contain transition-transform duration-300 ease-out group-hover:scale-105" loading="lazy" />
                   </div>
                   <div className="mt-2 flex justify-center">
                     <CoinAmount amount={Math.round(box.price)} className="text-sm font-semibold text-slate-200" iconClassName="h-4 w-4" />
@@ -131,10 +131,10 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             <h2 className="mb-4 text-xl font-black">Top Upgrades</h2>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
               {topUpgrades.map((upgrade) => (
-                <div key={upgrade.id} className="rounded-xl bg-[#22282c] p-3">
+                <div key={upgrade.id} className="group rounded-xl border border-white/5 bg-[#22282c] p-3 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-slate-400/35 hover:shadow-[0_10px_24px_rgba(5,8,12,0.42)]">
                   <p className="text-xs font-black text-yellow-300">{upgrade.multiplier}</p>
                   <div className="my-3 flex h-[80px] items-center justify-center">
-                    <img src={upgrade.image} alt={upgrade.name} className="max-h-full max-w-full object-contain" loading="lazy" />
+                    <img src={upgrade.image} alt={upgrade.name} className="max-h-full max-w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105 group-hover:rotate-[-1deg]" loading="lazy" />
                   </div>
                   <p className="truncate text-xs text-slate-400">{upgrade.name}</p>
                   <CoinAmount amount={Math.round(upgrade.price)} className="mt-1 text-sm font-black text-white" iconClassName="h-4 w-4" />
