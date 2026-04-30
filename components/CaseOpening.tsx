@@ -1829,7 +1829,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 maxHeight: `${ITEM_SIZE}px`,
                                 position: 'absolute',
                                 top: '50%',
-                                transform: `translate(0px, -${ITEM_SIZE / 2}px)`,
+                                transform: 'translate(0px, -97.5px)',
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem ? `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55` : 'none',
