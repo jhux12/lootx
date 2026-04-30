@@ -96,37 +96,6 @@ const createSeededRng = (seed: string) => {
 
 const pickFromPool = <T,>(pool: T[], rng: () => number): T => pool[Math.floor(rng() * pool.length)];
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-const createBezierEasing = (x1: number, y1: number, x2: number, y2: number) => {
-  const sampleCurveX = (t: number) => ((1 - 3 * x2 + 3 * x1) * t + (3 * x2 - 6 * x1)) * t * t + (3 * x1) * t;
-  const sampleCurveY = (t: number) => ((1 - 3 * y2 + 3 * y1) * t + (3 * y2 - 6 * y1)) * t * t + (3 * y1) * t;
-  const sampleDerivativeX = (t: number) => (3 * (1 - 3 * x2 + 3 * x1) * t + 2 * (3 * x2 - 6 * x1)) * t + (3 * x1);
-
-  const solveCurveX = (x: number) => {
-    let t2 = x;
-    for (let i = 0; i < 8; i += 1) {
-      const x2AtT = sampleCurveX(t2) - x;
-      if (Math.abs(x2AtT) < 1e-6) return t2;
-      const derivative = sampleDerivativeX(t2);
-      if (Math.abs(derivative) < 1e-6) break;
-      t2 -= x2AtT / derivative;
-    }
-
-    let t0 = 0;
-    let t1 = 1;
-    t2 = x;
-    while (t0 < t1) {
-      const x2AtT = sampleCurveX(t2);
-      if (Math.abs(x2AtT - x) < 1e-6) return t2;
-      if (x > x2AtT) t0 = t2;
-      else t1 = t2;
-      t2 = (t1 - t0) * 0.5 + t0;
-      if (Math.abs(t1 - t0) < 1e-6) break;
-    }
-    return t2;
-  };
-
-  return (x: number) => sampleCurveY(solveCurveX(x));
-};
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -380,6 +349,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const winningCardRef = useRef<HTMLDivElement>(null);
   const spinnerAnimationRef = useRef<Animation | null>(null);
   const tickTimerRef = useRef<number | null>(null);
+  const lastCenterIndexRef = useRef<number>(SPINNER_MOTION.preWinnerItems);
   const spinnerMeasurementsRef = useRef({
     cardWidth: DESKTOP_CARD_WIDTH,
     reelGap: DESKTOP_GAP_WIDTH,
@@ -894,86 +864,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setAnimationPhase('idle');
   }, []);
 
-  const scheduleTickSounds = useCallback((options: {
-    durationMs: number;
-    winnerIndex: number;
-    overshootTranslate: number;
-    finalTranslate: number;
-  }) => {
-    const { durationMs, winnerIndex, overshootTranslate, finalTranslate } = options;
-    if (tickTimerRef.current !== null) {
-      window.clearTimeout(tickTimerRef.current);
-      tickTimerRef.current = null;
-    }
-
-    const { stepWidth } = spinnerMeasurementsRef.current;
-    if (!Number.isFinite(stepWidth) || stepWidth <= 0) return;
-
-    const segmentOneDuration = durationMs * 0.8;
-    const segmentTwoDuration = durationMs - segmentOneDuration;
-    const easeMain = createBezierEasing(0.1, 0.9, 0.25, 1);
-    const easeSettle = createBezierEasing(0.14, 0.9, 0.22, 1);
-    const invertEasing = (target: number, easing: (t: number) => number) => {
-      let low = 0;
-      let high = 1;
-      for (let i = 0; i < 22; i += 1) {
-        const mid = (low + high) / 2;
-        const value = easing(mid);
-        if (value < target) low = mid;
-        else high = mid;
-      }
-      return (low + high) / 2;
-    };
-
-    const times: number[] = [];
-    const pushCrossingTimes = (
-      fromX: number,
-      toX: number,
-      easing: (t: number) => number,
-      segmentStartMs: number,
-      segmentDurationMs: number
-    ) => {
-      const minX = Math.min(fromX, toX);
-      const maxX = Math.max(fromX, toX);
-
-      for (let index = 1; index <= winnerIndex + 2; index += 1) {
-        const crossingX = -(index * stepWidth);
-        if (crossingX < minX || crossingX > maxX) continue;
-        const range = toX - fromX;
-        if (Math.abs(range) < 1e-6) continue;
-        const normalized = (crossingX - fromX) / range;
-        if (normalized <= 0 || normalized >= 1) continue;
-        const easedTime = invertEasing(normalized, easing);
-        times.push(segmentStartMs + (easedTime * segmentDurationMs));
-      }
-    };
-
-    pushCrossingTimes(0, overshootTranslate, easeMain, 0, segmentOneDuration);
-    pushCrossingTimes(overshootTranslate, finalTranslate, easeSettle, segmentOneDuration, segmentTwoDuration);
-
-    const scheduled = times
-      .map((value) => Math.max(16, Math.floor(value)))
-      .sort((a, b) => a - b)
-      .filter((value, index, array) => index === 0 || value - array[index - 1] >= 18);
-
-    if (!scheduled.length) return;
-
-    const startAt = performance.now();
-    let cursor = 0;
-    const loop = () => {
-      playSound('spin-tick');
-      cursor += 1;
-      if (cursor >= scheduled.length) {
-        tickTimerRef.current = null;
-        return;
-      }
-      const elapsed = performance.now() - startAt;
-      const nextDelay = Math.max(12, scheduled[cursor] - elapsed);
-      tickTimerRef.current = window.setTimeout(loop, nextDelay);
-    };
-    tickTimerRef.current = window.setTimeout(loop, scheduled[0]);
-  }, [playSound]);
-
   const animateSpin = useCallback(async (
     winnerIndex: number,
     duration: number,
@@ -1019,12 +909,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
     updateSpinnerMeasurements();
     setAnimationPhase('spinning');
-    scheduleTickSounds({
-      durationMs: resolvedDuration,
-      winnerIndex,
-      overshootTranslate: overshootTarget,
-      finalTranslate: centeredTranslate
-    });
+    lastCenterIndexRef.current = 0;
 
     const animation = container.animate(
       [
@@ -1046,11 +931,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const transform = window.getComputedStyle(container).transform;
       const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
       const x = matrix ? matrix.m41 : 0;
-      const { stepWidth, cardWidth, viewportWidth } = spinnerMeasurementsRef.current;
-      if (Number.isFinite(stepWidth) && stepWidth > 0 && Number.isFinite(cardWidth) && Number.isFinite(viewportWidth)) {
-        const viewportCenter = viewportWidth / 2;
+      const { stepWidth, cardWidth } = spinnerMeasurementsRef.current;
+      const viewportCenter = scrollViewportRef.current?.clientWidth ? scrollViewportRef.current.clientWidth / 2 : 0;
+      if (Number.isFinite(stepWidth) && stepWidth > 0 && Number.isFinite(cardWidth) && viewportCenter > 0) {
         const index = Math.max(0, Math.round((viewportCenter - x - (cardWidth / 2)) / stepWidth));
         setCurrentCenterIndex(index);
+        if (index !== lastCenterIndexRef.current) {
+          playSound('spin-tick');
+          lastCenterIndexRef.current = index;
+        }
       }
       frameId = window.requestAnimationFrame(syncCenterItem);
     };
@@ -1092,7 +981,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, resetSpinnerAnimation, resolveCenteredTranslate, scheduleTickSounds, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, playSound, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1996,7 +1885,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             )}
                           </span>
                           {previewTotalXp > 0 && (
-                            <span className="hidden items-center rounded-full border border-emerald-300/40 bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-200 sm:inline-flex">
+                            <span className="inline-flex items-center text-[10px] font-semibold text-emerald-300 sm:rounded-full sm:border sm:border-emerald-300/40 sm:bg-emerald-500/15 sm:px-2 sm:py-0.5 sm:text-xs sm:text-emerald-200">
                               +{previewTotalXp.toLocaleString()} XP
                             </span>
                           )}
