@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LucideHistory,
   LucideSearch,
-  CircleHelp,
+  ShieldCheck,
+  Copy,
+  Info,
   LucideSettings2,
   LucideVolume2,
   LucideVolumeX
@@ -143,25 +145,25 @@ const Toolbar = ({
   onCategory: (value: CategoryFilter) => void;
   onUpgradePreset?: (value: RiskPreset) => void;
 }) => (
-  <div className="grid grid-cols-2 gap-2 rounded-xl border border-indigo-300/20 bg-[#070d1d]/95 p-2 md:grid-cols-[90px_90px_130px_130px_minmax(0,1fr)_36px]">
-    <input value={min} onChange={(e) => onMin(e.target.value)} placeholder="Min" className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-violet-300/60 ${min ? 'border-violet-300/45 bg-violet-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`} />
-    <input value={max} onChange={(e) => onMax(e.target.value)} placeholder="Max" className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-violet-300/60 ${max ? 'border-violet-300/45 bg-violet-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`} />
-    <select value={sort} onChange={(e) => onSort(e.target.value as SortMode)} className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none focus:border-violet-300/60 ${sort !== 'value_desc' && sort !== 'best_match' ? 'border-cyan-300/45 bg-cyan-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`}>
+  <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#222a32] p-2 md:grid-cols-[90px_90px_130px_130px_minmax(0,1fr)_36px]">
+    <input value={min} onChange={(e) => onMin(e.target.value)} placeholder="Min" className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-white/35 ${min ? 'border-white/30 bg-[#2a323b]' : 'border-white/15 bg-[#1f252c]'}`} />
+    <input value={max} onChange={(e) => onMax(e.target.value)} placeholder="Max" className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-white/35 ${max ? 'border-white/30 bg-[#2a323b]' : 'border-white/15 bg-[#1f252c]'}`} />
+    <select value={sort} onChange={(e) => onSort(e.target.value as SortMode)} className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none focus:border-white/35 ${sort !== 'value_desc' && sort !== 'best_match' ? 'border-white/30 bg-[#2a323b]' : 'border-white/15 bg-[#1f252c]'}`}>
       {includeBestMatch && <option value="best_match">Best Match</option>}
       <option value="value_desc">High Value</option>
       <option value="value_asc">Low Value</option>
       <option value="name_asc">Name</option>
     </select>
-    <select value={category} onChange={(e) => onCategory(e.target.value as CategoryFilter)} className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none focus:border-violet-300/60 ${category !== 'all' ? 'border-cyan-300/45 bg-cyan-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`}>
+    <select value={category} onChange={(e) => onCategory(e.target.value as CategoryFilter)} className={`h-9 rounded-lg border px-2.5 text-xs text-slate-200 outline-none focus:border-white/35 ${category !== 'all' ? 'border-white/30 bg-[#2a323b]' : 'border-white/15 bg-[#1f252c]'}`}>
       {CATEGORY_OPTIONS.map((option) => (
         <option key={option.value} value={option.value}>{option.label}</option>
       ))}
     </select>
     <div className="relative col-span-2 md:col-span-1">
       <LucideSearch className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
-      <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search item" className={`h-9 w-full rounded-lg border pl-7 pr-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-violet-300/60 ${search ? 'border-violet-300/45 bg-violet-500/10' : 'border-indigo-300/20 bg-[#050a18]'}`} />
+      <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search item" className={`h-9 w-full rounded-lg border pl-7 pr-2.5 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-white/35 ${search ? 'border-white/30 bg-[#2a323b]' : 'border-white/15 bg-[#1f252c]'}`} />
     </div>
-    <button type="button" className="hidden h-9 items-center justify-center rounded-lg border border-indigo-300/25 bg-[#0b1328] text-slate-300 md:flex" aria-label="Filters">
+    <button type="button" className="hidden h-9 items-center justify-center rounded-lg border border-white/15 bg-[#1f252c] text-slate-300 md:flex" aria-label="Filters">
       <LucideSettings2 className="h-3.5 w-3.5" />
     </button>
     {onUpgradePreset && (
@@ -187,32 +189,26 @@ const Toolbar = ({
   </div>
 );
 
-const SelectedPreview = ({ label, item, emptyText, actionLabel, onActivate }: { label: string; item: EliteItem | null; emptyText: string; actionLabel: string; onActivate: () => void }) => (
-  <div className="rounded-2xl border border-indigo-300/15 bg-gradient-to-b from-[#0a1122] to-[#060b15] p-4 sm:p-5">
+const SelectedPreview = ({ label, item, emptyText, onActivate }: { label: string; item: EliteItem | null; emptyText: string; onActivate: () => void }) => (
+  <div className="rounded-2xl border border-white/10 bg-[#1f252c] p-4 sm:p-5">
     <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-    <div className="relative mt-4 flex h-[240px] flex-col items-center justify-between overflow-hidden rounded-xl border border-indigo-300/15 bg-[#050914] px-3 pb-3 pt-4 sm:h-[250px]">
-      <div className="absolute top-4 h-28 w-40 bg-indigo-300/15 blur-3xl" />
-      <div className="absolute bottom-14 h-5 w-36 rounded-[999px] bg-cyan-300/15 blur-md" />
+    <button type="button" onClick={onActivate} className="relative mt-4 flex h-[240px] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-white/20 bg-transparent px-3 pb-3 pt-4 transition hover:border-white/35 sm:h-[250px]">
       {item ? (
         <>
           <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center">
             <img src={item.image} alt={item.name} className="max-h-[140px] w-auto max-w-[140px] object-contain sm:max-h-[155px] sm:max-w-[155px]" referrerPolicy="no-referrer" />
           </div>
-          <div className="relative z-10 w-full rounded-lg border border-indigo-300/20 bg-[#0b1228]/90 px-2 py-1 text-center">
-            <p className="truncate text-xs font-semibold text-white">{item.name}</p>
+          <div className="relative z-10 w-full rounded-lg border border-white/10 bg-[#2a323b] px-2 py-1 text-center">
             <CoinAmount amount={Math.round(item.price)} className="justify-center text-[11px] text-slate-200" iconClassName="h-3 w-3" />
           </div>
         </>
       ) : (
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 rounded-full border border-dashed border-slate-600/80" />
-          <p className="mt-3 px-4 text-xs text-slate-400">{emptyText}</p>
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl border border-white/25 text-5xl font-light text-white/85">+</div>
+          <p className="mt-3 px-4 text-sm text-slate-300">{emptyText}</p>
         </div>
       )}
-      <button type="button" onClick={onActivate} className="relative z-10 mt-4 h-10 w-full max-w-[220px] rounded-full border border-indigo-300/35 bg-[#152343] text-xs font-bold uppercase tracking-[0.16em] text-slate-200 transition duration-200 hover:scale-[1.02] hover:border-indigo-200/55 hover:text-white">
-        {actionLabel}
-      </button>
-    </div>
+    </button>
   </div>
 );
 
@@ -233,6 +229,8 @@ export default function UpgraderPage() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
   const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const inventoryPanelRef = useRef<HTMLDivElement | null>(null);
+  const targetPanelRef = useRef<HTMLDivElement | null>(null);
   const idleTimeoutRef = useRef<number | null>(null);
   const spinAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastPlayedResultRef = useRef<string | null>(null);
@@ -241,6 +239,24 @@ export default function UpgraderPage() {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('upgrader-audio-muted') === '1';
   });
+
+  const jumpToPanel = (panel: 'inventory' | 'targets') => {
+    setActiveTab(panel);
+    window.setTimeout(() => {
+      const targetNode = panel === 'inventory' ? inventoryPanelRef.current : targetPanelRef.current;
+      targetNode?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 40);
+  };
+
+  const handleCopyPageLink = async () => {
+    if (typeof window === 'undefined') return;
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied');
+    } catch {
+      toast.error('Unable to copy link');
+    }
+  };
 
   const [inventoryMin, setInventoryMin] = useState('');
   const [inventoryMax, setInventoryMax] = useState('');
@@ -575,47 +591,49 @@ export default function UpgraderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_20%_-10%,rgba(79,70,229,0.32),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(56,189,248,0.16),transparent_35%),linear-gradient(180deg,#02050e_0%,#040712_40%,#02040d_100%)] pb-44 font-sans text-slate-200 lg:pb-32">
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-end border-b border-indigo-300/10 bg-[#050916]/86 px-4 backdrop-blur-xl sm:hidden">
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 hover:text-white" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
-            {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
+    <div className="min-h-screen bg-[#1b2024] pb-44 font-sans text-slate-200 lg:pb-32">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/10 bg-[#1b2024]/90 px-4 backdrop-blur-xl sm:hidden">
+        <p className="text-base font-black text-white">Upgrader</p>
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={() => { window.location.href = '/provably-fair'; }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)]" aria-label="Open provably fair">
+            <ShieldCheck className="h-4 w-4" />
           </button>
-          <button type="button" onClick={() => setIsHelpOpen(true)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 transition duration-200 hover:scale-[1.03] hover:text-white" aria-label="Upgrader help">
-            <CircleHelp className="h-4 w-4" />
+          <button type="button" onClick={() => { void handleCopyPageLink(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)]" aria-label="Copy page link">
+            <Copy className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => setIsHelpOpen(true)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)]" aria-label="Upgrader help">
+            <Info className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)]" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
+            {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
           </button>
         </div>
       </header>
 
       <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 p-3 sm:gap-6 sm:p-4 lg:p-8">
-        <section className="relative overflow-hidden rounded-3xl border border-indigo-300/20 bg-[#080d1c]/90 p-3 sm:p-4">
-          <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[70%] -translate-x-1/2 bg-[radial-gradient(circle,rgba(124,58,237,0.32),rgba(59,130,246,0.04)_65%,transparent)] blur-2xl" />
-          <div className="relative mb-3 flex flex-wrap items-end justify-between gap-2 border-b border-indigo-300/15 pb-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Upgrader</p>
-              <h2 className="mt-0.5 text-2xl font-black uppercase tracking-tight text-white sm:text-4xl">
-                ELITE <span className="bg-gradient-to-r from-sky-300 via-violet-300 to-fuchsia-300 bg-clip-text text-transparent">UPGRADER</span>
-              </h2>
-              <p className="mt-0.5 text-sm text-slate-300">Upgrade your items. Higher risk. Higher rewards.</p>
-            </div>
-            <div className="hidden items-center gap-2 sm:flex">
-              <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 hover:text-white" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
+        <section className="relative overflow-hidden rounded-2xl border border-white/5 bg-transparent p-3 sm:p-4">
+          <div className="relative mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+            <div className="hidden items-center gap-1 sm:flex">
+              <button type="button" onClick={() => { window.location.href = '/provably-fair'; }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)]" aria-label="Open provably fair"><ShieldCheck className="h-4 w-4" /></button>
+              <button type="button" onClick={() => { void handleCopyPageLink(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)]" aria-label="Copy page link"><Copy className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setIsHelpOpen(true)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)]" aria-label="Upgrader help"><Info className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)]" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
                 {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
-              </button>
-              <button type="button" onClick={() => setIsHelpOpen(true)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 transition duration-200 hover:scale-[1.03] hover:text-white" aria-label="Upgrader help">
-                <CircleHelp className="h-4 w-4" />
               </button>
             </div>
           </div>
           <div className="relative grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1fr_minmax(320px,460px)_1fr] lg:gap-6">
-            <SelectedPreview label="Your Item" item={sourcePreview} emptyText="Choose an item to upgrade" actionLabel="Select Item" onActivate={() => setActiveTab('inventory')} />
+            <div className="order-2 lg:order-1">
+              <SelectedPreview label="Your Item" item={sourcePreview} emptyText="Choose an item to upgrade" onActivate={() => jumpToPanel('inventory')} />
+            </div>
 
-            <div className="relative flex flex-col items-center rounded-2xl border border-violet-300/35 bg-gradient-to-b from-[#0f1a3b] to-[#070d1b] p-4 shadow-[0_0_44px_rgba(76,29,149,0.26)]">
-              <div className="pointer-events-none absolute -inset-y-12 -left-6 -right-6 bg-[radial-gradient(circle,rgba(139,92,246,0.24),transparent_70%)]" />
+            <div className="relative order-1 flex flex-col items-center rounded-2xl border border-white/5 bg-[#1f252c] p-4 lg:order-2">
               <UpgraderSpinner
                 chance={chance}
                 hasSource={Boolean(source)}
                 hasTarget={Boolean(target)}
+                targetImage={targetPreview?.image}
+                targetName={targetPreview?.name}
                 status={status}
                 spinRotation={spinRotation}
                 spinNonce={spinNonce}
@@ -628,39 +646,30 @@ export default function UpgraderPage() {
                 size={spinnerSize}
                 durationMs={SPIN_DURATION_MS}
               />
-              {source && target && (
-                <div className="mt-3 w-full max-w-[340px] rounded-xl border border-indigo-300/20 bg-[#0a1228] p-3">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Value Comparison</p>
-                  <div className="space-y-1 text-xs text-slate-200">
-                    <div className="flex items-center justify-between"><span>Your item</span><CoinAmount amount={Math.round(source.coinValue)} className="text-xs text-slate-100" iconClassName="h-3 w-3" /></div>
-                    <div className="flex items-center justify-between"><span>Target</span><CoinAmount amount={Math.round(target.coinValue)} className="text-xs text-slate-100" iconClassName="h-3 w-3" /></div>
-                    <div className="flex items-center justify-between pt-1 text-violet-200"><span>Multiplier</span><span className="font-semibold">{valueMultiplier.toFixed(2)}x</span></div>
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-3 flex w-full max-w-[340px] flex-col items-center justify-center gap-2 sm:flex-row">
-                <button onClick={handleUpgrade} disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting} className={`h-11 w-full flex-1 rounded-xl border px-4 text-xs font-black uppercase tracking-[0.17em] transition duration-200 ${status === 'idle' && source && target && settings?.enabled ? 'border-violet-200/70 bg-gradient-to-r from-[#6d2eff] via-[#9444ff] to-[#4177ff] text-white shadow-[0_0_28px_rgba(139,92,246,0.4)] hover:brightness-110' : 'cursor-not-allowed border-indigo-300/20 bg-[#0a1124] text-slate-500'}`}>
+              <div className="mt-3 flex w-full max-w-[460px] items-center justify-center gap-2">
+                <button onClick={handleUpgrade} disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting} className={`h-11 min-w-0 flex-1 rounded-lg border px-4 text-base font-bold transition duration-200 ${status === 'idle' && source && target && settings?.enabled ? 'border-[#8fa2ff]/40 bg-gradient-to-r from-[#5b5bff] to-[#8a4dff] text-white hover:brightness-110' : 'cursor-not-allowed border-white/10 bg-[#24313b] text-slate-500'}`}>
                   {status === 'spinning' ? 'Upgrading...' : 'Upgrade'}
                 </button>
-                <button type="button" disabled={!source || !target || status === 'spinning'} onClick={handleDemoSpin} className={`h-10 w-full rounded-xl border px-3 text-[10px] font-semibold uppercase tracking-[0.12em] transition sm:w-auto ${source && target && status !== 'spinning' ? 'border-indigo-300/25 bg-[#0b1430]/80 text-slate-300 hover:border-indigo-300/50 hover:text-white' : 'cursor-not-allowed border-indigo-300/15 bg-[#0a1124] text-slate-500'}`}>Demo Spin</button>
+                <button type="button" disabled={!source || !target || status === 'spinning'} onClick={handleDemoSpin} className={`h-11 w-[42%] min-w-[124px] rounded-lg border px-3 text-sm font-bold transition ${source && target && status !== 'spinning' ? 'border-white/10 bg-[#343c46] text-white hover:bg-[#3b4551]' : 'cursor-not-allowed border-white/10 bg-[#24313b] text-slate-500'}`}>Demo Spin</button>
               </div>
             </div>
 
-            <SelectedPreview label="Item You Want" item={targetPreview} emptyText="Select your target item" actionLabel="Select Target" onActivate={() => setActiveTab('targets')} />
+            <div className="order-3 lg:order-3">
+              <SelectedPreview label="Item You Want" item={targetPreview} emptyText="Select your target item" onActivate={() => jumpToPanel('targets')} />
+            </div>
           </div>
         </section>
 
-        <div className="flex rounded-xl border border-indigo-300/15 bg-[#080d1c] p-1 lg:hidden">
-          <button onClick={() => setActiveTab('inventory')} className={`flex-1 rounded-lg py-2 text-xs font-semibold uppercase tracking-[0.14em] ${activeTab === 'inventory' ? 'bg-indigo-500 text-white' : 'text-slate-400'}`}>Your Items</button>
-          <button onClick={() => setActiveTab('targets')} className={`flex-1 rounded-lg py-2 text-xs font-semibold uppercase tracking-[0.14em] ${activeTab === 'targets' ? 'bg-indigo-500 text-white' : 'text-slate-400'}`}>Site Items</button>
+        <div className="flex rounded-xl border border-white/10 bg-[#1f252c] p-1 lg:hidden">
+          <button onClick={() => setActiveTab('inventory')} className={`flex-1 rounded-lg py-2 text-xs font-semibold uppercase tracking-[0.14em] ${activeTab === 'inventory' ? 'bg-[#343c46] text-white' : 'text-slate-400'}`}>Your Items</button>
+          <button onClick={() => setActiveTab('targets')} className={`flex-1 rounded-lg py-2 text-xs font-semibold uppercase tracking-[0.14em] ${activeTab === 'targets' ? 'bg-[#343c46] text-white' : 'text-slate-400'}`}>Site Items</button>
         </div>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-          <div className={`${activeTab === 'inventory' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/20 bg-[#070c19]/95 p-3 sm:p-4 lg:flex`}>
+          <div ref={inventoryPanelRef} className={`${activeTab === 'inventory' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-white/10 bg-[#1f252c] p-3 sm:p-4 lg:flex`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Your Items</h2>
-              <span className="rounded-md border border-indigo-300/20 bg-[#101837] px-2 py-0.5 text-[10px] text-slate-300">{filteredInventoryItems.length}</span>
+              <span className="rounded-md border border-white/15 bg-[#2a323b] px-2 py-0.5 text-[10px] text-slate-300">{filteredInventoryItems.length}</span>
             </div>
             <Toolbar min={inventoryMin} max={inventoryMax} search={inventorySearch} sort={inventorySort} category={inventoryCategory} onMin={setInventoryMin} onMax={setInventoryMax} onSearch={setInventorySearch} onSort={setInventorySort} onCategory={setInventoryCategory} />
             <div className="mt-3 grid flex-1 grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3 custom-scrollbar">
@@ -682,7 +691,7 @@ export default function UpgraderPage() {
               ))}
             </div>
             {filteredInventoryItems.length === 0 && (
-              <div className="mt-4 rounded-xl border border-dashed border-indigo-300/25 bg-[#090f20] p-4 text-center text-xs text-slate-400">
+              <div className="mt-4 rounded-xl border border-dashed border-white/20 bg-[#222a32] p-4 text-center text-xs text-slate-400">
                 No items match your filters. Adjust your search or range.
               </div>
             )}
@@ -690,26 +699,26 @@ export default function UpgraderPage() {
               <button
                 type="button"
                 onClick={() => setInventoryVisibleCount((previous) => previous + PANEL_INCREMENT)}
-                className="mt-3 h-9 rounded-lg border border-indigo-300/25 bg-[#0d1732] text-xs font-semibold uppercase tracking-[0.14em] text-slate-200 transition hover:border-indigo-300/50 hover:text-white"
+                className="mt-3 h-9 rounded-lg border border-white/20 bg-[#2a323b] text-xs font-semibold uppercase tracking-[0.14em] text-slate-200 transition hover:border-white/35 hover:text-white"
               >
                 Load More ({filteredInventoryItems.length - visibleInventoryItems.length} left)
               </button>
             )}
           </div>
 
-          <div className={`${activeTab === 'targets' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/25 bg-[#0a1022]/95 p-3 sm:p-4 lg:flex`}>
+          <div ref={targetPanelRef} className={`${activeTab === 'targets' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-white/10 bg-[#1f252c] p-3 sm:p-4 lg:flex`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">Site Items</h2>
-              <span className="rounded-md border border-indigo-300/20 bg-[#101837] px-2 py-0.5 text-[10px] text-slate-300">{filteredTargetItems.length}</span>
+              <span className="rounded-md border border-white/15 bg-[#2a323b] px-2 py-0.5 text-[10px] text-slate-300">{filteredTargetItems.length}</span>
             </div>
             <Toolbar min={targetMin} max={targetMax} search={targetSearch} sort={targetSort} category={targetCategory} includeBestMatch upgradePreset={targetRiskPreset} sourceSelected={Boolean(source)} onUpgradePreset={setTargetRiskPreset} onMin={setTargetMin} onMax={setTargetMax} onSearch={setTargetSearch} onSort={setTargetSort} onCategory={setTargetCategory} />
             {!source && (
-              <div className="mt-3 rounded-xl border border-dashed border-indigo-300/30 bg-[#0a1228] p-3 text-xs text-slate-400">
+              <div className="mt-3 rounded-xl border border-dashed border-white/20 bg-[#222a32] p-3 text-xs text-slate-400">
                 Select your source item on the left to unlock best-match sorting, suggested targets, and risk presets.
               </div>
             )}
             {source && suggestedTargets.length > 0 && (
-              <div className="mt-3 rounded-xl border border-indigo-300/25 bg-[#0a1430] p-2.5">
+              <div className="mt-3 rounded-xl border border-white/15 bg-[#222a32] p-2.5">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-200">Suggested Upgrades</p>
                   <p className="text-[10px] text-slate-400">Safe · Balanced · High Risk</p>
@@ -723,7 +732,7 @@ export default function UpgraderPage() {
                         const match = filteredTargets.find((entry) => entry.id === item.id) ?? null;
                         setTarget(match);
                       }}
-                      className="rounded-lg border border-indigo-300/25 bg-[#0f1a3b] p-2 text-left transition hover:border-cyan-300/55 hover:bg-[#182857]"
+                      className="rounded-lg border border-white/15 bg-[#2a323b] p-2 text-left transition hover:border-white/30 hover:bg-[#343c46]"
                     >
                       <p className="truncate text-[10px] font-semibold text-slate-100">{item.name}</p>
                       <p className="mt-1 text-[9px] uppercase tracking-[0.14em] text-cyan-200">{label}</p>

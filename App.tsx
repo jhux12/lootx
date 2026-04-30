@@ -795,7 +795,7 @@ const AppShell = () => {
 
   return (
     <PullToRefresh>
-      <div className="min-h-[var(--app-height,100vh)] bg-[#050811] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+      <div className="min-h-[var(--app-height,100vh)] bg-[#1b2024] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
         <SeoHead view={view} />
         <Header
           onOpenInbox={() => undefined}

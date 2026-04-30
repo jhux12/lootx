@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ChevronLeft,
   CheckCircle2,
   Copy,
   Crown,
@@ -216,7 +217,7 @@ export const ReferralsPage: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <div className="rounded-3xl border border-white/10 bg-[#0b101c] p-8 text-center sm:p-12">
+        <div className="rounded-3xl border border-white/10 bg-[#161b1f] p-8 text-center sm:p-12">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">{settings.heroBadge}</p>
           <h1 className="mb-3 flex flex-wrap items-center justify-center gap-3 text-3xl font-black text-white sm:text-5xl">
             <span>Give</span>
@@ -238,7 +239,14 @@ export const ReferralsPage: React.FC = () => {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0b101c] p-6 sm:p-10">
+      <button
+        type="button"
+        onClick={() => window.history.back()}
+        className="inline-flex min-h-10 items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-300 transition-colors hover:text-white"
+      >
+        <ChevronLeft className="h-4 w-4" /> Back
+      </button>
+      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#161b1f] p-6 sm:p-10">
         <button className="absolute right-5 top-5 hidden rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-semibold text-slate-200 md:inline-block">
           How It Works
         </button>
@@ -254,7 +262,7 @@ export const ReferralsPage: React.FC = () => {
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">{settings.heroDescription}</p>
       </section>
 
-      <section className="rounded-3xl border border-white/10 bg-[#0b101c] p-4 sm:p-6">
+      <section className="rounded-3xl border border-white/10 bg-[#161b1f] p-4 sm:p-6">
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Your Referral Link</p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <input
@@ -301,7 +309,7 @@ export const ReferralsPage: React.FC = () => {
             const value = data?.stats?.[card.key] ?? 0;
             const valueClassName = 'mt-1 text-2xl font-black leading-none text-white sm:text-3xl';
             return (
-              <div key={card.key} className="rounded-2xl border border-white/10 bg-[#0b101c] p-4">
+              <div key={card.key} className="rounded-2xl border border-white/10 bg-[#161b1f] p-4">
                 <p className="mb-2 inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-400">
                   <Icon className="h-3.5 w-3.5" />
                   {card.label}
@@ -319,7 +327,7 @@ export const ReferralsPage: React.FC = () => {
       </section>
 
       <section className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-cyan-500/20 bg-[#0b101c] p-5">
+        <div className="rounded-2xl border border-cyan-500/20 bg-[#161b1f] p-5">
           <p className="text-xs uppercase tracking-[0.16em] text-cyan-200">You Get</p>
           <CoinValue amount={settings.referrerRewardCoins} className="mt-2 text-4xl font-black text-white" iconClassName="h-7 w-7" />
           <p className="mt-1 text-sm text-slate-300">Coins per completed referral</p>
@@ -327,7 +335,7 @@ export const ReferralsPage: React.FC = () => {
             <p className="mt-2 text-xs text-cyan-200">+{settings.referrerLeaderboardPoints} leaderboard pts</p>
           )}
         </div>
-        <div className="rounded-2xl border border-violet-500/20 bg-[#0b101c] p-5">
+        <div className="rounded-2xl border border-violet-500/20 bg-[#161b1f] p-5">
           <p className="text-xs uppercase tracking-[0.16em] text-violet-200">Your Friend Gets</p>
           <CoinValue amount={settings.friendRewardCoins} className="mt-2 text-4xl font-black text-white" iconClassName="h-7 w-7" />
           <p className="mt-1 text-sm text-slate-300">Coins after qualifying</p>
@@ -337,7 +345,7 @@ export const ReferralsPage: React.FC = () => {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-white/10 bg-[#0b101c] p-4 sm:p-6">
+      <section className="rounded-3xl border border-white/10 bg-[#161b1f] p-4 sm:p-6">
         <h2 className="text-xl font-bold text-white">Your Referrals</h2>
         {loading ? (
           <p className="mt-3 text-sm text-slate-400">Loading referrals…</p>
@@ -385,18 +393,18 @@ export const ReferralsPage: React.FC = () => {
       <section className="space-y-4">
         <h2 className="text-2xl font-black text-white">How It Works</h2>
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-[#0b101c] p-5">
+          <div className="rounded-2xl border border-white/10 bg-[#161b1f] p-5">
             <h3 className="text-base font-bold text-white">Share Your Link</h3>
             <p className="mt-2 text-sm text-slate-300">Copy your referral link and share it on social, text, email, or Discord.</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-[#0b101c] p-5">
+          <div className="rounded-2xl border border-white/10 bg-[#161b1f] p-5">
             <h3 className="text-base font-bold text-white">Friend Joins with Your Code</h3>
             <p className="mt-2 text-sm text-slate-300">
               They sign up through your link, deposit at least <CoinValue amount={settings.requiredDepositCoins} className="align-middle font-semibold text-white" />,
               {settings.requireFirstQualifyingGame ? ' and play their first qualifying game.' : ' then become eligible for reward review.'}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-[#0b101c] p-5">
+          <div className="rounded-2xl border border-white/10 bg-[#161b1f] p-5">
             <h3 className="text-base font-bold text-white">You Both Get Rewarded</h3>
             <p className="mt-2 text-sm text-slate-300">
               You receive <CoinValue amount={settings.referrerRewardCoins} className="align-middle font-semibold text-white" /> and your friend receives <CoinValue amount={settings.friendRewardCoins} className="align-middle font-semibold text-white" />.
@@ -410,7 +418,7 @@ export const ReferralsPage: React.FC = () => {
         {settings.faqItems.map((faq) => {
           const open = faqOpenId === faq.id;
           return (
-            <div key={faq.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#0b101c]">
+            <div key={faq.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#161b1f]">
               <button
                 onClick={() => setFaqOpenId((prev) => (prev === faq.id ? null : faq.id))}
                 className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"

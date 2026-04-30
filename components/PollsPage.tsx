@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Clock3, Coins, Lock } from 'lucide-react';
+import { ChevronLeft, Clock3, Coins, Lock } from 'lucide-react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { useGame } from '../context/GameContext';
 import { db } from '../firebase';
@@ -154,7 +154,14 @@ export const PollsPage: React.FC = () => {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-[#0f1727] via-[#121a2d] to-[#111a2f] px-5 py-8 sm:px-8 sm:py-10">
+      <button
+        type="button"
+        onClick={() => window.history.back()}
+        className="mb-4 inline-flex min-h-10 items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-300 transition-colors hover:text-white"
+      >
+        <ChevronLeft className="h-4 w-4" /> Back
+      </button>
+      <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#161b1f] px-5 py-8 sm:px-8 sm:py-10">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-24 left-4 h-52 w-52 rounded-full bg-cyan-500/20 blur-3xl sm:h-72 sm:w-72" />
           <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl sm:h-80 sm:w-80" />
@@ -166,9 +173,9 @@ export const PollsPage: React.FC = () => {
       </section>
 
       <div className="mt-6 space-y-4 sm:space-y-5">
-        {loading && <div className="rounded-2xl border border-white/10 bg-[#131720] p-6 text-sm text-gray-300">Loading polls...</div>}
+        {loading && <div className="rounded-2xl border border-white/10 bg-[#161b1f] p-6 text-sm text-gray-300">Loading polls...</div>}
         {!loading && renderedPolls.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-white/20 bg-[#131720] p-6 text-center text-sm text-gray-300">
+          <div className="rounded-2xl border border-dashed border-white/20 bg-[#161b1f] p-6 text-center text-sm text-gray-300">
             No active polls right now. Check back soon.
           </div>
         )}
@@ -182,7 +189,7 @@ export const PollsPage: React.FC = () => {
           const totalVotes = Math.max(0, poll.totalVotes || poll.options.reduce((sum, option) => sum + option.voteCount, 0));
 
           return (
-            <article key={poll.id} className="rounded-2xl border border-white/10 bg-[#131720] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] sm:p-5">
+            <article key={poll.id} className="rounded-2xl border border-white/10 bg-[#161b1f] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold text-white sm:text-xl">{poll.title}</h2>
@@ -213,7 +220,7 @@ export const PollsPage: React.FC = () => {
                       key={option.id}
                       disabled={voteLocked}
                       onClick={() => handleVote(poll, option.id)}
-                      className="w-full rounded-xl border border-white/10 bg-[#0f1522] px-4 py-3 text-left text-sm font-semibold text-white transition hover:border-cyan-300/40 hover:bg-[#131b2b] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="w-full rounded-xl border border-white/10 bg-[#1b2228] px-4 py-3 text-left text-sm font-semibold text-white transition hover:border-cyan-300/40 hover:bg-[#202830] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {option.label}
                     </button>

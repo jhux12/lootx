@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2 } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -69,6 +69,14 @@ const SPINNER_MOTION = {
   durationVarianceMs: 420,
   initialBlurDurationMs: 260
 } as const;
+
+const rarityGlowClass: Record<string, string> = {
+  legendary: 'bg-amber-300/35',
+  epic: 'bg-fuchsia-400/30',
+  rare: 'bg-cyan-300/28',
+  uncommon: 'bg-emerald-300/24',
+  common: 'bg-slate-300/18'
+};
 
 const createSeededRng = (seed: string) => {
   let h = 2166136261;
@@ -300,7 +308,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const isReady = Boolean(box) && hasItems;
   const isAdmin = Boolean(user?.isAdmin);
   const hideDropTableOdds = Boolean(isFree && box?.isDaily);
-  const spinnerBackgroundImage = (box?.spinnerBackgroundImage ?? '').trim();
   const cheapestPaidBox = useMemo(() => {
     const paidBoxes = boxes.filter((entry) => {
       const coinPrice = toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE);
@@ -326,6 +333,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isSpinning, setIsSpinning] = useState(false);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
   const [reelWinnerIndex, setReelWinnerIndex] = useState(SPINNER_MOTION.preWinnerItems);
+  const [currentCenterIndex, setCurrentCenterIndex] = useState(SPINNER_MOTION.preWinnerItems);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
@@ -360,10 +368,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
   const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
   const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
+  const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
-  const [isBoxPreviewVisible, setIsBoxPreviewVisible] = useState(true);
+  const [isBoxPreviewVisible, setIsBoxPreviewVisible] = useState(false);
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
@@ -411,9 +420,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && (currentXpBalance > 0 || xpProgress > 0);
   const canOpenMain = isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
-  const xpRingRadius = 14;
-  const xpRingCircumference = 2 * Math.PI * xpRingRadius;
-  const xpRingOffset = xpRingCircumference * (1 - xpProgress);
   const spinnerCardWidth = isMobileViewport ? MOBILE_CARD_WIDTH : DESKTOP_CARD_WIDTH;
   const spinnerCardHeight = isMobileViewport ? MOBILE_CARD_HEIGHT : DESKTOP_CARD_HEIGHT;
   const spinnerGap = isMobileViewport ? MOBILE_GAP_WIDTH : DESKTOP_GAP_WIDTH;
@@ -983,8 +989,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const approachOffset = getApproachOffset(rng);
-    const durationVariance = Math.round((rng() - 0.5) * SPINNER_MOTION.durationVarianceMs * 2);
-    const resolvedDuration = Math.max(3000, duration + durationVariance);
+    const landingJitterPx = (rng() - 0.5) * 18;
+    const durationVariance = Math.round((rng() - 0.5) * Math.min(220, SPINNER_MOTION.durationVarianceMs) * 2);
+    const resolvedDuration = Math.max(2400, duration + durationVariance);
 
     resetSpinnerAnimation();
 
@@ -996,8 +1003,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
+    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
     const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null) {
+    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
@@ -1017,7 +1025,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const animation = container.animate(
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.1, 0.9, 0.25, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.8, easing: 'cubic-bezier(0.2, 1, 0.18, 1)' },
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.78, easing: 'cubic-bezier(0.2, 1, 0.18, 1)' },
+        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: 0.94, easing: 'cubic-bezier(0.16, 0.95, 0.3, 1)' },
         { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.14, 0.9, 0.22, 1)' }
       ],
       {
@@ -1028,6 +1037,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     );
 
     spinnerAnimationRef.current = animation;
+    let frameId: number | null = null;
+    const syncCenterItem = () => {
+      const transform = window.getComputedStyle(container).transform;
+      const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
+      const x = matrix ? matrix.m41 : 0;
+      const { stepWidth, cardWidth, viewportWidth } = spinnerMeasurementsRef.current;
+      if (Number.isFinite(stepWidth) && stepWidth > 0 && Number.isFinite(cardWidth) && Number.isFinite(viewportWidth)) {
+        const viewportCenter = viewportWidth / 2;
+        const index = Math.max(0, Math.round((viewportCenter - x - (cardWidth / 2)) / stepWidth));
+        setCurrentCenterIndex(index);
+      }
+      frameId = window.requestAnimationFrame(syncCenterItem);
+    };
+    frameId = window.requestAnimationFrame(syncCenterItem);
     const decelerationTimer = window.setTimeout(() => setAnimationPhase('settling'), Math.max(0, resolvedDuration - 850));
 
     animation.onfinish = () => {
@@ -1043,6 +1066,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       animation.cancel();
       container.style.transition = 'none';
       container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      setCurrentCenterIndex(winnerIndex);
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
 
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
@@ -1056,6 +1081,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         window.clearTimeout(tickTimerRef.current);
         tickTimerRef.current = null;
       }
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
@@ -1176,7 +1202,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
 
-  const handleSpin = async ({ isDemo = false, forceGold = false, paymentMethod = 'coins' }: { isDemo?: boolean; forceGold?: boolean; paymentMethod?: 'coins' | 'xp' } = {}) => {
+  const handleSpin = async ({ isDemo = false, forceGold = false, paymentMethod = 'coins', isQuick = false }: { isDemo?: boolean; forceGold?: boolean; paymentMethod?: 'coins' | 'xp'; isQuick?: boolean } = {}) => {
     if (isSpinning || spinRequestLockRef.current) {
       if (isFree) {
         trackEvent('free_spin_duplicate_click_blocked', { box_id: box?.id ?? boxId });
@@ -1267,13 +1293,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       preFreeSpinBalanceRef.current = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
     }
 
-    if (isBoxPreviewVisible) {
-      setIsBoxPreviewFading(true);
-      await new Promise((resolve) => window.setTimeout(resolve, 450));
-      setIsBoxPreviewVisible(false);
-      setIsBoxPreviewFading(false);
-    }
-    
     setIsSpinning(true);
     if (!isDemo && isFree) {
       trackEvent('free_spin_started', { box_id: box.id });
@@ -1428,7 +1447,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           boxId: box.id
         });
         setIsSpinning(false);
-        setIsBoxPreviewVisible(true);
+        setIsBoxPreviewVisible(false);
         setIsBoxPreviewFading(false);
         setSpinFeedbackMessage(readableMessage || 'Unable to open box.');
         toast.error(readableMessage || 'Unable to open box.');
@@ -1491,7 +1510,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const ticketReelResult = generateReel(GOLDEN_TICKET_ITEM, items, { sprinkleGold: true, seed: ticketSeed });
         await prepareReelForSpin(ticketReelResult.items, ticketReelResult.winnerIndex);
 
-        animateSpin(ticketReelResult.winnerIndex, SPINNER_MOTION.goldTicketDurationMs, () => {
+        const quickFactor = isQuick ? 0.58 : 1;
+        animateSpin(ticketReelResult.winnerIndex, SPINNER_MOTION.goldTicketDurationMs * quickFactor, () => {
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
             setIsGoldMode(true);
@@ -1503,7 +1523,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 const goldSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-final');
                 const goldReelResult = generateReel(winner, pool, { sprinkleGold: true, seed: goldSeed });
                 void prepareReelForSpin(goldReelResult.items, goldReelResult.winnerIndex).then(() => {
-                  animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs, () => {
+                  animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs * quickFactor, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
                   });
@@ -1517,7 +1537,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const normalReelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
         await prepareReelForSpin(normalReelResult.items, normalReelResult.winnerIndex);
 
-        animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs, () => {
+        animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.58 : 1), () => {
             finishSpin(winner);
         });
     }
@@ -1525,7 +1545,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleTryFree = () => {
     setSpinFeedbackMessage(null);
-    handleSpin({ isDemo: true });
+    handleSpin({ isDemo: true, isQuick: isQuickSpinEnabled });
   };
 
   useEffect(() => {
@@ -1535,7 +1555,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [showTopUpModal, spinFeedbackMessage]);
 
   useEffect(() => {
-    setIsBoxPreviewVisible(true);
+    setIsBoxPreviewVisible(false);
     setIsBoxPreviewFading(false);
   }, [boxId]);
 
@@ -1560,7 +1580,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const finishSpin = (item: CaseItem) => {
     spinRequestLockRef.current = false;
     setIsSpinning(false);
-    setIsBoxPreviewVisible(true);
+    setIsBoxPreviewVisible(false);
     setIsBoxPreviewFading(false);
 
     playSound('spin-start');
@@ -1799,216 +1819,77 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       ) : (
         <>
         {/* Breadcrumb */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex items-center justify-between gap-3">
             <div className="flex items-center gap-4">
                 <button 
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
-                    className="min-h-11 flex items-center gap-2 px-3 py-1.5 bg-[#131825] rounded text-gray-400 hover:text-white text-sm font-medium transition-colors"
+                    className="min-h-11 flex items-center gap-2 rounded px-3 py-1.5 text-gray-400 text-sm font-medium transition-colors hover:text-white"
                 >
                     <ChevronLeft className="w-4 h-4" /> All boxes
                 </button>
                 <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-bold text-white">{box!.name}</h2>
                     {isFree && <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded">FREE SPIN</span>}
                     <span className="bg-[#131825] text-gray-300 text-xs font-semibold px-2 py-0.5 rounded border border-gray-700">
                       {getRiskLabel(box!.riskLevel ?? 50)}
                     </span>
                 </div>
             </div>
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              {showXpOpenUi && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading) return;
+                    playSound('click');
+                    setShowXpConfirmSheet(true);
+                  }}
+                  disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
+                  className={`inline-flex min-h-9 items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap transition-all disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs ${canOpenWithXp ? 'border-cyan-300/45 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15' : 'border-white/20 bg-black/35 text-gray-200 hover:border-cyan-300/45'}`}
+                  aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
+                  title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
+                >
+                  XP {currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}
+                </button>
+              )}
+              <button type="button" onClick={() => { playSound('click'); setShowFairModal(true); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)] sm:h-9 sm:w-9" aria-label="Open provably fair details" title="View fairness verification"><ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></button>
+              <button type="button" onClick={() => { playSound('click'); void handleCopyPageLink(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)] sm:h-9 sm:w-9" aria-label="Copy server seed" title="Copy server seed"><Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></button>
+              <button type="button" onClick={() => { playSound('click'); setShowInfoModal(true); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)] sm:h-9 sm:w-9" aria-label="Open item availability disclaimer" title="View case details"><Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></button>
+              <button type="button" onClick={() => { playSound('click'); toggleMute(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)] sm:h-9 sm:w-9" aria-label={muted ? 'Unmute sounds' : 'Mute sounds'} title="Toggle sound effects">{muted ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}</button>
+            </div>
     </div>
 
         {/* SPINNER AREA */}
-        <div className={`relative w-full bg-[#0b0e14] border rounded-2xl p-1 mb-8 overflow-hidden shadow-2xl transition-all duration-700 ${isGoldMode ? 'border-yellow-500 shadow-yellow-500/20' : 'border-gray-800'}`}>
+        <div className="relative mb-8 w-full overflow-visible p-0">
             
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
             <div className="relative z-20 px-2 pt-2 pb-3 sm:px-3 sm:pt-3 sm:pb-3">
-              <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-black/50 p-1.5 shadow-[0_0_24px_rgba(45,212,191,0.12)] backdrop-blur-md sm:gap-2 sm:p-2">
-                <div className="flex min-w-0 flex-1 items-center">
-                  {showXpOpenUi && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading) return;
-                        playSound('click');
-                        setShowXpConfirmSheet(true);
-                      }}
-                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
-                      className={`group inline-flex items-center gap-2 rounded-lg border bg-black/55 px-2 py-1 shadow-xl backdrop-blur-sm transition-all disabled:cursor-not-allowed disabled:opacity-60 ${canOpenWithXp ? 'border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,0.3)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)]' : 'border-white/20 hover:border-cyan-300/45'}`}
-                      aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
-                      title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
-                    >
-                      <div className="relative h-7 w-7 shrink-0 sm:h-8 sm:w-8">
-                        <svg className="absolute inset-0 -rotate-90" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
-                          <circle cx="16" cy="16" r={xpRingRadius} fill="none" stroke="rgba(148,163,184,0.28)" strokeWidth="2.5" />
-                          <circle
-                            cx="16"
-                            cy="16"
-                            r={xpRingRadius}
-                            fill="none"
-                            stroke="rgba(34,211,238,0.95)"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeDasharray={xpRingCircumference}
-                            strokeDashoffset={xpRingOffset}
-                            className="transition-all duration-300 ease-out"
-                          />
-                        </svg>
-                        <div className="absolute inset-[4px] grid place-items-center rounded-full border border-cyan-300/25 bg-[#111827]">
-                          <img
-                            loading="lazy"
-                            decoding="async"
-                            src={XP_ICON}
-                            alt="XP"
-                            className="block h-3.5 w-3.5 object-contain object-center sm:h-4 sm:w-4"
-                          />
-                        </div>
-                      </div>
-                      <span className="text-[9px] text-cyan-100/85 whitespace-nowrap sm:text-[10px]">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span>
-                    </button>
-                  )}
-                </div>
-
-                <div className="ml-auto">
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        setShowFairModal(true);
-                      }}
-                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)] sm:h-9 sm:w-9"
-                      aria-label="Open provably fair details"
-                      title="View fairness verification"
-                    >
-                      <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        void handleCopyPageLink();
-                      }}
-                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)] sm:h-9 sm:w-9"
-                      aria-label="Copy server seed"
-                      title="Copy server seed"
-                    >
-                      <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        setShowInfoModal(true);
-                      }}
-                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)] sm:h-9 sm:w-9"
-                      aria-label="Open item availability disclaimer"
-                      title="View case details"
-                    >
-                      <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        toggleMute();
-                      }}
-                      className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)] sm:h-9 sm:w-9"
-                      aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
-                      title="Toggle sound effects"
-                    >
-                      {muted ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-                    </button>
-                  </div>
-                  {copyStatusMessage && (
-                    <p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
-                      {copyStatusMessage}
-                    </p>
-                  )}
-                </div>
+              <div className="flex flex-wrap items-center gap-1.5 p-1.5 sm:gap-2 sm:p-2">
+                <div className="ml-auto">{copyStatusMessage && (<p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}</div>
               </div>
             </div>
 
             {/* Spinner Window */}
-            <div
-              className="relative mx-auto w-full max-w-[1000px]"
-              style={{ height: `${spinnerViewportHeight}px` }}
-            >
+            <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
             <div
               ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex w-full max-w-[1000px] -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden rounded-2xl border border-white/5 bg-[rgba(255,255,255,0.02)]"
+              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
-                {spinnerBackgroundImage && (
-                  <>
-                    <img
-                      src={spinnerBackgroundImage}
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/45" aria-hidden="true" />
-                  </>
-                )}
-                {isBoxPreviewVisible && (
-                  <div
-                    className={`absolute inset-0 z-30 flex items-start justify-center px-3 pt-3 transition-opacity duration-500 sm:items-center sm:px-6 sm:pt-0 ${isBoxPreviewFading ? 'opacity-0' : 'opacity-100'}`}
-                    aria-live="polite"
-                  >
-                    <div className={`pullz-box-preview relative w-full max-w-[320px] sm:max-w-[380px] rounded-2xl border p-4 sm:p-5 backdrop-blur-sm ${isGoldMode ? 'border-yellow-400/50 bg-yellow-500/10' : 'border-cyan-400/40 bg-cyan-500/10'}`}>
-                      <div className="pullz-box-preview__shimmer" aria-hidden="true"></div>
-                      <div className="pullz-box-preview__image-wrap relative z-10 mx-auto w-full max-w-[240px] sm:max-w-[280px]">
-                        <span className="pullz-box-spark pullz-box-spark--one" aria-hidden="true" />
-                        <span className="pullz-box-spark pullz-box-spark--two" aria-hidden="true" />
-                        <span className="pullz-box-spark pullz-box-spark--three" aria-hidden="true" />
-                        <span className="pullz-box-spark pullz-box-spark--four" aria-hidden="true" />
-                        <img
-                          src={box!.image}
-                          alt={`${box!.name} box`}
-                          className="pullz-box-preview__image mx-auto h-40 w-auto max-w-full object-contain sm:h-44"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  className={`absolute inset-y-0 left-1/2 z-[26] w-[2px] -translate-x-1/2 pointer-events-none ${isGoldMode ? 'bg-gradient-to-b from-transparent via-yellow-300/80 to-transparent' : 'bg-gradient-to-b from-transparent via-cyan-300/80 to-transparent'}`}
-                  style={{ boxShadow: isGoldMode ? '0 0 14px rgba(250,204,21,0.55)' : '0 0 14px rgba(0,234,255,0.55)' }}
-                  aria-hidden="true"
-                />
-                <div
-                  className={`absolute inset-y-0 left-1/2 z-[24] w-14 -translate-x-1/2 pointer-events-none transition-opacity duration-500 sm:w-20 ${isSpinning ? (animationPhase === 'settling' ? 'opacity-85' : 'opacity-55') : 'opacity-35'}`}
-                  style={{
-                    background: isGoldMode
-                      ? 'radial-gradient(ellipse at center, rgba(250,204,21,0.24) 0%, rgba(250,204,21,0.08) 42%, rgba(250,204,21,0) 75%)'
-                      : 'radial-gradient(ellipse at center, rgba(34,211,238,0.24) 0%, rgba(34,211,238,0.08) 42%, rgba(34,211,238,0) 75%)'
-                  }}
-                  aria-hidden="true"
-                />
+                
+                
                 
                 {/* Fade Gradients */}
-                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-20 bg-gradient-to-r from-[#070b12] via-[#070b12]/85 to-transparent sm:w-28"></div>
-                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-20 bg-gradient-to-l from-[#070b12] via-[#070b12]/85 to-transparent sm:w-28"></div>
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
 
-                <div
-                  className={`absolute inset-0 z-[21] pointer-events-none transition-opacity duration-200 ${animationPhase === 'spinning' ? 'opacity-70' : 'opacity-0'}`}
-                  style={{
-                    background: isGoldMode
-                      ? 'linear-gradient(100deg, rgba(0,0,0,0) 0%, rgba(250,204,21,0.08) 35%, rgba(255,255,255,0.14) 50%, rgba(250,204,21,0.08) 65%, rgba(0,0,0,0) 100%)'
-                      : 'linear-gradient(100deg, rgba(0,0,0,0) 0%, rgba(34,211,238,0.06) 35%, rgba(255,255,255,0.12) 50%, rgba(34,211,238,0.06) 65%, rgba(0,0,0,0) 100%)'
-                  }}
-                  aria-hidden="true"
-                />
+                
 
                 {/* The Moving Reel */}
                 <div 
                     ref={scrollContainerRef}
-                    className={`flex will-change-transform transition-opacity duration-300 ${isBoxPreviewVisible ? 'opacity-0' : 'opacity-100'}`} 
+                    className="flex will-change-transform transition-opacity duration-300 opacity-100" 
                     style={{
                       gap: `${spinnerGap}px`,
                       transform: 'translate3d(0,0,0)',
@@ -2022,20 +1903,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         (() => {
                           const rarityValue = String(item.rarity ?? 'common').toLowerCase();
                           const rarityGlow = rarityValue.includes('legend')
-                            ? 'rgba(255,191,71,0.58)'
+                            ? rarityGlowClass.legendary
                             : rarityValue.includes('epic')
-                              ? 'rgba(196,125,255,0.52)'
+                              ? rarityGlowClass.epic
                               : rarityValue.includes('rare')
-                                ? 'rgba(96,165,250,0.48)'
+                                ? rarityGlowClass.rare
                                 : rarityValue.includes('uncommon')
-                                  ? 'rgba(74,222,128,0.42)'
-                                  : 'rgba(100,116,139,0.35)';
+                                  ? rarityGlowClass.uncommon
+                                  : rarityGlowClass.common;
                           const isIdleWinner = animationPhase === 'idle' && idx === reelWinnerIndex;
+                          const isCenteredDuringSpin = animationPhase !== 'idle' && idx === currentCenterIndex;
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className={`group relative flex flex-shrink-0 flex-col items-center justify-between overflow-hidden rounded-[18px] border border-[#2b3961]/85 bg-[radial-gradient(circle_at_50%_35%,rgba(33,52,94,0.34),rgba(8,14,30,0.96)_62%)] px-2 pb-2 pt-2 transition-colors duration-300 md:hover:scale-[1.015] md:hover:border-cyan-200/35 ${item.id === 'golden-ticket' ? 'border-yellow-500/60' : ''} ${isIdleWinner ? 'border-[#f5c34a]' : ''}`}
+                            className="group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 transition-transform duration-300 md:hover:scale-[1.015]"
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
@@ -2043,22 +1925,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 WebkitTransform: 'translateZ(0)',
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
-                                boxShadow: isIdleWinner
-                                  ? `0 0 0 1px rgba(245,195,74,0.42), 0 0 30px ${rarityGlow}, inset 0 0 0 1px rgba(255,255,255,0.12)`
-                                  : `0 0 18px ${rarityGlow}, inset 0 0 0 1px rgba(255,255,255,0.06)`
+                                boxShadow: 'none',
+                                opacity: isCenteredDuringSpin || isIdleWinner ? 1 : 0.35
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                                className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[999px] opacity-70 ${shouldSimplifyReelEffects ? 'blur-sm' : 'blur-md'}`}
-                                style={{
-                                  width: isMobileViewport ? '64px' : '92px',
-                                  height: isMobileViewport ? '76px' : '108px',
-                                  background: `${item.color}66`,
-                                  boxShadow: animationPhase === 'idle' ? `0 0 24px ${item.color}50` : 'none'
-                                }}
-                            ></div>
-                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch pt-2 sm:pt-3">
+                              className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] opacity-65 ${shouldSimplifyReelEffects ? 'blur-2xl' : 'blur-3xl'} ${rarityGlow}`}
+                              style={{ boxShadow: isIdleWinner ? `0 0 16px ${item.color}33` : 'none' }}
+                            />
+                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <img loading="eager" decoding="async" 
                                   src={item.image} 
                                   alt={item.name} 
@@ -2066,19 +1942,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                               />
                             </div>
-                            <div className={`relative z-10 mt-0.5 inline-flex items-center justify-center text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.7)] ${isMobileViewport ? 'text-[12px]' : 'text-[16px]'} font-extrabold leading-none`}>
-                              <CoinAmount
-                                amount={item.price}
-                                formatOptions={{ maximumFractionDigits: 0 }}
-                                className="text-white"
-                                iconClassName={isMobileViewport ? 'h-[10px] w-[10px]' : 'h-[12px] w-[12px]'}
-                                animated={false}
-                              />
-                            </div>
-                            <div 
-                                className="absolute bottom-0 left-3 right-3 h-px opacity-55"
-                                style={{ backgroundColor: item.color }}
-                            ></div>
                         </div>
                           );
                         })()
@@ -2088,11 +1951,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="bg-[#0b0e14] px-3 pb-4 pt-3 sm:p-4 flex flex-col items-center justify-center gap-2.5 border-t border-gray-800 relative z-20">
+            <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
                  <button 
-                    onClick={() => handleSpin()}
+                    onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
-                    className={`w-full sm:w-auto min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'btn-logo-gradient')}`}
+                    className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
                 >
                     <span>
                       {isSyncingFair ? (
@@ -2130,15 +1993,29 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       )}
                     </span>
                  </button>
-                 {!isFree && (
-                   <button
-                     onClick={handleTryFree}
-                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed}
-                     className="inline-flex max-w-full items-center justify-center px-2 py-1 text-xs sm:text-sm font-semibold text-white transition hover:text-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-                   >
-                     Demo Spin
-                   </button>
-                 )}
+                {!isFree && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleTryFree}
+                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed}
+                      className="inline-flex items-center justify-center rounded-lg border border-white/10 bg-[#303741] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#39424d] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Demo Spin
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setIsQuickSpinEnabled((prev) => !prev);
+                      }}
+                      className={`inline-flex h-[46px] w-[46px] items-center justify-center rounded-lg border text-white transition-colors ${isQuickSpinEnabled ? 'border-[#8a6cff] bg-[#6f4dff]/25 text-[#c8bcff]' : 'border-white/10 bg-[#303741] text-white/80 hover:bg-[#39424d]'}`}
+                      aria-label={isQuickSpinEnabled ? 'Disable quick spin' : 'Enable quick spin'}
+                      title={isQuickSpinEnabled ? 'Quick spin enabled' : 'Quick spin disabled'}
+                    >
+                      <Zap className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
             </div>
             {spinFeedbackMessage && (
               <div className="px-2 pb-4">
@@ -2399,7 +2276,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
         {/* Box Contents */}
-        <div className="mt-12 border-t border-white/10 bg-[#0d1118] py-8 sm:py-10">
+        <div className="mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
             <div className="mb-6 flex items-center gap-3">
                 <div className="rounded-lg border border-white/10 bg-white/5 p-2">
                   <Gamepad2 className="h-5 w-5 text-indigo-300" />
@@ -2428,7 +2305,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         key={item.id}
                         type="button"
                         onClick={() => setSelectedCaseItem(item)}
-                        className="group relative overflow-hidden rounded-xl border border-white/10 bg-[#131722] text-left transition-all hover:border-white/20 hover:bg-[#171d2a]"
+                        className="group relative overflow-hidden rounded-xl border border-white/10 bg-transparent text-left transition-all hover:border-white/20"
                     >
                         <div className="absolute inset-0 opacity-25" style={{ background: `radial-gradient(circle at top, ${item.color}88 0%, transparent 70%)` }} />
                         <div className="relative flex h-36 items-center justify-center p-3 sm:h-40">
@@ -2439,7 +2316,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               </span>
                             )}
                         </div>
-                        <div className="relative border-t border-white/10 bg-black/30 p-3">
+                        <div className="relative border-t border-white/10 bg-transparent p-3">
                             <div className="mb-1 truncate text-xs font-bold text-white" title={item.name}>{item.name}</div>
                             <div className="flex items-center justify-between gap-2">
                                 <CoinAmount

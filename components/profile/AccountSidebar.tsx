@@ -69,7 +69,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
     <aside className="hidden w-[280px] shrink-0 space-y-4 md:block">
       <section className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#151b2d] to-[#101523] p-4">
         <div className="flex items-center gap-3">
-          <UserAvatar user={user} className="h-14 w-14 rounded-xl bg-[#0b0f1a]" />
+          <UserAvatar user={user} className="h-14 w-14 rounded-xl bg-[#2a323b]" />
           <div>
             <p className="text-sm font-bold text-white">{username}</p>
             <p className="text-xs text-gray-400">Member since {memberSince}</p>
@@ -85,7 +85,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-[#101523] p-4">
+      <section className="rounded-2xl border border-white/10 bg-[#1f252c] p-4">
         <p className="mb-2 text-xs font-semibold uppercase text-gray-400">Quick Actions</p>
         <div className="space-y-2">
           {quickActions.map((action) => (
@@ -98,14 +98,14 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
       </section>
 
       {activePanel === 'security' && (
-        <section className="rounded-2xl border border-white/10 bg-[#101523] p-4">
+        <section className="rounded-2xl border border-white/10 bg-[#1f252c] p-4">
           <p className="mb-3 text-xs font-semibold uppercase text-gray-400">Security</p>
           <div className="grid grid-cols-1 gap-2">
-            <input value={securityForm.username} onChange={(e) => setSecurityForm({ ...securityForm, username: e.target.value })} placeholder="Username" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
-            <input value={securityForm.email} onChange={(e) => setSecurityForm({ ...securityForm, email: e.target.value })} placeholder="Email" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
-            <input type="password" value={securityForm.currentPassword} onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })} placeholder="Current Password" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
-            <input type="password" value={securityForm.newPassword} onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })} placeholder="New Password" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
-            <input type="password" value={securityForm.confirmPassword} onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })} placeholder="Confirm New Password" className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
+            <input value={securityForm.username} onChange={(e) => setSecurityForm({ ...securityForm, username: e.target.value })} placeholder="Username" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
+            <input value={securityForm.email} onChange={(e) => setSecurityForm({ ...securityForm, email: e.target.value })} placeholder="Email" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
+            <input type="password" value={securityForm.currentPassword} onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })} placeholder="Current Password" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
+            <input type="password" value={securityForm.newPassword} onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })} placeholder="New Password" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
+            <input type="password" value={securityForm.confirmPassword} onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })} placeholder="Confirm New Password" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
           </div>
           <button onClick={onSaveSecurity} disabled={isSavingSecurity} className="mt-3 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white">
             {isSavingSecurity ? 'Saving...' : 'Save Security Changes'}
@@ -114,7 +114,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
       )}
 
       {activePanel === 'settings' && (
-        <section className="rounded-2xl border border-white/10 bg-[#101523] p-4">
+        <section className="rounded-2xl border border-white/10 bg-[#1f252c] p-4">
           <p className="mb-3 text-xs font-semibold uppercase text-gray-400">Settings: Shipping Address</p>
           <div className="grid grid-cols-1 gap-2">
             {([
@@ -125,7 +125,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
               ['zipCode', 'Zip Code'],
               ['country', 'Country']
             ] as Array<[keyof ShippingAddress, string]>).map(([key, label]) => (
-              <input key={key} value={addressForm[key]} onChange={(e) => setAddressForm({ ...addressForm, [key]: e.target.value })} placeholder={label} className="rounded-xl border border-white/10 bg-[#0b0f1a] px-3 py-2 text-sm text-white" />
+              <input key={key} value={addressForm[key]} onChange={(e) => setAddressForm({ ...addressForm, [key]: e.target.value })} placeholder={label} className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
             ))}
           </div>
           <p className="mt-3 mb-2 text-xs font-semibold uppercase text-gray-400">Profile Picture</p>

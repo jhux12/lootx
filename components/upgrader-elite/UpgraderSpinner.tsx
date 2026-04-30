@@ -23,6 +23,8 @@ interface UpgraderSpinnerProps {
   chance: number;
   hasSource: boolean;
   hasTarget: boolean;
+  targetImage?: string;
+  targetName?: string;
   status: UpgradeStatus;
   spinRotation: number;
   spinNonce: number;
@@ -40,6 +42,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   chance,
   hasSource,
   hasTarget,
+  targetImage,
+  targetName,
   status,
   spinRotation,
   spinNonce,
@@ -62,7 +66,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   const historyRef = useRef<number[]>(Array(TRAIL_GHOST_COUNT).fill(0));
   const [spinBounceOffset, setSpinBounceOffset] = useState(0);
   const [isTrailing, setIsTrailing] = useState(false);
-  const [animatedChance, setAnimatedChance] = useState(chance);
   const [sweepNonce, setSweepNonce] = useState(0);
 
   const chanceGlowRgb = useMemo(() => {
@@ -75,37 +78,10 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   const offset = circumference - (Math.max(0, Math.min(100, chance)) / 100) * circumference;
   const riskColor = useMemo(() => getRiskColor(chance), [chance]);
   const wheelCenter = useMemo(() => ({ x: size / 2, y: size / 2 }), [size]);
-  const riskBand = useMemo(() => {
-    if (chance >= 70) return { label: 'Safe', className: 'text-emerald-300' };
-    if (chance >= 40) return { label: 'Balanced', className: 'text-amber-300' };
-    return { label: 'High Risk', className: 'text-rose-300' };
+  const multiplier = useMemo(() => {
+    const safeChance = Math.max(0.01, chance);
+    return (100 / safeChance).toFixed(2);
   }, [chance]);
-
-  useEffect(() => {
-    const start = animatedChance;
-    const end = chance;
-    if (Math.abs(end - start) < 0.01) {
-      setAnimatedChance(end);
-      return;
-    }
-
-    const duration = reducedMotion ? 0 : 480;
-    if (duration === 0) {
-      setAnimatedChance(end);
-      return;
-    }
-
-    const frameStart = performance.now();
-    let raf = 0;
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - frameStart) / duration);
-      const eased = 1 - (1 - t) ** 3;
-      setAnimatedChance(start + (end - start) * eased);
-      if (t < 1) raf = window.requestAnimationFrame(tick);
-    };
-    raf = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(raf);
-  }, [chance, reducedMotion]);
 
   useEffect(() => {
     if (!hasSource || !hasTarget) return;
@@ -257,14 +233,21 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           </defs>
         </svg>
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <div className="absolute inset-0 flex select-none flex-col items-center justify-center text-center [user-select:none]">
           {(status === 'idle' || status === 'spinning') && (
             <>
               {hasSource && hasTarget ? (
                 <>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Upgrade Chance</p>
-                  <span className={`mt-1 text-5xl font-black tracking-tight sm:text-6xl ${riskBand.className}`}>{animatedChance.toFixed(2)}%</span>
-                  <p className={`mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${riskBand.className}`}>{riskBand.label}</p>
+                  <p className="pointer-events-none text-[10px] font-semibold tracking-wide text-slate-300 sm:text-xs">{chance.toFixed(2)}%</p>
+                  {targetImage && (
+                    <img
+                      src={targetImage}
+                      alt={targetName ?? 'Target item'}
+                      className="pointer-events-none mt-1 h-20 w-20 object-contain sm:h-24 sm:w-24"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                  <span className="pointer-events-none mt-1 text-sm font-bold tracking-wide text-amber-300 sm:text-base">{multiplier}x</span>
                 </>
               ) : (
                 <>
@@ -300,7 +283,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
             style={{ opacity: isTrailing ? (TRAIL_GHOST_COUNT - index) / (TRAIL_GHOST_COUNT * 9) : 0, filter: `blur(${index * 0.45}px)` }}
           >
             <div className="relative h-full w-full">
-              <div className="absolute -top-1 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-[var(--reactor-risk-color)]" />
               <div className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-gradient-to-b from-[var(--reactor-risk-color)] to-transparent" />
             </div>
           </div>
@@ -322,7 +304,6 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           }}
         >
           <div className="relative h-full w-full">
-            <div className="absolute -top-2 left-1/2 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-[var(--reactor-risk-color)] bg-white shadow-[0_0_15px_rgba(255,255,255,0.7)]" />
             <div className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-gradient-to-b from-white via-white/70 to-transparent" />
           </div>
         </div>

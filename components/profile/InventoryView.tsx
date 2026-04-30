@@ -68,7 +68,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       />
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-[#101523] p-10 text-center text-gray-400">No items found.</div>
+        <div className="rounded-2xl border border-white/10 bg-[#1f252c] p-10 text-center text-gray-400">No items found.</div>
       ) : (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {items.map((item) => {
@@ -93,7 +93,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       )}
 
       {selectedIds.length > 0 && (
-        <div className="sticky bottom-16 z-30 flex items-center justify-between rounded-2xl border border-purple-400/30 bg-[#12172a]/95 p-3 backdrop-blur md:bottom-4">
+        <div className="sticky bottom-16 z-30 flex items-center justify-between rounded-2xl border border-purple-400/30 bg-[#1f252c]/95 p-3 backdrop-blur md:bottom-4">
           <p className="text-sm text-gray-200">{selectedIds.length} items selected</p>
           <div className="flex items-center gap-3">
             <CoinAmount amount={selectedValue} formatOptions={{ maximumFractionDigits: 0 }} className="text-sm font-bold text-white" iconClassName="h-4 w-4" />
