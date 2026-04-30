@@ -956,7 +956,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const stepsCrossed = Math.max(1, Math.abs(delta));
         const direction = delta >= 0 ? 1 : -1;
         const now = performance.now();
-        const minTickGap = isMobileViewport ? 22 : 16;
+        const minTickGap = 16;
 
         for (let step = 1; step <= stepsCrossed; step += 1) {
           const crossedIndex = previousIndex + direction * step;
@@ -969,7 +969,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           // On mobile, frames can skip indices under load. Emit one tick per crossed item so
           // audio cadence always matches items passing the center marker.
           const stepTime = now + step;
-          if (stepTime - lastTickAtRef.current > minTickGap) {
+          if (!isMobileViewport && stepTime - lastTickAtRef.current > minTickGap) {
             playSound('spin-tick');
             lastTickAtRef.current = stepTime;
           }
@@ -1858,7 +1858,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
                           const showItemGlow = !isSpinning || !isMobileViewport;
                           const allowHeavyHighlight = !isMobileViewport || !isSpinning;
-                          const cardOpacity = isFocusedItem ? 1 : (isMobileViewport && isSpinning ? 0.82 : 0.35);
+                          const cardOpacity = isMobileViewport && isSpinning ? 1 : (isFocusedItem ? 1 : 0.35);
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
