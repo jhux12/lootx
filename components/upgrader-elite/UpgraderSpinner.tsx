@@ -233,21 +233,21 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           </defs>
         </svg>
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <div className="absolute inset-0 flex select-none flex-col items-center justify-center text-center [user-select:none]">
           {(status === 'idle' || status === 'spinning') && (
             <>
               {hasSource && hasTarget ? (
                 <>
-                  <p className="text-[10px] font-semibold tracking-wide text-slate-300 sm:text-xs">{chance.toFixed(2)}%</p>
+                  <p className="pointer-events-none text-[10px] font-semibold tracking-wide text-slate-300 sm:text-xs">{chance.toFixed(2)}%</p>
                   {targetImage && (
                     <img
                       src={targetImage}
                       alt={targetName ?? 'Target item'}
-                      className="mt-1 h-20 w-20 object-contain sm:h-24 sm:w-24"
+                      className="pointer-events-none mt-1 h-20 w-20 object-contain sm:h-24 sm:w-24"
                       referrerPolicy="no-referrer"
                     />
                   )}
-                  <span className="mt-1 text-sm font-bold tracking-wide text-amber-300 sm:text-base">{multiplier}x</span>
+                  <span className="pointer-events-none mt-1 text-sm font-bold tracking-wide text-amber-300 sm:text-base">{multiplier}x</span>
                 </>
               ) : (
                 <>

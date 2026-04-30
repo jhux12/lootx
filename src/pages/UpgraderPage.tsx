@@ -580,12 +580,13 @@ export default function UpgraderPage() {
 
   return (
     <div className="min-h-screen bg-[#1b2024] pb-44 font-sans text-slate-200 lg:pb-32">
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-end border-b border-indigo-300/10 bg-[#050916]/86 px-4 backdrop-blur-xl sm:hidden">
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 hover:text-white" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/10 bg-[#1b2024]/90 px-4 backdrop-blur-xl sm:hidden">
+        <p className="text-base font-black text-white">Upgrader</p>
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)]" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
             {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
           </button>
-          <button type="button" onClick={() => setIsHelpOpen(true)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 transition duration-200 hover:scale-[1.03] hover:text-white" aria-label="Upgrader help">
+          <button type="button" onClick={() => setIsHelpOpen(true)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)]" aria-label="Upgrader help">
             <CircleHelp className="h-4 w-4" />
           </button>
         </div>
@@ -595,11 +596,11 @@ export default function UpgraderPage() {
         <section className="relative overflow-hidden rounded-2xl border border-white/5 bg-transparent p-3 sm:p-4">
           <div className="relative mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
             <p className="text-xl font-black text-white">Upgrader</p>
-            <div className="hidden items-center gap-2 sm:flex">
-              <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 hover:text-white" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
+            <div className="hidden items-center gap-1 sm:flex">
+              <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)]" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
                 {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
               </button>
-              <button type="button" onClick={() => setIsHelpOpen(true)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 transition duration-200 hover:scale-[1.03] hover:text-white" aria-label="Upgrader help">
+              <button type="button" onClick={() => setIsHelpOpen(true)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)]" aria-label="Upgrader help">
                 <CircleHelp className="h-4 w-4" />
               </button>
             </div>
