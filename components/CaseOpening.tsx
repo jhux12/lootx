@@ -564,7 +564,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [items]);
 
   useEffect(() => {
-    reelLengthRef.current = reelItems.length;
+    reelLengthRef.current = reelItems.length;    if (!isSpinning && reelItems.length > 0) {      applyVirtualTranslate(virtualTranslateXRef.current);    }
   }, [reelItems.length]);
 
   useEffect(() => {
@@ -1249,7 +1249,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             message: string;
           };
         }>('/api/open-case', {
-          method: 'POST',
+          method: 'POST',h
           body: JSON.stringify({ boxId: box.id, isFree, operationId, paymentMethod })
         });
 
@@ -1776,13 +1776,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
             <div
               ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
+              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden bg-[#1b2024]"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
                 
                 
                 
-                {/* Fade Gradients */}
+                {/* Fade Gradients */}                {/* Center Indicator */}                <div className="pointer-events-none absolute bottom-0 top-0 z-10 w-0.5 left-1/2 -translate-x-1/2 bg-white/20" />                {/* Center Indicator */}                <div className="pointer-events-none absolute bottom-0 top-0 z-10 w-0.5 left-1/2 -translate-x-1/2 bg-white/20" />
                 <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
                 <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
 
@@ -1823,7 +1823,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
-                            className="group absolute top-1/2 overflow-visible px-1 transition-all duration-200"
+                            className="group absolute top-1/2 overflow-visible px-1 transition-[opacity,box-shadow,filter] duration-150"
                             ref={(el) => {
                               itemRefs.current[idx] = el;
                               if (idx === reelWinnerIndex) {
@@ -1843,8 +1843,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem ? `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55` : 'none',
-                                opacity: isFocusedItem ? 1 : 0.42,
-                                filter: isFocusedItem ? 'brightness(1.12)' : 'brightness(0.82)',
+                                opacity: isFocusedItem ? 1 : 0.72,
+                                filter: isFocusedItem ? 'brightness(1.15)' : 'brightness(1.0)',
                                 zIndex: isFocusedItem ? 4 : 1
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
