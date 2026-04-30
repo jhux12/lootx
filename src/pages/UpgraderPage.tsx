@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LucideHistory,
   LucideSearch,
-  CircleHelp,
+  ShieldCheck,
+  Copy,
+  Info,
   LucideSettings2,
   LucideVolume2,
   LucideVolumeX
@@ -244,6 +246,16 @@ export default function UpgraderPage() {
       const targetNode = panel === 'inventory' ? inventoryPanelRef.current : targetPanelRef.current;
       targetNode?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 40);
+  };
+
+  const handleCopyPageLink = async () => {
+    if (typeof window === 'undefined') return;
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied');
+    } catch {
+      toast.error('Unable to copy link');
+    }
   };
 
   const [inventoryMin, setInventoryMin] = useState('');
@@ -583,11 +595,17 @@ export default function UpgraderPage() {
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/10 bg-[#1b2024]/90 px-4 backdrop-blur-xl sm:hidden">
         <p className="text-base font-black text-white">Upgrader</p>
         <div className="flex items-center gap-1">
+          <button type="button" onClick={() => { window.location.href = '/provably-fair'; }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)]" aria-label="Open provably fair">
+            <ShieldCheck className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => { void handleCopyPageLink(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)]" aria-label="Copy page link">
+            <Copy className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => setIsHelpOpen(true)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)]" aria-label="Upgrader help">
+            <Info className="h-4 w-4" />
+          </button>
           <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)]" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
             {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
-          </button>
-          <button type="button" onClick={() => setIsHelpOpen(true)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)]" aria-label="Upgrader help">
-            <CircleHelp className="h-4 w-4" />
           </button>
         </div>
       </header>
@@ -595,13 +613,12 @@ export default function UpgraderPage() {
       <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 p-3 sm:gap-6 sm:p-4 lg:p-8">
         <section className="relative overflow-hidden rounded-2xl border border-white/5 bg-transparent p-3 sm:p-4">
           <div className="relative mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-            <p className="text-xl font-black text-white">Upgrader</p>
             <div className="hidden items-center gap-1 sm:flex">
+              <button type="button" onClick={() => { window.location.href = '/provably-fair'; }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)]" aria-label="Open provably fair"><ShieldCheck className="h-4 w-4" /></button>
+              <button type="button" onClick={() => { void handleCopyPageLink(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)]" aria-label="Copy page link"><Copy className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setIsHelpOpen(true)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)]" aria-label="Upgrader help"><Info className="h-4 w-4" /></button>
               <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)]" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
                 {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
-              </button>
-              <button type="button" onClick={() => setIsHelpOpen(true)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)]" aria-label="Upgrader help">
-                <CircleHelp className="h-4 w-4" />
               </button>
             </div>
           </div>
