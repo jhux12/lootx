@@ -32,7 +32,7 @@ const rarityGlowClass: Record<string, string> = {
 };
 
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onViewAllBoxes, onSignUp }) => {
-  const { setView } = useGame();
+  const { setView, stripeSettings } = useGame();
   const featuredBoxes = boxes.slice(0, 5);
   const topUpgrades = useMemo(() => {
     const highValueItems = boxes
@@ -64,6 +64,29 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
       .sort((a, b) => b.itemPrice - a.itemPrice)
       .slice(0, 3);
   }, [boxes]);
+  const howItWorksSteps = useMemo(
+    () => [
+      {
+        title: '01. Browse Boxes',
+        text: 'Browse boxes by category and start opening!'
+      },
+      {
+        title: '02. Open Boxes',
+        text: 'Once you find a box you like open it and reveal your item!'
+      },
+      {
+        title: '03. Keep or Trade',
+        text: 'Keep the item you won or convert it to coins!'
+      }
+    ],
+    []
+  );
+  const howItWorksImages = howItWorksSteps.map((_, index) => {
+    const imageUrl = stripeSettings.howItWorksStepImageUrls[index]?.trim();
+    return imageUrl && imageUrl.length > 0
+      ? imageUrl
+      : 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/open.png?alt=media&token=34515af9-0309-412b-95fe-fb22837fd060';
+  });
 
   return (
     <div className="min-h-screen bg-[#1b2024] text-white">
@@ -147,6 +170,26 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             <h2 className="text-xl font-black">Get started with Pullz.gg</h2>
             <p className="mt-2 text-sm text-slate-300">Sign up and open your first box in seconds.</p>
             <button onClick={onSignUp} className="mt-4 w-full rounded-lg bg-[#2b96dc] px-4 py-3 text-sm font-black sm:w-auto">Create Account</button>
+          </section>
+
+          <section>
+            <h2 className="mb-4 text-xl font-black">How It Works</h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {howItWorksSteps.map((step, index) => (
+                <article key={step.title} className="rounded-xl bg-[#22282c] p-4 sm:p-5">
+                  <div className="relative mb-4 flex h-[150px] items-center justify-center overflow-hidden rounded-lg bg-[radial-gradient(circle_at_75%_20%,rgba(45,212,191,0.24),transparent_55%),radial-gradient(circle_at_20%_80%,rgba(59,130,246,0.24),transparent_60%),#1f2730] p-3 sm:h-[170px]">
+                    <img
+                      src={howItWorksImages[index]}
+                      alt={step.title}
+                      className="h-full w-full object-contain"
+                      loading="lazy"
+                    />
+                  </div>
+                  <h3 className="text-lg font-black text-white">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-300">{step.text}</p>
+                </article>
+              ))}
+            </div>
           </section>
 
           <section className="grid gap-3 md:grid-cols-2">
