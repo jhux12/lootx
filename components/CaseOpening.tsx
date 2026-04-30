@@ -801,7 +801,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     -(winnerIndex * STEP_WIDTH)
   ), []);
 
-  const getCenteredIndexFromTranslate = useCallback((translateX: number) => {
+  const getCenteredIndexFromTranslate = useCallback((x: number) => {
     const reelLength = reelLengthRef.current;
     if (reelLength <= 0) return 0;
 
@@ -809,7 +809,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       0,
       Math.min(
         reelLength - 1,
-        Math.round(-translateX / STEP_WIDTH)
+        Math.round(-x / STEP_WIDTH)
       )
     );
   }, []);
@@ -938,9 +938,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       applyVirtualTranslate(currentX);
       const index = getCenteredIndexFromTranslate(currentX);
       if (index !== lastCenterIndexRef.current) {
+        lastCenterIndexRef.current = index;
         setCurrentCenterIndex(index);
         playSound('spin-tick');
-        lastCenterIndexRef.current = index;
       }
 
       if (progress < 1) {
@@ -1807,7 +1807,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 : rarityValue.includes('uncommon')
                                   ? rarityGlowClass.uncommon
                                   : rarityGlowClass.common;
-                          const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && idx === reelWinnerIndex;
+                          const isSettledWinner =
+                            hasSpinSettled &&
+                            animationPhase === 'idle' &&
+                            idx === reelWinnerIndex;
                           const isCenteredItem = idx === currentCenterIndex;
                           const isFocusedItem = isSettledWinner || isCenteredItem;
                           return (
