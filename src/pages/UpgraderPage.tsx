@@ -646,11 +646,11 @@ export default function UpgraderPage() {
                 size={spinnerSize}
                 durationMs={SPIN_DURATION_MS}
               />
-              <div className="mt-3 flex w-full max-w-[460px] flex-col items-center justify-center gap-2 sm:flex-row">
-                <button onClick={handleUpgrade} disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting} className={`h-11 w-full flex-1 rounded-lg border px-4 text-base font-bold transition duration-200 ${status === 'idle' && source && target && settings?.enabled ? 'border-emerald-300/40 bg-[#49b879] text-white hover:brightness-105' : 'cursor-not-allowed border-white/10 bg-[#24313b] text-slate-500'}`}>
+              <div className="mt-3 flex w-full max-w-[460px] items-center justify-center gap-2">
+                <button onClick={handleUpgrade} disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting} className={`h-11 min-w-0 flex-1 rounded-lg border px-4 text-base font-bold transition duration-200 ${status === 'idle' && source && target && settings?.enabled ? 'border-[#8fa2ff]/40 bg-gradient-to-r from-[#5b5bff] to-[#8a4dff] text-white hover:brightness-110' : 'cursor-not-allowed border-white/10 bg-[#24313b] text-slate-500'}`}>
                   {status === 'spinning' ? 'Upgrading...' : 'Upgrade'}
                 </button>
-                <button type="button" disabled={!source || !target || status === 'spinning'} onClick={handleDemoSpin} className={`h-11 w-full rounded-lg border px-4 text-lg font-bold transition sm:w-auto ${source && target && status !== 'spinning' ? 'border-white/10 bg-[#343c46] text-white hover:bg-[#3b4551]' : 'cursor-not-allowed border-white/10 bg-[#24313b] text-slate-500'}`}>Demo Spin</button>
+                <button type="button" disabled={!source || !target || status === 'spinning'} onClick={handleDemoSpin} className={`h-11 w-[42%] min-w-[124px] rounded-lg border px-3 text-sm font-bold transition ${source && target && status !== 'spinning' ? 'border-white/10 bg-[#343c46] text-white hover:bg-[#3b4551]' : 'cursor-not-allowed border-white/10 bg-[#24313b] text-slate-500'}`}>Demo Spin</button>
               </div>
             </div>
 
