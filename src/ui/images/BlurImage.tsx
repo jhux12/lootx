@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './blurImage.css';
 
 type BlurImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
@@ -18,6 +18,9 @@ export const BlurImage: React.FC<BlurImageProps> = ({
   ...rest
 }) => {
   const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    setLoaded(false);
+  }, [src]);
 
   return (
     <div className={`pullz-blur-wrap ${ratioClassName ?? ''}`}>

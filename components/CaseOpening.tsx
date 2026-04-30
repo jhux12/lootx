@@ -2051,19 +2051,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               onClick={() => setShowXpConfirmSheet(false)}
               aria-label="Close XP confirmation"
             />
-            <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-cyan-300/20 bg-[#0b0e14] p-4 shadow-2xl backdrop-blur-sm animate-in slide-in-from-bottom duration-300 sm:mx-auto sm:mb-6 sm:max-w-md sm:rounded-2xl">
+            <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-white/10 bg-[#1a1f26] p-4 shadow-2xl backdrop-blur-sm animate-in slide-in-from-bottom duration-300 sm:mx-auto sm:mb-6 sm:max-w-md sm:rounded-2xl">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-semibold text-white">Open this box with XP?</p>
                 <button
                   type="button"
                   onClick={() => setShowXpConfirmSheet(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/50 text-gray-200"
+                  className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-[#2a313b] text-gray-200"
                   aria-label="Close XP confirmation"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <p className="text-xs text-gray-300">Open with XP: <span className="font-semibold text-cyan-200">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span></p>
+              <p className="text-xs text-gray-300">Open with XP: <span className="font-semibold text-gray-100">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span></p>
               {!canOpenWithXp && (
                 <p className="mt-2 text-xs text-amber-300">You need more XP to open this box.</p>
               )}
@@ -2082,7 +2082,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     void handleSpin({ paymentMethod: 'xp' });
                   }}
                   disabled={!canOpenWithXp || isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
-                  className="rounded-lg border border-cyan-300/35 bg-cyan-400/15 px-3 py-2 text-sm font-semibold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="rounded-lg border border-white/15 bg-[#2f3742] px-3 py-2 text-sm font-semibold text-gray-100 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Use XP
                 </button>
@@ -2138,7 +2138,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         <div className={`fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
         <div className={`fixed bottom-0 left-0 right-0 z-[100] transform transition-transform duration-500 ${showWinModal && wonItem ? 'translate-y-0' : 'translate-y-full'}`}>
           {wonItem && (
-            <div className="mx-auto relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] sm:max-h-[86vh]">
+            <div className="mx-auto relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#1b2028]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] sm:max-h-[86vh]">
               {confetti.map((piece) => (
                 <span
                   key={piece.id}
@@ -2163,9 +2163,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
               <div className="overflow-y-auto p-5 sm:p-6">
                 <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-white/10 bg-black/25 p-4 text-center">
-                  <div className="absolute inset-0 rounded-2xl opacity-30" style={{ background: `radial-gradient(circle at top, ${wonItem.color}99 0%, transparent 70%)` }} />
+                  <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
                   <BlurImage
-                    src={wonItem.image}
+                    src={wonItem.image || box?.image || ''}
                     alt={wonItem.name}
                     ratioClassName="relative z-10 mb-3 mx-auto h-32 w-32 shrink-0 sm:h-36 sm:w-36"
                     className="object-contain"
