@@ -188,11 +188,9 @@ const Toolbar = ({
 );
 
 const SelectedPreview = ({ label, item, emptyText, actionLabel, onActivate }: { label: string; item: EliteItem | null; emptyText: string; actionLabel: string; onActivate: () => void }) => (
-  <div className="rounded-2xl border border-indigo-300/15 bg-gradient-to-b from-[#0a1122] to-[#060b15] p-4 sm:p-5">
+  <div className="rounded-2xl border border-white/10 bg-[#1f252c] p-4 sm:p-5">
     <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-    <div className="relative mt-4 flex h-[240px] flex-col items-center justify-between overflow-hidden rounded-xl border border-indigo-300/15 bg-[#050914] px-3 pb-3 pt-4 sm:h-[250px]">
-      <div className="absolute top-4 h-28 w-40 bg-indigo-300/15 blur-3xl" />
-      <div className="absolute bottom-14 h-5 w-36 rounded-[999px] bg-cyan-300/15 blur-md" />
+    <button type="button" onClick={onActivate} className="relative mt-4 flex h-[240px] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-white/20 bg-transparent px-3 pb-3 pt-4 transition hover:border-white/35 sm:h-[250px]">
       {item ? (
         <>
           <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center">
@@ -205,14 +203,14 @@ const SelectedPreview = ({ label, item, emptyText, actionLabel, onActivate }: { 
         </>
       ) : (
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 rounded-full border border-dashed border-slate-600/80" />
-          <p className="mt-3 px-4 text-xs text-slate-400">{emptyText}</p>
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl border border-white/25 text-5xl font-light text-white/85">+</div>
+          <p className="mt-3 px-4 text-sm text-slate-300">{emptyText}</p>
         </div>
       )}
-      <button type="button" onClick={onActivate} className="relative z-10 mt-4 h-10 w-full max-w-[220px] rounded-full border border-indigo-300/35 bg-[#152343] text-xs font-bold uppercase tracking-[0.16em] text-slate-200 transition duration-200 hover:scale-[1.02] hover:border-indigo-200/55 hover:text-white">
+      <span className="relative z-10 mt-4 inline-flex h-10 w-full max-w-[220px] items-center justify-center rounded-full border border-white/15 bg-[#2a323b] text-xs font-bold uppercase tracking-[0.16em] text-slate-100">
         {actionLabel}
-      </button>
-    </div>
+      </span>
+    </button>
   </div>
 );
 
@@ -233,6 +231,8 @@ export default function UpgraderPage() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
   const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const inventoryPanelRef = useRef<HTMLDivElement | null>(null);
+  const targetPanelRef = useRef<HTMLDivElement | null>(null);
   const idleTimeoutRef = useRef<number | null>(null);
   const spinAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastPlayedResultRef = useRef<string | null>(null);
@@ -241,6 +241,14 @@ export default function UpgraderPage() {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('upgrader-audio-muted') === '1';
   });
+
+  const jumpToPanel = (panel: 'inventory' | 'targets') => {
+    setActiveTab(panel);
+    window.setTimeout(() => {
+      const targetNode = panel === 'inventory' ? inventoryPanelRef.current : targetPanelRef.current;
+      targetNode?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 40);
+  };
 
   const [inventoryMin, setInventoryMin] = useState('');
   const [inventoryMax, setInventoryMax] = useState('');
@@ -590,10 +598,7 @@ export default function UpgraderPage() {
       <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 p-3 sm:gap-6 sm:p-4 lg:p-8">
         <section className="relative overflow-hidden rounded-2xl border border-white/5 bg-[#20262d] p-3 sm:p-4">
           <div className="relative mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rotate-12 rounded-[2px] bg-white/90" />
-              <p className="text-xl font-black text-white">PullzDraw</p>
-            </div>
+            <p className="text-xl font-black text-white">Upgrader</p>
             <div className="hidden items-center gap-2 sm:flex">
               <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-300/20 bg-[#0c1430] text-slate-300 hover:text-white" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
                 {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
@@ -604,7 +609,7 @@ export default function UpgraderPage() {
             </div>
           </div>
           <div className="relative grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1fr_minmax(320px,460px)_1fr] lg:gap-6">
-            <SelectedPreview label="Your Item" item={sourcePreview} emptyText="Choose an item to upgrade" actionLabel="Select Item" onActivate={() => setActiveTab('inventory')} />
+            <SelectedPreview label="Your Item" item={sourcePreview} emptyText="Choose an item to upgrade" actionLabel="Select Item" onActivate={() => jumpToPanel('inventory')} />
 
             <div className="relative flex flex-col items-center rounded-2xl border border-white/5 bg-[#1f252c] p-4">
               <UpgraderSpinner
@@ -623,17 +628,6 @@ export default function UpgraderPage() {
                 size={spinnerSize}
                 durationMs={SPIN_DURATION_MS}
               />
-              {source && target && (
-                <div className="mt-3 w-full max-w-[340px] rounded-xl border border-indigo-300/20 bg-[#0a1228] p-3">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Value Comparison</p>
-                  <div className="space-y-1 text-xs text-slate-200">
-                    <div className="flex items-center justify-between"><span>Your item</span><CoinAmount amount={Math.round(source.coinValue)} className="text-xs text-slate-100" iconClassName="h-3 w-3" /></div>
-                    <div className="flex items-center justify-between"><span>Target</span><CoinAmount amount={Math.round(target.coinValue)} className="text-xs text-slate-100" iconClassName="h-3 w-3" /></div>
-                    <div className="flex items-center justify-between pt-1 text-violet-200"><span>Multiplier</span><span className="font-semibold">{valueMultiplier.toFixed(2)}x</span></div>
-                  </div>
-                </div>
-              )}
-
               <div className="mt-3 flex w-full max-w-[460px] flex-col items-center justify-center gap-2 sm:flex-row">
                 <button onClick={handleUpgrade} disabled={status !== 'idle' || !source || !target || !settings?.enabled || isSubmitting} className={`h-11 w-full flex-1 rounded-lg border px-4 text-base font-bold transition duration-200 ${status === 'idle' && source && target && settings?.enabled ? 'border-emerald-300/40 bg-[#49b879] text-white hover:brightness-105' : 'cursor-not-allowed border-white/10 bg-[#24313b] text-slate-500'}`}>
                   {status === 'spinning' ? 'Upgrading...' : 'Upgrade'}
@@ -642,7 +636,7 @@ export default function UpgraderPage() {
               </div>
             </div>
 
-            <SelectedPreview label="Item You Want" item={targetPreview} emptyText="Select your target item" actionLabel="Select Target" onActivate={() => setActiveTab('targets')} />
+            <SelectedPreview label="Item You Want" item={targetPreview} emptyText="Select your target item" actionLabel="Select Target" onActivate={() => jumpToPanel('targets')} />
           </div>
         </section>
 
@@ -652,7 +646,7 @@ export default function UpgraderPage() {
         </div>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-          <div className={`${activeTab === 'inventory' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/20 bg-[#070c19]/95 p-3 sm:p-4 lg:flex`}>
+          <div ref={inventoryPanelRef} className={`${activeTab === 'inventory' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-white/10 bg-[#1f252c] p-3 sm:p-4 lg:flex`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Your Items</h2>
               <span className="rounded-md border border-indigo-300/20 bg-[#101837] px-2 py-0.5 text-[10px] text-slate-300">{filteredInventoryItems.length}</span>
@@ -692,7 +686,7 @@ export default function UpgraderPage() {
             )}
           </div>
 
-          <div className={`${activeTab === 'targets' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-indigo-300/25 bg-[#0a1022]/95 p-3 sm:p-4 lg:flex`}>
+          <div ref={targetPanelRef} className={`${activeTab === 'targets' ? 'flex' : 'hidden'} min-h-[460px] flex-col rounded-2xl border border-white/10 bg-[#1f252c] p-3 sm:p-4 lg:flex`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">Site Items</h2>
               <span className="rounded-md border border-indigo-300/20 bg-[#101837] px-2 py-0.5 text-[10px] text-slate-300">{filteredTargetItems.length}</span>
