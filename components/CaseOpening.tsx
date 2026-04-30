@@ -332,11 +332,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
   const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
   const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
   const [isBoxPreviewVisible, setIsBoxPreviewVisible] = useState(false);
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
+  const lastTickAtRef = useRef(0);
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -388,6 +390,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const spinnerCardHeight = DESKTOP_CARD_HEIGHT;
   const spinnerGap = DESKTOP_GAP_WIDTH;
   const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+    const syncViewport = () => setIsMobileViewport(mediaQuery.matches);
+    syncViewport();
+    mediaQuery.addEventListener('change', syncViewport);
+    return () => mediaQuery.removeEventListener('change', syncViewport);
+  }, []);
 
 
   const updateSpinnerMeasurements = useCallback(() => {
@@ -942,7 +953,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (index !== lastCenterIndexRef.current) {
         lastCenterIndexRef.current = index;
         setCurrentCenterIndex(index);
-        playSound('spin-tick');
+        const now = performance.now();
+        const minTickGap = isMobileViewport ? 45 : 20;
+        if (now - lastTickAtRef.current > minTickGap) {
+          playSound('spin-tick');
+          lastTickAtRef.current = now;
+        }
       }
       frameId = window.requestAnimationFrame(syncCenterItem);
     };
@@ -986,7 +1002,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, isMobileViewport, playSound, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1825,32 +1841,41 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && idx === reelWinnerIndex;
                           const isCenteredItem = idx === currentCenterIndex;
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
+                          const showItemGlow = !isSpinning || !isMobileViewport;
+                          const allowHeavyHighlight = !isMobileViewport || !isSpinning;
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className="group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 transition-opacity duration-150"
+                            className={`group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${isSpinning ? 'transition-none' : 'transition-opacity duration-200'}`}
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
-                                boxShadow: isFocusedItem ? `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55` : 'none',
+                                boxShadow: isFocusedItem && allowHeavyHighlight
+                                  ? `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`
+                                  : 'none',
                                 opacity: isFocusedItem ? 1 : 0.35,
-                                filter: isFocusedItem ? 'brightness(1.14)' : 'brightness(0.78)',
+                                filter:
+                                  isMobileViewport && isSpinning
+                                    ? 'none'
+                                    : isFocusedItem
+                                      ? 'brightness(1.12)'
+                                      : 'brightness(0.82)',
                                 zIndex: isFocusedItem ? 4 : 1
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                              className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] opacity-65 blur-3xl ${rarityGlow}`}
+                              className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-65 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
                               style={{ boxShadow: isFocusedItem ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <img loading="eager" decoding="async" 
                                   src={item.image} 
                                   alt={item.name} 
-                                  className={`mt-1 h-[132px] w-[132px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:mt-1.5 ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse' : ''}`} 
+                                  className={`mt-1 ${isMobileViewport ? 'h-[104px] w-[104px]' : 'h-[132px] w-[132px]'} object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:mt-1.5 ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse' : ''}`} 
                               />
                             </div>
                         </div>
@@ -2493,4 +2518,3 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     </div>
   );
 };
-
