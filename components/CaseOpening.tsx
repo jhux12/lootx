@@ -844,22 +844,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return null;
   }, [getCenteredTranslate]);
 
-  const getTranslateBounds = useCallback(() => {
-    const viewport = scrollViewportRef.current;
-    const container = scrollContainerRef.current;
-    if (!viewport || !container) return null;
-
-    const measuredViewport = spinnerMeasurementsRef.current.viewportWidth || viewport.clientWidth;
-    const minTranslate = Math.min(0, measuredViewport - container.scrollWidth);
-    return { minTranslate, maxTranslate: 0 };
-  }, []);
-
-  const clampTranslate = useCallback((translateX: number) => {
-    const bounds = getTranslateBounds();
-    if (!bounds) return translateX;
-    return clamp(translateX, bounds.minTranslate, bounds.maxTranslate);
-  }, [getTranslateBounds]);
-
   const resetSpinnerAnimation = useCallback(() => {
     if (spinnerAnimationRef.current) {
       spinnerAnimationRef.current.cancel();
@@ -878,6 +862,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       tickTimerRef.current = null;
     }
     setAnimationPhase('idle');
+  }, []);
+
+  const applyVirtualTranslate = useCallback((nextX: number) => {
+    virtualTranslateXRef.current = nextX;
+    itemRefs.current.forEach((node, idx) => {
+      if (!node) return;
+      node.style.transform = `translate(${(idx * STEP_WIDTH) + nextX}px, -${ITEM_SIZE / 2}px)`;
+    });
   }, []);
 
   const animateSpin = useCallback(async (
@@ -914,9 +906,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setCurrentCenterIndex(startingCenterIndex);
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
-    const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
+    const centeredTranslate = centeredTranslateRaw;
+    const jitterLandingTranslate = centeredTranslate === null ? null : centeredTranslate + landingJitterPx;
+    const approachTranslate = centeredTranslate === null ? null : centeredTranslate + approachOffset;
     if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
@@ -924,9 +916,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = clampTranslate(
-      approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection)
-    );
+    const overshootTarget = approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection);
     setAnimationPhase('spinning');
 
     const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
@@ -948,8 +938,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       return keyframes[segment] + ((keyframes[segment + 1] - keyframes[segment]) * eased);
     };
 
+    let decelerationTimer: number | null = null;
+
     const finishAnimation = () => {
-      window.clearTimeout(decelerationTimer);
+      if (decelerationTimer !== null) window.clearTimeout(decelerationTimer);
       container.style.transition = 'none';
       container.style.transform = 'translate3d(0px, 0, 0)';
       container.style.willChange = 'auto';
@@ -981,11 +973,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
     };
 
-    frameId = window.requestAnimationFrame(syncCenterItem);
-    const decelerationTimer = window.setTimeout(() => setAnimationPhase('settling'), Math.max(0, resolvedDuration - 850));
-
     const cancelSpin = () => {
-      window.clearTimeout(decelerationTimer);
+      if (decelerationTimer !== null) window.clearTimeout(decelerationTimer);
       if (tickTimerRef.current !== null) {
         window.clearTimeout(tickTimerRef.current);
         tickTimerRef.current = null;
@@ -999,7 +988,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     // store cancellable handle semantics
     spinnerAnimationRef.current = { cancel: cancelSpin } as unknown as Animation;
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, resolveCenteredTranslate, updateSpinnerMeasurements]);
+    decelerationTimer = window.setTimeout(() => setAnimationPhase('settling'), Math.max(0, resolvedDuration - 850));
+    frameId = window.requestAnimationFrame(syncCenterItem);
+  }, [applyVirtualTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1115,11 +1106,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setReelItems(nextReelItems);
     setReelWinnerIndex(winnerIndex);
     await waitForNextPaint();
+    applyVirtualTranslate(0);
     updateSpinnerMeasurements();
     const startingCenterIndex = getCenteredIndexFromTranslate(0);
     lastCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
-  }, [getCenteredIndexFromTranslate, resetSpinnerAnimation, updateSpinnerMeasurements]);
+  }, [applyVirtualTranslate, getCenteredIndexFromTranslate, resetSpinnerAnimation, updateSpinnerMeasurements]);
 
 
 
@@ -2520,10 +2512,3 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     </div>
   );
 };
-    const applyVirtualTranslate = (nextX: number) => {
-      virtualTranslateXRef.current = nextX;
-      itemRefs.current.forEach((node, idx) => {
-        if (!node) return;
-        node.style.transform = `translate(${(idx * STEP_WIDTH) + nextX}px, -97.5px)`;
-      });
-    };
