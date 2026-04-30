@@ -1646,19 +1646,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const redirectResult = await getRedirectResult(auth);
         if (!redirectResult?.user) return;
-        const refreshedAfterRedirect = typeof window !== 'undefined' && window.sessionStorage.getItem(GOOGLE_REDIRECT_REFRESH_KEY) === '1';
         await redirectResult.user.reload();
         await ensureGoogleUserProfile(redirectResult.user);
         trackEvent('google_oauth_success');
         setShowLoginModal(false);
-        if (typeof window !== 'undefined' && !refreshedAfterRedirect) {
-          window.sessionStorage.setItem(GOOGLE_REDIRECT_REFRESH_KEY, '1');
-          window.location.reload();
-          return;
-        }
-        if (typeof window !== 'undefined') {
-          window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
-        }
         const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
         resolveEmailRedirect(redirectPath);
       } catch (error: any) {
@@ -2255,7 +2246,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = async (email: string, pass: string, remember: boolean = true) => {
-      await setAuthPersistence(remember);
+      const useRedirectFlow = shouldUseRedirectGoogleAuth();
+      await setAuthPersistence(useRedirectFlow ? true : remember);
       const credential = await signInWithEmailAndPassword(auth, email, pass);
       if (!credential.user.emailVerified) {
         const redirectPath = consumePostSignupRedirect() || getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT;
@@ -2293,13 +2285,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     googleAuthInProgressRef.current = true;
 
     try {
-      await setAuthPersistence(remember);
+      const useRedirectFlow = shouldUseRedirectGoogleAuth();
+      await setAuthPersistence(useRedirectFlow ? true : remember);
       if (isRetry) {
         trackEvent('google_oauth_retry');
       }
       trackEvent('google_oauth_started');
 
-      if (shouldUseRedirectGoogleAuth()) {
+      if (useRedirectFlow) {
         if (typeof window !== 'undefined') {
           window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
         }

@@ -177,6 +177,12 @@ export const LoginModal: React.FC = () => {
     setMode(authModalMode);
   }, [authModalMode]);
 
+  useEffect(() => {
+    if (mode === 'register') {
+      setShowEmailFields(true);
+    }
+  }, [mode]);
+
   const clearGoogleLinkState = () => {
     setGoogleLinkEmail('');
     setGoogleLinkPassword('');
