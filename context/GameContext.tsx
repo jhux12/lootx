@@ -1592,7 +1592,41 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+
+    const checkGoogleRedirectResult = async () => {
+      try {
+        console.info('Checking Google redirect result');
+        const result = await getRedirectResult(auth);
+        if (!mounted) return;
+
+        if (result?.user) {
+          console.info(`Google redirect result user: ${result.user.uid}`);
+          await result.user.getIdToken(true);
+          await ensureGoogleUserProfile(result.user);
+          setShowLoginModal(false);
+          const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
+          resolveEmailRedirect(redirectPath);
+          if (typeof window !== 'undefined') {
+            window.sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
+          }
+        } else {
+          console.info('No Google redirect result.');
+        }
+      } catch (error: any) {
+        console.error('Google redirect error:', error?.code, error?.message);
+        console.error('Firebase Google redirect error', { code: error?.code, message: error?.message, error });
+        trackEvent('google_oauth_error', { code: error?.code || 'redirect_unknown' });
+      } finally {
+        redirectResultResolvedRef.current = true;
+      }
+    };
+
+    void checkGoogleRedirectResult();
+
     const unsubscribe = onIdTokenChanged(auth, (firebaseUser) => {
+      if (!redirectResultResolvedRef.current) return;
+      console.info(`Auth ready user: ${firebaseUser?.uid ?? 'null'}`);
       setAuthInitialized(true);
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
       const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified);
@@ -1652,57 +1686,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     return () => {
+      mounted = false;
       unsubscribe();
       clearUserSubscriptions();
       activeUserIdRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-
-    getRedirectResult(auth)
-      .then(async (result) => {
-        if (!mounted) return;
-
-        if (result?.user) {
-          console.info('Google redirect completed:', result.user.uid);
-          await result.user.reload();
-          await ensureGoogleUserProfile(result.user);
-
-          if (result?.user) {
-            console.info('Forcing session after redirect...');
-            void syncAdminClaim(result.user);
-            startAuthenticatedSession(result.user);
-            setAuthInitialized(true);
-          }
-
-          trackEvent('google_oauth_success');
-          setShowLoginModal(false);
-          const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
-          resolveEmailRedirect(redirectPath);
-          if (typeof window !== 'undefined') {
-            window.sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
-          }
-          return;
-        }
-
-        console.info('No Google redirect result.');
-        setAuthInitialized(true);
-      })
-      .catch((error: any) => {
-        setAuthInitialized(true);
-        if (typeof window !== 'undefined') {
-          window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
-          window.sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
-        }
-        console.error('Google redirect error:', error?.code, error?.message);
-        console.error('Firebase Google redirect error', { code: error?.code, message: error?.message, error });
-        trackEvent('google_oauth_error', { code: error?.code || 'redirect_unknown' });
-      });
-
-    return () => {
-      mounted = false;
     };
   }, []);
 
@@ -2320,6 +2307,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const googleAuthInProgressRef = useRef(false);
+  const redirectResultResolvedRef = useRef(false);
   const GOOGLE_REDIRECT_REFRESH_KEY = 'google_redirect_refresh_done';
   const GOOGLE_REDIRECT_PENDING_KEY = 'google_redirect_pending';
 
@@ -2350,6 +2338,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.info('User agent:', navigator.userAgent);
 
       if (useRedirectFlow) {
+        console.info('Starting Google redirect');
         if (typeof window !== 'undefined') {
           window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
           window.sessionStorage.setItem(GOOGLE_REDIRECT_PENDING_KEY, '1');
