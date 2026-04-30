@@ -2273,7 +2273,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const shouldUseRedirectGoogleAuth = () => {
     if (typeof navigator === 'undefined') return false;
     const ua = navigator.userAgent || '';
-    return /(Instagram|FBAN|FBAV|FBIOS|FB_IAB|TikTok|Snapchat|Line)/i.test(ua);
+    const isInAppBrowser = /(Instagram|FBAN|FBAV|FBIOS|FB_IAB|TikTok|Snapchat|Line|wv|WebView|MiuiBrowser)/i.test(ua);
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
+    return isInAppBrowser || isMobile;
   };
 
   const googleAuthInProgressRef = useRef(false);
@@ -2282,6 +2284,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const loginWithGoogle = async (options: GoogleAuthOptions = {}): Promise<GoogleAuthResult> => {
     const { remember = true, isRetry = false } = options;
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
     if (googleAuthInProgressRef.current) {
       return { status: 'error', message: 'Google sign-in is already in progress.' };
     }
@@ -2313,6 +2318,27 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error: any) {
       console.error('Firebase Google auth error', { code: error?.code, message: error?.message, error });
       const errorCode = error?.code;
+      if (
+        errorCode === 'auth/popup-blocked' ||
+        errorCode === 'auth/popup-closed-by-user' ||
+        errorCode === 'auth/cancelled-popup-request' ||
+        errorCode === 'auth/operation-not-supported-in-this-environment'
+      ) {
+        try {
+          if (typeof window !== 'undefined') {
+            window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
+          }
+          trackEvent('google_oauth_popup_fallback_to_redirect', { code: errorCode });
+          await signInWithRedirect(auth, provider);
+          return { status: 'redirect-started' };
+        } catch (redirectError: any) {
+          console.error('Firebase Google redirect fallback error', {
+            code: redirectError?.code,
+            message: redirectError?.message,
+            error: redirectError
+          });
+        }
+      }
       if (errorCode === 'auth/account-exists-with-different-credential') {
         const pendingCredential = GoogleAuthProvider.credentialFromError(error);
         const email = error?.customData?.email ?? error?.email;
