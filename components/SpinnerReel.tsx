@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 export interface ReelItem {
   itemId?: string;
@@ -19,9 +19,9 @@ interface SpinnerReelProps {
 
 const REEL_LENGTH = 40;
 const STOP_INDEX = 32;
-const CARD_WIDTH = 128;
+const DEFAULT_CARD_WIDTH = 128;
 const CARD_GAP = 12;
-const STEP = CARD_WIDTH + CARD_GAP;
+const DEFAULT_STEP = DEFAULT_CARD_WIDTH + CARD_GAP;
 
 const fallbackItem: ReelItem = {
   itemId: 'placeholder-item',
@@ -59,6 +59,8 @@ const hashSeed = (input: string) => {
 export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, spinKey, state, durationMs, onSpinComplete }) => {
   const [transitionEnabled, setTransitionEnabled] = useState(false);
   const [translateX, setTranslateX] = useState(0);
+  const [step, setStep] = useState(DEFAULT_STEP);
+  const reelTrackRef = useRef<HTMLDivElement | null>(null);
 
   const pool = useMemo(() => (items.length ? items : [fallbackItem]), [items]);
 
@@ -79,8 +81,28 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
     });
   }, [reelItems]);
 
-  const centerOffset = useMemo(() => `calc(50% - ${CARD_WIDTH / 2}px)`, []);
-  const targetTranslateX = useMemo(() => -(STOP_INDEX * STEP), []);
+  const cardWidth = step - CARD_GAP;
+  const centerOffset = useMemo(() => `calc(50% - ${cardWidth / 2}px)`, [cardWidth]);
+  const targetTranslateX = useMemo(() => -(STOP_INDEX * step), [step]);
+
+  useEffect(() => {
+    const measureStep = () => {
+      const track = reelTrackRef.current;
+      const firstCard = track?.querySelector<HTMLElement>('[data-reel-card="true"]');
+      if (!firstCard) return;
+
+      const computedStyle = window.getComputedStyle(track);
+      const gap = Number.parseFloat(computedStyle.columnGap || computedStyle.gap || String(CARD_GAP)) || CARD_GAP;
+      const measuredStep = Math.round(firstCard.getBoundingClientRect().width + gap);
+      if (measuredStep > 0) {
+        setStep(measuredStep);
+      }
+    };
+
+    measureStep();
+    window.addEventListener('resize', measureStep);
+    return () => window.removeEventListener('resize', measureStep);
+  }, [reelItems, state]);
 
   useEffect(() => {
     if (state === 'IDLE') {
@@ -119,10 +141,13 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
 
       <div className="absolute left-0 top-1/2 -translate-y-1/2" style={{ transform: `translate(${centerOffset}, -50%)` }}>
         <div
+          ref={reelTrackRef}
           className={`flex gap-3 ${state === 'IDLE' ? 'animate-reel-idle' : ''}`}
           style={{
             transform: state === 'IDLE' ? undefined : `translateX(${translateX}px)`,
-            transition: transitionEnabled ? `transform ${durationMs}ms cubic-bezier(0.08, 0.78, 0.22, 1)` : 'none'
+            transition: transitionEnabled ? `transform ${durationMs}ms cubic-bezier(0.12, 0.84, 0.22, 1)` : 'none',
+            willChange: 'transform',
+            backfaceVisibility: 'hidden'
           }}
         >
           {reelItems.map((item, index) => {
@@ -132,6 +157,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
             return (
               <div
                 key={itemKey(item, index)}
+                data-reel-card="true"
                 className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 transition-colors ${isWinner && state === 'STOPPED' ? 'border-brand-purple bg-brand-purple/15 shadow-[0_0_24px_rgba(139,92,246,0.45)]' : 'border-gray-700 bg-[#111827]'} ${rarity === 'legendary' ? 'shadow-[0_0_18px_rgba(251,191,36,0.2)]' : ''}`}
               >
                 <div className="h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
@@ -141,7 +167,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
                       alt={item.itemName}
                       className="w-full h-full object-contain"
                       loading="eager"
-                      decoding="sync"
+                      decoding="async"
                       draggable={false}
                     />
                   ) : (
