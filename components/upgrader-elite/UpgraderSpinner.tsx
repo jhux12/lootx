@@ -23,6 +23,8 @@ interface UpgraderSpinnerProps {
   chance: number;
   hasSource: boolean;
   hasTarget: boolean;
+  targetImage?: string;
+  targetName?: string;
   status: UpgradeStatus;
   spinRotation: number;
   spinNonce: number;
@@ -40,6 +42,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   chance,
   hasSource,
   hasTarget,
+  targetImage,
+  targetName,
   status,
   spinRotation,
   spinNonce,
@@ -234,7 +238,16 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
             <>
               {hasSource && hasTarget ? (
                 <>
-                  <span className="text-sm font-bold tracking-wide text-amber-300 sm:text-base">{multiplier}x</span>
+                  <p className="text-[10px] font-semibold tracking-wide text-slate-300 sm:text-xs">{chance.toFixed(2)}%</p>
+                  {targetImage && (
+                    <img
+                      src={targetImage}
+                      alt={targetName ?? 'Target item'}
+                      className="mt-1 h-16 w-16 object-contain sm:h-20 sm:w-20"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                  <span className="mt-1 text-sm font-bold tracking-wide text-amber-300 sm:text-base">{multiplier}x</span>
                 </>
               ) : (
                 <>

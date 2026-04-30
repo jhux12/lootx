@@ -592,7 +592,7 @@ export default function UpgraderPage() {
       </header>
 
       <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 p-3 sm:gap-6 sm:p-4 lg:p-8">
-        <section className="relative overflow-hidden rounded-2xl border border-white/5 bg-[#20262d] p-3 sm:p-4">
+        <section className="relative overflow-hidden rounded-2xl border border-white/5 bg-transparent p-3 sm:p-4">
           <div className="relative mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
             <p className="text-xl font-black text-white">Upgrader</p>
             <div className="hidden items-center gap-2 sm:flex">
@@ -612,6 +612,8 @@ export default function UpgraderPage() {
                 chance={chance}
                 hasSource={Boolean(source)}
                 hasTarget={Boolean(target)}
+                targetImage={targetPreview?.image}
+                targetName={targetPreview?.name}
                 status={status}
                 spinRotation={spinRotation}
                 spinNonce={spinNonce}
