@@ -360,6 +360,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
   const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
   const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
+  const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -1546,7 +1547,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleTryFree = () => {
     setSpinFeedbackMessage(null);
-    handleSpin({ isDemo: true });
+    handleSpin({ isDemo: true, isQuick: isQuickSpinEnabled });
   };
 
   useEffect(() => {
@@ -2005,7 +2006,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Action Bar */}
             <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
                  <button 
-                    onClick={() => handleSpin()}
+                    onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
                     className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
                 >
@@ -2056,10 +2057,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleSpin({ isQuick: true })}
-                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
-                      className="inline-flex h-[46px] w-[46px] items-center justify-center rounded-lg border border-white/10 bg-[#303741] text-white/80"
-                      aria-label="Quick action"
+                      onClick={() => {
+                        playSound('click');
+                        setIsQuickSpinEnabled((prev) => !prev);
+                      }}
+                      className={`inline-flex h-[46px] w-[46px] items-center justify-center rounded-lg border text-white transition-colors ${isQuickSpinEnabled ? 'border-[#8a6cff] bg-[#6f4dff]/25 text-[#c8bcff]' : 'border-white/10 bg-[#303741] text-white/80 hover:bg-[#39424d]'}`}
+                      aria-label={isQuickSpinEnabled ? 'Disable quick spin' : 'Enable quick spin'}
+                      title={isQuickSpinEnabled ? 'Quick spin enabled' : 'Quick spin disabled'}
                     >
                       <Zap className="h-4 w-4" />
                     </button>
