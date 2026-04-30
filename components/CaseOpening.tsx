@@ -46,7 +46,6 @@ interface RevealData {
 interface SpinnerReelCardProps {
   item: CaseItem;
   idx: number;
-  reelWinnerIndex: number;
   spinnerCardWidth: number;
   spinnerCardHeight: number;
   isFocusedItem: boolean;
@@ -87,10 +86,9 @@ const rarityGlowClass: Record<string, string> = {
   common: 'bg-slate-300/18'
 };
 
-const SpinnerReelCard = React.memo(({
+const SpinnerReelCard: React.FC<SpinnerReelCardProps> = ({
   item,
   idx,
-  reelWinnerIndex,
   spinnerCardWidth,
   spinnerCardHeight,
   isFocusedItem,
@@ -113,7 +111,6 @@ const SpinnerReelCard = React.memo(({
 
   return (
     <div
-      key={`${item.id}-${idx}`}
       ref={(node) => {
         setWinningRef(node, idx);
         setCardRef(node, idx);
@@ -151,18 +148,7 @@ const SpinnerReelCard = React.memo(({
       </div>
     </div>
   );
-}, (prev, next) => (
-  prev.item.id === next.item.id
-  && prev.item.image === next.item.image
-  && prev.item.color === next.item.color
-  && prev.idx === next.idx
-  && prev.reelWinnerIndex === next.reelWinnerIndex
-  && prev.spinnerCardWidth === next.spinnerCardWidth
-  && prev.spinnerCardHeight === next.spinnerCardHeight
-  && prev.isFocusedItem === next.isFocusedItem
-  && prev.isSpinning === next.isSpinning
-  && prev.animationPhase === next.animationPhase
-));
+};
 
 const createSeededRng = (seed: string) => {
   let h = 2166136261;
@@ -1952,7 +1938,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           key={`${item.id}-${idx}`}
                           item={item}
                           idx={idx}
-                          reelWinnerIndex={reelWinnerIndex}
                           spinnerCardWidth={spinnerCardWidth}
                           spinnerCardHeight={spinnerCardHeight}
                           isFocusedItem={isFocusedItem}
