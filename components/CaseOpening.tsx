@@ -820,6 +820,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return viewportCenterX - winnerCenterX + landingOffset;
   }, [updateSpinnerMeasurements]);
 
+  const getCenteredIndexFromTranslate = useCallback((translateX: number) => {
+    const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
+    const resolvedViewportWidth = scrollViewportRef.current?.clientWidth ?? viewportWidth;
+    const viewportCenter = resolvedViewportWidth / 2;
+
+    if (!Number.isFinite(stepWidth) || stepWidth <= 0 || !Number.isFinite(cardWidth) || viewportCenter <= 0) {
+      return 0;
+    }
+
+    return Math.max(
+      0,
+      Math.min(
+        reelItems.length - 1,
+        Math.round((viewportCenter - translateX - (cardWidth / 2)) / stepWidth)
+      )
+    );
+  }, [reelItems.length]);
+
   const resolveCenteredTranslate = useCallback(async (winnerIndex: number, landingOffset = 0) => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const next = getCenteredTranslate(winnerIndex, landingOffset);
@@ -927,23 +945,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     spinnerAnimationRef.current = animation;
     let frameId: number | null = null;
-    const estimatedStartCenterIndex = Math.max(0, Math.round(Math.abs(overshootTarget) / spinnerMeasurementsRef.current.stepWidth));
-    lastCenterIndexRef.current = estimatedStartCenterIndex;
-    setCurrentCenterIndex(estimatedStartCenterIndex);
+    const startingCenterIndex = getCenteredIndexFromTranslate(0);
+    lastCenterIndexRef.current = startingCenterIndex;
+    setCurrentCenterIndex(startingCenterIndex);
 
     const syncCenterItem = () => {
-      const timing = animation.effect?.getComputedTiming();
-      const progress = typeof timing?.progress === 'number' ? timing.progress : null;
-      const { stepWidth } = spinnerMeasurementsRef.current;
-
-      if (progress !== null && Number.isFinite(progress) && stepWidth > 0) {
-        const currentTranslate = overshootTarget + (centeredTranslate - overshootTarget) * progress;
-        const index = Math.max(0, Math.round(Math.abs(currentTranslate) / stepWidth));
-        setCurrentCenterIndex(index);
-        if (index !== lastCenterIndexRef.current) {
-          playSound('spin-tick');
-          lastCenterIndexRef.current = index;
-        }
+      const transform = window.getComputedStyle(container).transform;
+      const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
+      const currentX = matrix ? matrix.m41 : 0;
+      const index = getCenteredIndexFromTranslate(currentX);
+      setCurrentCenterIndex(index);
+      if (index !== lastCenterIndexRef.current) {
+        playSound('spin-tick');
+        lastCenterIndexRef.current = index;
       }
 
       frameId = window.requestAnimationFrame(syncCenterItem);
@@ -986,7 +1000,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, playSound, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
