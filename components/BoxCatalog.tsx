@@ -318,7 +318,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           )}
 
           {!isLoadingBoxes && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid justify-items-center grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {groupedBoxes.map((box) => (
                 <BoxCard key={box.id} box={box} onSelect={openBox} />
               ))}
