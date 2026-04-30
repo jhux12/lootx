@@ -356,6 +356,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     viewportWidth: 0,
     stepWidth: DESKTOP_CARD_WIDTH + DESKTOP_GAP_WIDTH
   });
+  const reelLengthRef = useRef(0);
   const itemModalRef = useRef<HTMLDivElement>(null);
   const itemModalCloseRef = useRef<HTMLButtonElement>(null);
   const itemModalRevealFrameRef = useRef<number | null>(null);
@@ -568,6 +569,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         setReelWinnerIndex(Math.floor(staticItems.length / 2));
     }
   }, [items]);
+
+  useEffect(() => {
+    reelLengthRef.current = reelItems.length;
+  }, [reelItems.length]);
 
   useEffect(() => {
     if (!selectedCaseItem) return;
@@ -829,14 +834,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       return 0;
     }
 
+    const reelLength = reelLengthRef.current;
+    if (reelLength <= 0) return 0;
+
     return Math.max(
       0,
       Math.min(
-        reelItems.length - 1,
+        reelLength - 1,
         Math.round((viewportCenter - translateX - (cardWidth / 2)) / stepWidth)
       )
     );
-  }, [reelItems.length]);
+  }, []);
 
   const resolveCenteredTranslate = useCallback(async (winnerIndex: number, landingOffset = 0) => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
