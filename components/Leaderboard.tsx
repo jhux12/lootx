@@ -228,12 +228,12 @@ export const Leaderboard: React.FC = () => {
   const lowerRows = useMemo(() => leaders.slice(3), [leaders]);
 
   return (
-    <div className="min-h-screen bg-[#090c13] text-white">
-      <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-[#0b0f17]/95 backdrop-blur">
+    <div className="min-h-screen bg-[#1b2024] text-white">
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-[#1b2024]/95 backdrop-blur">
         <div className="mx-auto flex h-20 w-full max-w-[1280px] items-center gap-2 px-3 sm:px-5">
           <button
             onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
-            className="rounded-lg p-2 text-gray-300 hover:bg-white/5 md:hidden"
+            className="rounded-lg p-2 text-gray-300 hover:bg-white/5"
             aria-label="Back"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -263,7 +263,7 @@ export const Leaderboard: React.FC = () => {
 
       <main className="pb-10 pt-20 sm:pt-24">
         <section className="mx-auto mb-6 w-full max-w-[1280px] px-3 sm:mb-8 sm:px-5">
-          <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-[#11192b] via-[#131c30] to-[#0f1727] px-5 py-8 sm:px-8 sm:py-10">
+          <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#161b1f] px-5 py-8 sm:px-8 sm:py-10">
             <div className="pointer-events-none absolute inset-0">
               <div className="absolute -top-24 left-4 h-52 w-52 rounded-full bg-cyan-500/20 blur-3xl sm:h-72 sm:w-72" />
               <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl sm:h-80 sm:w-80" />
@@ -293,7 +293,7 @@ export const Leaderboard: React.FC = () => {
           ) : (
             <div className="space-y-8">
               {timeLeft && (
-                <section className="mx-auto w-full max-w-2xl rounded-2xl border border-white/10 bg-[#111725] p-4 sm:p-5">
+                <section className="mx-auto w-full max-w-2xl rounded-2xl border border-white/10 bg-[#161b1f] p-4 sm:p-5">
                   <div className="flex items-center justify-center gap-3 sm:gap-5">
                     <div className="hidden items-center gap-2 text-sm font-semibold text-gray-400 sm:flex">
                       <Flame className="h-4 w-4 text-[#8f7dff]" /> Ends in:
@@ -348,7 +348,7 @@ export const Leaderboard: React.FC = () => {
               })}
             </section>
 
-            <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d0f14]">
+            <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#161b1f]">
               <div className="grid grid-cols-[70px_1fr_120px] gap-2 border-b border-white/10 px-3 py-3 text-sm font-bold text-gray-400 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6 sm:text-[28px]">
                 <div>Rank</div>
                 <div>Player</div>
@@ -366,7 +366,7 @@ export const Leaderboard: React.FC = () => {
                     const rank = index + 4;
                     const rowReward = rewardByRule(settings, rank, entry.points);
                     return (
-                      <div key={entry.uid} className="grid grid-cols-[70px_1fr_120px] items-center gap-2 rounded-2xl border border-white/10 bg-[#121a26] px-3 py-4 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6">
+                      <div key={entry.uid} className="grid grid-cols-[70px_1fr_120px] items-center gap-2 rounded-2xl border border-white/10 bg-[#1b2228] px-3 py-4 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6">
                         <div className="text-2xl font-black text-white">{rank}</div>
                         <div className="flex min-w-0 items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-lime-400 text-lg font-black text-white">
