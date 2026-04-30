@@ -18,7 +18,8 @@ import { CoinAmount } from '../../components/CoinAmount';
 import { ItemCard } from '../../components/upgrader-elite/ItemCard';
 import { UpgraderSpinner } from '../../components/upgrader-elite/UpgraderSpinner';
 import { Item as EliteItem, UpgradeStatus } from '../../components/upgrader-elite/types';
-import upgraderSoundUrl from '../../assets/upgrader.mp3';
+import wooshSoundUrl from '../../assets/audio/woosh.mp3';
+import winSoundUrl from '../../assets/audio/win.mp3';
 import { toast } from '../ui/toast/toast';
 
 const rarityMap: Record<string, Rarity> = {
@@ -232,7 +233,9 @@ export default function UpgraderPage() {
   const inventoryPanelRef = useRef<HTMLDivElement | null>(null);
   const targetPanelRef = useRef<HTMLDivElement | null>(null);
   const idleTimeoutRef = useRef<number | null>(null);
-  const spinAudioRef = useRef<HTMLAudioElement | null>(null);
+  const wooshAudioPoolRef = useRef<HTMLAudioElement[]>([]);
+  const winAudioPoolRef = useRef<HTMLAudioElement[]>([]);
+  const audioPoolCursorRef = useRef({ woosh: 0, win: 0 });
   const lastPlayedResultRef = useRef<string | null>(null);
   const [spinnerSize, setSpinnerSize] = useState<number>(290);
   const [isMuted, setIsMuted] = useState<boolean>(() => {
@@ -277,19 +280,51 @@ export default function UpgraderPage() {
   const [isDemoSpin, setIsDemoSpin] = useState(false);
 
   useEffect(() => {
-    const audio = new Audio(upgraderSoundUrl);
-    audio.preload = 'auto';
-    audio.volume = 0.45;
-    spinAudioRef.current = audio;
+    const buildPool = (url: string, volume: number) => Array.from({ length: 3 }, () => {
+      const audio = new Audio(url);
+      audio.preload = 'auto';
+      audio.volume = volume;
+      return audio;
+    });
+
+    wooshAudioPoolRef.current = buildPool(wooshSoundUrl, 0.45);
+    winAudioPoolRef.current = buildPool(winSoundUrl, 0.55);
+
+    const unlockAudio = () => {
+      if (isMuted) return;
+      [wooshAudioPoolRef.current, winAudioPoolRef.current].forEach((pool) => {
+        pool.forEach((audio) => {
+          void audio.play().then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+          }).catch(() => undefined);
+        });
+      });
+    };
+
+    window.addEventListener('pointerdown', unlockAudio, { passive: true });
 
     return () => {
-      if (spinAudioRef.current) {
-        spinAudioRef.current.pause();
-        spinAudioRef.current.currentTime = 0;
-      }
-      spinAudioRef.current = null;
+      window.removeEventListener('pointerdown', unlockAudio);
+      [...wooshAudioPoolRef.current, ...winAudioPoolRef.current].forEach((audio) => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+      wooshAudioPoolRef.current = [];
+      winAudioPoolRef.current = [];
     };
-  }, []);
+  }, [isMuted]);
+
+  const playUpgraderSound = (type: 'woosh' | 'win') => {
+    if (isMuted) return;
+    const pool = type === 'woosh' ? wooshAudioPoolRef.current : winAudioPoolRef.current;
+    if (!pool.length) return;
+    const cursor = audioPoolCursorRef.current[type] % pool.length;
+    const audio = pool[cursor];
+    audioPoolCursorRef.current[type] = (cursor + 1) % pool.length;
+    audio.currentTime = 0;
+    void audio.play().catch(() => undefined);
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -306,23 +341,20 @@ export default function UpgraderPage() {
   }, []);
 
   useEffect(() => {
-    const audio = spinAudioRef.current;
-    if (!audio || isMuted) return;
     if (!resultSheet?.success) return;
     const resultKey = `${resultSheet.item.id}-${resultSheet.item.price}-${resultSheet.success}`;
     if (lastPlayedResultRef.current === resultKey) return;
 
     lastPlayedResultRef.current = resultKey;
-    audio.currentTime = 0;
-    void audio.play().catch(() => undefined);
+    playUpgraderSound('win');
   }, [isMuted, resultSheet]);
 
   useEffect(() => {
     if (!isMuted) return;
-    const audio = spinAudioRef.current;
-    if (!audio) return;
-    audio.pause();
-    audio.currentTime = 0;
+    [...wooshAudioPoolRef.current, ...winAudioPoolRef.current].forEach((audio) => {
+      audio.pause();
+      audio.currentTime = 0;
+    });
   }, [isMuted]);
 
   useEffect(() => {
@@ -530,6 +562,7 @@ export default function UpgraderPage() {
 
     setIsSubmitting(true);
     setStatus('spinning');
+    playUpgraderSound('woosh');
 
     try {
       const response = await attemptUpgrade({ sourceItemInstanceId: source.id, targetItemId: target.id, clientSeed: `${Date.now()}` });
@@ -550,6 +583,7 @@ export default function UpgraderPage() {
     const success = Math.random() * 100 < chance;
     setIsDemoSpin(true);
     setStatus('spinning');
+    playUpgraderSound('woosh');
     setSpinResult(success);
     setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
     setSpinNonce((previous) => previous + 1);
