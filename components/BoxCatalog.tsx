@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Search, Sparkles, X } from 'lucide-react';
+import { ChevronDown, Search, Sparkles } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
-import { BoxCard } from './BoxCard';
 import type { MysteryBox } from '../types';
 
 type BoxCatalogProps = {
@@ -191,119 +190,38 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   };
 
   return (
-    <div className="w-full bg-[#0b0d11] pb-20">
+    <div className="w-full bg-[#1a1f26] pb-20">
 
-      <div className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#090a0f]/95 shadow-xl backdrop-blur">
-        <div className="mx-auto max-w-[1370px] px-3 py-4 sm:px-4">
-          <div className="-mx-1 mb-3 flex items-center gap-2 overflow-x-auto border-b border-white/10 px-1 pb-3 scrollbar-hide [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch]">
-            <button
-              onClick={() => setActiveCategory('all')}
-              className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${activeCategory === 'all' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-300'}`}
-            >
-              <Sparkles className="h-4 w-4 text-indigo-400" />
-              All
+      <div className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#1a1f26]/95 shadow-xl backdrop-blur">
+        <div className="mx-auto max-w-[980px] px-3 py-3 sm:px-4">
+          <div className="mb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            <button onClick={() => setActiveCategory('all')} className="flex items-center gap-2 whitespace-nowrap rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white">
+              <Sparkles className="h-4 w-4 text-indigo-400" /> All
             </button>
             {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${activeCategory === cat.id ? 'bg-white/10 text-white' : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-300'}`}
-              >
-                {cat.iconClass ? <i aria-hidden="true" className={`${cat.iconClass} text-sm`} /> : <div className="h-4 w-4 rounded-full bg-indigo-500" />}
-                <span>{cat.title}</span>
+              <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className="whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold text-neutral-400 hover:bg-white/5 hover:text-white">
+                {cat.title}
               </button>
             ))}
           </div>
-
-          <div className="rounded-2xl border border-white/10 bg-[#121318] p-2.5 sm:p-3">
-            <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
-              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/5 bg-black/45 px-3 py-2.5 md:w-auto">
-                <Search className="h-4 w-4 shrink-0 text-neutral-500" />
-                <input
-                  type="text"
-                  placeholder="Search boxes"
-                  className="w-full min-w-0 border-none bg-transparent text-sm text-white placeholder-neutral-600 outline-none"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                {searchQuery && (
-                  <button type="button" className="text-neutral-500 transition hover:text-white" onClick={() => setSearchQuery('')} aria-label="Clear search">
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:items-center xl:gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex min-w-[120px] items-center gap-1.5 rounded-xl border border-white/5 bg-black/45 px-3 py-2.5">
-                    <Sparkles className="h-4 w-4 text-indigo-400" />
-                    <input
-                      inputMode="numeric"
-                      placeholder="Min"
-                      value={minPriceQuery}
-                      onChange={(event) => setMinPriceQuery(event.target.value.replace(/[^\d]/g, ''))}
-                      className="w-full border-none bg-transparent text-sm font-semibold text-white placeholder-neutral-500 outline-none"
-                    />
-                  </div>
-                  <span className="text-neutral-500">–</span>
-                  <div className="flex min-w-[120px] items-center gap-1.5 rounded-xl border border-white/5 bg-black/45 px-3 py-2.5">
-                    <Sparkles className="h-4 w-4 text-indigo-400" />
-                    <input
-                      inputMode="numeric"
-                      placeholder="Max"
-                      value={maxPriceQuery}
-                      onChange={(event) => setMaxPriceQuery(event.target.value.replace(/[^\d]/g, ''))}
-                      className="w-full border-none bg-transparent text-sm font-semibold text-white placeholder-neutral-500 outline-none"
-                    />
-                  </div>
-                </div>
-                <label className="relative">
-                  <span className="sr-only">Sort boxes</span>
-                  <select
-                    value={sortOption}
-                    onChange={(event) => setSortOption(event.target.value as SortOption)}
-                    className="appearance-none rounded-lg border border-white/5 bg-neutral-800 px-4 py-2.5 pr-9 text-xs font-bold text-white outline-none transition-colors hover:bg-neutral-700"
-                  >
-                    {SORT_OPTIONS.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-neutral-400" />
-                </label>
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/5 px-3 py-2.5 text-sm font-semibold text-neutral-200">
-                  <input
-                    type="checkbox"
-                    checked={onlyAffordable}
-                    onChange={(event) => setOnlyAffordable(event.target.checked)}
-                    className="h-4 w-4 rounded border-white/20 bg-black/40"
-                  />
-                  Enough Coins to Buy
-                </label>
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-white/20 hover:text-white"
-                >
-                  <X className="h-4 w-4" />
-                  Clear Filters
-                </button>
-              </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-[#222833] px-3 py-3">
+              <Search className="h-4 w-4 shrink-0 text-neutral-500" />
+              <input type="text" placeholder="Search" className="w-full min-w-0 border-none bg-transparent text-sm text-white placeholder-neutral-600 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <button type="button" className="text-[#4ea8ff] text-sm font-semibold" onClick={() => setSearchQuery('')}>Reset</button>
             </div>
-
-            <div className="mt-2 flex items-center justify-between gap-2 xl:hidden">
-              <div className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap text-xs text-neutral-300 scrollbar-hide">
-                <span className="rounded-full bg-white/5 px-3 py-1.5 inline-flex items-center gap-2">
-                  <span className="font-semibold text-white">{activeCategory === 'all' ? 'All boxes' : categories.find((cat) => cat.id === activeCategory)?.title ?? 'Filtered'}</span>
-                  {searchQuery.trim() ? <span className="truncate text-neutral-400">• “{searchQuery.trim()}”</span> : null}
-                </span>
-              </div>
-              {hasActiveFilters && (
-                <button type="button" onClick={clearFilters} className="shrink-0 rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:border-white/20 hover:text-white">
-                  Clear
-                </button>
-              )}
+            <button type="button" onClick={clearFilters} className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#4ea8ff] px-4 py-2.5 text-base font-bold text-white">
+              + Create Pack
+            </button>
+            <label className="relative">
+              <select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)} className="appearance-none w-full rounded-xl border border-white/10 bg-[#1d232e] px-4 py-3 pr-9 text-sm font-bold text-white outline-none">
+                {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <input inputMode="numeric" placeholder="Min" value={minPriceQuery} onChange={(event) => setMinPriceQuery(event.target.value.replace(/[^\d]/g, ''))} className="w-full rounded-xl border border-white/10 bg-[#1d232e] px-3 py-3 text-sm font-semibold text-white placeholder-neutral-500 outline-none" />
+              <input inputMode="numeric" placeholder="Max" value={maxPriceQuery} onChange={(event) => setMaxPriceQuery(event.target.value.replace(/[^\d]/g, ''))} className="w-full rounded-xl border border-white/10 bg-[#1d232e] px-3 py-3 text-sm font-semibold text-white placeholder-neutral-500 outline-none" />
             </div>
           </div>
         </div>
@@ -318,9 +236,20 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           )}
 
           {!isLoadingBoxes && (
-            <div className="grid justify-items-center grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid justify-items-center grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10">
               {groupedBoxes.map((box) => (
-                <BoxCard key={box.id} box={box} onSelect={openBox} />
+                <button key={box.id} type="button" onClick={() => openBox(box.id)} className="w-full max-w-[220px] text-center">
+                  <div className="relative aspect-[0.72] w-full overflow-hidden rounded-[14px] border border-[#2c3340] bg-[#20262f] shadow-[0_12px_24px_-20px_rgba(0,0,0,0.9)]">
+                    <img src={box.image} alt={box.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                    <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/55 to-transparent" />
+                    <h3 className="absolute left-0 right-0 top-3 px-2 text-center text-[clamp(0.85rem,2.8vw,1.9rem)] font-extrabold uppercase tracking-tight text-white drop-shadow">
+                      {box.name}
+                    </h3>
+                  </div>
+                  <div className="mt-3 text-lg font-extrabold text-white">
+                    ${Number(getBoxPrice(box)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                </button>
               ))}
             </div>
           )}
