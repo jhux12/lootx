@@ -47,6 +47,7 @@ interface RevealData {
 const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
 const ITEM_SIZE = 195;
 const STEP_WIDTH = 195;
+const START_CENTER_INDEX = 7;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -91,6 +92,7 @@ const createSeededRng = (seed: string) => {
 
 const pickFromPool = <T,>(pool: T[], rng: () => number): T => pool[Math.floor(rng() * pool.length)];
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const getInitialTranslate = () => -(START_CENTER_INDEX * STEP_WIDTH);
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -550,11 +552,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   useEffect(() => {
     // Fill the static view with random items from the specific box
     if (items.length > 0) {
-        const staticItems = Array.from({ length: 15 }, () => 
+        const staticItems = Array.from({ length: 20 }, () => 
           items[Math.floor(Math.random() * items.length)]
         );
         setReelItems(staticItems);
-        setReelWinnerIndex(Math.floor(staticItems.length / 2));
+        const previewCenterIndex = Math.min(START_CENTER_INDEX, staticItems.length - 1);
+        setReelWinnerIndex(previewCenterIndex);
+        setCurrentCenterIndex(previewCenterIndex);
+        virtualTranslateXRef.current = getInitialTranslate();
     }
   }, [items]);
 
@@ -880,7 +885,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     void container.offsetWidth;
     void container.getBoundingClientRect();
     updateSpinnerMeasurements();
-    const startingCenterIndex = getCenteredIndexFromTranslate(0);
+    const startingCenterIndex = getCenteredIndexFromTranslate(virtualTranslateXRef.current);
     lastCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
 
@@ -899,7 +904,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setAnimationPhase('spinning');
 
     const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-    const keyframes = [0, overshootTarget, jitterLandingTranslate, centeredTranslate];
+    const startTranslate = virtualTranslateXRef.current;
+    const keyframes = [startTranslate, overshootTarget, jitterLandingTranslate, centeredTranslate];
     const keyframeOffsets = [0, 0.7, 0.9, 1];
 
     spinnerAnimationRef.current = null;
@@ -1085,8 +1091,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     await waitForNextPaint();
     await waitForNextPaint();
     updateSpinnerMeasurements();
-    applyVirtualTranslate(0);
-    const startingCenterIndex = getCenteredIndexFromTranslate(0);
+    const initialTranslate = getInitialTranslate();
+    applyVirtualTranslate(initialTranslate);
+    const startingCenterIndex = getCenteredIndexFromTranslate(initialTranslate);
     lastCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
   }, [applyVirtualTranslate, getCenteredIndexFromTranslate, resetSpinnerAnimation, updateSpinnerMeasurements]);
