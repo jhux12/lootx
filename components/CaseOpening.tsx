@@ -70,6 +70,14 @@ const SPINNER_MOTION = {
   initialBlurDurationMs: 260
 } as const;
 
+const rarityGlowClass: Record<string, string> = {
+  legendary: 'bg-amber-300/35',
+  epic: 'bg-fuchsia-400/30',
+  rare: 'bg-cyan-300/28',
+  uncommon: 'bg-emerald-300/24',
+  common: 'bg-slate-300/18'
+};
+
 const createSeededRng = (seed: string) => {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i += 1) {
@@ -1895,14 +1903,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         (() => {
                           const rarityValue = String(item.rarity ?? 'common').toLowerCase();
                           const rarityGlow = rarityValue.includes('legend')
-                            ? 'rgba(255,191,71,0.58)'
+                            ? rarityGlowClass.legendary
                             : rarityValue.includes('epic')
-                              ? 'rgba(196,125,255,0.52)'
+                              ? rarityGlowClass.epic
                               : rarityValue.includes('rare')
-                                ? 'rgba(96,165,250,0.48)'
+                                ? rarityGlowClass.rare
                                 : rarityValue.includes('uncommon')
-                                  ? 'rgba(74,222,128,0.42)'
-                                  : 'rgba(100,116,139,0.35)';
+                                  ? rarityGlowClass.uncommon
+                                  : rarityGlowClass.common;
                           const isIdleWinner = animationPhase === 'idle' && idx === reelWinnerIndex;
                           const isCenteredDuringSpin = animationPhase !== 'idle' && idx === currentCenterIndex;
                           return (
@@ -1923,14 +1931,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                              className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${shouldSimplifyReelEffects ? 'blur-xl' : 'blur-2xl'}`}
-                              style={{
-                                width: isMobileViewport ? '82px' : '110px',
-                                height: isMobileViewport ? '82px' : '110px',
-                                borderRadius: '999px',
-                                background: `radial-gradient(circle, ${item.color}30 0%, ${item.color}08 52%, transparent 76%)`,
-                                boxShadow: isIdleWinner ? `0 0 18px ${item.color}44` : 'none'
-                              }}
+                              className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] opacity-65 ${shouldSimplifyReelEffects ? 'blur-2xl' : 'blur-3xl'} ${rarityGlow}`}
+                              style={{ boxShadow: isIdleWinner ? `0 0 16px ${item.color}33` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <img loading="eager" decoding="async" 
