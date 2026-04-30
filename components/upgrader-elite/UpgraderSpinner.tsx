@@ -38,6 +38,15 @@ interface UpgraderSpinnerProps {
   durationMs?: number;
 }
 
+interface SpinnerConfetti {
+  id: number;
+  angle: number;
+  distance: number;
+  size: number;
+  hue: number;
+  delay: number;
+}
+
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   chance,
   hasSource,
@@ -67,6 +76,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   const [spinBounceOffset, setSpinBounceOffset] = useState(0);
   const [isTrailing, setIsTrailing] = useState(false);
   const [sweepNonce, setSweepNonce] = useState(0);
+  const [confettiBurst, setConfettiBurst] = useState<SpinnerConfetti[]>([]);
 
   const chanceGlowRgb = useMemo(() => {
     if (chance >= 70) return '34, 197, 94';
@@ -168,6 +178,21 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
     if (trailRafRef.current) window.cancelAnimationFrame(trailRafRef.current);
     if (bounceRafRef.current) window.cancelAnimationFrame(bounceRafRef.current);
   }, []);
+
+  useEffect(() => {
+    if (status !== 'success') return;
+    const burst = Array.from({ length: reducedMotion ? 16 : 32 }, (_, index) => ({
+      id: index,
+      angle: Math.random() * 360,
+      distance: (size / 2) * (0.5 + Math.random() * 0.55),
+      size: 5 + Math.random() * 6,
+      hue: 160 + Math.random() * 170,
+      delay: Math.random() * 120
+    }));
+    setConfettiBurst(burst);
+    const timeoutId = window.setTimeout(() => setConfettiBurst([]), reducedMotion ? 900 : 1400);
+    return () => window.clearTimeout(timeoutId);
+  }, [reducedMotion, size, spinNonce, status]);
 
   return (
     <div className="relative flex flex-col items-center">
@@ -272,6 +297,26 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
             </>
           )}
         </div>
+        {confettiBurst.length > 0 && (
+          <div className="pointer-events-none absolute inset-0 z-30">
+            {confettiBurst.map((piece) => (
+              <span
+                key={`${spinNonce}-${piece.id}`}
+                className="absolute left-1/2 top-1/2 rounded-sm"
+                style={{
+                  width: `${piece.size}px`,
+                  height: `${Math.max(3, piece.size * 0.55)}px`,
+                  background: `hsl(${piece.hue} 98% 66%)`,
+                  transform: 'translate(-50%, -50%)',
+                  animation: reducedMotion ? 'none' : `spinnerConfetti 860ms cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+                  animationDelay: `${piece.delay}ms`,
+                  ['--confetti-x' as string]: `${Math.cos((piece.angle * Math.PI) / 180) * piece.distance}px`,
+                  ['--confetti-y' as string]: `${Math.sin((piece.angle * Math.PI) / 180) * piece.distance}px`
+                }}
+              />
+            ))}
+          </div>
+        )}
 
         {Array.from({ length: TRAIL_GHOST_COUNT }).map((_, index) => (
           <div
@@ -317,7 +362,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           </div>
         )}
       </div>
-      <style>{`@keyframes upgraderSweep{from{transform:rotate(-22deg);opacity:.7}to{transform:rotate(18deg);opacity:0}}`}</style>
+      <style>{`@keyframes upgraderSweep{from{transform:rotate(-22deg);opacity:.7}to{transform:rotate(18deg);opacity:0}}@keyframes spinnerConfetti{0%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(calc(-50% + var(--confetti-x)),calc(-50% + var(--confetti-y) + 24px)) scale(.86) rotate(220deg);opacity:0}}`}</style>
     </div>
   );
 });
