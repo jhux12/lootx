@@ -1188,6 +1188,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [showEmailVerifiedModal, setShowEmailVerifiedModal] = useState(false);
   const [emailVerificationStatus, setEmailVerificationStatus] = useState<EmailVerificationStatus>('idle');
   const [authInitialized, setAuthInitialized] = useState(false);
+  const redirectResolvedRef = useRef(false);
   const hasInventorySubcollectionRef = useRef(false);
   const pendingSoldIdsRef = useRef<Set<string>>(new Set());
   const pendingBalanceRef = useRef<number | null>(null);
@@ -1598,6 +1599,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, (firebaseUser) => {
+      if (!redirectResolvedRef.current) {
+        console.info('Waiting for redirect resolution...');
+        return;
+      }
+
       setAuthInitialized(true);
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
       const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified);
@@ -1646,12 +1652,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     getRedirectResult(auth)
       .then(async (result) => {
-        if (!mounted) return;
+        if (!mounted) {
+          redirectResolvedRef.current = true;
+          return;
+        }
 
         if (result?.user) {
           console.info('Google redirect completed:', result.user.uid);
           await result.user.reload();
           await ensureGoogleUserProfile(result.user);
+
+          redirectResolvedRef.current = true;
+
           trackEvent('google_oauth_success');
           setShowLoginModal(false);
           const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
@@ -1659,9 +1671,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return;
         }
 
+        redirectResolvedRef.current = true;
         console.info('No Google redirect result.');
       })
       .catch((error: any) => {
+        redirectResolvedRef.current = true;
         if (typeof window !== 'undefined') {
           window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
         }
