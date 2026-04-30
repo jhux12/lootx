@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Clock3, Gift, Target } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, Clock3, Gift, Target } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
@@ -94,7 +94,14 @@ export const Quests: React.FC = () => {
 
   return (
     <section className="mx-auto w-full max-w-5xl px-4 pb-8 pt-6 sm:px-6 lg:px-8">
-      <div className="mb-5 rounded-2xl border border-white/10 bg-[#0f1117] p-4 sm:p-6">
+      <button
+        type="button"
+        onClick={() => window.history.back()}
+        className="mb-4 inline-flex min-h-10 items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-300 transition-colors hover:text-white"
+      >
+        <ChevronLeft className="h-4 w-4" /> Back
+      </button>
+      <div className="mb-5 rounded-2xl border border-white/10 bg-[#161b1f] p-4 sm:p-6">
         <h1 className="text-xl font-extrabold text-white sm:text-2xl">Mini Challenges / Quests</h1>
         <p className="mt-2 text-sm text-gray-300">Complete 3 actions today for bonus rewards.</p>
         <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 sm:text-sm">
@@ -108,7 +115,7 @@ export const Quests: React.FC = () => {
           const progress = Math.min(100, Math.round((value / target) * 100));
           const disabled = !completed || alreadyClaimed || claimingId === rule.id;
           return (
-            <article key={rule.id} className="rounded-2xl border border-white/10 bg-[#10131b] p-4 sm:p-5">
+            <article key={rule.id} className="rounded-2xl border border-white/10 bg-[#161b1f] p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-cyan-200 sm:text-base">{rule.title}</p>
