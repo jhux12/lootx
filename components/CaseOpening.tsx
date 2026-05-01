@@ -56,6 +56,8 @@ const SPINNER_MOTION = {
   goldTicketDurationMs: 4200,
   goldFinalDurationMs: 3800,
   settleDurationMs: 360,
+  slowDownStartOffset: 0.62,
+  finalApproachOffset: 0.84,
   overshootPx: 18,
   approachOffsetSoftMaxPx: 16,
   approachOffsetNearMissMinPx: 34,
@@ -932,9 +934,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const animation = container.animate(
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.25, 0.6, 0.2, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.7, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: 0.9, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'ease-out' }
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: SPINNER_MOTION.slowDownStartOffset, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
+        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: SPINNER_MOTION.finalApproachOffset, easing: 'cubic-bezier(0.12, 0.88, 0.22, 1)' },
+        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.08, 0.7, 0.18, 1)' }
       ],
       {
         duration: resolvedDuration,
