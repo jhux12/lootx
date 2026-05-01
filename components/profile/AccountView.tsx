@@ -38,8 +38,12 @@ interface AccountViewProps {
   isSavingAddress: boolean;
   securityForm: SecurityForm;
   setSecurityForm: (next: SecurityForm) => void;
-  onSaveSecurity: () => void;
-  isSavingSecurity: boolean;
+  onSaveUsername: () => void;
+  onSaveEmail: () => void;
+  onSavePassword: () => void;
+  isSavingUsername: boolean;
+  isSavingEmail: boolean;
+  isSavingPassword: boolean;
   avatarOptions: string[];
   onSaveAvatar: () => void;
   isSavingAvatar: boolean;
@@ -59,12 +63,21 @@ export const AccountView: React.FC<AccountViewProps> = ({
   isSavingAddress,
   securityForm,
   setSecurityForm,
-  onSaveSecurity,
-  isSavingSecurity,
+  onSaveUsername,
+  onSaveEmail,
+  onSavePassword,
+  isSavingUsername,
+  isSavingEmail,
+  isSavingPassword,
   avatarOptions,
   onSaveAvatar,
   isSavingAvatar
 }) => {
+  const usernameChanged = securityForm.username.trim() !== (user.name ?? '').trim() && securityForm.username.trim().length > 0;
+  const emailChanged = securityForm.email.trim() !== (user.email ?? '').trim() && securityForm.email.trim().length > 0;
+  const canUpdateEmail = emailChanged && securityForm.currentPassword.trim().length > 0;
+  const canUpdatePassword = securityForm.currentPassword.trim().length > 0 && securityForm.newPassword.trim().length > 0 && securityForm.confirmPassword.trim().length > 0;
+
   return (
     <div className="space-y-4 md:hidden">
       <section className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#151b2d] to-[#101523] p-4">
@@ -102,14 +115,20 @@ export const AccountView: React.FC<AccountViewProps> = ({
           <p className="mb-3 text-xs font-semibold uppercase text-gray-400">Security</p>
           <div className="grid grid-cols-1 gap-2">
             <input value={securityForm.username} onChange={(e) => setSecurityForm({ ...securityForm, username: e.target.value })} placeholder="Username" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
+            <button onClick={onSaveUsername} disabled={isSavingUsername || !usernameChanged} className="rounded-xl border border-purple-400/40 bg-purple-500/15 px-3 py-2 text-sm font-bold text-purple-100 disabled:opacity-50">
+              {isSavingUsername ? 'Saving Username...' : 'Update Username'}
+            </button>
             <input value={securityForm.email} onChange={(e) => setSecurityForm({ ...securityForm, email: e.target.value })} placeholder="Email" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
             <input type="password" value={securityForm.currentPassword} onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })} placeholder="Current Password" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
+            <button onClick={onSaveEmail} disabled={isSavingEmail || !canUpdateEmail} className="rounded-xl border border-purple-400/40 bg-purple-500/15 px-3 py-2 text-sm font-bold text-purple-100 disabled:opacity-50">
+              {isSavingEmail ? 'Saving Email...' : 'Update Email'}
+            </button>
             <input type="password" value={securityForm.newPassword} onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })} placeholder="New Password" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
             <input type="password" value={securityForm.confirmPassword} onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })} placeholder="Confirm New Password" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
+            <button onClick={onSavePassword} disabled={isSavingPassword || !canUpdatePassword} className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">
+              {isSavingPassword ? 'Saving Password...' : 'Update Password'}
+            </button>
           </div>
-          <button onClick={onSaveSecurity} disabled={isSavingSecurity} className="mt-3 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white">
-            {isSavingSecurity ? 'Saving...' : 'Save Security Changes'}
-          </button>
         </section>
       )}
 
