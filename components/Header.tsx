@@ -45,6 +45,12 @@ type HeaderProps = {
 const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => (
   <i className={`fa-brands fa-superpowers ${className ?? ''}`.trim()} aria-hidden="true" />
 );
+const GamesIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <i className={`fa-solid fa-box-open ${className ?? ''}`.trim()} aria-hidden="true" />
+);
+const RewardsIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <i className={`fa-solid fa-gem ${className ?? ''}`.trim()} aria-hidden="true" />
+);
 
 const drawerCardClass =
   'flex items-center gap-3 rounded-xl border border-white/10 bg-[#25313a] p-3 text-left transition-colors hover:bg-[#2f3d47]';
@@ -78,6 +84,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     social: false
   });
   const headerRef = useRef<HTMLElement | null>(null);
+  const gamesMenuRef = useRef<HTMLDivElement | null>(null);
+  const rewardsMenuRef = useRef<HTMLDivElement | null>(null);
   const targetXp = Math.floor(user.xpBalance ?? user.xp ?? 0);
   const resolvedDisplayName = authInitialized ? resolveUserDisplayName(user) : 'Loading...';
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
@@ -93,6 +101,29 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     if (typeof window === 'undefined') return;
     setIsFreeBoxTooltipDismissed(window.sessionStorage.getItem('pullz:free-box-tooltip-dismissed') === '1');
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleDocumentClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+
+      if (isGamesMenuOpen && gamesMenuRef.current && !gamesMenuRef.current.contains(target)) {
+        setIsGamesMenuOpen(false);
+      }
+      if (isRewardsMenuOpen && rewardsMenuRef.current && !rewardsMenuRef.current.contains(target)) {
+        setIsRewardsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    document.addEventListener('touchstart', handleDocumentClick);
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentClick);
+      document.removeEventListener('touchstart', handleDocumentClick);
+    };
+  }, [isGamesMenuOpen, isRewardsMenuOpen]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -286,6 +317,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
 
             <div className="hidden lg:flex lg:gap-x-3">
               <div
+                ref={gamesMenuRef}
                 className="relative"
               >
                 <button
@@ -294,11 +326,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     setIsGamesMenuOpen((prev) => !prev);
                     setIsRewardsMenuOpen(false);
                   }}
-                  className="flex items-center gap-2 rounded-xl border border-transparent bg-[#22282c]/50 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition-colors hover:border-white/5 hover:bg-[#2a3138] hover:text-white"
+                  className="flex items-center gap-2 rounded-xl border border-transparent bg-[#22282c]/50 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:border-white/5 hover:bg-[#2a3138] hover:text-white"
                   aria-expanded={isGamesMenuOpen}
                   aria-haspopup="menu"
                 >
-                  <UpgraderIcon className="h-4 w-4 text-emerald-300" />
+                  <GamesIcon className="h-4 w-4 text-white" />
                   Games
                   <ChevronDown className={`h-4 w-4 transition-transform ${isGamesMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -317,13 +349,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   </button>
                 </div>
               </div>
-              <div className="relative">
+              <div ref={rewardsMenuRef} className="relative">
                 <button type="button" onClick={() => {
                   setIsRewardsMenuOpen((prev) => !prev);
                   setIsGamesMenuOpen(false);
                 }} className={rewardsDesktopTabClass} aria-expanded={isRewardsMenuOpen}>
                   {showDailySpinReady ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_18%,rgba(96,165,250,0.25)_50%,transparent_82%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]" /> : null}
-                  <Sparkles className={`relative z-10 h-4 w-4 ${showDailySpinReady ? 'motion-safe:animate-pulse text-blue-200' : ''}`} />
+                  <RewardsIcon className={`relative z-10 h-4 w-4 ${showDailySpinReady ? 'motion-safe:animate-pulse text-blue-200' : 'text-white'}`} />
                   Rewards
                   <ChevronDown className={`h-4 w-4 transition-transform ${isRewardsMenuOpen ? 'rotate-180' : ''}`} />
                   {questReadyCount > 0 ? <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}
@@ -509,7 +541,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
 
           <section className="space-y-3">
             <button type="button" onClick={() => toggleMobileSection('games')} className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-[#22282c] px-3 py-3 text-left">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Games</h3>
+              <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white"><GamesIcon className="h-4 w-4 text-white" />Games</h3>
               <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.games ? 'rotate-180' : ''}`} />
             </button>
             {openMobileSections.games ? (
@@ -523,7 +555,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
           <section className="space-y-3">
             <button type="button" onClick={() => toggleMobileSection('rewards')} className={rewardsMobileTabClass}>
               {showDailySpinReady ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(96,165,250,0.25)_50%,transparent_82%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]" /> : null}
-              <h3 className={`relative z-10 text-xs font-bold uppercase tracking-wider ${showDailySpinReady ? 'text-blue-100' : 'text-neutral-500'}`}>Rewards</h3>
+              <h3 className={`relative z-10 flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${showDailySpinReady ? 'text-blue-100' : 'text-white'}`}><RewardsIcon className={`h-4 w-4 ${showDailySpinReady ? 'text-blue-200' : 'text-white'}`} />Rewards</h3>
               <div className="relative z-10 flex items-center gap-2">
                 <ChevronDown className={`h-4 w-4 transition-transform ${openMobileSections.rewards ? 'rotate-180' : ''} ${showDailySpinReady ? 'text-blue-200' : 'text-neutral-400'}`} />
               </div>
