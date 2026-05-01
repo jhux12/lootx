@@ -99,7 +99,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 <img
                   src={tile.image}
                   alt={`${tile.title} artwork`}
-                  className="pointer-events-none absolute right-1 bottom-0 z-10 h-[128px] w-[128px] shrink-0 object-contain opacity-100 transition-transform duration-300 ease-out group-hover:scale-105 sm:h-[124px] sm:w-[124px] md:h-[132px] md:w-[132px] lg:h-[138px] lg:w-[138px]"
+                  className="pointer-events-none absolute -right-4 -bottom-4 z-10 h-[170px] w-[170px] shrink-0 -rotate-12 object-contain opacity-100 transition-transform duration-300 ease-out group-hover:scale-105 group-hover:-rotate-[15deg] sm:-right-3 sm:-bottom-3 sm:h-[162px] sm:w-[162px] md:h-[176px] md:w-[176px] lg:h-[186px] lg:w-[186px]"
                   loading="lazy"
                   width={500}
                   height={500}
