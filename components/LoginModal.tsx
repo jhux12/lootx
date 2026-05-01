@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { X, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { X, Mail, Lock, User } from 'lucide-react';
 import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
-import googleLogo from '../assets/google-logo.svg';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { getAuthErrorMessage } from '../utils/authErrors';
 import { toast } from '../src/ui/toast/toast';
 import { DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
+import FirebaseAuthUI from './FirebaseAuthUI';
 
 export const LoginModal: React.FC = () => {
-  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
+  const { login, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
   const registerBonusImage = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
@@ -29,9 +29,6 @@ export const LoginModal: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
-  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
-  const [showOAuthFallback, setShowOAuthFallback] = useState(false);
   const [showEmailFields, setShowEmailFields] = useState(false);
   const isLinkingGoogle = Boolean(googleLinkCredential);
 
@@ -60,55 +57,6 @@ export const LoginModal: React.FC = () => {
       setUserError(getAuthErrorMessage(err));
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    if (isOAuthLoading || isLoading) {
-      return;
-    }
-
-    if (mode === 'register' && (!confirmAdult || !acceptTerms)) {
-      setShowGoogleRequirementsTooltip(true);
-      return;
-    }
-
-    setShowOAuthFallback(false);
-    setIsLoading(true);
-    setIsOAuthLoading(true);
-    setUserError(null);
-    setMessage('Opening Google sign-in…');
-    playSound('click');
-
-    try {
-      if (mode === 'register') {
-        setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
-      }
-      const result = await loginWithGoogle({ remember: rememberMe, isRetry: false });
-      if (result.status === 'redirect-started') {
-        setMessage('Opening Google sign-in…');
-        return;
-      }
-
-      if (result.status === 'link-required') {
-        setGoogleLinkEmail(result.email);
-        setGoogleLinkCredential(result.credential);
-        setGoogleLinkPassword('');
-        setMessage('Enter your password to link your Google account.');
-        return;
-      }
-
-      if (result.status === 'error') {
-        setUserError(getAuthErrorMessage(result.message));
-        setMessage('Having trouble? Open in browser or use email sign-up.');
-      }
-    } catch (err: any) {
-      console.error(err);
-      setUserError(getAuthErrorMessage(err));
-      setMessage('Having trouble? Open in browser or use email sign-up.');
-    } finally {
-      setIsLoading(false);
-      setIsOAuthLoading(false);
     }
   };
 
@@ -169,7 +117,6 @@ export const LoginModal: React.FC = () => {
     setGoogleLinkCredential(null);
     setRememberMe(true);
     setShowEmailFields(false);
-    setShowOAuthFallback(false);
     playSound('click');
   };
 
@@ -189,7 +136,6 @@ export const LoginModal: React.FC = () => {
     setGoogleLinkCredential(null);
     setUserError(null);
     setMessage(null);
-    setShowOAuthFallback(false);
   };
 
   useEffect(() => {
@@ -208,34 +154,8 @@ export const LoginModal: React.FC = () => {
     toast.info(message);
   }, [message]);
 
-  useEffect(() => {
-    if (!showGoogleRequirementsTooltip) return;
 
-    const timeoutId = window.setTimeout(() => {
-      setShowGoogleRequirementsTooltip(false);
-    }, 2200);
 
-    return () => window.clearTimeout(timeoutId);
-  }, [showGoogleRequirementsTooltip]);
-
-  useEffect(() => {
-    if (mode === 'register' && acceptTerms && confirmAdult) {
-      setShowGoogleRequirementsTooltip(false);
-    }
-  }, [mode, acceptTerms, confirmAdult]);
-
-  useEffect(() => {
-    if (!isOAuthLoading) {
-      setShowOAuthFallback(false);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setShowOAuthFallback(true);
-    }, 4000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [isOAuthLoading]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -332,36 +252,7 @@ export const LoginModal: React.FC = () => {
           {!isLinkingGoogle && (
             <>
               <div className="grid grid-cols-1 gap-2">
-                <button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  disabled={isLoading}
-                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isOAuthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" />}
-                  {isOAuthLoading ? 'Opening Google sign-in…' : 'Continue with Google'}
-                </button>
-
-                {mode === 'register' && showGoogleRequirementsTooltip && (
-                  <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-200">
-                    Check both boxes to continue with Google.
-                  </div>
-                )}
-
-                {showOAuthFallback && (
-                  <div className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-100">
-                    <p className="font-semibold">Having trouble?</p>
-                    <p className="mt-1 text-indigo-100/90">Open in browser or use email sign-up.</p>
-                    <a
-                      href={typeof window === 'undefined' ? '/' : window.location.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-flex text-xs font-semibold text-indigo-300 underline-offset-2 hover:underline"
-                    >
-                      Open in browser
-                    </a>
-                  </div>
-                )}
+                <FirebaseAuthUI />
               </div>
 
               <div className="relative py-4">
