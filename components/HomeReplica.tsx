@@ -54,7 +54,7 @@ const rarityGlowClass: Record<string, string> = {
 };
 
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onViewAllBoxes, onSignUp }) => {
-  const { setView } = useGame();
+  const { setView, user } = useGame();
   const [openFaqId, setOpenFaqId] = useState<string | null>(faqs[0]?.id ?? null);
   const featuredBoxes = boxes.slice(0, 5);
   const topUpgrades = useMemo(() => {
@@ -95,7 +95,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               {
-                title: 'Open your first box',
+                title: 'Open mystery boxes',
                 image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/open.png?alt=media&token=34515af9-0309-412b-95fe-fb22837fd060'
               },
               {
@@ -166,11 +166,18 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             </div>
           </section>
 
-          <section className="rounded-xl bg-[#22282c] p-5">
-            <h2 className="text-xl font-black">Get started with Pullz.gg</h2>
-            <p className="mt-2 text-sm text-slate-300">Sign up and open your first box in seconds.</p>
-            <button onClick={onSignUp} className="mt-4 w-full rounded-lg bg-[#2b96dc] px-4 py-3 text-sm font-black sm:w-auto">Create Account</button>
-          </section>
+          {!user && (
+            <section className="rounded-xl bg-[#22282c] p-5">
+              <h2 className="text-xl font-black">Get started with Pullz.gg</h2>
+              <p className="mt-2 text-sm text-slate-300">Sign up and open mystery boxes in seconds.</p>
+              <button
+                onClick={onSignUp}
+                className="mt-4 w-full rounded-lg bg-gradient-to-r from-fuchsia-600 via-violet-600 to-indigo-600 px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(139,92,246,0.35)] transition-all duration-200 hover:brightness-110 sm:w-auto"
+              >
+                Create Account
+              </button>
+            </section>
+          )}
 
           <section className="space-y-3">
             {faqs.map((faq) => {
