@@ -237,6 +237,7 @@ export default function UpgraderPage() {
   const winAudioPoolRef = useRef<HTMLAudioElement[]>([]);
   const audioPoolCursorRef = useRef({ woosh: 0, win: 0 });
   const lastPlayedResultRef = useRef<string | null>(null);
+  const audioUnlockedRef = useRef(false);
   const [spinnerSize, setSpinnerSize] = useState<number>(290);
   const [isMuted, setIsMuted] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -280,10 +281,12 @@ export default function UpgraderPage() {
   const [isDemoSpin, setIsDemoSpin] = useState(false);
 
   useEffect(() => {
-    const buildPool = (url: string, volume: number) => Array.from({ length: 3 }, () => {
+    const buildPool = (url: string, volume: number) => Array.from({ length: 4 }, () => {
       const audio = new Audio(url);
       audio.preload = 'auto';
       audio.volume = volume;
+      audio.playsInline = true;
+      audio.load();
       return audio;
     });
 
@@ -291,21 +294,30 @@ export default function UpgraderPage() {
     winAudioPoolRef.current = buildPool(winSoundUrl, 0.55);
 
     const unlockAudio = () => {
-      if (isMuted) return;
+      if (isMuted || audioUnlockedRef.current) return;
+      const primePromises: Array<Promise<unknown>> = [];
       [wooshAudioPoolRef.current, winAudioPoolRef.current].forEach((pool) => {
         pool.forEach((audio) => {
-          void audio.play().then(() => {
+          const promise = audio.play().then(() => {
             audio.pause();
             audio.currentTime = 0;
-          }).catch(() => undefined);
+          });
+          primePromises.push(promise);
         });
+      });
+      void Promise.allSettled(primePromises).then(() => {
+        audioUnlockedRef.current = true;
       });
     };
 
     window.addEventListener('pointerdown', unlockAudio, { passive: true });
+    window.addEventListener('touchstart', unlockAudio, { passive: true });
+    window.addEventListener('keydown', unlockAudio);
 
     return () => {
       window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
       [...wooshAudioPoolRef.current, ...winAudioPoolRef.current].forEach((audio) => {
         audio.pause();
         audio.currentTime = 0;
@@ -319,11 +331,19 @@ export default function UpgraderPage() {
     if (isMuted) return;
     const pool = type === 'woosh' ? wooshAudioPoolRef.current : winAudioPoolRef.current;
     if (!pool.length) return;
+
     const cursor = audioPoolCursorRef.current[type] % pool.length;
     const audio = pool[cursor];
     audioPoolCursorRef.current[type] = (cursor + 1) % pool.length;
+
+    audio.pause();
     audio.currentTime = 0;
-    void audio.play().catch(() => undefined);
+    void audio.play().catch(() => {
+      const fallback = audio.cloneNode(true) as HTMLAudioElement;
+      fallback.volume = audio.volume;
+      fallback.playsInline = true;
+      void fallback.play().catch(() => undefined);
+    });
   };
 
   useEffect(() => {
