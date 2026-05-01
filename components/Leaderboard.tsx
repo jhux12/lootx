@@ -227,6 +227,11 @@ export const Leaderboard: React.FC = () => {
 
   const lowerRows = useMemo(() => leaders.slice(3), [leaders]);
 
+  const rewardLabelForRank = (rank: number, points: number) => {
+    if (rank >= 4 && rank <= 10) return '100';
+    return rewardByRule(settings, rank, points).label;
+  };
+
   return (
     <div className="min-h-screen bg-[#1b2024] text-white">
       <main className="pb-10 pt-6 sm:pt-8">
@@ -341,7 +346,7 @@ export const Leaderboard: React.FC = () => {
                 <div className="space-y-2 p-3 sm:p-4">
                   {lowerRows.map((entry, index) => {
                     const rank = index + 4;
-                    const rowReward = rewardByRule(settings, rank, entry.points);
+                    const rowRewardLabel = rewardLabelForRank(rank, entry.points);
                     return (
                       <div key={entry.uid} className="grid grid-cols-[70px_1fr_120px] items-center gap-2 rounded-2xl border border-white/10 bg-[#1b2228] px-3 py-4 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6">
                         <div className="text-2xl font-black text-white">{rank}</div>
@@ -351,16 +356,15 @@ export const Leaderboard: React.FC = () => {
                           </div>
                           <div className="min-w-0">
                             <div className="truncate text-lg font-extrabold text-white sm:text-2xl">{entry.displayName}</div>
-                            <div className="mt-0.5 flex items-center gap-1.5 text-sm font-bold text-[#a89fff]">
-                              <img src={COIN_ICON} alt="Coins" className="h-3.5 w-3.5 object-contain" />
-                              <span>{rowReward.label}</span>
+                            <div className="mt-0.5 text-sm font-bold text-[#8f7dff]">
+                              {entry.points.toLocaleString()} pts
                             </div>
                           </div>
                         </div>
                         <div className="hidden text-2xl font-black text-[#8f7dff] sm:block">{entry.points.toLocaleString()} <span className="text-[#8f7dff]">pts</span></div>
                         <div className="ml-auto flex items-center justify-end gap-1.5 text-lg font-black sm:gap-2 sm:text-2xl">
                           <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" />
-                          <span>{rowReward.label}</span>
+                          <span>{rowRewardLabel}</span>
                         </div>
                       </div>
                     );
