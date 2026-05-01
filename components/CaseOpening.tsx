@@ -6,7 +6,6 @@ import { CaseItem, InventoryItem } from '../types';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { Input } from './ui/Input';
-import { getRiskLabel } from '../utils/caseOdds';
 import { getSellBackValue } from '../utils/sellBack';
 import { authedFetch } from '../utils/authedFetch';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
@@ -296,6 +295,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   );
 
   const [isSpinning, setIsSpinning] = useState(false);
+  const [isSpinnerAssetsLoading, setIsSpinnerAssetsLoading] = useState(true);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
   const [reelWinnerIndex, setReelWinnerIndex] = useState(SPINNER_MOTION.preWinnerItems);
   const [currentCenterIndex, setCurrentCenterIndex] = useState(SPINNER_MOTION.preWinnerItems);
@@ -358,6 +358,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const itemModalCoinFrameRef = useRef<number | null>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const bodyOverflowRef = useRef<string>('');
+  const loadedSpinnerImageSourcesRef = useRef<Set<string>>(new Set());
   const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
   const preFreeSpinBalanceRef = useRef<number | null>(null);
@@ -1083,7 +1084,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [isAuthenticated, openAuthModal]);
 
   const preloadReelImages = useCallback(async (nextReelItems: CaseItem[]) => {
-    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter(Boolean)));
+    setIsSpinnerAssetsLoading(true);
+    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter(Boolean)))
+      .filter((src) => !loadedSpinnerImageSourcesRef.current.has(src));
+
+    if (uniqueSources.length === 0) {
+      setIsSpinnerAssetsLoading(false);
+      return;
+    }
 
     await Promise.all(uniqueSources.map(async (src) => {
       const img = new Image();
@@ -1102,12 +1110,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (typeof img.decode === 'function') {
         await img.decode().catch(() => undefined);
       }
+      loadedSpinnerImageSourcesRef.current.add(src);
     }));
+    setIsSpinnerAssetsLoading(false);
   }, []);
 
   useEffect(() => {
     if (!items.length) return;
-    void preloadReelImages(items);
+    let isMounted = true;
+    setIsSpinnerAssetsLoading(true);
+    void preloadReelImages(items).finally(() => {
+      if (!isMounted) return;
+      setIsSpinnerAssetsLoading(false);
+    });
+    return () => {
+      isMounted = false;
+    };
   }, [items, preloadReelImages]);
 
   const waitForNextPaint = () => new Promise<void>((resolve) => {
@@ -1771,9 +1789,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 </button>
                 <div className="flex items-center gap-3">
                     {isFree && <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded">FREE SPIN</span>}
-                    <span className="bg-[#131825] text-gray-300 text-xs font-semibold px-2 py-0.5 rounded border border-gray-700">
-                      {getRiskLabel(box!.riskLevel ?? 50)}
-                    </span>
                 </div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-1.5">
@@ -1781,11 +1796,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <button
                   type="button"
                   onClick={() => {
-                    if (isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading) return;
+                    if (isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading) return;
                     playSound('click');
                     setShowXpConfirmSheet(true);
                   }}
-                  disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
+                  disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
                   className={`inline-flex min-h-9 items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap transition-all disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs ${canOpenWithXp ? 'border-cyan-300/45 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15' : 'border-white/20 bg-black/35 text-gray-200 hover:border-cyan-300/45'}`}
                   aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
                   title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
@@ -1819,9 +1834,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
-                
-                
-                
                 {/* Fade Gradients */}
                 <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
                 <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
@@ -1907,7 +1919,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
                  <button 
                     onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
-                    disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
+                    disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
                     className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
                 >
                     <span>
@@ -1915,6 +1927,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         'Syncing server...'
                       ) : isSpinning ? (
                         <span className="inline-flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />Spinning...</span>
+                      ) : isSpinnerAssetsLoading ? (
+                        'Preparing spinner...'
                       ) : isBalanceLoading ? (
                         'Loading balance...'
                       ) : isFree ? (
@@ -1950,7 +1964,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleTryFree}
-                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed}
+                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isSpinnerAssetsLoading}
                       className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-white/10 bg-[#303741] px-3 py-3 text-[11px] font-semibold text-white transition hover:bg-[#39424d] disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
                     >
                       Demo Spin
@@ -2022,7 +2036,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     setShowXpConfirmSheet(false);
                     void handleSpin({ paymentMethod: 'xp' });
                   }}
-                  disabled={!canOpenWithXp || isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading}
+                  disabled={!canOpenWithXp || isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
                   className="rounded-lg border border-white/15 bg-[#2f3742] px-3 py-2 text-sm font-semibold text-gray-100 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Use XP
