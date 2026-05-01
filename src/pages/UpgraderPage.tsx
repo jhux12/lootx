@@ -236,8 +236,10 @@ export default function UpgraderPage() {
   const wooshAudioPoolRef = useRef<HTMLAudioElement[]>([]);
   const winAudioPoolRef = useRef<HTMLAudioElement[]>([]);
   const audioPoolCursorRef = useRef({ woosh: 0, win: 0 });
+  const hasAudioGestureRef = useRef(false);
   const lastPlayedResultRef = useRef<string | null>(null);
   const [spinnerSize, setSpinnerSize] = useState<number>(290);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isMuted, setIsMuted] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('upgrader-audio-muted') === '1';
@@ -284,6 +286,9 @@ export default function UpgraderPage() {
       const audio = new Audio(url);
       audio.preload = 'auto';
       audio.volume = volume;
+      audio.playsInline = true;
+      audio.setAttribute('playsinline', 'true');
+      audio.setAttribute('webkit-playsinline', 'true');
       return audio;
     });
 
@@ -291,21 +296,17 @@ export default function UpgraderPage() {
     winAudioPoolRef.current = buildPool(winSoundUrl, 0.55);
 
     const unlockAudio = () => {
-      if (isMuted) return;
-      [wooshAudioPoolRef.current, winAudioPoolRef.current].forEach((pool) => {
-        pool.forEach((audio) => {
-          void audio.play().then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-          }).catch(() => undefined);
-        });
-      });
+      hasAudioGestureRef.current = true;
     };
 
     window.addEventListener('pointerdown', unlockAudio, { passive: true });
+    window.addEventListener('touchstart', unlockAudio, { passive: true });
+    window.addEventListener('keydown', unlockAudio, { passive: true });
 
     return () => {
       window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
       [...wooshAudioPoolRef.current, ...winAudioPoolRef.current].forEach((audio) => {
         audio.pause();
         audio.currentTime = 0;
@@ -316,7 +317,7 @@ export default function UpgraderPage() {
   }, [isMuted]);
 
   const playUpgraderSound = (type: 'woosh' | 'win') => {
-    if (isMuted) return;
+    if (isMuted || !hasAudioGestureRef.current) return;
     const pool = type === 'woosh' ? wooshAudioPoolRef.current : winAudioPoolRef.current;
     if (!pool.length) return;
     const cursor = audioPoolCursorRef.current[type] % pool.length;
@@ -381,7 +382,11 @@ export default function UpgraderPage() {
       }
     })();
 
-    const handleResize = () => setSpinnerSize(window.innerWidth < 640 ? 245 : 330);
+    const handleResize = () => {
+      const mobile = window.innerWidth < 640;
+      setIsMobileViewport(mobile);
+      setSpinnerSize(mobile ? 240 : 330);
+    };
     handleResize();
     window.addEventListener('resize', handleResize);
 
@@ -677,6 +682,7 @@ export default function UpgraderPage() {
                 onWinZoneRotationChange={setWinZoneRotation}
                 canRotateWinZone={Boolean(source && target && status === 'idle')}
                 reducedMotion={reducedMotion}
+                mobileOptimized={isMobileViewport}
                 size={spinnerSize}
                 durationMs={SPIN_DURATION_MS}
               />
@@ -706,7 +712,7 @@ export default function UpgraderPage() {
               <span className="rounded-md border border-white/15 bg-[#2a323b] px-2 py-0.5 text-[10px] text-slate-300">{filteredInventoryItems.length}</span>
             </div>
             <Toolbar min={inventoryMin} max={inventoryMax} search={inventorySearch} sort={inventorySort} category={inventoryCategory} onMin={setInventoryMin} onMax={setInventoryMax} onSearch={setInventorySearch} onSort={setInventorySort} onCategory={setInventoryCategory} />
-            <div className="mt-3 grid flex-1 grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3 custom-scrollbar">
+            <div className="mt-3 grid flex-1 grid-cols-2 gap-2.5 overflow-y-auto pr-1 [-webkit-overflow-scrolling:touch] sm:grid-cols-3 custom-scrollbar">
               {visibleInventoryItems.map((group) => (
                 <ItemCard
                   key={group.key}
@@ -776,7 +782,7 @@ export default function UpgraderPage() {
                 </div>
               </div>
             )}
-            <div className="mt-3 grid flex-1 grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3 custom-scrollbar">
+            <div className="mt-3 grid flex-1 grid-cols-2 gap-2.5 overflow-y-auto pr-1 [-webkit-overflow-scrolling:touch] sm:grid-cols-3 custom-scrollbar">
               {visibleTargetItems.map((item) => (
                 <ItemCard
                   key={item.id}
@@ -866,7 +872,7 @@ export default function UpgraderPage() {
         </>
       )}
 
-      <footer className="fixed bottom-[calc(env(safe-area-inset-bottom)+62px)] left-0 z-50 flex h-20 w-full items-center gap-3 overflow-x-auto border-t border-white/10 bg-[#080b10]/90 px-3 backdrop-blur-md custom-scrollbar lg:bottom-0 lg:px-8">
+      <footer className={`fixed bottom-[calc(env(safe-area-inset-bottom)+62px)] left-0 z-50 flex h-20 w-full items-center gap-3 overflow-x-auto border-t border-white/10 bg-[#080b10]/90 px-3 custom-scrollbar lg:bottom-0 lg:px-8 ${isMobileViewport ? '' : 'backdrop-blur-md'}`}>
         <div className="shrink-0 border-r border-white/10 pr-3">
           <div className="flex items-center gap-2">
             <LucideHistory className="h-4 w-4 text-slate-500" />
