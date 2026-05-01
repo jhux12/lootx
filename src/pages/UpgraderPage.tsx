@@ -236,6 +236,7 @@ export default function UpgraderPage() {
   const wooshAudioPoolRef = useRef<HTMLAudioElement[]>([]);
   const winAudioPoolRef = useRef<HTMLAudioElement[]>([]);
   const audioPoolCursorRef = useRef({ woosh: 0, win: 0 });
+  const hasAudioGestureRef = useRef(false);
   const lastPlayedResultRef = useRef<string | null>(null);
   const [spinnerSize, setSpinnerSize] = useState<number>(290);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -295,23 +296,17 @@ export default function UpgraderPage() {
     winAudioPoolRef.current = buildPool(winSoundUrl, 0.55);
 
     const unlockAudio = () => {
-      if (isMuted) return;
-      [wooshAudioPoolRef.current, winAudioPoolRef.current].forEach((pool) => {
-        pool.forEach((audio) => {
-          void audio.play().then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-          }).catch(() => undefined);
-        });
-      });
+      hasAudioGestureRef.current = true;
     };
 
     window.addEventListener('pointerdown', unlockAudio, { passive: true });
     window.addEventListener('touchstart', unlockAudio, { passive: true });
+    window.addEventListener('keydown', unlockAudio, { passive: true });
 
     return () => {
       window.removeEventListener('pointerdown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
       [...wooshAudioPoolRef.current, ...winAudioPoolRef.current].forEach((audio) => {
         audio.pause();
         audio.currentTime = 0;
@@ -322,7 +317,7 @@ export default function UpgraderPage() {
   }, [isMuted]);
 
   const playUpgraderSound = (type: 'woosh' | 'win') => {
-    if (isMuted) return;
+    if (isMuted || !hasAudioGestureRef.current) return;
     const pool = type === 'woosh' ? wooshAudioPoolRef.current : winAudioPoolRef.current;
     if (!pool.length) return;
     const cursor = audioPoolCursorRef.current[type] % pool.length;
