@@ -91,6 +91,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [maxPriceQuery, setMaxPriceQuery] = useState('');
   const [onlyAffordable, setOnlyAffordable] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [loadedBoxImages, setLoadedBoxImages] = useState<Record<string, boolean>>({});
 
   const minPrice = minPriceQuery.trim() ? Number(minPriceQuery) : null;
   const maxPrice = maxPriceQuery.trim() ? Number(maxPriceQuery) : null;
@@ -191,6 +192,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     setView({ type: 'CASE_OPENING', boxId });
   };
 
+  useEffect(() => {
+    setLoadedBoxImages({});
+  }, [groupedBoxes]);
+
   return (
     <div className="w-full bg-[#1a1f26] pb-20">
 
@@ -246,7 +251,20 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             <div className="grid justify-items-center grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 lg:grid-cols-5">
               {groupedBoxes.map((box) => (
                 <button key={box.id} type="button" onClick={() => openBox(box.id)} className="group w-full max-w-[220px] rounded-xl border border-transparent bg-transparent p-2 text-center transition-colors duration-300 ease-out">
-                  <img src={box.image} alt={box.name} loading="lazy" decoding="async" className="mx-auto aspect-[0.72] w-[88%] object-contain transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-[-3deg] sm:w-[86%]" />
+                  <div className="relative mx-auto aspect-[0.72] w-[88%] sm:w-[86%]">
+                    {!loadedBoxImages[box.id] && (
+                      <div className="absolute inset-0 animate-pulse rounded-xl bg-white/10" aria-hidden="true" />
+                    )}
+                    <img
+                      src={box.image}
+                      alt={box.name}
+                      loading="lazy"
+                      decoding="async"
+                      onLoad={() => setLoadedBoxImages((prev) => ({ ...prev, [box.id]: true }))}
+                      onError={() => setLoadedBoxImages((prev) => ({ ...prev, [box.id]: true }))}
+                      className={`mx-auto h-full w-full object-contain transition-all duration-300 ease-out group-hover:scale-110 group-hover:rotate-[-3deg] ${loadedBoxImages[box.id] ? 'opacity-100' : 'opacity-0'}`}
+                    />
+                  </div>
                   <div className="mt-3 line-clamp-2 min-h-[2.5rem] text-sm font-extrabold text-white sm:text-base">
                     {box.name}
                   </div>
