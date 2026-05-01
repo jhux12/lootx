@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -358,6 +358,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const itemModalCoinFrameRef = useRef<number | null>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const bodyOverflowRef = useRef<string>('');
+  const loadedSpinnerImageSourcesRef = useRef<Set<string>>(new Set());
   const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
   const preFreeSpinBalanceRef = useRef<number | null>(null);
@@ -1084,7 +1085,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const preloadReelImages = useCallback(async (nextReelItems: CaseItem[]) => {
     setIsSpinnerAssetsLoading(true);
-    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter(Boolean)));
+    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter(Boolean)))
+      .filter((src) => !loadedSpinnerImageSourcesRef.current.has(src));
+
+    if (uniqueSources.length === 0) {
+      setIsSpinnerAssetsLoading(false);
+      return;
+    }
 
     await Promise.all(uniqueSources.map(async (src) => {
       const img = new Image();
@@ -1103,6 +1110,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (typeof img.decode === 'function') {
         await img.decode().catch(() => undefined);
       }
+      loadedSpinnerImageSourcesRef.current.add(src);
     }));
     setIsSpinnerAssetsLoading(false);
   }, []);
@@ -1826,17 +1834,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
-                {isSpinnerAssetsLoading && (
-                  <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0a0f19]/75 px-4">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 text-xs font-semibold text-white sm:text-sm">
-                      <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
-                      Loading spinner items...
-                    </div>
-                  </div>
-                )}
-                
-                
-                
                 {/* Fade Gradients */}
                 <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
                 <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
@@ -1930,6 +1927,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         'Syncing server...'
                       ) : isSpinning ? (
                         <span className="inline-flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />Spinning...</span>
+                      ) : isSpinnerAssetsLoading ? (
+                        'Preparing spinner...'
                       ) : isBalanceLoading ? (
                         'Loading balance...'
                       ) : isFree ? (
