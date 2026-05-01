@@ -609,6 +609,7 @@ type GoogleAuthResult =
 type GoogleAuthOptions = {
   remember?: boolean;
   isRetry?: boolean;
+  useRedirect?: boolean;
 };
 
 type AuthModalMode = 'login' | 'register';
@@ -1589,6 +1590,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
+    void getRedirectResult(auth).catch((error) => {
+      console.error('Google popup error:', error);
+    });
+
     const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
       console.log('Auth state fired:', firebaseUser?.uid);
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
@@ -2247,7 +2252,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const googleAuthInProgressRef = useRef(false);
 
   const loginWithGoogle = async (options: GoogleAuthOptions = {}): Promise<GoogleAuthResult> => {
-    const { remember = true, isRetry = false } = options;
+    const { remember = true, isRetry = false, useRedirect = false } = options;
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
       prompt: 'select_account'
@@ -2269,6 +2274,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.info('Firebase authDomain:', auth.app.options.authDomain);
       console.info('User agent:', navigator.userAgent);
 
+      if (useRedirect) {
+        await signInWithRedirect(auth, provider);
+        return { status: 'redirect-started' };
+      }
       console.log('Starting Google popup');
       const result = await signInWithPopup(auth, provider);
       console.log('Google popup success:', result.user.uid);
