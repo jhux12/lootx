@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
+import { BlurImage } from '../src/ui/images/BlurImage';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -140,7 +141,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
               {featuredBoxes.map((box) => (
                 <button key={box.id} onClick={() => onOpenBox(box.id)} className="group rounded-xl border border-transparent bg-transparent p-2 text-center transition-colors duration-300 ease-out">
                   <div className="flex h-[145px] items-center justify-center p-2 sm:h-[170px]">
-                    <img src={box.image} alt={box.name} className="max-h-full w-auto object-contain transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-[-3deg]" loading="lazy" />
+                    <BlurImage src={box.image} alt={box.name} className="max-h-full w-auto object-contain transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-[-3deg]" loading="lazy" />
                   </div>
                   <div className="mt-2 flex justify-center">
                     <CoinAmount amount={Math.round(box.price)} className="text-sm font-semibold text-slate-200" iconClassName="h-4 w-4" />

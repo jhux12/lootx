@@ -1888,10 +1888,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               style={{ boxShadow: isFocusedItem ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
-                              <img loading="eager" decoding="async" 
-                                  src={item.image} 
-                                  alt={item.name} 
-                                  className={`mt-1 ${isMobileViewport ? 'h-[104px] w-[104px]' : 'h-[132px] w-[132px]'} object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:mt-1.5 ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse' : ''}`} 
+                              <BlurImage
+                                  src={item.image}
+                                  alt={item.name}
+                                  loading="eager"
+                                  className={`mt-1 ${isMobileViewport ? 'h-[104px] w-[104px]' : 'h-[132px] w-[132px]'} object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] sm:mt-1.5 ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse' : ''}`}
                               />
                             </div>
                         </div>

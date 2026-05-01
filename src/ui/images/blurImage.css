@@ -5,4 +5,6 @@
 .pullz-blur-full { opacity: 0; transition: opacity 260ms ease; }
 .pullz-blur-full.is-loaded { opacity: 1; }
 .pullz-blur-placeholder.is-hidden { opacity: 0; }
-.pullz-blur-fallback { background: radial-gradient(circle at 30% 20%, rgba(59,130,246,.35), rgba(17,24,39,.8)); }
+
+.pullz-blur-fallback { background: linear-gradient(110deg, rgba(30,41,59,.9) 8%, rgba(71,85,105,.55) 18%, rgba(30,41,59,.9) 33%); background-size: 220% 100%; animation: pullz-skeleton-shimmer 1.2s linear infinite; }
+@keyframes pullz-skeleton-shimmer { to { background-position-x: -220%; } }
