@@ -32,9 +32,6 @@ export const LoginModal: React.FC = () => {
   const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [showOAuthFallback, setShowOAuthFallback] = useState(false);
-  const inAppGoogleUrl = 'https://www.pullz.gg/login?google=1';
-  const isInAppBrowser = typeof navigator !== 'undefined'
-    && /(Instagram|FBAN|FBAV|FBIOS|FB_IAB|Messenger|TikTok|Snapchat|Line|wv|WebView)/i.test(navigator.userAgent || '');
   const [showEmailFields, setShowEmailFields] = useState(false);
   const isLinkingGoogle = Boolean(googleLinkCredential);
 
@@ -88,7 +85,7 @@ export const LoginModal: React.FC = () => {
       if (mode === 'register') {
         setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
       }
-      const result = await loginWithGoogle({ remember: rememberMe, isRetry: false, useRedirect: isInAppBrowser });
+      const result = await loginWithGoogle({ remember: rememberMe, isRetry: false, useRedirect: false });
       if (result.status === 'redirect-started') {
         setMessage('Opening Google sign-in…');
         return;
@@ -103,12 +100,12 @@ export const LoginModal: React.FC = () => {
 
       if (result.status === 'error') {
         setUserError(getAuthErrorMessage(result.message));
-        setMessage('Having trouble? Open in browser or use email sign-up.');
+        setMessage('Having trouble? Please try again or use email sign-up.');
       }
     } catch (err: any) {
       console.error(err);
       setUserError(getAuthErrorMessage(err));
-      setMessage('Having trouble? Open in browser or use email sign-up.');
+      setMessage('Having trouble? Please try again or use email sign-up.');
     } finally {
       setIsLoading(false);
       setIsOAuthLoading(false);
@@ -329,17 +326,6 @@ export const LoginModal: React.FC = () => {
           {!isLinkingGoogle && (
             <>
               <div className="grid grid-cols-1 gap-2">
-                {isInAppBrowser && (
-                  <div className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-100">
-                    <p className="font-semibold">Open in browser to continue with Google</p>
-                    <a
-                      href={inAppGoogleUrl}
-                      className="mt-2 inline-flex text-xs font-semibold text-indigo-300 underline-offset-2 hover:underline"
-                    >
-                      Open in browser to continue with Google
-                    </a>
-                  </div>
-                )}
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
@@ -372,15 +358,7 @@ export const LoginModal: React.FC = () => {
                 {showOAuthFallback && (
                   <div className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-100">
                     <p className="font-semibold">Having trouble?</p>
-                    <p className="mt-1 text-indigo-100/90">Open in browser or use email sign-up.</p>
-                    <a
-                      href={inAppGoogleUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-flex text-xs font-semibold text-indigo-300 underline-offset-2 hover:underline"
-                    >
-                      Open in browser
-                    </a>
+                    <p className="mt-1 text-indigo-100/90">Please retry Google sign-in or use email sign-up.</p>
                   </div>
                 )}
               </div>
