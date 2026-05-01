@@ -34,7 +34,7 @@ export const LoginModal: React.FC = () => {
   const [showOAuthFallback, setShowOAuthFallback] = useState(false);
   const inAppGoogleUrl = 'https://www.pullz.gg/login?google=1';
   const isInAppBrowser = typeof navigator !== 'undefined'
-    && /(Instagram|FBAN|FBAV|FBIOS|FB_IAB|Messenger|TikTok|Snapchat|Line|wv|WebView)/i.test(navigator.userAgent || '');
+    && /(Instagram|FBAN|FBAV|FBIOS|Messenger|TikTok|Snapchat|Line|WebView|\bwv\b)/i.test(navigator.userAgent || '');
   const [showEmailFields, setShowEmailFields] = useState(false);
   const isLinkingGoogle = Boolean(googleLinkCredential);
 
@@ -88,11 +88,15 @@ export const LoginModal: React.FC = () => {
       if (mode === 'register') {
         setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
       }
-      const result = await loginWithGoogle({ remember: rememberMe, isRetry: false, useRedirect: isInAppBrowser });
-      if (result.status === 'redirect-started') {
-        setMessage('Opening Google sign-in…');
+      if (isInAppBrowser) {
+        console.info('In-app browser detected');
+        localStorage.setItem('start_google_login', '1');
+        console.info('Redirecting to external browser login URL');
+        window.location.href = inAppGoogleUrl;
         return;
       }
+
+      const result = await loginWithGoogle({ remember: rememberMe, isRetry: false });
       if (result.status === 'link-required') {
         setGoogleLinkEmail(result.email);
         setGoogleLinkCredential(result.credential);
@@ -185,6 +189,22 @@ export const LoginModal: React.FC = () => {
       setShowEmailFields(true);
     }
   }, [mode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const shouldStartGoogle = url.searchParams.get('google') === '1' || localStorage.getItem('start_google_login') === '1';
+    if (!shouldStartGoogle) return;
+
+    if (isInAppBrowser) {
+      setMessage('Open Pullz in Safari or Chrome to continue with Google.');
+      return;
+    }
+
+    localStorage.removeItem('start_google_login');
+    setMessage('Tap Continue with Google to finish signing in.');
+    setShowOAuthFallback(true);
+  }, [isInAppBrowser]);
 
   const clearGoogleLinkState = () => {
     setGoogleLinkEmail('');
@@ -336,14 +356,16 @@ export const LoginModal: React.FC = () => {
             <>
               <div className="grid grid-cols-1 gap-2">
                 {isInAppBrowser && (
-                  <div className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-100">
-                    <p className="font-semibold">Open in browser to continue with Google</p>
-                    <a
-                      href={inAppGoogleUrl}
-                      className="mt-2 inline-flex text-xs font-semibold text-indigo-300 underline-offset-2 hover:underline"
+                  <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-3 text-xs text-amber-100">
+                    <p className="font-semibold">Open Pullz in Safari or Chrome to continue with Google.</p>
+                    <p className="mt-2 break-all rounded bg-black/20 px-2 py-1 font-mono text-[11px]">{inAppGoogleUrl}</p>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard?.writeText(inAppGoogleUrl)}
+                      className="mt-2 inline-flex rounded-md border border-amber-200/30 px-2 py-1 text-[11px] font-semibold text-amber-50"
                     >
-                      Open in browser to continue with Google
-                    </a>
+                      Copy URL
+                    </button>
                   </div>
                 )}
                 <button
