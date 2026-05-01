@@ -612,6 +612,7 @@ type GoogleAuthResult =
 type GoogleAuthOptions = {
   remember?: boolean;
   isRetry?: boolean;
+  useRedirect?: boolean;
 };
 
 type AuthModalMode = 'login' | 'register';
@@ -1592,23 +1593,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-
-    void getRedirectResult(auth)
-      .then((result) => {
-        console.log('Checking Google redirect result');
-        if (!mounted) return;
-        if (result?.user) {
-          console.log('Redirect user:', result.user.uid);
-        } else {
-          console.log('No Google redirect result');
-        }
-      })
-      .catch((error: any) => {
-        console.error('Redirect error:', error);
-        console.error('Firebase Google redirect error', { code: error?.code, message: error?.message, error });
-        trackEvent('google_oauth_error', { code: error?.code || 'redirect_unknown' });
-      });
+    void getRedirectResult(auth).catch((error) => {
+      console.error('Google popup error:', error);
+    });
 
     const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
       console.log('Auth state fired:', firebaseUser?.uid);
@@ -1646,28 +1633,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      const hasPendingGoogleRedirect =
-        typeof window !== 'undefined' &&
-        window.sessionStorage.getItem(GOOGLE_REDIRECT_PENDING_KEY) === '1';
-
-      const isGoogleUser =
-        firebaseUser.providerData.some((provider) => provider.providerId === 'google.com');
-
-      console.info('Google redirect pending:', hasPendingGoogleRedirect);
-      console.info('Google user from auth listener:', isGoogleUser);
-
-      if (hasPendingGoogleRedirect && isGoogleUser) {
-        console.info('Completing Google redirect from auth state listener...');
-        window.sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
-
-        setShowLoginModal(false);
-
-        const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
-        resolveEmailRedirect(redirectPath);
-
-        trackEvent('google_oauth_success');
-      }
-
       try {
         void syncAdminClaim(firebaseUser);
         await firebaseUser.getIdToken(true);
@@ -1679,7 +1644,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     return () => {
-      mounted = false;
       unsubscribe();
       clearUserSubscriptions();
       activeUserIdRef.current = null;
@@ -2270,12 +2234,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = async (email: string, pass: string, remember: boolean = true) => {
-      const useRedirectFlow = shouldUseRedirectGoogleAuth();
       await setPersistence(
         auth,
-        useRedirectFlow
-          ? browserLocalPersistence
-          : (remember ? browserLocalPersistence : browserSessionPersistence)
+        remember ? browserLocalPersistence : browserSessionPersistence
       );
       const credential = await signInWithEmailAndPassword(auth, email, pass);
       if (!credential.user.emailVerified) {
@@ -2291,20 +2252,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setShowLoginModal(false);
   };
 
-  const shouldUseRedirectGoogleAuth = () => {
-    if (typeof navigator === 'undefined') return false;
-    const ua = navigator.userAgent || '';
-    const isInAppBrowser = /(Instagram|FBAN|FBAV|FBIOS|FB_IAB|TikTok|Snapchat|Line|wv|WebView|MiuiBrowser)/i.test(ua);
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
-    return isInAppBrowser || isMobile;
-  };
-
   const googleAuthInProgressRef = useRef(false);
-  const GOOGLE_REDIRECT_REFRESH_KEY = 'google_redirect_refresh_done';
-  const GOOGLE_REDIRECT_PENDING_KEY = 'google_redirect_pending';
 
   const loginWithGoogle = async (options: GoogleAuthOptions = {}): Promise<GoogleAuthResult> => {
-    const { remember = true, isRetry = false } = options;
+    const { remember = true, isRetry = false, useRedirect = false } = options;
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
       prompt: 'select_account'
@@ -2315,12 +2266,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     googleAuthInProgressRef.current = true;
 
     try {
-      const useRedirectFlow = shouldUseRedirectGoogleAuth();
       await setPersistence(
         auth,
-        useRedirectFlow
-          ? browserLocalPersistence
-          : (remember ? browserLocalPersistence : browserSessionPersistence)
+        remember ? browserLocalPersistence : browserSessionPersistence
       );
       if (isRetry) {
         trackEvent('google_oauth_retry');
@@ -2329,18 +2277,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.info('Firebase authDomain:', auth.app.options.authDomain);
       console.info('User agent:', navigator.userAgent);
 
-      if (useRedirectFlow) {
-        console.info('Starting Google redirect');
-        if (typeof window !== 'undefined') {
-          window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
-          window.sessionStorage.setItem(GOOGLE_REDIRECT_PENDING_KEY, '1');
-        }
+      if (useRedirect) {
         await signInWithRedirect(auth, provider);
         return { status: 'redirect-started' };
       }
-
-      const credential = await signInWithPopup(auth, provider);
-      await ensureGoogleUserProfile(credential.user);
+      console.log('Starting Google popup');
+      const result = await signInWithPopup(auth, provider);
+      console.log('Google popup success:', result.user.uid);
+      await result.user.getIdToken(true);
+      await ensureGoogleUserProfile(result.user);
+      await startAuthenticatedSession(result.user);
       trackEvent('google_oauth_success');
 
       setShowLoginModal(false);
@@ -2348,29 +2294,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       resolveEmailRedirect(redirectPath);
       return { status: 'success' };
     } catch (error: any) {
+      console.error('Google popup error:', error);
       console.error('Firebase Google auth error', { code: error?.code, message: error?.message, error });
       const errorCode = error?.code;
-      if (
-        errorCode === 'auth/popup-blocked' ||
-        errorCode === 'auth/popup-closed-by-user' ||
-        errorCode === 'auth/cancelled-popup-request' ||
-        errorCode === 'auth/operation-not-supported-in-this-environment'
-      ) {
-        try {
-          if (typeof window !== 'undefined') {
-            window.sessionStorage.removeItem(GOOGLE_REDIRECT_REFRESH_KEY);
-            window.sessionStorage.setItem(GOOGLE_REDIRECT_PENDING_KEY, '1');
-          }
-          trackEvent('google_oauth_popup_fallback_to_redirect', { code: errorCode });
-          await signInWithRedirect(auth, provider);
-          return { status: 'redirect-started' };
-        } catch (redirectError: any) {
-          console.error('Firebase Google redirect fallback error', {
-            code: redirectError?.code,
-            message: redirectError?.message,
-            error: redirectError
-          });
-        }
+      if (errorCode === 'auth/popup-blocked' || errorCode === 'auth/operation-not-supported-in-this-environment') {
+        return { status: 'error', message: 'Your browser blocked Google sign-in. Open Pullz in Safari or Chrome and try again.' };
       }
       if (errorCode === 'auth/account-exists-with-different-credential') {
         const pendingCredential = GoogleAuthProvider.credentialFromError(error);
