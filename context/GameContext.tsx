@@ -67,6 +67,14 @@ const sanitizeDeep = (value: any): any => {
   return value;
 };
 
+
+const IN_APP_BROWSER_REGEX = /(Instagram|FBAN|FBAV|FBIOS|Messenger|TikTok|Snapchat|Line|WebView|\bwv\b)/i;
+
+const isInAppBrowser = () => {
+  if (typeof navigator === 'undefined') return false;
+  return IN_APP_BROWSER_REGEX.test(navigator.userAgent || '');
+};
+
 const buildFallbackInstanceId = (item: Partial<InventoryItem>, fallbackId: string) => {
   const obtainedAt = Number(item.obtainedAt ?? 0);
   const price = Number(item.price ?? 0);
@@ -609,7 +617,6 @@ type GoogleAuthResult =
 type GoogleAuthOptions = {
   remember?: boolean;
   isRetry?: boolean;
-  useRedirect?: boolean;
 };
 
 type AuthModalMode = 'login' | 'register';
@@ -1282,6 +1289,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('google') !== '1') return;
+    if (isInAppBrowser()) {
+      console.info('In-app browser detected');
+      return;
+    }
+
+    localStorage.setItem('start_google_login', '1');
+    setAuthModalMode('login');
+    setShowLoginModal(true);
+  }, []);
+
   const openAuthModal = (mode: AuthModalMode = 'login') => {
     if (mode === 'register') {
       setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
@@ -1590,10 +1611,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    void getRedirectResult(auth).catch((error) => {
-      console.error('Google popup error:', error);
-    });
-
     const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
       console.log('Auth state fired:', firebaseUser?.uid);
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
@@ -2252,7 +2269,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const googleAuthInProgressRef = useRef(false);
 
   const loginWithGoogle = async (options: GoogleAuthOptions = {}): Promise<GoogleAuthResult> => {
-    const { remember = true, isRetry = false, useRedirect = false } = options;
+    const { remember = true, isRetry = false } = options;
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
       prompt: 'select_account'
@@ -2274,10 +2291,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.info('Firebase authDomain:', auth.app.options.authDomain);
       console.info('User agent:', navigator.userAgent);
 
-      if (useRedirect) {
-        await signInWithRedirect(auth, provider);
-        return { status: 'redirect-started' };
-      }
       console.log('Starting Google popup');
       const result = await signInWithPopup(auth, provider);
       console.log('Google popup success:', result.user.uid);
