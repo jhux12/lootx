@@ -92,14 +92,14 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                   if (index === 1) setView({ type: 'PLINKO' });
                   if (index === 2) setView({ type: 'LEADERBOARD' });
                 }}
-                className="group relative min-h-[132px] overflow-hidden rounded-xl border border-white/5 bg-[#21282c] p-4 text-left transition-all duration-300 ease-out hover:-translate-y-1 hover:border-slate-400/35 hover:shadow-[0_12px_28px_rgba(5,8,12,0.45)] focus-visible:-translate-y-1 focus-visible:border-slate-400/35"
+                className="group relative min-h-[160px] overflow-hidden rounded-xl border border-white/5 bg-[#21282c] p-4 text-left transition-all duration-300 ease-out hover:-translate-y-1 hover:border-slate-400/35 hover:shadow-[0_12px_28px_rgba(5,8,12,0.45)] focus-visible:-translate-y-1 focus-visible:border-slate-400/35 sm:min-h-[150px] lg:min-h-[156px]"
               >
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_60%,rgba(34,211,238,0.20),transparent_52%),radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.08),transparent_45%)]" />
                 <p className="relative z-10 max-w-[140px] text-sm font-black uppercase leading-5 text-slate-100">{tile.title}</p>
                 <img
                   src={tile.image}
                   alt={`${tile.title} artwork`}
-                  className="pointer-events-none absolute right-1 bottom-0 z-10 h-[96px] w-[96px] shrink-0 object-contain opacity-100 transition-transform duration-300 ease-out group-hover:scale-105 sm:h-[112px] sm:w-[112px] md:h-[122px] md:w-[122px]"
+                  className="pointer-events-none absolute right-1 bottom-0 z-10 h-[128px] w-[128px] shrink-0 object-contain opacity-100 transition-transform duration-300 ease-out group-hover:scale-105 sm:h-[124px] sm:w-[124px] md:h-[132px] md:w-[132px] lg:h-[138px] lg:w-[138px]"
                   loading="lazy"
                   width={500}
                   height={500}
