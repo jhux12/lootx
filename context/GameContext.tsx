@@ -1601,7 +1601,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (result?.user) {
           console.log('Redirect user:', result.user.uid);
         } else {
-          console.log('No Google redirect result.');
+          console.log('No Google redirect result');
         }
       })
       .catch((error: any) => {
@@ -1668,11 +1668,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         trackEvent('google_oauth_success');
       }
 
-      void syncAdminClaim(firebaseUser);
-      await firebaseUser.getIdToken(true);
-      await startAuthenticatedSession(firebaseUser);
-      console.log('User fully authenticated:', firebaseUser.uid);
-      setAuthInitialized(true);
+      try {
+        void syncAdminClaim(firebaseUser);
+        await firebaseUser.getIdToken(true);
+        await startAuthenticatedSession(firebaseUser);
+        console.log('User fully authenticated:', firebaseUser.uid);
+      } finally {
+        setAuthInitialized(true);
+      }
     });
 
     return () => {
