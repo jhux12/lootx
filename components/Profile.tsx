@@ -70,7 +70,9 @@ export const Profile: React.FC = () => {
   const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   const [activeAccountPanel, setActiveAccountPanel] = useState<AccountPanel>('overview');
-  const [isSavingSecurity, setIsSavingSecurity] = useState(false);
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [securityForm, setSecurityForm] = useState({
     username: user.name ?? '',
@@ -269,59 +271,60 @@ export const Profile: React.FC = () => {
     }
   };
 
-  const handleSaveSecurity = async () => {
-    if (securityForm.newPassword && securityForm.newPassword !== securityForm.confirmPassword) {
-      toast.error('New passwords do not match.');
-      return;
-    }
-
-    setIsSavingSecurity(true);
+  const handleSaveUsername = async () => {
+    const nextUsername = securityForm.username.trim();
+    if (!nextUsername || nextUsername === user.name) return;
+    setIsSavingUsername(true);
     try {
-      const nextUsername = securityForm.username.trim() || user.name;
-      const nextAvatar = securityForm.avatar || user.avatar;
-      const usernameChanged = nextUsername !== user.name;
-      const avatarChanged = nextAvatar !== user.avatar;
-
-      if (usernameChanged || avatarChanged) {
-        await updateUserInfo(nextUsername, nextAvatar);
-      }
-
-      if (!auth.currentUser) {
-        toast.error('Please sign in again to update security details.');
-        return;
-      }
-
-      const emailChanged = securityForm.email.trim() && securityForm.email.trim() !== (auth.currentUser.email ?? user.email ?? '');
-      const passwordChanged = Boolean(securityForm.newPassword.trim());
-
-      if ((emailChanged || passwordChanged) && !securityForm.currentPassword.trim()) {
-        toast.error('Current password is required to update email or password.');
-        return;
-      }
-
-      if (emailChanged || passwordChanged) {
-        if (!auth.currentUser.email) {
-          toast.error('Email/password updates are unavailable for this account type.');
-          return;
-        }
-        const credential = EmailAuthProvider.credential(auth.currentUser.email, securityForm.currentPassword.trim());
-        await reauthenticateWithCredential(auth.currentUser, credential);
-      }
-
-      if (emailChanged) {
-        await updateFirebaseEmail(auth.currentUser, securityForm.email.trim());
-      }
-      if (passwordChanged) {
-        await updateFirebasePassword(auth.currentUser, securityForm.newPassword.trim());
-      }
-
-      setSecurityForm((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
-      toast.success('Security settings updated.');
+      await updateUserInfo(nextUsername, securityForm.avatar || user.avatar);
+      toast.success('Username updated.');
     } catch (error) {
-      console.error('Failed to update security settings', error);
-      toast.error('Could not update security settings. Please verify your current password.');
+      console.error('Failed to update username', error);
+      toast.error('Could not update username.');
     } finally {
-      setIsSavingSecurity(false);
+      setIsSavingUsername(false);
+    }
+  };
+
+  const handleSaveEmail = async () => {
+    if (!auth.currentUser) return toast.error('Please sign in again to update your email.');
+    const nextEmail = securityForm.email.trim();
+    if (!nextEmail || nextEmail === (auth.currentUser.email ?? user.email ?? '')) return;
+    if (!securityForm.currentPassword.trim()) return toast.error('Current password is required to update email.');
+    if (!auth.currentUser.email) return toast.error('Email updates are unavailable for this account type.');
+    setIsSavingEmail(true);
+    try {
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, securityForm.currentPassword.trim());
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updateFirebaseEmail(auth.currentUser, nextEmail);
+      setSecurityForm((prev) => ({ ...prev, currentPassword: '' }));
+      toast.success('Email updated.');
+    } catch (error) {
+      console.error('Failed to update email', error);
+      toast.error('Could not update email. Please verify your current password.');
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
+
+  const handleSavePassword = async () => {
+    if (!auth.currentUser) return toast.error('Please sign in again to update your password.');
+    if (!securityForm.newPassword.trim()) return toast.error('Enter a new password.');
+    if (securityForm.newPassword !== securityForm.confirmPassword) return toast.error('New passwords do not match.');
+    if (!securityForm.currentPassword.trim()) return toast.error('Current password is required to update password.');
+    if (!auth.currentUser.email) return toast.error('Password updates are unavailable for this account type.');
+    setIsSavingPassword(true);
+    try {
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, securityForm.currentPassword.trim());
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updateFirebasePassword(auth.currentUser, securityForm.newPassword.trim());
+      setSecurityForm((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
+      toast.success('Password updated.');
+    } catch (error) {
+      console.error('Failed to update password', error);
+      toast.error('Could not update password. Please verify your current password.');
+    } finally {
+      setIsSavingPassword(false);
     }
   };
 
@@ -460,8 +463,12 @@ export const Profile: React.FC = () => {
           isSavingAddress={isSavingAddress}
           securityForm={securityForm}
           setSecurityForm={setSecurityForm}
-          onSaveSecurity={handleSaveSecurity}
-          isSavingSecurity={isSavingSecurity}
+          onSaveUsername={handleSaveUsername}
+          onSaveEmail={handleSaveEmail}
+          onSavePassword={handleSavePassword}
+          isSavingUsername={isSavingUsername}
+          isSavingEmail={isSavingEmail}
+          isSavingPassword={isSavingPassword}
           avatarOptions={AVATAR_PRESETS}
           onSaveAvatar={handleSaveAvatar}
           isSavingAvatar={isSavingAvatar}
@@ -524,8 +531,12 @@ export const Profile: React.FC = () => {
                 isSavingAddress={isSavingAddress}
                 securityForm={securityForm}
                 setSecurityForm={setSecurityForm}
-                onSaveSecurity={handleSaveSecurity}
-                isSavingSecurity={isSavingSecurity}
+                onSaveUsername={handleSaveUsername}
+                onSaveEmail={handleSaveEmail}
+                onSavePassword={handleSavePassword}
+                isSavingUsername={isSavingUsername}
+                isSavingEmail={isSavingEmail}
+                isSavingPassword={isSavingPassword}
                 avatarOptions={AVATAR_PRESETS}
                 onSaveAvatar={handleSaveAvatar}
                 isSavingAvatar={isSavingAvatar}
