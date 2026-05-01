@@ -5,6 +5,7 @@ import { UpgradeStatus } from './types';
 export const needlePhysics = { overshootDeg: 6, settleMs: 520, damping: 0.18, frequency: 14 };
 
 const TRAIL_GHOST_COUNT = 8;
+const MOBILE_TRAIL_GHOST_COUNT = 4;
 
 const getRiskColor = (chance: number) => {
   if (chance >= 70) return '#22c55e';
@@ -36,6 +37,7 @@ interface UpgraderSpinnerProps {
   reducedMotion: boolean;
   size?: number;
   durationMs?: number;
+  mobileOptimized?: boolean;
 }
 
 interface SpinnerConfetti {
@@ -63,7 +65,8 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   canRotateWinZone,
   reducedMotion,
   size = 280,
-  durationMs = 4200
+  durationMs = 4200,
+  mobileOptimized = false
 }) => {
   const handledNonceRef = useRef<number>(-1);
   const wheelRef = useRef<HTMLDivElement | null>(null);
@@ -124,10 +127,11 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
     const frame = () => {
       if (!needleRef.current) return;
       const currentAngle = angleFromTransform(needleRef.current);
-      historyRef.current = [currentAngle, ...historyRef.current.slice(0, TRAIL_GHOST_COUNT - 1)];
+      const ghostCount = mobileOptimized ? MOBILE_TRAIL_GHOST_COUNT : TRAIL_GHOST_COUNT;
+      historyRef.current = [currentAngle, ...historyRef.current.slice(0, ghostCount - 1)];
       ghostNeedleRefs.current.forEach((ghost, index) => {
         if (!ghost) return;
-        const sampledAngle = historyRef.current[Math.min(TRAIL_GHOST_COUNT - 1, index + 1)] ?? currentAngle;
+        const sampledAngle = historyRef.current[Math.min(ghostCount - 1, index + 1)] ?? currentAngle;
         ghost.style.transform = `rotate(${sampledAngle}deg)`;
       });
       trailRafRef.current = window.requestAnimationFrame(frame);
@@ -181,7 +185,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
 
   useEffect(() => {
     if (status !== 'success') return;
-    const burst = Array.from({ length: reducedMotion ? 16 : 32 }, (_, index) => ({
+    const burst = Array.from({ length: reducedMotion ? 12 : (mobileOptimized ? 14 : 32) }, (_, index) => ({
       id: index,
       angle: Math.random() * 360,
       distance: (size / 2) * (0.5 + Math.random() * 0.55),
@@ -192,7 +196,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
     setConfettiBurst(burst);
     const timeoutId = window.setTimeout(() => setConfettiBurst([]), reducedMotion ? 900 : 1400);
     return () => window.clearTimeout(timeoutId);
-  }, [reducedMotion, size, spinNonce, status]);
+  }, [mobileOptimized, reducedMotion, size, spinNonce, status]);
 
   return (
     <div className="relative flex flex-col items-center">
@@ -221,7 +225,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           event.currentTarget.releasePointerCapture(event.pointerId);
         }}
       >
-        <div className="pointer-events-none absolute -inset-8 rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.3),rgba(56,189,248,0.08)_45%,transparent_70%)] blur-xl" />
+        <div className={`pointer-events-none absolute rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.3),rgba(56,189,248,0.08)_45%,transparent_70%)] ${mobileOptimized ? '-inset-4 blur-lg' : '-inset-8 blur-xl'}`} />
         <div className="pointer-events-none absolute inset-4 rounded-full bg-[radial-gradient(circle_at_50%_35%,rgba(139,92,246,0.24),rgba(7,12,25,0.95)_70%)]" />
         <div className="pointer-events-none absolute inset-8 rounded-full border border-indigo-300/20 opacity-75" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)', backgroundSize: '14px 14px' }} />
         {hasSource && hasTarget && (
@@ -318,14 +322,14 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           </div>
         )}
 
-        {Array.from({ length: TRAIL_GHOST_COUNT }).map((_, index) => (
+        {Array.from({ length: mobileOptimized ? MOBILE_TRAIL_GHOST_COUNT : TRAIL_GHOST_COUNT }).map((_, index) => (
           <div
             key={`ghost-${index}`}
             ref={(node) => {
               ghostNeedleRefs.current[index] = node;
             }}
             className={`pointer-events-none absolute left-1/2 top-0 z-10 -ml-[2px] h-1/2 w-[4px] origin-bottom will-change-transform ${isTrailing ? 'opacity-100' : 'opacity-0'}`}
-            style={{ opacity: isTrailing ? (TRAIL_GHOST_COUNT - index) / (TRAIL_GHOST_COUNT * 9) : 0, filter: `blur(${index * 0.45}px)` }}
+            style={{ opacity: isTrailing ? ((mobileOptimized ? MOBILE_TRAIL_GHOST_COUNT : TRAIL_GHOST_COUNT) - index) / ((mobileOptimized ? MOBILE_TRAIL_GHOST_COUNT : TRAIL_GHOST_COUNT) * 9) : 0, filter: `blur(${index * 0.45}px)` }}
           >
             <div className="relative h-full w-full">
               <div className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-gradient-to-b from-[var(--reactor-risk-color)] to-transparent" />
