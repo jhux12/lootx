@@ -33,8 +33,6 @@ export const LoginModal: React.FC = () => {
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [showOAuthFallback, setShowOAuthFallback] = useState(false);
   const inAppGoogleUrl = 'https://www.pullz.gg/login?google=1';
-  const isInAppBrowser = typeof navigator !== 'undefined'
-    && /(Instagram|FBAN|FBAV|FBIOS|FB_IAB|Messenger|TikTok|Snapchat|Line|wv|WebView)/i.test(navigator.userAgent || '');
   const [showEmailFields, setShowEmailFields] = useState(false);
   const isLinkingGoogle = Boolean(googleLinkCredential);
 
@@ -85,12 +83,6 @@ export const LoginModal: React.FC = () => {
     playSound('click');
 
     try {
-      if (isInAppBrowser) {
-        setShowOAuthFallback(true);
-        setUserError('Open in browser to continue with Google');
-        setMessage(null);
-        return;
-      }
       if (mode === 'register') {
         setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
       }
@@ -337,21 +329,10 @@ export const LoginModal: React.FC = () => {
           {!isLinkingGoogle && (
             <>
               <div className="grid grid-cols-1 gap-2">
-                {isInAppBrowser && (
-                  <div className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-100">
-                    <p className="font-semibold">Open in browser to continue with Google</p>
-                    <a
-                      href={inAppGoogleUrl}
-                      className="mt-2 inline-flex text-xs font-semibold text-indigo-300 underline-offset-2 hover:underline"
-                    >
-                      Open in browser to continue with Google
-                    </a>
-                  </div>
-                )}
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
-                  disabled={isLoading || isInAppBrowser}
+                  disabled={isLoading}
                   className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isOAuthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" />}
