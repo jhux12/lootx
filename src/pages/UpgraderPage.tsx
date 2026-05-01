@@ -673,6 +673,7 @@ export default function UpgraderPage() {
             <div className="relative order-1 flex flex-col items-center rounded-2xl border border-white/5 bg-[#1f252c] p-4 lg:order-2">
               <UpgraderSpinner
                 chance={chance}
+                valueMultiplier={valueMultiplier}
                 hasSource={Boolean(source)}
                 hasTarget={Boolean(target)}
                 targetImage={targetPreview?.image}
