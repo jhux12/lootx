@@ -119,10 +119,14 @@ export const Profile: React.FC = () => {
     || (item.provenance?.sourceType === 'case_open' && typeof item.provenance.sourceId === 'string' && xpBoxIds.has(item.provenance.sourceId));
 
   const normalizedInventory = useMemo(() => normalizeItems(inventory as InventoryItem[]).sort((a, b) => b.obtainedAt - a.obtainedAt), [inventory]);
+  const activeInventory = useMemo(
+    () => normalizedInventory.filter((item) => item.status !== 'sold'),
+    [normalizedInventory]
+  );
 
   const filteredInventory = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const byFilters = normalizedInventory.filter((item) => {
+    const byFilters = activeInventory.filter((item) => {
       const itemType = item.status === 'shipping' || item.status === 'shipping_requested' ? 'shipping' : item.status === 'shipped' ? 'shipped' : 'available';
       return (!term || item.name.toLowerCase().includes(term))
         && (rarity === 'all' || item.rarity === rarity)
@@ -135,7 +139,7 @@ export const Profile: React.FC = () => {
       if (sort === 'nameAsc') return a.name.localeCompare(b.name);
       return b.obtainedAt - a.obtainedAt;
     });
-  }, [normalizedInventory, search, rarity, type, sort]);
+  }, [activeInventory, search, rarity, type, sort]);
 
   const shippingCoinEnabled = stripeSettings.shippingCoinEnabled;
   const shippingCoinCostCoins = Math.max(0, stripeSettings.shippingCoinCostCoins);
@@ -149,9 +153,9 @@ export const Profile: React.FC = () => {
   const canSelectShipment = (item: InventoryItem) => item.status === 'available' && !item.locked && !!user.shippingAddress;
 
   useEffect(() => {
-    const selectableIds = new Set(normalizedInventory.filter((item) => canSelectShipment(item)).map((item) => item.instanceId));
+    const selectableIds = new Set(activeInventory.filter((item) => canSelectShipment(item)).map((item) => item.instanceId));
     setSelectedShipments((prev) => prev.filter((id) => selectableIds.has(id)));
-  }, [normalizedInventory, user.shippingAddress]);
+  }, [activeInventory, user.shippingAddress]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -202,7 +206,7 @@ export const Profile: React.FC = () => {
     }
   }, []);
 
-  const selectedShipmentItems = normalizedInventory.filter((item) => selectedShipments.includes(item.instanceId));
+  const selectedShipmentItems = activeInventory.filter((item) => selectedShipments.includes(item.instanceId));
   const selectedShipmentValue = selectedShipmentItems.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   const shippingCoinTotal = selectedShipmentItems.reduce((sum, item) => sum + getCoinShippingCostForItem(item), 0);
   const shippingCashTotalCents = selectedShipmentItems.reduce((sum, item) => sum + getCashShippingCostForItemCents(item), 0);
