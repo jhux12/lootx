@@ -57,7 +57,9 @@ const SPINNER_MOTION = {
   goldFinalDurationMs: 3800,
   settleDurationMs: 360,
   slowDownStartOffset: 0.62,
-  finalApproachOffset: 0.84,
+  finalApproachOffset: 0.9,
+  dramaticSlowDownStartOffset: 0.42,
+  dramaticFinalApproachOffset: 0.94,
   overshootPx: 18,
   approachOffsetSoftMaxPx: 16,
   approachOffsetNearMissMinPx: 34,
@@ -886,7 +888,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     winnerIndex: number,
     duration: number,
     onComplete: () => void,
-    options?: { seed?: string }
+    options?: { seed?: string; preserveFastSpinMotion?: boolean }
   ) => {
     const container = scrollContainerRef.current;
     if (!container) {
@@ -931,12 +933,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
     setAnimationPhase('spinning');
 
+    const preserveFastSpinMotion = options?.preserveFastSpinMotion ?? false;
+    const slowDownStartOffset = preserveFastSpinMotion
+      ? SPINNER_MOTION.slowDownStartOffset
+      : SPINNER_MOTION.dramaticSlowDownStartOffset;
+    const finalApproachOffset = preserveFastSpinMotion
+      ? SPINNER_MOTION.finalApproachOffset
+      : SPINNER_MOTION.dramaticFinalApproachOffset;
+
     const animation = container.animate(
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.25, 0.6, 0.2, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: SPINNER_MOTION.slowDownStartOffset, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: SPINNER_MOTION.finalApproachOffset, easing: 'cubic-bezier(0.12, 0.88, 0.22, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.08, 0.7, 0.18, 1)' }
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: slowDownStartOffset, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
+        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: finalApproachOffset, easing: preserveFastSpinMotion ? 'cubic-bezier(0.12, 0.88, 0.22, 1)' : 'cubic-bezier(0.05, 0.95, 0.16, 1)' },
+        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: preserveFastSpinMotion ? 'cubic-bezier(0.08, 0.7, 0.18, 1)' : 'cubic-bezier(0.02, 0.86, 0.12, 1)' }
       ],
       {
         duration: resolvedDuration,
@@ -1488,7 +1498,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.58 : 1), () => {
             finishSpin(winner);
-        });
+        }, { preserveFastSpinMotion: isQuick });
     }
   };
 
