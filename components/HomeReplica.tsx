@@ -115,7 +115,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-5">
               {featuredBoxes.map((box) => (
-                <button key={box.id} onClick={() => onOpenBox(box.id)} className="group rounded-xl border border-transparent bg-transparent p-2 text-center transition-all duration-300 ease-out hover:-translate-x-1 hover:-translate-y-1 hover:rotate-[-2.8deg] focus-visible:-translate-x-1">
+                <button key={box.id} onClick={() => onOpenBox(box.id)} className="group rounded-xl border border-transparent bg-transparent p-2 text-center transition-colors duration-300 ease-out">
                   <div className="flex h-[145px] items-center justify-center p-2 sm:h-[170px]">
                     <img src={box.image} alt={box.name} className="max-h-full w-auto object-contain transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-[-3deg]" loading="lazy" />
                   </div>
