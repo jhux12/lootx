@@ -1594,40 +1594,24 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     let mounted = true;
 
-    const checkGoogleRedirectResult = async () => {
-      try {
-        console.info('Checking Google redirect result');
-        const result = await getRedirectResult(auth);
+    void getRedirectResult(auth)
+      .then((result) => {
+        console.log('Checking Google redirect result');
         if (!mounted) return;
-
         if (result?.user) {
-          console.info(`Google redirect result user: ${result.user.uid}`);
-          await result.user.getIdToken(true);
-          await ensureGoogleUserProfile(result.user);
-          setShowLoginModal(false);
-          const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
-          resolveEmailRedirect(redirectPath);
-          if (typeof window !== 'undefined') {
-            window.sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
-          }
+          console.log('Redirect user:', result.user.uid);
         } else {
-          console.info('No Google redirect result.');
+          console.log('No Google redirect result.');
         }
-      } catch (error: any) {
-        console.error('Google redirect error:', error?.code, error?.message);
+      })
+      .catch((error: any) => {
+        console.error('Redirect error:', error);
         console.error('Firebase Google redirect error', { code: error?.code, message: error?.message, error });
         trackEvent('google_oauth_error', { code: error?.code || 'redirect_unknown' });
-      } finally {
-        redirectResultResolvedRef.current = true;
-      }
-    };
+      });
 
-    void checkGoogleRedirectResult();
-
-    const unsubscribe = onIdTokenChanged(auth, (firebaseUser) => {
-      if (!redirectResultResolvedRef.current) return;
-      console.info(`Auth ready user: ${firebaseUser?.uid ?? 'null'}`);
-      setAuthInitialized(true);
+    const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
+      console.log('Auth state fired:', firebaseUser?.uid);
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
       const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified);
       if (requiresVerification && !hasPendingEmailVerification()) {
@@ -1638,6 +1622,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       clearUserSubscriptions();
 
       if (!firebaseUser) {
+        console.log('No user');
         setIsAuthenticated(false);
         setUser(GUEST_USER);
         setBalance(0);
@@ -1645,6 +1630,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setNotifications([]);
         hasInventorySubcollectionRef.current = false;
         activeUserIdRef.current = null;
+        setAuthInitialized(true);
         return;
       }
 
@@ -1656,6 +1642,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setNotifications([]);
         hasInventorySubcollectionRef.current = false;
         activeUserIdRef.current = null;
+        setAuthInitialized(true);
         return;
       }
 
@@ -1682,7 +1669,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       void syncAdminClaim(firebaseUser);
-      startAuthenticatedSession(firebaseUser);
+      await firebaseUser.getIdToken(true);
+      await startAuthenticatedSession(firebaseUser);
+      console.log('User fully authenticated:', firebaseUser.uid);
+      setAuthInitialized(true);
     });
 
     return () => {
@@ -2307,7 +2297,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const googleAuthInProgressRef = useRef(false);
-  const redirectResultResolvedRef = useRef(false);
   const GOOGLE_REDIRECT_REFRESH_KEY = 'google_redirect_refresh_done';
   const GOOGLE_REDIRECT_PENDING_KEY = 'google_redirect_pending';
 
