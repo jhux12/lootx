@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
@@ -13,14 +13,36 @@ type HomeReplicaProps = {
 };
 
 const faqs = [
-  'What is Pullz.gg?',
-  'How do I deposit?',
-  'Is Pullz.gg fair and safe?',
-  'Missing crypto deposit?',
-  'How do I open a box?',
-  'How do Battles work?',
-  'How do I cash out or ship?',
-  'How can I contact support?'
+  {
+    id: 'what-is-pullz',
+    question: 'What is Pullz.gg?',
+    answer: 'Pullz.gg is a social unboxing game where you open virtual boxes, collect item skins, and use coins to play modes like upgrades and battles.'
+  },
+  {
+    id: 'how-to-deposit',
+    question: 'How do I deposit?',
+    answer: 'Sign in, open the Top Up page, choose a coin package, and complete checkout. Your coins are added automatically once payment is confirmed.'
+  },
+  {
+    id: 'fair-and-safe',
+    question: 'Is Pullz.gg fair and safe?',
+    answer: 'Yes. Pullz.gg uses provably fair systems so outcomes can be verified. Always protect your account with a strong password and secure email.'
+  },
+  {
+    id: 'open-box',
+    question: 'How do I open a box?',
+    answer: 'Browse Available Boxes, pick one you like, and press Open. The result is revealed instantly and the item appears in your inventory.'
+  },
+  {
+    id: 'cash-out-ship',
+    question: 'How do I cash out or ship?',
+    answer: 'Open your inventory/profile and choose withdraw or shipping options when eligible. Requirements can depend on account and regional rules.'
+  },
+  {
+    id: 'contact-support',
+    question: 'How can I contact support?',
+    answer: 'Use the support/contact option in the app and include your username plus relevant transaction details so the team can help faster.'
+  }
 ];
 
 const rarityGlowClass: Record<string, string> = {
@@ -33,6 +55,7 @@ const rarityGlowClass: Record<string, string> = {
 
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onViewAllBoxes, onSignUp }) => {
   const { setView } = useGame();
+  const [openFaqId, setOpenFaqId] = useState<string | null>(faqs[0]?.id ?? null);
   const featuredBoxes = boxes.slice(0, 5);
   const topUpgrades = useMemo(() => {
     const highValueItems = boxes
@@ -149,13 +172,24 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             <button onClick={onSignUp} className="mt-4 w-full rounded-lg bg-[#2b96dc] px-4 py-3 text-sm font-black sm:w-auto">Create Account</button>
           </section>
 
-          <section className="grid gap-3 md:grid-cols-2">
-            {faqs.map((question) => (
-              <button key={question} className="flex items-center justify-between rounded-xl bg-[#22282c] px-4 py-4 text-left text-sm font-bold">
-                {question}
-                <span className="text-slate-400">⌄</span>
-              </button>
-            ))}
+          <section className="space-y-3">
+            {faqs.map((faq) => {
+              const isOpen = openFaqId === faq.id;
+              return (
+                <div key={faq.id} className="overflow-hidden rounded-xl bg-[#22282c]">
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaqId((prev) => (prev === faq.id ? null : faq.id))}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left text-sm font-bold sm:text-base"
+                    aria-expanded={isOpen}
+                  >
+                    <span>{faq.question}</span>
+                    <span className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}>⌄</span>
+                  </button>
+                  {isOpen && <p className="border-t border-white/10 px-4 py-4 text-sm leading-6 text-slate-300">{faq.answer}</p>}
+                </div>
+              );
+            })}
           </section>
         </section>
 
