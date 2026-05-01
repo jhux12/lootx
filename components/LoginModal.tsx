@@ -23,8 +23,8 @@ export const LoginModal: React.FC = () => {
   const [googleLinkEmail, setGoogleLinkEmail] = useState('');
   const [googleLinkPassword, setGoogleLinkPassword] = useState('');
   const [googleLinkCredential, setGoogleLinkCredential] = useState<AuthCredential | null>(null);
-  const [confirmAdult, setConfirmAdult] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [emailSignupConsent, setEmailSignupConsent] = useState(false);
+  const [googleSignupConsent, setGoogleSignupConsent] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
@@ -48,8 +48,8 @@ export const LoginModal: React.FC = () => {
     try {
       if (mode === 'register') {
         setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
-        if (!confirmAdult || !acceptTerms) {
-          setUserError('Please confirm you are 18+ and accept the terms to continue.');
+        if (!emailSignupConsent) {
+          setUserError('Please confirm the checkbox to continue with email registration.');
           setIsLoading(false);
           return;
         }
@@ -72,7 +72,7 @@ export const LoginModal: React.FC = () => {
       return;
     }
 
-    if (mode === 'register' && (!confirmAdult || !acceptTerms)) {
+    if (mode === 'register' && !googleSignupConsent) {
       setShowGoogleRequirementsTooltip(true);
       return;
     }
@@ -180,12 +180,6 @@ export const LoginModal: React.FC = () => {
     setMode(authModalMode);
   }, [authModalMode]);
 
-  useEffect(() => {
-    if (mode === 'register') {
-      setShowEmailFields(true);
-    }
-  }, [mode]);
-
   const clearGoogleLinkState = () => {
     setGoogleLinkEmail('');
     setGoogleLinkPassword('');
@@ -222,10 +216,10 @@ export const LoginModal: React.FC = () => {
   }, [showGoogleRequirementsTooltip]);
 
   useEffect(() => {
-    if (mode === 'register' && acceptTerms && confirmAdult) {
+    if (mode === 'register' && googleSignupConsent) {
       setShowGoogleRequirementsTooltip(false);
     }
-  }, [mode, acceptTerms, confirmAdult]);
+  }, [mode, googleSignupConsent]);
 
   useEffect(() => {
     if (!isOAuthLoading) {
@@ -272,7 +266,7 @@ export const LoginModal: React.FC = () => {
   return (
     <div
       data-disable-pull-refresh="true"
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-hidden overscroll-none p-2 pt-[calc(env(safe-area-inset-top)+8px)] sm:items-center sm:p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden overscroll-none p-2 sm:p-4"
     >
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
@@ -358,8 +352,21 @@ export const LoginModal: React.FC = () => {
 
                 {mode === 'register' && showGoogleRequirementsTooltip && (
                   <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-200">
-                    Check both boxes to continue with Google.
+                    Check the Google consent box to continue.
                   </div>
+                )}
+                {mode === 'register' && (
+                  <label className="group flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-[#141417] p-3 text-xs">
+                    <Checkbox
+                      required
+                      checked={googleSignupConsent}
+                      onChange={(e) => setGoogleSignupConsent(e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span className="select-none text-neutral-400 group-hover:text-neutral-300">
+                      I agree to the <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Terms of Service</a>, <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Privacy Policy</a>, and confirm I am 18+ to register with Google.
+                    </span>
+                  </label>
                 )}
 
                 {showOAuthFallback && (
@@ -505,31 +512,17 @@ export const LoginModal: React.FC = () => {
               )}
 
               {mode === 'register' && (
-                <div className="mt-1 flex flex-col gap-3 text-xs">
-                  <label className="group flex cursor-pointer items-start gap-3">
-                    <Checkbox
-                      required
-                      checked={acceptTerms}
-                      onChange={(e) => setAcceptTerms(e.target.checked)}
-                      className="mt-0.5"
-                    />
-                    <span className="select-none text-neutral-400 group-hover:text-neutral-300">
-                      I agree to the <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Terms of Service</a> and <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Privacy Policy</a>
-                    </span>
-                  </label>
-
-                  <label className="group flex cursor-pointer items-start gap-3">
-                    <Checkbox
-                      required
-                      checked={confirmAdult}
-                      onChange={(e) => setConfirmAdult(e.target.checked)}
-                      className="mt-0.5"
-                    />
-                    <span className="select-none text-neutral-400 group-hover:text-neutral-300">
-                      I confirm I am 18 years of age or older
-                    </span>
-                  </label>
-                </div>
+                <label className="group mt-1 flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-[#141417] p-3 text-xs">
+                  <Checkbox
+                    required
+                    checked={emailSignupConsent}
+                    onChange={(e) => setEmailSignupConsent(e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span className="select-none text-neutral-400 group-hover:text-neutral-300">
+                    I agree to the <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Terms of Service</a>, <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Privacy Policy</a>, and confirm I am 18+ to register with email.
+                  </span>
+                </label>
               )}
 
               <button
