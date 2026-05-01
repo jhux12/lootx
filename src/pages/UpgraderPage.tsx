@@ -237,7 +237,6 @@ export default function UpgraderPage() {
   const winAudioPoolRef = useRef<HTMLAudioElement[]>([]);
   const audioPoolCursorRef = useRef({ woosh: 0, win: 0 });
   const hasAudioGestureRef = useRef(false);
-  const lastPlayedResultRef = useRef<string | null>(null);
   const [spinnerSize, setSpinnerSize] = useState<number>(290);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isMuted, setIsMuted] = useState<boolean>(() => {
@@ -296,7 +295,20 @@ export default function UpgraderPage() {
     winAudioPoolRef.current = buildPool(winSoundUrl, 0.55);
 
     const unlockAudio = () => {
+      if (hasAudioGestureRef.current) return;
       hasAudioGestureRef.current = true;
+      const prime = [...wooshAudioPoolRef.current, ...winAudioPoolRef.current];
+      prime.forEach((audio) => {
+        const originalVolume = audio.volume;
+        audio.volume = 0;
+        void audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = originalVolume;
+        }).catch(() => {
+          audio.volume = originalVolume;
+        });
+      });
     };
 
     window.addEventListener('pointerdown', unlockAudio, { passive: true });
@@ -340,15 +352,6 @@ export default function UpgraderPage() {
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
   }, []);
-
-  useEffect(() => {
-    if (!resultSheet?.success) return;
-    const resultKey = `${resultSheet.item.id}-${resultSheet.item.price}-${resultSheet.success}`;
-    if (lastPlayedResultRef.current === resultKey) return;
-
-    lastPlayedResultRef.current = resultKey;
-    playUpgraderSound('win');
-  }, [isMuted, resultSheet]);
 
   useEffect(() => {
     if (!isMuted) return;
@@ -596,6 +599,7 @@ export default function UpgraderPage() {
 
   const handleSpinComplete = (success: boolean) => {
     setStatus(success ? 'success' : 'fail');
+    if (success) playUpgraderSound('win');
 
     if (isDemoSpin) {
       setSpinResult(null);
