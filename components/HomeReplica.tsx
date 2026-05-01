@@ -94,12 +94,12 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 }}
                 className="group relative min-h-[132px] overflow-hidden rounded-xl border border-white/5 bg-[#21282c] p-4 text-left transition-all duration-300 ease-out hover:-translate-y-1 hover:border-slate-400/35 hover:shadow-[0_12px_28px_rgba(5,8,12,0.45)] focus-visible:-translate-y-1 focus-visible:border-slate-400/35"
               >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_60%,rgba(34,211,238,0.20),transparent_52%),radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.08),transparent_45%)]" />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_70%,rgba(34,211,238,0.30),transparent_56%),radial-gradient(circle_at_25%_15%,rgba(168,85,247,0.20),transparent_46%),radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.14),transparent_42%)]" />
                 <p className="relative z-10 max-w-[140px] text-sm font-black uppercase leading-5 text-slate-100">{tile.title}</p>
                 <img
                   src={tile.image}
                   alt={`${tile.title} artwork`}
-                  className="pointer-events-none absolute -right-4 -bottom-4 z-10 h-[170px] w-[170px] shrink-0 -rotate-12 object-contain opacity-100 transition-transform duration-300 ease-out group-hover:scale-105 group-hover:-rotate-[15deg] sm:-right-3 sm:-bottom-3 sm:h-[162px] sm:w-[162px] md:h-[176px] md:w-[176px] lg:h-[186px] lg:w-[186px]"
+                  className="pointer-events-none absolute -right-3 -bottom-7 z-10 h-[154px] w-[154px] shrink-0 -rotate-12 object-contain opacity-100 transition-transform duration-300 ease-out group-hover:scale-105 group-hover:-rotate-[15deg] sm:-right-2 sm:-bottom-6 sm:h-[148px] sm:w-[148px] md:h-[160px] md:w-[160px] lg:h-[172px] lg:w-[172px]"
                   loading="lazy"
                   width={500}
                   height={500}
