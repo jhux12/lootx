@@ -19,8 +19,6 @@ import {
   signInWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   linkWithCredential,
@@ -605,7 +603,6 @@ type PersistUserData = Partial<{
 
 type GoogleAuthResult =
   | { status: 'success' }
-  | { status: 'redirect-started' }
   | { status: 'link-required'; email: string; credential: AuthCredential }
   | { status: 'error'; message: string };
 
