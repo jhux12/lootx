@@ -356,9 +356,8 @@ export const Leaderboard: React.FC = () => {
                           </div>
                           <div className="min-w-0">
                             <div className="truncate text-lg font-extrabold text-white sm:text-2xl">{entry.displayName}</div>
-                            <div className="mt-0.5 flex items-center gap-1.5 text-sm font-bold text-[#a89fff]">
-                              <img src={COIN_ICON} alt="Coins" className="h-3.5 w-3.5 object-contain" />
-                              <span>{rowRewardLabel}</span>
+                            <div className="mt-0.5 text-sm font-bold text-[#8f7dff]">
+                              {entry.points.toLocaleString()} pts
                             </div>
                           </div>
                         </div>
