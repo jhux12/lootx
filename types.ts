@@ -82,6 +82,7 @@ export interface CaseItem {
   tags?: string[];
   sizes?: string[];
   redeemable?: boolean;
+  shippable?: boolean;
   forceFullSellBack?: boolean;
   upgraderEnabled?: boolean;
   upgraderCategory?: '' | 'tech' | 'collectible' | 'apparel';
