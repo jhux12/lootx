@@ -46,6 +46,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const lastTickAtRef = useRef(0);
   const didInitRef = useRef(false);
   const didWarmupRef = useRef(false);
+  const didPrimePoolRef = useRef(false);
 
   const ensureAudioContextReady = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -103,8 +104,47 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, [ensureAudioContextReady]);
 
+  const primeAudioPoolForMobile = useCallback(() => {
+    if (didPrimePoolRef.current || typeof window === 'undefined') return;
+    didPrimePoolRef.current = true;
+    (Object.values(audioRefs.current) as HTMLAudioElement[][]).forEach((pool) => {
+      pool.forEach((audio) => {
+        try {
+          audio.playsInline = true;
+          const previousMuted = audio.muted;
+          const previousVolume = audio.volume;
+          audio.muted = true;
+          audio.volume = 0;
+          const playPromise = audio.play();
+          if (playPromise && typeof playPromise.then === 'function') {
+            void playPromise
+              .then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+              })
+              .catch(() => undefined)
+              .finally(() => {
+                audio.muted = previousMuted;
+                audio.volume = previousVolume;
+              });
+          } else {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.muted = previousMuted;
+            audio.volume = previousVolume;
+          }
+        } catch {
+          // ignore priming failures
+        }
+      });
+    });
+  }, []);
+
   useEffect(() => {
-    const bootstrap = () => initializeAudio();
+    const bootstrap = () => {
+      initializeAudio();
+      primeAudioPoolForMobile();
+    };
     window.addEventListener('pointerdown', bootstrap, { once: true, passive: true });
     window.addEventListener('touchstart', bootstrap, { once: true, passive: true });
     window.addEventListener('keydown', bootstrap, { once: true });
@@ -113,7 +153,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       window.removeEventListener('touchstart', bootstrap);
       window.removeEventListener('keydown', bootstrap);
     };
-  }, [initializeAudio]);
+  }, [initializeAudio, primeAudioPoolForMobile]);
 
   const toggleMute = useCallback(() => setMuted((prev) => !prev), []);
 
@@ -121,6 +161,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (muted) return;
 
     initializeAudio();
+    ensureAudioContextReady();
 
     if (type === 'spin-tick') {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -138,7 +179,18 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     try {
       audio.currentTime = 0;
-      void audio.play().catch(() => undefined);
+      const playPromise = audio.play();
+      if (playPromise && typeof playPromise.then === 'function') {
+        void playPromise.catch(() => {
+          try {
+            audio.load();
+            audio.currentTime = 0;
+            void audio.play().catch(() => undefined);
+          } catch {
+            // ignore playback recovery failures
+          }
+        });
+      }
     } catch {
       // ignore playback errors
     }
