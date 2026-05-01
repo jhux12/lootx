@@ -150,7 +150,8 @@ export const Profile: React.FC = () => {
   const getCoinShippingCostForItem = (item: InventoryItem) => (isFreeShippingItem(item) ? 0 : shippingCoinCostCoins);
   const getCashShippingCostForItemCents = (item: InventoryItem) => (isFreeShippingItem(item) ? 0 : shippingFlatRateCents);
 
-  const canSelectShipment = (item: InventoryItem) => item.status === 'available' && !item.locked && !!user.shippingAddress;
+  const isItemShippable = (item: InventoryItem) => item.status === 'available' && !item.locked && item.shippable !== false;
+  const canSelectShipment = (item: InventoryItem) => isItemShippable(item);
 
   useEffect(() => {
     const selectableIds = new Set(activeInventory.filter((item) => canSelectShipment(item)).map((item) => item.instanceId));
@@ -218,6 +219,7 @@ export const Profile: React.FC = () => {
   const canUseCashShipping = !isFreeOnlySelection && shippingCashEnabled;
   const hasShippingMethodToggle = canUseCoinShipping && canUseCashShipping;
   const activeShippingMethod = hasShippingMethodToggle ? shippingPaymentMethod : canUseCashShipping ? 'cash' : 'coins';
+  const hasMadeDeposit = Number(user.totalSpent ?? 0) > 0;
 
   useEffect(() => {
     if (canUseCoinShipping && canUseCashShipping) return;
@@ -336,6 +338,10 @@ export const Profile: React.FC = () => {
   };
 
   const handleConfirmShipping = async () => {
+    if (!hasMadeDeposit) {
+      toast.info('Make your first deposit to unlock shipping.');
+      return;
+    }
     if (!user.shippingAddress) {
       toast.info('Please add a shipping address before requesting shipment.');
       setActiveTab('account');
@@ -356,6 +362,10 @@ export const Profile: React.FC = () => {
   };
 
   const handleCashShipping = async () => {
+    if (!hasMadeDeposit) {
+      toast.info('Make your first deposit to unlock shipping.');
+      return;
+    }
     if (!auth.currentUser) {
       openAuthModal('login');
       return;
@@ -402,14 +412,13 @@ export const Profile: React.FC = () => {
     { label: 'Referrals', onClick: () => setView({ type: 'REFERRALS' as const }), isNew: true }
   ];
 
-  const hasMadeDeposit = Number(user.totalSpent ?? 0) > 0;
   const inventoryTotalValue = filteredInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   const availableToShip = filteredInventory.filter((item) => canSelectShipment(item)).length;
 
   const getActionForItem = (item: InventoryItem) => {
     const isAvailable = item.status === 'available';
     const isLocked = !!item.locked;
-    const canShip = isAvailable && !isLocked && !!user.shippingAddress;
+    const canShip = isItemShippable(item);
     const canSell = isAvailable && !isLocked && item.redeemable !== false && !isXpPurchasedItem(item);
 
     if (canShip) {
@@ -581,6 +590,16 @@ export const Profile: React.FC = () => {
               <p>Paid shipping items: {paidShippingItemCount}</p>
               {activeShippingMethod === 'coins' && <p>Coins due now: {shippingCoinTotal.toLocaleString()}</p>}
               {activeShippingMethod === 'cash' && <p>Cash due now: ${(shippingCashTotalCents / 100).toFixed(2)}</p>}
+              {!hasMadeDeposit && (
+                <p className="rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                  Make your first deposit to unlock shipping.
+                </p>
+              )}
+              {!user.shippingAddress && (
+                <p className="rounded-xl border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
+                  Add a shipping address in Profile Settings before confirming shipment.
+                </p>
+              )}
             </div>
             {hasShippingMethodToggle && (
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -590,9 +609,9 @@ export const Profile: React.FC = () => {
             )}
             <div className="mt-4 grid grid-cols-1 gap-2">
               {activeShippingMethod === 'cash' && canUseCashShipping ? (
-                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={handleCashShipping} disabled={isSubmittingCashShipping}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
+                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCashShipping} disabled={isSubmittingCashShipping || !hasMadeDeposit}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
               ) : (
-                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={handleConfirmShipping} disabled={isSubmittingShipment}>{isSubmittingShipment ? 'Submitting...' : 'Confirm Shipping'}</button>
+                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment || !hasMadeDeposit}>{isSubmittingShipment ? 'Submitting...' : 'Confirm Shipping'}</button>
               )}
               <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-300" onClick={() => setShowShippingReview(false)}>Cancel</button>
             </div>
