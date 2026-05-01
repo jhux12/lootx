@@ -22,6 +22,7 @@ const angleFromTransform = (node: HTMLElement) => {
 
 interface UpgraderSpinnerProps {
   chance: number;
+  valueMultiplier?: number;
   hasSource: boolean;
   hasTarget: boolean;
   targetImage?: string;
@@ -51,6 +52,7 @@ interface SpinnerConfetti {
 
 export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   chance,
+  valueMultiplier = 0,
   hasSource,
   hasTarget,
   targetImage,
@@ -92,9 +94,9 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   const riskColor = useMemo(() => getRiskColor(chance), [chance]);
   const wheelCenter = useMemo(() => ({ x: size / 2, y: size / 2 }), [size]);
   const multiplier = useMemo(() => {
-    const safeChance = Math.max(0.01, chance);
-    return (100 / safeChance).toFixed(2);
-  }, [chance]);
+    if (!Number.isFinite(valueMultiplier) || valueMultiplier <= 0) return '0.00';
+    return valueMultiplier.toFixed(2);
+  }, [valueMultiplier]);
 
   useEffect(() => {
     if (!hasSource || !hasTarget) return;
