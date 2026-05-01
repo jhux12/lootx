@@ -70,7 +70,9 @@ export const Profile: React.FC = () => {
   const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   const [activeAccountPanel, setActiveAccountPanel] = useState<AccountPanel>('overview');
-  const [isSavingSecurity, setIsSavingSecurity] = useState(false);
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [securityForm, setSecurityForm] = useState({
     username: user.name ?? '',
@@ -150,7 +152,8 @@ export const Profile: React.FC = () => {
   const getCoinShippingCostForItem = (item: InventoryItem) => (isFreeShippingItem(item) ? 0 : shippingCoinCostCoins);
   const getCashShippingCostForItemCents = (item: InventoryItem) => (isFreeShippingItem(item) ? 0 : shippingFlatRateCents);
 
-  const canSelectShipment = (item: InventoryItem) => item.status === 'available' && !item.locked && !!user.shippingAddress;
+  const isItemShippable = (item: InventoryItem) => item.status === 'available' && !item.locked && item.shippable !== false;
+  const canSelectShipment = (item: InventoryItem) => isItemShippable(item);
 
   useEffect(() => {
     const selectableIds = new Set(activeInventory.filter((item) => canSelectShipment(item)).map((item) => item.instanceId));
@@ -218,6 +221,7 @@ export const Profile: React.FC = () => {
   const canUseCashShipping = !isFreeOnlySelection && shippingCashEnabled;
   const hasShippingMethodToggle = canUseCoinShipping && canUseCashShipping;
   const activeShippingMethod = hasShippingMethodToggle ? shippingPaymentMethod : canUseCashShipping ? 'cash' : 'coins';
+  const hasMadeDeposit = Number(user.totalSpent ?? 0) > 0;
 
   useEffect(() => {
     if (canUseCoinShipping && canUseCashShipping) return;
@@ -267,59 +271,63 @@ export const Profile: React.FC = () => {
     }
   };
 
-  const handleSaveSecurity = async () => {
-    if (securityForm.newPassword && securityForm.newPassword !== securityForm.confirmPassword) {
-      toast.error('New passwords do not match.');
+  const handleSaveUsername = async () => {
+    const nextUsername = securityForm.username.trim();
+    if (!nextUsername || nextUsername === user.name) {
+      toast.info('Enter a new username to update.');
       return;
     }
-
-    setIsSavingSecurity(true);
+    setIsSavingUsername(true);
     try {
-      const nextUsername = securityForm.username.trim() || user.name;
-      const nextAvatar = securityForm.avatar || user.avatar;
-      const usernameChanged = nextUsername !== user.name;
-      const avatarChanged = nextAvatar !== user.avatar;
-
-      if (usernameChanged || avatarChanged) {
-        await updateUserInfo(nextUsername, nextAvatar);
-      }
-
-      if (!auth.currentUser) {
-        toast.error('Please sign in again to update security details.');
-        return;
-      }
-
-      const emailChanged = securityForm.email.trim() && securityForm.email.trim() !== (auth.currentUser.email ?? user.email ?? '');
-      const passwordChanged = Boolean(securityForm.newPassword.trim());
-
-      if ((emailChanged || passwordChanged) && !securityForm.currentPassword.trim()) {
-        toast.error('Current password is required to update email or password.');
-        return;
-      }
-
-      if (emailChanged || passwordChanged) {
-        if (!auth.currentUser.email) {
-          toast.error('Email/password updates are unavailable for this account type.');
-          return;
-        }
-        const credential = EmailAuthProvider.credential(auth.currentUser.email, securityForm.currentPassword.trim());
-        await reauthenticateWithCredential(auth.currentUser, credential);
-      }
-
-      if (emailChanged) {
-        await updateFirebaseEmail(auth.currentUser, securityForm.email.trim());
-      }
-      if (passwordChanged) {
-        await updateFirebasePassword(auth.currentUser, securityForm.newPassword.trim());
-      }
-
-      setSecurityForm((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
-      toast.success('Security settings updated.');
+      await updateUserInfo(nextUsername, securityForm.avatar || user.avatar);
+      toast.success('Username updated.');
     } catch (error) {
-      console.error('Failed to update security settings', error);
-      toast.error('Could not update security settings. Please verify your current password.');
+      console.error('Failed to update username', error);
+      toast.error('Could not update username.');
     } finally {
-      setIsSavingSecurity(false);
+      setIsSavingUsername(false);
+    }
+  };
+
+  const handleSaveEmail = async () => {
+    if (!auth.currentUser) return toast.error('Please sign in again to update your email.');
+    const nextEmail = securityForm.email.trim();
+    if (!nextEmail || nextEmail === (auth.currentUser.email ?? user.email ?? '')) return toast.info('Enter a different email to update.');
+    if (!securityForm.currentPassword.trim()) return toast.error('Current password is required to update email.');
+    if (!auth.currentUser.email) return toast.error('Email updates are unavailable for this account type.');
+    setIsSavingEmail(true);
+    try {
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, securityForm.currentPassword.trim());
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updateFirebaseEmail(auth.currentUser, nextEmail);
+      setSecurityForm((prev) => ({ ...prev, currentPassword: '' }));
+      toast.success('Email updated.');
+    } catch (error) {
+      console.error('Failed to update email', error);
+      toast.error('Could not update email. Please verify your current password.');
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
+
+  const handleSavePassword = async () => {
+    if (!auth.currentUser) return toast.error('Please sign in again to update your password.');
+    if (!securityForm.newPassword.trim()) return toast.error('Enter a new password.');
+    if (securityForm.newPassword !== securityForm.confirmPassword) return toast.error('New passwords do not match.');
+    if (!securityForm.currentPassword.trim()) return toast.error('Current password is required to update password.');
+    if (!auth.currentUser.email) return toast.error('Password updates are unavailable for this account type.');
+    setIsSavingPassword(true);
+    try {
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, securityForm.currentPassword.trim());
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updateFirebasePassword(auth.currentUser, securityForm.newPassword.trim());
+      setSecurityForm((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
+      toast.success('Password updated.');
+    } catch (error) {
+      console.error('Failed to update password', error);
+      toast.error('Could not update password. Please verify your current password.');
+    } finally {
+      setIsSavingPassword(false);
     }
   };
 
@@ -336,6 +344,10 @@ export const Profile: React.FC = () => {
   };
 
   const handleConfirmShipping = async () => {
+    if (!hasMadeDeposit) {
+      toast.info('Make your first deposit to unlock shipping.');
+      return;
+    }
     if (!user.shippingAddress) {
       toast.info('Please add a shipping address before requesting shipment.');
       setActiveTab('account');
@@ -356,6 +368,10 @@ export const Profile: React.FC = () => {
   };
 
   const handleCashShipping = async () => {
+    if (!hasMadeDeposit) {
+      toast.info('Make your first deposit to unlock shipping.');
+      return;
+    }
     if (!auth.currentUser) {
       openAuthModal('login');
       return;
@@ -402,14 +418,13 @@ export const Profile: React.FC = () => {
     { label: 'Referrals', onClick: () => setView({ type: 'REFERRALS' as const }), isNew: true }
   ];
 
-  const hasMadeDeposit = Number(user.totalSpent ?? 0) > 0;
   const inventoryTotalValue = filteredInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   const availableToShip = filteredInventory.filter((item) => canSelectShipment(item)).length;
 
   const getActionForItem = (item: InventoryItem) => {
     const isAvailable = item.status === 'available';
     const isLocked = !!item.locked;
-    const canShip = isAvailable && !isLocked && !!user.shippingAddress;
+    const canShip = isItemShippable(item);
     const canSell = isAvailable && !isLocked && item.redeemable !== false && !isXpPurchasedItem(item);
 
     if (canShip) {
@@ -451,8 +466,12 @@ export const Profile: React.FC = () => {
           isSavingAddress={isSavingAddress}
           securityForm={securityForm}
           setSecurityForm={setSecurityForm}
-          onSaveSecurity={handleSaveSecurity}
-          isSavingSecurity={isSavingSecurity}
+          onSaveUsername={handleSaveUsername}
+          onSaveEmail={handleSaveEmail}
+          onSavePassword={handleSavePassword}
+          isSavingUsername={isSavingUsername}
+          isSavingEmail={isSavingEmail}
+          isSavingPassword={isSavingPassword}
           avatarOptions={AVATAR_PRESETS}
           onSaveAvatar={handleSaveAvatar}
           isSavingAvatar={isSavingAvatar}
@@ -515,8 +534,12 @@ export const Profile: React.FC = () => {
                 isSavingAddress={isSavingAddress}
                 securityForm={securityForm}
                 setSecurityForm={setSecurityForm}
-                onSaveSecurity={handleSaveSecurity}
-                isSavingSecurity={isSavingSecurity}
+                onSaveUsername={handleSaveUsername}
+                onSaveEmail={handleSaveEmail}
+                onSavePassword={handleSavePassword}
+                isSavingUsername={isSavingUsername}
+                isSavingEmail={isSavingEmail}
+                isSavingPassword={isSavingPassword}
                 avatarOptions={AVATAR_PRESETS}
                 onSaveAvatar={handleSaveAvatar}
                 isSavingAvatar={isSavingAvatar}
@@ -581,6 +604,16 @@ export const Profile: React.FC = () => {
               <p>Paid shipping items: {paidShippingItemCount}</p>
               {activeShippingMethod === 'coins' && <p>Coins due now: {shippingCoinTotal.toLocaleString()}</p>}
               {activeShippingMethod === 'cash' && <p>Cash due now: ${(shippingCashTotalCents / 100).toFixed(2)}</p>}
+              {!hasMadeDeposit && (
+                <p className="rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                  Make your first deposit to unlock shipping.
+                </p>
+              )}
+              {!user.shippingAddress && (
+                <p className="rounded-xl border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
+                  Add a shipping address in Profile Settings before confirming shipment.
+                </p>
+              )}
             </div>
             {hasShippingMethodToggle && (
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -590,9 +623,9 @@ export const Profile: React.FC = () => {
             )}
             <div className="mt-4 grid grid-cols-1 gap-2">
               {activeShippingMethod === 'cash' && canUseCashShipping ? (
-                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={handleCashShipping} disabled={isSubmittingCashShipping}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
+                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCashShipping} disabled={isSubmittingCashShipping || !hasMadeDeposit}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
               ) : (
-                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white" onClick={handleConfirmShipping} disabled={isSubmittingShipment}>{isSubmittingShipment ? 'Submitting...' : 'Confirm Shipping'}</button>
+                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment || !hasMadeDeposit}>{isSubmittingShipment ? 'Submitting...' : 'Confirm Shipping'}</button>
               )}
               <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-300" onClick={() => setShowShippingReview(false)}>Cancel</button>
             </div>
