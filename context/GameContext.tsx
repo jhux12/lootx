@@ -18,9 +18,7 @@ import {
   setPersistence,
   signInWithCredential,
   signInWithEmailAndPassword,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithCustomToken,
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   linkWithCredential,
@@ -1511,6 +1509,29 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const [bonusSettings, setBonusSettings] = useState<BonusSettings>(() => getStoredBonusSettings());
 
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const customToken = url.searchParams.get('customToken');
+    if (!customToken) return;
+
+    console.log('Custom token detected');
+    void (async () => {
+      try {
+        await signInWithCustomToken(auth, customToken);
+        console.log('Custom token sign-in success');
+        url.searchParams.delete('customToken');
+        window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+        setShowLoginModal(false);
+        const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
+        resolveEmailRedirect(redirectPath);
+      } catch (error) {
+        console.error('Custom token sign-in failed', error);
+      }
+    })();
+  }, []);
+
   useEffect(() => {
     const bonusSettingsPath = `settings/${BONUS_SETTINGS_DOC}`;
     console.log('READING FIRESTORE PATH', bonusSettingsPath);
@@ -1592,10 +1613,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    void getRedirectResult(auth).catch((error) => {
-      console.error('Google popup error:', error);
-    });
-
     const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
       console.log('Auth state fired:', firebaseUser?.uid);
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
@@ -2254,11 +2271,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const googleAuthInProgressRef = useRef(false);
 
   const loginWithGoogle = async (options: GoogleAuthOptions = {}): Promise<GoogleAuthResult> => {
-    const { remember = true, isRetry = false, useRedirect = false } = options;
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-      prompt: 'select_account'
-    });
+    const { remember = true } = options;
     if (googleAuthInProgressRef.current) {
       return { status: 'error', message: 'Google sign-in is already in progress.' };
     }
@@ -2269,29 +2282,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         auth,
         remember ? browserLocalPersistence : browserSessionPersistence
       );
-      if (isRetry) {
-        trackEvent('google_oauth_retry');
-      }
       trackEvent('google_oauth_started');
-      console.info('Firebase authDomain:', auth.app.options.authDomain);
-      console.info('User agent:', navigator.userAgent);
-
-      if (useRedirect) {
-        await signInWithRedirect(auth, provider);
-        return { status: 'redirect-started' };
+      console.log('Google server auth start');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/api/auth/google/start';
       }
-      console.log('Starting Google popup');
-      const result = await signInWithPopup(auth, provider);
-      console.log('Google popup success:', result.user.uid);
-      await result.user.getIdToken(true);
-      await ensureGoogleUserProfile(result.user);
-      await startAuthenticatedSession(result.user);
-      trackEvent('google_oauth_success');
-
-      setShowLoginModal(false);
-      const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
-      resolveEmailRedirect(redirectPath);
-      return { status: 'success' };
+      return { status: 'redirect-started' };
     } catch (error: any) {
       console.error('Google popup error:', error);
       console.error('Firebase Google auth error', { code: error?.code, message: error?.message, error });
