@@ -160,6 +160,32 @@ export const Profile: React.FC = () => {
     setSelectedShipments((prev) => prev.filter((id) => selectableIds.has(id)));
   }, [activeInventory, user.shippingAddress]);
 
+
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    void (async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) return;
+
+        const response = await fetch('/api/cancel-shipping-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({})
+        });
+
+        if (!response.ok) return;
+        const payload = await response.json().catch(() => null) as { released?: boolean; releasedCount?: number } | null;
+        if (payload?.released && Number(payload.releasedCount ?? 0) > 0) {
+          toast.info('We restored shippable items from an incomplete checkout so you can try again.');
+        }
+      } catch {
+        // Silent best-effort recovery.
+      }
+    })();
+  }, [auth.currentUser?.uid]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const shippingStatus = params.get('shipping');
