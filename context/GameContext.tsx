@@ -32,6 +32,7 @@ import {
   collection,
   collectionGroup,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -708,6 +709,7 @@ interface GameContextType {
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
   updateShipmentStatus: (shipmentId: string, userId: string, inventoryId: string | undefined, status: ShipmentStatus, trackingNumber?: string) => Promise<void>;
+  cancelShipmentAsAdmin: (shipmentId: string, userId: string, inventoryId?: string) => Promise<void>;
 }
 
 const getDayStart = (timestamp: number = Date.now()) => {
@@ -3435,6 +3437,57 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
   };
 
+
+  const cancelShipmentAsAdmin = async (shipmentId: string, userId: string, inventoryId?: string) => {
+    if (!shipmentId) {
+      console.warn('Attempted to cancel shipment without a shipment id');
+      return;
+    }
+
+    try {
+      await setDoc(doc(db, 'shipments', shipmentId), {
+        status: 'cancelled',
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (error) {
+      console.error('Failed to cancel shipment in Firebase', error);
+      return;
+    }
+
+    if (userId && inventoryId) {
+      try {
+        await setDoc(doc(db, 'users', userId, 'inventory', inventoryId), {
+          status: 'available',
+          shipmentId: deleteField(),
+          shipmentBatchId: deleteField(),
+          trackingNumber: deleteField(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } catch (error) {
+        console.error('Failed to restore inventory after shipment cancellation', error);
+      }
+    }
+
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id !== userId) return u;
+        if (!Array.isArray(u.inventory)) return u;
+        const updatedInventory = u.inventory.map((item) =>
+          item.instanceId === inventoryId
+            ? {
+                ...item,
+                status: 'available',
+                shipmentId: undefined,
+                shipmentBatchId: undefined,
+                trackingNumber: undefined
+              }
+            : item
+        );
+        return { ...u, inventory: updatedInventory };
+      })
+    );
+  };
+
   const gameContextValue = useMemo(() => ({
       user,
       isAuthenticated,
@@ -3515,6 +3568,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       generateAffiliateCode,
       updateUserProgress,
       updateShipmentStatus,
+      cancelShipmentAsAdmin,
       authInitialized
     }), [
       user, isAuthenticated, users, notifications, showLoginModal, showTopUpModal, topUpModalIntent, authModalMode,
@@ -3528,7 +3582,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updateUserAdminData, updateUserBalance, createBattle, joinBattle, updateBattle, createItem, updateItem,
       deleteItem, createCoinPackage, updateCoinPackage, deleteCoinPackage, createBox, createUserBox, updateBox,
       deleteBox, claimFreeBox, claimRakeback, updateBonusSettings, updateStripeSettings, awardCaseOpenXp,
-      registerSpend, generateAffiliateCode, updateUserProgress, updateShipmentStatus, authInitialized
+      registerSpend, generateAffiliateCode, updateUserProgress, updateShipmentStatus, cancelShipmentAsAdmin, authInitialized
     ]);
 
   const authContextValue = useMemo(() => ({
