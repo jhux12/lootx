@@ -164,7 +164,7 @@ export interface InventoryItem extends CaseItem {
   shippingCostOverrideCents?: number;
 }
 
-export type ShipmentStatus = 'shipping_requested' | 'shipping' | 'shipped';
+export type ShipmentStatus = 'pending_payment' | 'shipping_requested' | 'shipping' | 'shipped' | 'cancelled';
 
 export interface ShipmentItem {
   name: string;

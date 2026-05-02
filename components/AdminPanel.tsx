@@ -277,6 +277,7 @@ export const AdminPanel: React.FC = () => {
     updateUserProgress,
     sendAdminNotification,
     updateShipmentStatus,
+    cancelShipmentAsAdmin,
     updateUserAdminData,
     updateUserBalance,
     bonusSettings,
@@ -4741,21 +4742,36 @@ export const AdminPanel: React.FC = () => {
                                                     placeholder="Enter tracking number"
                                                     className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200"
                                                 />
-                                                <button
-                                                    onClick={() =>
-                                                        updateShipmentStatus(
-                                                            shipment.id,
-                                                            shipment.uid,
-                                                            shipment.inventoryId,
-                                                            'shipped',
-                                                            trackingValue
-                                                        )
-                                                    }
-                                                    disabled={shipment.status === 'shipped' || !canUpdate}
-                                                    className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    Mark as shipped
-                                                </button>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    <button
+                                                        onClick={() =>
+                                                            updateShipmentStatus(
+                                                                shipment.id,
+                                                                shipment.uid,
+                                                                shipment.inventoryId,
+                                                                'shipped',
+                                                                trackingValue
+                                                            )
+                                                        }
+                                                        disabled={shipment.status === 'shipped' || !canUpdate}
+                                                        className="w-full px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        Mark as shipped
+                                                    </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            cancelShipmentAsAdmin(
+                                                                shipment.id,
+                                                                shipment.uid,
+                                                                shipment.inventoryId
+                                                            )
+                                                        }
+                                                        disabled={shipment.status === 'shipped' || shipment.status === 'cancelled' || !canUpdate}
+                                                        className="w-full px-4 py-2 bg-red-600/90 hover:bg-red-500 text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        Cancel & restore
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

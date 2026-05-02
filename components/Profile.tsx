@@ -177,9 +177,6 @@ export const Profile: React.FC = () => {
 
         if (!response.ok) return;
         const payload = await response.json().catch(() => null) as { released?: boolean; releasedCount?: number } | null;
-        if (payload?.released && Number(payload.releasedCount ?? 0) > 0) {
-          toast.info('We restored shippable items from an incomplete checkout so you can try again.');
-        }
       } catch {
         // Silent best-effort recovery.
       }
