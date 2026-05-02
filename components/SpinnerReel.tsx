@@ -42,6 +42,27 @@ const normalizeRarity = (rarity?: string) => {
 
 const itemKey = (item: ReelItem, index: number) => `${item.itemId ?? item.itemName}-${index}`;
 
+
+const rarityWeight: Record<string, number> = {
+  common: 10,
+  uncommon: 7,
+  rare: 4,
+  epic: 2,
+  legendary: 1
+};
+
+const buildWeightedPool = (items: ReelItem[]) => {
+  const weighted: ReelItem[] = [];
+  items.forEach((item) => {
+    const rarity = normalizeRarity(item.rarity);
+    const copies = rarityWeight[rarity] ?? 1;
+    for (let i = 0; i < copies; i += 1) {
+      weighted.push(item);
+    }
+  });
+  return weighted.length ? weighted : [fallbackItem];
+};
+
 const pickDeterministic = (pool: ReelItem[], seed: number, index: number) => {
   if (!pool.length) return fallbackItem;
   const position = Math.abs((seed + index * 13) % pool.length);
@@ -60,7 +81,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
   const [transitionEnabled, setTransitionEnabled] = useState(false);
   const [translateX, setTranslateX] = useState(0);
 
-  const pool = useMemo(() => (items.length ? items : [fallbackItem]), [items]);
+  const pool = useMemo(() => buildWeightedPool(items), [items]);
 
   const reelItems = useMemo(() => {
     const seed = hashSeed(spinKey);
