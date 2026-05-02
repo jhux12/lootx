@@ -111,28 +111,10 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       pool.forEach((audio) => {
         try {
           audio.playsInline = true;
-          const previousMuted = audio.muted;
-          const previousVolume = audio.volume;
-          audio.muted = true;
-          audio.volume = 0;
-          const playPromise = audio.play();
-          if (playPromise && typeof playPromise.then === 'function') {
-            void playPromise
-              .then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-              })
-              .catch(() => undefined)
-              .finally(() => {
-                audio.muted = previousMuted;
-                audio.volume = previousVolume;
-              });
-          } else {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.muted = previousMuted;
-            audio.volume = previousVolume;
-          }
+          audio.setAttribute('playsinline', 'true');
+          audio.setAttribute('webkit-playsinline', 'true');
+          audio.preload = 'auto';
+          audio.load();
         } catch {
           // ignore priming failures
         }
