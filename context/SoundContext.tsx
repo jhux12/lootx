@@ -111,28 +111,9 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       pool.forEach((audio) => {
         try {
           audio.playsInline = true;
-          const previousMuted = audio.muted;
-          const previousVolume = audio.volume;
-          audio.muted = true;
-          audio.volume = 0;
-          const playPromise = audio.play();
-          if (playPromise && typeof playPromise.then === 'function') {
-            void playPromise
-              .then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-              })
-              .catch(() => undefined)
-              .finally(() => {
-                audio.muted = previousMuted;
-                audio.volume = previousVolume;
-              });
-          } else {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.muted = previousMuted;
-            audio.volume = previousVolume;
-          }
+          audio.setAttribute('playsinline', 'true');
+          audio.setAttribute('webkit-playsinline', 'true');
+          audio.load();
         } catch {
           // ignore priming failures
         }
@@ -157,6 +138,19 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toggleMute = useCallback(() => setMuted((prev) => !prev), []);
 
+
+  const stopAllAudio = useCallback((exceptType?: SoundType) => {
+    (Object.entries(audioRefs.current) as [SoundType, HTMLAudioElement[]][]).forEach(([soundType, pool]) => {
+      if (exceptType && soundType === exceptType) return;
+      pool.forEach((audio) => {
+        if (!audio.paused) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      });
+    });
+  }, []);
+
   const playSound = useCallback((type: SoundType) => {
     if (muted) return;
 
@@ -173,6 +167,10 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const audioPool = audioRefs.current[type];
     if (!audioPool || audioPool.length === 0) return;
+
+    if (type !== 'spin-tick') {
+      stopAllAudio(type);
+    }
     const cursor = roundRobinIndexRef.current[type] ?? 0;
     const audio = audioPool[cursor % audioPool.length];
     roundRobinIndexRef.current[type] = (cursor + 1) % audioPool.length;
@@ -181,20 +179,12 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audio.currentTime = 0;
       const playPromise = audio.play();
       if (playPromise && typeof playPromise.then === 'function') {
-        void playPromise.catch(() => {
-          try {
-            audio.load();
-            audio.currentTime = 0;
-            void audio.play().catch(() => undefined);
-          } catch {
-            // ignore playback recovery failures
-          }
-        });
+        void playPromise.catch(() => undefined);
       }
     } catch {
       // ignore playback errors
     }
-  }, [ensureAudioContextReady, initializeAudio, muted]);
+  }, [ensureAudioContextReady, initializeAudio, muted, stopAllAudio]);
 
   return <SoundContext.Provider value={{ muted, toggleMute, playSound }}>{children}</SoundContext.Provider>;
 };
