@@ -16,6 +16,7 @@ import {
   Clock3,
   ShieldCheck,
   Trophy,
+  Tag,
   Twitter,
   User as UserIcon,
   Users,
@@ -240,27 +241,25 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     setIsRewardsMenuOpen(false);
   };
 
-  const authButtons = useMemo(() => (
-    <>
-      <button
-        onClick={() => {
-          playSound('click');
-          openAuthModal('login');
-        }}
-        className="rounded-xl border border-white/10 bg-[#22282c] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#2a3138]"
-      >
-        Sign in
-      </button>
-      <button
-        onClick={() => {
-          playSound('click');
-          openAuthModal('register');
-        }}
-        className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
-      >
-        Sign up
-      </button>
-    </>
+  const startPullingButton = useMemo(() => (
+    <button
+      type="button"
+      onClick={() => {
+        playSound('click');
+        openAuthModal('register');
+      }}
+      className="group relative inline-flex shrink-0 overflow-hidden rounded-full p-[3px] shadow-[0_0_18px_rgba(255,72,128,0.2)] outline-none transition-transform hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99] sm:p-1"
+      aria-label="Start Pulling"
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-[-160%] bg-[conic-gradient(from_0deg,_#ff385c,_#d946ef,_#3b82f6,_#2dd4bf,_#fde047,_#fb923c,_#ff385c)] motion-safe:animate-[spin_2.8s_linear_infinite]"
+      />
+      <span className="relative z-10 inline-flex items-center justify-center gap-2 rounded-full bg-black px-3.5 py-2 text-sm font-extrabold leading-none tracking-tight text-white sm:gap-2.5 sm:px-5 sm:py-2.5 sm:text-base lg:px-6 lg:py-3 xl:text-lg">
+        <Tag className="h-4 w-4 fill-white text-white sm:h-5 sm:w-5" aria-hidden="true" />
+        <span className="whitespace-nowrap">Start Pulling</span>
+      </span>
+    </button>
   ), [openAuthModal, playSound]);
 
   const dailySpinDesktopClass = `group relative flex w-full items-center gap-2 overflow-hidden rounded-lg px-3 py-2 text-left text-sm font-semibold text-white transition-all ${
@@ -467,10 +466,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 </div>
               </>
             ) : (
-              <div className="hidden items-center gap-3 lg:flex">{authButtons}</div>
+              <div className="hidden items-center lg:flex">{startPullingButton}</div>
             )}
 
-            {!isAuthenticated && <div className="flex items-center gap-2 lg:hidden">{authButtons}</div>}
+            {!isAuthenticated && <div className="flex items-center lg:hidden">{startPullingButton}</div>}
 
             {isAuthenticated && (
               <div className="flex items-center gap-2 lg:hidden">
