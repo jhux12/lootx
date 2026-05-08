@@ -384,23 +384,20 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" />
                     <span className="text-xs font-bold text-white"><AnimatedNumber value={targetXp} /></span>
                   </div>
-                  <div className={`relative overflow-hidden rounded-lg p-[1px] ${balanceTone === 'up' ? 'shadow-[0_0_20px_rgba(34,197,94,0.35)]' : balanceTone === 'down' ? 'shadow-[0_0_20px_rgba(239,68,68,0.35)]' : ''}`}>
+                  <div className={`relative shrink-0 overflow-hidden rounded-full p-[3px] shadow-[0_0_18px_rgba(255,72,128,0.2)] sm:p-1 ${balanceTone === 'up' ? 'shadow-[0_0_22px_rgba(34,197,94,0.35)]' : balanceTone === 'down' ? 'shadow-[0_0_22px_rgba(239,68,68,0.35)]' : ''}`}>
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 rounded-lg bg-[conic-gradient(from_0deg,_#3b82f6,_#6366f1,_#8b5cf6,_#6366f1,_#3b82f6)] animate-[spin_10s_linear_infinite]"
+                      className="pointer-events-none absolute inset-[-160%] bg-[conic-gradient(from_0deg,_#ff385c,_#d946ef,_#3b82f6,_#2dd4bf,_#fde047,_#fb923c,_#ff385c)] motion-safe:animate-[spin_2.8s_linear_infinite]"
                     />
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute inset-[1px] rounded-[7px] bg-[#18181b]"
-                    />
-                    <div className="relative z-10 flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-[#18181b] pl-3 pr-1.5 py-1.5">
-                      <CoinAmount amount={balance} className="text-white text-sm font-bold" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                    <div className="relative z-10 flex items-center gap-2 rounded-full bg-black py-1.5 pl-3.5 pr-1.5">
+                      <CoinAmount amount={balance} className="text-sm font-extrabold leading-none tracking-tight text-white" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
                       <button
+                        type="button"
                         onClick={() => {
                           playSound('click');
                           setShowTopUpModal(true);
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-white transition-colors hover:bg-indigo-500"
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-black shadow-sm transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                         aria-label="Top up"
                       >
                         <Plus className="h-4 w-4" />
@@ -475,25 +472,25 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                   <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
                   <span className="text-xs font-bold text-white sm:text-sm"><AnimatedNumber value={targetXp} /></span>
                 </div>
-                <div className="relative overflow-hidden rounded-md p-[1px]">
+                <div className="relative shrink-0 overflow-hidden rounded-full p-[3px] shadow-[0_0_18px_rgba(255,72,128,0.2)] sm:p-1">
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 rounded-md bg-[conic-gradient(from_0deg,_#3b82f6,_#6366f1,_#8b5cf6,_#6366f1,_#3b82f6)] animate-[spin_10s_linear_infinite]"
+                    className="pointer-events-none absolute inset-[-160%] bg-[conic-gradient(from_0deg,_#ff385c,_#d946ef,_#3b82f6,_#2dd4bf,_#fde047,_#fb923c,_#ff385c)] motion-safe:animate-[spin_2.8s_linear_infinite]"
                   />
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-[1px] rounded-[5px] bg-[#18181b]"
-                  />
-                  <button
-                    onClick={() => {
-                      playSound('click');
-                      setShowTopUpModal(true);
-                    }}
-                    className="relative z-10 flex items-center gap-1.5 rounded-md border border-indigo-500/20 bg-[#18181b] pl-2.5 pr-1.5 py-1.5 sm:pl-3"
-                  >
-                    <CoinAmount amount={balance} className="text-xs font-bold text-white sm:text-sm" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
-                    <span className="rounded bg-indigo-600 p-1"><Plus className="h-3.5 w-3.5" /></span>
-                  </button>
+                  <div className="relative z-10 flex items-center gap-1.5 rounded-full bg-black py-1 pl-2.5 pr-1 sm:gap-2 sm:py-1.5 sm:pl-3.5 sm:pr-1.5">
+                    <CoinAmount amount={balance} className="text-xs font-extrabold leading-none tracking-tight text-white sm:text-sm" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setShowTopUpModal(true);
+                      }}
+                      className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-black shadow-sm transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:h-7 sm:w-7"
+                      aria-label="Top up"
+                    >
+                      <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
