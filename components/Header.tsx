@@ -16,7 +16,6 @@ import {
   Clock3,
   ShieldCheck,
   Trophy,
-  Tag,
   Twitter,
   User as UserIcon,
   Users,
@@ -255,8 +254,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
         aria-hidden="true"
         className="pointer-events-none absolute inset-[-160%] bg-[conic-gradient(from_0deg,_#ff385c,_#d946ef,_#3b82f6,_#2dd4bf,_#fde047,_#fb923c,_#ff385c)] motion-safe:animate-[spin_2.8s_linear_infinite]"
       />
-      <span className="relative z-10 inline-flex items-center justify-center gap-2 rounded-full bg-black px-3.5 py-2 text-sm font-extrabold leading-none tracking-tight text-white sm:gap-2.5 sm:px-5 sm:py-2.5 sm:text-base lg:px-6 lg:py-3 xl:text-lg">
-        <Tag className="h-4 w-4 fill-white text-white sm:h-5 sm:w-5" aria-hidden="true" />
+      <span className="relative z-10 inline-flex items-center justify-center rounded-full bg-black px-4 py-2 text-sm font-extrabold leading-none tracking-tight text-white sm:px-5 sm:py-2.5 sm:text-base lg:px-6 lg:py-3 xl:text-lg">
         <span className="whitespace-nowrap">Start Pulling</span>
       </span>
     </button>
