@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   LucideHistory,
   LucideSearch,
@@ -7,11 +7,12 @@ import {
   Info,
   LucideSettings2,
   LucideVolume2,
-  LucideVolumeX
+  LucideVolumeX,
+  RefreshCw
 } from 'lucide-react';
 import { InventoryItem, Item, Rarity } from '../components/upgrader/upgraderTypes';
 import { useGame } from '../../context/GameContext';
-import { attemptUpgrade, getUpgraderSettings, getUpgraderTargets } from '../../services/upgraderService';
+import { attemptUpgrade, getProvablyFairState, getUpgraderSettings, getUpgraderTargets, UpgraderProvablyFairProof } from '../../services/upgraderService';
 import { computeUpgradeChance, UpgraderSettings } from '../../utils/upgrader';
 import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
 import { CoinAmount } from '../../components/CoinAmount';
@@ -230,6 +231,12 @@ export default function UpgraderPage() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
   const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [serverSeedHash, setServerSeedHash] = useState('');
+  const [clientSeed, setClientSeed] = useState('pullz-player');
+  const [fairNonce, setFairNonce] = useState(0);
+  const [isSyncingFair, setIsSyncingFair] = useState(false);
+  const [lastProof, setLastProof] = useState<UpgraderProvablyFairProof | null>(null);
+  const pendingProofRef = useRef<UpgraderProvablyFairProof | null>(null);
   const inventoryPanelRef = useRef<HTMLDivElement | null>(null);
   const targetPanelRef = useRef<HTMLDivElement | null>(null);
   const idleTimeoutRef = useRef<number | null>(null);
@@ -262,6 +269,49 @@ export default function UpgraderPage() {
     }
   };
 
+
+  const loadProvablyFairState = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setIsSyncingFair(true);
+    try {
+      const state = await getProvablyFairState();
+      setServerSeedHash(state.serverSeedHash);
+      setClientSeed(state.clientSeed);
+      setFairNonce(state.nonce);
+    } catch (error) {
+      console.error('Failed to load upgrader provably fair state', error);
+    } finally {
+      setIsSyncingFair(false);
+    }
+  }, [isAuthenticated]);
+
+  const handleCopyProof = async (proof: UpgraderProvablyFairProof | null = lastProof) => {
+    if (!proof) {
+      toast.info('Complete a real upgrade first to generate proof.');
+      return;
+    }
+
+    const proofText = [
+      'Pullz Upgrader Provably Fair Proof',
+      `Server Seed Hash: ${proof.serverSeedHash}`,
+      `Client Seed: ${proof.clientSeed}`,
+      `Nonce: ${proof.nonce}`,
+      `Game: ${proof.game}`,
+      `HMAC Message: ${proof.message}`,
+      `Roll Hash: ${proof.rollHash}`,
+      `Roll Value: ${proof.roll}`,
+      `Target Item ID: ${proof.targetItemId}`,
+      `Source Item Instance ID: ${proof.sourceItemInstanceId}`
+    ].join('\n');
+
+    try {
+      await navigator.clipboard.writeText(proofText);
+      toast.success('Provably fair proof copied.');
+    } catch {
+      toast.info(proofText);
+    }
+  };
+
   const [inventoryMin, setInventoryMin] = useState('');
   const [inventoryMax, setInventoryMax] = useState('');
   const [inventorySearch, setInventorySearch] = useState('');
@@ -277,7 +327,7 @@ export default function UpgraderPage() {
   const [targetVisibleCount, setTargetVisibleCount] = useState(PANEL_INITIAL_LIMIT);
 
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [resultSheet, setResultSheet] = useState<{ item: EliteItem; success: boolean } | null>(null);
+  const [resultSheet, setResultSheet] = useState<{ item: EliteItem; success: boolean; proof: UpgraderProvablyFairProof | null } | null>(null);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
 
   useEffect(() => {
@@ -362,6 +412,7 @@ export default function UpgraderPage() {
   }, [isMuted]);
 
   useEffect(() => {
+    void loadProvablyFairState();
     void (async () => {
       setLoading(true);
       try {
@@ -397,7 +448,7 @@ export default function UpgraderPage() {
       if (idleTimeoutRef.current) window.clearTimeout(idleTimeoutRef.current);
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [loadProvablyFairState]);
 
   const realInventoryItems = useMemo<InventoryItem[]>(() => {
     const allowedIds = settings?.sourceItemIdsEnabled ?? [];
@@ -573,8 +624,31 @@ export default function UpgraderPage() {
     playUpgraderSound('woosh');
 
     try {
-      const response = await attemptUpgrade({ sourceItemInstanceId: source.id, targetItemId: target.id, clientSeed: `${Date.now()}` });
+      const response = await attemptUpgrade({ sourceItemInstanceId: source.id, targetItemId: target.id });
       const success = Boolean(response.win);
+      const proof = (response.provablyFair ?? null) as UpgraderProvablyFairProof | null;
+      setLastProof(proof);
+      pendingProofRef.current = proof;
+      if (proof) {
+        setServerSeedHash(proof.serverSeedHash);
+        setClientSeed(proof.clientSeed);
+        setFairNonce(proof.nonce + 1);
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem('pullz:last-provably-fair-roll', JSON.stringify({
+            nonce: proof.nonce,
+            rollHash: proof.rollHash,
+            rollValue: proof.roll,
+            message: proof.message,
+            boxId: 'upgrader',
+            game: 'upgrader',
+            serverSeedHash: proof.serverSeedHash,
+            clientSeed: proof.clientSeed,
+            outcome: success ? target.name : 'Upgrade failed',
+            targetItemId: proof.targetItemId,
+            sourceItemInstanceId: proof.sourceItemInstanceId
+          }));
+        }
+      }
       setSpinResult(success);
       setSpinRotation((previous) => previous + computeSpinDelta(chance, success, previous, winZoneRotation));
       setSpinNonce((previous) => previous + 1);
@@ -602,7 +676,8 @@ export default function UpgraderPage() {
     if (success) playUpgraderSound('win');
 
     if (isDemoSpin) {
-      setSpinResult(null);
+      pendingProofRef.current = null;
+    setSpinResult(null);
       setIsDemoSpin(false);
       if (idleTimeoutRef.current) window.clearTimeout(idleTimeoutRef.current);
       idleTimeoutRef.current = window.setTimeout(() => setStatus('idle'), 900);
@@ -612,10 +687,11 @@ export default function UpgraderPage() {
     const historyItem = success ? targetPreview : sourcePreview;
     if (historyItem) {
       setHistory((previous) => [{ item: historyItem, success, date: Date.now() }, ...previous].slice(0, 20));
-      setResultSheet({ item: historyItem, success });
+      setResultSheet({ item: historyItem, success, proof: pendingProofRef.current });
     }
     setSource(null);
     setTarget(null);
+    pendingProofRef.current = null;
     setSpinResult(null);
     if (idleTimeoutRef.current) window.clearTimeout(idleTimeoutRef.current);
     idleTimeoutRef.current = window.setTimeout(() => setStatus('idle'), 1200);
@@ -696,6 +772,27 @@ export default function UpgraderPage() {
                   {status === 'spinning' ? 'Upgrading...' : 'Upgrade'}
                 </button>
                 <button type="button" disabled={!source || !target || status === 'spinning'} onClick={handleDemoSpin} className={`h-11 w-[42%] min-w-[124px] rounded-lg border px-3 text-sm font-bold transition ${source && target && status !== 'spinning' ? 'border-white/10 bg-[#343c46] text-white hover:bg-[#3b4551]' : 'cursor-not-allowed border-white/10 bg-[#24313b] text-slate-500'}`}>Demo Spin</button>
+              </div>
+              <div className="mt-3 w-full max-w-[460px] rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-200">
+                      <ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Provably Fair
+                    </div>
+                    <p className="mt-1 truncate font-mono text-[10px] text-slate-400" title={serverSeedHash || undefined}>
+                      Hash: {serverSeedHash || 'Syncing commit...'}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-slate-500">Client seed: <span className="font-mono text-slate-300">{clientSeed}</span> · Next nonce {fairNonce}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button type="button" onClick={() => { void loadProvablyFairState(); }} disabled={isSyncingFair} className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
+                      <RefreshCw className={`h-3 w-3 ${isSyncingFair ? 'animate-spin' : ''}`} /> Sync
+                    </button>
+                    <button type="button" onClick={() => { window.location.href = '/provably-fair'; }} className="h-8 rounded-lg border border-emerald-300/30 bg-emerald-400/10 px-2 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-100 transition hover:bg-emerald-400/20">
+                      Verify
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -825,7 +922,7 @@ export default function UpgraderPage() {
       <div className={`fixed inset-0 z-[72] bg-black/65 backdrop-blur-sm transition-opacity duration-300 ${resultSheet ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={() => setResultSheet(null)} />
       <div className={`fixed inset-x-0 bottom-0 z-[73] transform px-3 pb-[max(env(safe-area-inset-bottom),12px)] transition-transform duration-300 sm:px-4 sm:pb-4 ${resultSheet ? 'translate-y-0' : 'translate-y-full'}`}>
         {resultSheet && (
-          <div className="mx-auto w-full max-w-md rounded-2xl border border-white/15 bg-[#0f1524] p-4 shadow-[0_-12px_40px_rgba(0,0,0,0.65)] sm:p-5">
+          <div className="mx-auto max-h-[calc(100vh-96px)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/15 bg-[#0f1524] p-4 shadow-[0_-12px_40px_rgba(0,0,0,0.65)] sm:p-5">
             <div className="mb-3 flex items-center justify-between">
               <h2 className={`text-sm font-bold uppercase tracking-widest ${resultSheet.success ? 'text-emerald-300' : 'text-rose-300'}`}>{resultSheet.success ? 'Upgrade Success' : 'Upgrade Failed'}</h2>
               <button type="button" onClick={() => setResultSheet(null)} className="rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-slate-200 hover:bg-white/10">Close</button>
@@ -835,6 +932,21 @@ export default function UpgraderPage() {
               <p className="mt-3 text-base font-semibold text-white">{resultSheet.item.name}</p>
               <div className="mt-2 flex justify-center"><CoinAmount amount={Math.round(resultSheet.item.price)} className="text-sm font-bold text-amber-300" iconClassName="h-4 w-4" /></div>
             </div>
+            {resultSheet.proof && (
+              <div className="mt-3 rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3 text-left">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-emerald-200">
+                    <ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Fair Proof
+                  </div>
+                  <button type="button" onClick={() => { void handleCopyProof(resultSheet.proof); }} className="shrink-0 rounded-lg border border-emerald-300/30 bg-emerald-400/10 px-2 py-1 text-[10px] font-bold text-emerald-100 hover:bg-emerald-400/20">Copy</button>
+                </div>
+                <div className="mt-2 grid gap-1 text-[10px] text-slate-400 sm:grid-cols-2">
+                  <div className="min-w-0">Roll <span className="font-mono text-slate-200">{resultSheet.proof.roll.toFixed(6)}</span></div>
+                  <div className="min-w-0">Nonce <span className="font-mono text-slate-200">{resultSheet.proof.nonce}</span></div>
+                  <div className="min-w-0 sm:col-span-2">Hash <span className="font-mono text-slate-200 break-all">{resultSheet.proof.rollHash}</span></div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

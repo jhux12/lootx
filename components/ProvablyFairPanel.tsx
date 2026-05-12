@@ -8,6 +8,9 @@ export interface ProvablyFairRollData {
   rollValue: number;
   message: string;
   boxId: string;
+  game?: string;
+  targetItemId?: string;
+  sourceItemInstanceId?: string;
   serverSeedHash: string;
   clientSeed: string;
   outcome?: string;
@@ -195,6 +198,8 @@ export const ProvablyFairPanel: React.FC<ProvablyFairPanelProps> = ({
                 {lastRoll ? (
                   <div className="space-y-2 font-mono text-xs text-gray-300">
                     <div className="flex items-center justify-between"><span className="text-gray-500">Outcome</span><span className="text-white">{lastRoll.outcome}</span></div>
+                    <div className="flex items-center justify-between"><span className="text-gray-500">Game</span><span>{lastRoll.game ?? 'case'}</span></div>
+                    <div className="flex items-center justify-between"><span className="text-gray-500">Box / Round ID</span><span>{lastRoll.boxId}</span></div>
                     <div className="flex items-center justify-between"><span className="text-gray-500">Nonce</span><span>{lastRoll.nonce}</span></div>
                     <div className="flex items-center justify-between"><span className="text-gray-500">Roll Value</span><span>{lastRoll.rollValue.toFixed(6)}</span></div>
                     <div>
@@ -202,12 +207,12 @@ export const ProvablyFairPanel: React.FC<ProvablyFairPanelProps> = ({
                       <div className="break-all text-gray-200">{lastRoll.rollHash}</div>
                     </div>
                     <div>
-                      <div className="text-gray-500">HMAC Message (client:nonce:box)</div>
+                      <div className="text-gray-500">HMAC Message</div>
                       <div className="break-all text-gray-400">{lastRoll.message}</div>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">Spin a box first to generate verifiable proof data for your result.</p>
+                  <p className="text-sm text-gray-500">Spin a box or use the upgrader first to generate verifiable proof data for your result.</p>
                 )}
               </div>
             </div>
