@@ -69,6 +69,40 @@ export interface ChatMessage {
 export type BoxTag = 'tech' | 'pokemon' | 'hot' | 'digital' | 'holiday';
 export const BOX_TAG_OPTIONS: BoxTag[] = ['tech', 'pokemon', 'hot', 'digital', 'holiday'];
 
+
+export type MarketPricingSource = 'pricecharting' | 'tcgplayer' | 'manual';
+export type MarketPricingCondition = 'raw' | 'near_mint' | 'lightly_played' | 'psa_9' | 'psa_10' | 'sealed';
+export type MarketPricingStatus = 'idle' | 'pending_review' | 'approved' | 'failed';
+
+export interface ItemMarketPricing {
+  enabled: boolean;
+  source: MarketPricingSource;
+  sourceId?: string;
+  query?: string;
+  condition?: MarketPricingCondition;
+  lastCheckedAt?: any;
+  lastMarketValueUsd?: number;
+  suggestedValueUsd?: number;
+  suggestedValueCoins?: number;
+  suggestedSellBackCoins?: number;
+  approvedValueUsd?: number;
+  approvedValueCoins?: number;
+  approvedSellBackCoins?: number;
+  updateStatus?: MarketPricingStatus;
+  lastError?: string | null;
+  valueLocked?: boolean;
+}
+
+export interface BoxMarketValueAudit {
+  lastCheckedAt?: any;
+  expectedValueCoins: number;
+  boxPriceCoins: number;
+  marginCoins: number;
+  marginPercent: number;
+  status: 'healthy' | 'warning' | 'danger';
+  needsReview: boolean;
+}
+
 export interface CaseItem {
   id: string;
   name: string;
@@ -88,6 +122,10 @@ export interface CaseItem {
   upgraderCategory?: '' | 'tech' | 'collectible' | 'apparel';
   upgraderSort?: number;
   upgraderFeatured?: boolean;
+  valueUsd?: number;
+  valueCoins?: number;
+  sellBackCoins?: number;
+  marketPricing?: ItemMarketPricing;
 }
 
 export interface MysteryBox {
@@ -108,6 +146,7 @@ export interface MysteryBox {
   isDaily?: boolean;
   sellBackRate?: number;
   createdAt?: number;
+  marketValueAudit?: BoxMarketValueAudit;
 }
 
 export interface CoinPackage {

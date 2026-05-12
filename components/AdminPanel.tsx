@@ -15,6 +15,7 @@ import { LegalEditor } from './admin/LegalEditor';
 import { UpgraderAdminSection } from './admin/UpgraderAdminSection';
 import { PollsAdminSection } from './admin/PollsAdminSection';
 import { ReferralAdminSection } from './admin/ReferralAdminSection';
+import { MarketPricingAdminSection } from './admin/MarketPricingAdminSection';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -285,7 +286,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -2629,7 +2630,7 @@ export const AdminPanel: React.FC = () => {
           alert(isXpBox ? 'XP boxes require a positive XP price unless marked as a free daily box.' : 'Boxes require a positive coin price unless marked as a free daily box.');
           return;
       }
-      
+
       if(selectedItems.length === 0) {
           alert("Select at least one item for the box");
           return;
@@ -2645,7 +2646,7 @@ export const AdminPanel: React.FC = () => {
 
       // Clone items to decouple from global pool (ensuring box-specific chances)
       const boxItems = selectedItems.map(i => ({...i}));
-      
+
       // If setting as daily, unset others first (best effort approach)
       if (newBox.isDaily) {
           boxes.forEach(b => {
@@ -3082,105 +3083,111 @@ export const AdminPanel: React.FC = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto p-6 animate-in fade-in duration-300">
-      
+
       <div className="flex flex-col md:flex-row gap-8">
-        
+
         {/* Sidebar */}
         <div className="w-full md:w-64 flex-shrink-0">
            <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sticky top-24">
                <h2 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4 px-2">Admin Control</h2>
                <nav className="flex flex-col gap-1">
-                   <button 
+                   <button
                      onClick={() => setActiveTab('dashboard')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'dashboard' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <LayoutDashboard className="w-4 h-4" /> Dashboard
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('items')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'items' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Package className="w-4 h-4" /> Manage Items
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('boxes')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'boxes' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <BoxIcon className="w-4 h-4" /> Manage Boxes
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('packages')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'packages' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <PackageCheck className="w-4 h-4" /> Coin Packages
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('users')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'users' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Users className="w-4 h-4" /> User Management
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('shipments')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipments' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Truck className="w-4 h-4" /> Shipment Manager
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('support')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'support' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <MessageCircle className="w-4 h-4" /> Support Inbox
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('bonuses')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'bonuses' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Sparkles className="w-4 h-4" /> Bonuses
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('referrals')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'referrals' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Users className="w-4 h-4" /> Referrals
                    </button>
-                   <button 
+                   <button
+                     onClick={() => setActiveTab('market-pricing')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'market-pricing' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <Calculator className="w-4 h-4" /> Market Pricing
+                   </button>
+                   <button
                      onClick={() => setActiveTab('fees')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'fees' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <BadgeDollarSign className="w-4 h-4" /> Fees &amp; Shipping
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('homepage')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'homepage' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <HomeIcon className="w-4 h-4" /> Homepage
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('boxes-page')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'boxes-page' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <PackageOpen className="w-4 h-4" /> Boxes Page
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('case-lab')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'case-lab' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Beaker className="w-4 h-4" /> Box Lab
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('polls')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'polls' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <BarChart3 className="w-4 h-4" /> Polls
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('legal')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'legal' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <ScrollText className="w-4 h-4" /> Legal
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('settings')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'settings' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -3192,7 +3199,7 @@ export const AdminPanel: React.FC = () => {
 
         {/* Content Area */}
         <div className="flex-1 min-w-0">
-            
+
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-white mb-2">
@@ -3212,6 +3219,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'case-lab' && 'Box Lab'}
                     {activeTab === 'polls' && 'Poll Management'}
                     {activeTab === 'legal' && 'Legal Content'}
+                    {activeTab === 'market-pricing' && 'Market Pricing'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
             </div>
@@ -3915,10 +3923,10 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                 )}
                                 <div className="flex items-center gap-2">
-                                    <Checkbox 
+                                    <Checkbox
                                         id="daily-case"
-                                        checked={newBox.isDaily || false} 
-                                        onChange={e => setNewBox({...newBox, isDaily: e.target.checked})} 
+                                        checked={newBox.isDaily || false}
+                                        onChange={e => setNewBox({...newBox, isDaily: e.target.checked})}
                                         className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
                                     />
                                     <label htmlFor="daily-case" className="text-sm text-gray-400 flex items-center gap-1">
@@ -3935,7 +3943,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="mb-6 p-4 bg-[#0b0e14] rounded-lg border border-gray-800">
                              <div className="flex justify-between items-center mb-4">
                                  <h4 className="text-sm font-bold text-gray-400 uppercase">Available Items</h4>
-                                 <button 
+                                 <button
                                     onClick={calculateBoxConfig}
                                     disabled={selectedItems.length === 0}
                                     className="flex items-center gap-2 px-3 py-1.5 bg-brand-purple hover:bg-purple-600 disabled:opacity-50 text-white text-xs font-bold rounded shadow-lg shadow-purple-900/20"
@@ -4012,14 +4020,14 @@ export const AdminPanel: React.FC = () => {
                                      </div>
                                  </div>
                              </div>
-                             
+
                              {/* Item Pool */}
                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-48 overflow-y-auto mb-4 pr-1">
                                 {filteredItemsForBox.map(item => {
                                     const isSelected = selectedItems.some(i => i.id === item.id);
                                     return (
-                                        <div 
-                                            key={item.id} 
+                                        <div
+                                            key={item.id}
                                             onClick={() => toggleItemSelection(item)}
                                             className={`p-2 rounded border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isSelected ? 'bg-blue-600/10 border-blue-500' : 'bg-[#131720] border-gray-800 hover:border-gray-600'}`}
                                         >
@@ -4132,8 +4140,8 @@ export const AdminPanel: React.FC = () => {
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end gap-2">
                                                 <button onClick={() => handleEditBox(box)} className="p-1.5 hover:bg-blue-500/10 text-blue-400 rounded transition-colors"><Edit2 className="w-4 h-4" /></button>
-                                                <button 
-                                                    onClick={() => initiateDeleteBox(box.id)} 
+                                                <button
+                                                    onClick={() => initiateDeleteBox(box.id)}
                                                     className={`p-1.5 rounded transition-colors ${deletingBoxId === box.id ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-red-500/10 text-red-400'}`}
                                                     disabled={deletingBoxId === box.id}
                                                 >
@@ -5627,6 +5635,10 @@ export const AdminPanel: React.FC = () => {
             )}
 
             {/* TAB: FEES & SHIPPING */}
+            {activeTab === 'market-pricing' && (
+                <MarketPricingAdminSection items={items} boxes={boxes} />
+            )}
+
             {activeTab === 'referrals' && (
                 <ReferralAdminSection />
             )}
@@ -6349,13 +6361,13 @@ export const AdminPanel: React.FC = () => {
                       Are you sure you want to delete this box permanently? This action cannot be undone.
                   </p>
                   <div className="flex gap-3">
-                      <button 
+                      <button
                           onClick={() => setBoxToDelete(null)}
                           className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-700 text-white text-sm font-bold rounded-lg transition-colors"
                       >
                           Cancel
                       </button>
-                      <button 
+                      <button
                           onClick={confirmDeleteBox}
                           className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-red-900/20 transition-colors"
                       >
