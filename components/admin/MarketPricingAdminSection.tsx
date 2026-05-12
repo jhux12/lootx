@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { RefreshCw, CheckCircle2, XCircle, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { CaseItem, MarketPricingCondition, MarketPricingSource, MysteryBox } from '../../types';
 import { db } from '../../firebase';
@@ -79,38 +79,63 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
   };
 
 
-  const toggleLock = async (item: CaseItem, locked: boolean) => {
-    const existing = item.marketPricing || { enabled: false, source: 'manual' as MarketPricingSource };
-    await updateDoc(doc(db, 'items', item.id), {
-      marketPricing: {
-        ...existing,
-        ...(drafts[item.id] || {}),
-        valueLocked: locked,
-        source: (drafts[item.id]?.source || existing.source || 'manual') as MarketPricingSource
-      }
-    });
-  };
+  const removeUndefined = <T extends Record<string, unknown>>(value: T): T =>
+    Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as T;
 
-  const saveConfig = async (item: CaseItem) => {
-    const draft = drafts[item.id] || {};
+  const saveMarketPricingConfig = async (item: CaseItem, overrides: Partial<NonNullable<CaseItem['marketPricing']>> = {}) => {
+    const draft = { ...(drafts[item.id] || {}), ...overrides };
     const existing = item.marketPricing || { enabled: false, source: 'manual' as MarketPricingSource };
     const approvedValueUsd = draft.approvedValueUsd != null ? Math.max(0, Number(draft.approvedValueUsd)) : existing.approvedValueUsd;
     const approvedValueCoins = draft.approvedValueCoins != null ? Math.max(0, Math.round(Number(draft.approvedValueCoins))) : (approvedValueUsd != null ? usdToCoins(approvedValueUsd) : existing.approvedValueCoins);
     const approvedSellBackCoins = draft.approvedSellBackCoins != null ? Math.max(0, Math.floor(Number(draft.approvedSellBackCoins))) : (approvedValueCoins != null ? sellBack(approvedValueCoins) : existing.approvedSellBackCoins);
-
-    await updateDoc(doc(db, 'items', item.id), {
-      marketPricing: {
-        ...existing,
-        ...draft,
-        source: draft.source || existing.source || 'manual',
-        enabled: draft.enabled ?? existing.enabled ?? false,
-        valueLocked: draft.valueLocked ?? existing.valueLocked ?? false,
-        approvedValueUsd,
-        approvedValueCoins,
-        approvedSellBackCoins
-      },
-      ...(approvedValueCoins != null ? { valueUsd: approvedValueUsd, valueCoins: approvedValueCoins, sellBackCoins: approvedSellBackCoins, price: approvedValueCoins } : {})
+    const marketPricing = removeUndefined({
+      ...existing,
+      enabled: draft.enabled ?? existing.enabled ?? false,
+      source: (draft.source || existing.source || 'manual') as MarketPricingSource,
+      sourceId: draft.sourceId ?? existing.sourceId,
+      query: draft.query ?? existing.query,
+      condition: draft.condition ?? existing.condition,
+      valueLocked: draft.valueLocked ?? existing.valueLocked ?? false,
+      approvedValueUsd,
+      approvedValueCoins,
+      approvedSellBackCoins
     });
+
+    await updateDoc(doc(db, 'items', item.id), { marketPricing });
+    setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], ...marketPricing } }));
+    return marketPricing;
+  };
+
+  const refreshMarketPricingDraft = async (itemId: string) => {
+    const snapshot = await getDoc(doc(db, 'items', itemId));
+    const marketPricing = snapshot.exists() ? snapshot.data().marketPricing : null;
+    if (marketPricing) {
+      setDrafts((prev) => ({ ...prev, [itemId]: { ...prev[itemId], ...marketPricing } }));
+    }
+  };
+
+  const checkPrice = async (item: CaseItem) => {
+    // Save current dropdown/input drafts first so the server route reads fresh Firestore config.
+    await saveMarketPricingConfig(item);
+    const result = await authedFetch('/api/admin/market-prices/update', { method: 'POST', body: JSON.stringify({ itemId: item.id }) });
+    await refreshMarketPricingDraft(item.id);
+    return result;
+  };
+
+  const toggleLock = async (item: CaseItem, locked: boolean) => {
+    await saveMarketPricingConfig(item, { valueLocked: locked });
+  };
+
+  const saveConfig = async (item: CaseItem) => {
+    const marketPricing = await saveMarketPricingConfig(item);
+    if (marketPricing.approvedValueCoins != null) {
+      await updateDoc(doc(db, 'items', item.id), removeUndefined({
+        valueUsd: marketPricing.approvedValueUsd ?? coinsToUsd(marketPricing.approvedValueCoins),
+        valueCoins: marketPricing.approvedValueCoins,
+        sellBackCoins: marketPricing.approvedSellBackCoins ?? sellBack(marketPricing.approvedValueCoins),
+        price: marketPricing.approvedValueCoins
+      }));
+    }
   };
 
   return (
@@ -172,7 +197,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
                   </div>
 
                   <div className="flex flex-wrap gap-2 xl:justify-end">
-                    <button disabled={rowBusy} onClick={() => runAction(`check-${item.id}`, () => authedFetch('/api/admin/market-prices/update', { method: 'POST', body: JSON.stringify({ itemId: item.id }) }))} className="rounded-lg border border-cyan-400/30 px-3 py-2 text-xs font-bold text-cyan-100">Check Price</button>
+                    <button disabled={rowBusy} onClick={() => runAction(`check-${item.id}`, () => checkPrice(item))} className="rounded-lg border border-cyan-400/30 px-3 py-2 text-xs font-bold text-cyan-100">Check Price</button>
                     <button disabled={rowBusy} onClick={() => runAction(`approve-${item.id}`, () => authedFetch('/api/admin/market-prices/approve', { method: 'POST', body: JSON.stringify({ itemId: item.id }) }))} className="rounded-lg border border-emerald-400/30 px-3 py-2 text-xs font-bold text-emerald-100"><CheckCircle2 className="mr-1 inline h-3 w-3" />Approve</button>
                     <button disabled={rowBusy} onClick={() => runAction(`reject-${item.id}`, () => authedFetch('/api/admin/market-prices/reject', { method: 'POST', body: JSON.stringify({ itemId: item.id }) }))} className="rounded-lg border border-red-400/30 px-3 py-2 text-xs font-bold text-red-100"><XCircle className="mr-1 inline h-3 w-3" />Reject</button>
                     <button onClick={() => runAction(`lock-${item.id}`, () => toggleLock(item, !pricing.valueLocked))} className="rounded-lg border border-gray-700 px-3 py-2 text-xs font-bold text-gray-200">{pricing.valueLocked ? <Unlock className="mr-1 inline h-3 w-3" /> : <Lock className="mr-1 inline h-3 w-3" />}{pricing.valueLocked ? 'Unlock' : 'Lock'} Value</button>
