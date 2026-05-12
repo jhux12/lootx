@@ -7,7 +7,7 @@ import { authedFetch } from '../../utils/authedFetch';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 
-const sources: MarketPricingSource[] = ['manual', 'pricecharting', 'tcgplayer'];
+const sources: MarketPricingSource[] = ['manual', 'pricecharting', 'tcgplayer', 'justtcg'];
 const conditions: MarketPricingCondition[] = ['raw', 'near_mint', 'lightly_played', 'psa_9', 'psa_10', 'sealed'];
 
 type FilterKey = 'pending' | 'failed' | 'locked' | 'enabled' | 'danger';
@@ -188,6 +188,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
                   <label className="text-[11px] font-bold uppercase text-gray-500">Approved USD<Input type="number" min="0" value={pricing.approvedValueUsd ?? ''} onChange={(e) => { const usd = Math.max(0, Number(e.target.value)); const coins = usdToCoins(usd); setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], approvedValueUsd: usd, approvedValueCoins: coins, approvedSellBackCoins: sellBack(coins) } })); }} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white" /></label>
                   <label className="text-[11px] font-bold uppercase text-gray-500">Approved Coins<Input type="number" min="0" value={pricing.approvedValueCoins ?? ''} onChange={(e) => { const coins = Math.max(0, Math.round(Number(e.target.value))); setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], approvedValueCoins: coins, approvedValueUsd: coinsToUsd(coins), approvedSellBackCoins: sellBack(coins) } })); }} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white" /></label>
                 </div>
+                <p className="mt-2 text-xs text-gray-500">Source ID can be a JustTCG card id or TCGplayer id. Use a specific query like “Pokemon Obsidian Flames Charizard ex 223/197”.</p>
                 <div className="mt-3 flex justify-end"><button onClick={() => runAction(`save-${item.id}`, () => saveConfig(item))} className="rounded-lg bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/15">Save Manual Override</button></div>
               </article>
             );
