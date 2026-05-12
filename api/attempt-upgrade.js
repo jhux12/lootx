@@ -1,6 +1,6 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
-import { randomSeed, sha256 } from './_lib/provablyFair.js';
+import { computeUpgradeRoll, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 
 const DEFAULT_CLIENT_SEED = 'pullz-player';
@@ -130,13 +130,11 @@ export default async function handler(req, res) {
       const serverSeed = typeof provablyData.serverSeed === 'string' && provablyData.serverSeed ? provablyData.serverSeed : randomSeed();
       const serverSeedHash = typeof provablyData.serverSeedHash === 'string' && provablyData.serverSeedHash ? provablyData.serverSeedHash : sha256(serverSeed);
       const clientSeed = inputClientSeed || (typeof provablyData.clientSeed === 'string' && provablyData.clientSeed.trim() ? provablyData.clientSeed.trim() : DEFAULT_CLIENT_SEED);
-      const nonce = Math.max(0, Math.floor(toNumber(provablyData.upgradeNonce, 0))) + 1;
+      const nonce = Math.max(0, Math.floor(toNumber(provablyData.nonce, provablyData.upgradeNonce ?? 0)));
 
       const chance = computeChance({ sourceValue, targetValue, settings, sourceItem, targetItem, user: userData });
       const expectedPayout = computeExpectedPayout({ chance, targetValue });
-      const hashInput = `${serverSeed}:${decoded.uid}:${clientSeed}:${nonce}:${targetItemId}:${sourceItemInstanceId}`;
-      const hash = sha256(hashInput);
-      const roll = parseInt(hash.slice(0, 8), 16) / 0xffffffff;
+      const { roll, rollHash, message } = computeUpgradeRoll(serverSeed, clientSeed, nonce, targetItemId, sourceItemInstanceId);
       const win = roll < chance;
 
       const attemptRef = firestore.collection('upgradeAttempts').doc();
@@ -189,7 +187,8 @@ export default async function handler(req, res) {
         serverSeed,
         serverSeedHash,
         clientSeed,
-        upgradeNonce: nonce
+        nonce: nonce + 1,
+        upgradeNonce: nonce + 1
       }, { merge: true });
 
       transaction.set(attemptRef, {
@@ -212,10 +211,13 @@ export default async function handler(req, res) {
         chance,
         expectedPayout,
         roll,
+        rollHash,
+        message,
         win,
         nonce,
         clientSeed,
         serverSeedHash,
+        proofVersion: 'hmac-sha256-v1',
         hashInputSummary: {
           uid: decoded.uid,
           nonce,
@@ -232,6 +234,17 @@ export default async function handler(req, res) {
         chance,
         expectedPayout,
         attemptId: attemptRef.id,
+        provablyFair: {
+          serverSeedHash,
+          clientSeed,
+          nonce,
+          roll,
+          rollHash,
+          message,
+          targetItemId,
+          sourceItemInstanceId,
+          game: 'upgrader'
+        },
         awardedItem: awardedRef ? { id: awardedRef.id, name: targetName, imageUrl: targetImage } : undefined
       };
     });

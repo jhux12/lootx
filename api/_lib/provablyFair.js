@@ -17,6 +17,15 @@ export const computeRoll = (serverSeed, clientSeed, nonce, boxId) => {
   return { roll, rollHash, message };
 };
 
+export const computeUpgradeRoll = (serverSeed, clientSeed, nonce, targetItemId, sourceItemInstanceId) => {
+  const message = `${clientSeed}:${nonce}:upgrader:${targetItemId}:${sourceItemInstanceId}`;
+  const rollHash = hmacSha256Hex(serverSeed, message);
+  const intValue = parseInt(rollHash.slice(0, 13), 16);
+  const roll = intValue / 0x10000000000000;
+
+  return { roll, rollHash, message };
+};
+
 export const pickPrizeByWeight = (prizes, roll) => {
   const normalized = prizes.map((prize) => ({
     ...prize,

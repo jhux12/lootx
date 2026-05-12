@@ -118,6 +118,23 @@ export const getUpgraderTargets = async () => {
   }
 };
 
+export type UpgraderProvablyFairProof = {
+  serverSeedHash: string;
+  clientSeed: string;
+  nonce: number;
+  roll: number;
+  rollHash: string;
+  message: string;
+  targetItemId: string;
+  sourceItemInstanceId: string;
+  game: 'upgrader';
+};
+
+export const getProvablyFairState = async () => {
+  const response = await authedFetch<{ serverSeedHash: string; clientSeed: string; nonce: number }>('/api/provably-fair');
+  return response;
+};
+
 export const attemptUpgrade = async (payload: { sourceItemInstanceId: string; targetItemId: string; clientSeed?: string }) => {
   const response = await authedFetch<any>('/api/attempt-upgrade', {
     method: 'POST',

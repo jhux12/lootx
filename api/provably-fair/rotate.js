@@ -40,6 +40,7 @@ export default async function handler(req, res) {
         serverSeedHash: nextHash,
         clientSeed,
         nonce: 0,
+        upgradeNonce: 0,
         lastServerSeedRotationAt: rotatedAt
       }, { merge: true })
     ]);

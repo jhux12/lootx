@@ -133,8 +133,11 @@ export const ProvablyFairPage: React.FC = () => {
       `Server Seed Hash (committed): ${lastRoll.serverSeedHash}`,
       `Client Seed: ${lastRoll.clientSeed}`,
       `Nonce: ${lastRoll.nonce}`,
-      `Box ID: ${lastRoll.boxId}`,
-      `HMAC Message (clientSeed:nonce:boxId): ${lastRoll.message}`,
+      `Game: ${lastRoll.game ?? 'case'}`,
+      `Box / Round ID: ${lastRoll.boxId}`,
+      `Target Item ID: ${lastRoll.targetItemId ?? 'N/A'}`,
+      `Source Item Instance ID: ${lastRoll.sourceItemInstanceId ?? 'N/A'}`,
+      `HMAC Message: ${lastRoll.message}`,
       `Roll Hash (HMAC): ${lastRoll.rollHash}`,
       `Roll Value: ${lastRoll.rollValue}`,
       `Outcome: ${lastRoll.outcome ?? 'N/A'}`

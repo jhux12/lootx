@@ -31,6 +31,7 @@ export default async function handler(req, res) {
     await docRef.set({
       clientSeed,
       nonce: 0,
+      upgradeNonce: 0,
       serverSeedHash: state.serverSeedHash
     }, { merge: true });
 
