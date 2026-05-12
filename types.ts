@@ -92,6 +92,8 @@ export interface ItemMarketPricing {
   updateStatus?: MarketPricingStatus;
   lastError?: string | null;
   valueLocked?: boolean;
+  allowHighValue?: boolean;
+  warning?: string | null;
 }
 
 export interface BoxMarketValueAudit {
