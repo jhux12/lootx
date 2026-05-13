@@ -129,6 +129,8 @@ export interface CaseItem {
   valueCoins?: number;
   sellBackCoins?: number;
   marketPricing?: ItemMarketPricing;
+  boxValueOverrideCoins?: number;
+  originalPriceCoins?: number;
 }
 
 export interface MysteryBox {

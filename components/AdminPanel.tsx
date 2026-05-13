@@ -1960,9 +1960,8 @@ export const AdminPanel: React.FC = () => {
       });
   };
 
-  const calculateBoxConfig = () => {
-      if (selectedItems.length === 0) return;
-      const baseSelection = selectedItems.map(item => ({ ...item, chance: 0 }));
+  const getAutoCalculatedBoxItems = (sourceItems: CaseItem[]) => {
+      const baseSelection = sourceItems.map(item => ({ ...item, chance: 0 }));
       const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
       const baseEv = calculateExpectedValue(baseItems);
       const calculatedPrice = hasExplicitBoxPrice
@@ -1970,8 +1969,15 @@ export const AdminPanel: React.FC = () => {
         : baseEv / clampedTargetEV;
       const updatedItems = applyRarityOverrides(
           buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice),
-          selectedItems
+          sourceItems
       );
+
+      return { updatedItems, calculatedPrice };
+  };
+
+  const calculateBoxConfig = () => {
+      if (selectedItems.length === 0) return;
+      const { updatedItems, calculatedPrice } = getAutoCalculatedBoxItems(selectedItems);
 
       // Apply updates
       setSelectedItems(updatedItems);
@@ -1987,16 +1993,7 @@ export const AdminPanel: React.FC = () => {
       setSelectedItems((prev) => {
           if (prev.length === 0) return prev;
 
-          const baseSelection = prev.map(item => ({ ...item, chance: 0 }));
-          const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
-          const baseEv = calculateExpectedValue(baseItems);
-          const calculatedPrice = hasExplicitBoxPrice
-            ? effectiveBoxPrice
-            : baseEv / clampedTargetEV;
-          const updatedItems = applyRarityOverrides(
-              buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice),
-              prev
-          );
+          const { updatedItems, calculatedPrice } = getAutoCalculatedBoxItems(prev);
 
           if (!hasExplicitBoxPrice) {
               setNewBox((current) => ({
@@ -2685,7 +2682,7 @@ export const AdminPanel: React.FC = () => {
           sellBackRate: box.sellBackRate ?? (box.isUserCreated ? 0.75 : 0.82)
       });
       setBoxTagInput('');
-      setSelectedItems(box.items.map(i => ({...i})));
+      setSelectedItems(box.items.map(i => ({ ...i, boxValueOverrideCoins: Number(i.boxValueOverrideCoins ?? i.price ?? 0), originalPriceCoins: Number(i.originalPriceCoins ?? i.price ?? 0) })));
       setOddsEditorMode('manual');
       setRiskBalance(box.riskLevel ?? 50);
       setTargetEV(box.targetEV ?? 0.85);
@@ -2796,8 +2793,51 @@ export const AdminPanel: React.FC = () => {
       if(exists) {
           setSelectedItems(prev => prev.filter(i => i.id !== item.id));
       } else {
-          setSelectedItems(prev => [...prev, { ...item }]);
+          setSelectedItems(prev => [...prev, {
+              ...item,
+              boxValueOverrideCoins: Number(item.boxValueOverrideCoins ?? item.price ?? 0),
+              originalPriceCoins: Number(item.originalPriceCoins ?? item.price ?? 0)
+          }]);
       }
+  };
+
+  const getCatalogItemPrice = (item: CaseItem) => {
+      const catalogItem = items.find((entry) => entry.id === item.id);
+      return Math.max(0, Number(catalogItem?.price ?? item.originalPriceCoins ?? item.price ?? 0) || 0);
+  };
+
+  const applyBoxValueOverride = (itemId: string, nextValueCoins: number) => {
+      const nextItems = selectedItems.map((entry) => {
+          if (entry.id !== itemId) return entry;
+          const safeValueCoins = Math.max(0, Math.round(Number(nextValueCoins) || 0));
+          return {
+              ...entry,
+              price: safeValueCoins,
+              valueCoins: safeValueCoins,
+              valueUsd: Number((safeValueCoins / 100).toFixed(2)),
+              sellBackCoins: Math.floor(safeValueCoins * 0.8),
+              boxValueOverrideCoins: safeValueCoins,
+              originalPriceCoins: Number(entry.originalPriceCoins ?? getCatalogItemPrice(entry))
+          };
+      });
+      const { updatedItems, calculatedPrice } = getAutoCalculatedBoxItems(nextItems);
+      setSelectedItems(updatedItems);
+      setOddsEditorMode('auto');
+      if (!hasExplicitBoxPrice) {
+          setNewBox((prev) => ({
+              ...prev,
+              [isXpBox ? 'priceXP' : 'price']: parseFloat(calculatedPrice.toFixed(2))
+          }));
+      }
+  };
+
+  const handleSelectedItemValueOverrideChange = (itemId: string, valueInput: string) => {
+      const parsedValue = Number(valueInput);
+      applyBoxValueOverride(itemId, Number.isFinite(parsedValue) ? parsedValue : 0);
+  };
+
+  const resetSelectedItemValueOverride = (item: CaseItem) => {
+      applyBoxValueOverride(item.id, getCatalogItemPrice(item));
   };
 
   const handleSelectedItemChanceChange = (itemId: string, chanceInput: string) => {
@@ -3952,7 +3992,7 @@ export const AdminPanel: React.FC = () => {
                                  </button>
                              </div>
                              <p className="mb-3 text-[11px] text-gray-500">
-                                 Mode: <span className="font-semibold text-gray-300">{oddsEditorMode === 'manual' ? 'Manual odds' : 'Auto-calculated odds'}</span>. You can edit each item&apos;s chance directly below.
+                                 Mode: <span className="font-semibold text-gray-300">{oddsEditorMode === 'manual' ? 'Manual odds' : 'Auto-calculated odds'}</span>. You can edit each item&apos;s chance directly below. Changing an item EV value auto-recalculates odds against the target EV.
                              </p>
 
                              <div className="mb-4 flex flex-col gap-3">
@@ -4056,12 +4096,33 @@ export const AdminPanel: React.FC = () => {
                                              <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700">
                                                  <img src={item.image} alt={item.name} className="w-5 h-5 object-contain" />
                                                  <span className="min-w-[120px] flex-1 text-gray-300 truncate">{item.name}</span>
-                                                 <CoinAmount
-                                                   amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                                                   formatOptions={{ maximumFractionDigits: 0 }}
-                                                   className="text-gray-500"
-                                                   iconClassName="w-3 h-3"
-                                                 />
+                                                 <div className="flex w-full flex-col gap-1 rounded bg-black/30 px-2 py-1 sm:w-[150px]">
+                                                     <div className="flex items-center justify-between gap-2">
+                                                         <span className="text-[10px] uppercase text-gray-500">EV value</span>
+                                                         <CoinAmount
+                                                           amount={toCoins(item.price, PRICE_UNIT_MODE)}
+                                                           formatOptions={{ maximumFractionDigits: 0 }}
+                                                           className="text-[11px] text-emerald-300"
+                                                           iconClassName="w-3 h-3"
+                                                         />
+                                                     </div>
+                                                     <Input
+                                                         type="number"
+                                                         min={0}
+                                                         step={1}
+                                                         value={Math.round(Number(item.price ?? 0))}
+                                                         onChange={(event) => handleSelectedItemValueOverrideChange(item.id, event.target.value)}
+                                                         className="w-full bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-white font-semibold text-xs"
+                                                         aria-label={`Override EV coin value for ${item.name}`}
+                                                     />
+                                                     <button
+                                                         type="button"
+                                                         onClick={() => resetSelectedItemValueOverride(item)}
+                                                         className="text-left text-[10px] text-gray-500 hover:text-gray-300"
+                                                     >
+                                                         Reset to catalog: {Math.round(getCatalogItemPrice(item)).toLocaleString()} coins
+                                                     </button>
+                                                 </div>
                                                  <label className="flex items-center gap-1 bg-black/30 px-2 py-1 rounded w-full sm:w-auto">
                                                      <span className="text-gray-400 whitespace-nowrap">Chance %</span>
                                                      <Input
