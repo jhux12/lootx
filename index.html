@@ -37,10 +37,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://firebasestorage.googleapis.com">
     <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com">
-    <link rel="preload" as="image" href="/assets/hero.png" fetchpriority="high">
+    <link rel="preload" as="image" href="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/open.png?alt=media&token=34515af9-0309-412b-95fe-fb22837fd060" fetchpriority="high">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" /></noscript>
     <script>
       window.tailwind = window.tailwind || {};
       window.tailwind.config = {
@@ -64,20 +65,31 @@
         }
       }
     </script>
-    <!-- Meta Pixel Code -->
+    <!-- Meta Pixel is queued immediately, then its network script is loaded on idle or first interaction. -->
     <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '3861511834150011');
-      fbq('track', 'PageView');
+      (function(w,d,s,u,id){
+        if(w.fbq)return;
+        var n=w.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!w._fbq)w._fbq=n;
+        n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];
+        n('init', id);
+        n('track', 'PageView');
+        var loaded=false;
+        function load(){
+          if(loaded)return;loaded=true;
+          window.removeEventListener('pointerdown',load);
+          window.removeEventListener('touchstart',load);
+          window.removeEventListener('keydown',load);
+          var t=d.createElement(s);t.async=true;t.src=u;
+          var first=d.getElementsByTagName(s)[0];first.parentNode.insertBefore(t,first);
+        }
+        window.addEventListener('pointerdown',load,{once:true,passive:true});
+        window.addEventListener('touchstart',load,{once:true,passive:true});
+        window.addEventListener('keydown',load,{once:true});
+        if('requestIdleCallback' in window){requestIdleCallback(load,{timeout:3500});}
+        else{setTimeout(load,3500);}
+      })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js', '3861511834150011');
     </script>
-    <!-- End Meta Pixel Code -->
     <style>
       :root {
         --app-height: 100vh;

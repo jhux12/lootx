@@ -1784,7 +1784,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [users, isAuthenticated, user.id, user.createdAt, user.topPullsPublic]);
 
   useEffect(() => {
-    void (async () => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+    const loadItems = () => {
+      if (cancelled) return;
+      void (async () => {
       try {
         const itemsPath = 'items?limit=500';
         console.log('READING FIRESTORE PATH', itemsPath);
@@ -1832,7 +1836,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } catch (error) {
         console.error('Failed to load items', error);
       }
-    })();
+      })();
+    };
+    const idleId = 'requestIdleCallback' in window
+      ? window.requestIdleCallback(loadItems, { timeout: 2500 })
+      : window.setTimeout(loadItems, 1200);
+    return () => {
+      cancelled = true;
+      if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
+      else window.clearTimeout(idleId as number);
+    };
   }, []);
 
   const expiredUserBoxDeletesRef = useRef<Set<string>>(new Set());
@@ -1950,6 +1963,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
+    if (!showTopUpModal) return;
     void (async () => {
       try {
         const coinPackagesPath = 'coin_packages?limit=50';
@@ -1981,7 +1995,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('Failed to load coin packages', error);
       }
     })();
-  }, []);
+  }, [showTopUpModal]);
 
   useEffect(() => {
     activityStore.setScope(isAuthenticated && user.id ? user.id : 'guest');
@@ -1999,6 +2013,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Cost-control: the battle list is fetched in a bounded one-time query.
   // Realtime is kept in BattleArena for a single active battle view.
   useEffect(() => {
+    if (view.type !== 'BATTLES' && view.type !== 'BATTLE_ARENA') return;
     void (async () => {
       try {
         const battlesPath = 'battles?limit=50';
@@ -2049,7 +2064,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('Failed to load battles list', error);
       }
     })();
-  }, [boxes]);
+  }, [boxes, view.type]);
 
   // --- ACTIONS ---
 

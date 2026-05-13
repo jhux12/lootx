@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 import {
   Facebook,
@@ -28,13 +28,14 @@ import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
 import { XP_ICON } from '../constants';
 import { useBalanceFeedback } from '../src/ui/feedback/useBalanceFeedback';
-import { ActivityDrawer } from '../src/ui/activity/ActivityDrawer';
 import { useActivity } from '../src/lib/activity/useActivity';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getClaimReadyQuestCount, normalizeQuestRules } from '../src/lib/quests';
 import { UserAvatar } from './UserAvatar';
 import { resolveUserDisplayName } from '../utils/userIdentity';
+
+const ActivityDrawer = lazy(() => import('../src/ui/activity/ActivityDrawer').then((module) => ({ default: module.ActivityDrawer })));
 
 type HeaderProps = {
   onOpenInbox: () => void;
@@ -183,6 +184,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   }, []);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setQuestReadyCount(0);
+      setClaimedTodayCount(0);
+      return;
+    }
     const pathLabel = 'settings/rewards';
     console.log('READING FIRESTORE PATH', pathLabel);
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
@@ -208,7 +214,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       });
     });
     return () => unsub();
-  }, [locallyClaimedQuestIds, user.challengeStats, user.questClaims]);
+  }, [isAuthenticated, locallyClaimedQuestIds, user.challengeStats, user.questClaims]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -640,7 +646,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
         </div>
       </div>
     </div>
-    <ActivityDrawer open={showActivity} onClose={() => setShowActivity(false)} />
+    <Suspense fallback={null}>
+      {showActivity ? <ActivityDrawer open={showActivity} onClose={() => setShowActivity(false)} /> : null}
+    </Suspense>
     <style>{`@media (prefers-reduced-motion: reduce){.ambient-pulse{animation:none!important;}}`}</style>
     </>
   );
