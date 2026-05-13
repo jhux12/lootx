@@ -1813,7 +1813,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               ? (String(data.upgraderCategory) as CaseItem['upgraderCategory'])
               : '',
             upgraderSort: Number.isFinite(Number(data.upgraderSort)) ? Number(data.upgraderSort) : undefined,
-            upgraderFeatured: data.upgraderFeatured === true
+            upgraderFeatured: data.upgraderFeatured === true,
+            valueUsd: data.valueUsd !== undefined ? Number(data.valueUsd) : undefined,
+            valueCoins: data.valueCoins !== undefined ? Number(data.valueCoins) : Number(data.price ?? 0),
+            sellBackCoins: data.sellBackCoins !== undefined ? Number(data.sellBackCoins) : undefined,
+            marketPricing: data.marketPricing
           } as CaseItem;
         })
         .sort((a, b) => a.price - b.price);
@@ -1860,7 +1864,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               tags: Array.isArray(item.tags) ? (item.tags as CaseItem['tags']) : [],
               sizes: Array.isArray(item.sizes) ? item.sizes.filter((size: unknown) => typeof size === 'string') : [],
               redeemable: item.redeemable ?? true,
-              forceFullSellBack: item.forceFullSellBack === true
+              forceFullSellBack: item.forceFullSellBack === true,
+              valueUsd: item.valueUsd !== undefined ? Number(item.valueUsd) : undefined,
+              valueCoins: item.valueCoins !== undefined ? Number(item.valueCoins) : price,
+              sellBackCoins: item.sellBackCoins !== undefined ? Number(item.sellBackCoins) : undefined,
+              marketPricing: item.marketPricing
             };
           }) : [];
           const createdAt = data.createdAt ? normalizeTimestamp(data.createdAt, Date.now()) : undefined;
@@ -1894,6 +1902,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             items,
             isUserCreated: data.isUserCreated ?? false,
             sellBackRate: data.sellBackRate !== undefined ? Number(data.sellBackRate) : undefined,
+            marketValueAudit: data.marketValueAudit,
             createdAt
           } as MysteryBox;
         })

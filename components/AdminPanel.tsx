@@ -15,6 +15,7 @@ import { LegalEditor } from './admin/LegalEditor';
 import { UpgraderAdminSection } from './admin/UpgraderAdminSection';
 import { PollsAdminSection } from './admin/PollsAdminSection';
 import { ReferralAdminSection } from './admin/ReferralAdminSection';
+import { MarketPricingAdminSection } from './admin/MarketPricingAdminSection';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -285,7 +286,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -1959,9 +1960,8 @@ export const AdminPanel: React.FC = () => {
       });
   };
 
-  const calculateBoxConfig = () => {
-      if (selectedItems.length === 0) return;
-      const baseSelection = selectedItems.map(item => ({ ...item, chance: 0 }));
+  const getAutoCalculatedBoxItems = (sourceItems: CaseItem[]) => {
+      const baseSelection = sourceItems.map(item => ({ ...item, chance: 0 }));
       const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
       const baseEv = calculateExpectedValue(baseItems);
       const calculatedPrice = hasExplicitBoxPrice
@@ -1969,8 +1969,15 @@ export const AdminPanel: React.FC = () => {
         : baseEv / clampedTargetEV;
       const updatedItems = applyRarityOverrides(
           buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice),
-          selectedItems
+          sourceItems
       );
+
+      return { updatedItems, calculatedPrice };
+  };
+
+  const calculateBoxConfig = () => {
+      if (selectedItems.length === 0) return;
+      const { updatedItems, calculatedPrice } = getAutoCalculatedBoxItems(selectedItems);
 
       // Apply updates
       setSelectedItems(updatedItems);
@@ -1986,16 +1993,7 @@ export const AdminPanel: React.FC = () => {
       setSelectedItems((prev) => {
           if (prev.length === 0) return prev;
 
-          const baseSelection = prev.map(item => ({ ...item, chance: 0 }));
-          const baseItems = buildRiskAdjustedOdds(baseSelection, riskBalance);
-          const baseEv = calculateExpectedValue(baseItems);
-          const calculatedPrice = hasExplicitBoxPrice
-            ? effectiveBoxPrice
-            : baseEv / clampedTargetEV;
-          const updatedItems = applyRarityOverrides(
-              buildOddsWithRiskAndTargetEV(baseSelection, riskBalance, clampedTargetEV, calculatedPrice),
-              prev
-          );
+          const { updatedItems, calculatedPrice } = getAutoCalculatedBoxItems(prev);
 
           if (!hasExplicitBoxPrice) {
               setNewBox((current) => ({
@@ -2629,7 +2627,7 @@ export const AdminPanel: React.FC = () => {
           alert(isXpBox ? 'XP boxes require a positive XP price unless marked as a free daily box.' : 'Boxes require a positive coin price unless marked as a free daily box.');
           return;
       }
-      
+
       if(selectedItems.length === 0) {
           alert("Select at least one item for the box");
           return;
@@ -2645,7 +2643,7 @@ export const AdminPanel: React.FC = () => {
 
       // Clone items to decouple from global pool (ensuring box-specific chances)
       const boxItems = selectedItems.map(i => ({...i}));
-      
+
       // If setting as daily, unset others first (best effort approach)
       if (newBox.isDaily) {
           boxes.forEach(b => {
@@ -2684,7 +2682,7 @@ export const AdminPanel: React.FC = () => {
           sellBackRate: box.sellBackRate ?? (box.isUserCreated ? 0.75 : 0.82)
       });
       setBoxTagInput('');
-      setSelectedItems(box.items.map(i => ({...i})));
+      setSelectedItems(box.items.map(i => ({ ...i, boxValueOverrideCoins: Number(i.boxValueOverrideCoins ?? i.price ?? 0), originalPriceCoins: Number(i.originalPriceCoins ?? i.price ?? 0) })));
       setOddsEditorMode('manual');
       setRiskBalance(box.riskLevel ?? 50);
       setTargetEV(box.targetEV ?? 0.85);
@@ -2795,8 +2793,51 @@ export const AdminPanel: React.FC = () => {
       if(exists) {
           setSelectedItems(prev => prev.filter(i => i.id !== item.id));
       } else {
-          setSelectedItems(prev => [...prev, { ...item }]);
+          setSelectedItems(prev => [...prev, {
+              ...item,
+              boxValueOverrideCoins: Number(item.boxValueOverrideCoins ?? item.price ?? 0),
+              originalPriceCoins: Number(item.originalPriceCoins ?? item.price ?? 0)
+          }]);
       }
+  };
+
+  const getCatalogItemPrice = (item: CaseItem) => {
+      const catalogItem = items.find((entry) => entry.id === item.id);
+      return Math.max(0, Number(catalogItem?.price ?? item.originalPriceCoins ?? item.price ?? 0) || 0);
+  };
+
+  const applyBoxValueOverride = (itemId: string, nextValueCoins: number) => {
+      const nextItems = selectedItems.map((entry) => {
+          if (entry.id !== itemId) return entry;
+          const safeValueCoins = Math.max(0, Math.round(Number(nextValueCoins) || 0));
+          return {
+              ...entry,
+              price: safeValueCoins,
+              valueCoins: safeValueCoins,
+              valueUsd: Number((safeValueCoins / 100).toFixed(2)),
+              sellBackCoins: Math.floor(safeValueCoins * 0.8),
+              boxValueOverrideCoins: safeValueCoins,
+              originalPriceCoins: Number(entry.originalPriceCoins ?? getCatalogItemPrice(entry))
+          };
+      });
+      const { updatedItems, calculatedPrice } = getAutoCalculatedBoxItems(nextItems);
+      setSelectedItems(updatedItems);
+      setOddsEditorMode('auto');
+      if (!hasExplicitBoxPrice) {
+          setNewBox((prev) => ({
+              ...prev,
+              [isXpBox ? 'priceXP' : 'price']: parseFloat(calculatedPrice.toFixed(2))
+          }));
+      }
+  };
+
+  const handleSelectedItemValueOverrideChange = (itemId: string, valueInput: string) => {
+      const parsedValue = Number(valueInput);
+      applyBoxValueOverride(itemId, Number.isFinite(parsedValue) ? parsedValue : 0);
+  };
+
+  const resetSelectedItemValueOverride = (item: CaseItem) => {
+      applyBoxValueOverride(item.id, getCatalogItemPrice(item));
   };
 
   const handleSelectedItemChanceChange = (itemId: string, chanceInput: string) => {
@@ -3082,105 +3123,111 @@ export const AdminPanel: React.FC = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto p-6 animate-in fade-in duration-300">
-      
+
       <div className="flex flex-col md:flex-row gap-8">
-        
+
         {/* Sidebar */}
         <div className="w-full md:w-64 flex-shrink-0">
            <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sticky top-24">
                <h2 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4 px-2">Admin Control</h2>
                <nav className="flex flex-col gap-1">
-                   <button 
+                   <button
                      onClick={() => setActiveTab('dashboard')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'dashboard' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <LayoutDashboard className="w-4 h-4" /> Dashboard
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('items')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'items' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Package className="w-4 h-4" /> Manage Items
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('boxes')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'boxes' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <BoxIcon className="w-4 h-4" /> Manage Boxes
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('packages')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'packages' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <PackageCheck className="w-4 h-4" /> Coin Packages
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('users')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'users' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Users className="w-4 h-4" /> User Management
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('shipments')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipments' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Truck className="w-4 h-4" /> Shipment Manager
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('support')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'support' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <MessageCircle className="w-4 h-4" /> Support Inbox
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('bonuses')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'bonuses' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Sparkles className="w-4 h-4" /> Bonuses
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('referrals')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'referrals' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Users className="w-4 h-4" /> Referrals
                    </button>
-                   <button 
+                   <button
+                     onClick={() => setActiveTab('market-pricing')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'market-pricing' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <Calculator className="w-4 h-4" /> Market Pricing
+                   </button>
+                   <button
                      onClick={() => setActiveTab('fees')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'fees' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <BadgeDollarSign className="w-4 h-4" /> Fees &amp; Shipping
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('homepage')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'homepage' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <HomeIcon className="w-4 h-4" /> Homepage
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('boxes-page')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'boxes-page' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <PackageOpen className="w-4 h-4" /> Boxes Page
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('case-lab')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'case-lab' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <Beaker className="w-4 h-4" /> Box Lab
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('polls')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'polls' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <BarChart3 className="w-4 h-4" /> Polls
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('legal')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'legal' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
                        <ScrollText className="w-4 h-4" /> Legal
                    </button>
-                   <button 
+                   <button
                      onClick={() => setActiveTab('settings')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'settings' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -3192,7 +3239,7 @@ export const AdminPanel: React.FC = () => {
 
         {/* Content Area */}
         <div className="flex-1 min-w-0">
-            
+
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-white mb-2">
@@ -3212,6 +3259,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'case-lab' && 'Box Lab'}
                     {activeTab === 'polls' && 'Poll Management'}
                     {activeTab === 'legal' && 'Legal Content'}
+                    {activeTab === 'market-pricing' && 'Market Pricing'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
             </div>
@@ -3915,10 +3963,10 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                 )}
                                 <div className="flex items-center gap-2">
-                                    <Checkbox 
+                                    <Checkbox
                                         id="daily-case"
-                                        checked={newBox.isDaily || false} 
-                                        onChange={e => setNewBox({...newBox, isDaily: e.target.checked})} 
+                                        checked={newBox.isDaily || false}
+                                        onChange={e => setNewBox({...newBox, isDaily: e.target.checked})}
                                         className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
                                     />
                                     <label htmlFor="daily-case" className="text-sm text-gray-400 flex items-center gap-1">
@@ -3935,7 +3983,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="mb-6 p-4 bg-[#0b0e14] rounded-lg border border-gray-800">
                              <div className="flex justify-between items-center mb-4">
                                  <h4 className="text-sm font-bold text-gray-400 uppercase">Available Items</h4>
-                                 <button 
+                                 <button
                                     onClick={calculateBoxConfig}
                                     disabled={selectedItems.length === 0}
                                     className="flex items-center gap-2 px-3 py-1.5 bg-brand-purple hover:bg-purple-600 disabled:opacity-50 text-white text-xs font-bold rounded shadow-lg shadow-purple-900/20"
@@ -3944,7 +3992,7 @@ export const AdminPanel: React.FC = () => {
                                  </button>
                              </div>
                              <p className="mb-3 text-[11px] text-gray-500">
-                                 Mode: <span className="font-semibold text-gray-300">{oddsEditorMode === 'manual' ? 'Manual odds' : 'Auto-calculated odds'}</span>. You can edit each item&apos;s chance directly below.
+                                 Mode: <span className="font-semibold text-gray-300">{oddsEditorMode === 'manual' ? 'Manual odds' : 'Auto-calculated odds'}</span>. You can edit each item&apos;s chance directly below. Changing an item EV value auto-recalculates odds against the target EV.
                              </p>
 
                              <div className="mb-4 flex flex-col gap-3">
@@ -4012,14 +4060,14 @@ export const AdminPanel: React.FC = () => {
                                      </div>
                                  </div>
                              </div>
-                             
+
                              {/* Item Pool */}
                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-48 overflow-y-auto mb-4 pr-1">
                                 {filteredItemsForBox.map(item => {
                                     const isSelected = selectedItems.some(i => i.id === item.id);
                                     return (
-                                        <div 
-                                            key={item.id} 
+                                        <div
+                                            key={item.id}
                                             onClick={() => toggleItemSelection(item)}
                                             className={`p-2 rounded border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isSelected ? 'bg-blue-600/10 border-blue-500' : 'bg-[#131720] border-gray-800 hover:border-gray-600'}`}
                                         >
@@ -4048,12 +4096,33 @@ export const AdminPanel: React.FC = () => {
                                              <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700">
                                                  <img src={item.image} alt={item.name} className="w-5 h-5 object-contain" />
                                                  <span className="min-w-[120px] flex-1 text-gray-300 truncate">{item.name}</span>
-                                                 <CoinAmount
-                                                   amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                                                   formatOptions={{ maximumFractionDigits: 0 }}
-                                                   className="text-gray-500"
-                                                   iconClassName="w-3 h-3"
-                                                 />
+                                                 <div className="flex w-full flex-col gap-1 rounded bg-black/30 px-2 py-1 sm:w-[150px]">
+                                                     <div className="flex items-center justify-between gap-2">
+                                                         <span className="text-[10px] uppercase text-gray-500">EV value</span>
+                                                         <CoinAmount
+                                                           amount={toCoins(item.price, PRICE_UNIT_MODE)}
+                                                           formatOptions={{ maximumFractionDigits: 0 }}
+                                                           className="text-[11px] text-emerald-300"
+                                                           iconClassName="w-3 h-3"
+                                                         />
+                                                     </div>
+                                                     <Input
+                                                         type="number"
+                                                         min={0}
+                                                         step={1}
+                                                         value={Math.round(Number(item.price ?? 0))}
+                                                         onChange={(event) => handleSelectedItemValueOverrideChange(item.id, event.target.value)}
+                                                         className="w-full bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-white font-semibold text-xs"
+                                                         aria-label={`Override EV coin value for ${item.name}`}
+                                                     />
+                                                     <button
+                                                         type="button"
+                                                         onClick={() => resetSelectedItemValueOverride(item)}
+                                                         className="text-left text-[10px] text-gray-500 hover:text-gray-300"
+                                                     >
+                                                         Reset to catalog: {Math.round(getCatalogItemPrice(item)).toLocaleString()} coins
+                                                     </button>
+                                                 </div>
                                                  <label className="flex items-center gap-1 bg-black/30 px-2 py-1 rounded w-full sm:w-auto">
                                                      <span className="text-gray-400 whitespace-nowrap">Chance %</span>
                                                      <Input
@@ -4132,8 +4201,8 @@ export const AdminPanel: React.FC = () => {
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end gap-2">
                                                 <button onClick={() => handleEditBox(box)} className="p-1.5 hover:bg-blue-500/10 text-blue-400 rounded transition-colors"><Edit2 className="w-4 h-4" /></button>
-                                                <button 
-                                                    onClick={() => initiateDeleteBox(box.id)} 
+                                                <button
+                                                    onClick={() => initiateDeleteBox(box.id)}
                                                     className={`p-1.5 rounded transition-colors ${deletingBoxId === box.id ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-red-500/10 text-red-400'}`}
                                                     disabled={deletingBoxId === box.id}
                                                 >
@@ -5627,6 +5696,10 @@ export const AdminPanel: React.FC = () => {
             )}
 
             {/* TAB: FEES & SHIPPING */}
+            {activeTab === 'market-pricing' && (
+                <MarketPricingAdminSection items={items} boxes={boxes} />
+            )}
+
             {activeTab === 'referrals' && (
                 <ReferralAdminSection />
             )}
@@ -6349,13 +6422,13 @@ export const AdminPanel: React.FC = () => {
                       Are you sure you want to delete this box permanently? This action cannot be undone.
                   </p>
                   <div className="flex gap-3">
-                      <button 
+                      <button
                           onClick={() => setBoxToDelete(null)}
                           className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-700 text-white text-sm font-bold rounded-lg transition-colors"
                       >
                           Cancel
                       </button>
-                      <button 
+                      <button
                           onClick={confirmDeleteBox}
                           className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-red-900/20 transition-colors"
                       >
