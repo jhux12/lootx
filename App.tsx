@@ -1,38 +1,12 @@
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { Header } from './components/Header';
-import { LiveTicker } from './components/LiveTicker';
-import { Hero } from './components/Hero';
-import { BoxGrid } from './components/BoxGrid';
-import { BoxCard } from './components/BoxCard';
-import { BoxRow } from './components/BoxRow';
-import { CategoryRow } from './components/CategoryRow';
-import { BoxCatalog } from './components/BoxCatalog';
-import { Bonuses } from './components/Bonuses';
-import { LoginModal } from './components/LoginModal';
-import { EmailVerificationModal } from './components/EmailVerificationModal';
-import { EmailVerifiedModal } from './components/EmailVerifiedModal';
-import { TopUpModal } from './components/TopUpModal';
-import { LegalPage } from './components/LegalPage';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert } from 'lucide-react';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
-import { HowItWorksSection } from './components/HowItWorksSection';
-import { TrustSection } from './components/TrustSection';
-import { FinalCTA } from './components/FinalCTA';
-import { SiteFooter } from './components/SiteFooter';
-import { ProvablyFairPage } from './components/ProvablyFairPage';
-import { HomeBanners } from './components/HomeBanners';
-import { CaseLabPromo } from './components/CaseLabPromo';
-import { ContactSupport } from './components/ContactSupport';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { LegendaryShowcase } from './components/LegendaryShowcase';
-import { ReferralsPage } from './components/ReferralsPage';
-import { PollsPage } from './components/PollsPage';
-import { SpinLandingPage } from './components/SpinLandingPage';
-import { getBoxTags } from './utils/boxTags';
 import { HomeReplica } from './components/HomeReplica';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
@@ -43,13 +17,7 @@ import { trackEvent, trackMetaEvent } from './utils/trackEvent';
 import { auth } from './firebase';
 import PullToRefresh from './components/PullToRefresh';
 import { setPostSignupRedirect } from './utils/postSignupRedirect';
-import {
-  ShowcaseRow,
-  ShowcaseRowBoxes,
-  ShowcaseRowCategories,
-  normalizeShowcaseRows,
-  subscribeHomepageConfig
-} from './utils/homepageShowcase';
+import { subscribeHomepageConfig } from './utils/homepageShowcase';
 
 type ClarityWindow = Window &
   typeof globalThis & {
@@ -59,6 +27,35 @@ type ClarityWindow = Window &
   };
 
 const CLARITY_PROJECT_ID = 'wie0qmjc7c';
+
+const runAfterIdleOrInteraction = (callback: () => void, timeout = 3500) => {
+  if (typeof window === 'undefined') return () => undefined;
+  let didRun = false;
+  let idleId: number | null = null;
+  let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
+  const run = () => {
+    if (didRun) return;
+    didRun = true;
+    cleanup();
+    callback();
+  };
+  const cleanup = () => {
+    window.removeEventListener('pointerdown', run);
+    window.removeEventListener('keydown', run);
+    window.removeEventListener('touchstart', run);
+    if (idleId !== null && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId);
+    if (timeoutId !== null) globalThis.clearTimeout(timeoutId);
+  };
+  window.addEventListener('pointerdown', run, { once: true, passive: true });
+  window.addEventListener('keydown', run, { once: true });
+  window.addEventListener('touchstart', run, { once: true, passive: true });
+  if ('requestIdleCallback' in window) {
+    idleId = window.requestIdleCallback(run, { timeout }) as unknown as number;
+  } else {
+    timeoutId = globalThis.setTimeout(run, timeout);
+  }
+  return cleanup;
+};
 
 const getClarity = () => {
   if (typeof window === 'undefined') return undefined;
@@ -78,6 +75,19 @@ const trackClarityPageView = () => {
   trackClarityEvent(`page_view_${normalized}`);
 };
 
+const BoxCatalog = lazy(() => import('./components/BoxCatalog').then((module) => ({ default: module.BoxCatalog })));
+const Bonuses = lazy(() => import('./components/Bonuses').then((module) => ({ default: module.Bonuses })));
+const LoginModal = lazy(() => import('./components/LoginModal').then((module) => ({ default: module.LoginModal })));
+const EmailVerificationModal = lazy(() => import('./components/EmailVerificationModal').then((module) => ({ default: module.EmailVerificationModal })));
+const EmailVerifiedModal = lazy(() => import('./components/EmailVerifiedModal').then((module) => ({ default: module.EmailVerifiedModal })));
+const TopUpModal = lazy(() => import('./components/TopUpModal').then((module) => ({ default: module.TopUpModal })));
+const LegalPage = lazy(() => import('./components/LegalPage').then((module) => ({ default: module.LegalPage })));
+const SiteFooter = lazy(() => import('./components/SiteFooter').then((module) => ({ default: module.SiteFooter })));
+const ProvablyFairPage = lazy(() => import('./components/ProvablyFairPage').then((module) => ({ default: module.ProvablyFairPage })));
+const ContactSupport = lazy(() => import('./components/ContactSupport').then((module) => ({ default: module.ContactSupport })));
+const ReferralsPage = lazy(() => import('./components/ReferralsPage').then((module) => ({ default: module.ReferralsPage })));
+const PollsPage = lazy(() => import('./components/PollsPage').then((module) => ({ default: module.PollsPage })));
+const SpinLandingPage = lazy(() => import('./components/SpinLandingPage').then((module) => ({ default: module.SpinLandingPage })));
 const AdminPanel = lazy(() => import('./components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
 const CaseOpening = lazy(() => import('./components/CaseOpening').then((module) => ({ default: module.CaseOpening })));
 const UpgraderPage = lazy(() => import('./src/pages/UpgraderPage'));
@@ -94,24 +104,6 @@ const LoadingSpinner = React.memo(() => (
   </div>
 ));
 
-type HomeRowConfig = {
-  id: string;
-  title: string;
-  query: {
-    tags?: string[];
-    maxPrice?: number;
-    minPrice?: number;
-  };
-  limit: number;
-};
-
-const HOME_ROWS: HomeRowConfig[] = [
-  { id: 'new', title: 'New Drops', query: { tags: ['new'] }, limit: 8 },
-  { id: 'trending', title: 'Trending Now', query: { tags: ['trending'] }, limit: 8 },
-  { id: 'budget', title: 'Budget Picks', query: { maxPrice: 500 }, limit: 8 },
-  { id: 'high-roller', title: 'High Roller', query: { minPrice: 2000 }, limit: 8 }
-];
-
 type MainContentProps = {
   isChatCollapsed: boolean;
 };
@@ -120,7 +112,6 @@ type MainContentProps = {
 const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal } = useGame();
   const { playSound } = useSound();
-  const [showcaseRows, setShowcaseRows] = useState<ShowcaseRow[] | null>(null);
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
   const trackedPurchaseSessionsRef = useRef<Set<string>>(new Set());
   const [showHomePrompt, setShowHomePrompt] = useState(false);
@@ -139,15 +130,17 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           const queue = ((clarityWindow.clarity as unknown as { q?: unknown[][] }).q ??= []);
           queue.push(args);
         });
-      const existingScript = document.querySelector<HTMLScriptElement>(`script[data-clarity-project-id="${CLARITY_PROJECT_ID}"]`);
-      if (!existingScript) {
-        const script = document.createElement('script');
-        script.async = true;
-        script.src = `https://www.clarity.ms/tag/${CLARITY_PROJECT_ID}`;
-        script.setAttribute('data-clarity-project-id', CLARITY_PROJECT_ID);
-        document.head.appendChild(script);
-      }
     }
+
+    const cancelClarityLoad = runAfterIdleOrInteraction(() => {
+      const existingScript = document.querySelector<HTMLScriptElement>(`script[data-clarity-project-id="${CLARITY_PROJECT_ID}"]`);
+      if (existingScript) return;
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = `https://www.clarity.ms/tag/${CLARITY_PROJECT_ID}`;
+      script.setAttribute('data-clarity-project-id', CLARITY_PROJECT_ID);
+      document.head.appendChild(script);
+    });
 
     if (!clarityWindow.__pullzClarityNavigationTrackingInstalled) {
       clarityWindow.__pullzClarityNavigationTrackingInstalled = true;
@@ -173,17 +166,15 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     }
 
     trackClarityPageView();
+    return cancelClarityLoad;
   }, []);
 
   useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
       (config) => {
-        const rows = normalizeShowcaseRows(config?.showcaseRows);
-        setShowcaseRows(rows.length ? rows : null);
         setHomepageDemoBoxId(config?.demoBoxId ?? null);
       },
       () => {
-        setShowcaseRows(null);
         setHomepageDemoBoxId(null);
       }
     );
@@ -409,75 +400,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     [boxes]
   );
 
-  const homeRows = useMemo(() => (
-    HOME_ROWS.map((row) => {
-      let filtered = baseHomeBoxes;
-      const { maxPrice, minPrice } = row.query;
-      if (row.query.tags?.length) {
-        const targetTags = row.query.tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
-        filtered = filtered.filter((box) => {
-          const boxTags = getBoxTags(box);
-          return targetTags.some((tag) => boxTags.includes(tag));
-        });
-      }
-      if (typeof maxPrice === 'number') {
-        filtered = filtered.filter((box) => box.price <= maxPrice);
-      }
-      if (typeof minPrice === 'number') {
-        filtered = filtered.filter((box) => box.price >= minPrice);
-      }
-      return {
-        ...row,
-        boxes: filtered.slice(0, row.limit)
-      };
-    })
-  ), [baseHomeBoxes]);
 
-  const showcaseRowsWithBoxes = useMemo(() => {
-    if (!showcaseRows) return null;
-    const boxMap = new Map(baseHomeBoxes.map((box) => [box.id, box]));
-    return showcaseRows.map((row) => {
-      if (row.type === 'categories') {
-        return row;
-      }
-      const rowBoxes = row.boxIds
-        .map((id) => boxMap.get(id))
-        .filter((box): box is typeof baseHomeBoxes[number] => Boolean(box));
-      return {
-        ...row,
-        boxes: rowBoxes
-      };
-    }) as Array<ShowcaseRowCategories | (ShowcaseRowBoxes & { boxes: typeof baseHomeBoxes })>;
-  }, [baseHomeBoxes, showcaseRows]);
-
-  const gridCols = {
-    1: 'grid-cols-1',
-    2: 'grid-cols-2',
-    3: 'grid-cols-3',
-    4: 'grid-cols-4',
-    5: 'grid-cols-5',
-    6: 'grid-cols-6'
-  } as const;
-  const smGridCols = {
-    1: 'sm:grid-cols-1',
-    2: 'sm:grid-cols-2',
-    3: 'sm:grid-cols-3',
-    4: 'sm:grid-cols-4',
-    5: 'sm:grid-cols-5',
-    6: 'sm:grid-cols-6'
-  } as const;
-  const lgGridCols = {
-    1: 'lg:grid-cols-1',
-    2: 'lg:grid-cols-2',
-    3: 'lg:grid-cols-3',
-    4: 'lg:grid-cols-4',
-    5: 'lg:grid-cols-5',
-    6: 'lg:grid-cols-6'
-  } as const;
-  const clampGrid = (value: number | undefined, fallback: number) => {
-    if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
-    return Math.min(6, Math.max(1, Math.round(value)));
-  };
 
 
 
@@ -701,11 +624,15 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       </Suspense>
 
       {/* Modals */}
-      {showLoginModal && <LoginModal />}
-      {showEmailVerificationModal && <EmailVerificationModal />}
-      {showEmailVerifiedModal && <EmailVerifiedModal />}
-      {showTopUpModal && <TopUpModal />}
-      <SiteFooter />
+      <Suspense fallback={null}>
+        {showLoginModal && <LoginModal />}
+        {showEmailVerificationModal && <EmailVerificationModal />}
+        {showEmailVerifiedModal && <EmailVerifiedModal />}
+        {showTopUpModal && <TopUpModal />}
+      </Suspense>
+      <Suspense fallback={<div className="min-h-[220px]" aria-hidden="true" />}>
+        <SiteFooter />
+      </Suspense>
     </main>
   );
 };
