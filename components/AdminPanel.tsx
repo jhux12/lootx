@@ -889,6 +889,10 @@ export const AdminPanel: React.FC = () => {
           provenance: data.provenance ?? (data.boxId ? { sourceType: 'case_open', sourceId: data.boxId } : undefined),
           redeemable: data.redeemable ?? true,
           sellBackRate: Number(data.sellBackRate ?? 0),
+          freeShipping: data.freeShipping === true,
+          shippable: data.shippable === false ? false : true,
+          shippingCostOverrideCoins: data.shippingCostOverrideCoins == null ? undefined : Number(data.shippingCostOverrideCoins),
+          shippingCostOverrideCents: data.shippingCostOverrideCents == null ? undefined : Number(data.shippingCostOverrideCents),
           history
       };
   };
@@ -2462,6 +2466,8 @@ export const AdminPanel: React.FC = () => {
       return normalizeLedgerEntries(ledgerEntries[selectedUserId] ?? [], selectedUser?.balance ?? 0);
   }, [ledgerEntries, selectedUser, selectedUserId]);
   const selectedInventory = selectedUserId ? inventoryState[selectedUserId] ?? [] : [];
+  const selectedShippableInventory = selectedInventory.filter((item) => item.status === 'available' && !item.locked && item.shippable !== false);
+  const selectedShippableInventoryValue = selectedShippableInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   useEffect(() => {
       if (!selectedUserId) return;
       const run = async () => {
@@ -4594,19 +4600,69 @@ export const AdminPanel: React.FC = () => {
                                                 <button onClick={handleVoidOpen} disabled={!voidSourceId.trim()} className="w-full rounded-lg bg-yellow-500/20 px-3 py-2 text-xs font-bold uppercase text-yellow-300 disabled:opacity-50">Void Open & Compensate</button>
                                             </div>
 
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
-                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Inventory Controls</h4>
-                                                <button onClick={() => setIsEditingInventory((prev) => !prev)} className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-semibold text-blue-300">{isEditingInventory ? 'Done Editing Inventory' : 'Edit Inventory'}</button>
-                                                {isEditingInventory && <div className="grid grid-cols-1 gap-2"><Input type="text" value={inventoryDraft.name} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, name: event.target.value }))} placeholder="Item name" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="number" value={inventoryDraft.price} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, price: event.target.value }))} placeholder="Value" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="text" value={inventoryDraft.image} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, image: event.target.value }))} placeholder="Image URL" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><button onClick={handleAddInventoryItem} className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-semibold text-blue-300">Add Inventory Item</button></div>}
-                                                <div className="max-h-56 space-y-2 overflow-auto pr-1">
-                                                    {selectedInventory.map((item) => (
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-5 space-y-4">
+                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                    <div>
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Live Shippable Inventory</h4>
+                                                            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">Live</span>
+                                                        </div>
+                                                        <p className="mt-1 text-xs text-gray-500">Available, unlocked items that are currently eligible for shipment.</p>
+                                                    </div>
+                                                    <button onClick={() => setIsEditingInventory((prev) => !prev)} className="w-full rounded-lg bg-blue-500/20 px-3 py-2 text-xs font-semibold text-blue-300 sm:w-auto sm:py-1.5">{isEditingInventory ? 'Done Editing Inventory' : 'Edit Inventory'}</button>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                                    <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-3">
+                                                        <div className="text-[10px] uppercase text-gray-500">Shippable items</div>
+                                                        <div className="mt-1 text-lg font-bold text-white">{selectedShippableInventory.length}</div>
+                                                    </div>
+                                                    <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-3">
+                                                        <div className="text-[10px] uppercase text-gray-500">Shippable value</div>
+                                                        <CoinAmount amount={selectedShippableInventoryValue} animated={false} className="mt-1 text-lg font-bold text-white" iconClassName="h-4 w-4" />
+                                                    </div>
+                                                    <div className="col-span-2 rounded-xl border border-gray-800 bg-[#0b0e14] p-3 sm:col-span-1">
+                                                        <div className="text-[10px] uppercase text-gray-500">Total inventory</div>
+                                                        <div className="mt-1 text-lg font-bold text-white">{selectedInventory.length}</div>
+                                                    </div>
+                                                </div>
+                                                {isEditingInventory && <div className="grid grid-cols-1 gap-2"><Input type="text" value={inventoryDraft.name} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, name: event.target.value }))} placeholder="Item name" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="number" value={inventoryDraft.price} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, price: event.target.value }))} placeholder="Value" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="text" value={inventoryDraft.image} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, image: event.target.value }))} placeholder="Image URL" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><button onClick={handleAddInventoryItem} className="rounded-lg bg-blue-500/20 px-3 py-2 text-xs font-semibold text-blue-300">Add Inventory Item</button></div>}
+                                                <div className="max-h-72 space-y-2 overflow-auto pr-1">
+                                                    {selectedShippableInventory.map((item) => (
                                                         <div key={item.instanceId} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
-                                                            <div className="flex items-center justify-between gap-2"><span className="text-xs text-gray-200">{item.name}</span><span className="text-[10px] text-gray-500">{item.provenance ? `${item.provenance.sourceType}:${item.provenance.sourceId}` : 'unknown provenance'}</span></div>
-                                                            <div className="mt-1 flex gap-2"><button onClick={() => handleInventoryLockToggle(selectedUser.id, item.instanceId)} className="rounded bg-red-500/20 px-2 py-1 text-[10px] font-semibold text-red-300">{item.locked ? 'Unlock' : 'Lock'}</button>{isEditingInventory && <button onClick={() => handleRemoveInventoryItem(selectedUser.id, item.instanceId)} className="rounded bg-red-600/20 px-2 py-1 text-[10px] font-semibold text-red-300">Remove</button>}</div>
+                                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                                <div className="flex min-w-0 items-center gap-3">
+                                                                    <img src={item.image} alt={item.name} className="h-10 w-10 flex-none rounded-lg object-cover" />
+                                                                    <div className="min-w-0">
+                                                                        <div className="truncate text-xs font-semibold text-gray-100">{item.name}</div>
+                                                                        <div className="text-[10px] text-gray-500">{item.provenance ? `${item.provenance.sourceType}:${item.provenance.sourceId}` : 'unknown provenance'}</div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                                                                    <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} animated={false} className="text-xs font-bold text-emerald-300" iconClassName="h-3.5 w-3.5" />
+                                                                    {item.freeShipping && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">Free ship</span>}
+                                                                    {item.size && <span className="rounded-full bg-gray-800 px-2 py-0.5 text-[10px] text-gray-300">{item.size}</span>}
+                                                                </div>
+                                                            </div>
+                                                            <div className="mt-2 flex flex-wrap gap-2"><button onClick={() => handleInventoryLockToggle(selectedUser.id, item.instanceId)} className="rounded bg-red-500/20 px-2 py-1 text-[10px] font-semibold text-red-300">Lock</button>{isEditingInventory && <button onClick={() => handleRemoveInventoryItem(selectedUser.id, item.instanceId)} className="rounded bg-red-600/20 px-2 py-1 text-[10px] font-semibold text-red-300">Remove</button>}</div>
                                                         </div>
                                                     ))}
-                                                    {selectedInventory.length === 0 && <div className="text-xs text-gray-500">No inventory items.</div>}
+                                                    {selectedShippableInventory.length === 0 && <div className="rounded-lg border border-dashed border-gray-800 bg-[#0b0e14] p-4 text-xs text-gray-500">No live shippable inventory for this user.</div>}
                                                 </div>
+                                                {selectedInventory.length > selectedShippableInventory.length && <div className="text-[11px] text-gray-500">Hidden from this list: sold, shipping, shipped, locked, or non-shippable items.</div>}
+                                                {isEditingInventory && (
+                                                    <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-3">
+                                                        <div className="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-500">All inventory controls</div>
+                                                        <div className="max-h-48 space-y-2 overflow-auto pr-1">
+                                                            {selectedInventory.map((item) => (
+                                                                <div key={`all-${item.instanceId}`} className="rounded-lg border border-gray-800 bg-[#131720] p-2">
+                                                                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><span className="text-xs text-gray-200">{item.name}</span><span className="text-[10px] text-gray-500">{item.status}{item.locked ? ' • locked' : ''}{item.shippable === false ? ' • non-shippable' : ''}</span></div>
+                                                                    <div className="mt-2 flex flex-wrap gap-2"><button onClick={() => handleInventoryLockToggle(selectedUser.id, item.instanceId)} className="rounded bg-red-500/20 px-2 py-1 text-[10px] font-semibold text-red-300">{item.locked ? 'Unlock' : 'Lock'}</button><button onClick={() => handleRemoveInventoryItem(selectedUser.id, item.instanceId)} className="rounded bg-red-600/20 px-2 py-1 text-[10px] font-semibold text-red-300">Remove</button></div>
+                                                                </div>
+                                                            ))}
+                                                            {selectedInventory.length === 0 && <div className="text-xs text-gray-500">No inventory items.</div>}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
