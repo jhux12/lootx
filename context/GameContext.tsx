@@ -617,6 +617,10 @@ type AuthModalMode = 'login' | 'register';
 
 type EmailVerificationStatus = 'idle' | 'pending' | 'checking' | 'verified-no-session';
 
+type EmailPasswordAuthResult = { requiresEmailVerification?: boolean } | void;
+
+const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
+
 export type TopUpModalIntent = {
   reason: 'insufficient_balance';
   requiredCoins: number;
@@ -651,10 +655,10 @@ interface GameContextType {
   authInitialized: boolean;
   
   // Actions
-  login: (email: string, pass: string, remember?: boolean) => Promise<void>;
+  login: (email: string, pass: string, remember?: boolean) => Promise<EmailPasswordAuthResult>;
   loginWithGoogle: (options?: GoogleAuthOptions) => Promise<GoogleAuthResult>;
   linkGoogleAccount: (email: string, password: string, credential: AuthCredential) => Promise<GoogleAuthResult>;
-  register: (name: string, email: string, pass: string) => Promise<void>;
+  register: (name: string, email: string, pass: string) => Promise<EmailPasswordAuthResult>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => void;
   setShowLoginModal: (show: boolean) => void;
@@ -1428,7 +1432,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (hasEmailVerificationCompleted()) {
         setEmailVerificationStatus('verified-no-session');
         setShowEmailVerificationModal(false);
-        setShowEmailVerifiedModal(true);
+        setShowEmailVerifiedModal(false);
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem(AUTH_INLINE_MESSAGE_KEY, 'Email verified. Sign in to continue.');
+        }
+        setAuthModalMode('login');
+        setShowLoginModal(true);
         return;
       }
 
@@ -1471,7 +1480,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     setEmailVerificationStatus('pending');
-    setShowEmailVerificationModal(!emailVerificationDismissedRef.current);
+    setShowEmailVerificationModal(false);
     setShowEmailVerifiedModal(false);
   };
 
@@ -2287,9 +2296,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await sendCustomVerificationEmail(credential.user);
         setEmailVerificationStatus('pending');
         emailVerificationDismissedRef.current = false;
-        setShowEmailVerificationModal(true);
-        setShowLoginModal(false);
-        return;
+        setShowEmailVerificationModal(false);
+        setShowLoginModal(true);
+        return { requiresEmailVerification: true };
       }
       setShowLoginModal(false);
   };
@@ -2418,10 +2427,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       await tryApplyPendingReferralAttribution();
 
-      setShowLoginModal(false);
+      setShowLoginModal(true);
       setEmailVerificationStatus('pending');
       emailVerificationDismissedRef.current = false;
-      setShowEmailVerificationModal(true);
+      setShowEmailVerificationModal(false);
+      return { requiresEmailVerification: true };
     } catch (error: any) {
       if (error?.code === 'auth/email-already-in-use') {
         try {
@@ -2432,9 +2442,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             await sendCustomVerificationEmail(signInCredential.user);
             setEmailVerificationStatus('pending');
             emailVerificationDismissedRef.current = false;
-            setShowEmailVerificationModal(true);
-            setShowLoginModal(false);
-            return;
+            setShowEmailVerificationModal(false);
+            setShowLoginModal(true);
+            return { requiresEmailVerification: true };
           }
           throw new Error('That email is already registered. Please sign in.');
         } catch (signInError: any) {
