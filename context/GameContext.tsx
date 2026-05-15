@@ -2293,7 +2293,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!credential.user.emailVerified) {
         const redirectPath = consumePostSignupRedirect() || getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT;
         setPendingEmailVerification(redirectPath);
-        await sendCustomVerificationEmail(credential.user);
+        try {
+          await sendCustomVerificationEmail(credential.user);
+        } catch (error) {
+          console.error('Verification email resend failed during login', error);
+        }
         setEmailVerificationStatus('pending');
         emailVerificationDismissedRef.current = false;
         setShowEmailVerificationModal(false);
