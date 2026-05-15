@@ -62,8 +62,6 @@ export const LoginModal: React.FC = () => {
         }
         const result = await register(username, email, password);
         if (result?.requiresEmailVerification) {
-          setMode('login');
-          setAuthModalMode('login');
           setShowEmailFields(true);
           setPassword('');
           setMessage(EMAIL_CONFIRMATION_MESSAGE);
