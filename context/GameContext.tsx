@@ -1535,7 +1535,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         url.searchParams.delete('customToken');
         window.history.replaceState({}, '', `${url.pathname}${url.search}`);
         setShowLoginModal(false);
-        const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
+        const redirectPath = consumePostSignupRedirect() || '/';
         resolveEmailRedirect(redirectPath);
       } catch (error) {
         console.error('Custom token sign-in failed', error);
