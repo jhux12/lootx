@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LucideCheckCircle2, LucideRefreshCw, LucideXCircle } from 'lucide-react';
 import { UpgradeStatus } from './types';
 
-export const needlePhysics = { overshootDeg: 6, settleMs: 520, damping: 0.18, frequency: 14 };
+export const needlePhysics = { overshootDeg: 0, settleMs: 120, damping: 0.42, frequency: 16 };
 
 const TRAIL_GHOST_COUNT = 8;
 const MOBILE_TRAIL_GHOST_COUNT = 4;
@@ -31,6 +31,7 @@ interface UpgraderSpinnerProps {
   spinRotation: number;
   spinNonce: number;
   spinSuccess: boolean | null;
+  successConfettiNonce: number;
   onSpinComplete: (success: boolean) => void;
   winZoneRotation: number;
   onWinZoneRotationChange: (rotation: number) => void;
@@ -61,6 +62,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   spinRotation,
   spinNonce,
   spinSuccess,
+  successConfettiNonce,
   onSpinComplete,
   winZoneRotation,
   onWinZoneRotationChange,
@@ -75,10 +77,11 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
   const needleRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
   const trailRafRef = useRef<number | null>(null);
-  const bounceRafRef = useRef<number | null>(null);
+  const settleTimeoutRef = useRef<number | null>(null);
   const ghostNeedleRefs = useRef<Array<HTMLDivElement | null>>([]);
   const historyRef = useRef<number[]>(Array(TRAIL_GHOST_COUNT).fill(0));
   const [spinBounceOffset, setSpinBounceOffset] = useState(0);
+  const [isSettling, setIsSettling] = useState(false);
   const [isTrailing, setIsTrailing] = useState(false);
   const [sweepNonce, setSweepNonce] = useState(0);
   const [confettiBurst, setConfettiBurst] = useState<SpinnerConfetti[]>([]);
@@ -147,58 +150,60 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
       }
       setIsTrailing(false);
     };
-  }, [reducedMotion, status, spinNonce]);
+  }, [mobileOptimized, reducedMotion, status, spinNonce]);
 
   const runNeedlePhysicsBounce = (onSettled: () => void) => {
+    if (settleTimeoutRef.current) {
+      window.clearTimeout(settleTimeoutRef.current);
+      settleTimeoutRef.current = null;
+    }
+
+    setIsSettling(true);
+    setSpinBounceOffset(0);
+
     if (reducedMotion) {
-      setSpinBounceOffset(0);
+      setIsSettling(false);
       onSettled();
       return;
     }
 
-    const start = performance.now();
-    const initial = needlePhysics.overshootDeg;
-    const settleSeconds = needlePhysics.settleMs / 1000;
-
-    const frame = (now: number) => {
-      const elapsed = (now - start) / 1000;
-      const progress = Math.min(1, elapsed / settleSeconds);
-      const oscillation = Math.cos(needlePhysics.frequency * elapsed);
-      const envelope = Math.exp(-needlePhysics.damping * needlePhysics.frequency * elapsed * 2);
-      const offsetDeg = initial * envelope * oscillation;
-      setSpinBounceOffset(progress >= 1 ? 0 : offsetDeg);
-
-      if (progress >= 1) {
-        setSpinBounceOffset(0);
-        onSettled();
-        return;
-      }
-
-      bounceRafRef.current = window.requestAnimationFrame(frame);
-    };
-
-    bounceRafRef.current = window.requestAnimationFrame(frame);
+    settleTimeoutRef.current = window.setTimeout(() => {
+      settleTimeoutRef.current = null;
+      setIsSettling(false);
+      onSettled();
+    }, needlePhysics.settleMs);
   };
+
+  useEffect(() => {
+    if (status !== 'spinning') return;
+    handledNonceRef.current = -1;
+    setSpinBounceOffset(0);
+    setIsSettling(false);
+  }, [spinNonce, status]);
 
   useEffect(() => () => {
     if (trailRafRef.current) window.cancelAnimationFrame(trailRafRef.current);
-    if (bounceRafRef.current) window.cancelAnimationFrame(bounceRafRef.current);
+    if (settleTimeoutRef.current) window.clearTimeout(settleTimeoutRef.current);
   }, []);
 
   useEffect(() => {
-    if (status !== 'success') return;
-    const burst = Array.from({ length: reducedMotion ? 12 : (mobileOptimized ? 14 : 32) }, (_, index) => ({
+    if (status !== 'success' || successConfettiNonce <= 0) {
+      setConfettiBurst([]);
+      return;
+    }
+
+    const burst = Array.from({ length: reducedMotion ? 10 : (mobileOptimized ? 14 : 32) }, (_, index) => ({
       id: index,
       angle: Math.random() * 360,
       distance: (size / 2) * (0.5 + Math.random() * 0.55),
-      size: 5 + Math.random() * 6,
+      size: mobileOptimized ? 4 + Math.random() * 5 : 5 + Math.random() * 6,
       hue: 160 + Math.random() * 170,
       delay: Math.random() * 120
     }));
     setConfettiBurst(burst);
     const timeoutId = window.setTimeout(() => setConfettiBurst([]), reducedMotion ? 900 : 1400);
     return () => window.clearTimeout(timeoutId);
-  }, [mobileOptimized, reducedMotion, size, spinNonce, status]);
+  }, [mobileOptimized, reducedMotion, size, status, successConfettiNonce]);
 
   return (
     <div className="relative flex flex-col items-center">
@@ -331,7 +336,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
               ghostNeedleRefs.current[index] = node;
             }}
             className={`pointer-events-none absolute left-1/2 top-0 z-10 -ml-[2px] h-1/2 w-[4px] origin-bottom will-change-transform ${isTrailing ? 'opacity-100' : 'opacity-0'}`}
-            style={{ opacity: isTrailing ? ((mobileOptimized ? MOBILE_TRAIL_GHOST_COUNT : TRAIL_GHOST_COUNT) - index) / ((mobileOptimized ? MOBILE_TRAIL_GHOST_COUNT : TRAIL_GHOST_COUNT) * 9) : 0, filter: `blur(${index * 0.45}px)` }}
+            style={{ opacity: isTrailing ? ((mobileOptimized ? MOBILE_TRAIL_GHOST_COUNT : TRAIL_GHOST_COUNT) - index) / ((mobileOptimized ? MOBILE_TRAIL_GHOST_COUNT : TRAIL_GHOST_COUNT) * 10) : 0, filter: `blur(${index * 0.32}px)`, backfaceVisibility: 'hidden' }}
           >
             <div className="relative h-full w-full">
               <div className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-gradient-to-b from-[var(--reactor-risk-color)] to-transparent" />
@@ -350,8 +355,9 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           }}
           className="pointer-events-none absolute left-1/2 top-0 z-20 -ml-[2px] h-1/2 w-[4px] origin-bottom will-change-transform"
           style={{
-            transform: `rotate(${spinRotation + spinBounceOffset}deg)`,
-            transition: status === 'spinning' ? `transform ${durationMs}ms cubic-bezier(0.16, 1, 0.3, 1)` : 'none'
+            transform: `translateZ(0) rotate(${spinRotation + spinBounceOffset}deg)`,
+            transition: status === 'spinning' && !isSettling ? `transform ${durationMs}ms cubic-bezier(0.12, 0.72, 0, 1)` : 'none',
+            backfaceVisibility: 'hidden'
           }}
         >
           <div className="relative h-full w-full">
@@ -368,7 +374,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           </div>
         )}
       </div>
-      <style>{`@keyframes upgraderSweep{from{transform:rotate(-22deg);opacity:.7}to{transform:rotate(18deg);opacity:0}}@keyframes spinnerConfetti{0%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(calc(-50% + var(--confetti-x)),calc(-50% + var(--confetti-y) + 24px)) scale(.86) rotate(220deg);opacity:0}}`}</style>
+      <style>{`@keyframes upgraderSweep{from{transform:rotate(-22deg);opacity:.7}to{transform:rotate(18deg);opacity:0}}@keyframes spinnerConfetti{0%{transform:translate3d(-50%,-50%,0) scale(1);opacity:1}100%{transform:translate3d(calc(-50% + var(--confetti-x)),calc(-50% + var(--confetti-y) + 24px),0) scale(.86) rotate(220deg);opacity:0}}`}</style>
     </div>
   );
 });

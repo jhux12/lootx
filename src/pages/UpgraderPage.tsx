@@ -227,6 +227,7 @@ export default function UpgraderPage() {
   const [winZoneRotation, setWinZoneRotation] = useState(0);
   const [spinNonce, setSpinNonce] = useState(0);
   const [spinResult, setSpinResult] = useState<boolean | null>(null);
+  const [successConfettiNonce, setSuccessConfettiNonce] = useState(0);
   const [history, setHistory] = useState<Array<{ item: EliteItem; success: boolean; date: number }>>([]);
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
   const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
@@ -679,11 +680,14 @@ export default function UpgraderPage() {
 
   const handleSpinComplete = (success: boolean) => {
     setStatus(success ? 'success' : 'fail');
-    if (success) playUpgraderSound('win');
+    if (success) {
+      setSuccessConfettiNonce((previous) => previous + 1);
+      playUpgraderSound('win');
+    }
 
     if (isDemoSpin) {
       pendingProofRef.current = null;
-    setSpinResult(null);
+      setSpinResult(null);
       setIsDemoSpin(false);
       if (idleTimeoutRef.current) window.clearTimeout(idleTimeoutRef.current);
       idleTimeoutRef.current = window.setTimeout(() => setStatus('idle'), 900);
@@ -764,6 +768,7 @@ export default function UpgraderPage() {
                 spinRotation={spinRotation}
                 spinNonce={spinNonce}
                 spinSuccess={spinResult}
+                successConfettiNonce={successConfettiNonce}
                 onSpinComplete={handleSpinComplete}
                 winZoneRotation={winZoneRotation}
                 onWinZoneRotationChange={setWinZoneRotation}
