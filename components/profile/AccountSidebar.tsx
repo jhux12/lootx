@@ -1,5 +1,6 @@
 import React from 'react';
-import { User, ShippingAddress } from '../../types';
+import { ShieldCheck, SlidersHorizontal, UserRound } from 'lucide-react';
+import { User } from '../../types';
 import { UserAvatar } from '../UserAvatar';
 import { XP_ICON } from '../../constants';
 import { AnimatedNumber } from '../../src/ui/numbers/AnimatedNumber';
@@ -15,15 +16,6 @@ interface QuickAction {
 
 type AccountPanel = 'overview' | 'security' | 'settings';
 
-interface SecurityForm {
-  username: string;
-  email: string;
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-  avatar: string;
-}
-
 interface AccountSidebarProps {
   user: User;
   username: string;
@@ -32,21 +24,7 @@ interface AccountSidebarProps {
   balance: number;
   quickActions: QuickAction[];
   activePanel: AccountPanel;
-  addressForm: ShippingAddress;
-  setAddressForm: (next: ShippingAddress) => void;
-  onSaveAddress: () => void;
-  isSavingAddress: boolean;
-  securityForm: SecurityForm;
-  setSecurityForm: (next: SecurityForm) => void;
-  onSaveUsername: () => void;
-  onSaveEmail: () => void;
-  onSavePassword: () => void;
-  isSavingUsername: boolean;
-  isSavingEmail: boolean;
-  isSavingPassword: boolean;
-  avatarOptions: string[];
-  onSaveAvatar: () => void;
-  isSavingAvatar: boolean;
+  onSelectPanel: (panel: AccountPanel) => void;
 }
 
 export const AccountSidebar: React.FC<AccountSidebarProps> = ({
@@ -57,117 +35,124 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
   balance,
   quickActions,
   activePanel,
-  addressForm,
-  setAddressForm,
-  onSaveAddress,
-  isSavingAddress,
-  securityForm,
-  setSecurityForm,
-  onSaveUsername,
-  onSaveEmail,
-  onSavePassword,
-  isSavingUsername,
-  isSavingEmail,
-  isSavingPassword,
-  avatarOptions,
-  onSaveAvatar,
-  isSavingAvatar
+  onSelectPanel
 }) => {
-  const usernameChanged = securityForm.username.trim() !== (user.name ?? '').trim() && securityForm.username.trim().length > 0;
-  const emailChanged = securityForm.email.trim() !== (user.email ?? '').trim() && securityForm.email.trim().length > 0;
-  const canUpdateEmail = emailChanged && securityForm.currentPassword.trim().length > 0;
-  const canUpdatePassword = securityForm.currentPassword.trim().length > 0 && securityForm.newPassword.trim().length > 0 && securityForm.confirmPassword.trim().length > 0;
+  const hasShippingAddress = Boolean(
+    user.shippingAddress?.fullName
+    && user.shippingAddress?.street
+    && user.shippingAddress?.city
+    && user.shippingAddress?.zipCode
+    && user.shippingAddress?.country
+  );
+  const profileCompletionChecks = [Boolean(user.name), Boolean(user.email), Boolean(user.avatar), hasShippingAddress];
+  const completedChecks = profileCompletionChecks.filter(Boolean).length;
+  const profileCompletionPercent = Math.round((completedChecks / profileCompletionChecks.length) * 100);
+  const panelButtons = [
+    {
+      id: 'overview' as const,
+      label: 'Overview',
+      hint: 'Profile details and status',
+      icon: UserRound
+    },
+    {
+      id: 'security' as const,
+      label: 'Security',
+      hint: 'Email, password, login',
+      icon: ShieldCheck
+    },
+    {
+      id: 'settings' as const,
+      label: 'Settings',
+      hint: 'Address and avatar',
+      icon: SlidersHorizontal
+    }
+  ];
 
   return (
-    <aside className="hidden w-[280px] shrink-0 space-y-4 md:block">
-      <section className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#151b2d] to-[#101523] p-4">
-        <div className="flex items-center gap-3">
-          <UserAvatar user={user} className="h-14 w-14 rounded-xl bg-[#2a323b]" />
+    <aside className="hidden w-[300px] shrink-0 space-y-4 md:block">
+      <section className="rounded-3xl border border-purple-400/20 bg-gradient-to-b from-[#171d31] via-[#141b2d] to-[#101523] p-4 shadow-[0_16px_45px_rgba(11,14,20,0.45)]">
+        <div className="flex items-center gap-3.5">
+          <UserAvatar user={user} className="h-16 w-16 rounded-2xl bg-[#2a323b]" />
           <div>
-            <p className="text-sm font-bold text-white">{username}</p>
-            <p className="text-xs text-gray-400">Member since {memberSince}</p>
+            <p className="text-base font-bold text-white">{username}</p>
+            <p className="text-xs text-gray-300">Member since {memberSince}</p>
+            <p className="mt-1 text-[11px] text-gray-400">{user.email || 'No email linked yet'}</p>
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full border border-purple-400/30 bg-purple-500/10 px-2 py-1 text-xs text-white">
-            <img src={XP_ICON} alt="XP" className="h-3.5 w-3.5" /> <AnimatedNumber value={xp} /> XP
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <span className="inline-flex items-center justify-center gap-1 rounded-xl border border-purple-400/30 bg-purple-500/10 px-2 py-2 text-xs text-white">
+            <img src={XP_ICON} alt="XP" className="h-3.5 w-3.5" />
+            <AnimatedNumber value={xp} /> XP
           </span>
-          <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-white">
+          <span className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-xs text-white">
             <CoinAmount amount={balance} formatOptions={{ maximumFractionDigits: 0 }} className="text-xs font-semibold text-white" iconClassName="h-3.5 w-3.5" />
           </span>
         </div>
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between text-[11px] text-gray-300">
+            <span>Profile completion</span>
+            <span className="font-semibold text-white">{profileCompletionPercent}%</span>
+          </div>
+          <div className="h-2 rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-400 transition-all"
+              style={{ width: `${profileCompletionPercent}%` }}
+            />
+          </div>
+        </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-[#1f252c] p-4">
-        <p className="mb-2 text-xs font-semibold uppercase text-gray-400">Quick Actions</p>
+      <section className="rounded-3xl border border-white/10 bg-[#1f252c] p-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Account Sections</p>
+        <div className="space-y-2">
+          {panelButtons.map((panel) => {
+            const Icon = panel.icon;
+            const isActive = activePanel === panel.id;
+            return (
+              <button
+                key={panel.id}
+                type="button"
+                onClick={() => onSelectPanel(panel.id)}
+                className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left transition ${
+                  isActive
+                    ? 'border-purple-400/50 bg-purple-500/20 text-white'
+                    : 'border-white/10 bg-white/[0.02] text-gray-300 hover:bg-white/[0.05]'
+                }`}
+              >
+                <span className={`rounded-lg p-1.5 ${isActive ? 'bg-purple-500/30 text-purple-100' : 'bg-white/10 text-gray-300'}`}>
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold">{panel.label}</span>
+                  <span className="block text-[11px] text-gray-400">{panel.hint}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-white/10 bg-[#1f252c] p-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Quick Actions</p>
         <div className="space-y-2">
           {quickActions.map((action) => (
-            <button key={action.label} onClick={action.onClick} className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm ${action.active ? 'border border-purple-400/60 bg-purple-500/20 text-white' : action.primary ? 'bg-gradient-to-r from-purple-600 to-violet-500 text-white' : 'border border-white/10 text-gray-200 hover:bg-white/5'}`}>
+            <button
+              key={action.label}
+              onClick={action.onClick}
+              className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm ${
+                action.active
+                  ? 'border border-purple-400/60 bg-purple-500/20 text-white'
+                  : action.primary
+                    ? 'bg-gradient-to-r from-purple-600 to-violet-500 text-white'
+                    : 'border border-white/10 text-gray-200 hover:bg-white/5'
+              }`}
+            >
               <span>{action.label}</span>
               {action.isNew && <span className="rounded-full bg-purple-500 px-2 py-0.5 text-[10px] font-bold">NEW</span>}
             </button>
           ))}
         </div>
       </section>
-
-      {activePanel === 'security' && (
-        <section className="rounded-2xl border border-white/10 bg-[#1f252c] p-4">
-          <p className="mb-3 text-xs font-semibold uppercase text-gray-400">Security</p>
-          <div className="grid grid-cols-1 gap-2">
-            <input value={securityForm.username} onChange={(e) => setSecurityForm({ ...securityForm, username: e.target.value })} placeholder="Username" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
-            <button onClick={onSaveUsername} disabled={isSavingUsername || !usernameChanged} className="rounded-xl border border-purple-400/40 bg-purple-500/15 px-3 py-2 text-sm font-bold text-purple-100 disabled:opacity-50">
-              {isSavingUsername ? 'Saving Username...' : 'Update Username'}
-            </button>
-            <input value={securityForm.email} onChange={(e) => setSecurityForm({ ...securityForm, email: e.target.value })} placeholder="Email" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
-            <input type="password" value={securityForm.currentPassword} onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })} placeholder="Current Password" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
-            <button onClick={onSaveEmail} disabled={isSavingEmail || !canUpdateEmail} className="rounded-xl border border-purple-400/40 bg-purple-500/15 px-3 py-2 text-sm font-bold text-purple-100 disabled:opacity-50">
-              {isSavingEmail ? 'Saving Email...' : 'Update Email'}
-            </button>
-            <input type="password" value={securityForm.newPassword} onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })} placeholder="New Password" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
-            <input type="password" value={securityForm.confirmPassword} onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })} placeholder="Confirm New Password" className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
-            <button onClick={onSavePassword} disabled={isSavingPassword || !canUpdatePassword} className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">
-              {isSavingPassword ? 'Saving Password...' : 'Update Password'}
-            </button>
-          </div>
-        </section>
-      )}
-
-      {activePanel === 'settings' && (
-        <section className="rounded-2xl border border-white/10 bg-[#1f252c] p-4">
-          <p className="mb-3 text-xs font-semibold uppercase text-gray-400">Settings: Shipping Address</p>
-          <div className="grid grid-cols-1 gap-2">
-            {([
-              ['fullName', 'Full Name'],
-              ['street', 'Street'],
-              ['city', 'City'],
-              ['state', 'State'],
-              ['zipCode', 'Zip Code'],
-              ['country', 'Country']
-            ] as Array<[keyof ShippingAddress, string]>).map(([key, label]) => (
-              <input key={key} value={addressForm[key]} onChange={(e) => setAddressForm({ ...addressForm, [key]: e.target.value })} placeholder={label} className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white" />
-            ))}
-          </div>
-          <p className="mt-3 mb-2 text-xs font-semibold uppercase text-gray-400">Profile Picture</p>
-          <div className="grid grid-cols-5 gap-2">
-            {avatarOptions.map((avatar) => (
-              <button
-                type="button"
-                key={avatar}
-                onClick={() => setSecurityForm({ ...securityForm, avatar })}
-                className={`overflow-hidden rounded-xl border-2 ${securityForm.avatar === avatar ? 'border-purple-400' : 'border-white/10'}`}
-              >
-                <img src={avatar} alt="avatar option" className="h-10 w-full object-cover" />
-              </button>
-            ))}
-          </div>
-          <button onClick={onSaveAvatar} disabled={isSavingAvatar} className="mt-3 w-full rounded-xl border border-purple-400/40 bg-purple-500/15 px-3 py-2 text-sm font-bold text-purple-100">
-            {isSavingAvatar ? 'Saving...' : 'Save Profile Picture'}
-          </button>
-          <button onClick={onSaveAddress} disabled={isSavingAddress} className="mt-3 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white">
-            {isSavingAddress ? 'Saving...' : 'Save Address'}
-          </button>
-        </section>
-      )}
     </aside>
   );
 };

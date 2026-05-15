@@ -434,7 +434,8 @@ export const Profile: React.FC = () => {
   const balance = Number(user.balance ?? 0);
 
   const quickActions = [
-    { label: 'Inventory', active: activeTab === 'inventory', onClick: () => { setActiveTab('inventory'); setActiveAccountPanel('overview'); } },
+    { label: 'Overview', active: activeTab === 'account' && activeAccountPanel === 'overview', onClick: () => { setActiveTab('account'); setActiveAccountPanel('overview'); } },
+    { label: 'Inventory', active: activeTab === 'inventory', onClick: () => { setActiveTab('inventory'); } },
     { label: 'Settings', active: activeTab === 'account' && activeAccountPanel === 'settings', onClick: () => { setActiveTab('account'); setActiveAccountPanel('settings'); } },
     { label: 'Security', active: activeTab === 'account' && activeAccountPanel === 'security', onClick: () => { setActiveTab('account'); setActiveAccountPanel('security'); } },
     { label: 'Rewards', onClick: () => setView({ type: 'BONUSES' as const }) },
@@ -483,26 +484,15 @@ export const Profile: React.FC = () => {
           balance={balance}
           quickActions={quickActions}
           activePanel={activeAccountPanel}
-          addressForm={addressForm}
-          setAddressForm={setAddressForm}
-          onSaveAddress={handleSaveAddress}
-          isSavingAddress={isSavingAddress}
-          securityForm={securityForm}
-          setSecurityForm={setSecurityForm}
-          onSaveUsername={handleSaveUsername}
-          onSaveEmail={handleSaveEmail}
-          onSavePassword={handleSavePassword}
-          isSavingUsername={isSavingUsername}
-          isSavingEmail={isSavingEmail}
-          isSavingPassword={isSavingPassword}
-          avatarOptions={AVATAR_PRESETS}
-          onSaveAvatar={handleSaveAvatar}
-          isSavingAvatar={isSavingAvatar}
+          onSelectPanel={(panel) => {
+            setActiveTab('account');
+            setActiveAccountPanel(panel);
+          }}
         />
 
         <div className="flex-1">
           <div
-            className={`mb-3 grid gap-2 rounded-2xl border border-white/10 bg-[#1f252c] p-1 md:hidden ${
+            className={`mb-4 grid gap-2 rounded-2xl border border-white/10 bg-[#1f252c] p-1 md:max-w-md ${
               hasDailyFreeBoxAvailable ? 'grid-cols-3' : 'grid-cols-2'
             }`}
           >
@@ -521,56 +511,7 @@ export const Profile: React.FC = () => {
             ) : null}
           </div>
 
-          <div className="md:hidden">
-            {activeTab === 'inventory' ? (
-              <InventoryView
-                items={filteredInventory}
-                selectedIds={selectedShipments}
-                onToggleSelect={(id) => setSelectedShipments((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))}
-                onReviewShipping={() => handleOpenShippingReview(selectedShipments)}
-                search={search}
-                setSearch={setSearch}
-                rarity={rarity}
-                setRarity={setRarity}
-                type={type}
-                setType={setType}
-                sort={sort}
-                setSort={setSort}
-                getAction={getActionForItem}
-                isSelectable={canSelectShipment}
-                totalValue={inventoryTotalValue}
-                availableToShip={availableToShip}
-                selectedValue={selectedShipmentValue}
-              />
-            ) : (
-              <AccountView
-                user={user}
-                username={displayUsername}
-                memberSince={joinedDate}
-                xp={xp}
-                balance={balance}
-                quickActions={quickActions}
-                activePanel={activeAccountPanel}
-                addressForm={addressForm}
-                setAddressForm={setAddressForm}
-                onSaveAddress={handleSaveAddress}
-                isSavingAddress={isSavingAddress}
-                securityForm={securityForm}
-                setSecurityForm={setSecurityForm}
-                onSaveUsername={handleSaveUsername}
-                onSaveEmail={handleSaveEmail}
-                onSavePassword={handleSavePassword}
-                isSavingUsername={isSavingUsername}
-                isSavingEmail={isSavingEmail}
-                isSavingPassword={isSavingPassword}
-                avatarOptions={AVATAR_PRESETS}
-                onSaveAvatar={handleSaveAvatar}
-                isSavingAvatar={isSavingAvatar}
-              />
-            )}
-          </div>
-
-          <div className="hidden md:block">
+          {activeTab === 'inventory' ? (
             <InventoryView
               items={filteredInventory}
               selectedIds={selectedShipments}
@@ -590,7 +531,33 @@ export const Profile: React.FC = () => {
               availableToShip={availableToShip}
               selectedValue={selectedShipmentValue}
             />
-          </div>
+          ) : (
+            <AccountView
+              user={user}
+              username={displayUsername}
+              memberSince={joinedDate}
+              xp={xp}
+              balance={balance}
+              quickActions={quickActions}
+              activePanel={activeAccountPanel}
+              onSelectPanel={setActiveAccountPanel}
+              addressForm={addressForm}
+              setAddressForm={setAddressForm}
+              onSaveAddress={handleSaveAddress}
+              isSavingAddress={isSavingAddress}
+              securityForm={securityForm}
+              setSecurityForm={setSecurityForm}
+              onSaveUsername={handleSaveUsername}
+              onSaveEmail={handleSaveEmail}
+              onSavePassword={handleSavePassword}
+              isSavingUsername={isSavingUsername}
+              isSavingEmail={isSavingEmail}
+              isSavingPassword={isSavingPassword}
+              avatarOptions={AVATAR_PRESETS}
+              onSaveAvatar={handleSaveAvatar}
+              isSavingAvatar={isSavingAvatar}
+            />
+          )}
         </div>
       </div>
 
