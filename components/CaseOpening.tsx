@@ -358,6 +358,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const winningCardRef = useRef<HTMLDivElement>(null);
+  const reelItemsRef = useRef<CaseItem[]>([]);
   const spinnerAnimationRef = useRef<Animation | null>(null);
   const tickTimerRef = useRef<number | null>(null);
   const lastCenterIndexRef = useRef<number>(SPINNER_MOTION.preWinnerItems);
@@ -571,6 +572,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           items[Math.floor(Math.random() * items.length)]
         );
         const previewCenterIndex = Math.floor(staticItems.length / 2);
+        reelItemsRef.current = staticItems;
         setReelItems(staticItems);
         setReelWinnerIndex(previewCenterIndex);
         setCurrentCenterIndex(previewCenterIndex);
@@ -833,7 +835,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const getCenteredIndexFromTranslate = useCallback((translateX: number) => {
     const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
     const viewportCenter = viewportWidth / 2;
-    const reelLength = reelItems.length;
+    const renderedItemCount = scrollContainerRef.current?.children.length ?? 0;
+    const reelLength = renderedItemCount || reelItemsRef.current.length || reelItems.length;
     if (!Number.isFinite(stepWidth) || stepWidth <= 0 || !Number.isFinite(cardWidth) || viewportCenter <= 0 || reelLength <= 0) {
       return 0;
     }
@@ -1136,6 +1139,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       scrollContainerRef.current.style.transition = 'none';
     }
 
+    reelItemsRef.current = nextReelItems;
     setReelItems(nextReelItems);
     setReelWinnerIndex(winnerIndex);
     await waitForNextPaint();
