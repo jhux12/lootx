@@ -44,6 +44,7 @@ export const LoginModal: React.FC = () => {
   const [showOAuthFallback, setShowOAuthFallback] = useState(false);
   const [showEmailFields, setShowEmailFields] = useState(false);
   const isLinkingGoogle = Boolean(googleLinkCredential);
+  const showRegisterFormMessage = Boolean(message && mode === 'register' && showEmailFields && !isLinkingGoogle);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -330,8 +331,8 @@ export const LoginModal: React.FC = () => {
                   : 'Login to access your account.'}
               </p>
             )}
-            {message && (
-              <p className="mt-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-neutral-300">
+            {message && !showRegisterFormMessage && (
+              <p className="mt-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-neutral-300" aria-live="polite">
                 {message}
               </p>
             )}
@@ -527,6 +528,12 @@ export const LoginModal: React.FC = () => {
                     I agree to the <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Terms of Service</a>, <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Privacy Policy</a>, and confirm I am 18+ to register with email.
                   </span>
                 </label>
+              )}
+
+              {showRegisterFormMessage && (
+                <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-neutral-300" aria-live="polite">
+                  {message}
+                </p>
               )}
 
               <button
