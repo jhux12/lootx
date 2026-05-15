@@ -1820,7 +1820,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
                 <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
 
-                
+                {/* Center Indicator */}
+                <div className="pointer-events-none absolute inset-y-0 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center" aria-hidden="true">
+                  <i className="fa-solid fa-caret-down mt-1 text-base leading-none text-white drop-shadow-[0_0_8px_rgba(34,211,238,0.9)] sm:mt-0 sm:text-lg"></i>
+                  <div className="mt-0.5 h-full w-px bg-gradient-to-b from-cyan-200 via-white/90 to-cyan-200/35 shadow-[0_0_12px_rgba(34,211,238,0.75)]" />
+                </div>
 
                 {/* The Moving Reel */}
                 <div 
