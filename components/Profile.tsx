@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { CheckCircle2, Coins, CreditCard, MapPin, PackageCheck, Sparkles, Truck, X } from 'lucide-react';
+import { Check, Coins, CreditCard, Package, Tag, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -248,12 +248,6 @@ export const Profile: React.FC = () => {
   const selectedShippingCostLabel = activeShippingMethod === 'cash'
     ? `$${(shippingCashTotalCents / 100).toFixed(2)}`
     : `${shippingCoinTotal.toLocaleString()} coins`;
-  const shippingAddressSummary = user.shippingAddress
-    ? [user.shippingAddress.street, user.shippingAddress.city, user.shippingAddress.state, user.shippingAddress.zipCode]
-      .filter(Boolean)
-      .join(', ')
-    : '';
-
   useEffect(() => {
     if (canUseCoinShipping && canUseCashShipping) return;
     setShippingPaymentMethod(canUseCashShipping ? 'cash' : 'coins');
@@ -590,144 +584,93 @@ export const Profile: React.FC = () => {
       )}
 
       {showShippingReview && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/85 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="max-h-[92vh] w-full overflow-hidden rounded-t-[2rem] border border-white/10 bg-[#151922] shadow-2xl shadow-purple-950/40 sm:max-w-2xl sm:rounded-[2rem]">
-            <div className="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-purple-700/30 via-[#1f252c] to-cyan-500/10 p-4 sm:p-5">
-              <div className="absolute -right-12 -top-16 h-36 w-36 rounded-full bg-purple-500/30 blur-3xl" />
-              <div className="absolute -bottom-16 left-6 h-32 w-32 rounded-full bg-cyan-400/20 blur-3xl" />
-              <div className="relative flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-purple-100 shadow-lg shadow-purple-900/30">
-                    <Truck className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-purple-300/20 bg-purple-400/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-purple-100">
-                      <Sparkles className="h-3 w-3" /> Ready to ship
-                    </div>
-                    <h3 className="text-xl font-black text-white sm:text-2xl">Review your shipment</h3>
-                    <p className="mt-1 text-xs leading-relaxed text-gray-300 sm:text-sm">Confirm your items, delivery details, and preferred payment method before we pack your order.</p>
-                  </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-[25rem] overflow-y-auto rounded-[1.75rem] border border-white/15 bg-[#11131a]/95 p-5 shadow-2xl shadow-purple-950/40 ring-1 ring-white/5 sm:p-6">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/25 to-slate-800/80 text-purple-300 shadow-lg shadow-purple-900/20">
+                  <Truck className="h-8 w-8" />
                 </div>
-                <button
-                  aria-label="Close shipping review"
-                  className="rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:bg-white/10 hover:text-white"
-                  onClick={() => setShowShippingReview(false)}
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                <div className="min-w-0">
+                  <h3 className="text-3xl font-black leading-tight text-white sm:text-4xl">Review Shipping</h3>
+                  <p className="mt-1 text-base font-medium text-slate-400">{selectedShipmentItems.length} {selectedShipmentItems.length === 1 ? 'item' : 'items'} selected</p>
+                </div>
+              </div>
+              <button
+                aria-label="Close shipping review"
+                className="-mr-1 rounded-full p-1 text-slate-400 transition hover:bg-white/5 hover:text-white"
+                onClick={() => setShowShippingReview(false)}
+              >
+                <X className="h-8 w-8" />
+              </button>
+            </div>
+
+            <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#141821]/90">
+              <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-5">
+                <div className="flex min-w-0 items-center gap-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-700/25 text-slate-300">
+                    <Package className="h-5 w-5" />
+                  </span>
+                  <span className="truncate text-lg font-semibold text-slate-300">Free shipping items</span>
+                </div>
+                <span className="text-lg font-bold text-slate-300">{freeShippingItemCount}</span>
+              </div>
+              <div className="h-px bg-white/10" />
+              <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-5">
+                <div className="flex min-w-0 items-center gap-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-purple-500/15 text-purple-300">
+                    <Tag className="h-5 w-5" />
+                  </span>
+                  <span className="truncate text-lg font-semibold text-slate-300">Paid shipping items</span>
+                </div>
+                <span className="text-lg font-bold text-slate-300">{paidShippingItemCount}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4 bg-gradient-to-r from-purple-500/25 via-purple-500/15 to-transparent px-4 py-4 sm:px-5">
+                <div className="flex min-w-0 items-center gap-4">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-500/25 text-purple-300 shadow-lg shadow-purple-500/20">
+                    {activeShippingMethod === 'cash' ? <CreditCard className="h-6 w-6" /> : <Coins className="h-6 w-6" />}
+                  </span>
+                  <span className="truncate text-lg font-black text-purple-100">{activeShippingMethod === 'cash' ? 'Cash due now' : 'Coins due now'}</span>
+                </div>
+                <span className="text-xl font-black text-purple-400">{isFreeOnlySelection ? 'Free' : selectedShippingCostLabel}</span>
               </div>
             </div>
 
-            <div className="max-h-[calc(92vh-9rem)] overflow-y-auto p-4 sm:p-5">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-200">
-                    <PackageCheck className="h-4 w-4" />
-                  </div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">Items</p>
-                  <p className="mt-1 text-2xl font-black text-white">{selectedShipmentItems.length}</p>
-                  <p className="mt-1 text-xs text-gray-400">{freeShippingItemCount} free · {paidShippingItemCount} paid</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-200">
-                    <Coins className="h-4 w-4" />
-                  </div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">Item value</p>
-                  <p className="mt-1 text-2xl font-black text-white">{selectedShipmentValue.toLocaleString()}</p>
-                  <p className="mt-1 text-xs text-gray-400">coins in selected items</p>
-                </div>
-                <div className="rounded-2xl border border-purple-300/20 bg-gradient-to-br from-purple-500/15 to-cyan-500/10 p-4">
-                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white">
-                    {activeShippingMethod === 'cash' ? <CreditCard className="h-4 w-4" /> : <Coins className="h-4 w-4" />}
-                  </div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-purple-100/80">Due now</p>
-                  <p className="mt-1 text-2xl font-black text-white">{isFreeOnlySelection ? 'Free' : selectedShippingCostLabel}</p>
-                  <p className="mt-1 text-xs text-gray-300">{activeShippingMethod === 'cash' ? 'Secure card checkout' : 'Paid from coin balance'}</p>
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="flex items-start gap-3">
-                  <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${user.shippingAddress ? 'bg-emerald-500/15 text-emerald-200' : 'bg-sky-500/15 text-sky-200'}`}>
-                    <MapPin className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-bold text-white">Shipping address</p>
-                      {user.shippingAddress && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-bold text-emerald-200">
-                          <CheckCircle2 className="h-3 w-3" /> Saved
-                        </span>
-                      )}
-                    </div>
-                    {user.shippingAddress ? (
-                      <p className="mt-1 truncate text-sm text-gray-300">{user.shippingAddress.fullName}{shippingAddressSummary ? ` · ${shippingAddressSummary}` : ''}</p>
-                    ) : (
-                      <p className="mt-1 text-sm text-sky-200">Add a shipping address in Profile Settings before confirming shipment.</p>
-                    )}
-                  </div>
+            {(canUseCoinShipping || canUseCashShipping) && !isFreeOnlySelection && (
+              <div className="mt-6">
+                <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-slate-500">Pay with</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    className={`flex min-h-16 items-center justify-between gap-2 rounded-2xl border px-4 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${activeShippingMethod === 'coins' ? 'border-purple-500 bg-purple-500/10 text-white shadow-[0_0_22px_rgba(168,85,247,0.35)]' : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'}`}
+                    onClick={() => setShippingPaymentMethod('coins')}
+                    disabled={!canUseCoinShipping}
+                  >
+                    <span className="flex items-center gap-3">
+                      <Coins className="h-7 w-7 text-purple-400" />
+                      <span className="text-lg font-bold">Coins</span>
+                    </span>
+                    {activeShippingMethod === 'coins' && <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white"><Check className="h-5 w-5" /></span>}
+                  </button>
+                  <button
+                    className={`flex min-h-16 items-center justify-center gap-3 rounded-2xl border px-4 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${activeShippingMethod === 'cash' ? 'border-purple-500 bg-purple-500/10 text-white shadow-[0_0_22px_rgba(168,85,247,0.35)]' : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'}`}
+                    onClick={() => setShippingPaymentMethod('cash')}
+                    disabled={!canUseCashShipping}
+                  >
+                    <CreditCard className="h-7 w-7" />
+                    <span className="text-lg font-bold">Cash</span>
+                    {activeShippingMethod === 'cash' && <span className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white"><Check className="h-5 w-5" /></span>}
+                  </button>
                 </div>
               </div>
+            )}
 
-              {hasShippingMethodToggle && (
-                <div className="mt-4">
-                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-gray-500">Choose payment</p>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <button
-                      className={`rounded-2xl border p-4 text-left transition ${activeShippingMethod === 'coins' ? 'border-purple-300/60 bg-purple-500/15 shadow-lg shadow-purple-950/30' : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]'}`}
-                      onClick={() => setShippingPaymentMethod('coins')}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400/15 text-amber-200"><Coins className="h-5 w-5" /></span>
-                          <span>
-                            <span className="block font-black text-white">Ship with coins</span>
-                            <span className="block text-xs text-gray-400">Use your available balance</span>
-                          </span>
-                        </div>
-                        <span className="text-sm font-black text-white">{shippingCoinTotal.toLocaleString()}</span>
-                      </div>
-                    </button>
-                    <button
-                      className={`rounded-2xl border p-4 text-left transition ${activeShippingMethod === 'cash' ? 'border-purple-300/60 bg-purple-500/15 shadow-lg shadow-purple-950/30' : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]'}`}
-                      onClick={() => setShippingPaymentMethod('cash')}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/15 text-cyan-200"><CreditCard className="h-5 w-5" /></span>
-                          <span>
-                            <span className="block font-black text-white">Ship with cash</span>
-                            <span className="block text-xs text-gray-400">Pay securely by card</span>
-                          </span>
-                        </div>
-                        <span className="text-sm font-black text-white">${(shippingCashTotalCents / 100).toFixed(2)}</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
+            <div className="mt-6 space-y-3">
+              {activeShippingMethod === 'cash' && canUseCashShipping ? (
+                <button className="w-full rounded-2xl bg-gradient-to-r from-purple-700 via-purple-600 to-fuchsia-500 px-5 py-4 text-lg font-black text-white shadow-lg shadow-purple-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCashShipping} disabled={isSubmittingCashShipping || !hasMadeDeposit}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
+              ) : (
+                <button className="w-full rounded-2xl bg-gradient-to-r from-purple-700 via-purple-600 to-fuchsia-500 px-5 py-4 text-lg font-black text-white shadow-lg shadow-purple-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment || !hasMadeDeposit}>{isSubmittingShipment ? 'Submitting...' : isFreeOnlySelection ? 'Confirm Free Shipping' : 'Confirm Shipping'}</button>
               )}
-
-              <div className="mt-4 space-y-2">
-                {!hasMadeDeposit && (
-                  <p className="rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                    Make your first deposit to unlock shipping.
-                  </p>
-                )}
-                {isFreeOnlySelection && (
-                  <p className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-                    Every selected item qualifies for free shipping — no payment is due today.
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
-                {activeShippingMethod === 'cash' && canUseCashShipping ? (
-                  <button className="rounded-2xl bg-gradient-to-r from-purple-600 to-violet-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-purple-950/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCashShipping} disabled={isSubmittingCashShipping || !hasMadeDeposit}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
-                ) : (
-                  <button className="rounded-2xl bg-gradient-to-r from-purple-600 to-violet-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-purple-950/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment || !hasMadeDeposit}>{isSubmittingShipment ? 'Submitting...' : isFreeOnlySelection ? 'Confirm Free Shipping' : 'Confirm Shipping'}</button>
-                )}
-                <button className="rounded-2xl border border-white/10 px-5 py-3 text-sm font-bold text-gray-300 transition hover:bg-white/5 hover:text-white" onClick={() => setShowShippingReview(false)}>Cancel</button>
-              </div>
+              <button className="w-full rounded-2xl border border-white/10 px-5 py-4 text-lg font-bold text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => setShowShippingReview(false)}>Cancel</button>
             </div>
           </div>
         </div>
