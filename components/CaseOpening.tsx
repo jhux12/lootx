@@ -73,6 +73,23 @@ const rarityGlowClass: Record<string, string> = {
   common: 'bg-slate-300/18'
 };
 
+const rarityIndicatorStyle: Record<string, { color: string; glow: string; label: string }> = {
+  legendary: { color: '#fbbf24', glow: 'rgba(251,191,36,0.95)', label: 'Legendary' },
+  epic: { color: '#e879f9', glow: 'rgba(232,121,249,0.9)', label: 'Epic' },
+  rare: { color: '#22d3ee', glow: 'rgba(34,211,238,0.9)', label: 'Rare' },
+  uncommon: { color: '#34d399', glow: 'rgba(52,211,153,0.85)', label: 'Uncommon' },
+  common: { color: '#cbd5e1', glow: 'rgba(203,213,225,0.65)', label: 'Common' }
+};
+
+const normalizeRarityKey = (rarity?: string) => {
+  const value = String(rarity ?? 'common').toLowerCase();
+  if (value.includes('legend')) return 'legendary';
+  if (value.includes('epic')) return 'epic';
+  if (value.includes('rare')) return 'rare';
+  if (value.includes('uncommon')) return 'uncommon';
+  return 'common';
+};
+
 const createSeededRng = (seed: string) => {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i += 1) {
@@ -390,6 +407,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
   // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
   const useMobileSpinnerBehavior = true;
+  const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
+  const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
+  const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
 
   const updateSpinnerMeasurements = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -1822,7 +1842,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
                 {/* Center Indicator */}
                 <i
-                  className="fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none text-white drop-shadow-[0_0_8px_rgba(34,211,238,0.9)] sm:top-0 sm:text-lg"
+                  className="fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none transition-[color,filter,text-shadow] duration-150 ease-out motion-reduce:transition-none sm:top-0 sm:text-lg"
+                  style={{
+                    color: centeredRarityIndicator.color,
+                    filter: `drop-shadow(0 0 8px ${centeredRarityIndicator.glow})`,
+                    textShadow: `0 0 10px ${centeredRarityIndicator.glow}, 0 0 20px ${centeredRarityIndicator.glow}`
+                  }}
+                  title={`${centeredRarityIndicator.label} item passing the spinner`}
                   aria-hidden="true"
                 ></i>
 
@@ -1841,16 +1867,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 >
                     {reelItems.map((item, idx) => (
                         (() => {
-                          const rarityValue = String(item.rarity ?? 'common').toLowerCase();
-                          const rarityGlow = rarityValue.includes('legend')
-                            ? rarityGlowClass.legendary
-                            : rarityValue.includes('epic')
-                              ? rarityGlowClass.epic
-                              : rarityValue.includes('rare')
-                                ? rarityGlowClass.rare
-                                : rarityValue.includes('uncommon')
-                                  ? rarityGlowClass.uncommon
-                                  : rarityGlowClass.common;
+                          const rarityValue = normalizeRarityKey(item.rarity);
+                          const rarityGlow = rarityGlowClass[rarityValue] ?? rarityGlowClass.common;
                           const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && idx === reelWinnerIndex;
                           const isCenteredItem = idx === currentCenterIndex;
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
