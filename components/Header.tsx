@@ -301,7 +301,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
 
   return (
     <>
-    <div className="relative z-50">
+    <div className="relative z-[140]">
       <header
         ref={headerRef}
         className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-cyan-400/15 bg-transparent backdrop-blur-md`}

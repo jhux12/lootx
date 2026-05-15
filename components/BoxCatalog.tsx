@@ -199,7 +199,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   return (
     <div className="w-full bg-[#1a1f26] pb-20">
 
-      <div className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#1a1f26]/95 shadow-xl backdrop-blur">
+      <div className="sticky top-[var(--pullz-header-height,70px)] z-50 w-full border-b border-white/10 bg-[#1a1f26]/95 shadow-xl backdrop-blur">
         <div className="mx-auto max-w-[980px] px-3 py-3 sm:px-4">
           <div className="mb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
             <button onClick={() => setActiveCategory('all')} className="flex items-center gap-2 whitespace-nowrap rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white">

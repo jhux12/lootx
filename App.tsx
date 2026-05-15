@@ -656,7 +656,7 @@ export default App;
 
 const AppShell = () => {
   const { view } = useGame();
-  const shouldUseStickyHeader = view.type !== 'BOXES';
+  const shouldUseStickyHeader = true;
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
