@@ -10,6 +10,9 @@ import { getAuthErrorMessage } from '../utils/authErrors';
 import { toast } from '../src/ui/toast/toast';
 import { DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 
+const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
+const EMAIL_CONFIRMATION_MESSAGE = 'Check your email to confirm your account before signing in.';
+
 export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
   const { playSound } = useSound();
@@ -28,12 +31,20 @@ export const LoginModal: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const storedMessage = window.sessionStorage.getItem(AUTH_INLINE_MESSAGE_KEY);
+    if (storedMessage) {
+      window.sessionStorage.removeItem(AUTH_INLINE_MESSAGE_KEY);
+    }
+    return storedMessage;
+  });
   const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [showOAuthFallback, setShowOAuthFallback] = useState(false);
   const [showEmailFields, setShowEmailFields] = useState(false);
   const isLinkingGoogle = Boolean(googleLinkCredential);
+  const showRegisterFormMessage = Boolean(message && mode === 'register' && showEmailFields && !isLinkingGoogle);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,13 +61,26 @@ export const LoginModal: React.FC = () => {
           setIsLoading(false);
           return;
         }
-        await register(username, email, password);
+        setMessage(EMAIL_CONFIRMATION_MESSAGE);
+        const result = await register(username, email, password);
+        if (result?.requiresEmailVerification) {
+          setShowEmailFields(true);
+          setPassword('');
+          setMessage(EMAIL_CONFIRMATION_MESSAGE);
+          return;
+        }
       } else {
-        await login(email, password, rememberMe);
+        const result = await login(email, password, rememberMe);
+        if (result?.requiresEmailVerification) {
+          setPassword('');
+          setMessage(EMAIL_CONFIRMATION_MESSAGE);
+          return;
+        }
       }
       // Success - modal closes inside context functions
     } catch (err: any) {
       console.error(err);
+      setMessage(null);
       setUserError(getAuthErrorMessage(err));
     } finally {
       setIsLoading(false);
@@ -193,7 +217,7 @@ export const LoginModal: React.FC = () => {
   }, [userError]);
 
   useEffect(() => {
-    if (!message) return;
+    if (!message || message === EMAIL_CONFIRMATION_MESSAGE) return;
     const normalized = message.toLowerCase();
     if (/(success|sent|saved|updated|completed|linked)/.test(normalized)) {
       toast.success(message);
@@ -307,6 +331,11 @@ export const LoginModal: React.FC = () => {
                 {isLinkingGoogle
                   ? 'Confirm your password to link Google with your existing account.'
                   : 'Login to access your account.'}
+              </p>
+            )}
+            {message && !showRegisterFormMessage && (
+              <p className="mt-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-neutral-300" aria-live="polite">
+                {message}
               </p>
             )}
           </div>
@@ -501,6 +530,12 @@ export const LoginModal: React.FC = () => {
                     I agree to the <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Terms of Service</a>, <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Privacy Policy</a>, and confirm I am 18+ to register with email.
                   </span>
                 </label>
+              )}
+
+              {showRegisterFormMessage && (
+                <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-neutral-300" aria-live="polite">
+                  {message}
+                </p>
               )}
 
               <button
