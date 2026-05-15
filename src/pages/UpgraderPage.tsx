@@ -231,6 +231,7 @@ export default function UpgraderPage() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'targets'>('inventory');
   const [detailsItem, setDetailsItem] = useState<EliteItem | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isFairDetailsOpen, setIsFairDetailsOpen] = useState(false);
   const [serverSeedHash, setServerSeedHash] = useState('');
   const [clientSeed, setClientSeed] = useState('pullz-player');
   const [fairNonce, setFairNonce] = useState(0);
@@ -284,6 +285,11 @@ export default function UpgraderPage() {
       setIsSyncingFair(false);
     }
   }, [isAuthenticated]);
+
+  const openFairDetails = () => {
+    setIsFairDetailsOpen(true);
+    if (!isSyncingFair) void loadProvablyFairState();
+  };
 
   const handleCopyProof = async (proof: UpgraderProvablyFairProof | null = lastProof) => {
     if (!proof) {
@@ -714,7 +720,7 @@ export default function UpgraderPage() {
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/10 bg-[#1b2024]/90 px-4 backdrop-blur-xl sm:hidden">
         <p className="text-base font-black text-white">Upgrader</p>
         <div className="flex items-center gap-1">
-          <button type="button" onClick={() => { window.location.href = '/provably-fair'; }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)]" aria-label="Open provably fair">
+          <button type="button" onClick={openFairDetails} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)]" aria-label="Open provably fair details">
             <ShieldCheck className="h-4 w-4" />
           </button>
           <button type="button" onClick={() => { void handleCopyPageLink(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)]" aria-label="Copy page link">
@@ -733,7 +739,7 @@ export default function UpgraderPage() {
         <section className="relative overflow-hidden rounded-2xl border border-white/5 bg-transparent p-3 sm:p-4">
           <div className="relative mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
             <div className="hidden items-center gap-1 sm:flex">
-              <button type="button" onClick={() => { window.location.href = '/provably-fair'; }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)]" aria-label="Open provably fair"><ShieldCheck className="h-4 w-4" /></button>
+              <button type="button" onClick={openFairDetails} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)]" aria-label="Open provably fair details"><ShieldCheck className="h-4 w-4" /></button>
               <button type="button" onClick={() => { void handleCopyPageLink(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)]" aria-label="Copy page link"><Copy className="h-4 w-4" /></button>
               <button type="button" onClick={() => setIsHelpOpen(true)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)]" aria-label="Upgrader help"><Info className="h-4 w-4" /></button>
               <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)]" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
@@ -772,27 +778,6 @@ export default function UpgraderPage() {
                   {status === 'spinning' ? 'Upgrading...' : 'Upgrade'}
                 </button>
                 <button type="button" disabled={!source || !target || status === 'spinning'} onClick={handleDemoSpin} className={`h-11 w-[42%] min-w-[124px] rounded-lg border px-3 text-sm font-bold transition ${source && target && status !== 'spinning' ? 'border-white/10 bg-[#343c46] text-white hover:bg-[#3b4551]' : 'cursor-not-allowed border-white/10 bg-[#24313b] text-slate-500'}`}>Demo Spin</button>
-              </div>
-              <div className="mt-3 w-full max-w-[460px] rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-200">
-                      <ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Provably Fair
-                    </div>
-                    <p className="mt-1 truncate font-mono text-[10px] text-slate-400" title={serverSeedHash || undefined}>
-                      Hash: {serverSeedHash || 'Syncing commit...'}
-                    </p>
-                    <p className="mt-0.5 text-[10px] text-slate-500">Client seed: <span className="font-mono text-slate-300">{clientSeed}</span> · Next nonce {fairNonce}</p>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <button type="button" onClick={() => { void loadProvablyFairState(); }} disabled={isSyncingFair} className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
-                      <RefreshCw className={`h-3 w-3 ${isSyncingFair ? 'animate-spin' : ''}`} /> Sync
-                    </button>
-                    <button type="button" onClick={() => { window.location.href = '/provably-fair'; }} className="h-8 rounded-lg border border-emerald-300/30 bg-emerald-400/10 px-2 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-100 transition hover:bg-emerald-400/20">
-                      Verify
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -964,6 +949,51 @@ export default function UpgraderPage() {
                 <img src={detailsItem.image} alt={detailsItem.name} className="mx-auto h-28 w-28 rounded-xl object-cover sm:h-32 sm:w-32" referrerPolicy="no-referrer" />
                 <p className="mt-4 text-center text-base font-semibold text-white">{detailsItem.name}</p>
                 <div className="mt-2 flex justify-center"><CoinAmount amount={Math.round(detailsItem.price)} className="text-sm font-bold text-amber-300" iconClassName="h-4 w-4" /></div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {isFairDetailsOpen && (
+        <>
+          <button type="button" aria-label="Close provably fair details" className="fixed inset-0 z-[70] bg-black/65" onClick={() => setIsFairDetailsOpen(false)} />
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[71] flex justify-center px-3 pb-[max(env(safe-area-inset-bottom),12px)] sm:inset-y-0 sm:items-center sm:px-4 sm:py-6">
+            <div role="dialog" aria-modal="true" aria-labelledby="upgrader-fair-title" className="pointer-events-auto w-full max-w-lg animate-[upgraderSheetIn_220ms_ease-out] rounded-2xl border border-emerald-300/20 bg-[#0f1524] p-4 shadow-[0_-12px_40px_rgba(0,0,0,0.65)] sm:p-5">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-200">
+                    <ShieldCheck className="h-4 w-4 shrink-0" /> Provably Fair
+                  </div>
+                  <h2 id="upgrader-fair-title" className="mt-1 text-lg font-black text-white">Upgrader Fairness</h2>
+                </div>
+                <button type="button" onClick={() => setIsFairDetailsOpen(false)} className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-slate-200 hover:bg-white/10">Close</button>
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-slate-300 sm:p-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Hash</p>
+                  <p className="mt-1 break-all font-mono text-[11px] text-slate-100">{serverSeedHash || 'Syncing commit...'}</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Client seed</p>
+                    <p className="mt-1 break-all font-mono text-[11px] text-slate-100">{clientSeed}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Next nonce</p>
+                    <p className="mt-1 font-mono text-[11px] text-slate-100">{fairNonce}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button type="button" onClick={() => { void loadProvablyFairState(); }} disabled={isSyncingFair} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
+                  <RefreshCw className={`h-3.5 w-3.5 ${isSyncingFair ? 'animate-spin' : ''}`} /> Sync
+                </button>
+                <button type="button" onClick={() => { window.location.href = '/provably-fair#verify'; }} className="h-10 rounded-lg border border-emerald-300/30 bg-emerald-400/10 px-3 text-xs font-bold uppercase tracking-[0.12em] text-emerald-100 transition hover:bg-emerald-400/20">
+                  Verify
+                </button>
               </div>
             </div>
           </div>
