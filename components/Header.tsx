@@ -133,15 +133,29 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       setIsMobileMenuOpen(true);
     };
 
+    const closeMobileMenu = () => {
+      setIsMobileMenuOpen(false);
+    };
+
     const toggleMobileMenu = () => {
       setIsMobileMenuOpen((prev) => !prev);
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
     window.addEventListener('pullz:open-mobile-menu', openMobileMenu);
+    window.addEventListener('pullz:close-mobile-menu', closeMobileMenu);
     window.addEventListener('pullz:toggle-mobile-menu', toggleMobileMenu);
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('pullz:open-mobile-menu', openMobileMenu);
+      window.removeEventListener('pullz:close-mobile-menu', closeMobileMenu);
       window.removeEventListener('pullz:toggle-mobile-menu', toggleMobileMenu);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -509,20 +523,34 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       <button
         type="button"
         onClick={() => setIsMobileMenuOpen(false)}
-        className={`fixed inset-x-0 bottom-0 z-40 bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-40 bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${isMobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
         aria-label="Close menu overlay"
       />
 
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 w-full overflow-y-auto bg-[#141b22] px-4 py-4 transition-all duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-50 w-full overflow-y-auto overscroll-contain bg-[#141b22] px-4 pb-4 pt-3 transition-all duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${
           isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
         }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile navigation menu"
       >
-        <div className="flex flex-col gap-6 pb-20">
+        <div className="sticky top-0 z-10 -mx-4 mb-4 flex items-center justify-between border-b border-white/10 bg-[#141b22]/95 px-4 pb-3 pt-1 backdrop-blur">
+          <span className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">Menu</span>
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+            aria-label="Close mobile menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex flex-col gap-6 pb-4">
           {isAuthenticated ? (
             <div className="grid grid-cols-2 gap-3">
               <>

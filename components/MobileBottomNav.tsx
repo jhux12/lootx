@@ -30,6 +30,15 @@ export const MobileBottomNav: React.FC = () => {
   const [isFreeBoxTooltipDismissed, setIsFreeBoxTooltipDismissed] = useState(false);
 
   useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+
+    document.documentElement.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(env(safe-area-inset-bottom) + 64px)');
+    return () => {
+      document.documentElement.style.removeProperty('--pullz-mobile-bottom-nav-height');
+    };
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
     const handleMenuState = (event: Event) => {
@@ -61,6 +70,10 @@ export const MobileBottomNav: React.FC = () => {
       return;
     }
 
+    if (isMenuOpen && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('pullz:close-mobile-menu'));
+    }
+
     setView({ type: item.id });
   };
 
@@ -82,7 +95,7 @@ export const MobileBottomNav: React.FC = () => {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-[70] border-t border-cyan-400/20 bg-[#141b22]/95 px-2.5 pb-[calc(env(safe-area-inset-bottom)+6px)] pt-2 backdrop-blur lg:hidden"
+      className="fixed bottom-0 left-0 right-0 z-[70] min-h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-cyan-400/20 bg-[#141b22]/95 px-2.5 pb-[calc(env(safe-area-inset-bottom)+6px)] pt-2 backdrop-blur lg:hidden"
       aria-label="Primary navigation"
     >
       <nav className="grid grid-cols-5 gap-0.5">
@@ -114,6 +127,8 @@ export const MobileBottomNav: React.FC = () => {
                   isActive ? 'text-white' : 'text-slate-400'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
+                aria-expanded={isMenuToggle ? isMenuOpen : undefined}
+                aria-label={isMenuToggle ? (isMenuOpen ? 'Close menu' : 'Open menu') : undefined}
               >
                 {isMenuToggle ? (
                   <span className="relative mt-0.5 block h-5 w-5" aria-hidden="true">
