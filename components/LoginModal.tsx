@@ -61,6 +61,7 @@ export const LoginModal: React.FC = () => {
           setIsLoading(false);
           return;
         }
+        setMessage(EMAIL_CONFIRMATION_MESSAGE);
         const result = await register(username, email, password);
         if (result?.requiresEmailVerification) {
           setShowEmailFields(true);
@@ -79,6 +80,7 @@ export const LoginModal: React.FC = () => {
       // Success - modal closes inside context functions
     } catch (err: any) {
       console.error(err);
+      setMessage(null);
       setUserError(getAuthErrorMessage(err));
     } finally {
       setIsLoading(false);
