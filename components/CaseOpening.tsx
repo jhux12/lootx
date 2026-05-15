@@ -332,13 +332,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
   const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
   const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
   const [isBoxPreviewVisible, setIsBoxPreviewVisible] = useState(false);
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
-  const lastTickAtRef = useRef(0);
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -390,16 +388,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const spinnerCardHeight = DESKTOP_CARD_HEIGHT;
   const spinnerGap = DESKTOP_GAP_WIDTH;
   const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mediaQuery = window.matchMedia('(max-width: 768px)');
-    const syncViewport = () => setIsMobileViewport(mediaQuery.matches);
-    syncViewport();
-    mediaQuery.addEventListener('change', syncViewport);
-    return () => mediaQuery.removeEventListener('change', syncViewport);
-  }, []);
-
+  // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
+  const useMobileSpinnerBehavior = true;
 
   const updateSpinnerMeasurements = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -955,23 +945,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const delta = index - previousIndex;
         const stepsCrossed = Math.max(1, Math.abs(delta));
         const direction = delta >= 0 ? 1 : -1;
-        const now = performance.now();
-        const minTickGap = 16;
-
         for (let step = 1; step <= stepsCrossed; step += 1) {
           const crossedIndex = previousIndex + direction * step;
           const shouldSyncUi = step === stepsCrossed;
           if (shouldSyncUi) {
             lastCenterIndexRef.current = crossedIndex;
             setCurrentCenterIndex(crossedIndex);
-          }
-
-          // On mobile, frames can skip indices under load. Emit one tick per crossed item so
-          // audio cadence always matches items passing the center marker.
-          const stepTime = now + step;
-          if (!isMobileViewport && stepTime - lastTickAtRef.current > minTickGap) {
-            playSound('spin-tick');
-            lastTickAtRef.current = stepTime;
           }
         }
       }
@@ -1017,7 +996,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, isMobileViewport, playSound, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1871,9 +1850,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && idx === reelWinnerIndex;
                           const isCenteredItem = idx === currentCenterIndex;
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
-                          const showItemGlow = !isSpinning || !isMobileViewport;
-                          const allowHeavyHighlight = !isMobileViewport || !isSpinning;
-                          const cardOpacity = isMobileViewport && isSpinning ? 1 : (isFocusedItem ? 1 : 0.35);
+                          const showItemGlow = !isSpinning || !useMobileSpinnerBehavior;
+                          const allowHeavyHighlight = !useMobileSpinnerBehavior || !isSpinning;
+                          const cardOpacity = useMobileSpinnerBehavior && isSpinning ? 1 : (isFocusedItem ? 1 : 0.35);
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
@@ -1889,7 +1868,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   : 'none',
                                 opacity: cardOpacity,
                                 filter:
-                                  isMobileViewport && isSpinning
+                                  useMobileSpinnerBehavior && isSpinning
                                     ? 'none'
                                     : isFocusedItem
                                       ? 'brightness(1.12)'
@@ -1903,7 +1882,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               style={{ boxShadow: isFocusedItem ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
-                              <div className={`flex items-center justify-center ${isMobileViewport ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
+                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
                               <BlurImage
                                   src={item.image}
                                   alt={item.name}
