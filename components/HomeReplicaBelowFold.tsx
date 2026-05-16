@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Sparkles, Trophy } from 'lucide-react';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 
@@ -41,6 +42,40 @@ const faqs = [
   }
 ];
 
+const liveWinUsers = ['Jay', 'Mason', 'Avery', 'Noah', 'Liam', 'Eli', 'Carter', 'Logan', 'Owen', 'Kai', 'Riley', 'Nova'];
+
+type LiveWinItem = {
+  id: string;
+  name: string;
+  image: string;
+  price: number;
+  rarity: string;
+  boxName: string;
+};
+
+type LiveWin = LiveWinItem & {
+  feedId: string;
+  user: string;
+  time: string;
+};
+
+const randomFrom = <T,>(items: T[]) => items[Math.floor(Math.random() * items.length)];
+
+const createLiveWin = (items: LiveWinItem[], index = 0): LiveWin | null => {
+  if (!items.length) return null;
+
+  const item = randomFrom(items);
+  const user = randomFrom(liveWinUsers);
+  const minutesAgo = Math.floor(Math.random() * 9) + 1;
+
+  return {
+    ...item,
+    feedId: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
+    user,
+    time: `${minutesAgo}m ago`
+  };
+};
+
 const rarityGlowClass: Record<string, string> = {
   legendary: 'bg-amber-300/35',
   epic: 'bg-fuchsia-400/30',
@@ -51,6 +86,19 @@ const rarityGlowClass: Record<string, string> = {
 
 export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxes, showSignupCta, onSignUp }) => {
   const [openFaqId, setOpenFaqId] = useState<string | null>(faqs[0]?.id ?? null);
+  const liveWinItems = useMemo<LiveWinItem[]>(() => {
+    return boxes.flatMap((box) =>
+      box.items.map((item) => ({
+        id: `${box.id}-${item.id}`,
+        name: item.name,
+        image: item.image,
+        price: item.price,
+        rarity: item.rarity,
+        boxName: box.name
+      }))
+    );
+  }, [boxes]);
+  const [liveWins, setLiveWins] = useState<LiveWin[]>([]);
   const topUpgrades = useMemo(() => {
     const highValueItems = boxes
       .flatMap((box) => box.items.map((item) => ({ ...item, boxId: box.id })))
@@ -65,6 +113,21 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
         multiplier: `${(1.2 + Math.random() * 8.8).toFixed(2)}x`
       }));
   }, [boxes]);
+  useEffect(() => {
+    const initialWins = Array.from({ length: 6 }, (_, index) => createLiveWin(liveWinItems, index)).filter((win): win is LiveWin => Boolean(win));
+    setLiveWins(initialWins);
+
+    if (!liveWinItems.length) return undefined;
+
+    const timer = window.setInterval(() => {
+      const nextWin = createLiveWin(liveWinItems);
+      if (!nextWin) return;
+      setLiveWins((current) => [nextWin, ...current].slice(0, 7));
+    }, 2800);
+
+    return () => window.clearInterval(timer);
+  }, [liveWinItems]);
+
   const topPullz = useMemo(() => {
     return boxes
       .flatMap((box) =>
@@ -85,6 +148,68 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
   return (
     <>
       <div className="space-y-10 lg:col-start-1">
+        {liveWins.length > 0 && (
+          <section className="overflow-hidden rounded-2xl border border-white/5 bg-[#22282c] shadow-[0_18px_42px_rgba(5,8,12,0.24)]">
+            <div className="border-b border-white/5 bg-[radial-gradient(circle_at_82%_10%,rgba(34,211,238,0.18),transparent_34%),radial-gradient(circle_at_18%_0%,rgba(168,85,247,0.18),transparent_30%)] p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/10 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-cyan-100">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" />
+                    </span>
+                    Live wins
+                  </div>
+                  <h2 className="text-xl font-black sm:text-2xl">Recent Pullz</h2>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                    Fresh wins from boxes across Pullz.gg, updating live with coin values.
+                  </p>
+                </div>
+                <div className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#1b2024]/80 px-4 py-3 text-sm font-black text-white sm:w-auto">
+                  <Sparkles className="h-4 w-4 text-yellow-300" />
+                  Updated live
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2 p-3 sm:p-4">
+              {liveWins.map((win, index) => (
+                <div
+                  key={win.feedId}
+                  className="group flex min-w-0 items-center gap-3 rounded-xl border border-white/5 bg-[#1b2024]/80 p-3 transition-all duration-200 ease-out hover:border-cyan-300/20 hover:bg-[#252d32]"
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/5 bg-[#252d32] sm:h-16 sm:w-16">
+                    <img src={win.image} alt={win.name} className="max-h-full max-w-full object-contain p-1 transition-transform duration-200 ease-out group-hover:scale-105" loading={index < 2 ? 'eager' : 'lazy'} decoding="async" width={96} height={96} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="min-w-0 truncate text-sm font-black text-white sm:text-base">
+                        {win.user} pulled {win.name}
+                      </p>
+                      {win.price >= 125 && <Sparkles className="hidden h-4 w-4 shrink-0 text-yellow-300 sm:block" />}
+                    </div>
+                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-xs">
+                      <span>{win.time}</span>
+                      <span className="h-1 w-1 rounded-full bg-slate-600" />
+                      <span>{win.rarity}</span>
+                      <span className="h-1 w-1 rounded-full bg-slate-600" />
+                      <span className="max-w-[120px] truncate normal-case tracking-normal text-slate-500 sm:max-w-[200px]">{win.boxName}</span>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <div className="inline-flex items-center gap-1 rounded-full border border-yellow-300/15 bg-yellow-300/10 px-2.5 py-1.5 sm:px-3">
+                      <Trophy className="h-3.5 w-3.5 text-yellow-300" />
+                      <CoinAmount amount={Math.round(win.price)} className="text-xs font-black text-white sm:text-sm" iconClassName="h-3.5 w-3.5" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section>
           <h2 className="mb-4 text-xl font-black">Top Upgrades</h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
