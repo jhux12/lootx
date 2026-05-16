@@ -233,6 +233,7 @@ export const Profile: React.FC = () => {
   }, []);
 
   const selectedShipmentItems = activeInventory.filter((item) => selectedShipments.includes(item.instanceId));
+  const selectedShipmentValue = selectedShipmentItems.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   const shippingCoinTotal = selectedShipmentItems.reduce((sum, item) => sum + getCoinShippingCostForItem(item), 0);
   const shippingCashTotalCents = selectedShipmentItems.reduce((sum, item) => sum + getCashShippingCostForItemCents(item), 0);
   const freeShippingItemCount = selectedShipmentItems.filter((item) => isFreeShippingItem(item)).length;
