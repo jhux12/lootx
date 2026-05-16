@@ -66,11 +66,11 @@ const liveWinRarityWeights: Record<Rarity, number> = {
 };
 
 const rarityImageBorderClass: Record<string, string> = {
-  legendary: 'border-amber-300/35 shadow-[0_0_18px_rgba(252,211,77,0.10)]',
-  epic: 'border-fuchsia-300/30 shadow-[0_0_18px_rgba(217,70,239,0.09)]',
-  rare: 'border-cyan-300/25 shadow-[0_0_16px_rgba(34,211,238,0.08)]',
-  uncommon: 'border-emerald-300/22 shadow-[0_0_14px_rgba(52,211,153,0.07)]',
-  common: 'border-slate-300/16'
+  legendary: 'border border-amber-300/40 shadow-[0_0_18px_rgba(252,211,77,0.10)]',
+  epic: 'border border-purple-300/35 shadow-[0_0_18px_rgba(168,85,247,0.09)]',
+  rare: 'border border-blue-300/30 shadow-[0_0_16px_rgba(96,165,250,0.08)]',
+  uncommon: 'border border-emerald-300/25 shadow-[0_0_14px_rgba(52,211,153,0.07)]',
+  common: ''
 };
 
 const randomFrom = <T,>(items: T[]) => items[Math.floor(Math.random() * items.length)];
@@ -220,21 +220,13 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
       <div className="space-y-10 lg:col-start-1">
         {liveWins.length > 0 && (
           <section className="overflow-hidden rounded-2xl border border-white/5 bg-[#22282c] shadow-[0_18px_42px_rgba(5,8,12,0.24)]">
-            <div className="border-b border-white/5 bg-[radial-gradient(circle_at_82%_10%,rgba(34,211,238,0.18),transparent_34%),radial-gradient(circle_at_18%_0%,rgba(168,85,247,0.18),transparent_30%)] p-4 sm:p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/10 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-cyan-100">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" />
-                    </span>
-                    Live wins
-                  </div>
-                  <h2 className="text-xl font-black sm:text-2xl">Recent Pullz</h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                    Fresh wins from boxes across Pullz.gg, updating live with coin values.
-                  </p>
-                </div>
+            <div className="border-b border-white/5 bg-[radial-gradient(circle_at_82%_10%,rgba(34,211,238,0.18),transparent_34%),radial-gradient(circle_at_18%_0%,rgba(168,85,247,0.18),transparent_30%)] p-3 sm:p-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/10 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-cyan-100">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" />
+                </span>
+                Live wins
               </div>
             </div>
 
@@ -245,7 +237,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
                   className="live-win-row group flex min-w-0 items-center gap-3 rounded-xl border border-white/5 bg-[#1b2024]/80 p-3 transition-all duration-300 ease-out hover:border-cyan-300/20 hover:bg-[#252d32]"
                   style={{ animationDelay: `${Math.min(index, 5) * 35}ms` }}
                 >
-                  <div className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-[#252d32] transition-colors duration-300 sm:h-16 sm:w-16 ${rarityImageBorderClass[normalizeRarity(win.rarity)]}`}>
+                  <div className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#252d32] transition-colors duration-300 sm:h-16 sm:w-16 ${rarityImageBorderClass[normalizeRarity(win.rarity)]}`}>
                     <img src={win.image} alt={win.name} className="max-h-full max-w-full object-contain p-1 transition-transform duration-300 ease-out group-hover:scale-105" loading="eager" decoding="async" width={96} height={96} />
                   </div>
 
