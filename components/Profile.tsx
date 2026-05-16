@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { X } from 'lucide-react';
+import { Check, Coins, CreditCard, Package, Tag, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -245,7 +245,9 @@ export const Profile: React.FC = () => {
   const hasShippingMethodToggle = canUseCoinShipping && canUseCashShipping;
   const activeShippingMethod = hasShippingMethodToggle ? shippingPaymentMethod : canUseCashShipping ? 'cash' : 'coins';
   const hasMadeDeposit = Number(user.totalSpent ?? 0) > 0;
-
+  const selectedShippingCostLabel = activeShippingMethod === 'cash'
+    ? `$${(shippingCashTotalCents / 100).toFixed(2)}`
+    : shippingCoinTotal.toLocaleString();
   useEffect(() => {
     if (canUseCoinShipping && canUseCashShipping) return;
     setShippingPaymentMethod(canUseCashShipping ? 'cash' : 'coins');
@@ -582,42 +584,93 @@ export const Profile: React.FC = () => {
       )}
 
       {showShippingReview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#1f252c] p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">Review Shipping</h3>
-              <button onClick={() => setShowShippingReview(false)}><X className="h-5 w-5 text-gray-400" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 backdrop-blur-sm">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-[21.5rem] overflow-y-auto rounded-[1.4rem] border border-white/15 bg-[#11131a]/95 p-4 shadow-2xl shadow-purple-950/40 ring-1 ring-white/5 sm:max-w-[23rem] sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/25 to-slate-800/80 text-purple-300 shadow-lg shadow-purple-900/20">
+                  <Truck className="h-6 w-6" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-2xl font-black leading-tight text-white sm:text-3xl">Review Shipping</h3>
+                  <p className="mt-0.5 text-sm font-medium text-slate-400">{selectedShipmentItems.length} {selectedShipmentItems.length === 1 ? 'item' : 'items'} selected</p>
+                </div>
+              </div>
+              <button
+                aria-label="Close shipping review"
+                className="-mr-1 rounded-full p-1 text-slate-400 transition hover:bg-white/5 hover:text-white"
+                onClick={() => setShowShippingReview(false)}
+              >
+                <X className="h-6 w-6" />
+              </button>
             </div>
-            <div className="space-y-2 text-sm text-gray-300">
-              <p>{selectedShipmentItems.length} items selected</p>
-              <p>Free shipping items: {freeShippingItemCount}</p>
-              <p>Paid shipping items: {paidShippingItemCount}</p>
-              {activeShippingMethod === 'coins' && <p>Coins due now: {shippingCoinTotal.toLocaleString()}</p>}
-              {activeShippingMethod === 'cash' && <p>Cash due now: ${(shippingCashTotalCents / 100).toFixed(2)}</p>}
-              {!hasMadeDeposit && (
-                <p className="rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                  Make your first deposit to unlock shipping.
-                </p>
-              )}
-              {!user.shippingAddress && (
-                <p className="rounded-xl border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
-                  Add a shipping address in Profile Settings before confirming shipment.
-                </p>
-              )}
+
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141821]/90">
+              <div className="flex items-center justify-between gap-3 px-3 py-3 sm:px-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-700/25 text-slate-300">
+                    <Package className="h-4 w-4" />
+                  </span>
+                  <span className="truncate text-sm font-semibold text-slate-300 sm:text-base">Free shipping items</span>
+                </div>
+                <span className="text-sm font-bold text-slate-300 sm:text-base">{freeShippingItemCount}</span>
+              </div>
+              <div className="h-px bg-white/10" />
+              <div className="flex items-center justify-between gap-3 px-3 py-3 sm:px-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/15 text-purple-300">
+                    <Tag className="h-4 w-4" />
+                  </span>
+                  <span className="truncate text-sm font-semibold text-slate-300 sm:text-base">Paid shipping items</span>
+                </div>
+                <span className="text-sm font-bold text-slate-300 sm:text-base">{paidShippingItemCount}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-purple-500/25 via-purple-500/15 to-transparent px-3 py-3 sm:px-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500/25 text-purple-300 shadow-lg shadow-purple-500/20">
+                    {activeShippingMethod === 'cash' ? <CreditCard className="h-5 w-5" /> : <Coins className="h-5 w-5" />}
+                  </span>
+                  <span className="truncate text-sm font-black text-purple-100 sm:text-base">{activeShippingMethod === 'cash' ? 'Cash due now' : 'Coins due now'}</span>
+                </div>
+                <span className="text-base font-black text-purple-400 sm:text-lg">{isFreeOnlySelection ? 'Free' : selectedShippingCostLabel}</span>
+              </div>
             </div>
-            {hasShippingMethodToggle && (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button className={`rounded-xl border py-2 text-xs ${activeShippingMethod === 'coins' ? 'border-purple-400/50 text-white' : 'border-white/10 text-gray-400'}`} onClick={() => setShippingPaymentMethod('coins')}>Ship with coins</button>
-                <button className={`rounded-xl border py-2 text-xs ${activeShippingMethod === 'cash' ? 'border-purple-400/50 text-white' : 'border-white/10 text-gray-400'}`} onClick={() => setShippingPaymentMethod('cash')}>Ship with cash</button>
+
+            {(canUseCoinShipping || canUseCashShipping) && !isFreeOnlySelection && (
+              <div className="mt-4">
+                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Pay with</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    className={`flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${activeShippingMethod === 'coins' ? 'border-purple-500 bg-purple-500/10 text-white shadow-[0_0_18px_rgba(168,85,247,0.3)]' : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'}`}
+                    onClick={() => setShippingPaymentMethod('coins')}
+                    disabled={!canUseCoinShipping}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Coins className="h-5 w-5 text-purple-400" />
+                      <span className="text-sm font-bold sm:text-base">Coins</span>
+                    </span>
+                    {activeShippingMethod === 'coins' && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white"><Check className="h-4 w-4" /></span>}
+                  </button>
+                  <button
+                    className={`flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${activeShippingMethod === 'cash' ? 'border-purple-500 bg-purple-500/10 text-white shadow-[0_0_18px_rgba(168,85,247,0.3)]' : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'}`}
+                    onClick={() => setShippingPaymentMethod('cash')}
+                    disabled={!canUseCashShipping}
+                  >
+                    <CreditCard className="h-5 w-5" />
+                    <span className="text-sm font-bold sm:text-base">Cash</span>
+                    {activeShippingMethod === 'cash' && <span className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white"><Check className="h-4 w-4" /></span>}
+                  </button>
+                </div>
               </div>
             )}
-            <div className="mt-4 grid grid-cols-1 gap-2">
+
+            <div className="mt-4 space-y-2">
               {activeShippingMethod === 'cash' && canUseCashShipping ? (
-                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCashShipping} disabled={isSubmittingCashShipping || !hasMadeDeposit}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
+                <button className="w-full rounded-xl bg-gradient-to-r from-purple-700 via-purple-600 to-fuchsia-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-purple-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCashShipping} disabled={isSubmittingCashShipping || !hasMadeDeposit}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
               ) : (
-                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment || !hasMadeDeposit}>{isSubmittingShipment ? 'Submitting...' : 'Confirm Shipping'}</button>
+                <button className="w-full rounded-xl bg-gradient-to-r from-purple-700 via-purple-600 to-fuchsia-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-purple-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment || !hasMadeDeposit}>{isSubmittingShipment ? 'Submitting...' : isFreeOnlySelection ? 'Confirm Free Shipping' : 'Confirm Shipping'}</button>
               )}
-              <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-300" onClick={() => setShowShippingReview(false)}>Cancel</button>
+              <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-bold text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => setShowShippingReview(false)}>Cancel</button>
             </div>
           </div>
         </div>
