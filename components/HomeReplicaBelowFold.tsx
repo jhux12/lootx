@@ -219,9 +219,9 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
     <>
       <div className="space-y-10 lg:col-start-1">
         {liveWins.length > 0 && (
-          <section className="overflow-hidden rounded-2xl border border-white/5 bg-[#22282c] shadow-[0_18px_42px_rgba(5,8,12,0.24)]">
-            <div className="border-b border-white/5 bg-[radial-gradient(circle_at_82%_10%,rgba(34,211,238,0.18),transparent_34%),radial-gradient(circle_at_18%_0%,rgba(168,85,247,0.18),transparent_30%)] p-3 sm:p-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/10 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-cyan-100">
+          <section className="overflow-hidden rounded-2xl border border-white/5">
+            <div className="border-b border-white/5 p-3 sm:p-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-100 sm:text-xs">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" />
@@ -234,27 +234,27 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
               {liveWins.map((win, index) => (
                 <div
                   key={win.feedId}
-                  className="live-win-row group flex min-w-0 items-center gap-3 rounded-xl border border-white/5 bg-[#1b2024]/80 p-3 transition-all duration-300 ease-out hover:border-cyan-300/20 hover:bg-[#252d32]"
-                  style={{ animationDelay: `${Math.min(index, 5) * 35}ms` }}
+                  className="live-win-row group flex min-w-0 transform-gpu items-center gap-2.5 rounded-xl border border-white/5 bg-[#1b2024]/80 p-2.5 transition-[background-color,border-color,transform] duration-300 ease-out hover:border-cyan-300/20 hover:bg-[#252d32] sm:gap-3 sm:p-3"
+                  style={{ animationDelay: `${Math.min(index, 5) * 28}ms` }}
                 >
                   <div className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#252d32] transition-colors duration-300 sm:h-16 sm:w-16 ${rarityImageBorderClass[normalizeRarity(win.rarity)]}`}>
                     <img src={win.image} alt={win.name} className="max-h-full max-w-full object-contain p-1 transition-transform duration-300 ease-out group-hover:scale-105" loading="eager" decoding="async" width={96} height={96} />
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="min-w-0 truncate text-sm font-black text-white sm:text-base">{win.name}</p>
-                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-xs">
+                    <p className="min-w-0 truncate text-xs font-black text-white sm:text-sm">{win.name}</p>
+                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 sm:gap-2 sm:text-[11px]">
                       <span>{win.time}</span>
                       <span className="h-1 w-1 rounded-full bg-slate-600" />
                       <span>{win.rarity}</span>
                       <span className="h-1 w-1 rounded-full bg-slate-600" />
-                      <span className="max-w-[120px] truncate normal-case tracking-normal text-slate-500 sm:max-w-[200px]">{win.boxName}</span>
+                      <span className="max-w-[104px] truncate normal-case tracking-normal text-slate-500 sm:max-w-[180px]">{win.boxName}</span>
                     </div>
                   </div>
 
                   <div className="shrink-0 text-right">
                     <div className="inline-flex items-center rounded-full border border-yellow-300/15 bg-yellow-300/10 px-2.5 py-1.5 sm:px-3">
-                      <CoinAmount amount={Math.round(win.price)} className="text-xs font-black text-white sm:text-sm" iconClassName="h-3.5 w-3.5" />
+                      <CoinAmount amount={Math.round(win.price)} className="text-[11px] font-black text-white sm:text-xs" iconClassName="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </div>
                   </div>
                 </div>
@@ -263,7 +263,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
           </section>
         )}
 
-        <style>{`@keyframes liveWinRowIn{0%{opacity:0;transform:translate3d(0,-10px,0) scale(.985)}100%{opacity:1;transform:translate3d(0,0,0) scale(1)}}.live-win-row{animation:liveWinRowIn 360ms cubic-bezier(.22,1,.36,1) both;will-change:transform,opacity}@media (prefers-reduced-motion: reduce){.live-win-row{animation:none;will-change:auto}}`}</style>
+        <style>{`@keyframes liveWinRowIn{0%{opacity:0;transform:translate3d(0,-8px,0) scale(.992)}60%{opacity:1}100%{opacity:1;transform:translate3d(0,0,0) scale(1)}}.live-win-row{animation:liveWinRowIn 520ms cubic-bezier(.16,1,.3,1) both;backface-visibility:hidden;transform-origin:center top;will-change:transform,opacity}.live-win-row img{backface-visibility:hidden}@media (prefers-reduced-motion: reduce){.live-win-row{animation:none;will-change:auto}}`}</style>
 
         <section>
           <h2 className="mb-4 text-xl font-black">Top Upgrades</h2>
