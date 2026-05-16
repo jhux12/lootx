@@ -413,7 +413,7 @@ export const LoginModal: React.FC = () => {
                     type="email"
                     value={googleLinkEmail}
                     readOnly
-                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4 text-white/60"
+                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4 text-base md:text-sm text-white/60"
                   />
                 </div>
               </div>
@@ -426,7 +426,7 @@ export const LoginModal: React.FC = () => {
                     type="password"
                     value={googleLinkPassword}
                     onChange={(e) => setGoogleLinkPassword(e.target.value)}
-                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4"
+                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4 text-base md:text-sm"
                     placeholder="Enter your password"
                     required
                   />
@@ -460,7 +460,7 @@ export const LoginModal: React.FC = () => {
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4"
+                      className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4 text-base md:text-sm"
                       placeholder="Display Name"
                       required
                     />
@@ -476,7 +476,7 @@ export const LoginModal: React.FC = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4"
+                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4 text-base md:text-sm"
                     placeholder="name@example.com"
                     required
                   />
@@ -491,7 +491,7 @@ export const LoginModal: React.FC = () => {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4"
+                    className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4 text-base md:text-sm"
                     placeholder="Enter your password"
                     required
                   />

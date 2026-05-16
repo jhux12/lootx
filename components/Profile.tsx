@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { X } from 'lucide-react';
+import { Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -582,18 +582,35 @@ export const Profile: React.FC = () => {
       )}
 
       {showShippingReview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#1f252c] p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">Review Shipping</h3>
-              <button onClick={() => setShowShippingReview(false)}><X className="h-5 w-5 text-gray-400" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4">
+          <div className="w-full max-w-lg rounded-3xl border border-white/15 bg-[linear-gradient(180deg,#11162a_0%,#0d1222_100%)] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_22px_60px_rgba(0,0,0,0.65)] sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-violet-400/30 bg-violet-500/10 text-violet-300 shadow-[0_0_24px_rgba(168,85,247,0.28)]">
+                  <Truck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-extrabold text-white">Review Shipping</h3>
+                  <p className="text-sm text-slate-300">{selectedShipmentItems.length} item{selectedShipmentItems.length === 1 ? '' : 's'} selected</p>
+                </div>
+              </div>
+              <button onClick={() => setShowShippingReview(false)} className="rounded-full p-1.5 text-slate-400 transition hover:bg-white/5 hover:text-white"><X className="h-5 w-5" /></button>
             </div>
-            <div className="space-y-2 text-sm text-gray-300">
-              <p>{selectedShipmentItems.length} items selected</p>
-              <p>Free shipping items: {freeShippingItemCount}</p>
-              <p>Paid shipping items: {paidShippingItemCount}</p>
-              {activeShippingMethod === 'coins' && <p>Coins due now: {shippingCoinTotal.toLocaleString()}</p>}
-              {activeShippingMethod === 'cash' && <p>Cash due now: ${(shippingCashTotalCents / 100).toFixed(2)}</p>}
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-sm text-slate-200">
+                <span>Free shipping items</span>
+                <span className="font-semibold text-white">{freeShippingItemCount}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-sm text-slate-200">
+                <span>Paid shipping items</span>
+                <span className="font-semibold text-white">{paidShippingItemCount}</span>
+              </div>
+              <div className="flex items-center justify-between bg-gradient-to-r from-violet-500/20 via-fuchsia-500/10 to-transparent px-4 py-3">
+                <span className="text-base font-semibold text-fuchsia-200">{activeShippingMethod === 'cash' ? 'Cash due now' : 'Coins due now'}</span>
+                <span className="text-2xl font-black text-violet-300">{activeShippingMethod === 'cash' ? `$${(shippingCashTotalCents / 100).toFixed(2)}` : shippingCoinTotal.toLocaleString()}</span>
+              </div>
+            </div>
+            <div className="mt-3 space-y-2 text-xs text-gray-300">
               {!hasMadeDeposit && (
                 <p className="rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
                   Make your first deposit to unlock shipping.
@@ -606,18 +623,21 @@ export const Profile: React.FC = () => {
               )}
             </div>
             {hasShippingMethodToggle && (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button className={`rounded-xl border py-2 text-xs ${activeShippingMethod === 'coins' ? 'border-purple-400/50 text-white' : 'border-white/10 text-gray-400'}`} onClick={() => setShippingPaymentMethod('coins')}>Ship with coins</button>
-                <button className={`rounded-xl border py-2 text-xs ${activeShippingMethod === 'cash' ? 'border-purple-400/50 text-white' : 'border-white/10 text-gray-400'}`} onClick={() => setShippingPaymentMethod('cash')}>Ship with cash</button>
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Pay with</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${activeShippingMethod === 'coins' ? 'border-violet-400/60 bg-violet-500/15 text-white shadow-[0_0_24px_rgba(168,85,247,0.28)]' : 'border-white/10 bg-white/[0.02] text-slate-300'}`} onClick={() => setShippingPaymentMethod('coins')}>Coins</button>
+                  <button className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${activeShippingMethod === 'cash' ? 'border-violet-400/60 bg-violet-500/15 text-white shadow-[0_0_24px_rgba(168,85,247,0.28)]' : 'border-white/10 bg-white/[0.02] text-slate-300'}`} onClick={() => setShippingPaymentMethod('cash')}>Cash</button>
+                </div>
               </div>
             )}
-            <div className="mt-4 grid grid-cols-1 gap-2">
+            <div className="mt-4 grid grid-cols-1 gap-2.5">
               {activeShippingMethod === 'cash' && canUseCashShipping ? (
-                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCashShipping} disabled={isSubmittingCashShipping || !hasMadeDeposit}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
+                <button className="rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-500 py-3 text-base font-extrabold text-white shadow-[0_8px_22px_rgba(168,85,247,0.35)] disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCashShipping} disabled={isSubmittingCashShipping || !hasMadeDeposit}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
               ) : (
-                <button className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment || !hasMadeDeposit}>{isSubmittingShipment ? 'Submitting...' : 'Confirm Shipping'}</button>
+                <button className="rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-500 py-3 text-base font-extrabold text-white shadow-[0_8px_22px_rgba(168,85,247,0.35)] disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment || !hasMadeDeposit}>{isSubmittingShipment ? 'Submitting...' : 'Confirm Shipping'}</button>
               )}
-              <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-300" onClick={() => setShowShippingReview(false)}>Cancel</button>
+              <button className="rounded-2xl border border-white/10 py-3 text-base text-gray-300" onClick={() => setShowShippingReview(false)}>Cancel</button>
             </div>
           </div>
         </div>
