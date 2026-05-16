@@ -3,6 +3,7 @@ import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
 import { BlurImage } from '../src/ui/images/BlurImage';
+import { LiveWinsFeed } from './LiveWinsFeed';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -100,6 +101,8 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
               ))}
             </div>
           </section>
+
+          <LiveWinsFeed boxes={boxes} />
         </section>
 
         {showBelowFold ? (
