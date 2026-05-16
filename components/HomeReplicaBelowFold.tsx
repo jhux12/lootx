@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Sparkles, Trophy } from 'lucide-react';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 
@@ -42,8 +41,6 @@ const faqs = [
   }
 ];
 
-const liveWinUsers = ['Jay', 'Mason', 'Avery', 'Noah', 'Liam', 'Eli', 'Carter', 'Logan', 'Owen', 'Kai', 'Riley', 'Nova'];
-
 type LiveWinItem = {
   id: string;
   name: string;
@@ -55,23 +52,77 @@ type LiveWinItem = {
 
 type LiveWin = LiveWinItem & {
   feedId: string;
-  user: string;
   time: string;
+};
+
+type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+const liveWinRarityWeights: Record<Rarity, number> = {
+  common: 42,
+  uncommon: 30,
+  rare: 20,
+  epic: 6,
+  legendary: 2
+};
+
+const rarityImageBorderClass: Record<string, string> = {
+  legendary: 'border-amber-300/35 shadow-[0_0_18px_rgba(252,211,77,0.10)]',
+  epic: 'border-fuchsia-300/30 shadow-[0_0_18px_rgba(217,70,239,0.09)]',
+  rare: 'border-cyan-300/25 shadow-[0_0_16px_rgba(34,211,238,0.08)]',
+  uncommon: 'border-emerald-300/22 shadow-[0_0_14px_rgba(52,211,153,0.07)]',
+  common: 'border-slate-300/16'
 };
 
 const randomFrom = <T,>(items: T[]) => items[Math.floor(Math.random() * items.length)];
 
-const createLiveWin = (items: LiveWinItem[], index = 0): LiveWin | null => {
+const normalizeRarity = (rarity: string): Rarity => {
+  const normalized = rarity.toLowerCase();
+  if (normalized === 'legendary' || normalized === 'epic' || normalized === 'rare' || normalized === 'uncommon') return normalized;
+  return 'common';
+};
+
+const getWeightedLiveWinItem = (items: LiveWinItem[]): LiveWinItem | null => {
   if (!items.length) return null;
 
-  const item = randomFrom(items);
-  const user = randomFrom(liveWinUsers);
+  const itemsByRarity = items.reduce<Record<Rarity, LiveWinItem[]>>((groups, item) => {
+    groups[normalizeRarity(item.rarity)].push(item);
+    return groups;
+  }, { common: [], uncommon: [], rare: [], epic: [], legendary: [] });
+  const availableRarities = (Object.keys(liveWinRarityWeights) as Rarity[]).filter((rarity) => itemsByRarity[rarity].length > 0);
+  if (!availableRarities.length) return randomFrom(items);
+
+  const totalWeight = availableRarities.reduce((sum, rarity) => sum + liveWinRarityWeights[rarity], 0);
+  let targetWeight = Math.random() * totalWeight;
+
+  for (const rarity of availableRarities) {
+    targetWeight -= liveWinRarityWeights[rarity];
+    if (targetWeight <= 0) return randomFrom(itemsByRarity[rarity]);
+  }
+
+  const fallbackRarity = availableRarities[0];
+  return fallbackRarity ? randomFrom(itemsByRarity[fallbackRarity]) : randomFrom(items);
+};
+
+const preloadLiveWinImage = (win: LiveWin): Promise<LiveWin> => {
+  if (typeof window === 'undefined') return Promise.resolve(win);
+
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(win);
+    image.onerror = () => resolve(win);
+    image.src = win.image;
+  });
+};
+
+const createLiveWin = (items: LiveWinItem[], index = 0): LiveWin | null => {
+  const item = getWeightedLiveWinItem(items);
+  if (!item) return null;
+
   const minutesAgo = Math.floor(Math.random() * 9) + 1;
 
   return {
     ...item,
     feedId: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
-    user,
     time: `${minutesAgo}m ago`
   };
 };
@@ -114,18 +165,37 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
       }));
   }, [boxes]);
   useEffect(() => {
+    let isMounted = true;
+    let isLoadingNextWin = false;
     const initialWins = Array.from({ length: 6 }, (_, index) => createLiveWin(liveWinItems, index)).filter((win): win is LiveWin => Boolean(win));
-    setLiveWins(initialWins);
 
-    if (!liveWinItems.length) return undefined;
+    void Promise.all(initialWins.map(preloadLiveWinImage)).then((preloadedWins) => {
+      if (isMounted) setLiveWins(preloadedWins);
+    });
+
+    if (!liveWinItems.length) {
+      return () => {
+        isMounted = false;
+      };
+    }
 
     const timer = window.setInterval(() => {
+      if (isLoadingNextWin) return;
       const nextWin = createLiveWin(liveWinItems);
       if (!nextWin) return;
-      setLiveWins((current) => [nextWin, ...current].slice(0, 7));
+
+      isLoadingNextWin = true;
+      void preloadLiveWinImage(nextWin).then((preloadedWin) => {
+        isLoadingNextWin = false;
+        if (!isMounted) return;
+        setLiveWins((current) => [preloadedWin, ...current].slice(0, 7));
+      });
     }, 2800);
 
-    return () => window.clearInterval(timer);
+    return () => {
+      isMounted = false;
+      window.clearInterval(timer);
+    };
   }, [liveWinItems]);
 
   const topPullz = useMemo(() => {
@@ -165,10 +235,6 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
                     Fresh wins from boxes across Pullz.gg, updating live with coin values.
                   </p>
                 </div>
-                <div className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#1b2024]/80 px-4 py-3 text-sm font-black text-white sm:w-auto">
-                  <Sparkles className="h-4 w-4 text-yellow-300" />
-                  Updated live
-                </div>
               </div>
             </div>
 
@@ -176,19 +242,15 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
               {liveWins.map((win, index) => (
                 <div
                   key={win.feedId}
-                  className="group flex min-w-0 items-center gap-3 rounded-xl border border-white/5 bg-[#1b2024]/80 p-3 transition-all duration-200 ease-out hover:border-cyan-300/20 hover:bg-[#252d32]"
+                  className="live-win-row group flex min-w-0 items-center gap-3 rounded-xl border border-white/5 bg-[#1b2024]/80 p-3 transition-all duration-300 ease-out hover:border-cyan-300/20 hover:bg-[#252d32]"
+                  style={{ animationDelay: `${Math.min(index, 5) * 35}ms` }}
                 >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/5 bg-[#252d32] sm:h-16 sm:w-16">
-                    <img src={win.image} alt={win.name} className="max-h-full max-w-full object-contain p-1 transition-transform duration-200 ease-out group-hover:scale-105" loading={index < 2 ? 'eager' : 'lazy'} decoding="async" width={96} height={96} />
+                  <div className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-[#252d32] transition-colors duration-300 sm:h-16 sm:w-16 ${rarityImageBorderClass[normalizeRarity(win.rarity)]}`}>
+                    <img src={win.image} alt={win.name} className="max-h-full max-w-full object-contain p-1 transition-transform duration-300 ease-out group-hover:scale-105" loading="eager" decoding="async" width={96} height={96} />
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <p className="min-w-0 truncate text-sm font-black text-white sm:text-base">
-                        {win.user} pulled {win.name}
-                      </p>
-                      {win.price >= 125 && <Sparkles className="hidden h-4 w-4 shrink-0 text-yellow-300 sm:block" />}
-                    </div>
+                    <p className="min-w-0 truncate text-sm font-black text-white sm:text-base">{win.name}</p>
                     <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-xs">
                       <span>{win.time}</span>
                       <span className="h-1 w-1 rounded-full bg-slate-600" />
@@ -199,8 +261,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
                   </div>
 
                   <div className="shrink-0 text-right">
-                    <div className="inline-flex items-center gap-1 rounded-full border border-yellow-300/15 bg-yellow-300/10 px-2.5 py-1.5 sm:px-3">
-                      <Trophy className="h-3.5 w-3.5 text-yellow-300" />
+                    <div className="inline-flex items-center rounded-full border border-yellow-300/15 bg-yellow-300/10 px-2.5 py-1.5 sm:px-3">
                       <CoinAmount amount={Math.round(win.price)} className="text-xs font-black text-white sm:text-sm" iconClassName="h-3.5 w-3.5" />
                     </div>
                   </div>
@@ -209,6 +270,8 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
             </div>
           </section>
         )}
+
+        <style>{`@keyframes liveWinRowIn{0%{opacity:0;transform:translate3d(0,-10px,0) scale(.985)}100%{opacity:1;transform:translate3d(0,0,0) scale(1)}}.live-win-row{animation:liveWinRowIn 360ms cubic-bezier(.22,1,.36,1) both;will-change:transform,opacity}@media (prefers-reduced-motion: reduce){.live-win-row{animation:none;will-change:auto}}`}</style>
 
         <section>
           <h2 className="mb-4 text-xl font-black">Top Upgrades</h2>
