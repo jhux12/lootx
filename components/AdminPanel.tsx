@@ -1172,12 +1172,13 @@ export const AdminPanel: React.FC = () => {
                   collection(db, 'leaderboards', `rewardsSeason_${seasonId}`, 'users'),
                   orderBy('points', 'desc'),
                   orderBy('updatedAt', 'asc'),
-                  limit(100)
+                  limit(500)
               );
               const snapshot = await getDocs(leaderboardQuery);
               if (cancelled) return;
               const rows = snapshot.docs.map((docSnap, index) => {
                   const data = docSnap.data() as Record<string, any>;
+                  if (data.hiddenFromLeaderboard === true) return null;
                   const rank = index + 1;
                   return {
                       uid: docSnap.id,
@@ -1187,7 +1188,8 @@ export const AdminPanel: React.FC = () => {
                       rewardCoins: getRewardCoinsForRank(rank),
                       rewardApprovedAt: data.rewardApprovedAt == null ? undefined : Number(data.rewardApprovedAt)
                   } as LeaderboardApprovalEntry;
-              });
+              }).filter((row): row is LeaderboardApprovalEntry => row !== null)
+                .map((row, index) => ({ ...row, rank: index + 1, rewardCoins: getRewardCoinsForRank(index + 1) }));
               setLeaderboardApprovals(rows);
               setSelectedLeaderboardWinnerIds((prev) => prev.filter((id) => rows.some((row) => row.uid === id && !row.rewardApprovedAt)));
           } catch (error) {
@@ -2193,6 +2195,35 @@ export const AdminPanel: React.FC = () => {
           { status: previousStatus },
           { status: nextStatus },
           `Status changed to ${nextStatus}`
+      );
+  };
+
+  const handlePublicVisibilityToggle = (targetUserId: string) => {
+      const targetUser = users.find((profile) => profile.id === targetUserId);
+      const previousHidden = targetUser?.hiddenFromLeaderboard === true || targetUser?.hiddenFromPublicDisplay === true;
+      const nextHidden = !previousHidden;
+      void updateUserAdminData(targetUserId, {
+          hiddenFromLeaderboard: nextHidden,
+          hiddenFromPublicDisplay: nextHidden
+      });
+
+      const seasonId = getRewardsSeasonId();
+      if (seasonId) {
+          void setDoc(
+              doc(db, 'leaderboards', `rewardsSeason_${seasonId}`, 'users', targetUserId),
+              { hiddenFromLeaderboard: nextHidden, hiddenFromPublicDisplay: nextHidden, updatedAt: serverTimestamp() },
+              { merge: true }
+          ).catch((error) => {
+              console.error('Failed to sync leaderboard visibility flag', error);
+          });
+      }
+
+      logAdminAction(
+          targetUserId,
+          'public_visibility_toggle',
+          { hiddenFromLeaderboard: previousHidden, hiddenFromPublicDisplay: previousHidden },
+          { hiddenFromLeaderboard: nextHidden, hiddenFromPublicDisplay: nextHidden },
+          nextHidden ? 'Hidden from leaderboard and public display' : 'Restored to leaderboard and public display'
       );
   };
 
@@ -4569,6 +4600,17 @@ export const AdminPanel: React.FC = () => {
                                             <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
                                                 <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Account Controls</h4>
                                                 <Select value={status} onChange={(event) => handleStatusChange(selectedUser.id, event.target.value as UserStatus)} className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="active">Active</option><option value="suspended">Suspended</option><option value="banned">Banned</option></Select>
+                                                <label className="flex flex-col gap-3 rounded-xl border border-gray-700 bg-[#0b0e14] p-3 text-sm text-gray-200 sm:flex-row sm:items-start">
+                                                    <Checkbox
+                                                        checked={selectedUser.hiddenFromLeaderboard === true || selectedUser.hiddenFromPublicDisplay === true}
+                                                        onChange={() => handlePublicVisibilityToggle(selectedUser.id)}
+                                                        className="mt-0.5 h-5 w-5 shrink-0"
+                                                    />
+                                                    <span className="min-w-0">
+                                                        <span className="block font-semibold text-white">Hide from leaderboard and public display</span>
+                                                        <span className="mt-1 block text-xs leading-5 text-gray-400">Removes this account from public leaderboards and live public win displays. Use for test, staff, or privacy-sensitive accounts.</span>
+                                                    </span>
+                                                </label>
                                                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                                     {Object.entries(LOCK_LABELS).map(([key, label]) => {
                                                         const isLocked = userLocks[selectedUser.id]?.[key as keyof UserLocks];

@@ -10,7 +10,8 @@ import { BlurImage } from '../src/ui/images/BlurImage';
 export const LiveTicker: React.FC = () => {
   const { items, users } = useGame();
   const drops = useMemo(() => {
-    const availableUsers: User[] = users.length ? users : [{
+    const publicUsers = users.filter((user) => user.hiddenFromPublicDisplay !== true);
+    const availableUsers: User[] = publicUsers.length ? publicUsers : [{
       id: 'guest',
       name: 'Player',
       avatar: 'https://picsum.photos/seed/guest/100/100',
@@ -18,7 +19,7 @@ export const LiveTicker: React.FC = () => {
       xp: 0
     }];
 
-    const liveWins = users.flatMap((user) => {
+    const liveWins = publicUsers.flatMap((user) => {
       const inventoryItems = user.inventory?.length ? user.inventory : user.topPulls ?? [];
       return inventoryItems.map((item) => ({
         item,

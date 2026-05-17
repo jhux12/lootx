@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Flame } from 'lucide-react';
-import { collection, doc, getCountFromServer, getDoc, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -24,6 +24,7 @@ interface LeaderboardEntry {
   displayName: string;
   avatarUrl: string;
   points: number;
+  hiddenFromLeaderboard?: boolean;
 }
 
 const DEFAULT_SETTINGS: RewardsSettings = {
@@ -179,27 +180,29 @@ export const Leaderboard: React.FC = () => {
         collection(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users'),
         orderBy('points', 'desc'),
         orderBy('updatedAt', 'asc'),
-        limit(100)
+        limit(500)
       );
       const topSnap = await getDocs(topQuery);
-      const top = topSnap.docs.map((d) => ({
-        uid: d.id,
-        displayName: String(d.data().displayName ?? 'Player'),
-        avatarUrl: String(d.data().avatarUrl ?? ''),
-        points: Number(d.data().points ?? 0)
-      }));
+      const rankedEntries = topSnap.docs
+        .map((d) => ({
+          uid: d.id,
+          displayName: String(d.data().displayName ?? 'Player'),
+          avatarUrl: String(d.data().avatarUrl ?? ''),
+          points: Number(d.data().points ?? 0),
+          hiddenFromLeaderboard: d.data().hiddenFromLeaderboard === true
+        }))
+        .filter((entry) => !entry.hiddenFromLeaderboard);
+      const top = rankedEntries.slice(0, 100);
 
       const myDoc = await getDoc(doc(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users', user.id));
-      const points = myDoc.exists() ? Number(myDoc.data().points ?? 0) : 0;
+      const myData = myDoc.data();
+      const isCurrentUserHidden = user.hiddenFromLeaderboard === true || user.hiddenFromPublicDisplay === true || myData?.hiddenFromLeaderboard === true;
+      const points = myDoc.exists() && !isCurrentUserHidden ? Number(myData?.points ?? 0) : 0;
 
       let rank: number | null = null;
       if (points > 0) {
-        const higherQuery = query(
-          collection(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users'),
-          where('points', '>', points)
-        );
-        const countSnap = await getCountFromServer(higherQuery);
-        rank = countSnap.data().count + 1;
+        const currentUserIndex = rankedEntries.findIndex((entry) => entry.uid === user.id);
+        rank = currentUserIndex >= 0 ? currentUserIndex + 1 : null;
       }
 
       if (mounted) {
@@ -214,7 +217,7 @@ export const Leaderboard: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [settings.enabled, settings.seasonEndsAt, settings.seasonId, user.id]);
+  }, [settings.enabled, settings.seasonEndsAt, settings.seasonId, user.hiddenFromLeaderboard, user.hiddenFromPublicDisplay, user.id]);
 
   const myReward = useMemo(() => rewardByRule(settings, myRank, myPoints), [settings, myRank, myPoints]);
   const hasActiveLeaderboard = settings.enabled && (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt);
