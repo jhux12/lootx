@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
@@ -14,6 +14,84 @@ type HomeReplicaProps = {
 };
 
 const HomeReplicaBelowFold = lazy(() => import('./HomeReplicaBelowFold').then((module) => ({ default: module.HomeReplicaBelowFold })));
+
+
+type HomeTickerWin = {
+  id: string;
+  boxId: string;
+  playerName: string;
+  itemName: string;
+  itemImage: string;
+  itemPrice: number;
+  rarity: MysteryBox['items'][number]['rarity'];
+  boxName: string;
+  timeAgo: string;
+};
+
+const TICKER_PLAYER_NAMES = ['Nova', 'Riley', 'Dash', 'Kai', 'Milo', 'Juno', 'Ace', 'Skye', 'Zed', 'Luna', 'Nico', 'Pax'];
+
+const TICKER_RARITY_MULTIPLIER: Record<HomeTickerWin['rarity'], number> = {
+  common: 1,
+  uncommon: 0.62,
+  rare: 0.28,
+  epic: 0.1,
+  legendary: 0.025
+};
+
+const TICKER_RARITY_DOT_CLASS: Record<HomeTickerWin['rarity'], string> = {
+  common: 'bg-slate-300',
+  uncommon: 'bg-emerald-300',
+  rare: 'bg-cyan-300',
+  epic: 'bg-fuchsia-300',
+  legendary: 'bg-amber-300'
+};
+
+const pickWeightedItem = <T extends { weight: number }>(pool: T[]) => {
+  const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+  let cursor = Math.random() * totalWeight;
+
+  for (const item of pool) {
+    cursor -= item.weight;
+    if (cursor <= 0) return item;
+  }
+
+  return pool[pool.length - 1];
+};
+
+const buildLiveWins = (boxes: MysteryBox[]): HomeTickerWin[] => {
+  const weightedPool = boxes
+    .filter((box) => !box.isUserCreated)
+    .flatMap((box) =>
+      box.items
+        .filter((item) => item.image && item.name)
+        .map((item) => ({
+          boxId: box.id,
+          boxName: box.name,
+          item,
+          weight: Math.max(item.chance || 1, 0.25) * TICKER_RARITY_MULTIPLIER[item.rarity]
+        }))
+    )
+    .filter((entry) => entry.weight > 0);
+
+  if (!weightedPool.length) return [];
+
+  return Array.from({ length: Math.min(24, Math.max(12, weightedPool.length)) }, (_, index) => {
+    const entry = pickWeightedItem(weightedPool);
+    const minutesAgo = index < 2 ? 'now' : `${2 + Math.floor(Math.random() * 48)}m`;
+
+    return {
+      id: `${entry.boxId}-${entry.item.id}-${index}-${minutesAgo}`,
+      boxId: entry.boxId,
+      playerName: TICKER_PLAYER_NAMES[Math.floor(Math.random() * TICKER_PLAYER_NAMES.length)],
+      itemName: entry.item.name,
+      itemImage: entry.item.image,
+      itemPrice: entry.item.price,
+      rarity: entry.item.rarity,
+      boxName: entry.boxName,
+      timeAgo: minutesAgo
+    };
+  });
+};
 
 const HOME_SECTION_IMAGES = [
   {
@@ -34,6 +112,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
   const { setView, user } = useGame();
   const [showBelowFold, setShowBelowFold] = useState(false);
   const featuredBoxes = boxes.slice(0, 5);
+  const liveWins = useMemo(() => buildLiveWins(boxes), [boxes]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -81,6 +160,55 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
               </button>
             ))}
           </div>
+
+
+          {liveWins.length > 0 && (
+            <section aria-label="Live recent wins" className="overflow-hidden rounded-2xl border border-white/5 bg-[#20262b] shadow-[0_14px_38px_rgba(5,8,12,0.22)]">
+              <div className="flex flex-col gap-1 border-b border-white/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-300" />
+                  </span>
+                  <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-100">Live Wins</h2>
+                </div>
+                <p className="text-xs font-medium text-slate-400">Weighted toward common Pullz with rare hits sprinkled in.</p>
+              </div>
+
+              <div className="relative overflow-hidden py-3">
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#20262b] to-transparent sm:w-16" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#20262b] to-transparent sm:w-16" />
+                <div className="ticker-animation flex w-max items-center gap-2 px-4 sm:gap-3">
+                  {[...liveWins, ...liveWins].map((win, index) => (
+                    <button
+                      key={`${win.id}-${index}`}
+                      type="button"
+                      onClick={() => onOpenBox(win.boxId)}
+                      className="group flex w-[214px] shrink-0 items-center gap-3 rounded-xl border border-white/[0.06] bg-[#1b2024]/80 p-2.5 text-left transition hover:-translate-y-0.5 hover:border-white/15 hover:bg-[#252c32] active:scale-[0.99] sm:w-[252px]"
+                      title={`${win.playerName} won ${win.itemName} from ${win.boxName}`}
+                    >
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-black/20 p-1.5 sm:h-14 sm:w-14">
+                        <img src={win.itemImage} alt={win.itemName} className="h-full w-full object-contain drop-shadow-md" loading="lazy" decoding="async" width={56} height={56} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                          <span className={`h-1.5 w-1.5 rounded-full ${TICKER_RARITY_DOT_CLASS[win.rarity]}`} />
+                          <span>{win.playerName}</span>
+                          <span className="text-slate-600">•</span>
+                          <span>{win.timeAgo}</span>
+                        </div>
+                        <p className="mt-1 truncate text-xs font-bold text-slate-100 sm:text-sm">{win.itemName}</p>
+                        <div className="mt-1 flex items-center justify-between gap-2">
+                          <p className="truncate text-[11px] text-slate-500">{win.boxName}</p>
+                          <CoinAmount amount={Math.round(win.itemPrice)} className="shrink-0 text-[11px] font-black text-emerald-200" iconClassName="h-3.5 w-3.5" animated={false} />
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
 
           <section>
             <div className="mb-5 flex items-center justify-between gap-3">
