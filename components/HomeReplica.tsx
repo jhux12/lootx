@@ -31,8 +31,8 @@ const TICKER_RARITY_MULTIPLIER: Record<HomeTickerWin['rarity'], number> = {
   common: 1,
   uncommon: 0.62,
   rare: 0.28,
-  epic: 0.1,
-  legendary: 0.025
+  epic: 0.18,
+  legendary: 0.055
 };
 
 const TICKER_RARITY_DOT_CLASS: Record<HomeTickerWin['rarity'], string> = {
