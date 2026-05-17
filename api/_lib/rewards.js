@@ -114,6 +114,7 @@ export const applySpendAndRewards = async ({
 
   const displayName = userData.displayName || userData.name || 'Player';
   const avatarUrl = userData.avatar || userData.photoURL || '';
+  const hiddenFromLeaderboard = userData.hiddenFromLeaderboard === true || userData.hiddenFromPublicDisplay === true;
   const nowTs = admin.firestore.FieldValue.serverTimestamp();
   const safeContext = typeof context === 'string' && context.trim().length ? context.trim() : 'spend';
 
@@ -129,7 +130,8 @@ export const applySpendAndRewards = async ({
     points: admin.firestore.FieldValue.increment(pointsAdded),
     updatedAt: nowTs,
     displayName,
-    avatarUrl
+    avatarUrl,
+    hiddenFromLeaderboard
   }, { merge: true });
 
   const rewardsTxnRef = userRef.collection('rewardTransactions').doc(referenceId || undefined);
@@ -196,8 +198,10 @@ export const settleExpiredRewardsSeason = async ({ force = false, maxUsers = 100
   let totalXpAwarded = 0;
   let awardedUsers = 0;
 
-  for (let idx = 0; idx < topSnap.docs.length; idx += 1) {
-    const docSnap = topSnap.docs[idx];
+  const visibleLeaderboardDocs = topSnap.docs.filter((docSnap) => docSnap.data()?.hiddenFromLeaderboard !== true);
+
+  for (let idx = 0; idx < visibleLeaderboardDocs.length; idx += 1) {
+    const docSnap = visibleLeaderboardDocs[idx];
     const uid = docSnap.id;
     const points = Math.max(0, Math.floor(toNumber(docSnap.data()?.points, 0)));
     const rank = idx + 1;

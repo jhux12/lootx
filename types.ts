@@ -44,6 +44,8 @@ export interface User {
   ledger?: LedgerEntry[];
   adminLogs?: AdminActionLog[];
   topPullsPublic?: boolean;
+  hiddenFromLeaderboard?: boolean;
+  hiddenFromPublicDisplay?: boolean;
   topPulls?: InventoryItem[];
   createdAt?: number;
   challengeStatsDay?: string;
