@@ -19,7 +19,6 @@ const HomeReplicaBelowFold = lazy(() => import('./HomeReplicaBelowFold').then((m
 type HomeTickerWin = {
   id: string;
   boxId: string;
-  playerName: string;
   itemName: string;
   itemImage: string;
   itemPrice: number;
@@ -27,8 +26,6 @@ type HomeTickerWin = {
   boxName: string;
   timeAgo: string;
 };
-
-const TICKER_PLAYER_NAMES = ['Nova', 'Riley', 'Dash', 'Kai', 'Milo', 'Juno', 'Ace', 'Skye', 'Zed', 'Luna', 'Nico', 'Pax'];
 
 const TICKER_RARITY_MULTIPLIER: Record<HomeTickerWin['rarity'], number> = {
   common: 1,
@@ -41,9 +38,17 @@ const TICKER_RARITY_MULTIPLIER: Record<HomeTickerWin['rarity'], number> = {
 const TICKER_RARITY_DOT_CLASS: Record<HomeTickerWin['rarity'], string> = {
   common: 'bg-slate-300',
   uncommon: 'bg-emerald-300',
-  rare: 'bg-cyan-300',
-  epic: 'bg-fuchsia-300',
+  rare: 'bg-blue-300',
+  epic: 'bg-purple-300',
   legendary: 'bg-amber-300'
+};
+
+const TICKER_RARITY_CARD_CLASS: Record<HomeTickerWin['rarity'], string> = {
+  common: 'border-slate-400/55 hover:border-slate-300/80 shadow-slate-950/20',
+  uncommon: 'border-emerald-400/55 hover:border-emerald-300/80 shadow-emerald-950/20',
+  rare: 'border-blue-400/60 hover:border-blue-300/85 shadow-blue-950/20',
+  epic: 'border-purple-400/65 hover:border-purple-300/90 shadow-purple-950/25',
+  legendary: 'border-amber-300/75 hover:border-amber-200 shadow-amber-950/30'
 };
 
 const pickWeightedItem = <T extends { weight: number }>(pool: T[]) => {
@@ -82,7 +87,6 @@ const buildLiveWins = (boxes: MysteryBox[]): HomeTickerWin[] => {
     return {
       id: `${entry.boxId}-${entry.item.id}-${index}-${minutesAgo}`,
       boxId: entry.boxId,
-      playerName: TICKER_PLAYER_NAMES[Math.floor(Math.random() * TICKER_PLAYER_NAMES.length)],
       itemName: entry.item.name,
       itemImage: entry.item.image,
       itemPrice: entry.item.price,
@@ -178,14 +182,14 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
               <div className="relative overflow-hidden py-3">
                 <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#20262b] to-transparent sm:w-16" />
                 <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#20262b] to-transparent sm:w-16" />
-                <div className="ticker-animation flex w-max items-center gap-2 px-4 sm:gap-3">
+                <div className="ticker-animation flex w-max items-center gap-2 px-4 [animation-duration:60s] sm:gap-3">
                   {[...liveWins, ...liveWins].map((win, index) => (
                     <button
                       key={`${win.id}-${index}`}
                       type="button"
                       onClick={() => onOpenBox(win.boxId)}
-                      className="group flex w-[214px] shrink-0 items-center gap-3 rounded-xl border border-white/[0.06] bg-[#1b2024]/80 p-2.5 text-left transition hover:-translate-y-0.5 hover:border-white/15 hover:bg-[#252c32] active:scale-[0.99] sm:w-[252px]"
-                      title={`${win.playerName} won ${win.itemName} from ${win.boxName}`}
+                      className={`group flex w-[214px] shrink-0 items-center gap-3 rounded-xl border-2 bg-[#1b2024]/80 p-2.5 text-left shadow-lg transition hover:-translate-y-0.5 hover:bg-[#252c32] active:scale-[0.99] sm:w-[252px] ${TICKER_RARITY_CARD_CLASS[win.rarity]}`}
+                      title={`${win.itemName} won from ${win.boxName}`}
                     >
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-black/20 p-1.5 sm:h-14 sm:w-14">
                         <img src={win.itemImage} alt={win.itemName} className="h-full w-full object-contain drop-shadow-md" loading="lazy" decoding="async" width={56} height={56} />
@@ -193,7 +197,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
                           <span className={`h-1.5 w-1.5 rounded-full ${TICKER_RARITY_DOT_CLASS[win.rarity]}`} />
-                          <span>{win.playerName}</span>
+                          <span>{win.rarity}</span>
                           <span className="text-slate-600">•</span>
                           <span>{win.timeAgo}</span>
                         </div>
