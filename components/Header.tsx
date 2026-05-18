@@ -267,14 +267,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
         playSound('click');
         openAuthModal('register');
       }}
-      className="group relative inline-flex shrink-0 overflow-hidden rounded-full p-[3px] shadow-[0_0_18px_rgba(255,72,128,0.2)] outline-none transition-transform hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99] sm:p-1"
+      className="group relative inline-flex shrink-0 overflow-hidden rounded-full p-[3px] shadow-[0_0_18px_rgba(255,72,128,0.2)] outline-none transition-transform hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99] sm:p-1 lg:p-[2px]"
       aria-label="Start Pulling"
     >
       <span
         aria-hidden="true"
         className="pointer-events-none absolute inset-[-160%] bg-[conic-gradient(from_0deg,_#ff385c,_#d946ef,_#3b82f6,_#2dd4bf,_#fde047,_#fb923c,_#ff385c)] motion-safe:animate-[spin_2.8s_linear_infinite]"
       />
-      <span className="relative z-10 inline-flex items-center justify-center rounded-full bg-black px-4 py-2 text-sm font-extrabold leading-none tracking-tight text-white sm:px-5 sm:py-2.5 sm:text-base lg:px-6 lg:py-3 xl:text-lg">
+      <span className="relative z-10 inline-flex items-center justify-center rounded-full bg-black px-4 py-2 text-sm font-extrabold leading-none tracking-tight text-white sm:px-5 sm:py-2.5 sm:text-base lg:px-4 lg:py-2.5 lg:text-sm xl:text-sm">
         <span className="whitespace-nowrap">Start Pulling</span>
       </span>
     </button>
