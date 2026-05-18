@@ -57,12 +57,43 @@ const RARITY_BADGE_CLASS: Record<ReturnType<typeof normalizeRarity>, string> = {
   legendary: 'bg-amber-500/15 text-amber-200'
 };
 
+const RARITY_DISPLAY_WEIGHTS: Record<ReturnType<typeof normalizeRarity>, number> = {
+  common: 64,
+  uncommon: 32,
+  rare: 16,
+  epic: 7,
+  legendary: 3
+};
+
 const itemKey = (item: ReelItem, index: number) => `${item.itemId ?? item.itemName}-${index}`;
+
+const seededUnitValue = (seed: number, index: number) => {
+  let value = (seed + index * 0x9e3779b9) | 0;
+  value ^= value >>> 16;
+  value = Math.imul(value, 0x7feb352d);
+  value ^= value >>> 15;
+  value = Math.imul(value, 0x846ca68b);
+  value ^= value >>> 16;
+  return (value >>> 0) / 4294967296;
+};
+
+const getDisplayWeight = (item: ReelItem) => RARITY_DISPLAY_WEIGHTS[normalizeRarity(item.rarity)] ?? RARITY_DISPLAY_WEIGHTS.common;
 
 const pickDeterministic = (pool: ReelItem[], seed: number, index: number) => {
   if (!pool.length) return fallbackItem;
-  const position = Math.abs((seed + index * 13) % pool.length);
-  return pool[position];
+
+  const weightedItems = pool.map((item) => ({ item, weight: getDisplayWeight(item) }));
+  const totalWeight = weightedItems.reduce((sum, entry) => sum + entry.weight, 0);
+
+  if (!Number.isFinite(totalWeight) || totalWeight <= 0) return pool[0] ?? fallbackItem;
+
+  let random = seededUnitValue(seed, index) * totalWeight;
+  for (const entry of weightedItems) {
+    if (random < entry.weight) return entry.item;
+    random -= entry.weight;
+  }
+
+  return weightedItems[weightedItems.length - 1]?.item ?? fallbackItem;
 };
 
 const hashSeed = (input: string) => {

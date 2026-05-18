@@ -106,7 +106,41 @@ const createSeededRng = (seed: string) => {
   };
 };
 
-const pickFromPool = <T,>(pool: T[], rng: () => number): T => pool[Math.floor(rng() * pool.length)];
+const SPINNER_RARITY_DISPLAY_WEIGHTS: Record<ReturnType<typeof normalizeRarityKey>, number> = {
+  common: 64,
+  uncommon: 32,
+  rare: 16,
+  epic: 7,
+  legendary: 3
+};
+
+const getSpinnerDisplayWeight = (item: Pick<CaseItem, 'rarity'>) => {
+  const rarityKey = normalizeRarityKey(item.rarity);
+  return SPINNER_RARITY_DISPLAY_WEIGHTS[rarityKey] ?? SPINNER_RARITY_DISPLAY_WEIGHTS.common;
+};
+
+const pickWeightedSpinnerItem = <T extends Pick<CaseItem, 'rarity'>>(pool: T[], rng: () => number): T => {
+  if (pool.length === 0) {
+    throw new Error('Cannot pick a spinner item from an empty pool.');
+  }
+
+  const fallback = pool[0];
+  const weightedItems = pool.map((item) => ({ item, weight: getSpinnerDisplayWeight(item) }));
+  const totalWeight = weightedItems.reduce((sum, entry) => sum + entry.weight, 0);
+
+  if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
+    return fallback;
+  }
+
+  let random = rng() * totalWeight;
+  for (const entry of weightedItems) {
+    if (random < entry.weight) return entry.item;
+    random -= entry.weight;
+  }
+
+  return weightedItems[weightedItems.length - 1]?.item ?? fallback;
+};
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
@@ -569,7 +603,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     // Fill the static view with random items from the specific box
     if (items.length > 0) {
         const staticItems = Array.from({ length: 15 }, () => 
-          items[Math.floor(Math.random() * items.length)]
+          pickWeightedSpinnerItem(items, Math.random)
         );
         const previewCenterIndex = Math.floor(staticItems.length / 2);
         reelItemsRef.current = staticItems;
@@ -790,9 +824,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
 
       const previous = newReel[newReel.length - 1];
-      let next = pickFromPool(pool, rng);
+      let next = pickWeightedSpinnerItem(pool, rng);
       if (pool.length > 2 && previous && next.id === previous.id) {
-        next = pickFromPool(pool, rng);
+        next = pickWeightedSpinnerItem(pool, rng);
       }
       newReel.push(next);
     }
