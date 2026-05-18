@@ -52,10 +52,10 @@ const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
 const SPINNER_MOTION = {
   preWinnerItems: 68,
   postWinnerItems: 14,
-  spinDurationMs: 6200,
-  goldTicketDurationMs: 5600,
-  goldFinalDurationMs: 5200,
-  settleDurationMs: 950,
+  spinDurationMs: 8400,
+  goldTicketDurationMs: 7800,
+  goldFinalDurationMs: 7200,
+  settleDurationMs: 1500,
   overshootPx: 18,
   approachOffsetSoftMaxPx: 16,
   approachOffsetNearMissMinPx: 34,
@@ -909,10 +909,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const approachOffset = getApproachOffset(rng);
     const landingJitterPx = 0;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(220, SPINNER_MOTION.durationVarianceMs) * 2);
-    const resolvedDuration = Math.max(3200, duration + durationVariance);
-    const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.12, 0.24);
-    const preSettleOffset = clamp(1 - settlePortion, 0.76, 0.88);
-    const overshootOffset = clamp(preSettleOffset - 0.18, 0.58, 0.74);
+    const resolvedDuration = Math.max(4200, duration + durationVariance);
+    const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.16, 0.28);
+    const preSettleOffset = clamp(1 - settlePortion, 0.72, 0.84);
+    const overshootOffset = clamp(preSettleOffset - 0.2, 0.52, 0.68);
 
     resetSpinnerAnimation();
 
