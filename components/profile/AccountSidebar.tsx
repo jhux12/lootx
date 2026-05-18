@@ -81,7 +81,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <span className="inline-flex items-center justify-center gap-1 rounded-xl border border-blue-400/30 bg-blue-500/10 px-2 py-2 text-xs text-white">
-            <img src={XP_ICON} alt="XP" className="h-3.5 w-3.5" />
+            <img src={XP_ICON} alt="XP" className="h-3.5 w-3.5" loading="lazy" decoding="async" width={14} height={14} />
             <AnimatedNumber value={xp} /> XP
           </span>
           <span className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-xs text-white">

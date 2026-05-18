@@ -100,7 +100,7 @@ const CANONICAL_REFERRAL_BASE_URL = 'https://pullz.gg';
 const CoinValue: React.FC<{ amount: number; className?: string; iconClassName?: string }> = ({ amount, className, iconClassName }) => (
   <span className={`inline-flex items-center gap-1.5 ${className ?? ''}`}>
     <span>{amount.toLocaleString()}</span>
-    <img src={COIN_ICON} alt="Coin" className={iconClassName ?? 'h-4 w-4'} />
+    <img src={COIN_ICON} alt="Coin" className={iconClassName ?? 'h-4 w-4'} loading="lazy" decoding="async" width={16} height={16} />
   </span>
 );
 

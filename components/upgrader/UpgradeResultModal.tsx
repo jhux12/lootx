@@ -13,7 +13,7 @@ export const UpgradeResultModal: React.FC<Props> = ({ result, onClose }) => {
         <h3 className={`text-2xl font-black ${result.win ? 'text-emerald-300' : 'text-rose-300'}`}>{result.win ? 'UPGRADE SUCCESS' : 'BUST'}</h3>
         {result.win && result.awardedItem && (
           <div className="mt-3">
-            <img src={result.awardedItem.imageUrl} alt={result.awardedItem.name} className="mx-auto h-20 w-20 rounded-xl object-cover" />
+            <img src={result.awardedItem.imageUrl} alt={result.awardedItem.name} className="mx-auto h-20 w-20 rounded-xl object-cover" loading="lazy" decoding="async" width={80} height={80} />
             <div className="mt-1 text-sm text-white">{result.awardedItem.name} added to inventory</div>
           </div>
         )}

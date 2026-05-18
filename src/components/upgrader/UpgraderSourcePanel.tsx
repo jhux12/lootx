@@ -91,6 +91,10 @@ export const UpgraderSourcePanel: React.FC<UpgraderSourcePanelProps> = ({
                     src={item.imageUrl}
                     alt={item.name}
                     className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                    width={160}
+                    height={160}
                     referrerPolicy="no-referrer"
                   />
                   {item.locked && (
@@ -139,7 +143,7 @@ export const UpgraderSourcePanel: React.FC<UpgraderSourcePanelProps> = ({
               >
                 <X className="h-4 w-4" />
               </button>
-              <img src={infoItem.imageUrl} alt={infoItem.name} className="relative z-10 h-40 w-40 object-contain drop-shadow-2xl" referrerPolicy="no-referrer" />
+              <img src={infoItem.imageUrl} alt={infoItem.name} className="relative z-10 h-40 w-40 object-contain drop-shadow-2xl" loading="lazy" decoding="async" width={160} height={160} referrerPolicy="no-referrer" />
             </div>
             <div className="space-y-4 px-5 py-6 sm:px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
               <div className="text-center">

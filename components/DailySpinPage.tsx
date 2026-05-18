@@ -44,6 +44,10 @@ const BackgroundFloatingCoins = () => (
         src={COIN_ICON}
         alt="floating coin"
         className="absolute opacity-20 blur-[1px]"
+        loading="lazy"
+        decoding="async"
+        width={coin.w}
+        height={coin.w}
         style={{
           top: coin.top,
           left: coin.left,
@@ -181,7 +185,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
                   style={{ transform: `translate(-50%, -50%) rotate(${prize.angle}deg) translateY(calc(-1 * var(--radius)))` }}
                 >
                   <div className="relative w-full h-full flex flex-col items-center justify-center">
-                    <img src={prize.image} alt={`${prize.amount}`} className="w-10 h-10 md:w-14 md:h-14 object-contain drop-shadow-[0_0_15px_rgba(32,93,215,0.5)] pb-4" />
+                    <img src={prize.image} alt={`${prize.amount}`} className="w-10 h-10 md:w-14 md:h-14 object-contain drop-shadow-[0_0_15px_rgba(32,93,215,0.5)] pb-4" loading="lazy" decoding="async" width={56} height={56} />
                     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 bg-neutral-950 border border-white/10 rounded-2xl px-3.5 py-1.5 flex items-center justify-center gap-0.5 shadow-lg min-w-[60px]">
                       <span className="text-sm font-bold text-white leading-none pt-0.5">{prize.amount}</span>
                     </div>
@@ -206,7 +210,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
                 <>
                   <span className="text-xs md:text-sm font-bold text-neutral-400 uppercase tracking-widest">YOU WON</span>
                   <div className="flex items-center gap-1 md:gap-2 mt-1">
-                    <img src={COIN_ICON} alt="Coin" className="w-5 h-5 md:w-6 md:h-6 object-contain" />
+                    <img src={COIN_ICON} alt="Coin" className="w-5 h-5 md:w-6 md:h-6 object-contain" loading="lazy" decoding="async" width={24} height={24} />
                     <span className="text-xl md:text-3xl font-black text-white">{lastPrize}</span>
                   </div>
                   <span className="text-[10px] md:text-xs text-neutral-500 mt-2">Come back tomorrow!</span>

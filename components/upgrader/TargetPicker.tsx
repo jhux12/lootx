@@ -63,7 +63,7 @@ export const TargetPicker: React.FC<Props> = ({ targets, selectedId, onSelect, f
           return (
             <button key={target.id} onClick={() => onSelect(target.id)} className={`rounded-xl border p-2 text-left transition ${active ? 'border-cyan-400 bg-cyan-500/20 shadow-[0_0_0_1px_rgba(34,211,238,0.25)]' : 'border-white/10 bg-[#111827] hover:border-white/20'}`}>
               <div className="flex items-center gap-2">
-                <img src={target.imageUrl} alt={target.name} className="h-14 w-14 rounded-lg object-cover" />
+                <img src={target.imageUrl} alt={target.name} className="h-14 w-14 rounded-lg object-cover" loading="lazy" decoding="async" width={56} height={56} />
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-white">{target.name}</div>
                   <div className="text-xs text-gray-400">{target.rarity}</div>

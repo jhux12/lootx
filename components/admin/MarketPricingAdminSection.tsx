@@ -175,7 +175,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
               <article key={item.id} className="rounded-2xl border border-gray-800 bg-[#0b0e14] p-4 shadow-xl shadow-black/10">
                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(220px,1.2fr)_minmax(360px,2fr)_auto] xl:items-start">
                   <div className="flex min-w-0 gap-3">
-                    <img src={item.image} alt={item.name} className="h-16 w-16 shrink-0 rounded-xl border border-white/10 object-cover" />
+                    <img src={item.image} alt={item.name} className="h-16 w-16 shrink-0 rounded-xl border border-white/10 object-cover" loading="lazy" decoding="async" width={64} height={64} />
                     <div className="min-w-0">
                       <h3 className="truncate text-sm font-bold text-white">{item.name}</h3>
                       <div className="mt-2 flex flex-wrap gap-2">

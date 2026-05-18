@@ -33,7 +33,7 @@ export const CoinAmount: React.FC<CoinAmountProps> = ({
 
   return (
     <span className={`inline-flex items-center gap-1 ${className ?? ''}`}>
-      <img src={COIN_ICON} alt="Coin" className={`w-4 h-4 ${iconClassName ?? ''}`} />
+      <img src={COIN_ICON} alt="Coin" className={`w-4 h-4 ${iconClassName ?? ''}`} loading="lazy" decoding="async" width={16} height={16} />
       <span className={textClassName}>
         {sign}
         {animated ? <AnimatedNumber value={absoluteAmount} format={formatValue} /> : formatValue(absoluteAmount)}

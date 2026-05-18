@@ -74,7 +74,7 @@ export const TopDropsSlider: React.FC<TopDropsSliderProps> = ({ boxes, onOpenBox
               title={`${item.name} from ${item.sourceBoxName}`}
             >
               <div className="mb-2 flex h-16 items-center justify-center rounded-lg bg-black/20 p-2">
-                <img src={item.image} alt={item.name} loading="lazy" className="h-full w-full object-contain drop-shadow-lg" />
+                <img src={item.image} alt={item.name} loading="lazy" decoding="async" width={64} height={64} className="h-full w-full object-contain drop-shadow-lg" />
               </div>
               <div className="line-clamp-2 min-h-[2rem] text-xs font-bold text-white">{item.name}</div>
               <div className="mt-2 flex items-center justify-between gap-2">
@@ -101,7 +101,7 @@ export const TopDropsSlider: React.FC<TopDropsSliderProps> = ({ boxes, onOpenBox
               title={`${item.name} from ${item.sourceBoxName}`}
             >
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-black/20 p-2">
-                <img src={item.image} alt={item.name} loading="lazy" className="h-full w-full object-contain" />
+                <img src={item.image} alt={item.name} loading="lazy" decoding="async" width={64} height={64} className="h-full w-full object-contain" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="line-clamp-2 text-sm font-bold text-white">{item.name}</div>

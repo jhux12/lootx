@@ -223,8 +223,8 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                   src={tile.image}
                   alt={`${tile.title} artwork`}
                   className="pointer-events-none absolute -right-3 -bottom-7 z-10 h-[154px] w-[154px] shrink-0 -rotate-12 object-contain opacity-100 transition-transform duration-300 ease-out group-hover:scale-105 group-hover:-rotate-[15deg] sm:-right-2 sm:-bottom-6 sm:h-[148px] sm:w-[148px] md:h-[160px] md:w-[160px] lg:h-[172px] lg:w-[172px]"
-                  loading={index === 0 ? 'eager' : 'lazy'}
-                  fetchPriority={index === 0 ? 'high' : 'auto'}
+                  loading="lazy"
+                  fetchPriority="low"
                   decoding="async"
                   width={500}
                   height={500}

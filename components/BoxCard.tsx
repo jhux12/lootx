@@ -64,7 +64,10 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
         <BlurImage
           src={box.image}
           alt={box.name}
-          className={`relative z-10 mx-auto object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105 ${isCompact ? 'h-28 w-28 sm:h-36 sm:w-36' : 'h-40 w-40 sm:h-44 sm:w-44'}`}
+          ratioClassName={`shrink-0 ${isCompact ? 'h-28 w-28 sm:h-36 sm:w-36' : 'h-40 w-40 sm:h-44 sm:w-44'}`}
+          className="relative z-10 mx-auto object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105"
+          width={176}
+          height={176}
         />
       </div>
 
@@ -72,7 +75,7 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
         <h4 className={`font-semibold text-gray-100 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-xs sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
         {box.currencyType === 'XP' ? (
           <div className={`flex items-center justify-center gap-1 font-semibold text-white sm:text-lg ${isCompact ? 'text-sm' : 'text-base'}`}>
-            <img src={XP_ICON} alt="XP" loading="lazy" decoding="async" className="h-4 w-4 object-contain" />
+            <img src={XP_ICON} alt="XP" loading="lazy" decoding="async" width={16} height={16} className="h-4 w-4 object-contain" />
             <span>{Math.max(0, Math.floor(Number(box.priceXP ?? 0))).toLocaleString()}</span>
           </div>
         ) : (

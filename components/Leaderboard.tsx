@@ -298,7 +298,7 @@ export const Leaderboard: React.FC = () => {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                 <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Rank: <span className="font-black">{myRank ? `#${myRank}` : 'Unranked'}</span></div>
                 <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Points: <span className="font-black text-[#8f7dff]">{myPoints.toLocaleString()} pts</span></div>
-                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold flex items-center gap-2">Reward: <img src={COIN_ICON} alt="Coins" className="h-4 w-4 object-contain" /><span className="font-black">{myReward.label}</span></div>
+                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold flex items-center gap-2">Reward: <img src={COIN_ICON} alt="Coins" className="h-4 w-4 object-contain" loading="lazy" decoding="async" width={16} height={16} /><span className="font-black">{myReward.label}</span></div>
               </div>
             </section>
 
@@ -319,12 +319,12 @@ export const Leaderboard: React.FC = () => {
                 return (
                   <article key={entry.uid} className={`relative overflow-hidden rounded-[26px] border bg-gradient-to-b p-5 text-center sm:p-6 ${highlight}`}>
                     <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-[#205DD7] to-sky-400 text-6xl font-black text-white">
-                      {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full rounded-full object-cover" /> : avatarFallback(entry.displayName)}
+                      {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full rounded-full object-cover" loading="lazy" decoding="async" width={48} height={48} /> : avatarFallback(entry.displayName)}
                     </div>
                     <div className="absolute left-1/2 top-[126px] -translate-x-1/2 rounded-xl bg-[#5a55ff] px-4 py-2 text-xl font-black text-white">#{badge}</div>
                     <div className="mt-8 truncate text-3xl font-bold text-white sm:text-4xl">{entry.displayName}</div>
                     <div className="mt-2 flex items-center justify-center gap-2 text-lg font-black text-[#a89fff] sm:text-xl"> 
-                      <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" />
+                      <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" loading="lazy" decoding="async" width={20} height={20} />
                       <span>{rewardByRule(settings, actualRank, entry.points).label}</span>
                     </div>
                     <div className="mt-2 text-2xl font-black text-[#58d5b3] sm:text-3xl">{entry.points.toLocaleString()} pts</div>
@@ -355,7 +355,7 @@ export const Leaderboard: React.FC = () => {
                         <div className="text-2xl font-black text-white">{rank}</div>
                         <div className="flex min-w-0 items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#205DD7] to-sky-400 text-lg font-black text-white">
-                            {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full rounded-full object-cover" /> : avatarFallback(entry.displayName)}
+                            {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full rounded-full object-cover" loading="lazy" decoding="async" width={48} height={48} /> : avatarFallback(entry.displayName)}
                           </div>
                           <div className="min-w-0">
                             <div className="truncate text-lg font-extrabold text-white sm:text-2xl">{entry.displayName}</div>
@@ -366,7 +366,7 @@ export const Leaderboard: React.FC = () => {
                         </div>
                         <div className="hidden text-2xl font-black text-[#8f7dff] sm:block">{entry.points.toLocaleString()} <span className="text-[#8f7dff]">pts</span></div>
                         <div className="ml-auto flex items-center justify-end gap-1.5 text-lg font-black sm:gap-2 sm:text-2xl">
-                          <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" />
+                          <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" loading="lazy" decoding="async" width={20} height={20} />
                           <span>{rowRewardLabel}</span>
                         </div>
                       </div>
@@ -378,7 +378,7 @@ export const Leaderboard: React.FC = () => {
 
             <section className="rounded-2xl border border-[#6b60ff]/30 bg-gradient-to-r from-[#151a31] via-[#121829] to-[#0d111b] p-4 sm:p-6">
               <div className="text-2xl font-black">Rank 11-100</div>
-              <p className="mt-1 text-base text-[#d9ddf0] sm:text-lg">5 lucky users in ranks 11-100 will randomly be selected to receive <img src={COIN_ICON} alt="Coins" className="inline h-4 w-4 object-contain" /> 100</p>
+              <p className="mt-1 text-base text-[#d9ddf0] sm:text-lg">5 lucky users in ranks 11-100 will randomly be selected to receive <img src={COIN_ICON} alt="Coins" className="inline h-4 w-4 object-contain" loading="lazy" decoding="async" width={16} height={16} /> 100</p>
             </section>
           </div>
           )}
