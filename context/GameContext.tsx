@@ -730,6 +730,9 @@ const AUTH_LOADING_USER: User = {
   level: 0,
   xp: 0,
   totalSpent: 0,
+  totalDepositedCents: 0,
+  depositCount: 0,
+  lastDepositAt: undefined,
   rakebackBalance: 0,
   rakebackEarnedToday: 0,
   rakebackEarnedAt: getDayStart(),
@@ -757,6 +760,9 @@ const GUEST_USER: User = {
   level: 0,
   xp: 0,
   totalSpent: 0,
+  totalDepositedCents: 0,
+  depositCount: 0,
+  lastDepositAt: undefined,
   rakebackBalance: 0,
   rakebackEarnedToday: 0,
   rakebackEarnedAt: getDayStart(),
@@ -769,6 +775,12 @@ const GUEST_USER: User = {
 };
 
 const getUserRef = (uid: string) => doc(db, 'users', uid);
+
+
+const normalizeNonNegativeNumber = (value: unknown, fallback = 0) => {
+  const numericValue = Number(value ?? fallback);
+  return Number.isFinite(numericValue) ? Math.max(0, numericValue) : fallback;
+};
 
 const normalizeTimestamp = (value: unknown, fallback: number) => {
   if (value instanceof Timestamp) return value.toMillis();
@@ -956,7 +968,10 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     xpSpentLifetime: Number(data.xpSpentLifetime ?? 0),
     lastDailyClaim,
     lastFreeBoxClaim,
-    totalSpent: Number(data.totalSpent ?? 0),
+    totalSpent: normalizeNonNegativeNumber(data.totalSpent),
+    totalDepositedCents: normalizeNonNegativeNumber(data.totalDepositedCents),
+    depositCount: normalizeNonNegativeNumber(data.depositCount),
+    lastDepositAt: data.lastDepositAt,
     rakebackBalance: Number(data.rakebackBalance ?? 0),
     rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
     rakebackEarnedAt: Number(data.rakebackEarnedAt ?? 0),
@@ -1020,7 +1035,10 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     xpSpentLifetime: Number(data.xpSpentLifetime ?? 0),
     lastDailyClaim,
     lastFreeBoxClaim,
-    totalSpent: Number(data.totalSpent ?? 0),
+    totalSpent: normalizeNonNegativeNumber(data.totalSpent),
+    totalDepositedCents: normalizeNonNegativeNumber(data.totalDepositedCents),
+    depositCount: normalizeNonNegativeNumber(data.depositCount),
+    lastDepositAt: data.lastDepositAt,
     rakebackBalance: Number(data.rakebackBalance ?? 0),
     rakebackEarnedToday: Number(data.rakebackEarnedToday ?? 0),
     rakebackEarnedAt: Number(data.rakebackEarnedAt ?? 0),
@@ -2184,6 +2202,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         lastDailyClaim: undefined,
         lastFreeBoxClaim: undefined,
         totalSpent: 0,
+        totalDepositedCents: 0,
+        depositCount: 0,
+        lastDepositAt: undefined,
         rakebackBalance: 0,
         rakebackEarnedToday: 0,
         rakebackEarnedAt: getDayStart(),
@@ -2419,6 +2440,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         lastDailyClaim: undefined,
         lastFreeBoxClaim: undefined,
         totalSpent: 0,
+        totalDepositedCents: 0,
+        depositCount: 0,
+        lastDepositAt: undefined,
         rakebackBalance: 0,
         rakebackEarnedToday: 0,
         rakebackEarnedAt: getDayStart(),
