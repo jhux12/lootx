@@ -67,26 +67,26 @@ const SPINNER_MOTION = {
 
 const rarityGlowClass: Record<string, string> = {
   legendary: 'bg-amber-300/35',
-  epic: 'bg-sky-400/30',
-  rare: 'bg-cyan-300/28',
-  uncommon: 'bg-emerald-300/24',
-  common: 'bg-slate-300/18'
+  epic: 'bg-purple-400/30',
+  rare: 'bg-blue-300/28',
+  uncommon: 'bg-green-300/24',
+  common: 'bg-gray-300/18'
 };
 
 const rarityIndicatorStyle: Record<string, { color: string; glow: string; label: string }> = {
   legendary: { color: '#fbbf24', glow: 'rgba(251,191,36,0.95)', label: 'Legendary' },
-  epic: { color: '#e879f9', glow: 'rgba(232,121,249,0.9)', label: 'Epic' },
-  rare: { color: '#22d3ee', glow: 'rgba(34,211,238,0.9)', label: 'Rare' },
-  uncommon: { color: '#34d399', glow: 'rgba(52,211,153,0.85)', label: 'Uncommon' },
-  common: { color: '#cbd5e1', glow: 'rgba(203,213,225,0.65)', label: 'Common' }
+  epic: { color: '#a855f7', glow: 'rgba(168,85,247,0.9)', label: 'Epic' },
+  rare: { color: '#3b82f6', glow: 'rgba(59,130,246,0.9)', label: 'Rare' },
+  uncommon: { color: '#22c55e', glow: 'rgba(34,197,94,0.85)', label: 'Uncommon' },
+  common: { color: '#9ca3af', glow: 'rgba(156,163,175,0.65)', label: 'Common' }
 };
 
 const normalizeRarityKey = (rarity?: string) => {
   const value = String(rarity ?? 'common').toLowerCase();
   if (value.includes('legend')) return 'legendary';
   if (value.includes('epic')) return 'epic';
-  if (value.includes('rare')) return 'rare';
   if (value.includes('uncommon')) return 'uncommon';
+  if (value.includes('rare')) return 'rare';
   return 'common';
 };
 
@@ -1536,8 +1536,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const rarity = String(item.rarity ?? 'common').toLowerCase();
     if (rarity.includes('legend')) playSound('win-gold');
     else if (rarity.includes('epic')) playSound('win-epic');
-    else if (rarity.includes('rare')) playSound('win-rare');
     else if (rarity.includes('uncommon')) playSound('win-uncommon');
+    else if (rarity.includes('rare')) playSound('win-rare');
     else playSound('win-common');
     setShowWinModal(true);
     if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
@@ -2470,13 +2470,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             animation: legendaryPulse 2s ease-in-out infinite;
           }
           .item-modal-rarity-bg--rare {
-            background: radial-gradient(circle at center, rgba(32, 93, 215, 0.28), transparent 72%);
+            background: radial-gradient(circle at center, rgba(59, 130, 246, 0.28), transparent 72%);
+          }
+          .item-modal-rarity-bg--epic {
+            background: radial-gradient(circle at center, rgba(168, 85, 247, 0.28), transparent 72%);
+          }
+          .item-modal-rarity-bg--uncommon {
+            background: radial-gradient(circle at center, rgba(34, 197, 94, 0.22), transparent 74%);
           }
           .item-modal-rarity-bg--common,
-          .item-modal-rarity-bg--uncommon,
-          .item-modal-rarity-bg--epic,
           .item-modal-rarity-bg--ultra-rare {
-            background: radial-gradient(circle at center, rgba(148, 163, 184, 0.18), transparent 74%);
+            background: radial-gradient(circle at center, rgba(156, 163, 175, 0.18), transparent 74%);
           }
           .item-modal-rarity-glow.is-active {
             animation: raritySinglePulse 600ms ease-out 1;

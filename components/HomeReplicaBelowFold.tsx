@@ -43,10 +43,10 @@ const faqs = [
 
 const rarityGlowClass: Record<string, string> = {
   legendary: 'bg-amber-300/35',
-  epic: 'bg-sky-400/30',
-  rare: 'bg-cyan-300/28',
-  uncommon: 'bg-emerald-300/24',
-  common: 'bg-slate-300/18'
+  epic: 'bg-purple-400/30',
+  rare: 'bg-blue-300/28',
+  uncommon: 'bg-green-300/24',
+  common: 'bg-gray-300/18'
 };
 
 export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxes, showSignupCta, onSignUp }) => {

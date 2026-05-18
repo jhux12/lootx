@@ -20,20 +20,20 @@ interface InventoryCardProps {
 
 const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: string }> = {
   common: {
-    card: 'border-slate-400/30 bg-gradient-to-b from-slate-500/20 to-slate-900/40',
-    badge: 'border-slate-300/40 bg-slate-500/20 text-slate-100'
+    card: 'border-gray-400/30 bg-gradient-to-b from-gray-500/20 to-gray-900/40',
+    badge: 'border-gray-300/40 bg-gray-500/20 text-gray-100'
   },
   uncommon: {
-    card: 'border-emerald-400/40 bg-gradient-to-b from-emerald-500/20 to-emerald-950/40',
-    badge: 'border-emerald-300/50 bg-emerald-500/20 text-emerald-100'
+    card: 'border-green-400/40 bg-gradient-to-b from-green-500/20 to-green-950/40',
+    badge: 'border-green-300/50 bg-green-500/20 text-green-100'
   },
   rare: {
     card: 'border-blue-400/45 bg-gradient-to-b from-blue-500/20 to-blue-950/40',
     badge: 'border-blue-300/50 bg-blue-500/20 text-blue-100'
   },
   epic: {
-    card: 'border-blue-400/45 bg-gradient-to-b from-[#205DD7]/20 to-blue-950/45',
-    badge: 'border-blue-300/50 bg-blue-500/20 text-blue-100'
+    card: 'border-purple-400/45 bg-gradient-to-b from-purple-500/20 to-purple-950/45',
+    badge: 'border-purple-300/50 bg-purple-500/20 text-purple-100'
   },
   legendary: {
     card: 'border-amber-400/55 bg-gradient-to-b from-amber-400/25 to-amber-950/45',

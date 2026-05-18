@@ -75,12 +75,12 @@ export const LegendaryShowcase: React.FC = () => {
                 playSound('click');
                 setView({ type: 'CASE_OPENING', boxId: box.id });
               }}
-              className="group relative flex min-w-[180px] flex-col gap-3 overflow-hidden rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-500/10 via-blue-500/10 to-cyan-500/10 px-3 py-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-[0_0_24px_rgba(250,204,21,0.25)] sm:min-w-0"
+              className="group relative flex min-w-[180px] flex-col gap-3 overflow-hidden rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-400/10 via-blue-500/10 to-cyan-500/10 px-3 py-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-[0_0_24px_rgba(251,191,36,0.25)] sm:min-w-0"
             >
-              <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-yellow-400/20 blur-2xl" />
+              <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-amber-400/20 blur-2xl" />
               <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-blue-500/20 blur-2xl" />
-              <div className="relative flex items-center justify-center rounded-xl border border-yellow-500/30 bg-black/20 p-3">
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-yellow-400/20 via-transparent to-blue-400/20" />
+              <div className="relative flex items-center justify-center rounded-xl border border-amber-400/30 bg-black/20 p-3">
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-amber-400/20 via-transparent to-blue-400/20" />
                 <img
                   src={item.image}
                   alt={item.name}
@@ -92,7 +92,7 @@ export const LegendaryShowcase: React.FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-yellow-200/80">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-amber-200/80">
                   Legendary Drop
                 </p>
                 <div className="space-y-1">
@@ -101,9 +101,9 @@ export const LegendaryShowcase: React.FC = () => {
                   </p>
                   <CoinAmount
                     amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                    className="text-xs text-yellow-100/80"
+                    className="text-xs text-amber-100/80"
                     iconClassName="h-3 w-3"
-                    textClassName="text-yellow-100/80"
+                    textClassName="text-amber-100/80"
                   />
                   <p className="text-xs text-blue-100/70">From: {box.name}</p>
                 </div>

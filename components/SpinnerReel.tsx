@@ -35,9 +35,26 @@ const normalizeRarity = (rarity?: string) => {
   const value = String(rarity ?? 'common').toLowerCase();
   if (value.includes('legend')) return 'legendary';
   if (value.includes('epic')) return 'epic';
-  if (value.includes('rare')) return 'rare';
   if (value.includes('uncommon')) return 'uncommon';
+  if (value.includes('rare')) return 'rare';
   return 'common';
+};
+
+
+const RARITY_CARD_CLASS: Record<ReturnType<typeof normalizeRarity>, string> = {
+  common: 'border-gray-500/45 shadow-[0_0_18px_rgba(156,163,175,0.12)]',
+  uncommon: 'border-green-500/45 shadow-[0_0_18px_rgba(34,197,94,0.16)]',
+  rare: 'border-blue-500/45 shadow-[0_0_18px_rgba(59,130,246,0.18)]',
+  epic: 'border-purple-500/45 shadow-[0_0_18px_rgba(168,85,247,0.2)]',
+  legendary: 'border-amber-400/55 shadow-[0_0_18px_rgba(251,191,36,0.22)]'
+};
+
+const RARITY_BADGE_CLASS: Record<ReturnType<typeof normalizeRarity>, string> = {
+  common: 'bg-gray-500/15 text-gray-200',
+  uncommon: 'bg-green-500/15 text-green-200',
+  rare: 'bg-blue-500/15 text-blue-200',
+  epic: 'bg-purple-500/15 text-purple-200',
+  legendary: 'bg-amber-500/15 text-amber-200'
 };
 
 const itemKey = (item: ReelItem, index: number) => `${item.itemId ?? item.itemName}-${index}`;
@@ -132,7 +149,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
             return (
               <div
                 key={itemKey(item, index)}
-                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 transition-colors ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : 'border-gray-700 bg-[#111827]'} ${rarity === 'legendary' ? 'shadow-[0_0_18px_rgba(251,191,36,0.2)]' : ''}`}
+                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 transition-colors ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
               >
                 <div className="h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
                   {item.imageUrl ? (
@@ -151,7 +168,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
                 <div className="text-[10px] sm:text-xs text-gray-100 truncate">{item.itemName}</div>
                 <div className="flex items-center justify-between mt-1">
                   <div className="text-[10px] text-green-300 font-semibold">{item.value.toLocaleString()}</div>
-                  <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-black/35 text-gray-300">{rarity}</span>
+                  <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded ${RARITY_BADGE_CLASS[rarity]}`}>{rarity}</span>
                 </div>
               </div>
             );
