@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 import {
   ChevronDown,
@@ -25,7 +25,7 @@ import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
 import { XP_ICON } from '../constants';
 import { useBalanceFeedback } from '../src/ui/feedback/useBalanceFeedback';
-import { useActivity } from '../src/lib/activity/useActivity';
+import { useUnreadActivityCount } from '../src/lib/activity/useActivity';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getClaimReadyQuestCount, normalizeQuestRules } from '../src/lib/quests';
@@ -53,7 +53,19 @@ const RewardsIcon: React.FC<{ className?: string }> = ({ className }) => (
 const drawerCardClass =
   'flex items-center gap-3 rounded-xl border border-white/10 bg-[#25313a] p-3 text-left transition-colors hover:bg-[#2f3d47]';
 
-export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unreadChatCount: _unreadChatCount, isSticky = true }) => {
+type RewardsSettingsData = Record<string, unknown> | undefined;
+
+const HeaderSkeleton: React.FC = memo(() => (
+  <div className="flex min-h-[44px] items-center gap-2" aria-hidden="true">
+    <div className="hidden h-8 w-[72px] rounded-lg border border-amber-500/10 bg-white/[0.06] lg:block" />
+    <div className="h-9 w-[118px] rounded-full bg-white/[0.07] sm:w-[132px] lg:h-10 lg:w-[148px]" />
+    <div className="hidden h-9 w-[168px] rounded-lg bg-white/[0.06] lg:block" />
+    <div className="h-10 w-10 rounded-xl bg-white/[0.07] lg:hidden" />
+  </div>
+));
+HeaderSkeleton.displayName = 'HeaderSkeleton';
+
+const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unreadChatCount: _unreadChatCount, isSticky = true }) => {
   const {
     user,
     authInitialized,
@@ -84,16 +96,20 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
   const headerRef = useRef<HTMLElement | null>(null);
   const gamesMenuRef = useRef<HTMLDivElement | null>(null);
   const rewardsMenuRef = useRef<HTMLDivElement | null>(null);
-  const targetXp = Math.floor(user.xpBalance ?? user.xp ?? 0);
-  const resolvedDisplayName = authInitialized ? resolveUserDisplayName(user) : 'Loading...';
+  const targetXp = useMemo(() => Math.floor(user.xpBalance ?? user.xp ?? 0), [user.xp, user.xpBalance]);
+  const resolvedDisplayName = useMemo(() => (authInitialized ? resolveUserDisplayName(user) : ''), [authInitialized, user]);
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
-  const { unreadCount } = useActivity();
-  const lastDailyClaim = Number.isFinite(user.lastDailyClaim ?? NaN) ? Number(user.lastDailyClaim) : 0;
-  const dailyCooldownMs = 24 * 60 * 60 * 1000;
-  const isDailySpinReady = !lastDailyClaim || (lastDailyClaim + dailyCooldownMs) <= Date.now();
+  const unreadCount = useUnreadActivityCount();
+  const lastDailyClaim = useMemo(() => Number.isFinite(user.lastDailyClaim ?? NaN) ? Number(user.lastDailyClaim) : 0, [user.lastDailyClaim]);
+  const isDailySpinReady = useMemo(() => {
+    const dailyCooldownMs = 24 * 60 * 60 * 1000;
+    return !lastDailyClaim || (lastDailyClaim + dailyCooldownMs) <= Date.now();
+  }, [lastDailyClaim]);
   const showDailySpinReady = isAuthenticated && isDailySpinReady;
-  const hasFreeSignupBox = isAuthenticated && boxes.some((box) => box.isDaily) && !user.lastFreeBoxClaim;
+  const hasDailyBox = useMemo(() => boxes.some((box) => box.isDaily), [boxes]);
+  const hasFreeSignupBox = isAuthenticated && hasDailyBox && !user.lastFreeBoxClaim;
   const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;
+  const [rewardsSettings, setRewardsSettings] = useState<RewardsSettingsData>();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -196,36 +212,34 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
 
   useEffect(() => {
     if (!isAuthenticated) {
-      setQuestReadyCount(0);
-      setClaimedTodayCount(0);
+      setRewardsSettings(undefined);
       return;
     }
-    const pathLabel = 'settings/rewards';
-    console.log('READING FIRESTORE PATH', pathLabel);
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
-      console.log('SNAPSHOT OK', {
-        path: pathLabel,
-        size: 'size' in snap ? snap.size : undefined
-      });
-      const data = snap.data() as Record<string, unknown> | undefined;
-      const today = new Date().toISOString().slice(0, 10);
-      const claims = { ...(user.questClaims ?? {}), ...locallyClaimedQuestIds };
-      const stats = user.challengeStatsDay === today ? (user.challengeStats ?? {}) : {};
-      const count = getClaimReadyQuestCount(normalizeQuestRules(data?.questRules), stats, claims, today);
-      const rules = normalizeQuestRules(data?.questRules).filter((rule) => rule.enabled !== false);
-      const claimedCount = rules.filter((rule) => claims?.[rule.id] === today).length;
-      setQuestReadyCount(count);
-      setClaimedTodayCount(claimedCount);
+      setRewardsSettings(snap.data() as RewardsSettingsData);
     }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: pathLabel,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
+      console.error('Rewards settings snapshot failed', error);
     });
     return () => unsub();
-  }, [isAuthenticated, locallyClaimedQuestIds, user.challengeStats, user.questClaims]);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setQuestReadyCount((current) => (current === 0 ? current : 0));
+      setClaimedTodayCount((current) => (current === 0 ? current : 0));
+      return;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const claims = { ...(user.questClaims ?? {}), ...locallyClaimedQuestIds };
+    const stats = user.challengeStatsDay === today ? (user.challengeStats ?? {}) : {};
+    const rules = normalizeQuestRules(rewardsSettings?.questRules);
+    const count = getClaimReadyQuestCount(rules, stats, claims, today);
+    const claimedCount = rules.filter((rule) => rule.enabled !== false && claims?.[rule.id] === today).length;
+
+    setQuestReadyCount((current) => (current === count ? current : count));
+    setClaimedTodayCount((current) => (current === claimedCount ? current : claimedCount));
+  }, [isAuthenticated, locallyClaimedQuestIds, rewardsSettings, user.challengeStats, user.challengeStatsDay, user.questClaims]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -235,7 +249,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       const questId = customEvent.detail?.questId;
       const day = customEvent.detail?.day;
       if (!questId || !day) return;
-      setLocallyClaimedQuestIds((prev) => ({ ...prev, [questId]: day }));
+      setLocallyClaimedQuestIds((prev) => (prev[questId] === day ? prev : { ...prev, [questId]: day }));
     };
 
     window.addEventListener('pullz:quest-claimed', handleQuestClaimed as EventListener);
@@ -244,7 +258,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     };
   }, []);
 
-  const navigate = (type: 'HOME' | 'BOXES' | 'PLINKO' | 'BONUSES' | 'LEADERBOARD' | 'QUESTS' | 'POLLS' | 'REFERRALS' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
+  const navigate = useCallback((type: 'HOME' | 'BOXES' | 'PLINKO' | 'BONUSES' | 'LEADERBOARD' | 'QUESTS' | 'POLLS' | 'REFERRALS' | 'PROVABLY_FAIR' | 'CONTACT' | 'TERMS' | 'PRIVACY' | 'PROFILE' | 'ADMIN' | 'INVENTORY') => {
     playSound('click');
     const requiresAuth = type === 'BONUSES' || type === 'QUESTS' || type === 'POLLS' || type === 'REFERRALS' || type === 'INVENTORY' || type === 'PROFILE';
     if (requiresAuth && !isAuthenticated) {
@@ -255,7 +269,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     setIsMobileMenuOpen(false);
     setIsGamesMenuOpen(false);
     setIsRewardsMenuOpen(false);
-  };
+  }, [isAuthenticated, openAuthModal, playSound, setView]);
+
+  const openTopUp = useCallback(() => {
+    playSound('click');
+    setShowTopUpModal(true);
+  }, [playSound, setShowTopUpModal]);
+
+  const openActivity = useCallback(() => setShowActivity(true), []);
+
+  const handleLogout = useCallback(() => {
+    playSound('click');
+    logout();
+  }, [logout, playSound]);
 
   const startPullingButton = useMemo(() => (
     <button
@@ -299,16 +325,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
       : 'border-white/5 bg-[#22282c]'
   }`;
 
-  const toggleMobileSection = (section: keyof typeof openMobileSections) => {
+  const toggleMobileSection = useCallback((section: keyof typeof openMobileSections) => {
     setOpenMobileSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  };
+  }, []);
 
-  const dismissFreeBoxTooltip = () => {
+  const dismissFreeBoxTooltip = useCallback(() => {
     if (typeof window !== 'undefined') {
       window.sessionStorage.setItem('pullz:free-box-tooltip-dismissed', '1');
     }
     setIsFreeBoxTooltipDismissed(true);
-  };
+  }, []);
 
   return (
     <>
@@ -393,27 +419,26 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            {isAuthenticated ? (
+          <div className="flex min-h-[44px] items-center gap-2 sm:gap-3">
+            {!authInitialized ? (
+              <HeaderSkeleton />
+            ) : isAuthenticated ? (
               <>
                 <div className="hidden items-center gap-2 lg:flex">
-                  <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5">
-                    <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" />
-                    <span className="text-xs font-bold text-white"><AnimatedNumber value={targetXp} /></span>
+                  <div className="flex h-9 min-w-[76px] items-center gap-1.5 rounded-lg border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5">
+                    <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" width={20} height={20} />
+                    <span className="min-w-[32px] text-xs font-bold tabular-nums text-white"><AnimatedNumber value={targetXp} /></span>
                   </div>
-                  <div className={`relative shrink-0 overflow-hidden rounded-full p-[3px] shadow-[0_0_18px_rgba(255,72,128,0.2)] sm:p-1 ${balanceTone === 'up' ? 'shadow-[0_0_22px_rgba(34,197,94,0.35)]' : balanceTone === 'down' ? 'shadow-[0_0_22px_rgba(239,68,68,0.35)]' : ''}`}>
+                  <div className={`relative min-w-[138px] shrink-0 overflow-hidden rounded-full p-[3px] shadow-[0_0_18px_rgba(255,72,128,0.2)] sm:p-1 ${balanceTone === 'up' ? 'shadow-[0_0_22px_rgba(34,197,94,0.35)]' : balanceTone === 'down' ? 'shadow-[0_0_22px_rgba(239,68,68,0.35)]' : ''}`}>
                     <span
                       aria-hidden="true"
                       className="pointer-events-none absolute inset-[-160%] bg-[conic-gradient(from_0deg,_#ff385c,_#d946ef,_#3b82f6,_#2dd4bf,_#fde047,_#fb923c,_#ff385c)] motion-safe:animate-[spin_2.8s_linear_infinite]"
                     />
-                    <div className="relative z-10 flex items-center gap-2 rounded-full bg-black py-1.5 pl-3.5 pr-1.5">
-                      <CoinAmount amount={balance} className="text-sm font-extrabold leading-none tracking-tight text-white" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                    <div className="relative z-10 flex items-center justify-between gap-2 rounded-full bg-black py-1.5 pl-3.5 pr-1.5">
+                      <CoinAmount amount={balance} className="min-w-[84px] text-sm font-extrabold leading-none tracking-tight text-white" iconClassName="h-4 w-4" textClassName="min-w-[56px] text-right tabular-nums" formatOptions={{ maximumFractionDigits: 0 }} />
                       <button
                         type="button"
-                        onClick={() => {
-                          playSound('click');
-                          setShowTopUpModal(true);
-                        }}
+                        onClick={openTopUp}
                         className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-black shadow-sm transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                         aria-label="Top up"
                       >
@@ -426,8 +451,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                 <div className="hidden items-center gap-2 lg:flex">
                   <button
                     type="button"
-                    onClick={() => setShowActivity(true)}
-                    className="relative rounded-lg border border-white/10 bg-[#22282c] p-2 text-gray-200 hover:text-white"
+                    onClick={openActivity}
+                    className="relative h-9 w-9 rounded-lg border border-white/10 bg-[#22282c] p-2 text-gray-200 hover:text-white"
                     aria-label="Open activity"
                   >
                     <Clock3 className="h-4 w-4" />
@@ -442,11 +467,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                       Admin
                     </button>
                   )}
-                  <button onClick={() => navigate('PROFILE')} className="text-right">
-                    <span className="block text-sm font-bold text-white hover:text-blue-400">{resolvedDisplayName}</span>
+                  <button onClick={() => navigate('PROFILE')} className="min-w-[112px] max-w-[148px] text-right xl:min-w-[132px]">
+                    <span className="block truncate text-sm font-bold text-white hover:text-blue-400">{resolvedDisplayName}</span>
                   </button>
                   <div className="relative flex items-center">
-                    <button type="button" onClick={() => navigate('PROFILE')}>
+                    <button type="button" onClick={() => navigate('PROFILE')} className="h-9 w-9">
                       <UserAvatar user={user} className="h-9 w-9 rounded-lg object-cover" initialsClassName="text-xs" />
                     </button>
                     {showFreeBoxTooltip ? (
@@ -466,11 +491,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
                     ) : null}
                   </div>
                   <button
-                    onClick={() => {
-                      playSound('click');
-                      logout();
-                    }}
-                    className="rounded-lg border border-white/10 bg-[#22282c] p-2 text-gray-300 hover:bg-[#2a3138] hover:text-white"
+                    onClick={handleLogout}
+                    className="h-9 w-9 rounded-lg border border-white/10 bg-[#22282c] p-2 text-gray-300 hover:bg-[#2a3138] hover:text-white"
                     aria-label="Log out"
                   >
                     <LogOut className="h-4 w-4" />
@@ -481,27 +503,24 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
               <div className="hidden items-center lg:flex">{startPullingButton}</div>
             )}
 
-            {!isAuthenticated && <div className="flex items-center lg:hidden">{startPullingButton}</div>}
+            {authInitialized && !isAuthenticated && <div className="flex min-h-[44px] min-w-[132px] items-center lg:hidden">{startPullingButton}</div>}
 
-            {isAuthenticated && (
-              <div className="flex items-center gap-2 lg:hidden">
-                <div className="flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5 sm:px-3">
-                  <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                  <span className="text-xs font-bold text-white sm:text-sm"><AnimatedNumber value={targetXp} /></span>
+            {authInitialized && isAuthenticated && (
+              <div className="flex min-h-[44px] items-center gap-2 lg:hidden">
+                <div className="flex h-8 min-w-[64px] items-center gap-1.5 rounded-md border border-amber-500/20 bg-[#18181b] px-2.5 py-1.5 sm:min-w-[74px] sm:px-3">
+                  <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" width={16} height={16} />
+                  <span className="min-w-[24px] text-xs font-bold tabular-nums text-white sm:min-w-[30px] sm:text-sm"><AnimatedNumber value={targetXp} /></span>
                 </div>
-                <div className="relative shrink-0 overflow-hidden rounded-full p-[3px] shadow-[0_0_18px_rgba(255,72,128,0.2)] sm:p-1">
+                <div className="relative min-w-[118px] shrink-0 overflow-hidden rounded-full p-[3px] shadow-[0_0_18px_rgba(255,72,128,0.2)] sm:min-w-[132px] sm:p-1">
                   <span
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-[-160%] bg-[conic-gradient(from_0deg,_#ff385c,_#d946ef,_#3b82f6,_#2dd4bf,_#fde047,_#fb923c,_#ff385c)] motion-safe:animate-[spin_2.8s_linear_infinite]"
                   />
-                  <div className="relative z-10 flex items-center gap-1.5 rounded-full bg-black py-1 pl-2.5 pr-1 sm:gap-2 sm:py-1.5 sm:pl-3.5 sm:pr-1.5">
-                    <CoinAmount amount={balance} className="text-xs font-extrabold leading-none tracking-tight text-white sm:text-sm" iconClassName="h-4 w-4" formatOptions={{ maximumFractionDigits: 0 }} />
+                  <div className="relative z-10 flex items-center justify-between gap-1.5 rounded-full bg-black py-1 pl-2.5 pr-1 sm:gap-2 sm:py-1.5 sm:pl-3.5 sm:pr-1.5">
+                    <CoinAmount amount={balance} className="min-w-[72px] text-xs font-extrabold leading-none tracking-tight text-white sm:min-w-[82px] sm:text-sm" iconClassName="h-4 w-4" textClassName="min-w-[44px] text-right tabular-nums sm:min-w-[52px]" formatOptions={{ maximumFractionDigits: 0 }} />
                     <button
                       type="button"
-                      onClick={() => {
-                        playSound('click');
-                        setShowTopUpModal(true);
-                      }}
+                      onClick={openTopUp}
                       className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-black shadow-sm transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:h-7 sm:w-7"
                       aria-label="Top up"
                     >
@@ -683,3 +702,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
     </>
   );
 };
+
+export const Header = memo(HeaderComponent);
+Header.displayName = 'Header';

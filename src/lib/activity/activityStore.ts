@@ -11,6 +11,7 @@ const listeners = new Set<() => void>();
 let scopeSyncNonce = 0;
 
 const emit = () => listeners.forEach((listener) => listener());
+const getUnreadCount = () => entries.reduce((count, entry) => count + (entry.read ? 0 : 1), 0);
 
 const makeStorageKey = (scope: string) => `${STORAGE_KEY_PREFIX}${scope}`;
 
@@ -115,6 +116,9 @@ export const activityStore = {
   getSnapshot() {
     return entries;
   },
+  getUnreadSnapshot() {
+    return getUnreadCount();
+  },
   setScope(nextScopeKey: string) {
     const normalized = nextScopeKey.trim() || 'guest';
     if (normalized === scopeKey) return;
@@ -139,7 +143,8 @@ export const activityStore = {
     return next;
   },
   markAllRead() {
-    entries = entries.map((entry) => ({ ...entry, read: true }));
+    if (!entries.some((entry) => !entry.read)) return;
+    entries = entries.map((entry) => (entry.read ? entry : { ...entry, read: true }));
     persist();
     emit();
 
