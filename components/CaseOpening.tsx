@@ -20,6 +20,7 @@ import { createMicroConfetti, MicroConfettiParticle } from '../src/ui/feedback/m
 import { ProvablyFairModal } from '../src/ui/provably/ProvablyFairModal';
 import { trackEvent } from '../utils/trackEvent';
 import pullzLogo from '../assets/pullz-p.PNG';
+import spinnerPLogo from '../assets/spinnerp.svg';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -411,6 +412,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
   const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
   const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
+  const spinnerAccentVars = {
+    '--spinner-accent': centeredRarityIndicator.color,
+    '--spinner-glow': centeredRarityIndicator.glow
+  } as React.CSSProperties;
+  const spinnerLogoStateClass = [
+    animationPhase === 'settling' ? 'case-spinner-logo--settling' : '',
+    hasSpinSettled && animationPhase === 'idle' ? 'case-spinner-logo--landed' : ''
+  ].filter(Boolean).join(' ');
 
   const updateSpinnerMeasurements = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -1827,7 +1836,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div
               ref={scrollViewportRef}
               className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
-              style={{ height: `${spinnerViewportHeight}px` }}
+              style={{ height: `${spinnerViewportHeight}px`, ...spinnerAccentVars }}
             >
                 {isSpinnerAssetsLoading && (
                   <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0a0f19]/75 px-4">
@@ -1848,13 +1857,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <i
                   className="fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none transition-[color,filter,text-shadow] duration-150 ease-out motion-reduce:transition-none sm:top-0 sm:text-lg"
                   style={{
-                    color: centeredRarityIndicator.color,
-                    filter: `drop-shadow(0 0 8px ${centeredRarityIndicator.glow})`,
-                    textShadow: `0 0 10px ${centeredRarityIndicator.glow}, 0 0 20px ${centeredRarityIndicator.glow}`
+                    color: 'var(--spinner-accent)',
+                    filter: 'drop-shadow(0 0 8px var(--spinner-glow))',
+                    textShadow: '0 0 10px var(--spinner-glow), 0 0 20px var(--spinner-glow)'
                   }}
                   title={`${centeredRarityIndicator.label} item passing the spinner`}
                   aria-hidden="true"
                 ></i>
+
+                {/* Branded Center Logo Overlay */}
+                <div
+                  className={`case-spinner-logo pointer-events-none absolute left-1/2 top-1/2 z-[26] -translate-x-1/2 -translate-y-1/2 ${spinnerLogoStateClass}`}
+                  aria-hidden="true"
+                >
+                  <span className="case-spinner-logo__halo" />
+                  <span
+                    className="case-spinner-logo__mark"
+                    style={{ WebkitMaskImage: `url(${spinnerPLogo})`, maskImage: `url(${spinnerPLogo})` }}
+                  />
+                </div>
 
                 {/* The Moving Reel */}
                 <div 
@@ -2248,7 +2269,65 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           .ambient-pulse { animation: ambientPulse 3s ease-in-out infinite; }
           @keyframes ambientPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 rgba(34,211,238,0.2);} 50% { transform: scale(1.02); box-shadow: 0 0 22px rgba(34,211,238,0.32);} }
           @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-          @media (prefers-reduced-motion: reduce){ .ambient-pulse { animation: none; } }
+          .case-spinner-logo {
+            width: clamp(2.75rem, 9vw, 3.75rem);
+            height: clamp(2.75rem, 9vw, 3.75rem);
+            contain: layout paint style;
+            transform: translate3d(-50%, -50%, 0);
+            will-change: filter, opacity, transform;
+            filter: drop-shadow(0 0 12px var(--spinner-glow));
+            opacity: 0.88;
+            transition: filter 420ms ease, opacity 420ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+          }
+          .case-spinner-logo__halo {
+            position: absolute;
+            inset: -34%;
+            border-radius: 9999px;
+            background: radial-gradient(circle, var(--spinner-glow) 0%, rgba(255,255,255,0.08) 34%, transparent 68%);
+            background: radial-gradient(circle, var(--spinner-glow) 0%, color-mix(in srgb, var(--spinner-accent) 18%, transparent) 34%, transparent 68%);
+            opacity: 0.34;
+            transform: translate3d(0,0,0);
+            animation: caseSpinnerLogoPulse 2.9s ease-in-out infinite;
+            transition: opacity 420ms ease, transform 420ms ease, background 420ms ease;
+          }
+          .case-spinner-logo__mark {
+            position: absolute;
+            inset: 14%;
+            background: linear-gradient(180deg, #ffffff 0%, var(--spinner-accent) 42%, #050914 100%);
+            background: linear-gradient(180deg, #ffffff 0%, var(--spinner-accent) 42%, color-mix(in srgb, var(--spinner-accent) 72%, #050914) 100%);
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            -webkit-mask-position: center;
+            mask-position: center;
+            -webkit-mask-size: contain;
+            mask-size: contain;
+            transform: translate3d(0,0,0);
+            transition: background 420ms ease, opacity 420ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+          }
+          .case-spinner-logo--settling {
+            filter: drop-shadow(0 0 18px var(--spinner-glow)) drop-shadow(0 0 28px var(--spinner-glow));
+            opacity: 0.96;
+          }
+          .case-spinner-logo--settling .case-spinner-logo__halo {
+            opacity: 0.48;
+            transform: scale3d(1.08, 1.08, 1);
+          }
+          .case-spinner-logo--landed {
+            transform: translate3d(-50%, -50%, 0) scale3d(1.055, 1.055, 1);
+            filter: drop-shadow(0 0 18px var(--spinner-glow)) drop-shadow(0 0 34px var(--spinner-glow));
+            opacity: 1;
+          }
+          .case-spinner-logo--landed .case-spinner-logo__mark {
+            transform: scale3d(1.035, 1.035, 1);
+          }
+          @keyframes caseSpinnerLogoPulse {
+            0%, 100% { opacity: 0.26; transform: scale3d(0.96, 0.96, 1); }
+            50% { opacity: 0.44; transform: scale3d(1.06, 1.06, 1); }
+          }
+          @media (prefers-reduced-motion: reduce){
+            .ambient-pulse, .case-spinner-logo__halo { animation: none; }
+            .case-spinner-logo, .case-spinner-logo__halo, .case-spinner-logo__mark { transition-duration: 1ms; }
+          }
         `}</style>
 
 
