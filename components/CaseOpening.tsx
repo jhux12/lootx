@@ -52,10 +52,10 @@ const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
 const SPINNER_MOTION = {
   preWinnerItems: 68,
   postWinnerItems: 14,
-  spinDurationMs: 4600,
-  goldTicketDurationMs: 4200,
-  goldFinalDurationMs: 3800,
-  settleDurationMs: 360,
+  spinDurationMs: 6200,
+  goldTicketDurationMs: 5600,
+  goldFinalDurationMs: 5200,
+  settleDurationMs: 950,
   overshootPx: 18,
   approachOffsetSoftMaxPx: 16,
   approachOffsetNearMissMinPx: 34,
@@ -909,7 +909,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const approachOffset = getApproachOffset(rng);
     const landingJitterPx = 0;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(220, SPINNER_MOTION.durationVarianceMs) * 2);
-    const resolvedDuration = Math.max(2400, duration + durationVariance);
+    const resolvedDuration = Math.max(3200, duration + durationVariance);
+    const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.12, 0.24);
+    const preSettleOffset = clamp(1 - settlePortion, 0.76, 0.88);
+    const overshootOffset = clamp(preSettleOffset - 0.18, 0.58, 0.74);
 
     resetSpinnerAnimation();
 
@@ -945,9 +948,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const animation = container.animate(
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.25, 0.6, 0.2, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.7, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: 0.9, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'ease-out' }
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
+        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.86, 0.28, 1)' },
+        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.12, 0, 0.18, 1)' }
       ],
       {
         duration: resolvedDuration,
@@ -980,7 +983,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       frameId = window.requestAnimationFrame(syncCenterItem);
     };
     frameId = window.requestAnimationFrame(syncCenterItem);
-    const decelerationTimer = window.setTimeout(() => setAnimationPhase('settling'), Math.max(0, resolvedDuration - 850));
+    const decelerationTimer = window.setTimeout(
+      () => setAnimationPhase('settling'),
+      Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
+    );
 
     animation.onfinish = () => {
       window.clearTimeout(decelerationTimer);
