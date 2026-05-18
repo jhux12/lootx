@@ -11,6 +11,9 @@ type FacebookPixelFn = (
   options?: TrackEventOptions
 ) => void;
 
+const recentEventKeys = new Map<string, number>();
+const DUPLICATE_EVENT_WINDOW_MS = 250;
+
 const STANDARD_EVENTS = new Set([
   'PageView',
   'ViewContent',
@@ -37,8 +40,20 @@ export const trackMetaEvent = (
   data?: TrackEventData,
   options?: TrackEventOptions
 ) => {
-  if (typeof window === 'undefined' || typeof window.fbq !== 'function') {
+  if (typeof window === 'undefined' || typeof window.fbq !== 'function' || document.visibilityState === 'hidden') {
     return;
+  }
+
+  const eventKey = `${eventName}:${options?.eventID ?? JSON.stringify(data ?? {})}`;
+  const now = performance.now();
+  const lastFiredAt = recentEventKeys.get(eventKey) ?? 0;
+  if (now - lastFiredAt < DUPLICATE_EVENT_WINDOW_MS) return;
+  recentEventKeys.set(eventKey, now);
+  if (recentEventKeys.size > 80) {
+    const cutoff = now - 5000;
+    recentEventKeys.forEach((timestamp, key) => {
+      if (timestamp < cutoff) recentEventKeys.delete(key);
+    });
   }
 
   const action: FacebookPixelAction = STANDARD_EVENTS.has(eventName) ? 'track' : 'trackCustom';
