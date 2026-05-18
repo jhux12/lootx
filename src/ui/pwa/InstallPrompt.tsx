@@ -10,7 +10,7 @@ export const InstallPrompt: React.FC = () => {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[120] px-3 sm:bottom-6 sm:px-4">
       <div className="pointer-events-auto mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-cyan-300/30 bg-[#070b17]/88 p-4 shadow-[0_16px_70px_rgba(40,12,92,0.65)] backdrop-blur-xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 via-transparent to-cyan-400/10" aria-hidden />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#205DD7]/10 via-transparent to-cyan-400/10" aria-hidden />
         <div className="relative flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 rounded-xl border border-cyan-300/40 bg-cyan-400/10 p-2 text-cyan-200">
@@ -47,7 +47,7 @@ export const InstallPrompt: React.FC = () => {
             type="button"
             onClick={promptInstall}
             disabled={!canTriggerNativePrompt}
-            className="relative mt-4 flex w-full items-center justify-center rounded-xl border border-cyan-300/50 bg-gradient-to-r from-fuchsia-600/90 to-cyan-500/90 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            className="relative mt-4 flex w-full items-center justify-center rounded-xl border border-cyan-300/50 bg-gradient-to-r from-[#205DD7]/90 to-cyan-500/90 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Install Pullz
           </button>

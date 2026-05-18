@@ -87,7 +87,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
     && user.shippingAddress?.country
   );
   const authProviderLabel = user.provider === 'google' ? 'Google' : user.provider === 'password' ? 'Email + Password' : 'Standard';
-  const inputClassName = 'w-full rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white outline-none transition placeholder:text-gray-500 focus:border-purple-400/50 focus:ring-2 focus:ring-purple-500/20';
+  const inputClassName = 'w-full rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-white outline-none transition placeholder:text-gray-500 focus:border-blue-400/50 focus:ring-2 focus:ring-blue-500/20';
   const panelOptions: Array<{ id: AccountPanel; label: string }> = [
     { id: 'overview', label: 'Overview' },
     { id: 'security', label: 'Security' },
@@ -96,7 +96,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
 
   return (
     <div className="space-y-4">
-      <section className="rounded-3xl border border-purple-400/20 bg-gradient-to-b from-[#171d31] via-[#141b2d] to-[#101523] p-4 md:p-5">
+      <section className="rounded-3xl border border-blue-400/20 bg-gradient-to-b from-[#171d31] via-[#141b2d] to-[#101523] p-4 md:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <UserAvatar user={user} className="h-16 w-16 rounded-2xl bg-[#2a323b]" />
@@ -107,7 +107,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <span className="inline-flex items-center justify-center gap-1 rounded-xl border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-xs text-white">
+            <span className="inline-flex items-center justify-center gap-1 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs text-white">
               <img src={XP_ICON} alt="XP" className="h-3.5 w-3.5" />
               <AnimatedNumber value={xp} /> XP
             </span>
@@ -127,7 +127,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
               onClick={() => onSelectPanel(panel.id)}
               className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
                 activePanel === panel.id
-                  ? 'bg-gradient-to-r from-purple-600 to-violet-500 text-white shadow-[0_8px_24px_rgba(124,58,237,0.35)]'
+                  ? 'bg-gradient-to-r from-[#205DD7] to-sky-500 text-white shadow-[0_8px_24px_rgba(32,93,215,0.35)]'
                   : 'border border-white/10 text-gray-300 hover:bg-white/[0.05]'
               }`}
             >
@@ -161,7 +161,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                 <button
                   type="button"
                   onClick={() => onSelectPanel('settings')}
-                  className="rounded-lg border border-purple-400/40 bg-purple-500/15 px-2.5 py-1.5 text-xs font-semibold text-purple-100 hover:bg-purple-500/25"
+                  className="rounded-lg border border-blue-400/40 bg-blue-500/15 px-2.5 py-1.5 text-xs font-semibold text-blue-100 hover:bg-blue-500/25"
                 >
                   Open Settings
                 </button>
@@ -179,12 +179,12 @@ export const AccountView: React.FC<AccountViewProps> = ({
                   onClick={action.onClick}
                   className={`rounded-xl px-3 py-2 text-sm transition ${
                     action.active
-                      ? 'border border-purple-400/50 bg-purple-500/20 text-white'
+                      ? 'border border-blue-400/50 bg-blue-500/20 text-white'
                       : 'border border-white/10 text-gray-200 hover:bg-white/[0.05]'
                   }`}
                 >
                   <span>{action.label}</span>
-                  {action.isNew ? <span className="ml-2 rounded-full bg-purple-500 px-1.5 py-0.5 text-[10px] font-bold">NEW</span> : null}
+                  {action.isNew ? <span className="ml-2 rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold">NEW</span> : null}
                 </button>
               ))}
             </div>
@@ -203,7 +203,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <button
                 onClick={onSaveUsername}
                 disabled={isSavingUsername || !usernameChanged}
-                className="rounded-xl border border-purple-400/40 bg-purple-500/15 px-3 py-2 text-sm font-bold text-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-blue-400/40 bg-blue-500/15 px-3 py-2 text-sm font-bold text-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSavingUsername ? 'Saving Username...' : 'Update Username'}
               </button>
@@ -215,7 +215,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <button
                 onClick={onSaveEmail}
                 disabled={isSavingEmail || !canUpdateEmail}
-                className="rounded-xl border border-purple-400/40 bg-purple-500/15 px-3 py-2 text-sm font-bold text-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-blue-400/40 bg-blue-500/15 px-3 py-2 text-sm font-bold text-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSavingEmail ? 'Saving Email...' : 'Update Email'}
               </button>
@@ -233,7 +233,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <button
                 onClick={onSavePassword}
                 disabled={isSavingPassword || !canUpdatePassword}
-                className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSavingPassword ? 'Saving Password...' : 'Update Password'}
               </button>
@@ -262,7 +262,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                 </label>
               ))}
             </div>
-            <button onClick={onSaveAddress} disabled={isSavingAddress} className="mt-3 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
+            <button onClick={onSaveAddress} disabled={isSavingAddress} className="mt-3 w-full rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
               {isSavingAddress ? 'Saving...' : 'Save Address'}
             </button>
           </article>
@@ -276,13 +276,13 @@ export const AccountView: React.FC<AccountViewProps> = ({
                   type="button"
                   key={avatar}
                   onClick={() => setSecurityForm({ ...securityForm, avatar })}
-                  className={`overflow-hidden rounded-xl border-2 transition ${securityForm.avatar === avatar ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.35)]' : 'border-white/10 hover:border-purple-300/40'}`}
+                  className={`overflow-hidden rounded-xl border-2 transition ${securityForm.avatar === avatar ? 'border-blue-400 shadow-[0_0_20px_rgba(32,93,215,0.35)]' : 'border-white/10 hover:border-blue-300/40'}`}
                 >
                   <img src={avatar} alt="avatar option" className="h-12 w-full object-cover" />
                 </button>
               ))}
             </div>
-            <button onClick={onSaveAvatar} disabled={isSavingAvatar} className="mt-3 w-full rounded-xl border border-purple-400/40 bg-purple-500/15 px-3 py-2 text-sm font-bold text-purple-100 disabled:cursor-not-allowed disabled:opacity-50">
+            <button onClick={onSaveAvatar} disabled={isSavingAvatar} className="mt-3 w-full rounded-xl border border-blue-400/40 bg-blue-500/15 px-3 py-2 text-sm font-bold text-blue-100 disabled:cursor-not-allowed disabled:opacity-50">
               {isSavingAvatar ? 'Saving...' : 'Save Profile Picture'}
             </button>
           </article>

@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 
 const packs = [
   { title: "1% ROLEX", price: "$813.54", icon: "watch", bg: "from-orange-700 via-amber-500 to-orange-950" },
-  { title: "XPOSED", price: "$671.30", icon: "car", bg: "from-blue-800 via-fuchsia-600 to-cyan-500" },
-  { title: "TOGI", price: "$1,005.78", icon: "creator", bg: "from-purple-900 via-fuchsia-600 to-indigo-950" },
+  { title: "XPOSED", price: "$671.30", icon: "car", bg: "from-[#205DD7] via-blue-600 to-cyan-500" },
+  { title: "TOGI", price: "$1,005.78", icon: "creator", bg: "from-blue-950 via-[#205DD7] to-sky-950" },
   { title: "1% LAMBO", price: "$680.46", icon: "car", bg: "from-orange-700 via-yellow-500 to-orange-950" },
   { title: "CHAMPAGNE", price: "$490.79", icon: "watch", bg: "from-yellow-800 via-amber-400 to-yellow-950" },
 ];

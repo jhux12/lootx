@@ -36,7 +36,7 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search inventory"
-          className="w-full rounded-xl border border-white/10 bg-[#2a323b] py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-purple-400/40"
+          className="w-full rounded-xl border border-white/10 bg-[#2a323b] py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-blue-400/40"
         />
       </label>
       {[
@@ -48,7 +48,7 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
           key={index}
           value={filter.value}
           onChange={(event) => filter.onChange(event.target.value)}
-          className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-gray-200 outline-none focus:border-purple-400/40"
+          className="rounded-xl border border-white/10 bg-[#2a323b] px-3 py-2 text-sm text-gray-200 outline-none focus:border-blue-400/40"
         >
           {filter.options.map((option) => (
             <option key={option} value={option}>{option}</option>
@@ -62,7 +62,7 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
         className={`ml-auto rounded-xl px-4 py-2 text-sm font-bold ${
           reviewDisabled
             ? 'cursor-not-allowed border border-white/10 bg-[#2a323b] text-gray-500'
-            : 'bg-gradient-to-r from-purple-600 to-violet-500 text-white shadow-[0_8px_20px_rgba(124,58,237,0.35)]'
+            : 'bg-gradient-to-r from-[#205DD7] to-sky-500 text-white shadow-[0_8px_20px_rgba(32,93,215,0.35)]'
         }`}
       >
         Review Shipping ({selectedCount})

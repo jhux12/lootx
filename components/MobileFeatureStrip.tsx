@@ -88,12 +88,12 @@ export const MobileFeatureStrip: React.FC<MobileFeatureStripProps> = ({
               onClick={() => handleSelect(item.id)}
               className={`flex shrink-0 snap-center items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold transition ${
                 isActive
-                  ? 'border-purple-400/60 bg-purple-500/10 text-white shadow-[0_0_18px_rgba(168,85,247,0.35)]'
+                  ? 'border-blue-400/60 bg-blue-500/10 text-white shadow-[0_0_18px_rgba(32,93,215,0.35)]'
                   : 'border-white/10 bg-white/5 text-gray-300 hover:border-white/20 hover:text-white'
               }`}
             >
               {item.icon ? (
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/5 text-purple-200">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/5 text-blue-200">
                   {item.icon}
                 </span>
               ) : null}
@@ -105,12 +105,12 @@ export const MobileFeatureStrip: React.FC<MobileFeatureStripProps> = ({
       <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-gray-300 shadow-[0_20px_60px_-50px_rgba(129,140,248,0.6)]">
           {activeItem.icon ? (
-            <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-purple-200">
+            <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-blue-200">
               {activeItem.icon}
             </div>
           ) : null}
           {showStepIndex && activeIndex >= 0 ? (
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-200/70">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-200/70">
               Step {activeIndex + 1}
             </div>
           ) : null}
@@ -119,7 +119,7 @@ export const MobileFeatureStrip: React.FC<MobileFeatureStripProps> = ({
           {activeItem.cta ? (
             <a
               href={activeItem.cta.href}
-              className="mt-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-purple-200 transition hover:text-white"
+              className="mt-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-blue-200 transition hover:text-white"
             >
               {activeItem.cta.label}
             </a>

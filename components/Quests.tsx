@@ -132,7 +132,7 @@ export const Quests: React.FC = () => {
                   <span>{progress}%</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-white/10">
-                  <div className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-indigo-500" style={{ width: `${progress}%` }} />
+                  <div className="h-2 rounded-full bg-gradient-to-r from-[#205DD7] to-sky-400" style={{ width: `${progress}%` }} />
                 </div>
               </div>
 
@@ -142,7 +142,7 @@ export const Quests: React.FC = () => {
                   type="button"
                   disabled={disabled}
                   onClick={() => claim(rule.id)}
-                  className={`inline-flex min-w-[132px] items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors ${disabled ? 'cursor-not-allowed border border-white/10 bg-white/5 text-gray-400' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}
+                  className={`inline-flex min-w-[132px] items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors ${disabled ? 'cursor-not-allowed border border-white/10 bg-white/5 text-gray-400' : 'bg-[#205DD7] text-white hover:bg-[#1f6bea]'}`}
                 >
                   {alreadyClaimed ? <CheckCircle2 className="h-4 w-4 text-emerald-300" /> : null}
                   {alreadyClaimed ? 'Claimed' : claimingId === rule.id ? 'Claiming…' : 'Claim reward'}

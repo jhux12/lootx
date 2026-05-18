@@ -346,7 +346,7 @@ export const ContactSupport: React.FC = () => {
                             key={`${caseItem.id}-${index}`}
                             className={`rounded-lg border border-white/10 px-3 py-2 text-xs sm:text-sm ${
                               messageItem.sender === 'admin'
-                                ? 'bg-purple-500/10 text-purple-100'
+                                ? 'bg-blue-500/10 text-blue-100'
                                 : 'bg-white/5 text-gray-200'
                             }`}
                           >

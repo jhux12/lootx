@@ -14,7 +14,7 @@ export const InventoryStats: React.FC<InventoryStatsProps> = ({ totalItems, tota
         <p className="text-[11px] uppercase tracking-wide text-gray-400">Total Items</p>
         <p className="mt-1 text-lg font-bold text-white">{totalItems}</p>
       </div>
-      <div className="rounded-2xl border border-purple-400/25 bg-gradient-to-b from-purple-500/15 to-white/[0.02] p-3">
+      <div className="rounded-2xl border border-blue-400/25 bg-gradient-to-b from-[#205DD7]/15 to-white/[0.02] p-3">
         <p className="text-[11px] uppercase tracking-wide text-gray-300">Total Value</p>
         <CoinAmount amount={totalValue} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 text-lg font-bold text-white" iconClassName="h-4 w-4" />
       </div>

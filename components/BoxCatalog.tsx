@@ -203,7 +203,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         <div className="mx-auto max-w-[980px] px-3 py-3 sm:px-4">
           <div className="mb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
             <button onClick={() => setActiveCategory('all')} className="flex items-center gap-2 whitespace-nowrap rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white">
-              <Sparkles className="h-4 w-4 text-indigo-400" /> All
+              <Sparkles className="h-4 w-4 text-blue-400" /> All
             </button>
             {categories.map((cat) => (
               <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className="whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold text-neutral-400 hover:bg-white/5 hover:text-white">
@@ -284,7 +284,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           {!isLoadingBoxes && groupedBoxes.length === 0 && (
             <div className="rounded-2xl border border-dashed border-white/10 bg-neutral-950/70 px-6 py-12 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5">
-                <Search className="h-6 w-6 text-indigo-300" />
+                <Search className="h-6 w-6 text-blue-300" />
               </div>
               <h2 className="mb-2 text-2xl font-bold text-white">No boxes match this view yet</h2>
               <p className="mx-auto mb-6 max-w-xl text-sm text-neutral-400 sm:text-base">
@@ -292,7 +292,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               </p>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 {hasActiveFilters && (
-                  <button type="button" onClick={clearFilters} className="w-full rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-indigo-500 sm:w-auto">
+                  <button type="button" onClick={clearFilters} className="w-full rounded-xl bg-[#205DD7] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#1f6bea] sm:w-auto">
                     Clear filters
                   </button>
                 )}

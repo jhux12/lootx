@@ -15,7 +15,7 @@ export const SourceInventoryPicker: React.FC<Props> = ({ items, selectedId, onSe
       {items.map((item) => {
         const active = selectedId === item.instanceId;
         return (
-          <button key={item.instanceId} onClick={() => onSelect(item.instanceId)} className={`rounded-xl border p-2 text-left transition ${active ? 'border-indigo-400 bg-indigo-500/20' : 'border-white/10 bg-[#111827] hover:border-white/20'}`}>
+          <button key={item.instanceId} onClick={() => onSelect(item.instanceId)} className={`rounded-xl border p-2 text-left transition ${active ? 'border-blue-400 bg-blue-500/20' : 'border-white/10 bg-[#111827] hover:border-white/20'}`}>
             <div className="flex items-center gap-2">
               <img src={item.image} alt={item.name} className="h-12 w-12 rounded-lg object-cover" />
               <div className="min-w-0">

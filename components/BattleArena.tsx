@@ -479,14 +479,14 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
         <div className="sticky top-14 z-40 mb-3 rounded-xl border border-white/10 bg-[#0b1220]/95 p-2 backdrop-blur sm:p-3">
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => setView({ type: 'BATTLES' })} className="rounded bg-[#162238] px-3 py-2 text-xs text-gray-200"><ChevronLeft className="mr-1 inline h-4 w-4" />Back</button>
-            <h2 className="text-sm font-black text-white sm:text-base"><Swords className="mr-1 inline h-4 w-4 text-brand-purple" />Box Battle</h2>
+            <h2 className="text-sm font-black text-white sm:text-base"><Swords className="mr-1 inline h-4 w-4 text-brand-blue" />Box Battle</h2>
             <span className="rounded border border-white/10 px-2 py-1 text-[11px] text-gray-300">{battle.mode || 'REGULAR'}</span>
             <span className="rounded border border-white/10 px-2 py-1 text-[11px] text-gray-300">{battle.format || '1V1'}</span>
             <span className="rounded border border-white/10 px-2 py-1 text-[11px] text-gray-300">{battle.winConditionLabel || (battle.mode === 'CRAZY' ? 'Lowest Total' : 'Highest Total')}</span>
             <CoinAmount amount={toCoins(Number(battle.entryCostCoins ?? 0), PRICE_UNIT_MODE)} className="ml-auto text-sm font-black text-emerald-300" iconClassName="h-3 w-3" />
             <span className={`rounded px-2 py-1 text-[11px] font-semibold ${battle.state === 'RUNNING' ? 'bg-rose-500/20 text-rose-300' : battle.state === 'COUNTDOWN' ? 'bg-amber-500/20 text-amber-300' : 'bg-sky-500/20 text-sky-300'}`}>{statusLabel}</span>
             <button onClick={() => setShowFairModal(true)} className="rounded border border-white/15 px-2 py-1 text-[11px] text-gray-200"><ShieldCheck className="mr-1 inline h-3 w-3" />Provably Fair</button>
-            <button onClick={recreateBattle} className="rounded bg-brand-purple px-2 py-1 text-[11px] font-semibold text-white">Recreate</button>
+            <button onClick={recreateBattle} className="rounded bg-brand-blue px-2 py-1 text-[11px] font-semibold text-white">Recreate</button>
             {(uiPhase === 'UI_ROUND_INTRO' || uiPhase === 'UI_SPINNING' || uiPhase === 'UI_ROUND_REVEAL' || uiPhase === 'UI_INTERMISSION') && (
               <button onClick={() => setSkipRequested(true)} className="rounded border border-white/20 px-2 py-1 text-[11px] text-gray-100"><SkipForward className="mr-1 inline h-3 w-3" />Skip</button>
             )}
@@ -509,7 +509,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
               <div className="rounded-xl border border-white/10 bg-[#111a2a] p-3 lg:sticky lg:top-[138px]">
                 <div className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">VS</div>
                 <div className="mb-3 h-2 overflow-hidden rounded bg-[#1b2740]">
-                  <div className="h-full bg-gradient-to-r from-brand-purple to-emerald-400 transition-all duration-300" style={{ width: `${aPercent}%` }} />
+                  <div className="h-full bg-gradient-to-r from-[#205DD7] to-emerald-400 transition-all duration-300" style={{ width: `${aPercent}%` }} />
                 </div>
                 <div className="text-center text-[11px] text-gray-400">Round Timeline</div>
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
@@ -524,7 +524,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                           if (!revealedRounds.has(idx)) return;
                           setActiveRoundIndex(idx);
                         }}
-                        className={`h-2.5 w-2.5 rounded-full ${isDone ? 'bg-brand-purple' : isCurrent ? 'animate-pulse bg-emerald-400' : 'bg-gray-600'} ${battle.state === 'COMPLETE' && isDone ? 'cursor-pointer' : 'cursor-default'}`}
+                        className={`h-2.5 w-2.5 rounded-full ${isDone ? 'bg-brand-blue' : isCurrent ? 'animate-pulse bg-emerald-400' : 'bg-gray-600'} ${battle.state === 'COMPLETE' && isDone ? 'cursor-pointer' : 'cursor-default'}`}
                       />
                     );
                   })}
@@ -569,7 +569,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
                   setShowFairModal(false);
                   if (typeof window !== 'undefined') window.open(`/fairness/battles/${battleId}`, '_blank');
                 }}
-                className="rounded bg-brand-purple px-3 py-2 text-sm text-white"
+                className="rounded bg-brand-blue px-3 py-2 text-sm text-white"
               >
                 Verify Battle <ExternalLink className="ml-1 inline h-3 w-3" />
               </button>

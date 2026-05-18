@@ -220,8 +220,8 @@ export const ProvablyFairPage: React.FC = () => {
       </header>
 
       <section className="grid gap-4 rounded-2xl border border-gray-800 bg-[#0b0e14] p-5 sm:grid-cols-3 sm:gap-5 sm:p-6">
-        <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-purple-200">1. Server Seed</h2>
+        <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-blue-200">1. Server Seed</h2>
           <p className="mt-2 text-sm text-gray-300">We commit to a hidden server seed hash before any spin happens.</p>
         </div>
         <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4">

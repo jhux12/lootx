@@ -149,7 +149,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
           <button
             onClick={() => runAction('update-all', () => authedFetch('/api/admin/market-prices/update', { method: 'POST', body: JSON.stringify({}) }))}
             disabled={busy !== null}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-cyan-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${busy === 'update-all' ? 'animate-spin' : ''}`} /> Run Daily Update
           </button>

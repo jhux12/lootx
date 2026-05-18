@@ -172,7 +172,7 @@ export const DeterministicReel: React.FC<DeterministicReelProps> = memo(({ spinK
               <div
                 ref={isWinner ? winnerRef : null}
                 key={`${item.id}-${index}`}
-                className={`relative shrink-0 overflow-hidden rounded-xl border bg-[#151a23] p-2 ${isWinner && phase !== 'IDLE' ? 'border-brand-purple shadow-[0_0_20px_rgba(139,92,246,0.6)]' : 'border-white/10'}`}
+                className={`relative shrink-0 overflow-hidden rounded-xl border bg-[#151a23] p-2 ${isWinner && phase !== 'IDLE' ? 'border-brand-blue shadow-[0_0_20px_rgba(32,93,215,0.6)]' : 'border-white/10'}`}
                 style={{ width: `${CARD_W}px`, minWidth: `${CARD_W}px`, height: `${CARD_H}px` }}
               >
                 <div className="pointer-events-none absolute inset-2 rounded-full opacity-65" style={{ background: `radial-gradient(circle, ${accent}66 0%, ${accent}24 45%, transparent 80%)` }} />

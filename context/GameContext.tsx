@@ -117,7 +117,7 @@ const RARITY_COLORS: Record<InventoryItem['rarity'], string> = {
   common: '#9ca3af',
   uncommon: '#22c55e',
   rare: '#3b82f6',
-  epic: '#a855f7',
+  epic: '#205DD7',
   legendary: '#fbbf24'
 };
 

@@ -166,13 +166,13 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
       <div className={panelClass}>
         {/* Header */}
         <div className="p-4 bg-[#0b0e14] border-b border-gray-800 flex items-center gap-3">
-            <div className="p-2 bg-brand-purple/20 rounded-lg">
-                <Sparkles className="w-5 h-5 text-brand-purple" />
+            <div className="p-2 bg-brand-blue/20 rounded-lg">
+                <Sparkles className="w-5 h-5 text-brand-blue" />
             </div>
             <div className="flex-1">
                 <h3 className="font-bold text-white text-sm flex items-center gap-2">
                   Pullz Assistant
-                  <span className="px-2 py-0.5 text-[10px] font-bold bg-brand-purple/20 text-brand-purple rounded-full border border-brand-purple/30">
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-brand-blue/20 text-brand-blue rounded-full border border-brand-blue/30">
                     AI Support
                   </span>
                 </h3>
@@ -207,7 +207,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
             {isLoading && (
                 <div className="flex justify-start">
                      <div className="bg-[#1a2130] p-3 rounded-2xl rounded-tl-none border border-gray-700 flex items-center gap-2">
-                         <Loader2 className="w-4 h-4 text-brand-purple animate-spin" />
+                         <Loader2 className="w-4 h-4 text-brand-blue animate-spin" />
                          <span className="text-xs text-gray-400">Thinking...</span>
                      </div>
                 </div>
@@ -231,7 +231,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
                 <button 
                     type="submit"
                     disabled={isLoading || !input.trim()}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-brand-purple hover:bg-purple-600 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-brand-blue hover:bg-[#205DD7] rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Send className="w-4 h-4" />
                 </button>

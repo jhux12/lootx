@@ -135,7 +135,7 @@ export default function UpgraderSettingsPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg flex items-center gap-2 font-bold transition-colors disabled:opacity-50"
+              className="bg-[#205DD7] hover:bg-[#1f6bea] text-white px-6 py-2 rounded-lg flex items-center gap-2 font-bold transition-colors disabled:opacity-50"
             >
               <Save className="w-4 h-4" /> Save Settings
             </button>
@@ -151,7 +151,7 @@ export default function UpgraderSettingsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4">
-            <div className="flex items-center gap-2 text-indigo-400 mb-1">
+            <div className="flex items-center gap-2 text-blue-400 mb-1">
               <ShieldCheck className="w-5 h-5" />
               <h2 className="font-bold uppercase tracking-wider">Core Parameters</h2>
             </div>
@@ -218,30 +218,30 @@ export default function UpgraderSettingsPage() {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-2xl p-4 sm:p-6 space-y-5">
-              <div className="flex items-center gap-2 text-indigo-400">
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-2xl p-4 sm:p-6 space-y-5">
+              <div className="flex items-center gap-2 text-blue-400">
                 <Calculator className="w-5 h-5" />
                 <h2 className="font-bold uppercase tracking-wider">Chance Preview</h2>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <input type="number" value={previewSource} onChange={(e) => setPreviewSource(e.target.value)} className="w-full bg-slate-950/50 border border-indigo-500/20 rounded-lg px-4 py-2 text-sm" />
-                <input type="number" value={previewTarget} onChange={(e) => setPreviewTarget(e.target.value)} className="w-full bg-slate-950/50 border border-indigo-500/20 rounded-lg px-4 py-2 text-sm" />
+                <input type="number" value={previewSource} onChange={(e) => setPreviewSource(e.target.value)} className="w-full bg-slate-950/50 border border-blue-500/20 rounded-lg px-4 py-2 text-sm" />
+                <input type="number" value={previewTarget} onChange={(e) => setPreviewTarget(e.target.value)} className="w-full bg-slate-950/50 border border-blue-500/20 rounded-lg px-4 py-2 text-sm" />
               </div>
-              <div className="p-4 sm:p-6 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-center space-y-3">
+              <div className="p-4 sm:p-6 bg-blue-500/10 rounded-2xl border border-blue-500/20 text-center space-y-3">
                 <div>
-                  <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Resulting Chance</span>
+                  <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">Resulting Chance</span>
                   <div className="text-3xl sm:text-4xl font-black text-white">{previewMetrics.chancePercent}%</div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
-                  <div className="rounded-xl border border-indigo-500/20 bg-slate-950/40 p-3">
+                  <div className="rounded-xl border border-blue-500/20 bg-slate-950/40 p-3">
                     <p className="text-[11px] uppercase tracking-wider text-slate-400">Expected Payout</p>
                     <p className="text-lg font-bold text-white">{previewMetrics.expectedPayout}</p>
                   </div>
-                  <div className="rounded-xl border border-indigo-500/20 bg-slate-950/40 p-3">
+                  <div className="rounded-xl border border-blue-500/20 bg-slate-950/40 p-3">
                     <p className="text-[11px] uppercase tracking-wider text-slate-400">Effective RTP</p>
                     <p className="text-lg font-bold text-emerald-300">{previewMetrics.effectiveRtp}%</p>
                   </div>
-                  <div className="rounded-xl border border-indigo-500/20 bg-slate-950/40 p-3">
+                  <div className="rounded-xl border border-blue-500/20 bg-slate-950/40 p-3">
                     <p className="text-[11px] uppercase tracking-wider text-slate-400">House Edge</p>
                     <p className="text-lg font-bold text-amber-300">{previewMetrics.effectiveEdge}%</p>
                   </div>
@@ -268,7 +268,7 @@ export default function UpgraderSettingsPage() {
                     <option key={option.id} value={option.id}>{option.label}</option>
                   ))}
                 </datalist>
-                <button onClick={addAllowedSourceItem} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                <button onClick={addAllowedSourceItem} className="bg-[#205DD7] hover:bg-[#1f6bea] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
                   <Plus className="w-4 h-4" /> Add
                 </button>
               </div>

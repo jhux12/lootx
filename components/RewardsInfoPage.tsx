@@ -13,7 +13,7 @@ export const RewardsInfoPage: React.FC<RewardsInfoPageProps> = ({ title, subtitl
     <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-[#0f1727] via-[#121a2d] to-[#111a2f] px-5 py-8 sm:px-8 sm:py-10">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-24 left-4 h-52 w-52 rounded-full bg-cyan-500/20 blur-3xl sm:h-72 sm:w-72" />
-        <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl sm:h-80 sm:w-80" />
+        <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-blue-500/20 blur-3xl sm:h-80 sm:w-80" />
       </div>
       <div className="relative z-10 flex flex-col gap-4">
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100 sm:text-xs">

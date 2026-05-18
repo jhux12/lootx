@@ -26,7 +26,7 @@ const applyRarityFromChance = (item: CaseItem) => {
   let color = '#9ca3af';
 
   if (item.chance < 0.5) { rarity = 'legendary'; color = '#fbbf24'; }
-  else if (item.chance < 5) { rarity = 'epic'; color = '#a855f7'; }
+  else if (item.chance < 5) { rarity = 'epic'; color = '#205DD7'; }
   else if (item.chance < 15) { rarity = 'rare'; color = '#3b82f6'; }
   else if (item.chance < 40) { rarity = 'uncommon'; color = '#22c55e'; }
 
@@ -141,7 +141,7 @@ export const runRiskBalanceDevCheck = () => {
     { name: 'Leather Wallet', price: 20, image: '', rarity: 'uncommon', chance: 0, color: '#22c55e' },
     { name: 'Wireless Earbuds', price: 45, image: '', rarity: 'rare', chance: 0, color: '#3b82f6' },
     { name: 'Smart Speaker', price: 80, image: '', rarity: 'rare', chance: 0, color: '#3b82f6' },
-    { name: 'Luxury Watch', price: 160, image: '', rarity: 'epic', chance: 0, color: '#a855f7' },
+    { name: 'Luxury Watch', price: 160, image: '', rarity: 'epic', chance: 0, color: '#205DD7' },
     { name: 'Collector Drone', price: 320, image: '', rarity: 'legendary', chance: 0, color: '#fbbf24' }
   ];
 

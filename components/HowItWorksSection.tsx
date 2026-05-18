@@ -61,7 +61,7 @@ export const HowItWorksSection: React.FC = () => {
               key={step.id}
               className="rounded-2xl border border-white/5 bg-[#0c111b] p-5 transition hover:border-white/15"
             >
-              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-purple-200/70">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-blue-200/70">
                 Step {index + 1}
               </div>
               <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-cyan-300">

@@ -64,7 +64,7 @@ export const ProvablyFairPanel: React.FC<ProvablyFairPanelProps> = ({
   return (
     <div className="rounded-2xl border border-gray-800 bg-[#0f1219] shadow-2xl shadow-black/50">
       {showHero && (
-        <div className="border-b border-gray-800 bg-gradient-to-r from-purple-600/15 via-cyan-500/10 to-transparent p-5 sm:p-6">
+        <div className="border-b border-gray-800 bg-gradient-to-r from-[#205DD7]/15 via-sky-500/10 to-transparent p-5 sm:p-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
             Pullz.gg Integrity
           </div>
@@ -149,7 +149,7 @@ export const ProvablyFairPanel: React.FC<ProvablyFairPanelProps> = ({
                     type="button"
                     onClick={onSaveClientSeed}
                     disabled={isUpdatingClientSeed || isSyncingFair}
-                    className="h-10 rounded-lg border border-purple-500/40 bg-purple-500/20 px-4 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="h-10 rounded-lg border border-blue-500/40 bg-blue-500/20 px-4 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Save Seed
                   </button>

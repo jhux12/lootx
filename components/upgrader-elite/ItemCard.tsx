@@ -16,7 +16,7 @@ interface ItemCardProps {
 export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, onInfoClick, disabled, quantityBadge, hintLabel }) => (
   <div className="relative">
     {quantityBadge && quantityBadge > 1 && (
-      <span className="absolute left-2 top-2 z-20 rounded-full border border-indigo-200/30 bg-[#1a2449] px-2 py-0.5 text-[10px] font-bold text-indigo-100">
+      <span className="absolute left-2 top-2 z-20 rounded-full border border-blue-200/30 bg-[#1a2449] px-2 py-0.5 text-[10px] font-bold text-blue-100">
         x{quantityBadge}
       </span>
     )}
@@ -28,7 +28,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, o
           event.stopPropagation();
           onInfoClick(item);
         }}
-        className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-indigo-300/25 bg-[#070c1a]/90 text-[10px] font-bold text-slate-200 transition hover:bg-[#0d1530]"
+        className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-blue-300/25 bg-[#070c1a]/90 text-[10px] font-bold text-slate-200 transition hover:bg-[#0d1530]"
       >
         i
       </button>

@@ -209,7 +209,7 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
     <div className="relative flex flex-col items-center">
       <div
         ref={wheelRef}
-        className={`relative touch-none rounded-full border border-violet-300/40 bg-[#050a16] shadow-[0_0_58px_rgba(79,70,229,0.3),inset_0_0_0_1px_rgba(255,255,255,0.08)] transition-all duration-200 ${status === 'success' ? 'shadow-[0_0_70px_rgba(16,185,129,0.28),inset_0_0_0_1px_rgba(255,255,255,0.08)]' : ''} ${status === 'fail' ? 'shadow-[0_0_70px_rgba(244,63,94,0.24),inset_0_0_0_1px_rgba(255,255,255,0.08)]' : ''} ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        className={`relative touch-none rounded-full border border-blue-300/40 bg-[#050a16] shadow-[0_0_58px_rgba(32,93,215,0.3),inset_0_0_0_1px_rgba(255,255,255,0.08)] transition-all duration-200 ${status === 'success' ? 'shadow-[0_0_70px_rgba(16,185,129,0.28),inset_0_0_0_1px_rgba(255,255,255,0.08)]' : ''} ${status === 'fail' ? 'shadow-[0_0_70px_rgba(244,63,94,0.24),inset_0_0_0_1px_rgba(255,255,255,0.08)]' : ''} ${canRotateWinZone ? 'cursor-grab active:cursor-grabbing' : ''}`}
         style={{ width: size, height: size, ['--reactor-glow-rgb' as string]: chanceGlowRgb, ['--reactor-risk-color' as string]: riskColor }}
         onPointerDown={(event) => {
           if (!canRotateWinZone || status !== 'idle') return;
@@ -232,9 +232,9 @@ export const UpgraderSpinner: React.FC<UpgraderSpinnerProps> = React.memo(({
           event.currentTarget.releasePointerCapture(event.pointerId);
         }}
       >
-        <div className={`pointer-events-none absolute rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.3),rgba(56,189,248,0.08)_45%,transparent_70%)] ${mobileOptimized ? '-inset-4 blur-lg' : '-inset-8 blur-xl'}`} />
-        <div className="pointer-events-none absolute inset-4 rounded-full bg-[radial-gradient(circle_at_50%_35%,rgba(139,92,246,0.24),rgba(7,12,25,0.95)_70%)]" />
-        <div className="pointer-events-none absolute inset-8 rounded-full border border-indigo-300/20 opacity-75" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)', backgroundSize: '14px 14px' }} />
+        <div className={`pointer-events-none absolute rounded-full bg-[radial-gradient(circle,rgba(32,93,215,0.3),rgba(56,189,248,0.08)_45%,transparent_70%)] ${mobileOptimized ? '-inset-4 blur-lg' : '-inset-8 blur-xl'}`} />
+        <div className="pointer-events-none absolute inset-4 rounded-full bg-[radial-gradient(circle_at_50%_35%,rgba(32,93,215,0.24),rgba(7,12,25,0.95)_70%)]" />
+        <div className="pointer-events-none absolute inset-8 rounded-full border border-blue-300/20 opacity-75" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)', backgroundSize: '14px 14px' }} />
         {hasSource && hasTarget && (
           <div
             key={sweepNonce}

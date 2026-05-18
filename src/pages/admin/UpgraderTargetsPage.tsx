@@ -147,7 +147,7 @@ export default function UpgraderTargetsPage() {
             <button
               onClick={() => void addTargetFromSiteItem()}
               disabled={!selectedSiteItemId || saving}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+              className="bg-[#205DD7] hover:bg-[#1f6bea] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Plus className="w-4 h-4" /> Add Target
             </button>
@@ -161,7 +161,7 @@ export default function UpgraderTargetsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search targets by name, id, or category..."
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-indigo-500"
+            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-blue-500"
           />
         </div>
 

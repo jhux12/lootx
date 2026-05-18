@@ -175,7 +175,7 @@ function getRarityColor(rarity: string) {
   switch (rarity) {
     case 'Common': return 'bg-slate-500 text-white';
     case 'Uncommon': return 'bg-blue-500 text-white';
-    case 'Rare': return 'bg-purple-500 text-white';
+    case 'Rare': return 'bg-blue-500 text-white';
     case 'Epic': return 'bg-pink-500 text-white';
     case 'Legendary': return 'bg-orange-500 text-white';
     case 'Mythic': return 'bg-red-500 text-white';

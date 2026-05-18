@@ -179,7 +179,7 @@ const Toolbar = ({
               type="button"
               onClick={() => onUpgradePreset(preset.value)}
               disabled={isDisabled}
-              className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${isActive ? 'border-cyan-300/60 bg-cyan-400/10 text-cyan-100' : 'border-indigo-300/20 bg-[#0a1124] text-slate-400 hover:border-indigo-300/40 hover:text-slate-200'} ${isDisabled ? 'cursor-not-allowed opacity-40' : ''}`}
+              className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${isActive ? 'border-cyan-300/60 bg-cyan-400/10 text-cyan-100' : 'border-blue-300/20 bg-[#0a1124] text-slate-400 hover:border-blue-300/40 hover:text-slate-200'} ${isDisabled ? 'cursor-not-allowed opacity-40' : ''}`}
               title={preset.helper}
             >
               {preset.label}
@@ -713,7 +713,7 @@ export default function UpgraderPage() {
         <div className="w-full max-w-md space-y-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-center sm:p-8">
           <h1 className="text-2xl font-black uppercase tracking-tight text-white">Upgrader</h1>
           <p className="text-sm text-slate-300">Sign in to use your real inventory items in the upgrader.</p>
-          <button onClick={() => openAuthModal('login')} className="w-full rounded-xl bg-indigo-600 py-3 font-bold text-white transition-colors hover:bg-indigo-500">Sign In</button>
+          <button onClick={() => openAuthModal('login')} className="w-full rounded-xl bg-[#205DD7] py-3 font-bold text-white transition-colors hover:bg-[#1f6bea]">Sign In</button>
         </div>
       </div>
     );
@@ -733,7 +733,7 @@ export default function UpgraderPage() {
           <button type="button" onClick={() => setIsHelpOpen(true)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)]" aria-label="Upgrader help">
             <Info className="h-4 w-4" />
           </button>
-          <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)]" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
+          <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-blue-300/60 hover:text-blue-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)]" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
             {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
           </button>
         </div>
@@ -746,7 +746,7 @@ export default function UpgraderPage() {
               <button type="button" onClick={openFairDetails} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)]" aria-label="Open provably fair details"><ShieldCheck className="h-4 w-4" /></button>
               <button type="button" onClick={() => { void handleCopyPageLink(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)]" aria-label="Copy page link"><Copy className="h-4 w-4" /></button>
               <button type="button" onClick={() => setIsHelpOpen(true)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)]" aria-label="Upgrader help"><Info className="h-4 w-4" /></button>
-              <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)]" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
+              <button type="button" onClick={() => setIsMuted((previous) => !previous)} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-blue-300/60 hover:text-blue-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)]" aria-label={isMuted ? 'Unmute upgrader sound' : 'Mute upgrader sound'}>
                 {isMuted ? <LucideVolumeX className="h-4 w-4" /> : <LucideVolume2 className="h-4 w-4" />}
               </button>
             </div>
@@ -892,7 +892,7 @@ export default function UpgraderPage() {
               ))}
             </div>
             {filteredTargetItems.length === 0 && (
-              <div className="mt-4 rounded-xl border border-dashed border-indigo-300/25 bg-[#090f20] p-4 text-center text-xs text-slate-400">
+              <div className="mt-4 rounded-xl border border-dashed border-blue-300/25 bg-[#090f20] p-4 text-center text-xs text-slate-400">
                 No target items match your filters right now.
               </div>
             )}
@@ -900,7 +900,7 @@ export default function UpgraderPage() {
               <button
                 type="button"
                 onClick={() => setTargetVisibleCount((previous) => previous + PANEL_INCREMENT)}
-                className="mt-3 h-9 rounded-lg border border-indigo-300/30 bg-[#13224b] text-xs font-semibold uppercase tracking-[0.14em] text-slate-100 transition hover:border-cyan-300/50 hover:text-white"
+                className="mt-3 h-9 rounded-lg border border-blue-300/30 bg-[#13224b] text-xs font-semibold uppercase tracking-[0.14em] text-slate-100 transition hover:border-cyan-300/50 hover:text-white"
               >
                 Load More ({filteredTargetItems.length - visibleTargetItems.length} left)
               </button>
@@ -1017,7 +1017,7 @@ export default function UpgraderPage() {
               <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-200">
                 <p className="text-slate-300">The Upgrader lets you risk one item for a chance at a higher-value item.</p>
                 <p className="text-slate-300">Pick a source item, choose your target, then press Upgrade to spin.</p>
-                <p className="font-semibold text-violet-300">Upgrade smart. Higher risk means higher reward.</p>
+                <p className="font-semibold text-blue-300">Upgrade smart. Higher risk means higher reward.</p>
               </div>
             </div>
           </div>

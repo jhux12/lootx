@@ -78,7 +78,7 @@ export const EmailVerificationModal: React.FC = () => {
       />
 
       <div className="relative z-10 w-full max-w-md overflow-hidden rounded-[28px] border border-white/12 bg-slate-950/72 p-5 shadow-[0_30px_90px_rgba(15,23,42,0.6)] backdrop-blur-2xl sm:max-h-[calc(100vh-2rem)] sm:p-7">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.18),_transparent_42%),radial-gradient(circle_at_bottom,_rgba(168,85,247,0.14),_transparent_42%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.18),_transparent_42%),radial-gradient(circle_at_bottom,_rgba(32,93,215,0.14),_transparent_42%)]" />
 
         <button
           onClick={closeModal}

@@ -314,7 +314,7 @@ export const LoginModal: React.FC = () => {
               </button>
               <button
                 onClick={() => mode !== 'register' && toggleMode()}
-                className={`flex-1 rounded-lg py-2.5 text-sm font-bold transition-all ${mode === 'register' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/20' : 'text-neutral-500 hover:text-neutral-300'}`}
+                className={`flex-1 rounded-lg py-2.5 text-sm font-bold transition-all ${mode === 'register' ? 'bg-[#205DD7] text-white shadow-md shadow-blue-900/20' : 'text-neutral-500 hover:text-neutral-300'}`}
                 type="button"
               >
                 Register
@@ -341,13 +341,13 @@ export const LoginModal: React.FC = () => {
           </div>
 
           {mode === 'register' && !isLinkingGoogle && (
-            <div className="mb-4 rounded-2xl border border-indigo-400/20 bg-gradient-to-b from-indigo-500/10 via-[#18181b] to-[#101014] p-4 text-center">
+            <div className="mb-4 rounded-2xl border border-blue-400/20 bg-gradient-to-b from-[#205DD7]/10 via-[#18181b] to-[#101014] p-4 text-center">
               <img
                 src={registerBonusImage}
                 alt="Free signup box"
                 className="mx-auto h-28 w-auto object-contain sm:h-32"
               />
-              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-indigo-300">Free signup bonus</p>
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-blue-300">Free signup bonus</p>
               <p className="mt-1 text-sm text-neutral-300">Register to claim your free box.</p>
             </div>
           )}
@@ -379,15 +379,15 @@ export const LoginModal: React.FC = () => {
                       className="mt-0.5"
                     />
                     <span className="select-none text-neutral-400 group-hover:text-neutral-300">
-                      I agree to the <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Terms of Service</a>, <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Privacy Policy</a>, and confirm I am 18+ to register with Google.
+                      I agree to the <a href="#" className="text-blue-400 hover:text-blue-300 hover:underline">Terms of Service</a>, <a href="#" className="text-blue-400 hover:text-blue-300 hover:underline">Privacy Policy</a>, and confirm I am 18+ to register with Google.
                     </span>
                   </label>
                 )}
 
                 {showOAuthFallback && (
-                  <div className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-100">
+                  <div className="rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs text-blue-100">
                     <p className="font-semibold">Having trouble?</p>
-                    <p className="mt-1 text-indigo-100/90">Please retry Google sign-in or use email sign-up.</p>
+                    <p className="mt-1 text-blue-100/90">Please retry Google sign-in or use email sign-up.</p>
                   </div>
                 )}
               </div>
@@ -436,7 +436,7 @@ export const LoginModal: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-2 w-full rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl bg-[#205DD7] py-3.5 text-sm font-bold text-white transition-all hover:bg-[#1f6bea] hover:shadow-lg hover:shadow-blue-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading ? 'Linking...' : 'Link Google'}
               </button>
@@ -510,7 +510,7 @@ export const LoginModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleForgotPassword}
-                    className="font-semibold text-indigo-400 transition-colors hover:text-indigo-300"
+                    className="font-semibold text-blue-400 transition-colors hover:text-blue-300"
                     disabled={isLoading}
                   >
                     Forgot password?
@@ -527,7 +527,7 @@ export const LoginModal: React.FC = () => {
                     className="mt-0.5"
                   />
                   <span className="select-none text-neutral-400 group-hover:text-neutral-300">
-                    I agree to the <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Terms of Service</a>, <a href="#" className="text-indigo-400 hover:text-indigo-300 hover:underline">Privacy Policy</a>, and confirm I am 18+ to register with email.
+                    I agree to the <a href="#" className="text-blue-400 hover:text-blue-300 hover:underline">Terms of Service</a>, <a href="#" className="text-blue-400 hover:text-blue-300 hover:underline">Privacy Policy</a>, and confirm I am 18+ to register with email.
                   </span>
                 </label>
               )}
@@ -541,7 +541,7 @@ export const LoginModal: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-2 w-full rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl bg-[#205DD7] py-3.5 text-sm font-bold text-white transition-all hover:bg-[#1f6bea] hover:shadow-lg hover:shadow-blue-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading ? 'Please wait...' : mode === 'login' ? 'Login with Password' : 'Register with Password'}
               </button>
@@ -567,7 +567,7 @@ export const LoginModal: React.FC = () => {
               <button
                 type="button"
                 onClick={toggleMode}
-                className="ml-1 font-bold text-indigo-400 hover:underline"
+                className="ml-1 font-bold text-blue-400 hover:underline"
               >
                 {mode === 'login' ? 'Register' : 'Login'}
               </button>

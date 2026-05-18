@@ -24,7 +24,7 @@ export const MarkdownEditorWithPreview: React.FC<MarkdownEditorWithPreviewProps>
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          className="min-h-[320px] w-full rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 text-sm text-gray-100 shadow-[0_0_20px_rgba(99,102,241,0.08)] outline-none transition focus:border-purple-400/60 focus:ring-2 focus:ring-purple-500/30"
+          className="min-h-[320px] w-full rounded-2xl border border-white/10 bg-[#0b0f1a] p-4 text-sm text-gray-100 shadow-[0_0_20px_rgba(32,93,215,0.08)] outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-500/30"
         />
       </div>
       <div className="flex flex-col gap-3">

@@ -102,7 +102,7 @@ export default async function handler(req, res) {
         name,
         price: sanitizedPrice,
         image: toString(rawBox.image, ''),
-        accentColor: toString(rawBox.accentColor, '#8b5cf6'),
+        accentColor: toString(rawBox.accentColor, '#205DD7'),
         tag: toString(rawBox.tag, ''),
         tags: Array.isArray(rawBox.tags) ? rawBox.tags.filter((tag) => typeof tag === 'string') : [],
         items: sanitizedItems,

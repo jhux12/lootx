@@ -115,7 +115,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
 
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-gray-700/70 bg-[#0b0f18] h-[124px] sm:h-[132px]">
-      <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-brand-purple to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-[#205DD7] to-transparent" />
 
       <div className="absolute left-0 top-1/2 -translate-y-1/2" style={{ transform: `translate(${centerOffset}, -50%)` }}>
         <div
@@ -132,7 +132,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
             return (
               <div
                 key={itemKey(item, index)}
-                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 transition-colors ${isWinner && state === 'STOPPED' ? 'border-brand-purple bg-brand-purple/15 shadow-[0_0_24px_rgba(139,92,246,0.45)]' : 'border-gray-700 bg-[#111827]'} ${rarity === 'legendary' ? 'shadow-[0_0_18px_rgba(251,191,36,0.2)]' : ''}`}
+                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 transition-colors ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : 'border-gray-700 bg-[#111827]'} ${rarity === 'legendary' ? 'shadow-[0_0_18px_rgba(251,191,36,0.2)]' : ''}`}
               >
                 <div className="h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
                   {item.imageUrl ? (

@@ -39,7 +39,7 @@ const TICKER_RARITY_DOT_CLASS: Record<HomeTickerWin['rarity'], string> = {
   common: 'bg-slate-300',
   uncommon: 'bg-emerald-300',
   rare: 'bg-blue-300',
-  epic: 'bg-purple-300',
+  epic: 'bg-blue-300',
   legendary: 'bg-amber-300'
 };
 
@@ -47,7 +47,7 @@ const TICKER_RARITY_CARD_CLASS: Record<HomeTickerWin['rarity'], string> = {
   common: 'border-slate-400/55 hover:border-slate-300/80 shadow-slate-950/20',
   uncommon: 'border-emerald-400/55 hover:border-emerald-300/80 shadow-emerald-950/20',
   rare: 'border-blue-400/60 hover:border-blue-300/85 shadow-blue-950/20',
-  epic: 'border-purple-400/65 hover:border-purple-300/90 shadow-purple-950/25',
+  epic: 'border-blue-400/65 hover:border-blue-300/90 shadow-blue-950/25',
   legendary: 'border-amber-300/75 hover:border-amber-200 shadow-amber-950/30'
 };
 
@@ -149,7 +149,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 }}
                 className="group relative min-h-[132px] overflow-hidden rounded-xl border border-white/5 bg-[#21282c] p-4 text-left transition-all duration-300 ease-out hover:-translate-y-1 hover:border-slate-400/35 hover:shadow-[0_12px_28px_rgba(5,8,12,0.45)] focus-visible:-translate-y-1 focus-visible:border-slate-400/35"
               >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_70%,rgba(34,211,238,0.30),transparent_56%),radial-gradient(circle_at_25%_15%,rgba(168,85,247,0.20),transparent_46%),radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.14),transparent_42%)]" />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_70%,rgba(34,211,238,0.30),transparent_56%),radial-gradient(circle_at_25%_15%,rgba(32,93,215,0.20),transparent_46%),radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.14),transparent_42%)]" />
                 <p className="relative z-10 max-w-[140px] text-sm font-black uppercase leading-5 text-slate-100">{tile.title}</p>
                 <img
                   src={tile.image}
