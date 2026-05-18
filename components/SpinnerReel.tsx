@@ -127,7 +127,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
 
   useEffect(() => {
     const preloadLimit = performanceMode.isMobile || performanceMode.isLowPower ? 18 : 42;
-    const uniqueImageUrls = Array.from(new Set(reelItems.map((item) => item.imageUrl).filter((imageUrl): imageUrl is string => !!imageUrl))).slice(0, preloadLimit);
+    const uniqueImageUrls: string[] = Array.from(new Set(reelItems.map((item) => item.imageUrl).filter((imageUrl): imageUrl is string => Boolean(imageUrl)))).slice(0, preloadLimit);
     uniqueImageUrls.forEach((imageUrl) => {
       const image = new Image();
       image.src = imageUrl;

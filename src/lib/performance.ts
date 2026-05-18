@@ -105,9 +105,9 @@ export const usePerformanceMode = () => {
     const onVisibility = () => updateMode(false);
 
     updateMode(false);
-    const idleId = 'requestIdleCallback' in window
+    const idleId: number = 'requestIdleCallback' in window
       ? window.requestIdleCallback(sampleFps, { timeout: 3200 })
-      : window.setTimeout(sampleFps, 1800);
+      : globalThis.setTimeout(sampleFps, 1800) as unknown as number;
 
     mobileMedia.addEventListener('change', onChange);
     motionMedia.addEventListener('change', onChange);
@@ -117,7 +117,7 @@ export const usePerformanceMode = () => {
       cancelled = true;
       if (rafId !== null) window.cancelAnimationFrame(rafId);
       if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
-      else window.clearTimeout(idleId as number);
+      else globalThis.clearTimeout(idleId);
       mobileMedia.removeEventListener('change', onChange);
       motionMedia.removeEventListener('change', onChange);
       document.removeEventListener('visibilitychange', onVisibility);

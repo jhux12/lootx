@@ -2203,24 +2203,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               </div>
 
               <div className="overflow-y-auto p-5 sm:p-6">
-                <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-white/10 bg-black/25 p-4 text-center">
-                  <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
-                  <img
-                    src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
-                    alt={wonItem.name}
-                    className="relative z-10 mb-3 mx-auto h-32 w-32 shrink-0 object-contain sm:h-36 sm:w-36"
-                    loading="eager"
-                    decoding="async"
-                    draggable={false}
-                  />
-                  <h4 className="relative z-10 text-lg font-bold text-white">{wonItem.name}</h4>
-                  <CoinAmount
-                    amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
-                    formatOptions={{ maximumFractionDigits: 0 }}
-                    className="relative z-10 mt-2 font-semibold text-gray-200"
-                    iconClassName="w-4 h-4"
-                  />
-                  <button type="button" onClick={() => setVerifyModalOpen(true)} className="relative z-10 mt-2 rounded-md border border-emerald-300/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-200">Verified ✓</button>
+                <div
+                  className="win-rarity-card relative mx-auto flex max-w-sm flex-col items-center rounded-2xl p-[2px] text-center"
+                  style={{ '--rarity-color': wonItem.color } as React.CSSProperties}
+                >
+                  <div className="win-rarity-card__inner relative flex w-full flex-col items-center overflow-hidden rounded-[calc(1rem-1px)] border border-white/10 bg-black/40 p-4">
+                    <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
+                    <button
+                      type="button"
+                      onClick={() => setVerifyModalOpen(true)}
+                      className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-emerald-300/25 bg-emerald-500/10 text-emerald-200 transition hover:border-emerald-300/45 hover:bg-emerald-500/15"
+                      aria-label="View fairness proof"
+                      title="View fairness proof"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                    </button>
+                    <img
+                      src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
+                      alt={wonItem.name}
+                      className="relative z-10 mb-3 mx-auto h-32 w-32 shrink-0 object-contain sm:h-36 sm:w-36"
+                      loading="eager"
+                      decoding="async"
+                      draggable={false}
+                    />
+                    <h4 className="relative z-10 text-lg font-bold text-white">{wonItem.name}</h4>
+                    <CoinAmount
+                      amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
+                      formatOptions={{ maximumFractionDigits: 0 }}
+                      className="relative z-10 mt-2 font-semibold text-gray-200"
+                      iconClassName="w-4 h-4"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -2563,6 +2576,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           .item-modal-rarity-glow.is-active {
             animation: raritySinglePulse 600ms ease-out 1;
           }
+          .win-rarity-card {
+            --rarity-color: #38bdf8;
+            background: rgba(255,255,255,0.08);
+            isolation: isolate;
+            overflow: hidden;
+            box-shadow: 0 0 0 1px var(--rarity-color), 0 14px 38px rgba(0,0,0,0.34);
+          }
+          .win-rarity-card::before {
+            content: '';
+            position: absolute;
+            inset: -45%;
+            z-index: 0;
+            background: conic-gradient(
+              from 0deg,
+              transparent 0deg,
+              var(--rarity-color) 58deg,
+              rgba(255,255,255,0.95) 82deg,
+              var(--rarity-color) 116deg,
+              transparent 152deg,
+              transparent 360deg
+            );
+            animation: winRarityBorderSpin 4.8s linear infinite;
+            opacity: 0.82;
+            will-change: transform;
+          }
+          .win-rarity-card__inner {
+            z-index: 1;
+          }
+          @keyframes winRarityBorderSpin {
+            to { transform: rotate(1turn); }
+          }
           .rarity-badge {
             display: inline-flex;
             align-items: center;
@@ -2622,6 +2666,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             .item-modal-rarity-bg--legendary,
             .item-modal-rarity-glow,
             .legendary-badge,
+            .win-rarity-card::before,
             .pullz-box-preview,
             .pullz-box-preview__image,
             .pullz-box-spark {
