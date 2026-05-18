@@ -20,6 +20,7 @@ import { createMicroConfetti, MicroConfettiParticle } from '../src/ui/feedback/m
 import { ProvablyFairModal } from '../src/ui/provably/ProvablyFairModal';
 import { trackEvent } from '../utils/trackEvent';
 import pullzLogo from '../assets/pullz-p.PNG';
+import spinnerLogo from '../assets/spinnerp.svg';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -411,6 +412,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
   const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
   const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
+  const spinnerAccentStyle = useMemo(() => ({
+    '--spinner-accent': centeredRarityIndicator.color,
+    '--spinner-glow': centeredRarityIndicator.glow
+  } as React.CSSProperties), [centeredRarityIndicator.color, centeredRarityIndicator.glow]);
 
   const updateSpinnerMeasurements = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -1826,11 +1831,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
             <div
               ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
-              style={{ height: `${spinnerViewportHeight}px` }}
+              className="case-spinner-viewport absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
+              style={{
+                height: `${spinnerViewportHeight}px`,
+                ...spinnerAccentStyle
+              }}
             >
                 {isSpinnerAssetsLoading && (
-                  <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0a0f19]/75 px-4">
+                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#0a0f19]/75 px-4">
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 text-xs font-semibold text-white sm:text-sm">
                       <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
                       Loading spinner items...
@@ -1846,15 +1854,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
                 {/* Center Indicator */}
                 <i
-                  className="fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none transition-[color,filter,text-shadow] duration-150 ease-out motion-reduce:transition-none sm:top-0 sm:text-lg"
-                  style={{
-                    color: centeredRarityIndicator.color,
-                    filter: `drop-shadow(0 0 8px ${centeredRarityIndicator.glow})`,
-                    textShadow: `0 0 10px ${centeredRarityIndicator.glow}, 0 0 20px ${centeredRarityIndicator.glow}`
-                  }}
+                  className="case-spinner-arrow fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-40 -translate-x-1/2 text-base leading-none sm:top-0 sm:text-lg"
                   title={`${centeredRarityIndicator.label} item passing the spinner`}
                   aria-hidden="true"
                 ></i>
+
+                {/* Center Pullz Logo Overlay */}
+                <div
+                  className={`case-spinner-logo-overlay ${animationPhase === 'settling' ? 'is-settling' : ''} ${hasSpinSettled && animationPhase === 'idle' ? 'is-landed' : ''}`}
+                  aria-hidden="true"
+                >
+                  <span className="case-spinner-logo-halo" />
+                  <span
+                    className="case-spinner-logo-mark"
+                    style={{ WebkitMaskImage: `url(${spinnerLogo})`, maskImage: `url(${spinnerLogo})` }}
+                  />
+                </div>
 
                 {/* The Moving Reel */}
                 <div 
@@ -2426,6 +2441,115 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           .item-modal-overlay {
             opacity: 0;
             transition: opacity 150ms ease;
+          }
+          .case-spinner-viewport {
+            --spinner-accent: #cbd5e1;
+            --spinner-glow: rgba(203, 213, 225, 0.65);
+          }
+          .case-spinner-arrow {
+            color: var(--spinner-accent);
+            filter: drop-shadow(0 0 8px var(--spinner-glow));
+            text-shadow: 0 0 10px var(--spinner-glow), 0 0 20px var(--spinner-glow);
+            transition: color 260ms ease, filter 260ms ease, text-shadow 260ms ease;
+          }
+          .case-spinner-logo-overlay {
+            pointer-events: none;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            z-index: 32;
+            display: flex;
+            height: 70px;
+            width: 70px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            transform: translate3d(-50%, -50%, 0) scale(1);
+            opacity: 0.94;
+            transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms ease;
+            will-change: transform, opacity;
+            contain: layout paint style;
+          }
+          .case-spinner-logo-overlay::before {
+            content: '';
+            position: absolute;
+            inset: 9px;
+            border-radius: inherit;
+            background: rgba(4, 8, 16, 0.72);
+            border: 1px solid color-mix(in srgb, var(--spinner-accent) 38%, rgba(255, 255, 255, 0.16));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 26px rgba(0, 0, 0, 0.42);
+            backdrop-filter: blur(6px);
+          }
+          .case-spinner-logo-halo {
+            position: absolute;
+            inset: 3px;
+            border-radius: inherit;
+            background: radial-gradient(circle, color-mix(in srgb, var(--spinner-accent) 26%, transparent) 0%, transparent 66%);
+            filter: blur(12px);
+            opacity: 0.75;
+            transform: translateZ(0);
+            transition: background 320ms ease, opacity 320ms ease, filter 320ms ease;
+            animation: spinnerLogoPulse 3.4s ease-in-out infinite;
+          }
+          .case-spinner-logo-mark {
+            position: relative;
+            z-index: 1;
+            display: block;
+            height: 38px;
+            width: 38px;
+            background: var(--spinner-accent);
+            filter: drop-shadow(0 0 8px var(--spinner-glow));
+            opacity: 0.98;
+            transform: translateZ(0);
+            transition: background 260ms ease, filter 260ms ease, opacity 260ms ease;
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            -webkit-mask-position: center;
+            mask-position: center;
+            -webkit-mask-size: contain;
+            mask-size: contain;
+          }
+          .case-spinner-logo-overlay.is-settling {
+            opacity: 1;
+            transform: translate3d(-50%, -50%, 0) scale(1.045);
+          }
+          .case-spinner-logo-overlay.is-settling .case-spinner-logo-halo {
+            opacity: 0.98;
+            filter: blur(14px);
+          }
+          .case-spinner-logo-overlay.is-landed {
+            opacity: 1;
+            transform: translate3d(-50%, -50%, 0) scale(1.08);
+          }
+          .case-spinner-logo-overlay.is-landed .case-spinner-logo-mark {
+            filter: drop-shadow(0 0 10px var(--spinner-glow)) brightness(1.16);
+          }
+          @media (max-width: 640px) {
+            .case-spinner-logo-overlay {
+              height: 58px;
+              width: 58px;
+            }
+            .case-spinner-logo-overlay::before {
+              inset: 7px;
+              backdrop-filter: blur(4px);
+            }
+            .case-spinner-logo-mark {
+              height: 31px;
+              width: 31px;
+            }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .case-spinner-arrow,
+            .case-spinner-logo-overlay,
+            .case-spinner-logo-halo,
+            .case-spinner-logo-mark {
+              animation: none;
+              transition: none;
+            }
+          }
+          @keyframes spinnerLogoPulse {
+            0%, 100% { opacity: 0.58; transform: translateZ(0) scale(0.96); }
+            50% { opacity: 0.9; transform: translateZ(0) scale(1.05); }
           }
           .item-modal-overlay.active {
             opacity: 1;
