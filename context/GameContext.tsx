@@ -1775,16 +1775,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [adminDirectoryUsers, isAuthenticated, user]);
 
   useEffect(() => {
-    if (!isAuthenticated || !user.isAdmin) {
+    if (!isAuthenticated) {
       setShipments([]);
       return;
     }
 
     void (async () => {
       try {
-        const shipmentsPath = 'shipments?limit=200';
+        const shipmentsPath = user.isAdmin ? 'shipments?limit=200' : `shipments?uid=${user.id}&limit=100`;
         console.log('READING FIRESTORE PATH', shipmentsPath);
-        const snapshot = await getDocs(query(collection(db, 'shipments'), orderBy('createdAt', 'desc'), limit(200)));
+        const shipmentsQuery = user.isAdmin
+          ? query(collection(db, 'shipments'), orderBy('createdAt', 'desc'), limit(200))
+          : query(collection(db, 'shipments'), where('uid', '==', user.id), limit(100));
+        const snapshot = await getDocs(shipmentsQuery);
         const loaded = snapshot.docs
           .map(mapShipmentDoc)
           .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
@@ -1794,7 +1797,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setShipments([]);
       }
     })();
-  }, [isAuthenticated, user.isAdmin]);
+  }, [isAuthenticated, user.id, user.isAdmin]);
 
   useEffect(() => {
     if (!isAuthenticated) return;

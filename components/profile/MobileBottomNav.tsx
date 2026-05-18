@@ -2,14 +2,14 @@ import React from 'react';
 import { Gift, Package, User, Gamepad2 } from 'lucide-react';
 
 interface MobileBottomNavProps {
-  activeTab: 'inventory' | 'account';
-  onTabChange: (tab: 'inventory' | 'account') => void;
+  activeTab: 'inventory' | 'orders' | 'account';
+  onTabChange: (tab: 'inventory' | 'orders' | 'account') => void;
   onGames: () => void;
   onRewards: () => void;
 }
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, onTabChange, onGames, onRewards }) => {
-  const tabClass = (tab: 'inventory' | 'account') => activeTab === tab ? 'text-white' : 'text-gray-500';
+  const tabClass = (tab: 'inventory' | 'orders' | 'account') => activeTab === tab ? 'text-white' : 'text-gray-500';
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#2a323b]/95 p-2 backdrop-blur md:hidden">
