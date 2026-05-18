@@ -104,6 +104,31 @@ const LoadingSpinner = React.memo(() => (
   </div>
 ));
 
+const ModalLoadingShell = React.memo(() => (
+  <div className="fixed inset-0 z-[200] grid place-items-center bg-black/65 px-4 backdrop-blur-sm" aria-busy="true" aria-live="polite">
+    <div className="h-[360px] w-full max-w-md rounded-2xl border border-white/10 bg-[#151b22] shadow-2xl" />
+  </div>
+));
+ModalLoadingShell.displayName = 'ModalLoadingShell';
+
+const DeferredAnalytics = React.memo(() => {
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => runAfterIdleOrInteraction(() => setIsReady(true), 4500), []);
+
+  return isReady ? <Analytics /> : null;
+});
+DeferredAnalytics.displayName = 'DeferredAnalytics';
+
+const DeferredInstallPrompt = React.memo(() => {
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => runAfterIdleOrInteraction(() => setIsReady(true), 5000), []);
+
+  return isReady ? <InstallPrompt /> : null;
+});
+DeferredInstallPrompt.displayName = 'DeferredInstallPrompt';
+
 type MainContentProps = {
   isChatCollapsed: boolean;
 };
@@ -170,24 +195,34 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = subscribeHomepageConfig(
-      (config) => {
-        setHomepageDemoBoxId(config?.demoBoxId ?? null);
-      },
-      () => {
-        setHomepageDemoBoxId(null);
-      }
-    );
-    return () => unsubscribe();
+    let unsubscribe: (() => void) | undefined;
+    const cancel = runAfterIdleOrInteraction(() => {
+      unsubscribe = subscribeHomepageConfig(
+        (config) => {
+          const nextDemoBoxId = config?.demoBoxId ?? null;
+          setHomepageDemoBoxId((current) => (current === nextDemoBoxId ? current : nextDemoBoxId));
+        },
+        () => {
+          setHomepageDemoBoxId((current) => (current === null ? current : null));
+        }
+      );
+    }, 4200);
+    return () => {
+      cancel();
+      unsubscribe?.();
+    };
   }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    trackEvent('PageView', {
-      page: view.type,
-      path: window.location.pathname
-    });
+    const timeoutId = window.setTimeout(() => {
+      trackEvent('PageView', {
+        page: view.type,
+        path: window.location.pathname
+      });
+    }, 1);
+    return () => window.clearTimeout(timeoutId);
   }, [view.type]);
 
   useEffect(() => {
@@ -223,11 +258,14 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       }
     };
 
-    window.addEventListener('scroll', onScroll, { passive: true });
-    document.addEventListener('mouseout', onExitIntent);
+    const listenerDelayId = window.setTimeout(() => {
+      window.addEventListener('scroll', onScroll, { passive: true });
+      document.addEventListener('mouseout', onExitIntent);
+    }, 1500);
 
     return () => {
       if (timeoutId) window.clearTimeout(timeoutId);
+      window.clearTimeout(listenerDelayId);
       window.removeEventListener('scroll', onScroll);
       document.removeEventListener('mouseout', onExitIntent);
     };
@@ -624,7 +662,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       </Suspense>
 
       {/* Modals */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<ModalLoadingShell />}>
         {showLoginModal && <LoginModal />}
         {showEmailVerificationModal && <EmailVerificationModal />}
         {showEmailVerifiedModal && <EmailVerifiedModal />}
@@ -644,7 +682,7 @@ function App() {
         <PreviewProvider>
           <ToastProvider>
             <AppShell />
-            <Analytics />
+            <DeferredAnalytics />
           </ToastProvider>
         </PreviewProvider>
       </GameProvider>
@@ -660,10 +698,18 @@ const AppShell = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+    let rafId = 0;
+    let lastViewportHeight = 0;
 
     const setAppHeight = () => {
-      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-      document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = 0;
+        const viewportHeight = Math.round(window.visualViewport?.height ?? window.innerHeight);
+        if (viewportHeight === lastViewportHeight) return;
+        lastViewportHeight = viewportHeight;
+        document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+      });
     };
 
     setAppHeight();
@@ -672,6 +718,7 @@ const AppShell = () => {
     window.visualViewport?.addEventListener('scroll', setAppHeight);
 
     return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
       window.removeEventListener('resize', setAppHeight);
       window.visualViewport?.removeEventListener('resize', setAppHeight);
       window.visualViewport?.removeEventListener('scroll', setAppHeight);
@@ -730,7 +777,7 @@ const AppShell = () => {
         />
         <AppLayout hasStickyHeader={shouldUseStickyHeader} />
         <MobileBottomNav />
-        <InstallPrompt />
+        <DeferredInstallPrompt />
         <ResetPasswordModal />
       </div>
     </PullToRefresh>

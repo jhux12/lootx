@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
@@ -80,7 +80,7 @@ const buildLiveWins = (boxes: MysteryBox[]): HomeTickerWin[] => {
 
   if (!weightedPool.length) return [];
 
-  return Array.from({ length: Math.min(24, Math.max(12, weightedPool.length)) }, (_, index) => {
+  return Array.from({ length: Math.min(12, Math.max(8, weightedPool.length)) }, (_, index) => {
     const entry = pickWeightedItem(weightedPool);
     const minutesAgo = index < 2 ? 'now' : `${2 + Math.floor(Math.random() * 48)}m`;
 
@@ -112,6 +112,81 @@ const HOME_SECTION_IMAGES = [
   }
 ];
 
+const runHomeWorkAfterIdleOrInteraction = (callback: () => void, timeout = 3200) => {
+  if (typeof window === 'undefined') return () => undefined;
+  let didRun = false;
+  let idleId: number | null = null;
+  let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
+  let run: () => void;
+  const cleanup = () => {
+    window.removeEventListener('pointerdown', run);
+    window.removeEventListener('keydown', run);
+    window.removeEventListener('touchstart', run);
+    if (idleId !== null && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId);
+    if (timeoutId !== null) window.clearTimeout(timeoutId);
+  };
+  run = () => {
+    if (didRun) return;
+    didRun = true;
+    cleanup();
+    callback();
+  };
+  window.addEventListener('pointerdown', run, { once: true, passive: true });
+  window.addEventListener('keydown', run, { once: true });
+  window.addEventListener('touchstart', run, { once: true, passive: true });
+  if ('requestIdleCallback' in window) idleId = window.requestIdleCallback(run, { timeout }) as unknown as number;
+  else timeoutId = window.setTimeout(run, timeout);
+  return cleanup;
+};
+
+const LiveWinCard = memo(({ win, onOpenBox }: { win: HomeTickerWin; onOpenBox: (boxId: string) => void }) => {
+  const handleOpen = useCallback(() => onOpenBox(win.boxId), [onOpenBox, win.boxId]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleOpen}
+      className={`group flex w-[214px] shrink-0 items-center gap-3 rounded-xl border-2 bg-[#1b2024]/80 p-2.5 text-left shadow-lg transition hover:-translate-y-0.5 hover:bg-[#252c32] active:scale-[0.99] sm:w-[252px] ${TICKER_RARITY_CARD_CLASS[win.rarity]}`}
+      title={`${win.itemName} won from ${win.boxName}`}
+    >
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-black/20 p-1.5 sm:h-14 sm:w-14">
+        <img src={win.itemImage} alt={win.itemName} className="h-full w-full object-contain drop-shadow-md" loading="lazy" decoding="async" width={56} height={56} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+          <span className={`h-1.5 w-1.5 rounded-full ${TICKER_RARITY_DOT_CLASS[win.rarity]}`} />
+          <span>{win.rarity}</span>
+          <span className="text-slate-600">•</span>
+          <span>{win.timeAgo}</span>
+        </div>
+        <p className="mt-1 truncate text-xs font-bold text-slate-100 sm:text-sm">{win.itemName}</p>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <p className="truncate text-[11px] text-slate-500">{win.boxName}</p>
+          <CoinAmount amount={Math.round(win.itemPrice)} className="shrink-0 text-[11px] font-black text-emerald-200" iconClassName="h-3.5 w-3.5" animated={false} />
+        </div>
+      </div>
+    </button>
+  );
+});
+LiveWinCard.displayName = 'LiveWinCard';
+
+const LiveWinsSkeleton = memo(() => (
+  <div className="flex min-h-[112px] items-center gap-2 px-4 py-3 sm:min-h-[124px] sm:gap-3" aria-hidden="true">
+    {Array.from({ length: 4 }).map((_, index) => (
+      <div key={index} className="h-[72px] w-[214px] shrink-0 rounded-xl border border-white/5 bg-white/[0.045] sm:h-20 sm:w-[252px]" />
+    ))}
+  </div>
+));
+LiveWinsSkeleton.displayName = 'LiveWinsSkeleton';
+
+const HomeBelowFoldSkeleton = memo(() => (
+  <>
+    <div className="min-h-[520px] rounded-xl bg-[#22282c]/40 lg:col-start-1" aria-hidden="true" />
+    <aside className="min-h-[760px] rounded-2xl bg-[#22282c]/40 lg:col-start-2 lg:row-start-1" aria-hidden="true" />
+  </>
+));
+HomeBelowFoldSkeleton.displayName = 'HomeBelowFoldSkeleton';
+
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onViewAllBoxes, onSignUp }) => {
   const { setView, user } = useGame();
   const [showBelowFold, setShowBelowFold] = useState(false);
@@ -123,14 +198,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
       setShowBelowFold(true);
       return;
     }
-    const loadBelowFold = () => setShowBelowFold(true);
-    const idleId = 'requestIdleCallback' in window
-      ? window.requestIdleCallback(loadBelowFold, { timeout: 1800 })
-      : window.setTimeout(loadBelowFold, 900);
-    return () => {
-      if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
-      else window.clearTimeout(idleId as number);
-    };
+    return runHomeWorkAfterIdleOrInteraction(() => setShowBelowFold(true), 3600);
   }, []);
 
   return (
@@ -166,8 +234,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
           </div>
 
 
-          {liveWins.length > 0 && (
-            <section aria-label="Live recent wins" className="overflow-hidden rounded-2xl border border-white/5 bg-[#20262b] shadow-[0_14px_38px_rgba(5,8,12,0.22)]">
+          <section aria-label="Live recent wins" className="min-h-[158px] overflow-hidden rounded-2xl border border-white/5 bg-[#20262b] shadow-[0_14px_38px_rgba(5,8,12,0.22)] sm:min-h-[170px]">
               <div className="flex flex-col gap-1 border-b border-white/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <div className="flex items-center gap-2">
                   <span className="relative flex h-2.5 w-2.5">
@@ -178,40 +245,22 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 </div>
               </div>
 
-              <div className="relative overflow-hidden py-3">
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#20262b] to-transparent sm:w-16" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#20262b] to-transparent sm:w-16" />
-                <div className="ticker-animation flex w-max items-center gap-2 px-4 [animation-duration:60s] sm:gap-3">
-                  {[...liveWins, ...liveWins].map((win, index) => (
-                    <button
-                      key={`${win.id}-${index}`}
-                      type="button"
-                      onClick={() => onOpenBox(win.boxId)}
-                      className={`group flex w-[214px] shrink-0 items-center gap-3 rounded-xl border-2 bg-[#1b2024]/80 p-2.5 text-left shadow-lg transition hover:-translate-y-0.5 hover:bg-[#252c32] active:scale-[0.99] sm:w-[252px] ${TICKER_RARITY_CARD_CLASS[win.rarity]}`}
-                      title={`${win.itemName} won from ${win.boxName}`}
-                    >
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-black/20 p-1.5 sm:h-14 sm:w-14">
-                        <img src={win.itemImage} alt={win.itemName} className="h-full w-full object-contain drop-shadow-md" loading="lazy" decoding="async" width={56} height={56} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                          <span className={`h-1.5 w-1.5 rounded-full ${TICKER_RARITY_DOT_CLASS[win.rarity]}`} />
-                          <span>{win.rarity}</span>
-                          <span className="text-slate-600">•</span>
-                          <span>{win.timeAgo}</span>
-                        </div>
-                        <p className="mt-1 truncate text-xs font-bold text-slate-100 sm:text-sm">{win.itemName}</p>
-                        <div className="mt-1 flex items-center justify-between gap-2">
-                          <p className="truncate text-[11px] text-slate-500">{win.boxName}</p>
-                          <CoinAmount amount={Math.round(win.itemPrice)} className="shrink-0 text-[11px] font-black text-emerald-200" iconClassName="h-3.5 w-3.5" animated={false} />
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </section>
-          )}
+            <div className="relative overflow-hidden py-3">
+              {liveWins.length > 0 ? (
+                <>
+                  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#20262b] to-transparent sm:w-16" />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#20262b] to-transparent sm:w-16" />
+                  <div className="ticker-animation flex w-max items-center gap-2 px-4 [animation-duration:70s] sm:gap-3">
+                    {[...liveWins, ...liveWins].map((win, index) => (
+                      <LiveWinCard key={`${win.id}-${index}`} win={win} onOpenBox={onOpenBox} />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <LiveWinsSkeleton />
+              )}
+            </div>
+          </section>
 
           <section>
             <div className="mb-5 flex items-center justify-between gap-3">
@@ -234,11 +283,11 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
         </section>
 
         {showBelowFold ? (
-            <Suspense fallback={<div className="min-h-[760px] rounded-xl bg-[#22282c]/40" aria-hidden="true" />}>
+            <Suspense fallback={<HomeBelowFoldSkeleton />}>
               <HomeReplicaBelowFold boxes={boxes} showSignupCta={!user} onSignUp={onSignUp} />
             </Suspense>
           ) : (
-            <div className="min-h-[760px] rounded-xl bg-[#22282c]/40" aria-hidden="true" />
+            <HomeBelowFoldSkeleton />
           )}
 
       </main>
