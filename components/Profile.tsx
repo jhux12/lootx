@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Check, Coins, CreditCard, Package, Tag, Truck, X } from 'lucide-react';
+import { Check, Coins, CreditCard, Info, Package, Tag, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -63,6 +63,7 @@ export const Profile: React.FC = () => {
   const [sort, setSort] = useState('newest');
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const [showShippingReview, setShowShippingReview] = useState(false);
+  const [showShippingRateTooltip, setShowShippingRateTooltip] = useState(false);
   const [shippingPaymentMethod, setShippingPaymentMethod] = useState<'coins' | 'cash'>('coins');
   const [withdrawLockedModalOpen, setWithdrawLockedModalOpen] = useState(false);
   const [tradeInModalItemId, setTradeInModalItemId] = useState<string | null>(null);
@@ -267,6 +268,7 @@ export const Profile: React.FC = () => {
   const handleOpenShippingReview = (instanceIds: string[]) => {
     setSelectedShipments(instanceIds);
     setShippingPaymentMethod(shippingCoinEnabled ? 'coins' : 'cash');
+    setShowShippingRateTooltip(false);
     setShowShippingReview(true);
   };
 
@@ -599,7 +601,7 @@ export const Profile: React.FC = () => {
               <button
                 aria-label="Close shipping review"
                 className="-mr-1 rounded-full p-1 text-slate-400 transition hover:bg-white/5 hover:text-white"
-                onClick={() => setShowShippingReview(false)}
+                onClick={() => { setShowShippingRateTooltip(false); setShowShippingReview(false); }}
               >
                 <X className="h-6 w-6" />
               </button>
@@ -631,13 +633,32 @@ export const Profile: React.FC = () => {
                     {activeShippingMethod === 'cash' ? <CreditCard className="h-5 w-5" /> : <Coins className="h-5 w-5" />}
                   </span>
                   <span className="truncate text-sm font-black text-blue-100 sm:text-base">{activeShippingMethod === 'cash' ? 'Cash due now' : 'Coins due now'}</span>
+                  {!isFreeOnlySelection && (
+                    <button
+                      type="button"
+                      aria-label={`Shipment cost details. ${formatShippingTierSummary()}`}
+                      aria-expanded={showShippingRateTooltip}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-blue-300/20 bg-blue-400/10 text-blue-100 transition hover:bg-blue-400/20 focus:outline-none focus:ring-2 focus:ring-blue-300/60"
+                      onClick={() => setShowShippingRateTooltip((open) => !open)}
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
                 <span className="text-base font-black text-blue-400 sm:text-lg">{isFreeOnlySelection ? 'Free' : selectedShippingCostLabel}</span>
               </div>
             </div>
-            {!isFreeOnlySelection && (
-              <div className="mt-3 rounded-2xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs font-semibold leading-relaxed text-blue-100 sm:text-sm">
-                Shipment rate for {shipmentRate.tierLabel}: {formatShippingTierSummary()}
+            {!isFreeOnlySelection && showShippingRateTooltip && (
+              <div className="relative mt-3 rounded-2xl border border-blue-400/25 bg-[#0d1b34] px-3 py-3 text-xs shadow-xl shadow-blue-950/30 sm:px-4 sm:text-sm">
+                <div className="absolute -top-2 left-8 h-4 w-4 rotate-45 border-l border-t border-blue-400/25 bg-[#0d1b34]" />
+                <div className="relative space-y-2">
+                  <div className="font-black text-blue-100">Shipment rate for {shipmentRate.tierLabel}</div>
+                  <div className="grid grid-cols-1 gap-1.5 text-slate-300 sm:grid-cols-3">
+                    <div className="rounded-lg bg-white/5 px-2.5 py-2"><span className="font-bold text-white">&lt;$20</span><span className="float-right font-black text-blue-300">$3.99</span></div>
+                    <div className="rounded-lg bg-white/5 px-2.5 py-2"><span className="font-bold text-white">$20–$75</span><span className="float-right font-black text-blue-300">$6.99</span></div>
+                    <div className="rounded-lg bg-white/5 px-2.5 py-2"><span className="font-bold text-white">$75+</span><span className="float-right font-black text-blue-300">$12.99</span></div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -675,7 +696,7 @@ export const Profile: React.FC = () => {
               ) : (
                 <button className="w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment || !hasMadeDeposit}>{isSubmittingShipment ? 'Submitting...' : isFreeOnlySelection ? 'Confirm Free Shipping' : 'Confirm Shipping'}</button>
               )}
-              <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-bold text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => setShowShippingReview(false)}>Cancel</button>
+              <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-bold text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => { setShowShippingRateTooltip(false); setShowShippingReview(false); }}>Cancel</button>
             </div>
           </div>
         </div>
