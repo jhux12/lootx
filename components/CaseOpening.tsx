@@ -62,8 +62,123 @@ const SPINNER_MOTION = {
   approachOffsetNearMissMaxPx: 58,
   nearMissChance: 0.42,
   durationVarianceMs: 420,
-  initialBlurDurationMs: 260
+  initialBlurDurationMs: 260,
+  landingJitterMinPx: 6,
+  landingJitterMaxPx: 24,
+  closeCallOffsetPx: 62,
+  overshootChance: 0.15,
+  closeCallChance: 0.10,
+  preSnapDelay: 180,
+  snapDuration: 340,
+  microCorrectionDistance: 5
 } as const;
+
+
+type LandingProfileName =
+  | 'normal-settle'
+  | 'slight-overshoot'
+  | 'left-edge-close-call'
+  | 'right-edge-close-call'
+  | 'slow-crawl-settle'
+  | 'tighter-snap'
+  | 'wider-drift';
+
+interface LandingProfile {
+  name: LandingProfileName;
+  family: 'normal' | 'drift' | 'overshoot' | 'close-call';
+  landingOffsetPx: number;
+  approachOffsetPx: number;
+  overshootPx: number;
+  preSnapDelayMs: number;
+  snapDurationMs: number;
+  microCorrectionPx: number;
+  suspenseGlowSide?: 'left' | 'right';
+}
+
+const pickLandingFamily = (rng: () => number): LandingProfile['family'] => {
+  const roll = rng();
+  const normalChance = 0.55;
+  const driftChance = 0.20;
+  const closeCallStart = Math.min(1 - SPINNER_MOTION.closeCallChance, normalChance + driftChance + SPINNER_MOTION.overshootChance);
+  if (roll < normalChance) return 'normal';
+  if (roll < normalChance + driftChance) return 'drift';
+  if (roll < closeCallStart) return 'overshoot';
+  return 'close-call';
+};
+
+const signedMagnitude = (rng: () => number, min: number, max: number, preferredDirection?: -1 | 1) => {
+  const direction = preferredDirection ?? (rng() < 0.5 ? -1 : 1);
+  return direction * (min + Math.round(rng() * (max - min)));
+};
+
+const getLandingProfile = (rng: () => number): LandingProfile => {
+  const family = pickLandingFamily(rng);
+  const maxSafeJitter = Math.min(SPINNER_MOTION.landingJitterMaxPx, (DESKTOP_CARD_WIDTH / 2) - 18);
+  const minJitter = Math.min(SPINNER_MOTION.landingJitterMinPx, maxSafeJitter);
+
+  if (family === 'close-call') {
+    const direction = rng() < 0.5 ? -1 : 1;
+    const edgeOffset = direction * Math.min(SPINNER_MOTION.closeCallOffsetPx, (DESKTOP_CARD_WIDTH / 2) - 20);
+    const microDirection = direction === 1 ? -1 : 1;
+    return {
+      name: direction < 0 ? 'left-edge-close-call' : 'right-edge-close-call',
+      family,
+      landingOffsetPx: edgeOffset,
+      approachOffsetPx: edgeOffset + signedMagnitude(rng, 8, 18, direction),
+      overshootPx: 8 * microDirection,
+      preSnapDelayMs: SPINNER_MOTION.preSnapDelay + 80,
+      snapDurationMs: SPINNER_MOTION.snapDuration + 80,
+      microCorrectionPx: SPINNER_MOTION.microCorrectionDistance * microDirection,
+      // The highlighted neighbor is visual-only suspense; the winner still receives the final snap.
+      suspenseGlowSide: direction < 0 ? 'left' : 'right'
+    };
+  }
+
+  if (family === 'overshoot') {
+    const direction = rng() < 0.5 ? -1 : 1;
+    const landingOffsetPx = signedMagnitude(rng, minJitter, maxSafeJitter, direction);
+    return {
+      name: 'slight-overshoot',
+      family,
+      landingOffsetPx,
+      approachOffsetPx: landingOffsetPx + signedMagnitude(rng, 14, 28, direction),
+      overshootPx: SPINNER_MOTION.overshootPx * -direction,
+      preSnapDelayMs: SPINNER_MOTION.preSnapDelay + 20,
+      snapDurationMs: SPINNER_MOTION.snapDuration + 20,
+      microCorrectionPx: SPINNER_MOTION.microCorrectionDistance * -direction
+    };
+  }
+
+  if (family === 'drift') {
+    const isWide = rng() < 0.45;
+    const landingOffsetPx = signedMagnitude(rng, minJitter, isWide ? maxSafeJitter : Math.max(minJitter, 16));
+    const driftDirection = landingOffsetPx < 0 ? -1 : 1;
+    return {
+      name: isWide ? 'wider-drift' : 'tighter-snap',
+      family,
+      landingOffsetPx,
+      approachOffsetPx: landingOffsetPx + signedMagnitude(rng, 6, isWide ? 20 : 12, driftDirection),
+      overshootPx: isWide ? 6 * -driftDirection : 0,
+      preSnapDelayMs: SPINNER_MOTION.preSnapDelay + (isWide ? 40 : -40),
+      snapDurationMs: SPINNER_MOTION.snapDuration + (isWide ? 90 : -90),
+      microCorrectionPx: (isWide ? SPINNER_MOTION.microCorrectionDistance : 3) * -driftDirection
+    };
+  }
+
+  const slowCrawl = rng() < 0.18;
+  const landingOffsetPx = rng() < 0.24 ? 0 : signedMagnitude(rng, minJitter, Math.max(minJitter, 14));
+  const landingDirection = landingOffsetPx === 0 ? (rng() < 0.5 ? -1 : 1) : (landingOffsetPx < 0 ? -1 : 1);
+  return {
+    name: slowCrawl ? 'slow-crawl-settle' : 'normal-settle',
+    family,
+    landingOffsetPx,
+    approachOffsetPx: landingOffsetPx + signedMagnitude(rng, 4, slowCrawl ? 10 : 16, landingDirection),
+    overshootPx: slowCrawl ? 0 : 4 * -landingDirection,
+    preSnapDelayMs: SPINNER_MOTION.preSnapDelay + (slowCrawl ? 120 : 0),
+    snapDurationMs: SPINNER_MOTION.snapDuration + (slowCrawl ? 130 : 0),
+    microCorrectionPx: SPINNER_MOTION.microCorrectionDistance * 0.6 * -landingDirection
+  };
+};
 
 const rarityGlowClass: Record<string, string> = {
   legendary: 'bg-amber-300/35',
@@ -345,6 +460,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [hasSpinSettled, setHasSpinSettled] = useState(false);
+  const [suspenseGlowIndex, setSuspenseGlowIndex] = useState<number | null>(null);
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
   const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
   const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
@@ -759,20 +875,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
   }, [nonce]);
 
-  const getApproachOffset = useCallback((rng: () => number) => {
-    const direction = rng() < 0.5 ? -1 : 1;
-
-    if (rng() < SPINNER_MOTION.nearMissChance) {
-      const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
-      const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
-      const magnitude = min + Math.round(rng() * (max - min));
-      return direction * magnitude;
-    }
-
-    const softMagnitude = Math.round(rng() * SPINNER_MOTION.approachOffsetSoftMaxPx);
-    return direction * softMagnitude;
-  }, []);
-
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
@@ -891,6 +993,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       tickTimerRef.current = null;
     }
     setAnimationPhase('idle');
+    setSuspenseGlowIndex(null);
   }, []);
 
   const animateSpin = useCallback(async (
@@ -905,11 +1008,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       return;
     }
 
-    const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
+    const rng = createSeededRng(`${options?.seed ?? 'demo'}:${winnerIndex}`);
+    const landingProfile = getLandingProfile(rng);
     const durationVariance = Math.round((rng() - 0.5) * Math.min(220, SPINNER_MOTION.durationVarianceMs) * 2);
     const resolvedDuration = Math.max(2400, duration + durationVariance);
+    const spinDuration = Math.max(1200, resolvedDuration - landingProfile.preSnapDelayMs - landingProfile.snapDurationMs);
+    const totalAnimationDuration = spinDuration + landingProfile.preSnapDelayMs + landingProfile.snapDurationMs;
 
     resetSpinnerAnimation();
 
@@ -930,27 +1034,42 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    const preSnapTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingProfile.landingOffsetPx);
+    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingProfile.approachOffsetPx);
+    const overshootTarget = centeredTranslate === null ? null : clampTranslate(approachTranslate + landingProfile.overshootPx);
+    const microTranslate = centeredTranslate === null ? null : clampTranslate(preSnapTranslate + landingProfile.microCorrectionPx);
+    if (centeredTranslate === null || approachTranslate === null || preSnapTranslate === null || overshootTarget === null || microTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
     }
 
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
+    // All landing variation below is visual-only. The server-selected winner, odds, and
+    // provably-fair roll stay unchanged; every profile ends with centeredTranslate so the
+    // winning card is snapped perfectly under the indicator before rewards resolve.
+    setSuspenseGlowIndex(
+      landingProfile.suspenseGlowSide === 'left'
+        ? Math.max(0, winnerIndex - 1)
+        : landingProfile.suspenseGlowSide === 'right'
+          ? Math.min(reelItemsRef.current.length - 1, winnerIndex + 1)
+          : null
+    );
     setAnimationPhase('spinning');
+
+    const settleStartOffset = spinDuration / totalAnimationDuration;
+    const microOffset = (spinDuration + Math.max(0, landingProfile.preSnapDelayMs - 70)) / totalAnimationDuration;
 
     const animation = container.animate(
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.25, 0.6, 0.2, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.7, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: 0.9, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'ease-out' }
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: Math.max(0.48, settleStartOffset - 0.2), easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
+        { transform: `translate3d(${approachTranslate}px, 0, 0)`, offset: Math.max(0.62, settleStartOffset - 0.07), easing: landingProfile.name === 'slow-crawl-settle' ? 'cubic-bezier(0.18, 0.72, 0.18, 1)' : 'cubic-bezier(0.2, 0.9, 0.3, 1)' },
+        { transform: `translate3d(${preSnapTranslate}px, 0, 0)`, offset: settleStartOffset, easing: 'cubic-bezier(0.18, 0.78, 0.2, 1)' },
+        { transform: `translate3d(${microTranslate}px, 0, 0)`, offset: Math.max(settleStartOffset, Math.min(0.985, microOffset)), easing: 'ease-in-out' },
+        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: landingProfile.name === 'tighter-snap' ? 'cubic-bezier(0.16, 0.84, 0.2, 1)' : 'cubic-bezier(0.12, 0.78, 0.18, 1)' }
       ],
       {
-        duration: resolvedDuration,
+        duration: totalAnimationDuration,
         fill: 'forwards',
         composite: 'replace'
       }
@@ -980,7 +1099,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       frameId = window.requestAnimationFrame(syncCenterItem);
     };
     frameId = window.requestAnimationFrame(syncCenterItem);
-    const decelerationTimer = window.setTimeout(() => setAnimationPhase('settling'), Math.max(0, resolvedDuration - 850));
+    const decelerationTimer = window.setTimeout(() => setAnimationPhase('settling'), Math.max(0, spinDuration - 500));
 
     animation.onfinish = () => {
       window.clearTimeout(decelerationTimer);
@@ -1002,6 +1121,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (frameId !== null) window.cancelAnimationFrame(frameId);
 
       setAnimationPhase('idle');
+      setSuspenseGlowIndex(null);
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
       onComplete();
@@ -1015,11 +1135,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       if (frameId !== null) window.cancelAnimationFrame(frameId);
       setAnimationPhase('idle');
+      setSuspenseGlowIndex(null);
       container.style.willChange = 'auto';
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getCenteredIndexFromTranslate, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1476,10 +1597,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs * quickFactor, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
-                  });
+                  }, { seed: `${goldSeed}:${winner.id}` });
                 });
             }, 700);
-        });
+        }, { seed: `${ticketSeed}:${GOLDEN_TICKET_ITEM.id}` });
 
     } else {
         // --- NORMAL SPIN FLOW ---
@@ -1489,7 +1610,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.58 : 1), () => {
             finishSpin(winner);
-        });
+        }, { seed: `${mainSeed}:${winner.id}` });
     }
   };
 
@@ -1875,6 +1996,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const rarityGlow = rarityGlowClass[rarityValue] ?? rarityGlowClass.common;
                           const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && idx === reelWinnerIndex;
                           const isCenteredItem = idx === currentCenterIndex;
+                          const isSuspenseGlow = suspenseGlowIndex === idx && animationPhase === 'settling' && !hasSpinSettled;
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
                           const showItemGlow = !isSpinning || !useMobileSpinnerBehavior;
                           const allowHeavyHighlight = !useMobileSpinnerBehavior || !isSpinning;
@@ -1906,6 +2028,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             <div
                               className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-65 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
                               style={{ boxShadow: isFocusedItem ? `0 0 20px ${item.color}40` : 'none' }}
+                            />
+                            <div
+                              className={`pointer-events-none absolute inset-3 rounded-[28px] transition-opacity duration-200 ${isSuspenseGlow ? 'opacity-60' : 'opacity-0'} motion-reduce:transition-none`}
+                              style={{ background: 'radial-gradient(circle, rgba(34,211,238,0.26) 0%, rgba(34,211,238,0.10) 46%, transparent 72%)' }}
+                              aria-hidden="true"
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
