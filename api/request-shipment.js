@@ -1,6 +1,7 @@
-import { adminAuth, firestore } from './_lib/firebaseAdmin.js';
+import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
+import { getShipmentShippingRate } from './_lib/shippingRates.js';
 
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
 
@@ -8,6 +9,17 @@ const isXpShopInventoryItem = (inventoryItem = {}) => (
   inventoryItem.source === 'xpShop'
   || inventoryItem.acquisitionCurrencyType === 'XP'
   || inventoryItem.openCurrencyType === 'XP'
+);
+
+const getInventoryValueCoins = (inventoryItem = {}) => Math.max(
+  0,
+  Math.round(Number(inventoryItem.price ?? inventoryItem.value ?? inventoryItem.valueCoins ?? 0) || 0)
+);
+
+const isFreeShippingInventoryItem = (inventoryItem = {}) => (
+  inventoryItem.freeShipping === true
+  || Number(inventoryItem.shippingCostOverrideCoins ?? NaN) === 0
+  || isXpShopInventoryItem(inventoryItem)
 );
 
 export default async function handler(req, res) {
@@ -24,11 +36,15 @@ export default async function handler(req, res) {
 
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await readJsonBody(req);
-    const inventoryId = body?.inventoryId;
+    const inventoryIds = Array.isArray(body?.inventoryIds)
+      ? Array.from(new Set(body.inventoryIds.filter((id) => typeof id === 'string' && id.trim()).map((id) => id.trim())))
+      : typeof body?.inventoryId === 'string' && body.inventoryId.trim()
+        ? [body.inventoryId.trim()]
+        : [];
     const shippingInfo = body?.shippingInfo;
 
-    if (!inventoryId || typeof inventoryId !== 'string') {
-      return sendJson(res, 400, { error: 'Missing inventoryId' });
+    if (inventoryIds.length === 0) {
+      return sendJson(res, 400, { error: 'No items selected' });
     }
 
     if (!shippingInfo || typeof shippingInfo !== 'object') {
@@ -38,38 +54,56 @@ export default async function handler(req, res) {
     const settingsSnap = await firestore.collection('settings').doc(STRIPE_SETTINGS_DOC).get();
     const settings = settingsSnap.data() ?? {};
     const shippingCoinEnabled = settings.shippingCoinEnabled === true;
-    const shippingCoinCostCoins = Math.max(0, Math.round(Number(settings.shippingCoinCostCoins) || 0));
 
     const userRef = firestore.collection('users').doc(decoded.uid);
-    const inventoryRef = userRef.collection('inventory').doc(inventoryId);
-    const shipmentRef = firestore.collection('shipments').doc();
+    const inventoryRefs = inventoryIds.map((inventoryId) => userRef.collection('inventory').doc(inventoryId));
+    const shipmentBatchId = firestore.collection('shipments').doc().id;
+    const shipmentRefs = inventoryIds.map(() => firestore.collection('shipments').doc());
 
     let updatedCoins = null;
+    let primaryShipmentId = shipmentRefs[0]?.id ?? null;
     await firestore.runTransaction(async (transaction) => {
-      const userSnap = await transaction.get(userRef);
+      const [userSnap, ...inventorySnaps] = await Promise.all([
+        transaction.get(userRef),
+        ...inventoryRefs.map((inventoryRef) => transaction.get(inventoryRef))
+      ]);
       const { settings: rewardsSettings } = await getRewardsSettings(transaction);
       const userData = userSnap.data() ?? {};
       const currentCoins = Number(userData.coins ?? userData.balance ?? 0);
 
-      const inventorySnap = await transaction.get(inventoryRef);
-      if (!inventorySnap.exists) {
-        throw { status: 404, error: 'Inventory item not found' };
+      if (!userSnap.exists) {
+        throw { status: 403, error: 'Unauthorized' };
       }
 
-      const inventoryItem = inventorySnap.data() ?? {};
-      const status = inventoryItem.status ?? 'available';
-      if (status !== 'available') {
-        throw { status: 400, error: 'Item is not available for shipping' };
-      }
+      const shipmentItems = inventorySnaps.map((inventorySnap, index) => {
+        if (!inventorySnap.exists) {
+          throw { status: 404, error: 'Inventory item not found' };
+        }
 
-      const hasFreeShipping =
-        inventoryItem.freeShipping === true
-        || Number(inventoryItem.shippingCostOverrideCoins ?? NaN) === 0
-        || isXpShopInventoryItem(inventoryItem);
-      const effectiveShippingCost = hasFreeShipping ? 0 : shippingCoinCostCoins;
+        const inventoryItem = inventorySnap.data() ?? {};
+        const status = inventoryItem.status ?? 'available';
+        if (status !== 'available') {
+          throw { status: 400, error: 'Item is not available for shipping' };
+        }
+
+        return {
+          inventoryItem,
+          inventoryId: inventoryIds[index],
+          inventoryRef: inventoryRefs[index],
+          shipmentRef: shipmentRefs[index],
+          freeShipping: isFreeShippingInventoryItem(inventoryItem)
+        };
+      });
+
+      const paidShipmentItems = shipmentItems.filter((item) => !item.freeShipping);
+      const paidShipmentValueCoins = paidShipmentItems.reduce((sum, item) => sum + getInventoryValueCoins(item.inventoryItem), 0);
+      const rate = getShipmentShippingRate(paidShipmentValueCoins);
+      const effectiveShippingCost = paidShipmentItems.length > 0 ? rate.coinCost : 0;
       const shippingPaymentMethod = effectiveShippingCost > 0 ? 'coins' : 'FREE_XP';
+      const firstPaidShipmentId = paidShipmentItems[0]?.shipmentRef.id ?? primaryShipmentId;
+      primaryShipmentId = firstPaidShipmentId;
 
-      if (!hasFreeShipping && !shippingCoinEnabled) {
+      if (paidShipmentItems.length > 0 && !shippingCoinEnabled) {
         throw { status: 400, error: 'Coin shipping is disabled' };
       }
 
@@ -87,7 +121,7 @@ export default async function handler(req, res) {
           userRef,
           coinsSpent: effectiveShippingCost,
           context: 'shipping_request',
-          referenceId: shipmentRef.id,
+          referenceId: shipmentBatchId,
           userData,
           rewardsSettings
         });
@@ -95,31 +129,44 @@ export default async function handler(req, res) {
         updatedCoins = currentCoins;
       }
 
-      transaction.set(inventoryRef, { status: 'shipping_requested' }, { merge: true });
-      transaction.set(shipmentRef, {
-        uid: decoded.uid,
-        inventoryId,
-        item: {
-          boxId: inventoryItem.boxId ?? null,
-          prizeId: inventoryItem.prizeId ?? null,
-          name: inventoryItem.name ?? 'Mystery Item',
-          value: Number(inventoryItem.value ?? 0),
-          image: inventoryItem.image ?? '',
-          rarity: inventoryItem.rarity ?? 'common',
-          sellBackRate: Number(inventoryItem.sellBackRate ?? 0.8),
-          size: inventoryItem.size ?? null
-        },
-        shippingInfo,
-        shippingCost: effectiveShippingCost,
-        shippingPaid: true,
-        shippingPaymentMethod,
-        paidAt: new Date(),
-        status: 'shipping_requested',
-        createdAt: new Date()
+      const now = admin.firestore.FieldValue.serverTimestamp();
+      shipmentItems.forEach(({ inventoryItem, inventoryId, inventoryRef, shipmentRef, freeShipping }) => {
+        const receivesBatchCharge = effectiveShippingCost > 0 && shipmentRef.id === firstPaidShipmentId;
+        transaction.set(inventoryRef, {
+          status: 'shipping_requested',
+          shipmentId: shipmentRef.id,
+          shipmentBatchId,
+          updatedAt: now
+        }, { merge: true });
+        transaction.set(shipmentRef, {
+          uid: decoded.uid,
+          inventoryId,
+          item: {
+            boxId: inventoryItem.boxId ?? null,
+            prizeId: inventoryItem.prizeId ?? null,
+            name: inventoryItem.name ?? 'Mystery Item',
+            value: Number(inventoryItem.value ?? inventoryItem.price ?? 0),
+            image: inventoryItem.image ?? '',
+            rarity: inventoryItem.rarity ?? 'common',
+            sellBackRate: Number(inventoryItem.sellBackRate ?? 0.8),
+            size: inventoryItem.size ?? null
+          },
+          shippingInfo,
+          shippingCost: receivesBatchCharge ? effectiveShippingCost : 0,
+          shippingBatchCost: effectiveShippingCost,
+          shippingBatchValueCoins: paidShipmentValueCoins,
+          shippingRateTier: paidShipmentItems.length > 0 ? rate.tierLabel : 'Free',
+          shippingPaid: true,
+          shippingPaymentMethod: freeShipping && effectiveShippingCost === 0 ? 'FREE_XP' : shippingPaymentMethod,
+          paidAt: now,
+          shippingBatchId: shipmentBatchId,
+          status: 'shipping_requested',
+          createdAt: now
+        });
       });
     });
 
-    return sendJson(res, 200, { ok: true, shipmentId: shipmentRef.id, newCoins: updatedCoins });
+    return sendJson(res, 200, { ok: true, shipmentId: primaryShipmentId, shipmentBatchId, newCoins: updatedCoins });
   } catch (error) {
     const status = error?.status;
     if (status) {
