@@ -18,6 +18,7 @@ import { auth } from './firebase';
 import PullToRefresh from './components/PullToRefresh';
 import { setPostSignupRedirect } from './utils/postSignupRedirect';
 import { subscribeHomepageConfig } from './utils/homepageShowcase';
+import { usePerformanceMode } from './src/lib/performance';
 
 type ClarityWindow = Window &
   typeof globalThis & {
@@ -114,7 +115,7 @@ ModalLoadingShell.displayName = 'ModalLoadingShell';
 const DeferredAnalytics = React.memo(() => {
   const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => runAfterIdleOrInteraction(() => setIsReady(true), 4500), []);
+  useEffect(() => runAfterIdleOrInteraction(() => setIsReady(true), 6500), []);
 
   return isReady ? <Analytics /> : null;
 });
@@ -137,6 +138,7 @@ type MainContentProps = {
 const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal } = useGame();
   const { playSound } = useSound();
+  const performanceMode = usePerformanceMode();
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
   const trackedPurchaseSessionsRef = useRef<Set<string>>(new Set());
   const [showHomePrompt, setShowHomePrompt] = useState(false);
@@ -157,7 +159,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         });
     }
 
+    const clarityDelay = performanceMode.isMobile || performanceMode.isLowPower ? 9000 : 4500;
     const cancelClarityLoad = runAfterIdleOrInteraction(() => {
+      if (document.visibilityState === 'hidden') return;
       const existingScript = document.querySelector<HTMLScriptElement>(`script[data-clarity-project-id="${CLARITY_PROJECT_ID}"]`);
       if (existingScript) return;
       const script = document.createElement('script');
@@ -165,7 +169,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       script.src = `https://www.clarity.ms/tag/${CLARITY_PROJECT_ID}`;
       script.setAttribute('data-clarity-project-id', CLARITY_PROJECT_ID);
       document.head.appendChild(script);
-    });
+    }, clarityDelay);
 
     if (!clarityWindow.__pullzClarityNavigationTrackingInstalled) {
       clarityWindow.__pullzClarityNavigationTrackingInstalled = true;
@@ -175,24 +179,28 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
       history.pushState = function (...args) {
         pushState(...args);
-        window.setTimeout(trackClarityPageView, 300);
+        if (document.visibilityState !== 'hidden') window.setTimeout(trackClarityPageView, 500);
       };
 
       history.replaceState = function (...args) {
         replaceState(...args);
-        window.setTimeout(trackClarityPageView, 300);
+        if (document.visibilityState !== 'hidden') window.setTimeout(trackClarityPageView, 500);
       };
 
-      window.addEventListener('popstate', () => {
-        window.setTimeout(trackClarityPageView, 300);
-      });
+      const onNavigation = () => {
+        if (document.visibilityState === 'hidden') return;
+        window.setTimeout(trackClarityPageView, 500);
+      };
 
-      window.addEventListener('load', trackClarityPageView);
+      window.addEventListener('popstate', onNavigation, { passive: true });
+      window.addEventListener('load', trackClarityPageView, { once: true });
     }
 
-    trackClarityPageView();
+    if (!performanceMode.isLowPower && document.visibilityState !== 'hidden') {
+      trackClarityPageView();
+    }
     return cancelClarityLoad;
-  }, []);
+  }, [performanceMode.isLowPower, performanceMode.isMobile]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -216,14 +224,15 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    if (document.visibilityState === 'hidden') return;
     const timeoutId = window.setTimeout(() => {
       trackEvent('PageView', {
         page: view.type,
         path: window.location.pathname
       });
-    }, 1);
+    }, performanceMode.isLowPower ? 900 : 80);
     return () => window.clearTimeout(timeoutId);
-  }, [view.type]);
+  }, [performanceMode.isLowPower, view.type]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -281,6 +290,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   }, [homePromptVariant, showHomePrompt]);
 
   useEffect(() => {
+    if (performanceMode.isLowPower) return;
     switch (view.type) {
       case 'CASE_OPENING':
         trackClarityEvent('view_case_page');
@@ -300,7 +310,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       default:
         break;
     }
-  }, [view.type]);
+  }, [performanceMode.isLowPower, view.type]);
 
   useEffect(() => {
     if (showLoginModal) {

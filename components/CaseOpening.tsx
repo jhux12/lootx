@@ -19,6 +19,7 @@ import { activityStore } from '../src/lib/activity/activityStore';
 import { createMicroConfetti, MicroConfettiParticle } from '../src/ui/feedback/microConfetti';
 import { ProvablyFairModal } from '../src/ui/provably/ProvablyFairModal';
 import { trackEvent } from '../utils/trackEvent';
+import { usePerformanceMode } from '../src/lib/performance';
 import pullzLogo from '../assets/pullz-p.PNG';
 
 interface CaseOpeningProps {
@@ -50,8 +51,8 @@ const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
-  preWinnerItems: 68,
-  postWinnerItems: 14,
+  preWinnerItems: 52,
+  postWinnerItems: 10,
   spinDurationMs: 8400,
   goldTicketDurationMs: 7800,
   goldFinalDurationMs: 7200,
@@ -299,6 +300,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     registerSpend
   } = useGame();
   const { muted, toggleMute, playSound } = useSound();
+  const performanceMode = usePerformanceMode();
   
   const matchedBox = boxes.find(b => b.id === boxId);
   const box = matchedBox ?? boxes[0];
@@ -414,8 +416,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
   const hasTrackedFreeBoxViewRef = useRef(false);
   const spinRequestLockRef = useRef(false);
+  const confettiTimerRef = useRef<number | null>(null);
+  const goldStageTimerRef = useRef<number | null>(null);
+  const topUpLockTimerRef = useRef<number | null>(null);
   const canFreeSpin = !user.lastFreeBoxClaim;
-  const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const prefersReducedMotion = performanceMode.prefersReducedMotion;
+  const reduceMobileEffects = performanceMode.isMobile || performanceMode.isLowPower;
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
   const currentCaseXpPrice = Math.max(0, Math.floor(Number(box?.priceXP ?? 0)));
@@ -442,6 +448,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
   // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
   const useMobileSpinnerBehavior = true;
+  const reduceSpinnerRerenders = reduceMobileEffects || prefersReducedMotion;
   const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
   const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
   const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
@@ -924,6 +931,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       window.clearTimeout(tickTimerRef.current);
       tickTimerRef.current = null;
     }
+    if (goldStageTimerRef.current !== null) {
+      window.clearTimeout(goldStageTimerRef.current);
+      goldStageTimerRef.current = null;
+    }
+    if (topUpLockTimerRef.current !== null) {
+      window.clearTimeout(topUpLockTimerRef.current);
+      topUpLockTimerRef.current = null;
+    }
     setAnimationPhase('idle');
   }, []);
 
@@ -996,27 +1011,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     spinnerAnimationRef.current = animation;
     let frameId: number | null = null;
     const syncCenterItem = () => {
+      if (reduceSpinnerRerenders || document.visibilityState === 'hidden') return;
       const transform = window.getComputedStyle(container).transform;
       const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
       const x = matrix ? matrix.m41 : 0;
       const index = getCenteredIndexFromTranslate(x);
       const previousIndex = lastCenterIndexRef.current;
       if (index !== previousIndex) {
-        const delta = index - previousIndex;
-        const stepsCrossed = Math.max(1, Math.abs(delta));
-        const direction = delta >= 0 ? 1 : -1;
-        for (let step = 1; step <= stepsCrossed; step += 1) {
-          const crossedIndex = previousIndex + direction * step;
-          const shouldSyncUi = step === stepsCrossed;
-          if (shouldSyncUi) {
-            lastCenterIndexRef.current = crossedIndex;
-            setCurrentCenterIndex(crossedIndex);
-          }
-        }
+        lastCenterIndexRef.current = index;
+        setCurrentCenterIndex(index);
       }
       frameId = window.requestAnimationFrame(syncCenterItem);
     };
-    frameId = window.requestAnimationFrame(syncCenterItem);
+    if (!reduceSpinnerRerenders) {
+      frameId = window.requestAnimationFrame(syncCenterItem);
+    }
     const decelerationTimer = window.setTimeout(
       () => setAnimationPhase('settling'),
       Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
@@ -1059,7 +1068,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1126,7 +1135,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const preloadReelImages = useCallback(async (nextReelItems: CaseItem[]) => {
     setIsSpinnerAssetsLoading(true);
-    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter(Boolean)));
+    const preloadLimit = reduceMobileEffects ? 28 : 72;
+    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter(Boolean))).slice(0, preloadLimit);
 
     await Promise.all(uniqueSources.map(async (src) => {
       const img = new Image();
@@ -1147,7 +1157,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
     }));
     setIsSpinnerAssetsLoading(false);
-  }, []);
+  }, [reduceMobileEffects]);
 
   useEffect(() => {
     if (!items.length) return;
@@ -1259,8 +1269,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               missingCoins: currentCasePrice - availableCoins
             });
             setShowTopUpModal(true);
-            window.setTimeout(() => {
+            if (topUpLockTimerRef.current !== null) window.clearTimeout(topUpLockTimerRef.current);
+            topUpLockTimerRef.current = window.setTimeout(() => {
               topUpTriggerLockRef.current = false;
+              topUpLockTimerRef.current = null;
             }, 350);
           }
           return;
@@ -1507,7 +1519,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             setIsGoldMode(true);
             
             // Wait a moment to see the ticket
-            window.setTimeout(() => {
+            goldStageTimerRef.current = window.setTimeout(() => {
                 // Stage 2: Spin to Actual Winner (using only legendary items in reel)
                 const pool = legendaryPool.length > 0 ? legendaryPool : items;
                 const goldSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-final');
@@ -1518,6 +1530,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     finishSpin(winner);
                   });
                 });
+              goldStageTimerRef.current = null;
             }, 700);
         });
 
@@ -1562,7 +1575,29 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [showXpOpenUi]);
 
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const handleVisibilityChange = () => {
+      const animation = spinnerAnimationRef.current;
+      if (!animation) return;
+      if (document.visibilityState === 'hidden') animation.pause();
+      else animation.play();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  useEffect(() => {
     return () => {
+      if (confettiTimerRef.current !== null) {
+        window.clearTimeout(confettiTimerRef.current);
+        confettiTimerRef.current = null;
+      }
+      if (topUpLockTimerRef.current !== null) {
+        window.clearTimeout(topUpLockTimerRef.current);
+        topUpLockTimerRef.current = null;
+      }
       resetSpinnerAnimation();
     };
   }, [resetSpinnerAnimation]);
@@ -1581,9 +1616,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     else playSound('win-common');
     setShowWinModal(true);
     if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
-      const particles = createMicroConfetti(18);
+      const particles = createMicroConfetti(reduceMobileEffects ? 10 : 18);
       setConfetti(particles);
-      window.setTimeout(() => setConfetti([]), 720);
+      if (confettiTimerRef.current !== null) window.clearTimeout(confettiTimerRef.current);
+      confettiTimerRef.current = window.setTimeout(() => {
+        setConfetti([]);
+        confettiTimerRef.current = null;
+      }, reduceMobileEffects ? 520 : 720);
     }
     setWonItem(item);
     setRewardResolved(false);
@@ -1889,8 +1928,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   className="fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none transition-[color,filter,text-shadow] duration-150 ease-out motion-reduce:transition-none sm:top-0 sm:text-lg"
                   style={{
                     color: centeredRarityIndicator.color,
-                    filter: `drop-shadow(0 0 8px ${centeredRarityIndicator.glow})`,
-                    textShadow: `0 0 10px ${centeredRarityIndicator.glow}, 0 0 20px ${centeredRarityIndicator.glow}`
+                    filter: reduceMobileEffects || isSpinning ? 'none' : `drop-shadow(0 0 8px ${centeredRarityIndicator.glow})`,
+                    textShadow: reduceMobileEffects || isSpinning ? `0 0 8px ${centeredRarityIndicator.glow}` : `0 0 10px ${centeredRarityIndicator.glow}, 0 0 20px ${centeredRarityIndicator.glow}`
                   }}
                   title={`${centeredRarityIndicator.label} item passing the spinner`}
                   aria-hidden="true"
@@ -1899,7 +1938,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 {/* The Moving Reel */}
                 <div 
                     ref={scrollContainerRef}
-                    className="flex will-change-transform transition-opacity duration-300 opacity-100" 
+                    className="pullz-spinner-track flex will-change-transform transition-opacity duration-300 opacity-100"
                     style={{
                       gap: `${spinnerGap}px`,
                       transform: 'translate3d(0,0,0)',
@@ -1923,29 +1962,28 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className={`group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${isSpinning ? 'transition-none' : 'transition-opacity duration-200'}`}
+                            className={`pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${isSpinning ? 'is-spinning transition-none' : 'transition-opacity duration-200'}`}
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem && allowHeavyHighlight
-                                  ? `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`
+                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}44, 0 0 12px ${item.color}30` : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
                                   : 'none',
                                 opacity: cardOpacity,
-                                filter:
-                                  useMobileSpinnerBehavior && isSpinning
-                                    ? 'none'
-                                    : isFocusedItem
-                                      ? 'brightness(1.12)'
-                                      : 'brightness(0.82)',
+                                filter: reduceMobileEffects || (useMobileSpinnerBehavior && isSpinning)
+                                  ? 'none'
+                                  : isFocusedItem
+                                    ? 'brightness(1.12)'
+                                    : 'brightness(0.82)',
                                 zIndex: isFocusedItem ? 4 : 1
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                              className={`pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-65 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
-                              style={{ boxShadow: isFocusedItem ? `0 0 20px ${item.color}40` : 'none' }}
+                              className={`pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow && !reduceMobileEffects ? 'opacity-65 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
+                              style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
@@ -1953,7 +1991,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   src={item.image}
                                   alt={item.name}
                                   loading="eager"
-                                  className={`h-full w-full object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] ${item.id === 'golden-ticket' && animationPhase === 'idle' ? 'animate-pulse' : ''}`}
+                                  className={`h-full w-full object-contain ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
                               />
                               </div>
                             </div>
@@ -2165,24 +2203,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               </div>
 
               <div className="overflow-y-auto p-5 sm:p-6">
-                <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-white/10 bg-black/25 p-4 text-center">
-                  <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
-                  <img
-                    src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
-                    alt={wonItem.name}
-                    className="relative z-10 mb-3 mx-auto h-32 w-32 shrink-0 object-contain sm:h-36 sm:w-36"
-                    loading="eager"
-                    decoding="async"
-                    draggable={false}
-                  />
-                  <h4 className="relative z-10 text-lg font-bold text-white">{wonItem.name}</h4>
-                  <CoinAmount
-                    amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
-                    formatOptions={{ maximumFractionDigits: 0 }}
-                    className="relative z-10 mt-2 font-semibold text-gray-200"
-                    iconClassName="w-4 h-4"
-                  />
-                  <button type="button" onClick={() => setVerifyModalOpen(true)} className="relative z-10 mt-2 rounded-md border border-emerald-300/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-200">Verified ✓</button>
+                <div
+                  className="win-rarity-card relative mx-auto flex max-w-sm flex-col items-center rounded-2xl p-[2px] text-center"
+                  style={{ '--rarity-color': wonItem.color } as React.CSSProperties}
+                >
+                  <div className="win-rarity-card__inner relative flex w-full flex-col items-center overflow-hidden rounded-[calc(1rem-1px)] border border-white/10 bg-black/40 p-4">
+                    <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
+                    <button
+                      type="button"
+                      onClick={() => setVerifyModalOpen(true)}
+                      className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-emerald-300/25 bg-emerald-500/10 text-emerald-200 transition hover:border-emerald-300/45 hover:bg-emerald-500/15"
+                      aria-label="View fairness proof"
+                      title="View fairness proof"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                    </button>
+                    <img
+                      src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
+                      alt={wonItem.name}
+                      className="relative z-10 mb-3 mx-auto h-32 w-32 shrink-0 object-contain sm:h-36 sm:w-36"
+                      loading="eager"
+                      decoding="async"
+                      draggable={false}
+                    />
+                    <h4 className="relative z-10 text-lg font-bold text-white">{wonItem.name}</h4>
+                    <CoinAmount
+                      amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
+                      formatOptions={{ maximumFractionDigits: 0 }}
+                      className="relative z-10 mt-2 font-semibold text-gray-200"
+                      iconClassName="w-4 h-4"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -2525,6 +2576,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           .item-modal-rarity-glow.is-active {
             animation: raritySinglePulse 600ms ease-out 1;
           }
+          .win-rarity-card {
+            --rarity-color: #38bdf8;
+            background: rgba(255,255,255,0.08);
+            isolation: isolate;
+            overflow: hidden;
+            box-shadow: 0 0 0 1px var(--rarity-color), 0 14px 38px rgba(0,0,0,0.34);
+          }
+          .win-rarity-card::before {
+            content: '';
+            position: absolute;
+            inset: -45%;
+            z-index: 0;
+            background: conic-gradient(
+              from 0deg,
+              transparent 0deg,
+              var(--rarity-color) 58deg,
+              rgba(255,255,255,0.95) 82deg,
+              var(--rarity-color) 116deg,
+              transparent 152deg,
+              transparent 360deg
+            );
+            animation: winRarityBorderSpin 4.8s linear infinite;
+            opacity: 0.82;
+            will-change: transform;
+          }
+          .win-rarity-card__inner {
+            z-index: 1;
+          }
+          @keyframes winRarityBorderSpin {
+            to { transform: rotate(1turn); }
+          }
           .rarity-badge {
             display: inline-flex;
             align-items: center;
@@ -2584,6 +2666,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             .item-modal-rarity-bg--legendary,
             .item-modal-rarity-glow,
             .legendary-badge,
+            .win-rarity-card::before,
             .pullz-box-preview,
             .pullz-box-preview__image,
             .pullz-box-spark {

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { usePerformanceMode } from '../src/lib/performance';
 
 export interface ReelItem {
   itemId?: string;
@@ -17,8 +18,10 @@ interface SpinnerReelProps {
   onSpinComplete?: () => void;
 }
 
-const REEL_LENGTH = 40;
-const STOP_INDEX = 32;
+const DESKTOP_REEL_LENGTH = 40;
+const MOBILE_REEL_LENGTH = 34;
+const DESKTOP_STOP_INDEX = 32;
+const MOBILE_STOP_INDEX = 27;
 const CARD_WIDTH = 128;
 const CARD_GAP = 12;
 const STEP = CARD_WIDTH + CARD_GAP;
@@ -107,28 +110,32 @@ const hashSeed = (input: string) => {
 export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, spinKey, state, durationMs, onSpinComplete }) => {
   const [transitionEnabled, setTransitionEnabled] = useState(false);
   const [translateX, setTranslateX] = useState(0);
+  const performanceMode = usePerformanceMode();
+  const reelLength = performanceMode.isMobile || performanceMode.isLowPower ? MOBILE_REEL_LENGTH : DESKTOP_REEL_LENGTH;
+  const stopIndex = performanceMode.isMobile || performanceMode.isLowPower ? MOBILE_STOP_INDEX : DESKTOP_STOP_INDEX;
 
   const pool = useMemo(() => (items.length ? items : [fallbackItem]), [items]);
 
   const reelItems = useMemo(() => {
     const seed = hashSeed(spinKey);
-    const nextReel = Array.from({ length: REEL_LENGTH }, (_, index) => pickDeterministic(pool, seed, index));
+    const nextReel = Array.from({ length: reelLength }, (_, index) => pickDeterministic(pool, seed, index));
     if (winningItem) {
-      nextReel[STOP_INDEX] = winningItem;
+      nextReel[stopIndex] = winningItem;
     }
     return nextReel;
-  }, [pool, spinKey, winningItem]);
+  }, [pool, reelLength, spinKey, stopIndex, winningItem]);
 
   useEffect(() => {
-    const uniqueImageUrls = Array.from(new Set(reelItems.map((item) => item.imageUrl).filter((imageUrl): imageUrl is string => !!imageUrl)));
+    const preloadLimit = performanceMode.isMobile || performanceMode.isLowPower ? 18 : 42;
+    const uniqueImageUrls: string[] = Array.from(new Set(reelItems.map((item) => item.imageUrl).filter((imageUrl): imageUrl is string => Boolean(imageUrl)))).slice(0, preloadLimit);
     uniqueImageUrls.forEach((imageUrl) => {
       const image = new Image();
       image.src = imageUrl;
     });
-  }, [reelItems]);
+  }, [performanceMode.isLowPower, performanceMode.isMobile, reelItems]);
 
   const centerOffset = useMemo(() => `calc(50% - ${CARD_WIDTH / 2}px)`, []);
-  const targetTranslateX = useMemo(() => -(STOP_INDEX * STEP), []);
+  const targetTranslateX = useMemo(() => -(stopIndex * STEP), [stopIndex]);
 
   useEffect(() => {
     if (state === 'IDLE') {
@@ -167,7 +174,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
 
       <div className="absolute left-0 top-1/2 -translate-y-1/2" style={{ transform: `translate(${centerOffset}, -50%)` }}>
         <div
-          className={`flex gap-3 ${state === 'IDLE' ? 'animate-reel-idle' : ''}`}
+          className={`pullz-spinner-track flex gap-3 ${state === 'IDLE' ? 'animate-reel-idle' : ''}`}
           style={{
             transform: state === 'IDLE' ? undefined : `translateX(${translateX}px)`,
             transition: transitionEnabled ? `transform ${durationMs}ms cubic-bezier(0.08, 0.78, 0.22, 1)` : 'none'
@@ -175,12 +182,12 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
         >
           {reelItems.map((item, index) => {
             const rarity = normalizeRarity(item.rarity);
-            const isWinner = !!winningItem && index === STOP_INDEX;
+            const isWinner = !!winningItem && index === stopIndex;
 
             return (
               <div
                 key={itemKey(item, index)}
-                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 transition-colors ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
+                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 ${state === 'SPIN' ? 'transition-none' : 'transition-colors'} ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
               >
                 <div className="h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
                   {item.imageUrl ? (
@@ -188,8 +195,8 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
                       src={item.imageUrl}
                       alt={item.itemName}
                       className="w-full h-full object-contain"
-                      loading="eager"
-                      decoding="sync"
+                      loading={index < 8 ? 'eager' : 'lazy'}
+                      decoding="async"
                       draggable={false}
                     />
                   ) : (

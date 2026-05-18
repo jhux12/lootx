@@ -8,3 +8,22 @@
 
 .pullz-blur-fallback { background: linear-gradient(110deg, rgba(30,41,59,.9) 8%, rgba(71,85,105,.55) 18%, rgba(30,41,59,.9) 33%); background-size: 220% 100%; animation: pullz-skeleton-shimmer 1.2s linear infinite; }
 @keyframes pullz-skeleton-shimmer { to { background-position-x: -220%; } }
+
+
+@media (max-width: 768px) {
+  html.pullz-mobile-optimized .pullz-blur-placeholder {
+    filter: none;
+    transform: none;
+    opacity: .35;
+    transition-duration: 120ms;
+  }
+  html.pullz-mobile-optimized .pullz-blur-full {
+    transition-duration: 140ms;
+  }
+  html.pullz-mobile-optimized .pullz-blur-fallback,
+  html.pullz-low-performance .pullz-blur-fallback,
+  html.pullz-tab-hidden .pullz-blur-fallback {
+    animation: none;
+    background-size: 100% 100%;
+  }
+}

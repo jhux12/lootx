@@ -7,7 +7,7 @@ type BlurImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
   priority?: boolean;
 };
 
-export const BlurImage: React.FC<BlurImageProps> = ({
+const BlurImageComponent: React.FC<BlurImageProps> = ({
   src,
   alt,
   className,
@@ -67,3 +67,6 @@ export const BlurImage: React.FC<BlurImageProps> = ({
     </div>
   );
 };
+
+export const BlurImage = React.memo(BlurImageComponent);
+BlurImage.displayName = 'BlurImage';

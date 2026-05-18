@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { LiveDrop, User } from '../types';
 import { CASE_ITEMS } from '../constants';
@@ -9,6 +9,21 @@ import { BlurImage } from '../src/ui/images/BlurImage';
 
 export const LiveTicker: React.FC = () => {
   const { items, users } = useGame();
+  const tickerRef = useRef<HTMLDivElement | null>(null);
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    const node = tickerRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsVisible(entry.isIntersecting);
+    }, { rootMargin: '80px' });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   const drops = useMemo(() => {
     const publicUsers = users.filter((user) => user.hiddenFromPublicDisplay !== true);
     const availableUsers: User[] = publicUsers.length ? publicUsers : [{
@@ -64,12 +79,12 @@ export const LiveTicker: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-16 sm:h-20 bg-[#0b0f17] overflow-hidden border border-white/5 rounded-2xl flex items-center">
+    <div ref={tickerRef} className="relative w-full h-16 sm:h-20 bg-[#0b0f17] overflow-hidden border border-white/5 rounded-2xl flex items-center">
       {/* Gradient fade overlays */}
       <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#0b0f17] to-transparent z-10 pointer-events-none"></div>
       <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#0b0f17] to-transparent z-10 pointer-events-none"></div>
 
-      <div className="flex gap-4 px-4 ticker-animation whitespace-nowrap">
+      <div className="flex gap-4 px-4 ticker-animation whitespace-nowrap" style={{ animationPlayState: isVisible ? 'running' : 'paused' }}>
         {drops.length === 0 ? (
           Array.from({ length: 6 }).map((_, idx) => (
             <div key={`recent-skeleton-${idx}`} className="w-40 h-12">
