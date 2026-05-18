@@ -86,6 +86,9 @@ export const LegendaryShowcase: React.FC = () => {
                   alt={item.name}
                   className="relative z-10 h-16 w-16 object-contain"
                   loading="lazy"
+                  decoding="async"
+                  width={64}
+                  height={64}
                 />
               </div>
               <div className="space-y-2">

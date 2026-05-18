@@ -108,7 +108,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <span className="inline-flex items-center justify-center gap-1 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs text-white">
-              <img src={XP_ICON} alt="XP" className="h-3.5 w-3.5" />
+              <img src={XP_ICON} alt="XP" className="h-3.5 w-3.5" loading="lazy" decoding="async" width={14} height={14} />
               <AnimatedNumber value={xp} /> XP
             </span>
             <span className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white">
@@ -278,7 +278,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                   onClick={() => setSecurityForm({ ...securityForm, avatar })}
                   className={`overflow-hidden rounded-xl border-2 transition ${securityForm.avatar === avatar ? 'border-blue-400 shadow-[0_0_20px_rgba(32,93,215,0.35)]' : 'border-white/10 hover:border-blue-300/40'}`}
                 >
-                  <img src={avatar} alt="avatar option" className="h-12 w-full object-cover" />
+                  <img src={avatar} alt="avatar option" className="h-12 w-full object-cover" loading="lazy" decoding="async" width={96} height={48} />
                 </button>
               ))}
             </div>

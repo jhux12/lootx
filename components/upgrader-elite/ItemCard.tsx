@@ -41,7 +41,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isSelected, onClick, o
       className={`group relative flex w-full flex-col items-center justify-start overflow-visible bg-transparent p-1.5 text-center transition duration-200 sm:p-2 ${isSelected ? 'scale-[1.01]' : ''} ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.99]'}`}
     >
       <div className="relative mt-1 flex h-20 items-center justify-center sm:h-24">
-        <img src={item.image} alt={item.name} className="relative z-10 h-[72px] w-[72px] object-contain transition-transform duration-200 group-hover:scale-105 sm:h-[88px] sm:w-[88px]" referrerPolicy="no-referrer" />
+        <img src={item.image} alt={item.name} className="relative z-10 h-[72px] w-[72px] object-contain transition-transform duration-200 group-hover:scale-105 sm:h-[88px] sm:w-[88px]" loading="lazy" decoding="async" width={88} height={88} referrerPolicy="no-referrer" />
       </div>
       <p className="mt-2 w-full truncate text-[11px] font-semibold text-slate-100">{item.name}</p>
       <CoinAmount amount={Math.round(item.price)} className="mt-1 justify-center text-xs font-bold text-slate-200" iconClassName="h-3.5 w-3.5" />

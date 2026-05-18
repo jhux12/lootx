@@ -15,6 +15,10 @@ export const BlurImage: React.FC<BlurImageProps> = ({
   ratioClassName,
   priority = false,
   loading,
+  width,
+  height,
+  decoding,
+  style,
   ...rest
 }) => {
   const [loaded, setLoaded] = useState(false);
@@ -32,6 +36,9 @@ export const BlurImage: React.FC<BlurImageProps> = ({
     }
   }, [src]);
 
+  const intrinsicWidth = width ?? 320;
+  const intrinsicHeight = height ?? intrinsicWidth;
+
   const handleLoad: React.ReactEventHandler<HTMLImageElement> = (event) => {
     setLoaded(true);
     rest.onLoad?.(event);
@@ -40,7 +47,7 @@ export const BlurImage: React.FC<BlurImageProps> = ({
   return (
     <div className={`pullz-blur-wrap ${ratioClassName ?? ''}`}>
       {placeholderSrc ? (
-        <img src={placeholderSrc} alt="" aria-hidden="true" className={`pullz-blur-placeholder ${loaded ? 'is-hidden' : ''}`} />
+        <img src={placeholderSrc} alt="" aria-hidden="true" className={`pullz-blur-placeholder ${loaded ? 'is-hidden' : ''}`} width={intrinsicWidth} height={intrinsicHeight} decoding="async" />
       ) : (
         <div className={`pullz-blur-placeholder pullz-blur-fallback ${loaded ? 'is-hidden' : ''}`} aria-hidden="true" />
       )}
@@ -50,7 +57,10 @@ export const BlurImage: React.FC<BlurImageProps> = ({
         alt={alt}
         className={`pullz-blur-full ${loaded ? 'is-loaded' : ''} ${className ?? ''}`}
         loading={priority ? 'eager' : (loading ?? 'lazy')}
-        decoding="async"
+        decoding={decoding ?? 'async'}
+        width={intrinsicWidth}
+        height={intrinsicHeight}
+        style={style}
         {...rest}
         onLoad={handleLoad}
       />

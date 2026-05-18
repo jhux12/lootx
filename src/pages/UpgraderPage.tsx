@@ -198,7 +198,7 @@ const SelectedPreview = ({ label, item, emptyText, onActivate }: { label: string
       {item ? (
         <>
           <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center">
-            <img src={item.image} alt={item.name} className="max-h-[140px] w-auto max-w-[140px] object-contain sm:max-h-[155px] sm:max-w-[155px]" referrerPolicy="no-referrer" />
+            <img src={item.image} alt={item.name} className="max-h-[140px] w-auto max-w-[140px] object-contain sm:max-h-[155px] sm:max-w-[155px]" loading="lazy" decoding="async" width={155} height={155} referrerPolicy="no-referrer" />
           </div>
           <div className="relative z-10 w-full rounded-lg border border-white/10 bg-[#2a323b] px-2 py-1 text-center">
             <CoinAmount amount={Math.round(item.price)} className="justify-center text-[11px] text-slate-200" iconClassName="h-3 w-3" />
@@ -918,7 +918,7 @@ export default function UpgraderPage() {
               <button type="button" onClick={() => setResultSheet(null)} className="rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-slate-200 hover:bg-white/10">Close</button>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center">
-              <img src={resultSheet.item.image} alt={resultSheet.item.name} className="mx-auto h-28 w-28 rounded-xl object-cover sm:h-32 sm:w-32" referrerPolicy="no-referrer" />
+              <img src={resultSheet.item.image} alt={resultSheet.item.name} className="mx-auto h-28 w-28 rounded-xl object-cover sm:h-32 sm:w-32" loading="lazy" decoding="async" width={128} height={128} referrerPolicy="no-referrer" />
               <p className="mt-3 text-base font-semibold text-white">{resultSheet.item.name}</p>
               <div className="mt-2 flex justify-center"><CoinAmount amount={Math.round(resultSheet.item.price)} className="text-sm font-bold text-amber-300" iconClassName="h-4 w-4" /></div>
             </div>
@@ -951,7 +951,7 @@ export default function UpgraderPage() {
                 <button type="button" onClick={() => setDetailsItem(null)} className="rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-slate-200 hover:bg-white/10">Close</button>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <img src={detailsItem.image} alt={detailsItem.name} className="mx-auto h-28 w-28 rounded-xl object-cover sm:h-32 sm:w-32" referrerPolicy="no-referrer" />
+                <img src={detailsItem.image} alt={detailsItem.name} className="mx-auto h-28 w-28 rounded-xl object-cover sm:h-32 sm:w-32" loading="lazy" decoding="async" width={128} height={128} referrerPolicy="no-referrer" />
                 <p className="mt-4 text-center text-base font-semibold text-white">{detailsItem.name}</p>
                 <div className="mt-2 flex justify-center"><CoinAmount amount={Math.round(detailsItem.price)} className="text-sm font-bold text-amber-300" iconClassName="h-4 w-4" /></div>
               </div>
@@ -1033,7 +1033,7 @@ export default function UpgraderPage() {
         </div>
         {history.map((entry) => (
           <div key={entry.date} className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 ${entry.success ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-rose-500/20 bg-rose-500/5'}`}>
-            <img src={entry.item.image} alt={entry.item.name} className="h-8 w-8 rounded-lg object-cover" />
+            <img src={entry.item.image} alt={entry.item.name} className="h-8 w-8 rounded-lg object-cover" loading="lazy" decoding="async" width={32} height={32} />
             <div className="flex flex-col">
               <span className="w-24 truncate text-[10px] font-bold text-white">{entry.item.name}</span>
               <span className={`text-[9px] font-bold uppercase ${entry.success ? 'text-emerald-400' : 'text-rose-400'}`}>{entry.success ? 'Upgrade Success' : 'Upgrade Failed'}</span>

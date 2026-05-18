@@ -36,7 +36,7 @@ export const UpgradeSpinWheel: React.FC<Props> = ({ chance, phase, rotationDeg, 
         <div className="absolute inset-[34px] flex flex-col items-center justify-center text-center">
           <div className="max-w-[84%] text-[18px] font-black leading-tight text-[#0a0a0a] sm:text-[30px]">{targetName}</div>
           {target?.imageUrl ? (
-            <img src={target.imageUrl} alt={target.name} className="my-3 h-24 w-24 rounded-xl object-cover sm:h-32 sm:w-32" />
+            <img src={target.imageUrl} alt={target.name} className="my-3 h-24 w-24 rounded-xl object-cover sm:h-32 sm:w-32" loading="lazy" decoding="async" width={128} height={128} />
           ) : (
             <div className="my-3 h-24 w-24 rounded-xl bg-white/40 sm:h-32 sm:w-32" />
           )}

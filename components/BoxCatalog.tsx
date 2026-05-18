@@ -260,6 +260,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       alt={box.name}
                       loading="lazy"
                       decoding="async"
+                      width={220}
+                      height={306}
                       onLoad={() => setLoadedBoxImages((prev) => ({ ...prev, [box.id]: true }))}
                       onError={() => setLoadedBoxImages((prev) => ({ ...prev, [box.id]: true }))}
                       className={`mx-auto h-full w-full object-contain transition-all duration-300 ease-out group-hover:scale-110 group-hover:rotate-[-3deg] ${loadedBoxImages[box.id] ? 'opacity-100' : 'opacity-0'}`}
