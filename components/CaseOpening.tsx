@@ -67,7 +67,7 @@ const SPINNER_MOTION = {
 
 const rarityGlowClass: Record<string, string> = {
   legendary: 'bg-amber-300/35',
-  epic: 'bg-fuchsia-400/30',
+  epic: 'bg-sky-400/30',
   rare: 'bg-cyan-300/28',
   uncommon: 'bg-emerald-300/24',
   common: 'bg-slate-300/18'
@@ -171,7 +171,7 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
       context.fillStyle = gradient;
       context.fillRect(0, 0, canvas.width, canvas.height);
 
-      context.strokeStyle = 'rgba(99, 102, 241, 0.2)';
+      context.strokeStyle = 'rgba(32, 93, 215, 0.2)';
       context.lineWidth = 2;
       const patternSize = 84;
       for (let x = -patternSize; x < canvas.width + patternSize; x += patternSize) {
@@ -213,7 +213,7 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
       const cardY = 470;
 
       context.fillStyle = 'rgba(10, 14, 22, 0.7)';
-      context.strokeStyle = 'rgba(99,102,241,0.45)';
+      context.strokeStyle = 'rgba(32,93,215,0.45)';
       context.lineWidth = 3;
       context.beginPath();
       context.roundRect(cardX, cardY, cardWidth, cardHeight, 44);
@@ -1806,7 +1806,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               <button type="button" onClick={() => { playSound('click'); setShowFairModal(true); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)] sm:h-9 sm:w-9" aria-label="Open provably fair details" title="View fairness verification"><ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></button>
               <button type="button" onClick={() => { playSound('click'); void handleCopyPageLink(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-cyan-300/60 hover:text-cyan-200 hover:shadow-[0_0_14px_rgba(34,211,238,0.45)] sm:h-9 sm:w-9" aria-label="Copy server seed" title="Copy server seed"><Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></button>
               <button type="button" onClick={() => { playSound('click'); setShowInfoModal(true); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-amber-300/60 hover:text-amber-200 hover:shadow-[0_0_14px_rgba(252,211,77,0.4)] sm:h-9 sm:w-9" aria-label="Open item availability disclaimer" title="View case details"><Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></button>
-              <button type="button" onClick={() => { playSound('click'); toggleMute(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-violet-300/60 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)] sm:h-9 sm:w-9" aria-label={muted ? 'Unmute sounds' : 'Mute sounds'} title="Toggle sound effects">{muted ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}</button>
+              <button type="button" onClick={() => { playSound('click'); toggleMute(); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-gray-200 transition duration-200 hover:scale-105 hover:border-blue-300/60 hover:text-blue-200 hover:shadow-[0_0_14px_rgba(196,181,253,0.45)] sm:h-9 sm:w-9" aria-label={muted ? 'Unmute sounds' : 'Mute sounds'} title="Toggle sound effects">{muted ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}</button>
             </div>
     </div>
 
@@ -2256,7 +2256,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         <div className="mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
             <div className="mb-6 flex items-center gap-3">
                 <div className="rounded-lg border border-white/10 bg-white/5 p-2">
-                  <Gamepad2 className="h-5 w-5 text-indigo-300" />
+                  <Gamepad2 className="h-5 w-5 text-blue-300" />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-white">Drop Table</h3>
@@ -2470,7 +2470,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             animation: legendaryPulse 2s ease-in-out infinite;
           }
           .item-modal-rarity-bg--rare {
-            background: radial-gradient(circle at center, rgba(168, 85, 247, 0.28), transparent 72%);
+            background: radial-gradient(circle at center, rgba(32, 93, 215, 0.28), transparent 72%);
           }
           .item-modal-rarity-bg--common,
           .item-modal-rarity-bg--uncommon,

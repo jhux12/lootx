@@ -65,7 +65,7 @@ export const TrustSection: React.FC = () => {
               key={item.id}
               className="rounded-2xl border border-white/5 bg-[#0b0f17] p-5 text-sm text-gray-400"
             >
-              <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-purple-300">
+              <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-blue-300">
                 <Icon className="h-4 w-4" />
               </div>
               <h3 className="text-base font-semibold text-white">{item.title}</h3>

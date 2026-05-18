@@ -87,7 +87,7 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
                 type="button"
                 disabled={isConfirming}
                 onClick={onConfirmUpgrade}
-                className="w-full sm:w-auto rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 text-sm font-bold uppercase tracking-wide transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                className="w-full sm:w-auto rounded-xl bg-[#205DD7] hover:bg-[#1f6bea] text-white px-6 py-3 text-sm font-bold uppercase tracking-wide transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
                 <Zap className="w-4 h-4 fill-current" />
                 {isConfirming ? 'Preparing...' : 'Upgrade'}

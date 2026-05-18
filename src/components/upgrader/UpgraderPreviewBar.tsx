@@ -102,7 +102,7 @@ export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
           </div>
 
           <motion.button
-            whileHover={!disabled && isValid ? { scale: 1.02, boxShadow: '0 0 20px rgba(99,102,241,0.28)' } : {}}
+            whileHover={!disabled && isValid ? { scale: 1.02, boxShadow: '0 0 20px rgba(32,93,215,0.28)' } : {}}
             whileTap={!disabled && isValid ? { scale: 0.98 } : {}}
             disabled={disabled || !isValid}
             onClick={onUpgrade}
@@ -111,7 +111,7 @@ export const UpgraderPreviewBar: React.FC<UpgraderPreviewBarProps> = ({
               ${isScrolling ? 'px-4 py-2 text-xs' : 'px-5 sm:px-6 py-2.5 text-xs sm:text-sm'}
               ${!isValid || disabled
                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                : 'bg-indigo-600 text-white hover:bg-indigo-500'}
+                : 'bg-[#205DD7] text-white hover:bg-[#1f6bea]'}
             `}
           >
             <div className="relative z-10 flex items-center gap-1.5">

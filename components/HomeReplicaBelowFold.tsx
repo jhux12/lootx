@@ -43,7 +43,7 @@ const faqs = [
 
 const rarityGlowClass: Record<string, string> = {
   legendary: 'bg-amber-300/35',
-  epic: 'bg-fuchsia-400/30',
+  epic: 'bg-sky-400/30',
   rare: 'bg-cyan-300/28',
   uncommon: 'bg-emerald-300/24',
   common: 'bg-slate-300/18'
@@ -107,7 +107,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
             <p className="mt-2 text-sm text-slate-300">Sign up and open mystery boxes in seconds.</p>
             <button
               onClick={onSignUp}
-              className="mt-4 w-full rounded-lg bg-gradient-to-r from-fuchsia-600 via-violet-600 to-indigo-600 px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(139,92,246,0.35)] transition-all duration-200 hover:brightness-110 sm:w-auto"
+              className="mt-4 w-full rounded-lg bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(32,93,215,0.35)] transition-all duration-200 hover:brightness-110 sm:w-auto"
             >
               Create Account
             </button>

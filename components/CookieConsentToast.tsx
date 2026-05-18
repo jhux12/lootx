@@ -101,7 +101,7 @@ export const CookieConsentToast: React.FC<CookieConsentToastProps> = ({
         <div className="flex flex-col gap-2 pointer-events-auto">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-purple-400/80" />
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-400/80" />
               <span className="h-1.5 w-1.5 rounded-full bg-cyan-300/80" />
               <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
               <span className="text-[11px] text-gray-200/90 sm:text-xs">
@@ -126,7 +126,7 @@ export const CookieConsentToast: React.FC<CookieConsentToastProps> = ({
               <button
                 type="button"
                 onClick={() => handleConsent('all')}
-                className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 via-fuchsia-500 to-cyan-400 px-4 py-1 text-[11px] font-semibold text-white shadow-[0_0_12px_rgba(139,92,246,0.6)] transition hover:brightness-110"
+                className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-400 px-4 py-1 text-[11px] font-semibold text-white shadow-[0_0_12px_rgba(32,93,215,0.6)] transition hover:brightness-110"
               >
                 Accept all
               </button>

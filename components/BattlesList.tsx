@@ -96,8 +96,8 @@ export const BattlesList: React.FC = () => {
   return (
     <section className="mx-auto w-full max-w-6xl px-2 pb-8 sm:px-4">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-black text-white"><Swords className="mr-2 inline h-5 w-5 text-brand-purple" />Battles</h2>
-        <button onClick={() => setShowCreateModal(true)} className="rounded-lg bg-brand-purple px-3 py-2 text-sm font-bold text-white"><Plus className="mr-1 inline h-4 w-4" />Create</button>
+        <h2 className="text-xl font-black text-white"><Swords className="mr-2 inline h-5 w-5 text-brand-blue" />Battles</h2>
+        <button onClick={() => setShowCreateModal(true)} className="rounded-lg bg-brand-blue px-3 py-2 text-sm font-bold text-white"><Plus className="mr-1 inline h-4 w-4" />Create</button>
       </div>
 
       <div className="space-y-2">
@@ -144,10 +144,10 @@ export const BattlesList: React.FC = () => {
 
             <div className="mb-4 grid grid-cols-2 gap-2">
               {(['REGULAR', 'CRAZY'] as const).map((value) => (
-                <button key={value} onClick={() => setMode(value)} className={`rounded border py-2 text-sm ${mode === value ? 'border-brand-purple bg-brand-purple text-white' : 'border-white/10 text-gray-300'}`}>{value}</button>
+                <button key={value} onClick={() => setMode(value)} className={`rounded border py-2 text-sm ${mode === value ? 'border-brand-blue bg-brand-blue text-white' : 'border-white/10 text-gray-300'}`}>{value}</button>
               ))}
               {(['1V1', '2V2'] as const).map((value) => (
-                <button key={value} onClick={() => setFormat(value)} className={`rounded border py-2 text-sm ${format === value ? 'border-brand-purple bg-brand-purple text-white' : 'border-white/10 text-gray-300'}`}>{value}</button>
+                <button key={value} onClick={() => setFormat(value)} className={`rounded border py-2 text-sm ${format === value ? 'border-brand-blue bg-brand-blue text-white' : 'border-white/10 text-gray-300'}`}>{value}</button>
               ))}
             </div>
 
@@ -162,7 +162,7 @@ export const BattlesList: React.FC = () => {
 
             <div className="mt-4 flex items-center justify-between">
               <CoinAmount amount={totalCost} formatOptions={{ maximumFractionDigits: 0 }} className="text-lg font-black text-white" iconClassName="h-4 w-4" />
-              <button onClick={onCreate} disabled={!selectedBoxIds.length} className="rounded bg-brand-purple px-4 py-2 text-sm font-bold text-white disabled:opacity-40">Create</button>
+              <button onClick={onCreate} disabled={!selectedBoxIds.length} className="rounded bg-brand-blue px-4 py-2 text-sm font-bold text-white disabled:opacity-40">Create</button>
             </div>
           </div>
         </div>
@@ -171,11 +171,11 @@ export const BattlesList: React.FC = () => {
       {isCreatingBattle && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center bg-[#05080fcc] backdrop-blur-sm">
           <div className="w-[min(92vw,420px)] rounded-2xl border border-white/10 bg-[#111a2a] p-5 text-center">
-            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-brand-purple/40 border-t-brand-purple" />
+            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-brand-blue/40 border-t-brand-blue" />
             <div className="text-sm font-bold text-white">Creating your battle…</div>
             <div className="mt-1 text-xs text-gray-400">Preparing arena and syncing players.</div>
             <div className="mt-3 h-1.5 overflow-hidden rounded bg-[#1a2438]">
-              <div className="h-full w-1/2 animate-[battleCreate_1.1s_ease-in-out_infinite] rounded bg-brand-purple" />
+              <div className="h-full w-1/2 animate-[battleCreate_1.1s_ease-in-out_infinite] rounded bg-brand-blue" />
             </div>
           </div>
           <style>{`@keyframes battleCreate { 0% { transform: translateX(-90%);} 100% { transform: translateX(190%);} }`}</style>

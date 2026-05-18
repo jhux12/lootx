@@ -225,7 +225,7 @@ export const PollsAdminSection: React.FC = () => {
               <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-gray-400">
                 <span className={`rounded-full px-2 py-1 ${poll.published ? 'bg-emerald-500/10 text-emerald-200' : 'bg-gray-700/40 text-gray-300'}`}>{poll.published ? 'Published' : 'Draft'}</span>
                 <span className={`rounded-full px-2 py-1 ${poll.active ? 'bg-cyan-500/10 text-cyan-200' : 'bg-gray-700/40 text-gray-300'}`}>{poll.active ? 'Active' : 'Inactive'}</span>
-                {selectedPoll?.id === poll.id && <span className="rounded-full bg-violet-500/10 px-2 py-1 text-violet-200">Currently editing</span>}
+                {selectedPoll?.id === poll.id && <span className="rounded-full bg-blue-500/10 px-2 py-1 text-blue-200">Currently editing</span>}
               </div>
             </div>
           ))}

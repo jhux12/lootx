@@ -9,7 +9,7 @@ export interface MicroConfettiParticle {
   color: string;
 }
 
-const COLORS = ['#a855f7', '#22d3ee', '#ffffff'];
+const COLORS = ['#205DD7', '#22d3ee', '#ffffff'];
 
 export const createMicroConfetti = (count = 18): MicroConfettiParticle[] => {
   const total = Math.max(15, Math.min(25, count));

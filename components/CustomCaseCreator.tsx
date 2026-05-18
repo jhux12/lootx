@@ -81,7 +81,7 @@ export const CustomCaseCreator: React.FC = () => {
           name: boxName,
           price: boxPrice,
           image: selectedBoxImage || 'https://picsum.photos/300', // Default image for custom boxes
-          accentColor: '#8b5cf6', // Brand purple for custom
+          accentColor: '#205DD7', // Brand blue for custom
           tag: 'New',
           items: selectedItems,
           targetEV: DEFAULT_TARGET_EV,
@@ -169,8 +169,8 @@ export const CustomCaseCreator: React.FC = () => {
              <ChevronLeft className="w-4 h-4" /> Back
            </button>
            <div className="flex flex-row items-start gap-3 sm:items-center">
-               <div className="shrink-0 p-2 bg-brand-purple/20 rounded-lg border border-brand-purple/40">
-                    <FlaskConical className="w-6 h-6 text-brand-purple" />
+               <div className="shrink-0 p-2 bg-brand-blue/20 rounded-lg border border-brand-blue/40">
+                    <FlaskConical className="w-6 h-6 text-brand-blue" />
                </div>
                <div>
                     <h1 className="text-3xl font-black text-white">Box Lab</h1>
@@ -179,7 +179,7 @@ export const CustomCaseCreator: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowLabInfo(true)}
-                        className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 font-semibold text-gray-200 transition hover:border-brand-purple/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple/60"
+                        className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 font-semibold text-gray-200 transition hover:border-brand-blue/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/60"
                         aria-label="How Box Lab works"
                       >
                         <Info className="h-3.5 w-3.5" />
@@ -200,7 +200,7 @@ export const CustomCaseCreator: React.FC = () => {
           <div className="relative w-full max-w-xl rounded-2xl border border-white/10 bg-gradient-to-br from-[#151a23] via-[#111722] to-[#0b0f18] p-5 text-gray-200 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-xs uppercase tracking-[0.3em] text-purple-300/80">Box Lab Guide</div>
+                <div className="text-xs uppercase tracking-[0.3em] text-blue-300/80">Box Lab Guide</div>
                 <h2 className="mt-2 text-xl font-black text-white sm:text-2xl">Design your custom box</h2>
               </div>
               <button
@@ -214,15 +214,15 @@ export const CustomCaseCreator: React.FC = () => {
             </div>
             <ol className="mt-4 space-y-3 text-sm text-gray-300">
               <li className="flex gap-3">
-                <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">1</span>
+                <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-blue-400/40 bg-blue-500/10 text-center text-xs font-bold leading-6 text-blue-200">1</span>
                 <p>Pick one or more source boxes, then choose which items from those boxes should be included in your box and give it a memorable name.</p>
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">2</span>
+                <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-blue-400/40 bg-blue-500/10 text-center text-xs font-bold leading-6 text-blue-200">2</span>
                 <p>Tap <span className="font-semibold text-white">Synthesize Odds</span> to balance the odds and calculate the box price.</p>
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-purple-400/40 bg-purple-500/10 text-center text-xs font-bold leading-6 text-purple-200">3</span>
+                <span className="mt-1 h-6 w-6 shrink-0 rounded-full border border-blue-400/40 bg-blue-500/10 text-center text-xs font-bold leading-6 text-blue-200">3</span>
                 <p>
                   Create and open your box instantly. Box Lab wins can be sold back for{' '}
                   <span className="font-semibold text-emerald-300">{stripeSettings.caseLabSellBackPercent}% of item value</span>.
@@ -262,7 +262,7 @@ export const CustomCaseCreator: React.FC = () => {
                               key={box.id}
                               type="button"
                               onClick={() => handleToggleSourceBox(box.id)}
-                              className={`min-w-[120px] rounded-lg border p-2 text-left transition sm:min-w-[140px] ${isSelected ? 'border-brand-purple/70 bg-brand-purple/20' : 'border-gray-700 bg-[#0b0e14] hover:border-gray-500'}`}
+                              className={`min-w-[120px] rounded-lg border p-2 text-left transition sm:min-w-[140px] ${isSelected ? 'border-brand-blue/70 bg-brand-blue/20' : 'border-gray-700 bg-[#0b0e14] hover:border-gray-500'}`}
                               aria-label={`Toggle ${box.name} as item source`}
                               aria-pressed={isSelected}
                             >
@@ -311,7 +311,7 @@ export const CustomCaseCreator: React.FC = () => {
                                 <div 
                                     key={item.id} 
                                     onClick={() => setExpandedItemId(prev => prev === item.id ? null : item.id)}
-                                    className={`relative rounded-lg border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isExpanded ? 'p-3 bg-[#101520] border-brand-purple/60 shadow-[0_10px_30px_rgba(15,23,42,0.45)]' : 'p-2 bg-[#0b0e14] border-gray-800 hover:border-gray-600'} ${isSelected ? 'ring-1 ring-brand-purple/40' : ''}`}
+                                    className={`relative rounded-lg border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isExpanded ? 'p-3 bg-[#101520] border-brand-blue/60 shadow-[0_10px_30px_rgba(15,23,42,0.45)]' : 'p-2 bg-[#0b0e14] border-gray-800 hover:border-gray-600'} ${isSelected ? 'ring-1 ring-brand-blue/40' : ''}`}
                                 >
                                     <img src={item.image} alt={item.name} className="w-12 h-12 object-contain" />
                                     <div className="w-full">
@@ -324,7 +324,7 @@ export const CustomCaseCreator: React.FC = () => {
                                         />
                                     </div>
                                     {isSelected && (
-                                        <div className="absolute top-1 right-1 bg-brand-purple rounded-full p-0.5">
+                                        <div className="absolute top-1 right-1 bg-brand-blue rounded-full p-0.5">
                                             <Check className="w-3 h-3 text-white" />
                                         </div>
                                     )}
@@ -336,7 +336,7 @@ export const CustomCaseCreator: React.FC = () => {
                                                   event.stopPropagation();
                                                   toggleItemSelection(item);
                                               }}
-                                              className={`w-full rounded-md px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-white/10 text-gray-200 hover:bg-white/20' : 'bg-brand-purple text-white hover:bg-purple-600'}`}
+                                              className={`w-full rounded-md px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-white/10 text-gray-200 hover:bg-white/20' : 'bg-brand-blue text-white hover:bg-[#205DD7]'}`}
                                           >
                                               {isSelected ? 'Remove from box' : 'Add to box'}
                                           </button>
@@ -377,7 +377,7 @@ export const CustomCaseCreator: React.FC = () => {
                                   onClick={() => setSelectedBoxImage(box.image)}
                                   className={`min-w-[72px] rounded-lg border p-2 transition ${
                                     selectedBoxImage === box.image
-                                      ? 'border-brand-purple/70 bg-brand-purple/10'
+                                      ? 'border-brand-blue/70 bg-brand-blue/10'
                                       : 'border-gray-700 bg-[#0b0e14] hover:border-gray-500'
                                   }`}
                                   aria-label={`Use ${box.name} image`}
@@ -402,7 +402,7 @@ export const CustomCaseCreator: React.FC = () => {
                           {selectedItems.map((item, idx) => (
                               <div key={idx} className="flex justify-between text-xs p-1.5 bg-[#0b0e14] rounded border border-gray-800/50">
                                   <span className="text-gray-400 truncate w-24">{item.name}</span>
-                                  {lastCalculated && <span className="text-brand-purple font-mono">{item.chance}%</span>}
+                                  {lastCalculated && <span className="text-brand-blue font-mono">{item.chance}%</span>}
                                   <CoinAmount
                                     amount={toCoins(item.price, PRICE_UNIT_MODE)}
                                     formatOptions={{ maximumFractionDigits: 0 }}
@@ -451,7 +451,7 @@ export const CustomCaseCreator: React.FC = () => {
                   <button 
                     onClick={handleCreate}
                     disabled={!lastCalculated || !boxName || !selectedBoxImage}
-                    className="w-full py-4 bg-brand-purple hover:bg-purple-600 text-white font-bold rounded-xl shadow-lg shadow-purple-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+                    className="w-full py-4 bg-brand-blue hover:bg-[#205DD7] text-white font-bold rounded-xl shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
                   >
                       Create & Open <ArrowRight className="w-4 h-4" />
                   </button>

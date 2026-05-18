@@ -26,7 +26,7 @@ const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
     uncommon: '#22c55e',
     rare: '#3b82f6',
-    epic: '#a855f7',
+    epic: '#205DD7',
     legendary: '#fbbf24'
 };
 
@@ -3505,7 +3505,7 @@ export const AdminPanel: React.FC = () => {
                                 <Checkbox
                                   checked={newItem.upgraderFeatured ?? false}
                                   onChange={(event) => setNewItem({ ...newItem, upgraderFeatured: event.target.checked })}
-                                  className="h-4 w-4 rounded border-gray-600 bg-transparent text-fuchsia-500 focus:ring-fuchsia-400"
+                                  className="h-4 w-4 rounded border-gray-600 bg-transparent text-[#205DD7] focus:ring-blue-400"
                                 />
                                 Featured in Upgrader
                             </label>
@@ -3720,7 +3720,7 @@ export const AdminPanel: React.FC = () => {
                                                         </span>
                                                     ) : null}
                                                     {item.upgraderFeatured ? (
-                                                        <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-2 py-0.5 font-semibold text-fuchsia-200">
+                                                        <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-semibold text-sky-200">
                                                             Featured
                                                         </span>
                                                     ) : null}
@@ -3851,7 +3851,7 @@ export const AdminPanel: React.FC = () => {
                                         <button
                                             type="button"
                                             onClick={handleSaveBoxTagIcons}
-                                            className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-500 sm:w-auto"
+                                            className="w-full rounded-lg bg-[#205DD7] px-3 py-2 text-xs font-bold text-white hover:bg-[#1f6bea] sm:w-auto"
                                         >
                                             Save tag icons
                                         </button>
@@ -3868,7 +3868,7 @@ export const AdminPanel: React.FC = () => {
                                                         <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-200">
                                                             <span className="truncate uppercase tracking-wide">{tag}</span>
                                                             <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-gray-300">{count} box{count === 1 ? '' : 'es'}</span>
-                                                            {iconClass ? <i aria-hidden="true" className={`${sanitizeFontAwesomeClass(iconClass)} text-sm text-indigo-300`} /> : <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />}
+                                                            {iconClass ? <i aria-hidden="true" className={`${sanitizeFontAwesomeClass(iconClass)} text-sm text-blue-300`} /> : <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />}
                                                         </div>
                                                         <Input
                                                             type="text"
@@ -3971,7 +3971,7 @@ export const AdminPanel: React.FC = () => {
                                         max={100}
                                         value={riskBalance}
                                         onChange={e => setRiskBalance(Number(e.target.value))}
-                                        className="w-full accent-brand-purple"
+                                        className="w-full accent-brand-blue"
                                     />
                                     <div className="flex justify-between text-[10px] text-gray-500">
                                         <span>Safer</span>
@@ -4004,7 +4004,7 @@ export const AdminPanel: React.FC = () => {
                                         id="daily-case"
                                         checked={newBox.isDaily || false}
                                         onChange={e => setNewBox({...newBox, isDaily: e.target.checked})}
-                                        className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
+                                        className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-blue focus:ring-brand-blue"
                                     />
                                     <label htmlFor="daily-case" className="text-sm text-gray-400 flex items-center gap-1">
                                         <Calendar className="w-3 h-3 text-yellow-500" /> Set as Daily Free Box
@@ -4023,7 +4023,7 @@ export const AdminPanel: React.FC = () => {
                                  <button
                                     onClick={calculateBoxConfig}
                                     disabled={selectedItems.length === 0}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-brand-purple hover:bg-purple-600 disabled:opacity-50 text-white text-xs font-bold rounded shadow-lg shadow-purple-900/20"
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-brand-blue hover:bg-[#205DD7] disabled:opacity-50 text-white text-xs font-bold rounded shadow-lg shadow-blue-900/20"
                                  >
                                     <Calculator className="w-3 h-3" /> Auto-Calculate Odds & Price
                                  </button>
@@ -4088,7 +4088,7 @@ export const AdminPanel: React.FC = () => {
                                                      key={tag}
                                                      type="button"
                                                      onClick={() => toggleItemFilterTag(tag)}
-                                                     className={`px-2 py-1.5 rounded border text-[11px] font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-brand-purple/20 border-brand-purple text-purple-200' : 'bg-[#131720] border-gray-800 text-gray-400 hover:border-gray-600'}`}
+                                                     className={`px-2 py-1.5 rounded border text-[11px] font-semibold uppercase tracking-wide transition ${isSelected ? 'bg-brand-blue/20 border-brand-blue text-blue-200' : 'bg-[#131720] border-gray-800 text-gray-400 hover:border-gray-600'}`}
                                                  >
                                                      {tag}
                                                  </button>
@@ -4177,7 +4177,7 @@ export const AdminPanel: React.FC = () => {
                                                      <select
                                                          value={item.rarity}
                                                          onChange={(event) => handleSelectedItemRarityChange(item.id, event.target.value as CaseItem['rarity'])}
-                                                         className="cursor-pointer rounded font-bold uppercase text-[10px] px-2 py-1 pr-6 border border-white/10 bg-black/30 focus:outline-none focus:ring-2 focus:ring-brand-purple"
+                                                         className="cursor-pointer rounded font-bold uppercase text-[10px] px-2 py-1 pr-6 border border-white/10 bg-black/30 focus:outline-none focus:ring-2 focus:ring-brand-blue"
                                                          style={{ color: item.color, backgroundColor: `${item.color}20` }}
                                                      >
                                                          {rarityColorOptions.map((option) => (
@@ -4488,7 +4488,7 @@ export const AdminPanel: React.FC = () => {
                                                     <td className="px-3 py-3 text-gray-300">{metrics.pendingShipmentCount}</td>
                                                     <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{metrics.riskScore}</span></td>
                                                     <td className="px-3 py-3">
-                                                        <div className="flex flex-wrap gap-1">{labels.length ? labels.slice(0, 2).map((label) => <span key={label} className="rounded-full bg-indigo-500/15 px-2 py-1 text-[10px] text-indigo-300">{label}</span>) : <span className="text-gray-500">—</span>}</div>
+                                                        <div className="flex flex-wrap gap-1">{labels.length ? labels.slice(0, 2).map((label) => <span key={label} className="rounded-full bg-blue-500/15 px-2 py-1 text-[10px] text-blue-300">{label}</span>) : <span className="text-gray-500">—</span>}</div>
                                                     </td>
                                                     <td className="px-3 py-3">
                                                         <div className="flex items-center gap-2 text-[11px]">
@@ -4571,7 +4571,7 @@ export const AdminPanel: React.FC = () => {
                                                         <div className="mt-2 flex flex-wrap gap-2">
                                                             <span className={`rounded-full px-2 py-1 text-xs font-bold ${status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : status === 'suspended' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-red-500/10 text-red-300'}`}>{status}</span>
                                                             <span className={`rounded-full px-2 py-1 text-xs font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>Risk {metrics.riskScore}</span>
-                                                            {labels.map((label) => <span key={label} className="rounded-full bg-indigo-500/15 px-2 py-1 text-xs text-indigo-300">{label}</span>)}
+                                                            {labels.map((label) => <span key={label} className="rounded-full bg-blue-500/15 px-2 py-1 text-xs text-blue-300">{label}</span>)}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -4718,14 +4718,14 @@ export const AdminPanel: React.FC = () => {
                                                     <div className="mb-2 text-[11px] uppercase text-gray-500">Internal Labels</div>
                                                     <div className="flex flex-wrap gap-2">
                                                         {['VIP', 'Fraud Watch', 'Big Depositor', 'Chargeback Risk', 'Support Sensitive', 'Needs Review'].map((label) => (
-                                                            <button key={label} onClick={() => toggleInternalLabel(selectedUser.id, label)} className={`rounded-full px-2 py-1 text-[10px] font-semibold ${labels.includes(label) ? 'bg-indigo-500/30 text-indigo-200' : 'bg-[#0b0e14] text-gray-400 border border-gray-700'}`}>{label}</button>
+                                                            <button key={label} onClick={() => toggleInternalLabel(selectedUser.id, label)} className={`rounded-full px-2 py-1 text-[10px] font-semibold ${labels.includes(label) ? 'bg-blue-500/30 text-blue-200' : 'bg-[#0b0e14] text-gray-400 border border-gray-700'}`}>{label}</button>
                                                         ))}
                                                     </div>
                                                 </div>
                                                 <div>
                                                     <div className="mb-2 text-[11px] uppercase text-gray-500">Admin Notes</div>
                                                     <Textarea rows={4} value={userAdminNotes[selectedUser.id] ?? ''} onChange={(event) => setUserAdminNotes((prev) => ({ ...prev, [selectedUser.id]: event.target.value }))} placeholder="Private operator notes only (not user-facing)." className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
-                                                    <div className="mt-2 flex gap-2"><button onClick={() => saveAdminNote(selectedUser.id)} className="rounded-lg bg-indigo-500/20 px-3 py-1.5 text-xs font-semibold text-indigo-200">Save Notes</button><button disabled className="rounded-lg bg-gray-700/40 px-3 py-1.5 text-xs font-semibold text-gray-400">Send Admin Notice (TODO)</button></div>
+                                                    <div className="mt-2 flex gap-2"><button onClick={() => saveAdminNote(selectedUser.id)} className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-semibold text-blue-200">Save Notes</button><button disabled className="rounded-lg bg-gray-700/40 px-3 py-1.5 text-xs font-semibold text-gray-400">Send Admin Notice (TODO)</button></div>
                                                 </div>
                                             </div>
 
@@ -5012,7 +5012,7 @@ export const AdminPanel: React.FC = () => {
                                                             key={`${caseItem.id}-${index}`}
                                                             className={`rounded-lg border border-gray-800 px-3 py-2 text-xs sm:text-sm ${
                                                                 messageItem.sender === 'admin'
-                                                                    ? 'bg-purple-500/10 text-purple-100'
+                                                                    ? 'bg-blue-500/10 text-blue-100'
                                                                     : 'bg-[#0b0e14] text-gray-200'
                                                             }`}
                                                         >
@@ -5321,7 +5321,7 @@ export const AdminPanel: React.FC = () => {
                             </div>
                             <button
                                 onClick={handleSaveBonusSettings}
-                                className="w-full sm:w-auto px-5 py-2 bg-brand-purple/20 text-brand-purple border border-brand-purple/40 rounded-lg text-sm font-bold hover:bg-brand-purple hover:text-white transition-colors"
+                                className="w-full sm:w-auto px-5 py-2 bg-brand-blue/20 text-brand-blue border border-brand-blue/40 rounded-lg text-sm font-bold hover:bg-brand-blue hover:text-white transition-colors"
                             >
                                 Save bonus settings
                             </button>
@@ -5687,7 +5687,7 @@ export const AdminPanel: React.FC = () => {
                                         <button
                                             type="button"
                                             onClick={handleCreateXpBoxFromRewardEditor}
-                                            className="w-full sm:w-auto px-3 py-2 rounded-lg border border-brand-purple/40 text-brand-purple hover:bg-brand-purple hover:text-white text-sm font-semibold"
+                                            className="w-full sm:w-auto px-3 py-2 rounded-lg border border-brand-blue/40 text-brand-blue hover:bg-brand-blue hover:text-white text-sm font-semibold"
                                         >
                                             Create XP Box
                                         </button>
@@ -5703,7 +5703,7 @@ export const AdminPanel: React.FC = () => {
                                     <button
                                         onClick={handleSaveXpShopItem}
                                         disabled={isSavingXpShopItem}
-                                        className="w-full sm:w-auto px-4 py-2 rounded-lg bg-brand-purple/20 text-brand-purple border border-brand-purple/40 hover:bg-brand-purple hover:text-white font-bold text-sm"
+                                        className="w-full sm:w-auto px-4 py-2 rounded-lg bg-brand-blue/20 text-brand-blue border border-brand-blue/40 hover:bg-brand-blue hover:text-white font-bold text-sm"
                                     >
                                         {isSavingXpShopItem ? 'Saving...' : editingXpShopItemId ? 'Update Item' : 'Create Item'}
                                     </button>
@@ -5942,7 +5942,7 @@ export const AdminPanel: React.FC = () => {
                             </span>
                             <button
                                 onClick={handleSaveStripeSettings}
-                                className="w-full sm:w-auto px-5 py-2 bg-brand-purple/20 text-brand-purple border border-brand-purple/40 rounded-lg text-sm font-bold hover:bg-brand-purple hover:text-white transition-colors"
+                                className="w-full sm:w-auto px-5 py-2 bg-brand-blue/20 text-brand-blue border border-brand-blue/40 rounded-lg text-sm font-bold hover:bg-brand-blue hover:text-white transition-colors"
                             >
                                 Save fees &amp; shipping
                             </button>
@@ -6059,7 +6059,7 @@ export const AdminPanel: React.FC = () => {
                                                             : prev.caseLabVisibleBoxIds.filter((id) => id !== box.id)
                                                     }))
                                                 }
-                                                className="h-4 w-4 rounded border-gray-700 bg-[#0b0e14] text-brand-purple focus:ring-brand-purple"
+                                                className="h-4 w-4 rounded border-gray-700 bg-[#0b0e14] text-brand-blue focus:ring-brand-blue"
                                             />
                                             <img src={box.image} alt={box.name} className="h-8 w-8 rounded object-cover bg-black/30" />
                                             <div className="min-w-0">
@@ -6085,7 +6085,7 @@ export const AdminPanel: React.FC = () => {
                             </span>
                             <button
                                 onClick={handleSaveStripeSettings}
-                                className="w-full sm:w-auto px-5 py-2 bg-brand-purple/20 text-brand-purple border border-brand-purple/40 rounded-lg text-sm font-bold hover:bg-brand-purple hover:text-white transition-colors"
+                                className="w-full sm:w-auto px-5 py-2 bg-brand-blue/20 text-brand-blue border border-brand-blue/40 rounded-lg text-sm font-bold hover:bg-brand-blue hover:text-white transition-colors"
                             >
                                 Save Box Lab settings
                             </button>
@@ -6262,7 +6262,7 @@ export const AdminPanel: React.FC = () => {
                                     </span>
                                     <button
                                         onClick={handleSaveStripeSettings}
-                                        className="w-full sm:w-auto px-5 py-2 bg-brand-purple/20 text-brand-purple border border-brand-purple/40 rounded-lg text-sm font-bold hover:bg-brand-purple hover:text-white transition-colors"
+                                        className="w-full sm:w-auto px-5 py-2 bg-brand-blue/20 text-brand-blue border border-brand-blue/40 rounded-lg text-sm font-bold hover:bg-brand-blue hover:text-white transition-colors"
                                     >
                                         Save general configuration
                                     </button>
@@ -6277,7 +6277,7 @@ export const AdminPanel: React.FC = () => {
                     </div>
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex items-center gap-2 mb-4">
-                            <BellRing className="w-5 h-5 text-brand-purple" />
+                            <BellRing className="w-5 h-5 text-brand-blue" />
                             <h3 className="text-lg font-bold text-white">Send Notification</h3>
                         </div>
                         <p className="text-sm text-gray-400 mb-4">
@@ -6289,7 +6289,7 @@ export const AdminPanel: React.FC = () => {
                                 onChange={(event) => setAdminNotification(event.target.value)}
                                 rows={3}
                                 placeholder="Enter a notification message..."
-                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-purple transition-colors"
+                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-blue transition-colors"
                             />
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <span className="text-xs text-gray-500">
@@ -6298,7 +6298,7 @@ export const AdminPanel: React.FC = () => {
                                 <button
                                     onClick={() => { void handleSendAdminNotification(); }}
                                     disabled={!adminNotification.trim() || isSendingAdminNotice}
-                                    className="px-5 py-2 bg-brand-purple/20 text-brand-purple border border-brand-purple/40 rounded-lg text-sm font-bold hover:bg-brand-purple hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="px-5 py-2 bg-brand-blue/20 text-brand-blue border border-brand-blue/40 rounded-lg text-sm font-bold hover:bg-brand-blue hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSendingAdminNotice ? 'Sending...' : 'Send notification'}
                                 </button>

@@ -40,7 +40,7 @@ export const SpinLandingPage: React.FC = () => {
 
   return (
     <section className="relative min-h-[calc(100vh-64px)] overflow-hidden px-4 py-8 sm:px-6 sm:py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_6%,rgba(168,85,247,0.3),transparent_40%),radial-gradient(circle_at_78%_0%,rgba(34,211,238,0.24),transparent_44%),radial-gradient(circle_at_50%_70%,rgba(59,130,246,0.15),transparent_42%),linear-gradient(180deg,#05070c_0%,#080b14_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_6%,rgba(32,93,215,0.3),transparent_40%),radial-gradient(circle_at_78%_0%,rgba(34,211,238,0.24),transparent_44%),radial-gradient(circle_at_50%_70%,rgba(59,130,246,0.15),transparent_42%),linear-gradient(180deg,#05070c_0%,#080b14_100%)]" />
       <div className="pointer-events-none absolute -top-36 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-cyan-400/10 blur-3xl" />
 
       <div className="relative z-10 mx-auto w-full max-w-6xl space-y-8 sm:space-y-10">
@@ -55,14 +55,14 @@ export const SpinLandingPage: React.FC = () => {
             type="button"
             onClick={handleGetFreeBox}
             disabled={!freeSignupBox || hasClaimedFreeBox}
-            className="mt-6 inline-flex min-h-12 w-full max-w-xs items-center justify-center rounded-xl bg-gradient-to-r from-cyan-300 via-sky-400 to-indigo-400 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
+            className="mt-6 inline-flex min-h-12 w-full max-w-xs items-center justify-center rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-300 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
           >
             Get Free Box
           </button>
 
           <p className="mt-3 text-xs text-slate-300 sm:text-sm">No purchase required • Real items • Instant pull</p>
 
-          <div className="mx-auto mt-4 max-w-xl rounded-xl border border-violet-300/20 bg-violet-500/10 px-4 py-2 text-xs text-violet-100 sm:text-sm">
+          <div className="mx-auto mt-4 max-w-xl rounded-xl border border-blue-300/20 bg-blue-500/10 px-4 py-2 text-xs text-blue-100 sm:text-sm">
             {hasClaimedFreeBox
               ? 'You already claimed your signup free box on this account.'
               : freeSignupBox
@@ -146,7 +146,7 @@ export const SpinLandingPage: React.FC = () => {
           ))}
         </section>
 
-        <section className="rounded-3xl border border-cyan-200/20 bg-gradient-to-r from-cyan-400/10 via-blue-500/10 to-violet-500/10 p-6 text-center backdrop-blur-xl sm:p-8">
+        <section className="rounded-3xl border border-cyan-200/20 bg-gradient-to-r from-cyan-400/10 via-blue-500/10 to-blue-500/10 p-6 text-center backdrop-blur-xl sm:p-8">
           <h2 className="text-2xl font-black text-white sm:text-3xl">Your First Pull Is Waiting</h2>
           <button
             type="button"
@@ -155,7 +155,7 @@ export const SpinLandingPage: React.FC = () => {
               setPostSignupRedirect('/case/free-box');
               openAuthModal('register');
             }}
-            className="mt-4 inline-flex min-h-12 w-full max-w-xs items-center justify-center rounded-xl bg-gradient-to-r from-cyan-300 via-sky-400 to-indigo-400 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-110 active:scale-[0.99]"
+            className="mt-4 inline-flex min-h-12 w-full max-w-xs items-center justify-center rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-300 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-110 active:scale-[0.99]"
           >
             Get Free Box
           </button>

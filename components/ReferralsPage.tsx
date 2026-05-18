@@ -335,12 +335,12 @@ export const ReferralsPage: React.FC = () => {
             <p className="mt-2 text-xs text-cyan-200">+{settings.referrerLeaderboardPoints} leaderboard pts</p>
           )}
         </div>
-        <div className="rounded-2xl border border-violet-500/20 bg-[#161b1f] p-5">
-          <p className="text-xs uppercase tracking-[0.16em] text-violet-200">Your Friend Gets</p>
+        <div className="rounded-2xl border border-blue-500/20 bg-[#161b1f] p-5">
+          <p className="text-xs uppercase tracking-[0.16em] text-blue-200">Your Friend Gets</p>
           <CoinValue amount={settings.friendRewardCoins} className="mt-2 text-4xl font-black text-white" iconClassName="h-7 w-7" />
           <p className="mt-1 text-sm text-slate-300">Coins after qualifying</p>
           {settings.leaderboardPointsEnabled && (
-            <p className="mt-2 text-xs text-violet-200">+{settings.friendLeaderboardPoints} leaderboard pts</p>
+            <p className="mt-2 text-xs text-blue-200">+{settings.friendLeaderboardPoints} leaderboard pts</p>
           )}
         </div>
       </section>

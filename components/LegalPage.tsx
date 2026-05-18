@@ -89,7 +89,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ variant }) => {
           <button
             type="button"
             onClick={() => setView({ type: 'CONTACT' })}
-            className="mt-4 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-200 transition hover:border-purple-400/40 hover:text-white"
+            className="mt-4 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-200 transition hover:border-blue-400/40 hover:text-white"
           >
             Contact Support
           </button>

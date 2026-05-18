@@ -32,8 +32,8 @@ const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: stri
     badge: 'border-blue-300/50 bg-blue-500/20 text-blue-100'
   },
   epic: {
-    card: 'border-purple-400/45 bg-gradient-to-b from-purple-500/20 to-purple-950/45',
-    badge: 'border-purple-300/50 bg-purple-500/20 text-purple-100'
+    card: 'border-blue-400/45 bg-gradient-to-b from-[#205DD7]/20 to-blue-950/45',
+    badge: 'border-blue-300/50 bg-blue-500/20 text-blue-100'
   },
   legendary: {
     card: 'border-amber-400/55 bg-gradient-to-b from-amber-400/25 to-amber-950/45',
@@ -56,7 +56,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
         }
       }}
       className={`group rounded-2xl border p-3 transition ${rarityStyle.card} ${
-        selected ? 'ring-2 ring-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.35)]' : 'hover:shadow-[0_0_18px_rgba(255,255,255,0.08)]'
+        selected ? 'ring-2 ring-blue-400/60 shadow-[0_0_18px_rgba(32,93,215,0.35)]' : 'hover:shadow-[0_0_18px_rgba(255,255,255,0.08)]'
       } ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
     >
       <div className="mb-3 flex items-center justify-between">
@@ -80,7 +80,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
         className={`mt-3 w-full rounded-xl px-2 py-2 text-xs font-bold ${
           actionDisabled
             ? 'cursor-not-allowed border border-white/10 bg-[#2a323b] text-gray-500'
-            : 'border border-purple-400/40 bg-purple-500/15 text-purple-100 hover:bg-purple-500/25'
+            : 'border border-blue-400/40 bg-blue-500/15 text-blue-100 hover:bg-blue-500/25'
         }`}
       >
         {actionLabel}

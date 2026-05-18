@@ -23,7 +23,7 @@ export const RoundRecapOverlay: React.FC<RoundRecapOverlayProps> = ({ open, roun
     <div className={`pointer-events-none absolute left-1/2 top-2 z-30 w-[min(96%,760px)] -translate-x-1/2 transition-all duration-300 ${open ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'}`}>
       <div className="rounded-xl border border-white/10 bg-[#0d1422]/95 p-3 shadow-xl backdrop-blur-sm">
         <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-          <span className="rounded bg-brand-purple/20 px-2 py-1 font-semibold text-brand-purple">Round {roundIndex + 1}</span>
+          <span className="rounded bg-brand-blue/20 px-2 py-1 font-semibold text-brand-blue">Round {roundIndex + 1}</span>
           <span className="text-gray-200">Winner: {winnerTeam === 'TIE' ? 'Tie' : `Team ${winnerTeam}`}</span>
           <CoinAmount amount={toCoins(deltaValue, PRICE_UNIT_MODE)} className="ml-auto text-sm font-black text-emerald-300" iconClassName="h-3 w-3" />
         </div>

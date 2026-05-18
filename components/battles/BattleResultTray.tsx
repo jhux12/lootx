@@ -41,8 +41,8 @@ export const BattleResultTray: React.FC<BattleResultTrayProps> = ({ open, varian
           </div>
 
           {bestHit && (
-            <div className="mb-3 rounded-xl border border-brand-purple/40 bg-brand-purple/10 p-2.5">
-              <div className="text-[11px] uppercase text-brand-purple">Best hit</div>
+            <div className="mb-3 rounded-xl border border-brand-blue/40 bg-brand-blue/10 p-2.5">
+              <div className="text-[11px] uppercase text-brand-blue">Best hit</div>
               <div className="mt-1 flex items-center gap-2">
                 <img src={bestHit.imageUrl || ''} alt={bestHit.itemName} width={38} height={38} className="h-10 w-10 rounded bg-[#121d31] object-cover" />
                 <div>
@@ -63,7 +63,7 @@ export const BattleResultTray: React.FC<BattleResultTrayProps> = ({ open, varian
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button onClick={onRecreate} className="rounded-lg bg-brand-purple px-3 py-2 text-xs font-bold text-white">Recreate Battle</button>
+            <button onClick={onRecreate} className="rounded-lg bg-brand-blue px-3 py-2 text-xs font-bold text-white">Recreate Battle</button>
             {!isReplay && <button onClick={onReplay} className="rounded-lg border border-white/20 px-3 py-2 text-xs font-bold text-gray-200">View Replay</button>}
             <button onClick={onClose} className="ml-auto rounded-lg border border-white/20 px-3 py-2 text-xs font-bold text-gray-300">Close</button>
           </div>

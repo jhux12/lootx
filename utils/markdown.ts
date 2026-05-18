@@ -31,7 +31,7 @@ const renderInlineMarkdown = (value: string) => {
     result += applyEmphasis(escapeHtml(before));
     const safeLabel = applyEmphasis(escapeHtml(label));
     const safeUrl = escapeHtml(sanitizeUrl(url));
-    result += `<a class="text-purple-300 underline underline-offset-4 hover:text-purple-200" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;
+    result += `<a class="text-blue-300 underline underline-offset-4 hover:text-blue-200" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;
     lastIndex = match.index + fullMatch.length;
     match = linkRegex.exec(value);
   }

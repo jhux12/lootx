@@ -85,7 +85,7 @@ export const UpgraderAdminSection: React.FC = () => {
         <input placeholder="Rarity" value={targetDraft.rarity ?? ''} onChange={(e) => setTargetDraft((prev) => ({ ...prev, rarity: e.target.value }))} className="rounded border border-white/10 bg-[#0b0e14] px-2 py-2 text-sm text-white" />
       </div>
       <div className="mt-2 flex gap-2">
-        <button onClick={async () => { await saveUpgraderTarget(targetDraft); setTargetDraft({ enabled: true, weight: 1 }); await reloadTargets(); }} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white">Add Target</button>
+        <button onClick={async () => { await saveUpgraderTarget(targetDraft); setTargetDraft({ enabled: true, weight: 1 }); await reloadTargets(); }} className="rounded-lg bg-[#205DD7] px-3 py-2 text-xs font-semibold text-white">Add Target</button>
       </div>
       <div className="mt-3 space-y-2">
         {targets.map((target) => (

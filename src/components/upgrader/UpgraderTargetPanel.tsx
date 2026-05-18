@@ -110,7 +110,7 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
               placeholder="Search items..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-900/60 border border-slate-800/70 rounded-lg py-2.5 pl-10 pr-4 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full bg-slate-900/60 border border-slate-800/70 rounded-lg py-2.5 pl-10 pr-4 text-sm text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
 
@@ -130,14 +130,14 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
               <select
                 value={rarityFilter}
                 onChange={(e) => setRarityFilter(e.target.value as Rarity | 'All')}
-                className="flex-1 bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="flex-1 bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
               >
                 {rarities.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="flex-1 bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="flex-1 bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
               >
                 {categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -149,14 +149,14 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
                 placeholder="Min"
                 value={minVal}
                 onChange={(e) => setMinVal(e.target.value)}
-                className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
               />
               <input
                 type="number"
                 placeholder="Max"
                 value={maxVal}
                 onChange={(e) => setMaxVal(e.target.value)}
-                className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
               />
             </div>
 
@@ -165,7 +165,7 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'value-asc' | 'value-desc' | 'rarity')}
-                className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 pl-10 pr-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-slate-900/60 border border-slate-800 rounded-lg py-2 pl-10 pr-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
               >
                 <option value="value-asc">Value Low</option>
                 <option value="value-desc">Value High</option>
@@ -187,7 +187,7 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
                 className={`
                   relative group cursor-pointer rounded-xl border p-2 transition-all duration-200
                   ${isSelected
-                    ? 'bg-indigo-500/10 border-indigo-400 shadow-[0_0_14px_rgba(99,102,241,0.25)]'
+                    ? 'bg-blue-500/10 border-blue-400 shadow-[0_0_14px_rgba(32,93,215,0.25)]'
                     : 'bg-slate-900/30 border-slate-800/60 hover:border-slate-700'}
                 `}
               >
@@ -217,13 +217,13 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
                     <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${getRarityColor(item.rarity)}`}>
                       {item.rarity}
                     </span>
-                    <CoinAmount amount={Math.round(item.coinValue)} className="text-xs font-mono text-indigo-300" iconClassName="h-3.5 w-3.5" />
+                    <CoinAmount amount={Math.round(item.coinValue)} className="text-xs font-mono text-blue-300" iconClassName="h-3.5 w-3.5" />
                   </div>
                   <p className="text-xs font-medium text-slate-300 truncate leading-tight">{item.name}</p>
                 </div>
 
                 {isSelected && (
-                  <div className="absolute top-1.5 right-1.5 bg-indigo-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-lg">
+                  <div className="absolute top-1.5 right-1.5 bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-lg">
                     TARGET
                   </div>
                 )}
@@ -289,7 +289,7 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
                 <button type="button" onClick={clearMobileFilters} className="rounded-lg border border-slate-700 py-2 text-sm font-semibold text-slate-200">
                   Clear
                 </button>
-                <button type="button" onClick={applyMobileFilters} className="rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white">
+                <button type="button" onClick={applyMobileFilters} className="rounded-lg bg-[#205DD7] py-2 text-sm font-semibold text-white">
                   Apply
                 </button>
               </div>
@@ -302,7 +302,7 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
       <div className={`fixed bottom-0 left-0 right-0 z-[120] transform transition-transform duration-300 ${infoItem ? 'translate-y-0' : 'translate-y-full'}`}>
         {infoItem && (
           <div role="dialog" aria-modal="true" aria-labelledby="target-item-details-title" className="mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)]">
-            <div className="relative flex h-56 items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.42)_0%,transparent_72%)]">
+            <div className="relative flex h-56 items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,rgba(32,93,215,0.42)_0%,transparent_72%)]">
               <button
                 type="button"
                 onClick={() => setInfoItem(null)}
@@ -316,7 +316,7 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
             <div className="space-y-4 px-5 py-6 sm:px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
               <div className="text-center">
                 <h3 id="target-item-details-title" className="text-xl font-bold text-white">{infoItem.name}</h3>
-                <div className="mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase" style={{ borderColor: 'rgba(99,102,241,0.55)', backgroundColor: 'rgba(99,102,241,0.15)', color: '#c7d2fe' }}>
+                <div className="mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase" style={{ borderColor: 'rgba(32,93,215,0.55)', backgroundColor: 'rgba(32,93,215,0.15)', color: '#c7d2fe' }}>
                   {infoItem.rarity}
                 </div>
               </div>
@@ -347,7 +347,7 @@ function getRarityColor(rarity: string) {
   switch (rarity) {
     case 'Common': return 'bg-slate-500 text-white';
     case 'Uncommon': return 'bg-blue-500 text-white';
-    case 'Rare': return 'bg-purple-500 text-white';
+    case 'Rare': return 'bg-blue-500 text-white';
     case 'Epic': return 'bg-pink-500 text-white';
     case 'Legendary': return 'bg-orange-500 text-white';
     case 'Mythic': return 'bg-red-500 text-white';

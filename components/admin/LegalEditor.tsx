@@ -281,7 +281,7 @@ export const LegalEditor: React.FC = () => {
               type="button"
               onClick={() => setActiveTab(tab)}
               className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition ${
-                activeTab === tab ? 'bg-purple-500/20 text-purple-100' : 'text-gray-400 hover:text-white'
+                activeTab === tab ? 'bg-blue-500/20 text-blue-100' : 'text-gray-400 hover:text-white'
               }`}
             >
               {tab === 'terms' ? 'Terms' : 'Privacy'}
@@ -322,14 +322,14 @@ export const LegalEditor: React.FC = () => {
                   type="button"
                   onClick={updateDraft}
                   disabled={!dirty[activeTab]}
-                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-200 transition hover:border-purple-400/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-200 transition hover:border-blue-400/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Save Draft
                 </button>
                 <button
                   type="button"
                   onClick={publishDraft}
-                  className="rounded-lg bg-purple-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-purple-100 transition hover:bg-purple-500/30"
+                  className="rounded-lg bg-blue-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-blue-100 transition hover:bg-blue-500/30"
                 >
                   Publish
                 </button>

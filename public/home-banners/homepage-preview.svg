@@ -11,12 +11,12 @@
       <stop offset="1" stop-color="#EC68C8"/>
     </linearGradient>
     <linearGradient id="button" x1="0" y1="0" x2="196" y2="0" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#8B5CF6"/>
+      <stop stop-color="#205DD7"/>
       <stop offset="1" stop-color="#22D3EE"/>
     </linearGradient>
     <radialGradient id="glowPurple" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(924 149) rotate(120.865) scale(309.423 326.632)">
-      <stop stop-color="#7C3AED" stop-opacity="0.5"/>
-      <stop offset="1" stop-color="#7C3AED" stop-opacity="0"/>
+      <stop stop-color="#205DD7" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#205DD7" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="glowCyan" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1018 413) rotate(149.349) scale(318.323 262.613)">
       <stop stop-color="#22D3EE" stop-opacity="0.38"/>

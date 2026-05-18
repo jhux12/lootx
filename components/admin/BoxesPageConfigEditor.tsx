@@ -349,7 +349,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
               value={draft.filters.search.placeholder ?? ''}
               onChange={(event) => updateFilters({ search: { ...draft.filters.search, placeholder: event.target.value } })}
               placeholder="Search placeholder"
-              className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-purple focus:outline-none"
+              className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-200 focus:border-brand-blue focus:outline-none"
             />
           </div>
 
@@ -654,7 +654,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
           <button
             type="button"
             onClick={addRow}
-            className="inline-flex items-center gap-2 rounded-full bg-purple-600/20 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-purple-200 transition hover:bg-purple-600/30"
+            className="inline-flex items-center gap-2 rounded-full bg-[#205DD7]/20 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-blue-200 transition hover:bg-[#205DD7]/30"
           >
             <Plus className="h-4 w-4" /> Add row
           </button>

@@ -70,7 +70,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
 
   return (
     <aside className="hidden w-[300px] shrink-0 space-y-4 md:block">
-      <section className="rounded-3xl border border-purple-400/20 bg-gradient-to-b from-[#171d31] via-[#141b2d] to-[#101523] p-4 shadow-[0_16px_45px_rgba(11,14,20,0.45)]">
+      <section className="rounded-3xl border border-blue-400/20 bg-gradient-to-b from-[#171d31] via-[#141b2d] to-[#101523] p-4 shadow-[0_16px_45px_rgba(11,14,20,0.45)]">
         <div className="flex items-center gap-3.5">
           <UserAvatar user={user} className="h-16 w-16 rounded-2xl bg-[#2a323b]" />
           <div>
@@ -80,7 +80,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
           </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <span className="inline-flex items-center justify-center gap-1 rounded-xl border border-purple-400/30 bg-purple-500/10 px-2 py-2 text-xs text-white">
+          <span className="inline-flex items-center justify-center gap-1 rounded-xl border border-blue-400/30 bg-blue-500/10 px-2 py-2 text-xs text-white">
             <img src={XP_ICON} alt="XP" className="h-3.5 w-3.5" />
             <AnimatedNumber value={xp} /> XP
           </span>
@@ -95,7 +95,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
           </div>
           <div className="h-2 rounded-full bg-white/10">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-400 transition-all"
+              className="h-full rounded-full bg-gradient-to-r from-[#205DD7] to-sky-400 transition-all"
               style={{ width: `${profileCompletionPercent}%` }}
             />
           </div>
@@ -115,11 +115,11 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
                 onClick={() => onSelectPanel(panel.id)}
                 className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left transition ${
                   isActive
-                    ? 'border-purple-400/50 bg-purple-500/20 text-white'
+                    ? 'border-blue-400/50 bg-blue-500/20 text-white'
                     : 'border-white/10 bg-white/[0.02] text-gray-300 hover:bg-white/[0.05]'
                 }`}
               >
-                <span className={`rounded-lg p-1.5 ${isActive ? 'bg-purple-500/30 text-purple-100' : 'bg-white/10 text-gray-300'}`}>
+                <span className={`rounded-lg p-1.5 ${isActive ? 'bg-blue-500/30 text-blue-100' : 'bg-white/10 text-gray-300'}`}>
                   <Icon className="h-3.5 w-3.5" />
                 </span>
                 <span>
@@ -141,14 +141,14 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
               onClick={action.onClick}
               className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm ${
                 action.active
-                  ? 'border border-purple-400/60 bg-purple-500/20 text-white'
+                  ? 'border border-blue-400/60 bg-blue-500/20 text-white'
                   : action.primary
-                    ? 'bg-gradient-to-r from-purple-600 to-violet-500 text-white'
+                    ? 'bg-gradient-to-r from-[#205DD7] to-sky-500 text-white'
                     : 'border border-white/10 text-gray-200 hover:bg-white/5'
               }`}
             >
               <span>{action.label}</span>
-              {action.isNew && <span className="rounded-full bg-purple-500 px-2 py-0.5 text-[10px] font-bold">NEW</span>}
+              {action.isNew && <span className="rounded-full bg-blue-500 px-2 py-0.5 text-[10px] font-bold">NEW</span>}
             </button>
           ))}
         </div>

@@ -17,7 +17,7 @@ export const CaseLabPromo: React.FC = () => {
             </div>
             <button
               onClick={() => setView({ type: 'CUSTOM_CREATOR' })}
-              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_-18px_rgba(124,58,237,0.8)] transition hover:shadow-[0_0_24px_rgba(34,211,238,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#205DD7] to-sky-400 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_-18px_rgba(32,93,215,0.8)] transition hover:shadow-[0_0_24px_rgba(34,211,238,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
             >
               Start Experimenting
             </button>

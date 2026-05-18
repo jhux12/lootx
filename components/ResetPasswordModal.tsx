@@ -148,7 +148,7 @@ export const ResetPasswordModal: React.FC = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex w-full items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-cyan-400 px-4 py-3 text-sm font-semibold text-slate-900 transition disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center justify-center rounded-full bg-gradient-to-r from-[#205DD7] to-sky-400 px-4 py-3 text-sm font-semibold text-slate-900 transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? 'Updating...' : 'Update password'}
             </button>

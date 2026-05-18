@@ -68,7 +68,7 @@ export const TargetPicker: React.FC<Props> = ({ targets, selectedId, onSelect, f
                   <div className="truncate text-sm font-semibold text-white">{target.name}</div>
                   <div className="text-xs text-gray-400">{target.rarity}</div>
                   <div className="text-xs font-bold text-cyan-300">{target.coinValue.toLocaleString()} coins</div>
-                  {target.featured && <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-fuchsia-300">Featured</div>}
+                  {target.featured && <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-sky-300">Featured</div>}
                 </div>
               </div>
             </button>

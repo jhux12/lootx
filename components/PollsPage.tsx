@@ -164,7 +164,7 @@ export const PollsPage: React.FC = () => {
       <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#161b1f] px-5 py-8 sm:px-8 sm:py-10">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-24 left-4 h-52 w-52 rounded-full bg-cyan-500/20 blur-3xl sm:h-72 sm:w-72" />
-          <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl sm:h-80 sm:w-80" />
+          <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-blue-500/20 blur-3xl sm:h-80 sm:w-80" />
         </div>
         <h1 className="relative z-10 mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">Polls</h1>
         <p className="relative z-10 mt-2 max-w-3xl text-sm leading-6 text-slate-200 sm:text-base">
