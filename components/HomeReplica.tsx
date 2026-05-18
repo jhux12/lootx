@@ -176,7 +176,6 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                   </span>
                   <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-100">Live Wins</h2>
                 </div>
-                <p className="text-xs font-medium text-slate-400">Weighted toward common Pullz with rare hits sprinkled in.</p>
               </div>
 
               <div className="relative overflow-hidden py-3">
