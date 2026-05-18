@@ -1,13 +1,9 @@
 import React from 'react';
 import { BrandLockup } from './BrandLockup';
-import { Instagram, Twitter, Youtube } from 'lucide-react';
+import { Instagram } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 
-const socialLinks = [
-  { label: 'Twitter', icon: Twitter },
-  { label: 'Instagram', icon: Instagram },
-  { label: 'YouTube', icon: Youtube }
-];
+const INSTAGRAM_URL = 'https://www.instagram.com/pullz.gg/';
 
 export const SiteFooter: React.FC = () => {
   const { setView } = useGame();
@@ -25,19 +21,15 @@ export const SiteFooter: React.FC = () => {
             showTextOnMobile
           />
           <div className="flex items-center gap-4">
-            {socialLinks.map((link) => {
-              const Icon = link.icon;
-              return (
-                <button
-                  key={link.label}
-                  type="button"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-400/25 bg-[#25313a] text-slate-200 transition hover:border-cyan-300/60 hover:text-white"
-                  aria-label={link.label}
-                >
-                  <Icon className="h-4 w-4" />
-                </button>
-              );
-            })}
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-cyan-400/25 bg-[#25313a] text-slate-200 transition hover:border-cyan-300/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/70 focus:ring-offset-2 focus:ring-offset-[#10161c]"
+              aria-label="Follow Pullz.gg on Instagram"
+            >
+              <Instagram className="h-5 w-5" />
+            </a>
           </div>
         </div>
         <div className="flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
