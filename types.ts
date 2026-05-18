@@ -27,6 +27,9 @@ export interface User {
   lastDailyClaim?: number;
   lastFreeBoxClaim?: number;
   totalSpent?: number;
+  totalDepositedCents?: number;
+  depositCount?: number;
+  lastDepositAt?: any;
   rakebackBalance?: number;
   rakebackEarnedToday?: number;
   rakebackEarnedAt?: number;

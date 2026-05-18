@@ -10,6 +10,7 @@ import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { resolveUserDisplayName } from '../utils/userIdentity';
 import { InventoryItem, ShippingAddress } from '../types';
+import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { AccountSidebar } from './profile/AccountSidebar';
 import { AccountView } from './profile/AccountView';
 import { InventoryView } from './profile/InventoryView';
@@ -244,7 +245,7 @@ export const Profile: React.FC = () => {
   const canUseCashShipping = !isFreeOnlySelection && shippingCashEnabled;
   const hasShippingMethodToggle = canUseCoinShipping && canUseCashShipping;
   const activeShippingMethod = hasShippingMethodToggle ? shippingPaymentMethod : canUseCashShipping ? 'cash' : 'coins';
-  const hasMadeDeposit = Number(user.totalSpent ?? 0) > 0;
+  const hasMadeDeposit = hasUserMadeDeposit(user);
   const selectedShippingCostLabel = activeShippingMethod === 'cash'
     ? `$${(shippingCashTotalCents / 100).toFixed(2)}`
     : shippingCoinTotal.toLocaleString();

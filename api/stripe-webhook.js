@@ -187,6 +187,15 @@ export default async function handler(req, res) {
           }
         });
 
+        const creditedDepositCents = Number.isFinite(amountTotalCents)
+          ? Math.max(0, Math.round(amountTotalCents))
+          : 0;
+        transaction.set(userRef, {
+          totalDepositedCents: admin.firestore.FieldValue.increment(creditedDepositCents),
+          depositCount: admin.firestore.FieldValue.increment(1),
+          lastDepositAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
         transaction.set(creditRef, {
           uid,
           coins: totalCoins,
