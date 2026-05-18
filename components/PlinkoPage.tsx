@@ -7,6 +7,16 @@ import { InventoryItem } from '../types';
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
+
+const getRarityColor = (rarity?: string) => {
+  const key = String(rarity ?? '').toLowerCase();
+  if (key.includes('legend')) return '#fbbf24';
+  if (key.includes('epic')) return '#a855f7';
+  if (key.includes('uncommon')) return '#22c55e';
+  if (key.includes('rare')) return '#3b82f6';
+  return '#9ca3af';
+};
+
 type SlotPrizePreview = {
   name: string;
   imageUrl: string;
@@ -46,11 +56,11 @@ type BoardLayout = {
 const getSlotTone = (label: string): SlotTone => {
   const key = label.trim().toLowerCase();
   if (key.includes('jackpot')) return { border: '#ff5a1f', bg: 'rgba(43,16,7,0.94)', glow: 'rgba(255,84,26,0.7)' };
-  if (key.includes('legendary')) return { border: '#f6c453', bg: 'rgba(39,28,8,0.94)', glow: 'rgba(246,196,83,0.55)' };
-  if (key.includes('epic')) return { border: '#f472d0', bg: 'rgba(36,8,31,0.94)', glow: 'rgba(244,114,208,0.55)' };
-  if (key.includes('rare')) return { border: '#a78bfa', bg: 'rgba(25,14,43,0.94)', glow: 'rgba(167,139,250,0.5)' };
-  if (key.includes('uncommon')) return { border: '#60a5fa', bg: 'rgba(10,25,45,0.94)', glow: 'rgba(96,165,250,0.45)' };
-  return { border: '#4b5563', bg: 'rgba(20,24,31,0.94)', glow: 'rgba(148,163,184,0.22)' };
+  if (key.includes('legendary')) return { border: '#fbbf24', bg: 'rgba(39,28,8,0.94)', glow: 'rgba(251,191,36,0.55)' };
+  if (key.includes('epic')) return { border: '#a855f7', bg: 'rgba(31,18,45,0.94)', glow: 'rgba(168,85,247,0.5)' };
+  if (key.includes('uncommon')) return { border: '#22c55e', bg: 'rgba(9,32,20,0.94)', glow: 'rgba(34,197,94,0.45)' };
+  if (key.includes('rare')) return { border: '#3b82f6', bg: 'rgba(10,25,45,0.94)', glow: 'rgba(59,130,246,0.45)' };
+  return { border: '#9ca3af', bg: 'rgba(20,24,31,0.94)', glow: 'rgba(156,163,175,0.22)' };
 };
 
 const formatCompactValue = (value: number) => {
@@ -382,7 +392,7 @@ export const PlinkoPage: React.FC = () => {
         rarity: awarded.rarity ?? 'common',
         price: Number(awarded.coinValue ?? 0),
         chance: 0,
-        color: '#22c55e',
+        color: getRarityColor(awarded.rarity),
         obtainedAt: Date.now(),
         status: 'available',
         category: awarded.category ?? '',

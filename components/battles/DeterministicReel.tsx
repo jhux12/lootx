@@ -41,11 +41,11 @@ const hash = (value: string) => {
 
 const rarityColor = (rarity?: string) => {
   const key = String(rarity ?? '').toLowerCase();
-  if (key.includes('legend')) return '#f59e0b';
-  if (key.includes('epic')) return '#d946ef';
-  if (key.includes('rare')) return '#38bdf8';
+  if (key.includes('legend')) return '#fbbf24';
+  if (key.includes('epic')) return '#a855f7';
   if (key.includes('uncommon')) return '#22c55e';
-  return '#94a3b8';
+  if (key.includes('rare')) return '#3b82f6';
+  return '#9ca3af';
 };
 
 const normalizePool = (pool: DeterministicReelItem[]) => (pool.length ? pool : [FALLBACK_ITEM]);

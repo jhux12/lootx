@@ -306,7 +306,7 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
       <div className={`fixed bottom-0 left-0 right-0 z-[120] transform transition-transform duration-300 ${infoItem ? 'translate-y-0' : 'translate-y-full'}`}>
         {infoItem && (
           <div role="dialog" aria-modal="true" aria-labelledby="target-item-details-title" className="mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)]">
-            <div className="relative flex h-56 items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,rgba(32,93,215,0.42)_0%,transparent_72%)]">
+            <div className="relative flex h-56 items-center justify-center overflow-hidden" style={{ background: `radial-gradient(circle at top, ${getRarityHexColor(infoItem.rarity)}6b 0%, transparent 72%)` }}>
               <button
                 type="button"
                 onClick={() => setInfoItem(null)}
@@ -320,7 +320,7 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
             <div className="space-y-4 px-5 py-6 sm:px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
               <div className="text-center">
                 <h3 id="target-item-details-title" className="text-xl font-bold text-white">{infoItem.name}</h3>
-                <div className="mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase" style={{ borderColor: 'rgba(32,93,215,0.55)', backgroundColor: 'rgba(32,93,215,0.15)', color: '#c7d2fe' }}>
+                <div className="mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase" style={{ borderColor: `${getRarityHexColor(infoItem.rarity)}99`, backgroundColor: `${getRarityHexColor(infoItem.rarity)}26`, color: getRarityHexColor(infoItem.rarity) }}>
                   {infoItem.rarity}
                 </div>
               </div>
@@ -347,14 +347,25 @@ export const UpgraderTargetPanel: React.FC<UpgraderTargetPanelProps> = ({
   );
 };
 
+
+function getRarityHexColor(rarity: string) {
+  const key = rarity.toLowerCase();
+  if (key.includes('legend')) return '#fbbf24';
+  if (key.includes('epic')) return '#a855f7';
+  if (key.includes('uncommon')) return '#22c55e';
+  if (key.includes('rare')) return '#3b82f6';
+  if (key.includes('mythic')) return '#ef4444';
+  return '#9ca3af';
+}
+
 function getRarityColor(rarity: string) {
   switch (rarity) {
-    case 'Common': return 'bg-slate-500 text-white';
-    case 'Uncommon': return 'bg-blue-500 text-white';
+    case 'Common': return 'bg-gray-500 text-white';
+    case 'Uncommon': return 'bg-green-500 text-white';
     case 'Rare': return 'bg-blue-500 text-white';
-    case 'Epic': return 'bg-pink-500 text-white';
-    case 'Legendary': return 'bg-orange-500 text-white';
+    case 'Epic': return 'bg-purple-500 text-white';
+    case 'Legendary': return 'bg-amber-500 text-white';
     case 'Mythic': return 'bg-red-500 text-white';
-    default: return 'bg-slate-500 text-white';
+    default: return 'bg-gray-500 text-white';
   }
 }

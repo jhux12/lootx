@@ -55,11 +55,11 @@ export const LiveTicker: React.FC = () => {
 
   const getRarityColor = (rarity: LiveDrop['rarity']) => {
     switch (rarity) {
-      case 'legendary': return 'border-yellow-500 shadow-yellow-500/20';
-      case 'epic': return 'border-blue-500 shadow-blue-500/20';
+      case 'legendary': return 'border-amber-400 shadow-amber-500/20';
+      case 'epic': return 'border-purple-500 shadow-purple-500/20';
       case 'rare': return 'border-blue-500 shadow-blue-500/20';
       case 'uncommon': return 'border-green-500 shadow-green-500/20';
-      default: return 'border-gray-600';
+      default: return 'border-gray-500 shadow-gray-500/10';
     }
   };
 

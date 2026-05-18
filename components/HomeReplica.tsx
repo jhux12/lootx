@@ -36,18 +36,18 @@ const TICKER_RARITY_MULTIPLIER: Record<HomeTickerWin['rarity'], number> = {
 };
 
 const TICKER_RARITY_DOT_CLASS: Record<HomeTickerWin['rarity'], string> = {
-  common: 'bg-slate-300',
-  uncommon: 'bg-emerald-300',
+  common: 'bg-gray-300',
+  uncommon: 'bg-green-300',
   rare: 'bg-blue-300',
-  epic: 'bg-blue-300',
+  epic: 'bg-purple-300',
   legendary: 'bg-amber-300'
 };
 
 const TICKER_RARITY_CARD_CLASS: Record<HomeTickerWin['rarity'], string> = {
-  common: 'border-slate-400/55 hover:border-slate-300/80 shadow-slate-950/20',
-  uncommon: 'border-emerald-400/55 hover:border-emerald-300/80 shadow-emerald-950/20',
+  common: 'border-gray-400/55 hover:border-gray-300/80 shadow-gray-950/20',
+  uncommon: 'border-green-400/55 hover:border-green-300/80 shadow-green-950/20',
   rare: 'border-blue-400/60 hover:border-blue-300/85 shadow-blue-950/20',
-  epic: 'border-blue-400/65 hover:border-blue-300/90 shadow-blue-950/25',
+  epic: 'border-purple-400/65 hover:border-purple-300/90 shadow-purple-950/25',
   legendary: 'border-amber-300/75 hover:border-amber-200 shadow-amber-950/30'
 };
 

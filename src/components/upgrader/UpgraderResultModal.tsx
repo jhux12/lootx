@@ -20,6 +20,17 @@ interface UpgraderResultModalProps {
 
 type DisplayStatus = 'settling-win' | 'settling-lose' | 'win' | 'lose';
 
+
+const getRarityHexColor = (rarity?: string) => {
+  const key = String(rarity ?? '').toLowerCase();
+  if (key.includes('legend')) return '#fbbf24';
+  if (key.includes('epic')) return '#a855f7';
+  if (key.includes('uncommon')) return '#22c55e';
+  if (key.includes('rare')) return '#3b82f6';
+  if (key.includes('mythic')) return '#ef4444';
+  return '#9ca3af';
+};
+
 export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
   isOpen,
   onClose,
@@ -154,10 +165,10 @@ export const UpgraderResultModal: React.FC<UpgraderResultModalProps> = ({
 
               <div className="overflow-y-auto p-5 sm:p-6">
                 {isWin && target ? (
-                  <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-emerald-400/20 bg-black/25 p-4 text-center">
-                    <div className="absolute inset-0 rounded-2xl opacity-30 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.5)_0%,transparent_72%)]" />
+                  <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border bg-black/25 p-4 text-center" style={{ borderColor: `${getRarityHexColor(target.rarity)}55` }}>
+                    <div className="absolute inset-0 rounded-2xl opacity-30" style={{ background: `radial-gradient(circle at top, ${getRarityHexColor(target.rarity)}80 0%, transparent 72%)` }} />
                     <img src={target.imageUrl} alt={target.name} className="relative z-10 mb-3 h-32 w-32 object-contain" loading="lazy" decoding="async" width={128} height={128} />
-                    <p className="relative z-10 text-xs font-bold text-emerald-400 uppercase tracking-wider">{target.rarity}</p>
+                    <p className="relative z-10 text-xs font-bold uppercase tracking-wider" style={{ color: getRarityHexColor(target.rarity) }}>{target.rarity}</p>
                     <h4 className="relative z-10 text-lg font-bold text-white truncate max-w-full">{target.name}</h4>
                     <CoinAmount
                       amount={Math.round(target.coinValue)}
