@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Check, Coins, CreditCard, Info, Package, Tag, Truck, X } from 'lucide-react';
+import { Check, Coins, CreditCard, Info, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -232,6 +232,8 @@ export const Profile: React.FC = () => {
   }, []);
 
   const selectedShipmentItems = activeInventory.filter((item) => selectedShipments.includes(item.instanceId));
+  const shipmentPreviewItems = selectedShipmentItems.slice(0, 6);
+  const hiddenShipmentItemCount = Math.max(0, selectedShipmentItems.length - shipmentPreviewItems.length);
   const selectedShipmentValue = selectedShipmentItems.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   const paidShipmentValue = selectedShipmentItems.reduce((sum, item) => sum + (isFreeShippingItem(item) ? 0 : toCoins(item.price, PRICE_UNIT_MODE)), 0);
   const shipmentRate = getShipmentShippingRate(paidShipmentValue);
@@ -608,25 +610,25 @@ export const Profile: React.FC = () => {
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141821]/90">
-              <div className="flex items-center justify-between gap-3 px-3 py-3 sm:px-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-700/25 text-slate-300">
-                    <Package className="h-4 w-4" />
-                  </span>
-                  <span className="truncate text-sm font-semibold text-slate-300 sm:text-base">Free shipping items</span>
+              <div className="px-3 py-3 sm:px-4" aria-label={`${selectedShipmentItems.length} shipment items selected`}>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {shipmentPreviewItems.map((item) => (
+                    <div
+                      key={item.instanceId}
+                      className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-[#0b0e14] p-1 shadow-inner shadow-black/20 sm:h-14 sm:w-14"
+                      title={item.name}
+                    >
+                      <img src={item.image} alt={item.name} className="h-full w-full object-contain" />
+                    </div>
+                  ))}
+                  {hiddenShipmentItemCount > 0 && (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/5 text-sm font-black text-blue-100 sm:h-14 sm:w-14">
+                      +{hiddenShipmentItemCount}
+                    </div>
+                  )}
                 </div>
-                <span className="text-sm font-bold text-slate-300 sm:text-base">{freeShippingItemCount}</span>
               </div>
               <div className="h-px bg-white/10" />
-              <div className="flex items-center justify-between gap-3 px-3 py-3 sm:px-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-blue-300">
-                    <Tag className="h-4 w-4" />
-                  </span>
-                  <span className="truncate text-sm font-semibold text-slate-300 sm:text-base">Paid shipping items</span>
-                </div>
-                <span className="text-sm font-bold text-slate-300 sm:text-base">{paidShippingItemCount}</span>
-              </div>
               <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-[#205DD7]/25 via-blue-500/15 to-transparent px-3 py-3 sm:px-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/25 text-blue-300 shadow-lg shadow-blue-500/20">
