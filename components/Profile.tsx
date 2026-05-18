@@ -47,7 +47,7 @@ type OrderSummary = {
   image: string;
   rarity: InventoryItem['rarity'];
   value: number;
-  status: 'shipping_requested' | 'shipping' | 'shipped';
+  status: 'shipped';
   trackingNumber?: string;
   createdAt?: number;
   shippedAt?: number;
@@ -59,23 +59,17 @@ const formatOrderDate = (timestamp?: number) => {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(timestamp);
 };
 
-const getOrderStatusLabel = (status: OrderSummary['status']) => {
-  if (status === 'shipped') return 'Shipped';
-  if (status === 'shipping') return 'In transit';
-  return 'Processing';
-};
-
 const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
   const shippedCount = orders.filter((order) => order.status === 'shipped').length;
 
   return (
-    <section className="flex-1 space-y-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <section className="mx-auto w-full max-w-3xl space-y-4">
+      <header className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-end min-[420px]:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">Orders</h2>
           <p className="text-sm text-gray-400">Previously shipped rewards and tracking details.</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-[#1f252c] px-4 py-3 text-sm text-gray-300">
+        <div className="w-fit rounded-2xl border border-white/10 bg-[#1f252c] px-3 py-2 text-sm text-gray-300 sm:px-4 sm:py-3">
           <span className="font-bold text-white">{shippedCount}</span> shipped {shippedCount === 1 ? 'order' : 'orders'}
         </div>
       </header>
@@ -95,28 +89,28 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
           {orders.map((order) => (
             <article
               key={order.id}
-              className="rounded-3xl border border-white/10 bg-[#1f252c] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.18)] transition hover:border-white/15 sm:p-4"
+              className="rounded-2xl border border-white/10 bg-[#1f252c] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.18)] transition hover:border-white/15 sm:rounded-3xl sm:p-4"
             >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#111720] p-2 sm:h-20 sm:w-20">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#111720] p-2 min-[420px]:h-16 min-[420px]:w-16 sm:h-20 sm:w-20">
                     <img src={order.image} alt={order.name} className="h-full w-full object-contain" loading="lazy" decoding="async" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-200">
-                        {getOrderStatusLabel(order.status)}
+                        Shipped
                       </span>
                       <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-gray-300">
                         {order.rarity}
                       </span>
                     </div>
-                    <h3 className="mt-2 truncate text-base font-bold text-white sm:text-lg">{order.name}</h3>
+                    <h3 className="mt-2 line-clamp-2 text-base font-bold leading-snug text-white sm:truncate sm:text-lg">{order.name}</h3>
                     <p className="mt-1 text-xs text-gray-500">Order #{order.id.slice(0, 8)}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 sm:w-[21rem] sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:w-[21rem]">
                   <div className="rounded-2xl border border-white/10 bg-[#171d24] px-3 py-2">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Shipped</p>
                     <p className="mt-1 text-sm font-semibold text-white">{formatOrderDate(order.shippedAt ?? order.createdAt)}</p>
@@ -635,17 +629,13 @@ export const Profile: React.FC = () => {
         />
 
         <div className="flex-1">
-          <div
-            className={`mb-4 grid gap-2 rounded-2xl border border-white/10 bg-[#1f252c] p-1 md:max-w-md ${
-              hasDailyFreeBoxAvailable ? 'grid-cols-4' : 'grid-cols-3'
-            }`}
-          >
-            <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'inventory' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('inventory')}>Inventory</button>
-            <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'orders' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('orders')}>Orders</button>
-            <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'account' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => { setActiveTab('account'); setActiveAccountPanel('overview'); }}>Profile</button>
+          <div className="mb-4 flex w-fit max-w-full gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-[#1f252c] p-1 [scrollbar-width:none] md:max-w-md [&::-webkit-scrollbar]:hidden">
+            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'inventory' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('inventory')}>Inventory</button>
+            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'orders' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('orders')}>Orders</button>
+            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'account' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => { setActiveTab('account'); setActiveAccountPanel('overview'); }}>Profile</button>
             {hasDailyFreeBoxAvailable ? (
               <button
-                className="rounded-xl bg-emerald-500/20 px-1 py-2 text-xs font-semibold text-emerald-200"
+                className="shrink-0 rounded-xl bg-emerald-500/20 px-3 py-2 text-xs font-semibold text-emerald-200"
                 onClick={() => {
                   if (!dailyFreeBox) return;
                   setView({ type: 'CASE_OPENING', boxId: dailyFreeBox.id, isFree: true });
