@@ -681,7 +681,7 @@ interface GameContextType {
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string) => Promise<{ creditCoins?: number } | void>;
-  shipItem: (instanceId: string) => Promise<{ shipmentId?: string } | void>;
+  shipItem: (instanceId: string | string[]) => Promise<{ shipmentId?: string; shipmentBatchId?: string } | void>;
   updateAddress: (address: ShippingAddress) => void;
   updateUserInfo: (name: string, avatar: string) => Promise<void>;
   addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>) => void;
@@ -2845,23 +2845,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const shipItem = async (instanceId: string) => {
+  const shipItem = async (instanceId: string | string[]) => {
     if (!auth.currentUser) {
       openAuthModal('login');
       return;
     }
 
-    const itemToShip = inventory.find(item => item.instanceId === instanceId);
-    if (!itemToShip || !user.shippingAddress) {
+    const instanceIds = Array.isArray(instanceId) ? instanceId : [instanceId];
+    const uniqueInstanceIds = Array.from(new Set(instanceIds.filter(Boolean)));
+    const itemsToShip = inventory.filter((item) => uniqueInstanceIds.includes(item.instanceId));
+    if (uniqueInstanceIds.length === 0 || itemsToShip.length !== uniqueInstanceIds.length || !user.shippingAddress) {
       alert('Please add a shipping address before requesting shipment.');
       return;
     }
 
     try {
-      const data = await authedFetch<{ newCoins?: number }>('/api/request-shipment', {
+      const data = await authedFetch<{ newCoins?: number; shipmentId?: string; shipmentBatchId?: string }>('/api/request-shipment', {
         method: 'POST',
         body: JSON.stringify({
-          inventoryId: instanceId,
+          inventoryIds: uniqueInstanceIds,
+          inventoryId: uniqueInstanceIds[0],
           shippingInfo: user.shippingAddress
         })
       });
@@ -2871,26 +2874,28 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         syncBalance(nextCoins);
       }
 
+      const shippedIds = new Set(uniqueInstanceIds);
       setInventory(prev =>
         prev.map(item =>
-          item.instanceId === instanceId
+          shippedIds.has(item.instanceId)
             ? { ...item, status: 'shipping_requested' }
             : item
         )
       );
 
+      const shipmentLabel = itemsToShip.length === 1 ? itemsToShip[0].name : `${itemsToShip.length} items`;
       addNotification({
-        message: `${itemToShip.name} is now shipping to your saved address.`,
+        message: `${shipmentLabel} ${itemsToShip.length === 1 ? 'is' : 'are'} now shipping to your saved address.`,
         type: 'shipping'
       });
       activityStore.add({
         userId: auth.currentUser?.uid,
         type: 'ship',
-        title: `Shipment requested for ${itemToShip.name}`,
-        meta: { shipmentId: (data as { shipmentId?: string }).shipmentId, trackingStatus: 'Processing' }
+        title: `Shipment requested for ${shipmentLabel}`,
+        meta: { shipmentId: data.shipmentId ?? data.shipmentBatchId, trackingStatus: 'Processing' }
       });
       await refreshInventory(auth.currentUser.uid);
-      return { shipmentId: (data as { shipmentId?: string }).shipmentId };
+      return { shipmentId: data.shipmentId, shipmentBatchId: data.shipmentBatchId };
     } catch (error) {
       console.error('Failed to request shipment', error);
       alert('Unable to request shipment right now. Please try again.');

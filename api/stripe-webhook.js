@@ -62,10 +62,10 @@ export default async function handler(req, res) {
       }
 
       const totalAmount = Number(session.amount_total ?? 0);
-      const perItemAmount = shipmentsSnap.size > 0 ? Math.round(totalAmount / shipmentsSnap.size) : 0;
 
       try {
         await firestore.runTransaction(async (transaction) => {
+          let assignedBatchPayment = false;
           shipmentsSnap.docs.forEach((docSnap) => {
             const shipmentRef = docSnap.ref;
             const shipmentData = docSnap.data() ?? {};
@@ -73,10 +73,14 @@ export default async function handler(req, res) {
               return;
             }
 
+            const receivesBatchPayment = !assignedBatchPayment;
+            assignedBatchPayment = true;
+
             transaction.set(shipmentRef, {
               shippingPaid: true,
               shippingPaymentMethod: 'cash',
-              shippingCashAmountCents: perItemAmount,
+              shippingCashAmountCents: receivesBatchPayment ? totalAmount : 0,
+              shippingBatchPaidAmountCents: totalAmount,
               stripeCheckoutSessionId: session.id,
               status: 'shipping_requested',
               updatedAt: admin.firestore.FieldValue.serverTimestamp()

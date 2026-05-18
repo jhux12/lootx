@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
+import { getShipmentShippingRate } from './_lib/shippingRates.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
@@ -9,6 +10,18 @@ const isXpShopInventoryItem = (inventoryItem = {}) => (
   inventoryItem.source === 'xpShop'
   || inventoryItem.acquisitionCurrencyType === 'XP'
   || inventoryItem.openCurrencyType === 'XP'
+);
+
+const getInventoryValueCoins = (inventoryItem = {}) => Math.max(
+  0,
+  Math.round(Number(inventoryItem.price ?? inventoryItem.value ?? inventoryItem.valueCoins ?? 0) || 0)
+);
+
+const isFreeShippingInventoryItem = (inventoryItem = {}) => (
+  inventoryItem.freeShipping === true
+  || Number(inventoryItem.shippingCostOverrideCents ?? NaN) === 0
+  || Number(inventoryItem.shippingCostOverrideCoins ?? NaN) === 0
+  || isXpShopInventoryItem(inventoryItem)
 );
 
 export default async function handler(req, res) {
@@ -26,9 +39,9 @@ export default async function handler(req, res) {
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await readJsonBody(req);
     const inventoryIds = Array.isArray(body?.inventoryIds)
-      ? body.inventoryIds.filter((id) => typeof id === 'string')
-      : typeof body?.inventoryId === 'string'
-        ? [body.inventoryId]
+      ? Array.from(new Set(body.inventoryIds.filter((id) => typeof id === 'string' && id.trim()).map((id) => id.trim())))
+      : typeof body?.inventoryId === 'string' && body.inventoryId.trim()
+        ? [body.inventoryId.trim()]
         : [];
 
     if (inventoryIds.length === 0) {
@@ -38,18 +51,12 @@ export default async function handler(req, res) {
     const settingsSnap = await firestore.collection('settings').doc(STRIPE_SETTINGS_DOC).get();
     const settings = settingsSnap.data() ?? {};
     const shippingCashEnabled = settings.shippingCashEnabled === true;
-    const shippingFlatRateCents = Math.max(0, Math.round(Number(settings.shippingFlatRateCents) || 0));
     const stripeShippingProductId =
       typeof settings.stripeShippingProductId === 'string' ? settings.stripeShippingProductId : '';
-    const usesPriceId = stripeShippingProductId.startsWith('price_');
     const usesProductId = stripeShippingProductId.startsWith('prod_');
 
     if (!shippingCashEnabled) {
       return sendJson(res, 400, { error: 'Cash shipping is disabled' });
-    }
-
-    if (!Number.isFinite(shippingFlatRateCents) || shippingFlatRateCents <= 0) {
-      return sendJson(res, 400, { error: 'Invalid shipping amount' });
     }
 
     const userRef = firestore.collection('users').doc(decoded.uid);
@@ -67,16 +74,17 @@ export default async function handler(req, res) {
       userRef.collection('inventory').doc(inventoryId)
     );
 
-    // Firestore requires all reads to complete before any writes in a transaction.
-    let payableItemCount = 0;
+    let shippingTotalCents = 0;
+    let paidShipmentValueCoins = 0;
+    let shippingRateTier = 'Free';
 
     await firestore.runTransaction(async (transaction) => {
-      const [userSnap, ...inventorySnaps] = await Promise.all([
+      const [transactionUserSnap, ...inventorySnaps] = await Promise.all([
         transaction.get(userRef),
         ...inventoryRefs.map((inventoryRef) => transaction.get(inventoryRef))
       ]);
 
-      if (!userSnap.exists) {
+      if (!transactionUserSnap.exists) {
         throw { status: 403, error: 'Unauthorized' };
       }
 
@@ -95,21 +103,26 @@ export default async function handler(req, res) {
           throw { status: 400, error: 'Item already in shipment' };
         }
 
-        return { inventoryItem, inventoryId: inventoryIds[index], inventoryRef: inventoryRefs[index] };
+        return {
+          inventoryItem,
+          inventoryId: inventoryIds[index],
+          inventoryRef: inventoryRefs[index],
+          shipmentRef: shipmentRefs[index],
+          freeShipping: isFreeShippingInventoryItem(inventoryItem)
+        };
       });
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
-      shipmentItems.forEach(({ inventoryItem, inventoryId, inventoryRef }, index) => {
-        const hasFreeShipping =
-          inventoryItem.freeShipping === true
-          || Number(inventoryItem.shippingCostOverrideCents ?? NaN) === 0
-          || Number(inventoryItem.shippingCostOverrideCoins ?? NaN) === 0
-          || isXpShopInventoryItem(inventoryItem);
-        const shippingCostCents = hasFreeShipping ? 0 : shippingFlatRateCents;
-        const hasOutstandingPayment = shippingCostCents > 0;
-        if (hasOutstandingPayment) payableItemCount += 1;
+      const paidShipmentItems = shipmentItems.filter((item) => !item.freeShipping);
+      paidShipmentValueCoins = paidShipmentItems.reduce((sum, item) => sum + getInventoryValueCoins(item.inventoryItem), 0);
+      const rate = getShipmentShippingRate(paidShipmentValueCoins);
+      shippingTotalCents = paidShipmentItems.length > 0 ? rate.cashCents : 0;
+      shippingRateTier = paidShipmentItems.length > 0 ? rate.tierLabel : 'Free';
+      const firstPaidShipmentId = paidShipmentItems[0]?.shipmentRef.id ?? shipmentRefs[0]?.id;
 
-        const shipmentRef = shipmentRefs[index];
+      const now = admin.firestore.FieldValue.serverTimestamp();
+      shipmentItems.forEach(({ inventoryItem, inventoryId, inventoryRef, shipmentRef, freeShipping }) => {
+        const hasOutstandingPayment = shippingTotalCents > 0;
+        const receivesBatchCharge = hasOutstandingPayment && shipmentRef.id === firstPaidShipmentId;
         transaction.set(shipmentRef, {
           uid: decoded.uid,
           inventoryId,
@@ -117,14 +130,17 @@ export default async function handler(req, res) {
             boxId: inventoryItem.boxId ?? null,
             prizeId: inventoryItem.prizeId ?? null,
             name: inventoryItem.name ?? 'Mystery Item',
-            value: Number(inventoryItem.value ?? 0),
+            value: Number(inventoryItem.value ?? inventoryItem.price ?? 0),
             image: inventoryItem.image ?? '',
             rarity: inventoryItem.rarity ?? 'common',
             sellBackRate: Number(inventoryItem.sellBackRate ?? 0.8),
             size: inventoryItem.size ?? null
           },
           shippingInfo,
-          shippingCost: shippingCostCents,
+          shippingCost: receivesBatchCharge ? shippingTotalCents : 0,
+          shippingBatchCostCents: shippingTotalCents,
+          shippingBatchValueCoins: paidShipmentValueCoins,
+          shippingRateTier,
           shippingPaid: !hasOutstandingPayment,
           shippingPaymentMethod: hasOutstandingPayment ? 'cash' : 'FREE_XP',
           paidAt: hasOutstandingPayment ? null : now,
@@ -134,7 +150,7 @@ export default async function handler(req, res) {
         });
 
         transaction.set(inventoryRef, {
-          status: 'pending_shipment',
+          status: hasOutstandingPayment ? 'pending_shipment' : 'shipping_requested',
           shipmentId: shipmentRef.id,
           shipmentBatchId,
           updatedAt: now
@@ -144,30 +160,28 @@ export default async function handler(req, res) {
 
     console.info('create-shipping-checkout-session', {
       selectedCount: inventoryIds.length,
-      payableItemCount,
       shipmentBatchId,
-      shippingFlatRateCents,
-      shippingTotalCents: shippingFlatRateCents * payableItemCount
+      paidShipmentValueCoins,
+      shippingRateTier,
+      shippingTotalCents
     });
 
-    if (payableItemCount <= 0) {
+    if (shippingTotalCents <= 0) {
       return sendJson(res, 200, { ok: true, shipmentBatchId, sessionId: null, fullyCoveredByFreeShipping: true });
     }
 
-    const lineItems = usesPriceId
-      ? [{ price: stripeShippingProductId, quantity: payableItemCount }]
-      : [
-          {
-            price_data: {
-              currency: 'usd',
-              ...(usesProductId
-                ? { product: stripeShippingProductId }
-                : { product_data: { name: 'Shipping & Handling' } }),
-              unit_amount: shippingFlatRateCents
-            },
-            quantity: payableItemCount
-          }
-        ];
+    const lineItems = [
+      {
+        price_data: {
+          currency: 'usd',
+          ...(usesProductId
+            ? { product: stripeShippingProductId }
+            : { product_data: { name: `Shipping & Handling (${shippingRateTier})` } }),
+          unit_amount: shippingTotalCents
+        },
+        quantity: 1
+      }
+    ];
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -178,7 +192,10 @@ export default async function handler(req, res) {
         userId: decoded.uid,
         shipmentId: shipmentBatchId,
         paymentType: 'shipping',
-        shipmentCount: String(payableItemCount)
+        shipmentCount: '1',
+        itemCount: String(inventoryIds.length),
+        shippingRateTier,
+        paidShipmentValueCoins: String(paidShipmentValueCoins)
       }
     });
 

@@ -7,6 +7,7 @@ import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateF
 import { toast } from '../src/ui/toast/toast';
 import { getSellBackValue } from '../utils/sellBack';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { formatShippingTierSummary, getShipmentShippingRate } from '../utils/shippingRates';
 import { CoinAmount } from './CoinAmount';
 import { resolveUserDisplayName } from '../utils/userIdentity';
 import { InventoryItem, ShippingAddress } from '../types';
@@ -145,13 +146,9 @@ export const Profile: React.FC = () => {
   }, [activeInventory, search, rarity, type, sort]);
 
   const shippingCoinEnabled = stripeSettings.shippingCoinEnabled;
-  const shippingCoinCostCoins = Math.max(0, stripeSettings.shippingCoinCostCoins);
-  const shippingCashEnabled = stripeSettings.shippingCashEnabled && stripeSettings.shippingFlatRateCents > 0;
-  const shippingFlatRateCents = Math.max(0, stripeSettings.shippingFlatRateCents);
+  const shippingCashEnabled = stripeSettings.shippingCashEnabled;
 
   const isFreeShippingItem = (item: InventoryItem) => item.freeShipping === true || Number(item.shippingCostOverrideCoins ?? NaN) === 0 || Number(item.shippingCostOverrideCents ?? NaN) === 0 || isXpPurchasedItem(item);
-  const getCoinShippingCostForItem = (item: InventoryItem) => (isFreeShippingItem(item) ? 0 : shippingCoinCostCoins);
-  const getCashShippingCostForItemCents = (item: InventoryItem) => (isFreeShippingItem(item) ? 0 : shippingFlatRateCents);
 
   const isItemShippable = (item: InventoryItem) => item.status === 'available' && !item.locked && item.shippable !== false;
   const canSelectShipment = (item: InventoryItem) => isItemShippable(item);
@@ -235,8 +232,10 @@ export const Profile: React.FC = () => {
 
   const selectedShipmentItems = activeInventory.filter((item) => selectedShipments.includes(item.instanceId));
   const selectedShipmentValue = selectedShipmentItems.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
-  const shippingCoinTotal = selectedShipmentItems.reduce((sum, item) => sum + getCoinShippingCostForItem(item), 0);
-  const shippingCashTotalCents = selectedShipmentItems.reduce((sum, item) => sum + getCashShippingCostForItemCents(item), 0);
+  const paidShipmentValue = selectedShipmentItems.reduce((sum, item) => sum + (isFreeShippingItem(item) ? 0 : toCoins(item.price, PRICE_UNIT_MODE)), 0);
+  const shipmentRate = getShipmentShippingRate(paidShipmentValue);
+  const shippingCoinTotal = shipmentRate.coinCost;
+  const shippingCashTotalCents = shipmentRate.cashCents;
   const freeShippingItemCount = selectedShipmentItems.filter((item) => isFreeShippingItem(item)).length;
   const paidShippingItemCount = Math.max(0, selectedShipmentItems.length - freeShippingItemCount);
   const isFreeOnlySelection = selectedShipmentItems.length > 0 && paidShippingItemCount === 0;
@@ -383,7 +382,7 @@ export const Profile: React.FC = () => {
     const itemsToShip = selectedShipmentItems.filter((item) => canSelectShipment(item));
     setIsSubmittingShipment(true);
     try {
-      await Promise.all(itemsToShip.map((item) => shipItem(item.instanceId)));
+      await shipItem(itemsToShip.map((item) => item.instanceId));
       setSelectedShipments([]);
       setShowShippingReview(false);
     } catch {
@@ -636,6 +635,11 @@ export const Profile: React.FC = () => {
                 <span className="text-base font-black text-blue-400 sm:text-lg">{isFreeOnlySelection ? 'Free' : selectedShippingCostLabel}</span>
               </div>
             </div>
+            {!isFreeOnlySelection && (
+              <div className="mt-3 rounded-2xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs font-semibold leading-relaxed text-blue-100 sm:text-sm">
+                Shipment rate for {shipmentRate.tierLabel}: {formatShippingTierSummary()}
+              </div>
+            )}
 
             {(canUseCoinShipping || canUseCashShipping) && !isFreeOnlySelection && (
               <div className="mt-4">
