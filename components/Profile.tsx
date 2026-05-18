@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Check, Coins, CreditCard, Info, Truck, X } from 'lucide-react';
+import { Check, Coins, CreditCard, Info, PackageCheck, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -10,7 +10,7 @@ import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { formatShippingTierSummary, getShipmentShippingRate } from '../utils/shippingRates';
 import { CoinAmount } from './CoinAmount';
 import { resolveUserDisplayName } from '../utils/userIdentity';
-import { InventoryItem, ShippingAddress } from '../types';
+import { InventoryItem, Shipment, ShippingAddress } from '../types';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { AccountSidebar } from './profile/AccountSidebar';
 import { AccountView } from './profile/AccountView';
@@ -34,10 +34,110 @@ const AVATAR_PRESETS = [
   'https://api.dicebear.com/7.x/lorelei/svg?seed=Loot'
 ];
 
-type MobileTab = 'inventory' | 'account';
+type MobileTab = 'inventory' | 'orders' | 'account';
 type AccountPanel = 'overview' | 'security' | 'settings';
 
 const getProfileUsername = (profile: { provider?: string; username?: string; name?: string; email?: string }) => resolveUserDisplayName(profile);
+
+
+type OrderSummary = {
+  id: string;
+  inventoryId?: string;
+  name: string;
+  image: string;
+  rarity: InventoryItem['rarity'];
+  value: number;
+  status: 'shipping_requested' | 'shipping' | 'shipped';
+  trackingNumber?: string;
+  createdAt?: number;
+  shippedAt?: number;
+  size?: string | null;
+};
+
+const formatOrderDate = (timestamp?: number) => {
+  if (!timestamp) return 'Date unavailable';
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(timestamp);
+};
+
+const getOrderStatusLabel = (status: OrderSummary['status']) => {
+  if (status === 'shipped') return 'Shipped';
+  if (status === 'shipping') return 'In transit';
+  return 'Processing';
+};
+
+const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
+  const shippedCount = orders.filter((order) => order.status === 'shipped').length;
+
+  return (
+    <section className="flex-1 space-y-4">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Orders</h2>
+          <p className="text-sm text-gray-400">Previously shipped rewards and tracking details.</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#1f252c] px-4 py-3 text-sm text-gray-300">
+          <span className="font-bold text-white">{shippedCount}</span> shipped {shippedCount === 1 ? 'order' : 'orders'}
+        </div>
+      </header>
+
+      {orders.length === 0 ? (
+        <div className="rounded-3xl border border-white/10 bg-[#1f252c] p-8 text-center sm:p-10">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-blue-300">
+            <PackageCheck className="h-7 w-7" />
+          </div>
+          <h3 className="mt-4 text-lg font-bold text-white">No shipped orders yet</h3>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-400">
+            Once your physical rewards ship, they will appear here with tracking when available.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {orders.map((order) => (
+            <article
+              key={order.id}
+              className="rounded-3xl border border-white/10 bg-[#1f252c] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.18)] transition hover:border-white/15 sm:p-4"
+            >
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#111720] p-2 sm:h-20 sm:w-20">
+                    <img src={order.image} alt={order.name} className="h-full w-full object-contain" loading="lazy" decoding="async" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-200">
+                        {getOrderStatusLabel(order.status)}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-gray-300">
+                        {order.rarity}
+                      </span>
+                    </div>
+                    <h3 className="mt-2 truncate text-base font-bold text-white sm:text-lg">{order.name}</h3>
+                    <p className="mt-1 text-xs text-gray-500">Order #{order.id.slice(0, 8)}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 sm:w-[21rem] sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-[#171d24] px-3 py-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Shipped</p>
+                    <p className="mt-1 text-sm font-semibold text-white">{formatOrderDate(order.shippedAt ?? order.createdAt)}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-[#171d24] px-3 py-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Tracking</p>
+                    {order.trackingNumber ? (
+                      <p className="mt-1 break-all text-sm font-semibold text-blue-200">{order.trackingNumber}</p>
+                    ) : (
+                      <p className="mt-1 text-sm font-semibold text-gray-400">Not available</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+};
 
 const normalizeItems = (items: InventoryItem[]) =>
   (items ?? []).map((item, index) => {
@@ -54,7 +154,7 @@ const normalizeItems = (items: InventoryItem[]) =>
   });
 
 export const Profile: React.FC = () => {
-  const { user, inventory, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, updateAddress, updateUserInfo } = useGame();
+  const { user, inventory, shipments, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, updateAddress, updateUserInfo } = useGame();
 
   const [activeTab, setActiveTab] = useState<MobileTab>('inventory');
   const [search, setSearch] = useState('');
@@ -145,6 +245,43 @@ export const Profile: React.FC = () => {
       return b.obtainedAt - a.obtainedAt;
     });
   }, [activeInventory, search, rarity, type, sort]);
+
+  const shippedOrders = useMemo<OrderSummary[]>(() => {
+    const shipmentOrders = (shipments as Shipment[])
+      .filter((shipment) => shipment.uid === user.id && shipment.status === 'shipped')
+      .map((shipment) => ({
+        id: shipment.id,
+        inventoryId: shipment.inventoryId,
+        name: shipment.item.name,
+        image: shipment.item.image,
+        rarity: shipment.item.rarity,
+        value: shipment.item.value,
+        status: 'shipped' as const,
+        trackingNumber: shipment.trackingNumber,
+        createdAt: shipment.createdAt,
+        shippedAt: shipment.updatedAt,
+        size: shipment.item.size
+      } as OrderSummary));
+
+    const shipmentInventoryIds = new Set(shipmentOrders.map((order) => order.inventoryId).filter(Boolean));
+    const inventoryOrders = normalizedInventory
+      .filter((item) => item.status === 'shipped' && !shipmentInventoryIds.has(item.instanceId))
+      .map((item) => ({
+        id: item.instanceId,
+        inventoryId: item.instanceId,
+        name: item.name,
+        image: item.image,
+        rarity: item.rarity,
+        value: toCoins(item.price, PRICE_UNIT_MODE),
+        status: 'shipped' as const,
+        trackingNumber: item.trackingNumber,
+        createdAt: item.obtainedAt,
+        shippedAt: item.history?.find((entry) => entry.action === 'shipped')?.createdAt ?? item.obtainedAt,
+        size: item.size ?? null
+      }));
+
+    return [...shipmentOrders, ...inventoryOrders].sort((a, b) => (b.shippedAt ?? b.createdAt ?? 0) - (a.shippedAt ?? a.createdAt ?? 0));
+  }, [normalizedInventory, shipments, user.id]);
 
   const shippingCoinEnabled = stripeSettings.shippingCoinEnabled;
   const shippingCashEnabled = stripeSettings.shippingCashEnabled;
@@ -442,6 +579,7 @@ export const Profile: React.FC = () => {
   const quickActions = [
     { label: 'Overview', active: activeTab === 'account' && activeAccountPanel === 'overview', onClick: () => { setActiveTab('account'); setActiveAccountPanel('overview'); } },
     { label: 'Inventory', active: activeTab === 'inventory', onClick: () => { setActiveTab('inventory'); } },
+    { label: 'Orders', active: activeTab === 'orders', onClick: () => { setActiveTab('orders'); } },
     { label: 'Settings', active: activeTab === 'account' && activeAccountPanel === 'settings', onClick: () => { setActiveTab('account'); setActiveAccountPanel('settings'); } },
     { label: 'Security', active: activeTab === 'account' && activeAccountPanel === 'security', onClick: () => { setActiveTab('account'); setActiveAccountPanel('security'); } },
     { label: 'Rewards', onClick: () => setView({ type: 'BONUSES' as const }) },
@@ -499,10 +637,11 @@ export const Profile: React.FC = () => {
         <div className="flex-1">
           <div
             className={`mb-4 grid gap-2 rounded-2xl border border-white/10 bg-[#1f252c] p-1 md:max-w-md ${
-              hasDailyFreeBoxAvailable ? 'grid-cols-3' : 'grid-cols-2'
+              hasDailyFreeBoxAvailable ? 'grid-cols-4' : 'grid-cols-3'
             }`}
           >
             <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'inventory' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('inventory')}>Inventory</button>
+            <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'orders' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('orders')}>Orders</button>
             <button className={`rounded-xl py-2 text-sm font-semibold ${activeTab === 'account' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => { setActiveTab('account'); setActiveAccountPanel('overview'); }}>Profile</button>
             {hasDailyFreeBoxAvailable ? (
               <button
@@ -537,6 +676,8 @@ export const Profile: React.FC = () => {
               availableToShip={availableToShip}
               selectedValue={selectedShipmentValue}
             />
+          ) : activeTab === 'orders' ? (
+            <OrdersView orders={shippedOrders} />
           ) : (
             <AccountView
               user={user}

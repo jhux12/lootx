@@ -178,7 +178,8 @@ service cloud.firestore {
     }
 
     match /shipments/{shipmentId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.uid);
+      allow write: if isAdmin();
     }
 
     match /admin/{document=**} {
