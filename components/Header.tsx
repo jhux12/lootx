@@ -1,7 +1,6 @@
 import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 import {
-  Facebook,
   ChevronDown,
   HelpCircle,
   Instagram,
@@ -16,11 +15,9 @@ import {
   Clock3,
   ShieldCheck,
   Trophy,
-  Twitter,
   User as UserIcon,
   Users,
-  X,
-  Youtube
+  X
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -654,11 +651,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unrea
             </button>
             {openMobileSections.social ? (
               <>
-                <div className="flex items-center gap-6 text-white">
-                  <a href="#" aria-label="Facebook"><Facebook className="h-6 w-6" /></a>
-                  <a href="#" aria-label="Instagram"><Instagram className="h-6 w-6" /></a>
-                  <a href="#" aria-label="Youtube"><Youtube className="h-6 w-6" /></a>
-                  <a href="#" aria-label="Twitter"><Twitter className="h-6 w-6" /></a>
+                <div className="flex w-full justify-center text-white">
+                  <a
+                    href="https://www.instagram.com/pullz.gg/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Follow Pullz.gg on Instagram"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-[#25313a] transition-colors hover:bg-[#2f3d47] focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+                  >
+                    <Instagram className="h-6 w-6" />
+                  </a>
                 </div>
                 <div className="flex flex-col items-center gap-3 text-xs font-bold text-neutral-500">
                   <div className="flex items-center gap-4">
