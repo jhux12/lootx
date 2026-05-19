@@ -2185,8 +2185,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const photoURL = firebaseUser.photoURL ?? undefined;
 
     if (!userSnapshot.exists()) {
-      const baseUsername = buildBaseUsername(displayName, email);
-      const username = await ensureUniqueUsername(baseUsername);
+      const username = await ensureUniqueUsername('Pullzer');
       const createdAt = Date.now();
       const avatar = photoURL || '';
       const newUser: User = {
