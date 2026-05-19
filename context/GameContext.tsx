@@ -2232,6 +2232,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const data = userSnapshot.data() as Record<string, any>;
     const updates: Record<string, unknown> = buildLegacyUserProfileBackfill(firebaseUser, data);
 
+    const currentUsername = typeof data.username === 'string' && data.username.trim() ? data.username.trim() : '';
+    const isGoogleProvider = data.provider === 'google' || firebaseUser.providerData.some((provider) => provider.providerId === 'google.com');
+    if (isGoogleProvider && !currentUsername.toLowerCase().startsWith('pullzer')) {
+      const username = await ensureUniqueUsername('Pullzer');
+      updates.username = username;
+      updates.usernameLower = toFirestoreUsernameLower(username);
+      updates.name = username;
+    }
+
     if (!data.email && email) updates.email = email;
     if (!data.displayName && displayName) updates.displayName = displayName;
     if (!data.photoURL && photoURL) updates.photoURL = photoURL;
