@@ -47,7 +47,7 @@ type OrderSummary = {
   image: string;
   rarity: InventoryItem['rarity'];
   value: number;
-  status: 'shipped';
+  status: 'pending' | 'shipped';
   trackingNumber?: string;
   createdAt?: number;
   shippedAt?: number;
@@ -61,16 +61,17 @@ const formatOrderDate = (timestamp?: number) => {
 
 const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
   const shippedCount = orders.filter((order) => order.status === 'shipped').length;
+  const pendingCount = orders.filter((order) => order.status === 'pending').length;
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-4">
       <header className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-end min-[420px]:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">Orders</h2>
-          <p className="text-sm text-gray-400">Previously shipped rewards and tracking details.</p>
+          <p className="text-sm text-gray-400">Pending and shipped rewards, with tracking details when available.</p>
         </div>
         <div className="w-fit rounded-2xl border border-white/10 bg-[#1f252c] px-3 py-2 text-sm text-gray-300 sm:px-4 sm:py-3">
-          <span className="font-bold text-white">{shippedCount}</span> shipped {shippedCount === 1 ? 'order' : 'orders'}
+          <span className="font-bold text-white">{pendingCount}</span> pending • <span className="font-bold text-white">{shippedCount}</span> shipped
         </div>
       </header>
 
@@ -79,7 +80,7 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-blue-300">
             <PackageCheck className="h-7 w-7" />
           </div>
-          <h3 className="mt-4 text-lg font-bold text-white">No shipped orders yet</h3>
+          <h3 className="mt-4 text-lg font-bold text-white">No orders yet</h3>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-400">
             Once your physical rewards ship, they will appear here with tracking when available.
           </p>
@@ -99,7 +100,7 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-200">
-                        Shipped
+                        {order.status === 'pending' ? 'Pending' : 'Shipped'}
                       </span>
                       <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-gray-300">
                         {order.rarity}
@@ -112,8 +113,8 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
 
                 <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:w-[21rem]">
                   <div className="rounded-2xl border border-white/10 bg-[#171d24] px-3 py-2">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Shipped</p>
-                    <p className="mt-1 text-sm font-semibold text-white">{formatOrderDate(order.shippedAt ?? order.createdAt)}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">{order.status === 'pending' ? 'Requested' : 'Shipped'}</p>
+                    <p className="mt-1 text-sm font-semibold text-white">{formatOrderDate(order.status === 'pending' ? order.createdAt : (order.shippedAt ?? order.createdAt))}</p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-[#171d24] px-3 py-2">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Tracking</p>
@@ -219,7 +220,7 @@ export const Profile: React.FC = () => {
 
   const normalizedInventory = useMemo(() => normalizeItems(inventory as InventoryItem[]).sort((a, b) => b.obtainedAt - a.obtainedAt), [inventory]);
   const activeInventory = useMemo(
-    () => normalizedInventory.filter((item) => item.status !== 'sold'),
+    () => normalizedInventory.filter((item) => item.status !== 'sold' && item.status !== 'shipping' && item.status !== 'shipping_requested' && item.status !== 'shipped'),
     [normalizedInventory]
   );
 
@@ -240,9 +241,10 @@ export const Profile: React.FC = () => {
     });
   }, [activeInventory, search, rarity, type, sort]);
 
-  const shippedOrders = useMemo<OrderSummary[]>(() => {
+  const orders = useMemo<OrderSummary[]>(() => {
+    const pendingStatuses = new Set(['shipping', 'shipping_requested']);
     const shipmentOrders = (shipments as Shipment[])
-      .filter((shipment) => shipment.uid === user.id && shipment.status === 'shipped')
+      .filter((shipment) => shipment.uid === user.id && (shipment.status === 'shipped' || pendingStatuses.has(shipment.status)))
       .map((shipment) => ({
         id: shipment.id,
         inventoryId: shipment.inventoryId,
@@ -250,7 +252,7 @@ export const Profile: React.FC = () => {
         image: shipment.item.image,
         rarity: shipment.item.rarity,
         value: shipment.item.value,
-        status: 'shipped' as const,
+        status: shipment.status === 'shipped' ? 'shipped' as const : 'pending' as const,
         trackingNumber: shipment.trackingNumber,
         createdAt: shipment.createdAt,
         shippedAt: shipment.updatedAt,
@@ -259,7 +261,7 @@ export const Profile: React.FC = () => {
 
     const shipmentInventoryIds = new Set(shipmentOrders.map((order) => order.inventoryId).filter(Boolean));
     const inventoryOrders = normalizedInventory
-      .filter((item) => item.status === 'shipped' && !shipmentInventoryIds.has(item.instanceId))
+      .filter((item) => (item.status === 'shipped' || item.status === 'shipping' || item.status === 'shipping_requested') && !shipmentInventoryIds.has(item.instanceId))
       .map((item) => ({
         id: item.instanceId,
         inventoryId: item.instanceId,
@@ -267,14 +269,14 @@ export const Profile: React.FC = () => {
         image: item.image,
         rarity: item.rarity,
         value: toCoins(item.price, PRICE_UNIT_MODE),
-        status: 'shipped' as const,
+        status: item.status === 'shipped' ? 'shipped' as const : 'pending' as const,
         trackingNumber: item.trackingNumber,
         createdAt: item.obtainedAt,
         shippedAt: item.history?.find((entry) => entry.action === 'shipped')?.createdAt ?? item.obtainedAt,
         size: item.size ?? null
       }));
 
-    return [...shipmentOrders, ...inventoryOrders].sort((a, b) => (b.shippedAt ?? b.createdAt ?? 0) - (a.shippedAt ?? a.createdAt ?? 0));
+    return [...shipmentOrders, ...inventoryOrders].sort((a, b) => (b.createdAt ?? b.shippedAt ?? 0) - (a.createdAt ?? a.shippedAt ?? 0));
   }, [normalizedInventory, shipments, user.id]);
 
   const shippingCoinEnabled = stripeSettings.shippingCoinEnabled;
@@ -667,7 +669,7 @@ export const Profile: React.FC = () => {
               selectedValue={selectedShipmentValue}
             />
           ) : activeTab === 'orders' ? (
-            <OrdersView orders={shippedOrders} />
+            <OrdersView orders={orders} />
           ) : (
             <AccountView
               user={user}
