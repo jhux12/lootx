@@ -62,6 +62,13 @@ const SPINNER_MOTION = {
   approachOffsetNearMissMinPx: 34,
   approachOffsetNearMissMaxPx: 58,
   nearMissChance: 0.42,
+  // close-call: indicator lands on the adjacent card, looks like it might win
+  closeCallMinFraction: 0.76,
+  closeCallMaxFraction: 0.92,
+  closeCallChance: 0.20,
+  closeCallChanceHighRarity: 0.35,
+  // random final resting position within the winner card (never exactly centered)
+  finalRestOffsetMaxPx: 40,
   durationVarianceMs: 420,
   initialBlurDurationMs: 260
 } as const;
@@ -800,24 +807,33 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
   }, [nonce]);
 
-  const getApproachOffset = useCallback((rng: () => number, rarityKey?: ReturnType<typeof normalizeRarityKey>) => {
+  const getApproachOffset = useCallback((rng: () => number, rarityKey?: ReturnType<typeof normalizeRarityKey>, stepWidth = 176) => {
     const direction = rng() < 0.5 ? -1 : 1;
+    const isHighRarity = rarityKey === 'legendary' || rarityKey === 'epic';
 
+    // Three tiers: close-call (indicator on adjacent card) → near-miss (within winner card) → soft wobble
+    const closeCallChance = isHighRarity ? SPINNER_MOTION.closeCallChanceHighRarity : SPINNER_MOTION.closeCallChance;
     const nearMissChance =
-      rarityKey === 'legendary' ? 0.72 :
-      rarityKey === 'epic' ? 0.62 :
-      rarityKey === 'rare' ? 0.52 :
+      rarityKey === 'legendary' ? 0.62 :
+      rarityKey === 'epic' ? 0.52 :
+      rarityKey === 'rare' ? 0.42 :
       SPINNER_MOTION.nearMissChance;
 
-    if (rng() < nearMissChance) {
-      const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
-      const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
-      const magnitude = min + Math.round(rng() * (max - min));
-      return direction * magnitude;
+    const roll = rng();
+
+    if (roll < closeCallChance) {
+      const min = Math.round(stepWidth * SPINNER_MOTION.closeCallMinFraction);
+      const max = Math.round(stepWidth * SPINNER_MOTION.closeCallMaxFraction);
+      return direction * (min + Math.round(rng() * (max - min)));
     }
 
-    const softMagnitude = Math.round(rng() * SPINNER_MOTION.approachOffsetSoftMaxPx);
-    return direction * softMagnitude;
+    if (roll < closeCallChance + nearMissChance) {
+      const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
+      const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
+      return direction * (min + Math.round(rng() * (max - min)));
+    }
+
+    return direction * Math.round(rng() * SPINNER_MOTION.approachOffsetSoftMaxPx);
   }, []);
 
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
@@ -961,8 +977,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const approachOffset = getApproachOffset(rng, options?.winnerRarity ? normalizeRarityKey(options.winnerRarity) : undefined);
-    const landingJitterPx = 0;
+    const stepWidth = spinnerMeasurementsRef.current.stepWidth || 176;
+    const approachOffset = getApproachOffset(rng, options?.winnerRarity ? normalizeRarityKey(options.winnerRarity) : undefined, stepWidth);
+    const finalRestOffsetPx = Math.round((rng() * 2 - 1) * SPINNER_MOTION.finalRestOffsetMaxPx);
     const durationVariance = Math.round((rng() - 0.5) * Math.min(220, SPINNER_MOTION.durationVarianceMs) * 2);
     const resolvedDuration = Math.max(4200, duration + durationVariance);
     const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.16, 0.28);
@@ -988,15 +1005,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
     const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    if (centeredTranslate === null || approachTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
     }
 
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
+    // Final resting position: random within the winner card (never snaps to exact center)
+    const finalRestTranslate = clampTranslate(centeredTranslate + finalRestOffsetPx);
+
+    // For close calls the overshoot pushes FURTHER from center (even more of the adjacent card
+    // becomes visible) before bouncing back to the close-call dwell, then snapping to winner.
+    // For near-miss / soft the overshoot goes slightly toward center (subtle wobble).
+    const isCloseCall = Math.abs(approachOffset) >= stepWidth * SPINNER_MOTION.closeCallMinFraction;
+    const overshootDirection = isCloseCall
+      ? (approachOffset >= 0 ? 1 : -1)
+      : (approachOffset >= 0 ? -1 : 1);
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
     setAnimationPhase('spinning');
 
@@ -1004,8 +1029,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.25, 0.6, 0.2, 1)' },
         { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.86, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.12, 0, 0.18, 1)' }
+        // Approach (close-call or near-miss) dwell position — this is where it looks like the wrong item wins
+        { transform: `translate3d(${approachTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
+        // Final rest: random within the winner card, spring easing gives a satisfying thud
+        { transform: `translate3d(${finalRestTranslate}px, 0, 0)`, offset: 1 }
       ],
       {
         duration: resolvedDuration,
@@ -1050,7 +1077,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       animation.cancel();
       container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.transform = `translate3d(${finalRestTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
