@@ -52,6 +52,14 @@ const RARITY_CARD_CLASS: Record<ReturnType<typeof normalizeRarity>, string> = {
   legendary: 'border-amber-400/55 shadow-[0_0_18px_rgba(251,191,36,0.22)]'
 };
 
+const RARITY_WINNER_CLASS: Record<ReturnType<typeof normalizeRarity>, string> = {
+  common: 'border-gray-400 bg-gray-400/15 shadow-[0_0_28px_rgba(156,163,175,0.55)] animate-winner-flash',
+  uncommon: 'border-green-400 bg-green-400/15 shadow-[0_0_28px_rgba(34,197,94,0.6)] animate-winner-flash',
+  rare: 'border-blue-400 bg-blue-400/15 shadow-[0_0_32px_rgba(59,130,246,0.65)] animate-winner-flash',
+  epic: 'border-purple-400 bg-purple-400/15 shadow-[0_0_36px_rgba(168,85,247,0.7)] animate-winner-flash',
+  legendary: 'border-amber-400 bg-amber-400/15 shadow-[0_0_40px_rgba(251,191,36,0.8)] animate-winner-flash',
+};
+
 const RARITY_BADGE_CLASS: Record<ReturnType<typeof normalizeRarity>, string> = {
   common: 'bg-gray-500/15 text-gray-200',
   uncommon: 'bg-green-500/15 text-green-200',
@@ -187,7 +195,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
             return (
               <div
                 key={itemKey(item, index)}
-                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 ${state === 'SPIN' ? 'transition-none' : 'transition-colors'} ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
+                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 ${state === 'SPIN' ? 'transition-none' : 'transition-colors'} ${isWinner && state === 'STOPPED' ? RARITY_WINNER_CLASS[rarity] : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
               >
                 <div className="h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
                   {item.imageUrl ? (
@@ -214,7 +222,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
         </div>
       </div>
 
-      <style>{`@keyframes reelIdle { 0% { transform: translateX(0); } 100% { transform: translateX(-280px); } } .animate-reel-idle { animation: reelIdle 7s linear infinite; }`}</style>
+      <style>{`@keyframes reelIdle { 0% { transform: translateX(0); } 100% { transform: translateX(-280px); } } .animate-reel-idle { animation: reelIdle 7s linear infinite; } @keyframes winnerFlash { 0% { opacity: 1; } 18% { opacity: 0.55; } 42% { opacity: 1; } 65% { opacity: 0.75; } 100% { opacity: 1; } } .animate-winner-flash { animation: winnerFlash 0.52s ease-out forwards; }`}</style>
     </div>
   );
 };

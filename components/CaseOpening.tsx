@@ -800,10 +800,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
   }, [nonce]);
 
-  const getApproachOffset = useCallback((rng: () => number) => {
+  const getApproachOffset = useCallback((rng: () => number, rarityKey?: ReturnType<typeof normalizeRarityKey>) => {
     const direction = rng() < 0.5 ? -1 : 1;
 
-    if (rng() < SPINNER_MOTION.nearMissChance) {
+    const nearMissChance =
+      rarityKey === 'legendary' ? 0.72 :
+      rarityKey === 'epic' ? 0.62 :
+      rarityKey === 'rare' ? 0.52 :
+      SPINNER_MOTION.nearMissChance;
+
+    if (rng() < nearMissChance) {
       const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
       const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
       const magnitude = min + Math.round(rng() * (max - min));
@@ -946,7 +952,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     winnerIndex: number,
     duration: number,
     onComplete: () => void,
-    options?: { seed?: string }
+    options?: { seed?: string; winnerRarity?: string }
   ) => {
     const container = scrollContainerRef.current;
     if (!container) {
@@ -955,7 +961,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const approachOffset = getApproachOffset(rng);
+    const approachOffset = getApproachOffset(rng, options?.winnerRarity ? normalizeRarityKey(options.winnerRarity) : undefined);
     const landingJitterPx = 0;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(220, SPINNER_MOTION.durationVarianceMs) * 2);
     const resolvedDuration = Math.max(4200, duration + durationVariance);
@@ -1020,6 +1026,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (index !== previousIndex) {
         lastCenterIndexRef.current = index;
         setCurrentCenterIndex(index);
+        playSound('spin-tick');
       }
       frameId = window.requestAnimationFrame(syncCenterItem);
     };
@@ -1068,7 +1075,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1517,7 +1524,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
             setIsGoldMode(true);
-            
+
             // Wait a moment to see the ticket
             goldStageTimerRef.current = window.setTimeout(() => {
                 // Stage 2: Spin to Actual Winner (using only legendary items in reel)
@@ -1528,11 +1535,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs * quickFactor, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
-                  });
+                  }, { winnerRarity: winner.rarity });
                 });
               goldStageTimerRef.current = null;
             }, 700);
-        });
+        }, { winnerRarity: 'legendary' });
 
     } else {
         // --- NORMAL SPIN FLOW ---
@@ -1542,7 +1549,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.58 : 1), () => {
             finishSpin(winner);
-        });
+        }, { winnerRarity: winner.rarity });
     }
   };
 
@@ -1615,8 +1622,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     else if (rarity.includes('rare')) playSound('win-rare');
     else playSound('win-common');
     setShowWinModal(true);
-    if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
-      const particles = createMicroConfetti(reduceMobileEffects ? 10 : 18);
+    if (!prefersReducedMotion && ['rare','ultra rare','epic','legendary'].includes(String(item.rarity).toLowerCase())) {
+      const isHighRarity = normalizeRarityKey(item.rarity) === 'legendary';
+      const particles = createMicroConfetti(reduceMobileEffects ? 12 : (isHighRarity ? 28 : 18));
       setConfetti(particles);
       if (confettiTimerRef.current !== null) window.clearTimeout(confettiTimerRef.current);
       confettiTimerRef.current = window.setTimeout(() => {
