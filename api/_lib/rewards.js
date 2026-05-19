@@ -112,7 +112,7 @@ export const applySpendAndRewards = async ({
     .collection('users')
     .doc(uid);
 
-  const displayName = userData.displayName || userData.name || 'Player';
+  const displayName = userData.username || userData.displayName || userData.name || 'Player';
   const avatarUrl = userData.avatar || userData.photoURL || '';
   const hiddenFromLeaderboard = userData.hiddenFromLeaderboard === true || userData.hiddenFromPublicDisplay === true;
   const nowTs = admin.firestore.FieldValue.serverTimestamp();
@@ -130,6 +130,7 @@ export const applySpendAndRewards = async ({
     points: admin.firestore.FieldValue.increment(pointsAdded),
     updatedAt: nowTs,
     displayName,
+    username: displayName,
     avatarUrl,
     hiddenFromLeaderboard
   }, { merge: true });
