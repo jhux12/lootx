@@ -62,6 +62,13 @@ const SPINNER_MOTION = {
   approachOffsetNearMissMinPx: 34,
   approachOffsetNearMissMaxPx: 58,
   nearMissChance: 0.42,
+  // close-call: indicator lands on the adjacent card, looks like it might win
+  closeCallMinFraction: 0.76,
+  closeCallMaxFraction: 0.92,
+  closeCallChance: 0.20,
+  closeCallChanceHighRarity: 0.35,
+  // random final resting position within the winner card (never exactly centered)
+  finalRestOffsetMaxPx: 40,
   durationVarianceMs: 420,
   initialBlurDurationMs: 260
 } as const;
@@ -800,18 +807,33 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
   }, [nonce]);
 
-  const getApproachOffset = useCallback((rng: () => number) => {
+  const getApproachOffset = useCallback((rng: () => number, rarityKey?: ReturnType<typeof normalizeRarityKey>, stepWidth = 176) => {
     const direction = rng() < 0.5 ? -1 : 1;
+    const isHighRarity = rarityKey === 'legendary' || rarityKey === 'epic';
 
-    if (rng() < SPINNER_MOTION.nearMissChance) {
-      const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
-      const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
-      const magnitude = min + Math.round(rng() * (max - min));
-      return direction * magnitude;
+    // Three tiers: close-call (indicator on adjacent card) → near-miss (within winner card) → soft wobble
+    const closeCallChance = isHighRarity ? SPINNER_MOTION.closeCallChanceHighRarity : SPINNER_MOTION.closeCallChance;
+    const nearMissChance =
+      rarityKey === 'legendary' ? 0.62 :
+      rarityKey === 'epic' ? 0.52 :
+      rarityKey === 'rare' ? 0.42 :
+      SPINNER_MOTION.nearMissChance;
+
+    const roll = rng();
+
+    if (roll < closeCallChance) {
+      const min = Math.round(stepWidth * SPINNER_MOTION.closeCallMinFraction);
+      const max = Math.round(stepWidth * SPINNER_MOTION.closeCallMaxFraction);
+      return direction * (min + Math.round(rng() * (max - min)));
     }
 
-    const softMagnitude = Math.round(rng() * SPINNER_MOTION.approachOffsetSoftMaxPx);
-    return direction * softMagnitude;
+    if (roll < closeCallChance + nearMissChance) {
+      const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
+      const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
+      return direction * (min + Math.round(rng() * (max - min)));
+    }
+
+    return direction * Math.round(rng() * SPINNER_MOTION.approachOffsetSoftMaxPx);
   }, []);
 
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
@@ -946,7 +968,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     winnerIndex: number,
     duration: number,
     onComplete: () => void,
-    options?: { seed?: string }
+    options?: { seed?: string; winnerRarity?: string }
   ) => {
     const container = scrollContainerRef.current;
     if (!container) {
@@ -955,8 +977,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
+    const stepWidth = spinnerMeasurementsRef.current.stepWidth || 176;
+    const approachOffset = getApproachOffset(rng, options?.winnerRarity ? normalizeRarityKey(options.winnerRarity) : undefined, stepWidth);
+    const finalRestOffsetPx = Math.round((rng() * 2 - 1) * SPINNER_MOTION.finalRestOffsetMaxPx);
     const durationVariance = Math.round((rng() - 0.5) * Math.min(220, SPINNER_MOTION.durationVarianceMs) * 2);
     const resolvedDuration = Math.max(4200, duration + durationVariance);
     const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.16, 0.28);
@@ -982,15 +1005,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
     const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    if (centeredTranslate === null || approachTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
     }
 
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
+    // Final resting position: random within the winner card (never snaps to exact center)
+    const finalRestTranslate = clampTranslate(centeredTranslate + finalRestOffsetPx);
+
+    // For close calls the overshoot pushes FURTHER from center (even more of the adjacent card
+    // becomes visible) before bouncing back to the close-call dwell, then snapping to winner.
+    // For near-miss / soft the overshoot goes slightly toward center (subtle wobble).
+    const isCloseCall = Math.abs(approachOffset) >= stepWidth * SPINNER_MOTION.closeCallMinFraction;
+    const overshootDirection = isCloseCall
+      ? (approachOffset >= 0 ? 1 : -1)
+      : (approachOffset >= 0 ? -1 : 1);
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
     setAnimationPhase('spinning');
 
@@ -998,8 +1029,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.25, 0.6, 0.2, 1)' },
         { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.86, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.12, 0, 0.18, 1)' }
+        // Approach (close-call or near-miss) dwell position — this is where it looks like the wrong item wins
+        { transform: `translate3d(${approachTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+        // Final rest: random within the winner card — clean ease-out, no overshoot
+        { transform: `translate3d(${finalRestTranslate}px, 0, 0)`, offset: 1 }
       ],
       {
         duration: resolvedDuration,
@@ -1020,6 +1053,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (index !== previousIndex) {
         lastCenterIndexRef.current = index;
         setCurrentCenterIndex(index);
+        playSound('spin-tick');
       }
       frameId = window.requestAnimationFrame(syncCenterItem);
     };
@@ -1043,7 +1077,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       animation.cancel();
       container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.transform = `translate3d(${finalRestTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
@@ -1068,7 +1102,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1517,7 +1551,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
             setIsGoldMode(true);
-            
+
             // Wait a moment to see the ticket
             goldStageTimerRef.current = window.setTimeout(() => {
                 // Stage 2: Spin to Actual Winner (using only legendary items in reel)
@@ -1528,11 +1562,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs * quickFactor, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
-                  });
+                  }, { winnerRarity: winner.rarity });
                 });
               goldStageTimerRef.current = null;
             }, 700);
-        });
+        }, { winnerRarity: 'legendary' });
 
     } else {
         // --- NORMAL SPIN FLOW ---
@@ -1542,7 +1576,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.58 : 1), () => {
             finishSpin(winner);
-        });
+        }, { winnerRarity: winner.rarity });
     }
   };
 
@@ -1615,8 +1649,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     else if (rarity.includes('rare')) playSound('win-rare');
     else playSound('win-common');
     setShowWinModal(true);
-    if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
-      const particles = createMicroConfetti(reduceMobileEffects ? 10 : 18);
+    if (!prefersReducedMotion && ['rare','ultra rare','epic','legendary'].includes(String(item.rarity).toLowerCase())) {
+      const isHighRarity = normalizeRarityKey(item.rarity) === 'legendary';
+      const particles = createMicroConfetti(reduceMobileEffects ? 12 : (isHighRarity ? 28 : 18));
       setConfetti(particles);
       if (confettiTimerRef.current !== null) window.clearTimeout(confettiTimerRef.current);
       confettiTimerRef.current = window.setTimeout(() => {
