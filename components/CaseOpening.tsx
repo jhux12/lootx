@@ -1972,15 +1972,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         (() => {
                           const rarityValue = normalizeRarityKey(item.rarity);
                           const rarityGlow = rarityGlowClass[rarityValue] ?? rarityGlowClass.common;
-                          const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && idx === reelWinnerIndex;
-                          const shouldHighlightWinResult = isSettledWinner && showWinModal && Boolean(wonItem);
+                          const isWinnerCard = idx === reelWinnerIndex;
+                          const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && isWinnerCard;
+                          const shouldHighlightWinResult = showWinModal && Boolean(wonItem) && isWinnerCard;
                           const isCenteredItem = idx === currentCenterIndex;
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
                           const isUltraSmoothSpin = isSpinning;
                           const showItemGlow = !isUltraSmoothSpin && (!useMobileSpinnerBehavior || !reduceMobileEffects);
                           const allowHeavyHighlight = !isUltraSmoothSpin;
                           const cardOpacity = isUltraSmoothSpin ? 1 : (isFocusedItem ? 1 : 0.35);
-                          if (showWinModal && wonItem && !isSettledWinner) {
+                          if (showWinModal && wonItem && !isWinnerCard) {
                             return null;
                           }
                           return (
