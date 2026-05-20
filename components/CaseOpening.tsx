@@ -1916,6 +1916,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
+                {showWinModal && wonItem && (
+                  <div className="pointer-events-none absolute inset-0 z-30">
+                    <div className="absolute inset-0 opacity-25" style={{ background: `radial-gradient(circle at center, ${wonItem.color}66 0%, transparent 72%)` }} />
+                    {confetti.map((piece) => (
+                      <span
+                        key={piece.id}
+                        className="absolute rounded-full"
+                        style={{ left: `${piece.x}%`, top: `${piece.y}%`, width: piece.size, height: piece.size, background: piece.color, transform: `translate(${piece.dx}px, ${piece.dy}px)`, opacity: 0, animation: `fadeOut ${piece.life}ms ease-out forwards` }}
+                      />
+                    ))}
+                  </div>
+                )}
                 {isSpinnerAssetsLoading && (
                   <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0a0f19]/75 px-4">
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 text-xs font-semibold text-white sm:text-sm">
@@ -1968,6 +1980,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const showItemGlow = !isUltraSmoothSpin && (!useMobileSpinnerBehavior || !reduceMobileEffects);
                           const allowHeavyHighlight = !isUltraSmoothSpin;
                           const cardOpacity = isUltraSmoothSpin ? 1 : (isFocusedItem ? 1 : 0.35);
+                          if (showWinModal && wonItem && !isSettledWinner) {
+                            return null;
+                          }
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
@@ -1989,11 +2004,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                     : 'brightness(0.82)',
                                 zIndex: shouldHighlightWinResult ? 8 : (isFocusedItem ? 4 : 1),
                                 transform: shouldHighlightWinResult
-                                  ? 'translateZ(0) scale(1.17)'
+                                  ? 'translateZ(0) scale(1.22)'
                                   : 'translateZ(0) scale(1)',
                                 transition: isSpinning
                                   ? 'none'
-                                  : 'transform 360ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms ease, box-shadow 220ms ease, filter 220ms ease'
+                                  : 'transform 460ms cubic-bezier(0.16, 1, 0.3, 1), opacity 220ms ease, box-shadow 260ms ease, filter 260ms ease'
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
@@ -2024,23 +2039,47 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
                  {showWinModal && wonItem ? (
                   <div className="flex w-full max-w-xl flex-col gap-2 sm:flex-row">
-                    {wonItem.redeemable !== false && (
-                      <button
-                        onClick={handleSell}
-                        disabled={isGeneratingSellOffer || isSellingItem}
-                        className="min-h-12 flex-1 rounded-lg border border-emerald-300/40 bg-emerald-500 px-4 py-3 text-sm font-bold text-black transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isSellingItem ? 'Selling item...' : (
+                    {isDemoSpin ? (
+                      <>
+                        <button
+                          onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
+                          disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
+                          className="min-h-12 flex-1 rounded-lg bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] px-4 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
                           <span className="inline-flex items-center justify-center gap-2">
-                            <Wallet className="h-4 w-4" />
-                            Quick sell <CoinAmount amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)} formatOptions={{ maximumFractionDigits: 0 }} className="text-black" iconClassName="h-4 w-4" />
+                            Open for
+                            <CoinAmount amount={toCoins(box!.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="text-white" iconClassName="h-4 w-4" />
                           </span>
+                        </button>
+                        <button
+                          onClick={handleTryFree}
+                          disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isSpinnerAssetsLoading}
+                          className="min-h-12 flex-1 rounded-lg border border-white/15 bg-[#3a414c] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#474f5c] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Demo Spin
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {wonItem.redeemable !== false && (
+                          <button
+                            onClick={handleSell}
+                            disabled={isGeneratingSellOffer || isSellingItem}
+                            className="min-h-12 flex-1 rounded-lg border border-emerald-300/40 bg-emerald-500 px-4 py-3 text-sm font-bold text-black transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isSellingItem ? 'Selling item...' : (
+                              <span className="inline-flex items-center justify-center gap-2">
+                                <Wallet className="h-4 w-4" />
+                                Quick sell <CoinAmount amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)} formatOptions={{ maximumFractionDigits: 0 }} className="text-black" iconClassName="h-4 w-4" />
+                              </span>
+                            )}
+                          </button>
                         )}
-                      </button>
+                        <button onClick={handleKeep} className="min-h-12 flex-1 rounded-lg border border-white/15 bg-[#3a414c] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#474f5c]">
+                          <span className="inline-flex items-center gap-2"><PackageOpen className="h-4 w-4" />Keep item</span>
+                        </button>
+                      </>
                     )}
-                    <button onClick={handleKeep} className="min-h-12 flex-1 rounded-lg border border-white/15 bg-[#3a414c] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#474f5c]">
-                      <span className="inline-flex items-center gap-2"><PackageOpen className="h-4 w-4" />Keep item</span>
-                    </button>
                   </div>
                  ) : (
                   <button 
