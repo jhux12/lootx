@@ -147,7 +147,7 @@ export const OfferwallModal: React.FC<OfferwallModalProps> = ({ open, onClose, o
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto px-3 py-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:px-4 sm:py-5 sm:p-6 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto px-3 py-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:px-4 sm:py-5 sm:p-6 animate-in fade-in duration-200"
       aria-hidden={!open}
       onClick={handleBackdropClick}
     >

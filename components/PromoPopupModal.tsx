@@ -36,7 +36,7 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 py-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:items-center sm:py-8 sm:px-6">
+    <div className="fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto px-4 py-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:items-center sm:py-8 sm:px-6">
       <button
         type="button"
         className="absolute inset-0 bg-black/60 backdrop-blur-md"
