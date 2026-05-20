@@ -398,6 +398,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const spinnerAnimationRef = useRef<Animation | null>(null);
   const tickTimerRef = useRef<number | null>(null);
   const tickFrameRef = useRef<number | null>(null);
+  const lastTickedCenterIndexRef = useRef<number>(-1);
   const lastCenterIndexRef = useRef<number>(SPINNER_MOTION.preWinnerItems);
   const spinnerMeasurementsRef = useRef({
     cardWidth: DESKTOP_CARD_WIDTH,
@@ -940,6 +941,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       window.cancelAnimationFrame(tickFrameRef.current);
       tickFrameRef.current = null;
     }
+    lastTickedCenterIndexRef.current = -1;
     if (goldStageTimerRef.current !== null) {
       window.clearTimeout(goldStageTimerRef.current);
       goldStageTimerRef.current = null;
@@ -991,6 +993,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     updateSpinnerMeasurements();
     const startingCenterIndex = getCenteredIndexFromTranslate(0);
     lastCenterIndexRef.current = startingCenterIndex;
+    lastTickedCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
@@ -1032,8 +1035,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const previousIndex = lastCenterIndexRef.current;
       if (index !== previousIndex) {
         lastCenterIndexRef.current = index;
-        if (isSpinningRef.current) {
+        if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
           playSound('spin-tick');
+          lastTickedCenterIndexRef.current = index;
         }
         if (!reduceSpinnerRerenders) {
           setCurrentCenterIndex(index);

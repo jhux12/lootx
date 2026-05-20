@@ -120,7 +120,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (type === 'spin-tick') {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      if (now - lastTickAtRef.current < 18) return;
+      if (now - lastTickAtRef.current < 42) return;
       lastTickAtRef.current = now;
     }
 
