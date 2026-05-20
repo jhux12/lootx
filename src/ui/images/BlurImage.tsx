@@ -5,6 +5,7 @@ type BlurImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
   placeholderSrc?: string;
   ratioClassName?: string;
   priority?: boolean;
+  showPlaceholder?: boolean;
 };
 
 const BlurImageComponent: React.FC<BlurImageProps> = ({
@@ -14,6 +15,7 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
   placeholderSrc,
   ratioClassName,
   priority = false,
+  showPlaceholder = true,
   loading,
   width,
   height,
@@ -46,11 +48,13 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
 
   return (
     <div className={`pullz-blur-wrap ${ratioClassName ?? ''}`}>
-      {placeholderSrc ? (
-        <img src={placeholderSrc} alt="" aria-hidden="true" className={`pullz-blur-placeholder ${loaded ? 'is-hidden' : ''}`} width={intrinsicWidth} height={intrinsicHeight} decoding="async" />
-      ) : (
-        <div className={`pullz-blur-placeholder pullz-blur-fallback ${loaded ? 'is-hidden' : ''}`} aria-hidden="true" />
-      )}
+      {showPlaceholder ? (
+        placeholderSrc ? (
+          <img src={placeholderSrc} alt="" aria-hidden="true" className={`pullz-blur-placeholder ${loaded ? 'is-hidden' : ''}`} width={intrinsicWidth} height={intrinsicHeight} decoding="async" />
+        ) : (
+          <div className={`pullz-blur-placeholder pullz-blur-fallback ${loaded ? 'is-hidden' : ''}`} aria-hidden="true" />
+        )
+      ) : null}
       <img
         ref={imageRef}
         src={src}
