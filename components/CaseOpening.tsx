@@ -2002,9 +2002,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && idx === reelWinnerIndex;
                           const isCenteredItem = idx === currentCenterIndex;
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
-                          const showItemGlow = !isSpinning || !useMobileSpinnerBehavior;
-                          const allowHeavyHighlight = !useMobileSpinnerBehavior || !isSpinning;
-                          const cardOpacity = useMobileSpinnerBehavior && isSpinning ? 1 : (isFocusedItem ? 1 : 0.35);
+                          const isUltraSmoothSpin = isSpinning;
+                          const showItemGlow = !isUltraSmoothSpin && (!useMobileSpinnerBehavior || !reduceMobileEffects);
+                          const allowHeavyHighlight = !isUltraSmoothSpin;
+                          const cardOpacity = isUltraSmoothSpin ? 1 : (isFocusedItem ? 1 : 0.35);
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
@@ -2019,7 +2020,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   ? (reduceMobileEffects ? `0 0 0 1px ${item.color}44, 0 0 12px ${item.color}30` : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
                                   : 'none',
                                 opacity: cardOpacity,
-                                filter: reduceMobileEffects || (useMobileSpinnerBehavior && isSpinning)
+                                filter: reduceMobileEffects || isUltraSmoothSpin
                                   ? 'none'
                                   : isFocusedItem
                                     ? 'brightness(1.12)'
@@ -2029,7 +2030,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                              className={`pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow && !reduceMobileEffects ? 'opacity-65 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
+                              className={`pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-65 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
                               style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
