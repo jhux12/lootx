@@ -36,7 +36,7 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8 sm:px-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 py-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:items-center sm:py-8 sm:px-6">
       <button
         type="button"
         className="absolute inset-0 bg-black/60 backdrop-blur-md"
@@ -44,7 +44,7 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
         onClick={onClose}
       />
       <div
-        className="relative w-full max-w-[540px] animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none"
+        className="relative my-auto w-full max-w-[540px] max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-y-auto animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby="promo-popup-title"

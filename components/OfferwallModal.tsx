@@ -147,7 +147,7 @@ export const OfferwallModal: React.FC<OfferwallModalProps> = ({ open, onClose, o
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-5 sm:p-6 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto px-3 py-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:px-4 sm:py-5 sm:p-6 animate-in fade-in duration-200"
       aria-hidden={!open}
       onClick={handleBackdropClick}
     >
@@ -161,7 +161,7 @@ export const OfferwallModal: React.FC<OfferwallModalProps> = ({ open, onClose, o
         aria-modal="true"
         aria-labelledby="offerwall-title"
         aria-describedby="offerwall-description"
-        className="relative z-10 flex w-full h-full flex-col overflow-hidden rounded-none border border-white/10 bg-[#0f141f]/90 shadow-2xl backdrop-blur-xl sm:h-[80vh] sm:min-h-[60vh] sm:max-h-[80vh] sm:max-w-5xl sm:rounded-2xl animate-in zoom-in-95 duration-200"
+        className="relative z-10 my-auto flex w-full max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-[70dvh] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0f141f]/90 shadow-2xl backdrop-blur-xl sm:h-[80vh] sm:min-h-[60vh] sm:max-h-[80vh] sm:max-w-5xl animate-in zoom-in-95 duration-200"
         onKeyDown={handleKeyDown}
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-6">
