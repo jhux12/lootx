@@ -1,17 +1,18 @@
-import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
 import spinSoundUrl from '../assets/spinsound.mp3';
-import tickSoundUrl from '../assets/audio/tick.mp3';
-import commonWinSoundUrl from '../assets/audio/common.mp3';
-import uncommonWinSoundUrl from '../assets/audio/uncommon.mp3';
-import rareWinSoundUrl from '../assets/audio/rare.mp3';
-import epicWinSoundUrl from '../assets/audio/epic.mp3';
-import legendaryWinSoundUrl from '../assets/audio/legendary.mp3';
+import tickSoundUrl from '../assets/audio/tick.wav';
+import commonWinSoundUrl from '../assets/audio/common.wav';
+import uncommonWinSoundUrl from '../assets/audio/uncommon.wav';
+import rareWinSoundUrl from '../assets/audio/rare.wav';
+import epicWinSoundUrl from '../assets/audio/epic.wav';
+import legendaryWinSoundUrl from '../assets/audio/legendary.wav';
 
 type SoundType = 'click' | 'hover' | 'spin-start' | 'spin-tick' | 'win-common' | 'win-uncommon' | 'win-rare' | 'win-epic' | 'win-gold' | 'gold-mode' | 'coins';
 
 interface SoundContextType {
   muted: boolean;
   toggleMute: () => void;
+  unlockAudio: () => void;
   playSound: (type: SoundType) => void;
 }
 
@@ -46,7 +47,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const lastTickAtRef = useRef(0);
   const didInitRef = useRef(false);
   const didWarmupRef = useRef(false);
-  const didPrimePoolRef = useRef(false);
+  const hasUserInteractedRef = useRef(false);
 
   const ensureAudioContextReady = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -104,68 +105,22 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, [ensureAudioContextReady]);
 
-  const primeAudioPoolForMobile = useCallback(() => {
-    if (didPrimePoolRef.current || typeof window === 'undefined') return;
-    didPrimePoolRef.current = true;
-    (Object.values(audioRefs.current) as HTMLAudioElement[][]).forEach((pool) => {
-      pool.forEach((audio) => {
-        try {
-          audio.playsInline = true;
-          const previousMuted = audio.muted;
-          const previousVolume = audio.volume;
-          audio.muted = true;
-          audio.volume = 0;
-          const playPromise = audio.play();
-          if (playPromise && typeof playPromise.then === 'function') {
-            void playPromise
-              .then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-              })
-              .catch(() => undefined)
-              .finally(() => {
-                audio.muted = previousMuted;
-                audio.volume = previousVolume;
-              });
-          } else {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.muted = previousMuted;
-            audio.volume = previousVolume;
-          }
-        } catch {
-          // ignore priming failures
-        }
-      });
-    });
-  }, []);
-
-  useEffect(() => {
-    const bootstrap = () => {
-      initializeAudio();
-      primeAudioPoolForMobile();
-    };
-    window.addEventListener('pointerdown', bootstrap, { once: true, passive: true });
-    window.addEventListener('touchstart', bootstrap, { once: true, passive: true });
-    window.addEventListener('keydown', bootstrap, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', bootstrap);
-      window.removeEventListener('touchstart', bootstrap);
-      window.removeEventListener('keydown', bootstrap);
-    };
-  }, [initializeAudio, primeAudioPoolForMobile]);
+  const unlockAudio = useCallback(() => {
+    if (hasUserInteractedRef.current) return;
+    hasUserInteractedRef.current = true;
+    initializeAudio();
+    ensureAudioContextReady();
+  }, [ensureAudioContextReady, initializeAudio]);
 
   const toggleMute = useCallback(() => setMuted((prev) => !prev), []);
 
   const playSound = useCallback((type: SoundType) => {
-    if (muted) return;
-
-    initializeAudio();
+    if (muted || !hasUserInteractedRef.current) return;
     ensureAudioContextReady();
 
     if (type === 'spin-tick') {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      if (now - lastTickAtRef.current < 18) return;
+      if (now - lastTickAtRef.current < 42) return;
       lastTickAtRef.current = now;
     }
 
@@ -196,7 +151,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [ensureAudioContextReady, initializeAudio, muted]);
 
-  return <SoundContext.Provider value={{ muted, toggleMute, playSound }}>{children}</SoundContext.Provider>;
+  return <SoundContext.Provider value={{ muted, toggleMute, unlockAudio, playSound }}>{children}</SoundContext.Provider>;
 };
 
 export const useSound = () => {

@@ -299,7 +299,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     claimFreeBox,
     registerSpend
   } = useGame();
-  const { muted, toggleMute, playSound } = useSound();
+  const { muted, toggleMute, unlockAudio, playSound } = useSound();
   const performanceMode = usePerformanceMode();
   
   const matchedBox = boxes.find(b => b.id === boxId);
@@ -397,6 +397,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const reelItemsRef = useRef<CaseItem[]>([]);
   const spinnerAnimationRef = useRef<Animation | null>(null);
   const tickTimerRef = useRef<number | null>(null);
+  const tickFrameRef = useRef<number | null>(null);
+  const lastTickedCenterIndexRef = useRef<number>(-1);
   const lastCenterIndexRef = useRef<number>(SPINNER_MOTION.preWinnerItems);
   const spinnerMeasurementsRef = useRef({
     cardWidth: DESKTOP_CARD_WIDTH,
@@ -416,6 +418,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
   const hasTrackedFreeBoxViewRef = useRef(false);
   const spinRequestLockRef = useRef(false);
+  const isSpinningRef = useRef(false);
+  const settleSoundPlayedRef = useRef(false);
+  const winSoundPlayedRef = useRef(false);
+  const winSoundTimerRef = useRef<number | null>(null);
   const confettiTimerRef = useRef<number | null>(null);
   const goldStageTimerRef = useRef<number | null>(null);
   const topUpLockTimerRef = useRef<number | null>(null);
@@ -931,6 +937,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       window.clearTimeout(tickTimerRef.current);
       tickTimerRef.current = null;
     }
+    if (tickFrameRef.current !== null) {
+      window.cancelAnimationFrame(tickFrameRef.current);
+      tickFrameRef.current = null;
+    }
+    lastTickedCenterIndexRef.current = -1;
     if (goldStageTimerRef.current !== null) {
       window.clearTimeout(goldStageTimerRef.current);
       goldStageTimerRef.current = null;
@@ -941,6 +952,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
     setAnimationPhase('idle');
   }, []);
+
+  useEffect(() => {
+    isSpinningRef.current = isSpinning;
+  }, [isSpinning]);
 
   const animateSpin = useCallback(async (
     winnerIndex: number,
@@ -978,6 +993,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     updateSpinnerMeasurements();
     const startingCenterIndex = getCenteredIndexFromTranslate(0);
     lastCenterIndexRef.current = startingCenterIndex;
+    lastTickedCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
@@ -1011,7 +1027,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     spinnerAnimationRef.current = animation;
     let frameId: number | null = null;
     const syncCenterItem = () => {
-      if (reduceSpinnerRerenders || document.visibilityState === 'hidden') return;
+      if (document.visibilityState === 'hidden') return;
       const transform = window.getComputedStyle(container).transform;
       const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
       const x = matrix ? matrix.m41 : 0;
@@ -1019,13 +1035,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const previousIndex = lastCenterIndexRef.current;
       if (index !== previousIndex) {
         lastCenterIndexRef.current = index;
-        setCurrentCenterIndex(index);
+        if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
+          playSound('spin-tick');
+          lastTickedCenterIndexRef.current = index;
+        }
+        if (!reduceSpinnerRerenders) {
+          setCurrentCenterIndex(index);
+        }
       }
-      frameId = window.requestAnimationFrame(syncCenterItem);
+      tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
+      frameId = tickFrameRef.current;
     };
-    if (!reduceSpinnerRerenders) {
-      frameId = window.requestAnimationFrame(syncCenterItem);
-    }
+    tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
+    frameId = tickFrameRef.current;
     const decelerationTimer = window.setTimeout(
       () => setAnimationPhase('settling'),
       Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
@@ -1049,6 +1071,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       lastCenterIndexRef.current = winnerIndex;
       setHasSpinSettled(true);
       if (frameId !== null) window.cancelAnimationFrame(frameId);
+      tickFrameRef.current = null;
 
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
@@ -1063,12 +1086,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         tickTimerRef.current = null;
       }
       if (frameId !== null) window.cancelAnimationFrame(frameId);
+      tickFrameRef.current = null;
       setAnimationPhase('idle');
       container.style.willChange = 'auto';
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1212,6 +1236,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (!box || items.length === 0) return;
 
     spinRequestLockRef.current = true;
+    unlockAudio();
+    settleSoundPlayedRef.current = false;
+    winSoundPlayedRef.current = false;
+    if (winSoundTimerRef.current !== null) {
+      window.clearTimeout(winSoundTimerRef.current);
+      winSoundTimerRef.current = null;
+    }
     setSpinFeedbackMessage(null);
 
     if (forceGold) {
@@ -1589,6 +1620,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, []);
 
   useEffect(() => {
+    if (!hasSpinSettled || !isSpinning || settleSoundPlayedRef.current) return;
+    settleSoundPlayedRef.current = true;
+    playSound('spin-start');
+  }, [hasSpinSettled, isSpinning, playSound]);
+
+  useEffect(() => {
     return () => {
       if (confettiTimerRef.current !== null) {
         window.clearTimeout(confettiTimerRef.current);
@@ -1597,6 +1634,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (topUpLockTimerRef.current !== null) {
         window.clearTimeout(topUpLockTimerRef.current);
         topUpLockTimerRef.current = null;
+      }
+      if (winSoundTimerRef.current !== null) {
+        window.clearTimeout(winSoundTimerRef.current);
+        winSoundTimerRef.current = null;
       }
       resetSpinnerAnimation();
     };
@@ -1608,13 +1649,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setIsBoxPreviewVisible(false);
     setIsBoxPreviewFading(false);
 
-    const rarity = String(item.rarity ?? 'common').toLowerCase();
-    if (rarity.includes('legend')) playSound('win-gold');
-    else if (rarity.includes('epic')) playSound('win-epic');
-    else if (rarity.includes('uncommon')) playSound('win-uncommon');
-    else if (rarity.includes('rare')) playSound('win-rare');
-    else playSound('win-common');
     setShowWinModal(true);
+    if (!winSoundPlayedRef.current) {
+      const rarity = String(item.rarity ?? 'common').toLowerCase();
+      winSoundTimerRef.current = window.setTimeout(() => {
+        if (winSoundPlayedRef.current) return;
+        if (rarity.includes('legend') || rarity.includes('mythic')) playSound('win-gold');
+        else if (rarity.includes('epic')) playSound('win-epic');
+        else if (rarity.includes('uncommon') || rarity.includes('rare')) playSound('win-rare');
+        else playSound('win-common');
+        winSoundPlayedRef.current = true;
+        winSoundTimerRef.current = null;
+      }, 120);
+    }
     if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
       const particles = createMicroConfetti(reduceMobileEffects ? 10 : 18);
       setConfetti(particles);
