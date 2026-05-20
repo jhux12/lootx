@@ -1924,11 +1924,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     setShowXpConfirmSheet(true);
                   }}
                   disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
-                  className={`inline-flex min-h-9 items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap transition-all disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs ${canOpenWithXp ? 'border-cyan-300/45 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15' : 'border-white/20 bg-black/35 text-gray-200 hover:border-cyan-300/45'}`}
+                  className="inline-flex min-h-9 items-center rounded-md p-[1.5px] transition-all disabled:cursor-not-allowed disabled:opacity-60"
+                  style={{ background: `conic-gradient(from -90deg, rgba(34, 211, 238, 0.9) ${xpProgress * 360}deg, rgba(255, 255, 255, 0.18) ${xpProgress * 360}deg 360deg)` }}
                   aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
                   title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
                 >
-                  XP {currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}
+                  <span className={`inline-flex min-h-[32px] items-center rounded-[5px] px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap sm:text-xs ${canOpenWithXp ? 'bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15' : 'bg-black/35 text-gray-200'}`}>
+                    XP
+                  </span>
                 </button>
               )}
               <button type="button" onClick={() => { playSound('click'); setShowFairModal(true); }} className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-black/65 text-emerald-300 transition duration-200 hover:scale-105 hover:border-emerald-300/60 hover:text-emerald-200 hover:shadow-[0_0_14px_rgba(52,211,153,0.45)] sm:h-9 sm:w-9" aria-label="Open provably fair details" title="View fairness verification"><ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></button>
