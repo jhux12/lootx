@@ -67,11 +67,11 @@ const SPINNER_MOTION = {
 } as const;
 
 const rarityGlowClass: Record<string, string> = {
-  legendary: 'bg-amber-300/35',
-  epic: 'bg-purple-400/30',
-  rare: 'bg-blue-300/28',
-  uncommon: 'bg-green-300/24',
-  common: 'bg-gray-300/18'
+  legendary: 'bg-transparent',
+  epic: 'bg-transparent',
+  rare: 'bg-transparent',
+  uncommon: 'bg-transparent',
+  common: 'bg-transparent'
 };
 
 const rarityIndicatorStyle: Record<string, { color: string; glow: string; label: string }> = {
