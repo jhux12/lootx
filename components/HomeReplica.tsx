@@ -250,7 +250,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 <>
                   <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#20262b] to-transparent sm:w-16" />
                   <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#20262b] to-transparent sm:w-16" />
-                  <div className="ticker-animation flex w-max items-center gap-2 px-4 [animation-duration:70s] sm:gap-3">
+                  <div className="ticker-animation live-wins-ticker flex w-max items-center gap-2 px-4 [animation-duration:70s] sm:gap-3">
                     {[...liveWins, ...liveWins].map((win, index) => (
                       <LiveWinCard key={`${win.id}-${index}`} win={win} onOpenBox={onOpenBox} />
                     ))}
@@ -280,6 +280,29 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
               ))}
             </div>
           </section>
+
+          <section aria-label="Follow us on Instagram" className="mt-2">
+            <a
+              href="https://www.instagram.com/pullz.gg/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative block overflow-hidden rounded-2xl p-[2px]"
+            >
+              <div className="pointer-events-none absolute -inset-[120%] animate-[spin_4.6s_linear_infinite] bg-[conic-gradient(from_90deg,rgba(56,189,248,0)_0deg,rgba(56,189,248,0.95)_95deg,rgba(124,58,237,0.95)_210deg,rgba(56,189,248,0)_360deg)]" />
+              <div className="relative rounded-[14px] border border-white/10 bg-[#1f2730] px-4 py-3.5 sm:px-5 sm:py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200/90">Community</p>
+                    <h3 className="mt-1 text-sm font-black uppercase text-white sm:text-base">Follow us on Instagram</h3>
+                  </div>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-violet-500 text-white shadow-[0_4px_16px_rgba(56,189,248,0.35)] sm:h-9 sm:w-9">
+                    ↗
+                  </span>
+                </div>
+              </div>
+            </a>
+          </section>
+
         </section>
 
         {showBelowFold ? (
