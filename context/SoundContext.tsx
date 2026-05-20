@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import spinSoundUrl from '../assets/spinsound.mp3';
-import tickSoundUrl from '../assets/audio/tick.mp3';
+import tickSoundUrl from '../assets/audio/tick.wav';
 import commonWinSoundUrl from '../assets/audio/common.mp3';
 import uncommonWinSoundUrl from '../assets/audio/uncommon.mp3';
 import rareWinSoundUrl from '../assets/audio/rare.mp3';
