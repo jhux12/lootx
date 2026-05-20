@@ -145,20 +145,20 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
       <aside className="space-y-4 lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1 lg:row-span-2">
         <section>
           <h3 className="mb-2 text-xs font-black uppercase text-slate-300 sm:mb-3 sm:text-sm">Top Pullz</h3>
-          <div className="space-y-2 sm:space-y-3">
+          <div className="space-y-2">
             {topPullz.map((item) => (
-              <div key={item.id} className="group relative min-h-[162px] overflow-hidden rounded-lg bg-[#1f2730]/70 p-1.5 text-center sm:min-h-[228px] sm:rounded-2xl sm:p-3">
-                <div className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_60%)] sm:block" />
-                <div className="relative z-10 flex min-h-[132px] flex-col items-center justify-center gap-1.5 transition-transform duration-300 ease-out group-hover:translate-y-[120%] group-focus-within:translate-y-[120%] sm:min-h-[210px] sm:gap-3">
-                  <div className="relative flex h-28 w-full items-center justify-center sm:h-52">
+              <div key={item.id} className="group relative min-h-[146px] overflow-hidden rounded-lg bg-[#1f2730]/45 p-2 text-center sm:min-h-[228px] sm:rounded-2xl sm:p-3">
+                <div className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06),transparent_62%)] sm:block" />
+                <div className="relative z-10 flex min-h-[122px] flex-col items-center justify-center gap-1 transition-transform duration-300 ease-out group-hover:translate-y-[118%] group-focus-within:translate-y-[118%] sm:min-h-[210px] sm:gap-3">
+                  <div className="relative flex h-24 w-full items-center justify-center sm:h-52">
                     <div className={`pointer-events-none absolute inset-x-8 top-8 bottom-8 hidden rounded-[40%] blur-2xl opacity-60 sm:block ${rarityGlowClass[item.rarity] ?? rarityGlowClass.common}`} />
-                    <img src={item.itemImage} alt={item.itemName} className="relative z-10 max-h-36 w-auto max-w-[98%] object-contain drop-shadow-xl sm:max-h-52" loading="lazy" decoding="async" width={220} height={220} />
+                    <img src={item.itemImage} alt={item.itemName} className="relative z-10 max-h-24 w-auto max-w-[92%] object-contain sm:max-h-52" loading="lazy" decoding="async" width={220} height={220} />
                   </div>
-                  <p className="max-w-[150px] truncate text-[10px] text-slate-300 sm:max-w-[185px] sm:text-sm">{item.itemName}</p>
-                  <CoinAmount amount={Math.round(item.itemPrice)} className="justify-center text-sm font-black text-white sm:text-lg" iconClassName="h-4 w-4 sm:h-5 sm:w-5" />
+                  <p className="max-w-[170px] truncate text-[11px] font-medium text-slate-300/95 sm:max-w-[185px] sm:text-sm">{item.itemName}</p>
+                  <CoinAmount amount={Math.round(item.itemPrice)} className="justify-center text-[13px] font-black text-white sm:text-lg" iconClassName="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
-                <div className="absolute inset-0 z-20 grid translate-y-[120%] place-items-center opacity-0 transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-                  <img src={item.boxImage} alt={item.boxName} className="h-32 w-32 object-contain sm:h-32 sm:w-32" loading="lazy" decoding="async" width={144} height={144} />
+                <div className="absolute inset-0 z-20 grid translate-y-[115%] place-items-center opacity-0 transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                  <img src={item.boxImage} alt={item.boxName} className="h-28 w-28 object-contain sm:h-32 sm:w-32" loading="lazy" decoding="async" width={144} height={144} />
                 </div>
               </div>
             ))}
