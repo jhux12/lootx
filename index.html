@@ -148,6 +148,15 @@
       .ticker-animation {
         animation: scroll 35s linear infinite;
       }
+      .live-wins-ticker {
+        will-change: transform;
+        transform: translate3d(0, 0, 0);
+      }
+      @media (max-width: 768px) {
+        .live-wins-ticker {
+          animation-duration: 45s !important;
+        }
+      }
       .btn-logo-gradient {
         background: linear-gradient(120deg, #205DD7 0%, #2f75ff 45%, #38bdf8 100%);
         box-shadow: 0 16px 30px rgba(32, 93, 215, 0.35);
@@ -231,7 +240,7 @@
 
       html.pullz-tab-hidden *,
       html.pullz-reduced-motion *,
-      html.pullz-low-performance .ticker-animation,
+      html.pullz-low-performance .ticker-animation:not(.live-wins-ticker),
       html.pullz-low-performance .animate-pulse,
       html.pullz-low-performance .ambient-pulse {
         animation-play-state: paused !important;
