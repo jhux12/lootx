@@ -279,6 +279,8 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
   }
 };
 
+const formatUsdValueFromCoins = (coins: number) => `$${(Math.max(0, coins) / 100).toFixed(2)} value`;
+
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
   const {
@@ -2436,12 +2438,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div className="relative border-t border-white/10 bg-transparent p-3">
                             <div className="mb-1 truncate text-xs font-bold text-white" title={item.name}>{item.name}</div>
                             <div className="flex items-center justify-between gap-2">
-                                <CoinAmount
-                                  amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                                  formatOptions={{ maximumFractionDigits: 0 }}
-                                  className="text-sm font-bold text-gray-200"
-                                  iconClassName="w-3.5 h-3.5"
-                                />
+                                <div className="min-w-0">
+                                  <CoinAmount
+                                    amount={toCoins(item.price, PRICE_UNIT_MODE)}
+                                    formatOptions={{ maximumFractionDigits: 0 }}
+                                    className="text-sm font-bold text-gray-200"
+                                    iconClassName="w-3.5 h-3.5"
+                                  />
+                                  <p className="mt-0.5 text-[9px] leading-tight text-gray-400">{formatUsdValueFromCoins(toCoins(item.price, PRICE_UNIT_MODE))}</p>
+                                </div>
                                 {!hideDropTableOdds && (
                                   <span
                                     className="rounded border px-1.5 py-0.5 text-[10px] font-bold"
