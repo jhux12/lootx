@@ -736,45 +736,8 @@ const AppShell = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
-    if (!window.matchMedia('(pointer: coarse)').matches) return undefined;
-    const userAgent = navigator.userAgent || '';
-    const isInAppBrowser = /(FBAN|FBAV|Instagram|Line\/|MiuiBrowser|wv)/i.test(userAgent);
-    if (isInAppBrowser) return undefined;
-
-    let lastTouchEnd = 0;
-
-    const preventDefault = (event: Event) => {
-      event.preventDefault();
-    };
-
-    const handleTouchMove = (event: TouchEvent) => {
-      if (event.touches.length > 1) {
-        event.preventDefault();
-      }
-    };
-
-    const handleTouchEnd = (event: TouchEvent) => {
-      const now = Date.now();
-      if (now - lastTouchEnd <= 300) {
-        event.preventDefault();
-      }
-      lastTouchEnd = now;
-    };
-
-    document.addEventListener('gesturestart', preventDefault, { passive: false });
-    document.addEventListener('gesturechange', preventDefault, { passive: false });
-    document.addEventListener('gestureend', preventDefault, { passive: false });
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd, { passive: false });
-
-    return () => {
-      document.removeEventListener('gesturestart', preventDefault);
-      document.removeEventListener('gesturechange', preventDefault);
-      document.removeEventListener('gestureend', preventDefault);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
+    // Keep native mobile zoom behavior enabled (pinch + browser-level accessibility zoom).
+    // Do not register gesture/touch preventDefault handlers here.
   }, []);
 
   return (

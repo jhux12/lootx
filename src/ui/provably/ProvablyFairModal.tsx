@@ -17,8 +17,8 @@ export const ProvablyFairModal: React.FC<Props> = ({ isOpen, onClose, data }) =>
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[170] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-lg rounded-2xl border border-cyan-400/30 bg-[#0d1320] p-4 text-sm text-gray-200 sm:p-5">
+    <div className="fixed inset-0 z-[220] flex items-end justify-center overflow-y-auto bg-black/70 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="my-auto w-full max-w-lg max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-y-auto rounded-2xl border border-cyan-400/30 bg-[#0d1320] p-4 text-sm text-gray-200 sm:p-5">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-base font-semibold text-white">Provably Fair Verification</h3>
           <button type="button" onClick={onClose} className="rounded-md border border-white/10 p-1.5"><X className="h-4 w-4" /></button>

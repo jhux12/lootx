@@ -251,13 +251,13 @@ export const TopUpModal: React.FC = () => {
   };
 
   return (
-    <div data-disable-pull-refresh="true" className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden overscroll-none p-0 sm:items-center sm:p-4">
+    <div data-disable-pull-refresh="true" className="fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto overscroll-contain p-0 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4">
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in" 
         onClick={handleClose}
       ></div>
       
-      <div className="relative flex max-h-[100dvh] min-h-0 w-full max-w-[380px] flex-col overflow-hidden rounded-t-[18px] border border-[rgba(124,92,255,0.2)] bg-[#1b2024] shadow-[0_0_40px_rgba(124,92,255,0.15)] animate-in zoom-in-95 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[18px]">
+      <div className="relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 w-full max-w-[380px] flex-col overflow-hidden rounded-t-[18px] border border-[rgba(124,92,255,0.2)] bg-[#1b2024] shadow-[0_0_40px_rgba(124,92,255,0.15)] animate-in zoom-in-95 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[18px]">
         
         {success ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -340,7 +340,7 @@ export const TopUpModal: React.FC = () => {
                     )}
 
                 </div>
-                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#1b2024]/95 px-5 py-4 backdrop-blur-md">
+                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#1b2024]/95 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-md">
                   <button
                     onClick={handleDeposit}
                     disabled={isLoading || !selectedPackage}
