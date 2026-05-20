@@ -417,6 +417,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
   const hasTrackedFreeBoxViewRef = useRef(false);
   const spinRequestLockRef = useRef(false);
+  const isSpinningRef = useRef(false);
   const settleSoundPlayedRef = useRef(false);
   const winSoundPlayedRef = useRef(false);
   const winSoundTimerRef = useRef<number | null>(null);
@@ -950,6 +951,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setAnimationPhase('idle');
   }, []);
 
+  useEffect(() => {
+    isSpinningRef.current = isSpinning;
+  }, [isSpinning]);
+
   const animateSpin = useCallback(async (
     winnerIndex: number,
     duration: number,
@@ -1027,7 +1032,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const previousIndex = lastCenterIndexRef.current;
       if (index !== previousIndex) {
         lastCenterIndexRef.current = index;
-        if (isSpinning) {
+        if (isSpinningRef.current) {
           playSound('spin-tick');
         }
         if (!reduceSpinnerRerenders) {
@@ -1083,7 +1088,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, isSpinning, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
