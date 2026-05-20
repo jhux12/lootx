@@ -26,46 +26,6 @@ const PRIZES: SpinPrize[] = [
   { id: 6, amount: 2500, image: COIN_ICON, angle: 330 }
 ];
 
-const BackgroundFloatingCoins = () => (
-  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-    {[
-      { top: '5%', left: '5%', w: 60, delay: 0 },
-      { top: '15%', left: '85%', w: 80, delay: 2 },
-      { top: '40%', left: '90%', w: 50, delay: 4 },
-      { top: '60%', left: '5%', w: 70, delay: 1 },
-      { top: '80%', left: '80%', w: 90, delay: 3 },
-      { top: '85%', left: '15%', w: 55, delay: 5 },
-      { top: '25%', left: '20%', w: 40, delay: 1.5 },
-      { top: '35%', left: '75%', w: 45, delay: 3.5 },
-      { top: '55%', left: '50%', w: 100, delay: 0.5 }
-    ].map((coin, i) => (
-      <img
-        key={i}
-        src={COIN_ICON}
-        alt="floating coin"
-        className="absolute opacity-20 blur-[1px]"
-        loading="lazy"
-        decoding="async"
-        width={coin.w}
-        height={coin.w}
-        style={{
-          top: coin.top,
-          left: coin.left,
-          width: `${coin.w}px`,
-          animation: 'float 8s ease-in-out infinite',
-          animationDelay: `${coin.delay}s`
-        }}
-      />
-    ))}
-    <style>{`
-      @keyframes float {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        50% { transform: translateY(-20px) rotate(5deg); }
-      }
-    `}</style>
-  </div>
-);
-
 const formatCountdown = (targetTime: number) => {
   const remainingMs = Math.max(0, targetTime - Date.now());
   const totalSeconds = Math.floor(remainingMs / 1000);
@@ -130,26 +90,22 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
   };
 
   return (
-    <div className="w-full flex flex-col items-center min-h-[calc(100vh-70px)] bg-neutral-950 relative overflow-hidden rounded-2xl border border-neutral-800">
-      <div className="absolute inset-0 z-0 bg-neutral-950">
-        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-neutral-950 to-neutral-950" />
-        <BackgroundFloatingCoins />
-      </div>
+    <div className="w-full flex flex-col items-center min-h-[calc(100vh-70px)] bg-[#1b2024] relative overflow-hidden rounded-2xl border border-white/5">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_15%,rgba(32,93,215,0.14),transparent_46%),radial-gradient(circle_at_78%_70%,rgba(34,211,238,0.10),transparent_56%)]" />
 
       <div className="relative z-10 w-full flex flex-col items-center max-w-6xl mx-auto px-4 py-6 md:py-8">
         <div className="mb-4 flex w-full justify-start">
-          <button onClick={onBack} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors">
+          <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors">
             <ChevronLeft className="h-5 w-5" />
             <span className="font-bold text-sm">Back</span>
           </button>
         </div>
 
         <div className="flex flex-col items-center mb-8 md:mb-12 text-center">
-          <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter text-white uppercase drop-shadow-2xl">
+          <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter text-white uppercase">
             Daily <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#205DD7] to-sky-300">Spin</span>
           </h1>
-          <p className="text-neutral-400 font-medium mt-2">Spin for free coins every 24 hours!</p>
+          <p className="text-slate-400 font-medium mt-2">Spin for free coins every 24 hours!</p>
         </div>
 
         <div className="relative w-[340px] h-[340px] md:w-[510px] md:h-[510px] flex items-center justify-center max-w-full">
@@ -168,14 +124,14 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
             className="relative w-full h-full rounded-full transition-transform duration-[5000ms] cubic-bezier(0.15, 0, 0.15, 1) [--radius:110px] md:[--radius:172.125px]"
             style={{ transform: `rotate(${rotation}deg)` }}
           >
-            <div className="relative w-full h-full overflow-hidden rounded-full border-4 border-neutral-800 shadow-2xl bg-[#1a1a1a]">
+            <div className="relative w-full h-full overflow-hidden rounded-full border-4 border-white/10 shadow-2xl bg-[#20262b]">
               <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full">
-                <path d="M 215.167 126.549 Q 203.271 125.071 203.794 113.082 L 207.982 17.174 Q 208.505 5.185 220.470 6.077 A 195 195 0 0 1 357.706 85.310 Q 364.461 95.226 354.340 101.674 L 273.375 153.254 Q 263.254 159.702 256.026 150.139 A 75 75 0 0 0 215.167 126.549 Z" className="fill-white/5 stroke-neutral-800" strokeWidth="2" />
-                <path d="M 271.193 176.409 Q 266.525 165.368 277.169 159.827 L 362.322 115.500 Q 372.967 109.959 378.177 120.766 A 195 195 0 0 1 378.177 279.233 Q 372.967 290.040 362.322 284.499 L 277.169 240.172 Q 266.525 234.631 271.193 223.590 A 75 75 0 0 0 271.193 176.409 Z" className="fill-white/5 stroke-neutral-800" strokeWidth="2" />
-                <path d="M 256.026 249.860 Q 263.254 240.297 273.375 246.745 L 354.340 298.325 Q 364.461 304.773 357.706 314.689 A 195 195 0 0 1 220.470 393.922 Q 208.505 394.814 207.982 382.825 L 203.794 286.917 Q 203.271 274.928 215.167 273.450 A 75 75 0 0 0 256.026 249.860 Z" className="fill-white/5 stroke-neutral-800" strokeWidth="2" />
-                <path d="M 184.832 273.450 Q 196.728 274.928 196.205 286.917 L 192.017 382.825 Q 191.494 394.814 179.529 393.922 A 195 195 0 0 1 42.293 314.689 Q 35.538 304.773 45.659 298.325 L 126.624 246.745 Q 136.745 240.297 143.973 249.860 A 75 75 0 0 0 184.832 273.450 Z" className="fill-white/5 stroke-neutral-800" strokeWidth="2" />
-                <path d="M 128.806 223.590 Q 133.474 234.631 122.830 240.172 L 37.677 284.499 Q 27.032 290.040 21.822 279.233 A 195 195 0 0 1 21.822 120.766 Q 27.032 109.959 37.677 115.500 L 122.830 159.827 Q 133.474 165.368 128.806 176.409 A 75 75 0 0 0 128.806 223.590 Z" className="fill-white/5 stroke-neutral-800" strokeWidth="2" />
-                <path d="M 143.973 150.139 Q 136.745 159.702 126.624 153.254 L 45.659 101.674 Q 35.538 95.226 42.293 85.310 A 195 195 0 0 1 179.529 6.077 Q 191.494 5.185 192.017 17.174 L 196.205 113.082 Q 196.728 125.071 184.832 126.549 A 75 75 0 0 0 143.973 150.139 Z" className="fill-white/5 stroke-neutral-800" strokeWidth="2" />
+                <path d="M 215.167 126.549 Q 203.271 125.071 203.794 113.082 L 207.982 17.174 Q 208.505 5.185 220.470 6.077 A 195 195 0 0 1 357.706 85.310 Q 364.461 95.226 354.340 101.674 L 273.375 153.254 Q 263.254 159.702 256.026 150.139 A 75 75 0 0 0 215.167 126.549 Z" className="fill-white/[0.04] stroke-white/10" strokeWidth="2" />
+                <path d="M 271.193 176.409 Q 266.525 165.368 277.169 159.827 L 362.322 115.500 Q 372.967 109.959 378.177 120.766 A 195 195 0 0 1 378.177 279.233 Q 372.967 290.040 362.322 284.499 L 277.169 240.172 Q 266.525 234.631 271.193 223.590 A 75 75 0 0 0 271.193 176.409 Z" className="fill-white/[0.06] stroke-white/10" strokeWidth="2" />
+                <path d="M 256.026 249.860 Q 263.254 240.297 273.375 246.745 L 354.340 298.325 Q 364.461 304.773 357.706 314.689 A 195 195 0 0 1 220.470 393.922 Q 208.505 394.814 207.982 382.825 L 203.794 286.917 Q 203.271 274.928 215.167 273.450 A 75 75 0 0 0 256.026 249.860 Z" className="fill-white/[0.04] stroke-white/10" strokeWidth="2" />
+                <path d="M 184.832 273.450 Q 196.728 274.928 196.205 286.917 L 192.017 382.825 Q 191.494 394.814 179.529 393.922 A 195 195 0 0 1 42.293 314.689 Q 35.538 304.773 45.659 298.325 L 126.624 246.745 Q 136.745 240.297 143.973 249.860 A 75 75 0 0 0 184.832 273.450 Z" className="fill-white/[0.06] stroke-white/10" strokeWidth="2" />
+                <path d="M 128.806 223.590 Q 133.474 234.631 122.830 240.172 L 37.677 284.499 Q 27.032 290.040 21.822 279.233 A 195 195 0 0 1 21.822 120.766 Q 27.032 109.959 37.677 115.500 L 122.830 159.827 Q 133.474 165.368 128.806 176.409 A 75 75 0 0 0 128.806 223.590 Z" className="fill-white/[0.04] stroke-white/10" strokeWidth="2" />
+                <path d="M 143.973 150.139 Q 136.745 159.702 126.624 153.254 L 45.659 101.674 Q 35.538 95.226 42.293 85.310 A 195 195 0 0 1 179.529 6.077 Q 191.494 5.185 192.017 17.174 L 196.205 113.082 Q 196.728 125.071 184.832 126.549 A 75 75 0 0 0 143.973 150.139 Z" className="fill-white/[0.06] stroke-white/10" strokeWidth="2" />
               </svg>
 
               {PRIZES.map((prize) => (
@@ -186,7 +142,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
                 >
                   <div className="relative w-full h-full flex flex-col items-center justify-center">
                     <img src={prize.image} alt={`${prize.amount}`} className="w-10 h-10 md:w-14 md:h-14 object-contain drop-shadow-[0_0_15px_rgba(32,93,215,0.5)] pb-4" loading="lazy" decoding="async" width={56} height={56} />
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 bg-neutral-950 border border-white/10 rounded-2xl px-3.5 py-1.5 flex items-center justify-center gap-0.5 shadow-lg min-w-[60px]">
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 bg-[#1b2024] border border-white/10 rounded-2xl px-3.5 py-1.5 flex items-center justify-center gap-0.5 shadow-lg min-w-[60px]">
                       <span className="text-sm font-bold text-white leading-none pt-0.5">{prize.amount}</span>
                     </div>
                   </div>
@@ -200,20 +156,19 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
               className="absolute inset-0 rounded-full opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-100"
               style={{ background: 'conic-gradient(from 0deg, #2f75ff, transparent 40%, transparent 60%, #2f75ff)' }}
             />
-
             <button
               onClick={handleSpin}
               disabled={isSpinning || !canSpinNow}
-              className="relative w-full h-full rounded-full bg-[#131315] border-4 border-neutral-800 shadow-xl flex flex-col items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-transform active:scale-95 z-10"
+              className="relative w-full h-full rounded-full bg-[#21282c] border-4 border-white/10 shadow-xl flex flex-col items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-transform active:scale-95 z-10"
             >
               {lastPrize ? (
                 <>
-                  <span className="text-xs md:text-sm font-bold text-neutral-400 uppercase tracking-widest">YOU WON</span>
+                  <span className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest">YOU WON</span>
                   <div className="flex items-center gap-1 md:gap-2 mt-1">
                     <img src={COIN_ICON} alt="Coin" className="w-5 h-5 md:w-6 md:h-6 object-contain" loading="lazy" decoding="async" width={24} height={24} />
                     <span className="text-xl md:text-3xl font-black text-white">{lastPrize}</span>
                   </div>
-                  <span className="text-[10px] md:text-xs text-neutral-500 mt-2">Come back tomorrow!</span>
+                  <span className="text-[10px] md:text-xs text-slate-500 mt-2">Come back tomorrow!</span>
                 </>
               ) : (
                 <>
@@ -225,8 +180,8 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
           </div>
         </div>
 
-        <p className="mt-8 text-neutral-500 font-bold text-sm md:text-base">Resets every 24 hours</p>
-        {!canSpinNow && <p className="mt-2 text-xs md:text-sm text-neutral-400">Next spin in {lockLabel || formatCountdown(effectiveNextClaimAt)}</p>}
+        <p className="mt-8 text-slate-500 font-bold text-sm md:text-base">Resets every 24 hours</p>
+        {!canSpinNow && <p className="mt-2 text-xs md:text-sm text-slate-400">Next spin in {lockLabel || formatCountdown(effectiveNextClaimAt)}</p>}
         {!!errorMessage && <p className="mt-3 text-xs md:text-sm text-red-400 text-center">{errorMessage}</p>}
       </div>
     </div>
