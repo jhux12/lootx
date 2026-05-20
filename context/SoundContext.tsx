@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
 import spinSoundUrl from '../assets/spinsound.mp3';
 import tickSoundUrl from '../assets/audio/tick.wav';
 import commonWinSoundUrl from '../assets/audio/common.wav';
@@ -47,7 +47,6 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const lastTickAtRef = useRef(0);
   const didInitRef = useRef(false);
   const didWarmupRef = useRef(false);
-  const didPrimePoolRef = useRef(false);
   const hasUserInteractedRef = useRef(false);
 
   const ensureAudioContextReady = useCallback(() => {
@@ -106,49 +105,12 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, [ensureAudioContextReady]);
 
-  const primeAudioPoolForMobile = useCallback(() => {
-    if (didPrimePoolRef.current || typeof window === 'undefined') return;
-    didPrimePoolRef.current = true;
-    (Object.values(audioRefs.current) as HTMLAudioElement[][]).forEach((pool) => {
-      pool.forEach((audio) => {
-        try {
-          audio.playsInline = true;
-          const previousMuted = audio.muted;
-          const previousVolume = audio.volume;
-          audio.muted = true;
-          audio.volume = 0;
-          const playPromise = audio.play();
-          if (playPromise && typeof playPromise.then === 'function') {
-            void playPromise
-              .then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-              })
-              .catch(() => undefined)
-              .finally(() => {
-                audio.muted = previousMuted;
-                audio.volume = previousVolume;
-              });
-          } else {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.muted = previousMuted;
-            audio.volume = previousVolume;
-          }
-        } catch {
-          // ignore priming failures
-        }
-      });
-    });
-  }, []);
-
   const unlockAudio = useCallback(() => {
     if (hasUserInteractedRef.current) return;
     hasUserInteractedRef.current = true;
     initializeAudio();
     ensureAudioContextReady();
-    primeAudioPoolForMobile();
-  }, [ensureAudioContextReady, initializeAudio, primeAudioPoolForMobile]);
+  }, [ensureAudioContextReady, initializeAudio]);
 
   const toggleMute = useCallback(() => setMuted((prev) => !prev), []);
 

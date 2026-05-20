@@ -397,6 +397,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const reelItemsRef = useRef<CaseItem[]>([]);
   const spinnerAnimationRef = useRef<Animation | null>(null);
   const tickTimerRef = useRef<number | null>(null);
+  const tickFrameRef = useRef<number | null>(null);
   const lastCenterIndexRef = useRef<number>(SPINNER_MOTION.preWinnerItems);
   const spinnerMeasurementsRef = useRef({
     cardWidth: DESKTOP_CARD_WIDTH,
@@ -416,7 +417,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
   const hasTrackedFreeBoxViewRef = useRef(false);
   const spinRequestLockRef = useRef(false);
-  const lastTickCenterIndexRef = useRef<number>(-1);
   const settleSoundPlayedRef = useRef(false);
   const winSoundPlayedRef = useRef(false);
   const winSoundTimerRef = useRef<number | null>(null);
@@ -935,6 +935,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       window.clearTimeout(tickTimerRef.current);
       tickTimerRef.current = null;
     }
+    if (tickFrameRef.current !== null) {
+      window.cancelAnimationFrame(tickFrameRef.current);
+      tickFrameRef.current = null;
+    }
     if (goldStageTimerRef.current !== null) {
       window.clearTimeout(goldStageTimerRef.current);
       goldStageTimerRef.current = null;
@@ -1015,7 +1019,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     spinnerAnimationRef.current = animation;
     let frameId: number | null = null;
     const syncCenterItem = () => {
-      if (reduceSpinnerRerenders || document.visibilityState === 'hidden') return;
+      if (document.visibilityState === 'hidden') return;
       const transform = window.getComputedStyle(container).transform;
       const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
       const x = matrix ? matrix.m41 : 0;
@@ -1023,13 +1027,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       const previousIndex = lastCenterIndexRef.current;
       if (index !== previousIndex) {
         lastCenterIndexRef.current = index;
-        setCurrentCenterIndex(index);
+        if (isSpinning) {
+          playSound('spin-tick');
+        }
+        if (!reduceSpinnerRerenders) {
+          setCurrentCenterIndex(index);
+        }
       }
-      frameId = window.requestAnimationFrame(syncCenterItem);
+      tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
+      frameId = tickFrameRef.current;
     };
-    if (!reduceSpinnerRerenders) {
-      frameId = window.requestAnimationFrame(syncCenterItem);
-    }
+    tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
+    frameId = tickFrameRef.current;
     const decelerationTimer = window.setTimeout(
       () => setAnimationPhase('settling'),
       Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
@@ -1053,6 +1062,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       lastCenterIndexRef.current = winnerIndex;
       setHasSpinSettled(true);
       if (frameId !== null) window.cancelAnimationFrame(frameId);
+      tickFrameRef.current = null;
 
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
@@ -1067,12 +1077,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         tickTimerRef.current = null;
       }
       if (frameId !== null) window.cancelAnimationFrame(frameId);
+      tickFrameRef.current = null;
       setAnimationPhase('idle');
       container.style.willChange = 'auto';
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, isSpinning, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1202,7 +1213,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const startingCenterIndex = getCenteredIndexFromTranslate(0);
     lastCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
-    lastTickCenterIndexRef.current = startingCenterIndex;
   }, [getCenteredIndexFromTranslate, resetSpinnerAnimation, updateSpinnerMeasurements]);
 
 
@@ -1225,7 +1235,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       winSoundTimerRef.current = null;
     }
     setSpinFeedbackMessage(null);
-    lastTickCenterIndexRef.current = -1;
 
     if (forceGold) {
       isDemo = true;
@@ -1600,15 +1609,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
-
-  useEffect(() => {
-    if (!isSpinning || animationPhase === 'idle') return;
-    const prev = lastTickCenterIndexRef.current;
-    if (currentCenterIndex !== prev) {
-      playSound('spin-tick');
-      lastTickCenterIndexRef.current = currentCenterIndex;
-    }
-  }, [animationPhase, currentCenterIndex, isSpinning, playSound]);
 
   useEffect(() => {
     if (!hasSpinSettled || !isSpinning || settleSoundPlayedRef.current) return;
