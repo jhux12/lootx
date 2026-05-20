@@ -250,7 +250,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 <>
                   <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#20262b] to-transparent sm:w-16" />
                   <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#20262b] to-transparent sm:w-16" />
-                  <div className="ticker-animation flex w-max items-center gap-2 px-4 [animation-duration:70s] sm:gap-3">
+                  <div className="ticker-animation live-wins-ticker flex w-max items-center gap-2 px-4 [animation-duration:70s] sm:gap-3">
                     {[...liveWins, ...liveWins].map((win, index) => (
                       <LiveWinCard key={`${win.id}-${index}`} win={win} onOpenBox={onOpenBox} />
                     ))}
