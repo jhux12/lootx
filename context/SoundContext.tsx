@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
-import spinSoundUrl from '../assets/spinsound.mp3';
 import tickSoundUrl from '../assets/audio/tick.wav';
 import commonWinSoundUrl from '../assets/audio/common.wav';
 import uncommonWinSoundUrl from '../assets/audio/uncommon.wav';
@@ -19,7 +18,6 @@ interface SoundContextType {
 const SoundContext = createContext<SoundContextType | undefined>(undefined);
 
 const SOUND_URLS: Partial<Record<SoundType, string>> = {
-  'spin-start': spinSoundUrl,
   'spin-tick': tickSoundUrl,
   'win-common': commonWinSoundUrl,
   'win-uncommon': uncommonWinSoundUrl,
@@ -29,7 +27,6 @@ const SOUND_URLS: Partial<Record<SoundType, string>> = {
 };
 
 const SOUND_VOLUMES: Partial<Record<SoundType, number>> = {
-  'spin-start': 0.2,
   'spin-tick': 0.28,
   'win-common': 0.5,
   'win-uncommon': 0.52,
