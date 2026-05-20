@@ -1030,8 +1030,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.25, 0.6, 0.2, 1)' },
         { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
         // Approach (close-call or near-miss) dwell position — this is where it looks like the wrong item wins
-        { transform: `translate3d(${approachTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
-        // Final rest: random within the winner card, spring easing gives a satisfying thud
+        { transform: `translate3d(${approachTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+        // Final rest: random within the winner card — clean ease-out, no overshoot
         { transform: `translate3d(${finalRestTranslate}px, 0, 0)`, offset: 1 }
       ],
       {
