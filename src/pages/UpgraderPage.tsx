@@ -116,6 +116,8 @@ const getMultiplierLabel = (multiplier: number): string | null => {
   return 'High Risk';
 };
 
+const formatUsdValueFromCoins = (coins: number) => `$${(Math.max(0, coins) / 100).toFixed(2)} value`;
+
 const Toolbar = ({
   min,
   max,
@@ -202,6 +204,7 @@ const SelectedPreview = ({ label, item, emptyText, onActivate }: { label: string
           </div>
           <div className="relative z-10 w-full rounded-lg border border-white/10 bg-[#2a323b] px-2 py-1 text-center">
             <CoinAmount amount={Math.round(item.price)} className="justify-center text-[11px] text-slate-200" iconClassName="h-3 w-3" />
+            <p className="mt-0.5 text-[9px] leading-tight text-slate-400">{formatUsdValueFromCoins(item.price)}</p>
           </div>
         </>
       ) : (
