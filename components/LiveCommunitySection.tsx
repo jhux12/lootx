@@ -151,7 +151,7 @@ export const LiveCommunitySection: React.FC = () => {
               <div><p className="text-[10px] font-extrabold text-white leading-none">{story.username}</p><p className="mt-1 text-[9px] font-bold text-white/90">{story.timestampLabel ?? formatStoryTimeLabel(story)}</p></div>
             </div>
             <div className="absolute bottom-2 left-2 right-2 space-y-1.5">
-              <p className="inline-block max-w-full rounded-xl bg-black/25 px-2.5 py-1 text-[10px] font-black leading-tight text-white shadow-sm backdrop-blur-[1px]">{story.badgeText ?? story.caption}</p>
+              {(story.badgeText || story.caption) && <p className="inline-block max-w-full rounded-xl bg-black/25 px-2.5 py-1 text-[10px] font-black leading-tight text-white shadow-sm backdrop-blur-[1px]">{story.badgeText || story.caption}</p>}
               {story.showViewCount && <p className="flex items-center gap-1 text-[11px] font-semibold text-white/90"><i className="fa-solid fa-eye text-[10px]" aria-hidden="true" /><span>{Number.isFinite(story.views) ? story.views : 0}</span></p>}
             </div>
           </button>

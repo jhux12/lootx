@@ -56,7 +56,6 @@ export const LiveCommunityAdmin: React.FC = () => {
   const handleCreate = async () => {
     if (isSaving) return;
     if (!draft.username.trim()) return showNotice('error', 'Username is required.');
-    if (!draft.caption.trim()) return showNotice('error', 'Caption is required.');
     if (!file && !draft.mediaUrl.trim()) return showNotice('error', 'Add an image/video file or media URL.');
 
     setIsSaving(true);
@@ -80,7 +79,7 @@ export const LiveCommunityAdmin: React.FC = () => {
       await addDoc(collection(db, 'liveCommunityStories'), {
         username: draft.username.trim(),
         caption: draft.caption.trim(),
-        badgeText: draft.badgeText.trim() || draft.caption.trim(),
+        badgeText: draft.badgeText.trim() || draft.caption.trim() || null,
         type: draft.type,
         rarity: draft.rarity,
         showViewCount: Boolean(draft.showViewCount),
@@ -127,7 +126,7 @@ export const LiveCommunityAdmin: React.FC = () => {
       <div className="rounded-xl border border-gray-800 bg-[#131720] p-4 space-y-3">
         <h4 className="font-semibold text-white">Add Story</h4>
         <input className="w-full rounded bg-[#0b0e14] p-2 text-white" placeholder="Username" value={draft.username} onChange={(e)=>setDraft({...draft, username:e.target.value})} />
-        <input className="w-full rounded bg-[#0b0e14] p-2 text-white" placeholder="Caption" value={draft.caption} onChange={(e)=>setDraft({...draft, caption:e.target.value})} />
+        <input className="w-full rounded bg-[#0b0e14] p-2 text-white" placeholder="Caption (optional)" value={draft.caption} onChange={(e)=>setDraft({...draft, caption:e.target.value})} />
         <input className="w-full rounded bg-[#0b0e14] p-2 text-white" placeholder="Badge text (optional)" value={draft.badgeText} onChange={(e)=>setDraft({...draft, badgeText:e.target.value})} />
         <input className="w-full rounded bg-[#0b0e14] p-2 text-white" placeholder="Media URL (optional if uploading file)" value={draft.mediaUrl} onChange={(e)=>setDraft({...draft, mediaUrl:e.target.value})} />
         <select className="w-full rounded bg-[#0b0e14] p-2 text-white" value={draft.type} onChange={(e)=>setDraft({...draft, type:e.target.value})}>{categories.map(c=><option key={c}>{c}</option>)}</select>
