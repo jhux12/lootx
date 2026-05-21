@@ -59,7 +59,6 @@ export const LiveCommunitySection: React.FC = () => {
   const [stories, setStories] = useState<LiveCommunityStory[]>([]);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const holdRef = useRef(false);
   const viewedStoryIdsRef = useRef<Set<string>>(new Set());
 
@@ -89,7 +88,6 @@ export const LiveCommunitySection: React.FC = () => {
           .slice(0, 30);
         setStories(next);
         try { window.localStorage.setItem('liveCommunityStoriesCache', JSON.stringify(next)); } catch {}
-        setLoadError(null);
       },
       () => {
         let cached: LiveCommunityStory[] = [];
@@ -98,7 +96,6 @@ export const LiveCommunitySection: React.FC = () => {
           if (raw) cached = JSON.parse(raw) as LiveCommunityStory[];
         } catch {}
         setStories(cached);
-        setLoadError(cached.length ? null : 'No live stories available right now.');
       }
     );
   }, []);
@@ -155,11 +152,8 @@ export const LiveCommunitySection: React.FC = () => {
               {story.showViewCount && <p className="flex items-center gap-1 text-[11px] font-semibold text-white/90"><i className="fa-solid fa-eye text-[10px]" aria-hidden="true" /><span>{Number.isFinite(story.views) ? story.views : 0}</span></p>}
             </div>
           </button>
-        )) : Array.from({ length: 5 }).map((_, idx) => <div key={idx} className="h-[220px] w-[122px] shrink-0 rounded-[20px] border border-white/10 bg-white/[0.03]" />)}
+        )) : Array.from({ length: 5 }).map((_, idx) => <div key={idx} className="relative h-[220px] w-[122px] shrink-0 overflow-hidden rounded-[20px] border border-white/10 bg-white/[0.03]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
       </div>
-      {!stories.length && (
-        <p className="px-1 pb-2 text-xs text-slate-400">{loadError ?? 'Stories will appear here once your first Live Community post is approved.'}</p>
-      )}
     </div>
     {activeIndex !== null && stories[activeIndex] && (
       <div className="fixed inset-0 z-[220] bg-black/95" onClick={() => setActiveIndex(null)}>
