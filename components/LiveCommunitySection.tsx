@@ -96,24 +96,29 @@ export const LiveCommunitySection: React.FC = () => {
   );
 
   return <section className="space-y-4">
-    <div className="rounded-2xl border border-white/10 bg-[#171e24] shadow-[0_14px_34px_rgba(5,8,12,0.35)]">
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+    <div className="">
+      <div className="flex items-center justify-between px-1 py-1">
         <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.75)]" /><h2 className="text-sm font-black tracking-[0.16em] text-white">LIVE COMMUNITY</h2></div>
         <button className="text-sm font-semibold text-slate-300 hover:text-white">View All</button>
       </div>
-      <div className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 py-3 [scrollbar-width:none]">
+      <div className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto px-0 py-2 [scrollbar-width:none]">
         {stories.length ? stories.map((story, index) => (
-          <button key={story.id} onClick={() => { setActiveIndex(index); setProgress(0); }} className="group relative h-[218px] w-[122px] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/15 bg-[#0f1319] text-left">
-            <div className={`pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b ${rarityRing[story.rarity] ?? rarityRing.rare} opacity-70`} />
-            <img src={story.mediaUrl} alt={story.caption} loading="lazy" decoding="async" className="absolute inset-[1px] h-[calc(100%-2px)] w-[calc(100%-2px)] rounded-[15px] object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-transparent to-black/75" />
-            <div className="absolute left-2 top-2"><p className="text-[11px] font-bold text-white">{story.username}</p><p className="text-[10px] text-slate-200">{story.timestampLabel ?? 'Now'}</p></div>
-            <div className="absolute bottom-2 left-2 right-2 space-y-1"><p className="inline-block rounded-xl bg-white px-2 py-1 text-[10px] font-black text-black">{story.badgeText ?? story.caption}</p>{story.showViewCount && <p className="text-[11px] text-white/90">◉ {story.views ?? 0}</p>}</div>
+          <button key={story.id} onClick={() => { setActiveIndex(index); setProgress(0); }} className="group relative h-[252px] w-[138px] shrink-0 snap-start overflow-hidden rounded-[24px] border border-[#2f56ff]/80 bg-black text-left shadow-[0_0_0_1px_rgba(182,85,255,0.55),0_0_20px_rgba(76,100,255,0.22)]">
+            <img src={story.mediaUrl} alt={story.caption} loading="lazy" decoding="async" className="absolute inset-[1px] h-[calc(100%-2px)] w-[calc(100%-2px)] rounded-[22px] object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/80" />
+            <div className="absolute left-2 top-2 flex items-start gap-2">
+              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[1.5px]"><img src={story.mediaUrl} alt="" className="h-full w-full rounded-full object-cover" /></div>
+              <div><p className="text-[10px] font-extrabold text-white leading-none">{story.username}</p><p className="mt-1 text-[9px] font-bold text-white/90">{story.timestampLabel ?? '2m'}</p></div>
+            </div>
+            <div className="absolute bottom-2 left-2 right-2 space-y-1.5">
+              <p className="inline-block max-w-full rounded-xl bg-white px-2.5 py-1 text-[10px] font-black leading-tight text-black shadow-sm">{story.badgeText ?? story.caption}</p>
+              {story.showViewCount && <p className="flex items-center gap-1 text-[11px] font-semibold text-white/95"><span>◉</span><span>{story.views ?? 0}</span></p>}
+            </div>
           </button>
-        )) : Array.from({ length: 5 }).map((_, idx) => <div key={idx} className="h-[218px] w-[122px] shrink-0 rounded-2xl border border-white/10 bg-white/[0.03]" />)}
+        )) : Array.from({ length: 5 }).map((_, idx) => <div key={idx} className="h-[252px] w-[138px] shrink-0 rounded-[24px] border border-white/10 bg-white/[0.03]" />)}
       </div>
       {!stories.length && (
-        <p className="px-4 pb-3 text-xs text-slate-400">{loadError ?? 'Stories will appear here once your first Live Community post is approved.'}</p>
+        <p className="px-1 pb-2 text-xs text-slate-400">{loadError ?? 'Stories will appear here once your first Live Community post is approved.'}</p>
       )}
     </div>
     <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-[#151c23] p-3 sm:grid-cols-4">
