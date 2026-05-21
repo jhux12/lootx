@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Timestamp, collection, doc, increment, limit, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 
 export type LiveCommunityStory = {
   id: string;
@@ -68,7 +68,7 @@ export const LiveCommunitySection: React.FC = () => {
       },
       (error) => {
         setStories([]);
-        setLoadError(error?.message || 'Unable to load live stories right now.');
+        setLoadError('Live stories are temporarily unavailable.');
       }
     );
   }, []);
@@ -108,6 +108,8 @@ export const LiveCommunitySection: React.FC = () => {
     viewedStoryIdsRef.current.add(story.id);
 
     setStories((current) => current.map((entry, entryIndex) => (entryIndex === index ? { ...entry, views: (entry.views || 0) + 1 } : entry)));
+
+    if (!auth.currentUser) return;
 
     try {
       await updateDoc(doc(db, 'liveCommunityStories', story.id), { views: increment(1) });
