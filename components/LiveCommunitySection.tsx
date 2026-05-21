@@ -93,16 +93,6 @@ export const LiveCommunitySection: React.FC = () => {
     setProgress(0);
   }, [progress, activeIndex, stories.length]);
 
-  const trustItems = useMemo(
-    () => [
-      ['Provably Fair', '100% Transparent'],
-      ['Instant Delivery', 'Digital Items'],
-      ['Real Shipping', 'Worldwide'],
-      ['24/7 Support', "We're here"]
-    ],
-    []
-  );
-
 
 
   const handleOpenStory = async (index: number) => {
@@ -132,7 +122,7 @@ export const LiveCommunitySection: React.FC = () => {
         <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.75)]" /><h2 className="text-sm font-black tracking-[0.16em] text-white">LIVE COMMUNITY</h2></div>
         <button className="text-sm font-semibold text-slate-300 hover:text-white">View All</button>
       </div>
-      <div className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto px-0 py-2 [scrollbar-width:none]">
+      <div className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto px-0 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] touch-pan-x">
         {stories.length ? stories.map((story, index) => (
           <button key={story.id} onClick={() => { void handleOpenStory(index); }} className="group relative h-[252px] w-[138px] shrink-0 snap-start overflow-hidden rounded-[24px] border border-[#2f56ff]/80 bg-black text-left shadow-[0_0_0_1px_rgba(182,85,255,0.55),0_0_20px_rgba(76,100,255,0.22)]">
             <img src={story.mediaUrl} alt={story.caption} loading="lazy" decoding="async" className="absolute inset-[1px] h-[calc(100%-2px)] w-[calc(100%-2px)] rounded-[22px] object-cover" />
@@ -152,10 +142,6 @@ export const LiveCommunitySection: React.FC = () => {
         <p className="px-1 pb-2 text-xs text-slate-400">{loadError ?? 'Stories will appear here once your first Live Community post is approved.'}</p>
       )}
     </div>
-    <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-[#151c23] p-3 sm:grid-cols-4">
-      {trustItems.map(([title, sub]) => <div key={title} className="rounded-xl border border-white/10 bg-white/[0.02] p-2.5"><p className="text-[11px] font-black uppercase tracking-wide text-slate-100">{title}</p><p className="mt-1 text-[11px] text-slate-400">{sub}</p></div>)}
-    </div>
-
     {activeIndex !== null && stories[activeIndex] && (
       <div className="fixed inset-0 z-[220] bg-black/95" onClick={() => setActiveIndex(null)}>
         <div className="mx-auto flex h-full w-full max-w-md flex-col px-3 py-4" onClick={(e) => e.stopPropagation()}>
@@ -163,6 +149,32 @@ export const LiveCommunitySection: React.FC = () => {
           <div className="mb-2 flex items-center justify-between text-sm text-white"><span>{stories[activeIndex].username} · {stories[activeIndex].timestampLabel ?? 'Now'}</span><button onClick={() => setActiveIndex(null)}>✕</button></div>
           <div className="relative flex-1 overflow-hidden rounded-2xl border border-white/10 bg-[#111]" onMouseDown={() => { holdRef.current = true; }} onMouseUp={() => { holdRef.current = false; }} onTouchStart={() => { holdRef.current = true; }} onTouchEnd={() => { holdRef.current = false; }}>
             {stories[activeIndex].mediaType === 'video' ? <video src={stories[activeIndex].mediaUrl} className="h-full w-full object-cover" autoPlay muted playsInline /> : <img src={stories[activeIndex].mediaUrl} className="h-full w-full object-cover" alt={stories[activeIndex].caption} />}
+            <button
+              type="button"
+              aria-label="Previous story"
+              className="absolute inset-y-0 left-0 w-1/2"
+              onClick={() => {
+                setProgress(0);
+                setActiveIndex((current) => {
+                  if (current === null) return current;
+                  if (current <= 0) return 0;
+                  return current - 1;
+                });
+              }}
+            />
+            <button
+              type="button"
+              aria-label="Next story"
+              className="absolute inset-y-0 right-0 w-1/2"
+              onClick={() => {
+                setProgress(0);
+                setActiveIndex((current) => {
+                  if (current === null) return current;
+                  if (current >= stories.length - 1) return null;
+                  return current + 1;
+                });
+              }}
+            />
           </div>
         </div>
       </div>
