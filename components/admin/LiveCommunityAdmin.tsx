@@ -109,6 +109,17 @@ export const LiveCommunityAdmin: React.FC = () => {
     }
   };
 
+
+
+  const handleModerationAction = async (action: string, storyId: string, patch: Record<string, unknown>) => {
+    try {
+      await updateDoc(doc(db, 'liveCommunityStories', storyId), patch);
+      showNotice('success', `${action} successful.`);
+    } catch (error) {
+      showNotice('error', error instanceof Error ? error.message : `Unable to ${action.toLowerCase()}.`);
+    }
+  };
+
   return <div className="space-y-6">
     {notice && <div className={`rounded-lg border px-3 py-2 text-sm ${notice.tone === 'success' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200' : 'border-red-500/40 bg-red-500/10 text-red-200'}`}>{notice.message}</div>}
     <div className="rounded-xl border border-gray-800 bg-[#131720] p-5"><h3 className="text-lg font-bold text-white">Live Community Stories</h3><p className="text-sm text-gray-400">Manage stories, scheduling, moderation, analytics, and community submissions.</p></div>
@@ -129,6 +140,6 @@ export const LiveCommunityAdmin: React.FC = () => {
         <p>Impressions: {analytics.impressions}</p><p>Taps: {analytics.taps}</p><p>Completion rate total: {analytics.completion}</p><p>Swipe-through total: {analytics.swipe}</p><p>Click-throughs: {analytics.ctr}</p>
       </div>
     </div>
-    <div className="rounded-xl border border-gray-800 bg-[#131720] p-4"><h4 className="mb-3 font-semibold text-white">Moderation Queue</h4><div className="space-y-2">{stories.map((story) => <div key={story.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-800 bg-[#0b0e14] p-2 text-xs text-gray-200"><span className="font-bold">{story.username || 'anon'}</span><span>{story.caption}</span><span className="rounded bg-white/10 px-2 py-0.5">{story.type}</span><button className="rounded bg-emerald-600/30 px-2 py-1" onClick={()=>updateDoc(doc(db,'liveCommunityStories',story.id), {approved:true,status:'approved',hidden:false})}>Approve</button><button className="rounded bg-amber-600/30 px-2 py-1" onClick={()=>updateDoc(doc(db,'liveCommunityStories',story.id), {hidden:!story.hidden})}>{story.hidden ? 'Unhide':'Hide'}</button><button className="rounded bg-blue-600/30 px-2 py-1" onClick={()=>updateDoc(doc(db,'liveCommunityStories',story.id), {featured:!story.featured})}>{story.featured ? 'Unfeature':'Feature'}</button><button className="rounded bg-red-600/30 px-2 py-1" onClick={()=>deleteDoc(doc(db,'liveCommunityStories',story.id))}>Delete</button></div>)}</div></div>
+    <div className="rounded-xl border border-gray-800 bg-[#131720] p-4"><h4 className="mb-3 font-semibold text-white">Moderation Queue</h4><div className="space-y-2">{stories.map((story) => <div key={story.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-800 bg-[#0b0e14] p-2 text-xs text-gray-200"><span className="font-bold">{story.username || 'anon'}</span><span>{story.caption}</span><span className="rounded bg-white/10 px-2 py-0.5">{story.type}</span><span className="rounded bg-slate-700/70 px-2 py-0.5 text-[10px] uppercase">{story.status || (story.approved ? 'approved' : 'pending')}</span><button className="rounded bg-emerald-600/30 px-2 py-1" onClick={()=>handleModerationAction('Approve', story.id, { approved: true, status: 'approved', hidden: false, approvedAt: serverTimestamp() })}>Approve</button><button className="rounded bg-amber-600/30 px-2 py-1" onClick={()=>handleModerationAction(story.hidden ? 'Unhide' : 'Hide', story.id, { hidden: !story.hidden })}>{story.hidden ? 'Unhide':'Hide'}</button><button className="rounded bg-blue-600/30 px-2 py-1" onClick={()=>handleModerationAction(story.featured ? 'Unfeature' : 'Feature', story.id, { featured: !story.featured })}>{story.featured ? 'Unfeature':'Feature'}</button><button className="rounded bg-red-600/30 px-2 py-1" onClick={async()=>{ try { await deleteDoc(doc(db,'liveCommunityStories',story.id)); showNotice('success','Delete successful.'); } catch (error) { showNotice('error', error instanceof Error ? error.message : 'Unable to delete.'); } }}>Delete</button></div>)}</div></div>
   </div>;
 };
