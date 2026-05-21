@@ -192,6 +192,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+
+    match /liveCommunityStories/{storyId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
     match /userVotes/{uid}/polls/{pollId} {
       allow read: if isOwnUser(uid) || isAdmin();
       allow write: if false;
