@@ -118,17 +118,16 @@ export const LiveCommunitySection: React.FC = () => {
 
   return <section className="space-y-4">
     <div className="">
-      <div className="flex items-center justify-between px-1 py-1">
-        <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.75)]" /><h2 className="text-sm font-black tracking-[0.16em] text-white">LIVE COMMUNITY</h2></div>
+      <div className="flex justify-end px-1 py-1">
         <button className="text-sm font-semibold text-slate-300 hover:text-white">View All</button>
       </div>
-      <div className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto px-0 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] touch-pan-x">
+      <div className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto px-0 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:auto]">
         {stories.length ? stories.map((story, index) => (
-          <button key={story.id} onClick={() => { void handleOpenStory(index); }} className="group relative h-[252px] w-[138px] shrink-0 snap-start overflow-hidden rounded-[24px] border border-[#2f56ff]/80 bg-black text-left shadow-[0_0_0_1px_rgba(182,85,255,0.55),0_0_20px_rgba(76,100,255,0.22)]">
-            <img src={story.mediaUrl} alt={story.caption} loading="lazy" decoding="async" className="absolute inset-[1px] h-[calc(100%-2px)] w-[calc(100%-2px)] rounded-[22px] object-cover" />
+          <button key={story.id} onClick={() => { void handleOpenStory(index); }} className="group relative h-[220px] w-[122px] shrink-0 snap-start overflow-hidden rounded-[20px] border border-[#2f56ff]/80 bg-black text-left shadow-[0_0_0_1px_rgba(182,85,255,0.55),0_0_20px_rgba(76,100,255,0.22)]">
+            <img src={story.mediaUrl} alt={story.caption} loading="lazy" decoding="async" className="absolute inset-[1px] h-[calc(100%-2px)] w-[calc(100%-2px)] rounded-[18px] object-cover" />
             <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/80" />
             <div className="absolute left-2 top-2 flex items-start gap-2">
-              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[1.5px]"><img src={story.mediaUrl} alt="" className="h-full w-full rounded-full object-cover" /></div>
+              <div className="h-6 w-6 rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[1.5px]"><img src={story.mediaUrl} alt="" className="h-full w-full rounded-full object-cover" /></div>
               <div><p className="text-[10px] font-extrabold text-white leading-none">{story.username}</p><p className="mt-1 text-[9px] font-bold text-white/90">{story.timestampLabel ?? '2m'}</p></div>
             </div>
             <div className="absolute bottom-2 left-2 right-2 space-y-1.5">
@@ -136,7 +135,7 @@ export const LiveCommunitySection: React.FC = () => {
               {story.showViewCount && <p className="flex items-center gap-1 text-[11px] font-semibold text-white/90"><i className="fa-solid fa-eye text-[10px]" aria-hidden="true" /><span>{story.views ?? 0}</span></p>}
             </div>
           </button>
-        )) : Array.from({ length: 5 }).map((_, idx) => <div key={idx} className="h-[252px] w-[138px] shrink-0 rounded-[24px] border border-white/10 bg-white/[0.03]" />)}
+        )) : Array.from({ length: 5 }).map((_, idx) => <div key={idx} className="h-[220px] w-[122px] shrink-0 rounded-[20px] border border-white/10 bg-white/[0.03]" />)}
       </div>
       {!stories.length && (
         <p className="px-1 pb-2 text-xs text-slate-400">{loadError ?? 'Stories will appear here once your first Live Community post is approved.'}</p>
