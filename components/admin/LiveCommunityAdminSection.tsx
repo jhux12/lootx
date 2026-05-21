@@ -17,39 +17,60 @@ type CommunityPost = {
 export const LiveCommunityAdminSection: React.FC = () => {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [form, setForm] = useState({ username: '', avatarUrl: '', imageUrl: '', caption: '' });
+  const [statusMessage, setStatusMessage] = useState('');
 
   useEffect(() => {
-    const postsQuery = query(collection(db, 'communityPosts'), orderBy('createdAt', 'desc'), limit(60));
-    return onSnapshot(postsQuery, (snapshot) => {
-      setPosts(snapshot.docs.map((docSnap) => {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          username: String(data.username ?? ''),
-          avatarUrl: String(data.avatarUrl ?? ''),
-          imageUrl: String(data.imageUrl ?? ''),
-          caption: String(data.caption ?? ''),
-          status: (data.status === 'approved' || data.status === 'rejected' ? data.status : 'pending') as PostStatus,
-          source: data.source === 'admin' ? 'admin' : 'user'
-        };
-      }));
-    });
+    const postsQuery = query(collection(db, 'communityPosts'), orderBy('createdAtMs', 'desc'), limit(120));
+    return onSnapshot(
+      postsQuery,
+      (snapshot) => {
+        setPosts(snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            username: String(data.username ?? ''),
+            avatarUrl: String(data.avatarUrl ?? ''),
+            imageUrl: String(data.imageUrl ?? ''),
+            caption: String(data.caption ?? ''),
+            status: (data.status === 'approved' || data.status === 'rejected' ? data.status : 'pending') as PostStatus,
+            source: data.source === 'admin' ? 'admin' : 'user'
+          };
+        }));
+      },
+      (error) => {
+        console.error('Failed to load community posts in admin', error);
+        setStatusMessage('Could not load posts. Check Firestore permissions/indexes.');
+      }
+    );
   }, []);
 
   const createAdminPost = async () => {
     if (!form.imageUrl.trim() || !form.username.trim()) return;
-    await addDoc(collection(db, 'communityPosts'), {
-      ...form,
-      status: 'approved',
-      source: 'admin',
-      viewCount: 0,
-      createdAt: serverTimestamp()
-    });
-    setForm({ username: '', avatarUrl: '', imageUrl: '', caption: '' });
+    try {
+      await addDoc(collection(db, 'communityPosts'), {
+        ...form,
+        status: 'approved',
+        source: 'admin',
+        viewCount: 0,
+        createdAt: serverTimestamp(),
+        createdAtMs: Date.now()
+      });
+      setForm({ username: '', avatarUrl: '', imageUrl: '', caption: '' });
+      setStatusMessage('Admin post published.');
+    } catch (error) {
+      console.error('Failed to create admin post', error);
+      setStatusMessage('Failed to publish admin post.');
+    }
   };
 
   const setStatus = async (id: string, status: PostStatus) => {
-    await updateDoc(doc(db, 'communityPosts', id), { status, reviewedAt: serverTimestamp() });
+    try {
+      await updateDoc(doc(db, 'communityPosts', id), { status, reviewedAt: serverTimestamp() });
+      setStatusMessage(`Post ${status}.`);
+    } catch (error) {
+      console.error('Failed to update post status', error);
+      setStatusMessage('Failed to update post status.');
+    }
   };
 
   const pending = posts.filter((post) => post.status === 'pending');
@@ -66,6 +87,7 @@ export const LiveCommunityAdminSection: React.FC = () => {
           <input value={form.caption} onChange={(event) => setForm((prev) => ({ ...prev, caption: event.target.value }))} placeholder="Caption" className="rounded-lg border border-gray-700 bg-[#0a0f16] px-3 py-2 text-sm text-white md:col-span-2" />
         </div>
         <button type="button" onClick={createAdminPost} className="mt-3 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white">Publish Admin Post</button>
+        {statusMessage ? <p className="mt-2 text-xs text-gray-300">{statusMessage}</p> : null}
       </div>
 
       <div className="rounded-xl border border-gray-800 bg-[#10151f] p-4">

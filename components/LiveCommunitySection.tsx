@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { addDoc, collection, limit, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
+import { addDoc, collection, limit, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
 
@@ -29,30 +29,42 @@ export const LiveCommunitySection: React.FC = () => {
   const [uploadImageUrl, setUploadImageUrl] = useState('');
   const [uploadCaption, setUploadCaption] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string>('');
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     const postsQuery = query(
       collection(db, 'communityPosts'),
-      where('status', '==', 'approved'),
-      orderBy('createdAt', 'desc'),
-      limit(30)
+      orderBy('createdAtMs', 'desc'),
+      limit(80)
     );
 
-    return onSnapshot(postsQuery, (snapshot) => {
-      const next = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          username: String(data.username ?? 'community.member'),
-          avatarUrl: String(data.avatarUrl ?? ''),
-          imageUrl: String(data.imageUrl ?? ''),
-          caption: String(data.caption ?? ''),
-          viewCount: Number(data.viewCount ?? 0),
-          createdAtMs: Number(data.createdAt?.toMillis?.() ?? Date.now())
-        };
-      }).filter((entry) => entry.imageUrl);
-      setPosts(next);
-    });
+    return onSnapshot(
+      postsQuery,
+      (snapshot) => {
+        setLoadError('');
+        const next = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data();
+            return {
+              id: docSnap.id,
+              username: String(data.username ?? 'community.member'),
+              avatarUrl: String(data.avatarUrl ?? ''),
+              imageUrl: String(data.imageUrl ?? ''),
+              caption: String(data.caption ?? ''),
+              viewCount: Number(data.viewCount ?? 0),
+              createdAtMs: Number(data.createdAtMs ?? data.createdAt?.toMillis?.() ?? Date.now()),
+              status: String(data.status ?? 'pending')
+            };
+          })
+          .filter((entry) => entry.status === 'approved' && entry.imageUrl);
+        setPosts(next);
+      },
+      (error) => {
+        console.error('Failed to load community posts', error);
+        setLoadError('Could not load community posts right now.');
+      }
+    );
   }, []);
 
   const visiblePosts = useMemo(() => (showAll ? posts : posts.slice(0, 6)), [posts, showAll]);
@@ -70,11 +82,15 @@ export const LiveCommunitySection: React.FC = () => {
         viewCount: 0,
         source: 'user',
         userId: user.id,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        createdAtMs: Date.now()
       });
       setUploadImageUrl('');
       setUploadCaption('');
-      alert('Submitted! Admin review is required before this appears publicly.');
+      setSaveMessage('Submitted! Admin review is required before this appears publicly.');
+    } catch (error) {
+      console.error('Failed to submit community post', error);
+      setSaveMessage('Could not submit your post. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -105,6 +121,7 @@ export const LiveCommunitySection: React.FC = () => {
           </article>
         ))}
       </div>
+      {loadError ? <p className="mt-2 text-xs text-rose-300">{loadError}</p> : null}
 
       {user && (
         <div className="mt-4 rounded-xl border border-white/10 bg-[#0f141c] p-3">
@@ -114,6 +131,7 @@ export const LiveCommunitySection: React.FC = () => {
             <input value={uploadCaption} onChange={(event) => setUploadCaption(event.target.value)} placeholder="Caption" className="rounded-lg border border-white/15 bg-[#0a0f16] px-3 py-2 text-sm text-white" />
           </div>
           <button type="button" onClick={submitPost} disabled={uploading || !uploadImageUrl.trim()} className="mt-2 rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{uploading ? 'Submitting...' : 'Submit post'}</button>
+          {saveMessage ? <p className="mt-2 text-xs text-slate-300">{saveMessage}</p> : null}
         </div>
       )}
     </section>
