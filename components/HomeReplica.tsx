@@ -3,6 +3,7 @@ import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
 import { BlurImage } from '../src/ui/images/BlurImage';
+import { LiveCommunitySection } from './LiveCommunitySection';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -204,7 +205,9 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
   return (
     <div className="min-h-screen bg-[#1b2024] text-white">
       <main className="mx-auto grid max-w-[1250px] grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_240px]">
-        <section className="min-w-0 space-y-10">
+        <section className="min-w-0 space-y-8">
+          <LiveCommunitySection />
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {HOME_SECTION_IMAGES.map((tile, index) => (
               <button
