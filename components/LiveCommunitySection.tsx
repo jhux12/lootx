@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Timestamp, collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { Timestamp, collection, doc, increment, limit, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export type LiveCommunityStory = {
@@ -37,6 +37,7 @@ export const LiveCommunitySection: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const holdRef = useRef(false);
+  const viewedStoryIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const q = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(50));
@@ -95,6 +96,27 @@ export const LiveCommunitySection: React.FC = () => {
     []
   );
 
+
+
+  const handleOpenStory = async (index: number) => {
+    const story = stories[index];
+    if (!story) return;
+    setActiveIndex(index);
+    setProgress(0);
+
+    if (viewedStoryIdsRef.current.has(story.id)) return;
+    viewedStoryIdsRef.current.add(story.id);
+
+    setStories((current) => current.map((entry, entryIndex) => (entryIndex === index ? { ...entry, views: (entry.views || 0) + 1 } : entry)));
+
+    try {
+      await updateDoc(doc(db, 'liveCommunityStories', story.id), { views: increment(1) });
+    } catch {
+      viewedStoryIdsRef.current.delete(story.id);
+      setStories((current) => current.map((entry, entryIndex) => (entryIndex === index ? { ...entry, views: Math.max((entry.views || 1) - 1, 0) } : entry)));
+    }
+  };
+
   return <section className="space-y-4">
     <div className="">
       <div className="flex items-center justify-between px-1 py-1">
@@ -103,7 +125,7 @@ export const LiveCommunitySection: React.FC = () => {
       </div>
       <div className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto px-0 py-2 [scrollbar-width:none]">
         {stories.length ? stories.map((story, index) => (
-          <button key={story.id} onClick={() => { setActiveIndex(index); setProgress(0); }} className="group relative h-[252px] w-[138px] shrink-0 snap-start overflow-hidden rounded-[24px] border border-[#2f56ff]/80 bg-black text-left shadow-[0_0_0_1px_rgba(182,85,255,0.55),0_0_20px_rgba(76,100,255,0.22)]">
+          <button key={story.id} onClick={() => { void handleOpenStory(index); }} className="group relative h-[252px] w-[138px] shrink-0 snap-start overflow-hidden rounded-[24px] border border-[#2f56ff]/80 bg-black text-left shadow-[0_0_0_1px_rgba(182,85,255,0.55),0_0_20px_rgba(76,100,255,0.22)]">
             <img src={story.mediaUrl} alt={story.caption} loading="lazy" decoding="async" className="absolute inset-[1px] h-[calc(100%-2px)] w-[calc(100%-2px)] rounded-[22px] object-cover" />
             <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/80" />
             <div className="absolute left-2 top-2 flex items-start gap-2">
@@ -112,7 +134,7 @@ export const LiveCommunitySection: React.FC = () => {
             </div>
             <div className="absolute bottom-2 left-2 right-2 space-y-1.5">
               <p className="inline-block max-w-full rounded-xl bg-white px-2.5 py-1 text-[10px] font-black leading-tight text-black shadow-sm">{story.badgeText ?? story.caption}</p>
-              {story.showViewCount && <p className="flex items-center gap-1 text-[11px] font-semibold text-white/95"><span>◉</span><span>{story.views ?? 0}</span></p>}
+              {story.showViewCount && <p className="flex items-center gap-1 text-[11px] font-semibold text-white/90"><i className="fa-solid fa-eye text-[10px]" aria-hidden="true" /><span>{story.views ?? 0}</span></p>}
             </div>
           </button>
         )) : Array.from({ length: 5 }).map((_, idx) => <div key={idx} className="h-[252px] w-[138px] shrink-0 rounded-[24px] border border-white/10 bg-white/[0.03]" />)}
@@ -126,7 +148,7 @@ export const LiveCommunitySection: React.FC = () => {
     </div>
 
     {activeIndex !== null && stories[activeIndex] && (
-      <div className="fixed inset-0 z-[120] bg-black/95" onClick={() => setActiveIndex(null)}>
+      <div className="fixed inset-0 z-[220] bg-black/95" onClick={() => setActiveIndex(null)}>
         <div className="mx-auto flex h-full w-full max-w-md flex-col px-3 py-4" onClick={(e) => e.stopPropagation()}>
           <div className="mb-2 flex gap-1">{stories.map((_, idx) => <div key={idx} className="h-1 flex-1 overflow-hidden rounded bg-white/20"><div className="h-full bg-white" style={{ width: `${idx < activeIndex ? 100 : idx === activeIndex ? progress : 0}%` }} /></div>)}</div>
           <div className="mb-2 flex items-center justify-between text-sm text-white"><span>{stories[activeIndex].username} · {stories[activeIndex].timestampLabel ?? 'Now'}</span><button onClick={() => setActiveIndex(null)}>✕</button></div>
