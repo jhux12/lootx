@@ -16,6 +16,7 @@ import { UpgraderAdminSection } from './admin/UpgraderAdminSection';
 import { PollsAdminSection } from './admin/PollsAdminSection';
 import { ReferralAdminSection } from './admin/ReferralAdminSection';
 import { MarketPricingAdminSection } from './admin/MarketPricingAdminSection';
+import { LiveCommunityAdminSection } from './admin/LiveCommunityAdminSection';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -286,7 +287,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals' | 'market-pricing' | 'community'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -3229,6 +3230,12 @@ export const AdminPanel: React.FC = () => {
                        <Calculator className="w-4 h-4" /> Market Pricing
                    </button>
                    <button
+                     onClick={() => setActiveTab('community')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'community' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <Users className="w-4 h-4" /> Community
+                   </button>
+                   <button
                      onClick={() => setActiveTab('fees')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'fees' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -3297,6 +3304,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'polls' && 'Poll Management'}
                     {activeTab === 'legal' && 'Legal Content'}
                     {activeTab === 'market-pricing' && 'Market Pricing'}
+                    {activeTab === 'community' && 'Live Community'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
             </div>
@@ -5800,6 +5808,10 @@ export const AdminPanel: React.FC = () => {
 
             {activeTab === 'referrals' && (
                 <ReferralAdminSection />
+            )}
+
+            {activeTab === 'community' && (
+                <LiveCommunityAdminSection />
             )}
 
             {activeTab === 'fees' && (
