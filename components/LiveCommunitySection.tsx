@@ -32,6 +32,29 @@ const rarityRing: Record<string, string> = {
   legendary: 'from-amber-300/90 to-orange-500/90'
 };
 
+
+
+const toMillis = (value: unknown): number => {
+  if (value && typeof value === 'object' && typeof (value as { toMillis?: unknown }).toMillis === 'function') {
+    return Number((value as { toMillis: () => number }).toMillis());
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  return 0;
+};
+
+const formatStoryTimeLabel = (story: LiveCommunityStory): string => {
+  const source = (story as Record<string, unknown>).publishAt ?? story.createdAt;
+  const millis = toMillis(source);
+  if (!millis) return 'just now';
+  const diffMs = Date.now() - millis;
+  if (diffMs < 60_000) return 'now';
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+};
 export const LiveCommunitySection: React.FC = () => {
   const [stories, setStories] = useState<LiveCommunityStory[]>([]);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -104,15 +127,12 @@ export const LiveCommunitySection: React.FC = () => {
     if (viewedStoryIdsRef.current.has(story.id)) return;
     viewedStoryIdsRef.current.add(story.id);
 
-    setStories((current) => current.map((entry, entryIndex) => (entryIndex === index ? { ...entry, views: (entry.views || 0) + 1 } : entry)));
-
     if (!auth.currentUser) return;
 
     try {
       await updateDoc(doc(db, 'liveCommunityStories', story.id), { views: increment(1) });
     } catch {
       viewedStoryIdsRef.current.delete(story.id);
-      setStories((current) => current.map((entry, entryIndex) => (entryIndex === index ? { ...entry, views: Math.max((entry.views || 1) - 1, 0) } : entry)));
     }
   };
 
@@ -128,11 +148,11 @@ export const LiveCommunitySection: React.FC = () => {
             <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/80" />
             <div className="absolute left-2 top-2 flex items-start gap-2">
               <div className="h-6 w-6 rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[1.5px]"><img src={story.mediaUrl} alt="" className="h-full w-full rounded-full object-cover" /></div>
-              <div><p className="text-[10px] font-extrabold text-white leading-none">{story.username}</p><p className="mt-1 text-[9px] font-bold text-white/90">{story.timestampLabel ?? '2m'}</p></div>
+              <div><p className="text-[10px] font-extrabold text-white leading-none">{story.username}</p><p className="mt-1 text-[9px] font-bold text-white/90">{story.timestampLabel ?? formatStoryTimeLabel(story)}</p></div>
             </div>
             <div className="absolute bottom-2 left-2 right-2 space-y-1.5">
               <p className="inline-block max-w-full rounded-xl bg-white px-2.5 py-1 text-[10px] font-black leading-tight text-black shadow-sm">{story.badgeText ?? story.caption}</p>
-              {story.showViewCount && <p className="flex items-center gap-1 text-[11px] font-semibold text-white/90"><i className="fa-solid fa-eye text-[10px]" aria-hidden="true" /><span>{story.views ?? 0}</span></p>}
+              {story.showViewCount && <p className="flex items-center gap-1 text-[11px] font-semibold text-white/90"><i className="fa-solid fa-eye text-[10px]" aria-hidden="true" /><span>{Number.isFinite(story.views) ? story.views : 0}</span></p>}
             </div>
           </button>
         )) : Array.from({ length: 5 }).map((_, idx) => <div key={idx} className="h-[220px] w-[122px] shrink-0 rounded-[20px] border border-white/10 bg-white/[0.03]" />)}
@@ -145,7 +165,7 @@ export const LiveCommunitySection: React.FC = () => {
       <div className="fixed inset-0 z-[220] bg-black/95" onClick={() => setActiveIndex(null)}>
         <div className="mx-auto flex h-full w-full max-w-md flex-col px-3 py-4" onClick={(e) => e.stopPropagation()}>
           <div className="mb-2 flex gap-1">{stories.map((_, idx) => <div key={idx} className="h-1 flex-1 overflow-hidden rounded bg-white/20"><div className="h-full bg-white" style={{ width: `${idx < activeIndex ? 100 : idx === activeIndex ? progress : 0}%` }} /></div>)}</div>
-          <div className="mb-2 flex items-center justify-between text-sm text-white"><span>{stories[activeIndex].username} · {stories[activeIndex].timestampLabel ?? 'Now'}</span><button onClick={() => setActiveIndex(null)}>✕</button></div>
+          <div className="mb-2 flex items-center justify-between text-sm text-white"><span>{stories[activeIndex].username} · {stories[activeIndex].timestampLabel ?? formatStoryTimeLabel(stories[activeIndex])}</span><button onClick={() => setActiveIndex(null)}>✕</button></div>
           <div className="relative flex-1 overflow-hidden rounded-2xl border border-white/10 bg-[#111]" onMouseDown={() => { holdRef.current = true; }} onMouseUp={() => { holdRef.current = false; }} onTouchStart={() => { holdRef.current = true; }} onTouchEnd={() => { holdRef.current = false; }}>
             {stories[activeIndex].mediaType === 'video' ? <video src={stories[activeIndex].mediaUrl} className="h-full w-full object-cover" autoPlay muted playsInline /> : <img src={stories[activeIndex].mediaUrl} className="h-full w-full object-cover" alt={stories[activeIndex].caption} />}
             <button
