@@ -39,28 +39,35 @@ export const LiveCommunitySection: React.FC = () => {
   const holdRef = useRef(false);
 
   useEffect(() => {
-    const now = Timestamp.now();
-    const q = query(
-      collection(db, 'liveCommunityStories'),
-      where('approved', '==', true),
-      where('expiresAt', '>', now),
-      orderBy('expiresAt', 'asc'),
-      orderBy('order', 'asc'),
-      limit(30)
-    );
+    const q = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(50));
 
     return onSnapshot(
       q,
       (snap) => {
+        const nowMs = Date.now();
         const next = snap.docs
           .map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Omit<LiveCommunityStory, 'id'>) }))
-          .filter((story) => !story.hidden && Boolean(story.mediaUrl));
+          .filter((story) => !story.hidden && Boolean(story.mediaUrl))
+          .filter((story) => {
+            const publishAt = story.publishAt as Timestamp | undefined;
+            const expiresAt = story.expiresAt as Timestamp | undefined;
+            const publishMs = publishAt && typeof publishAt.toMillis === 'function' ? publishAt.toMillis() : 0;
+            const expiresMs = expiresAt && typeof expiresAt.toMillis === 'function' ? expiresAt.toMillis() : Number.POSITIVE_INFINITY;
+            return publishMs <= nowMs && expiresMs > nowMs;
+          })
+          .sort((a, b) => {
+            if (a.featured !== b.featured) return a.featured ? -1 : 1;
+            const aOrder = Number.isFinite(a.order) ? a.order : 9999;
+            const bOrder = Number.isFinite(b.order) ? b.order : 9999;
+            return aOrder - bOrder;
+          })
+          .slice(0, 30);
         setStories(next);
         setLoadError(null);
       },
-      () => {
+      (error) => {
         setStories([]);
-        setLoadError('Live stories are loading. Please check back in a moment.');
+        setLoadError(error?.message || 'Unable to load live stories right now.');
       }
     );
   }, []);
