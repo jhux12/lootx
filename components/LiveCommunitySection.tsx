@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Timestamp, collection, doc, increment, limit, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { db } from '../firebase';
 
 export type LiveCommunityStory = {
   id: string;
@@ -123,8 +123,6 @@ export const LiveCommunitySection: React.FC = () => {
 
     if (viewedStoryIdsRef.current.has(story.id)) return;
     viewedStoryIdsRef.current.add(story.id);
-
-    if (!auth.currentUser) return;
 
     try {
       await updateDoc(doc(db, 'liveCommunityStories', story.id), { views: increment(1) });
