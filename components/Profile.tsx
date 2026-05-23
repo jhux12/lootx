@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Check, Coins, CreditCard, Info, PackageCheck, Truck, X } from 'lucide-react';
+import { Check, Coins, Copy, CreditCard, Info, PackageCheck, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -62,6 +62,21 @@ const formatOrderDate = (timestamp?: number) => {
 const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
   const shippedCount = orders.filter((order) => order.status === 'shipped').length;
   const pendingCount = orders.filter((order) => order.status === 'pending').length;
+  const [copiedTrackingId, setCopiedTrackingId] = useState<string | null>(null);
+
+  const handleCopyTracking = async (orderId: string, trackingNumber: string) => {
+    try {
+      await navigator.clipboard.writeText(trackingNumber);
+      setCopiedTrackingId(orderId);
+      window.setTimeout(() => {
+        setCopiedTrackingId((currentId) => (currentId === orderId ? null : currentId));
+      }, 1400);
+      toast.success('Tracking copied.');
+    } catch (error) {
+      console.error('Unable to copy tracking number', error);
+      toast.error('Could not copy tracking number.');
+    }
+  };
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-4">
@@ -119,7 +134,19 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
                   <div className="rounded-2xl border border-white/10 bg-[#171d24] px-3 py-2">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Tracking</p>
                     {order.trackingNumber ? (
-                      <p className="mt-1 break-all text-sm font-semibold text-blue-200">{order.trackingNumber}</p>
+                      <div className="mt-1 flex items-start gap-2">
+                        <p className="min-w-0 break-all pr-1 text-sm font-semibold text-blue-200">{order.trackingNumber}</p>
+                        {order.status === 'shipped' ? (
+                          <button
+                            type="button"
+                            onClick={() => { void handleCopyTracking(order.id, order.trackingNumber as string); }}
+                            className="shrink-0 rounded-md border border-blue-300/25 bg-blue-500/10 p-1.5 text-blue-100 transition hover:bg-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-300/50"
+                            aria-label={copiedTrackingId === order.id ? 'Tracking number copied' : 'Copy tracking number'}
+                          >
+                            {copiedTrackingId === order.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                          </button>
+                        ) : null}
+                      </div>
                     ) : (
                       <p className="mt-1 text-sm font-semibold text-gray-400">Not available</p>
                     )}
