@@ -24,10 +24,16 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
   ...rest
 }) => {
   const [loaded, setLoaded] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState(src);
+  const [hasError, setHasError] = useState(false);
+  const [hasRetried, setHasRetried] = useState(false);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     setLoaded(false);
+    setHasError(false);
+    setHasRetried(false);
+    setCurrentSrc(src);
   }, [src]);
 
   useEffect(() => {
@@ -43,7 +49,20 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
 
   const handleLoad: React.ReactEventHandler<HTMLImageElement> = (event) => {
     setLoaded(true);
+    setHasError(false);
     rest.onLoad?.(event);
+  };
+
+  const handleError: React.ReactEventHandler<HTMLImageElement> = (event) => {
+    const source = typeof currentSrc === 'string' ? currentSrc : '';
+    if (!hasRetried && source) {
+      const separator = source.includes('?') ? '&' : '?';
+      setHasRetried(true);
+      setCurrentSrc(`${source}${separator}retry=${Date.now()}`);
+      return;
+    }
+    setHasError(true);
+    rest.onError?.(event);
   };
 
   return (
@@ -57,9 +76,9 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
       ) : null}
       <img
         ref={imageRef}
-        src={src}
+        src={currentSrc}
         alt={alt}
-        className={`pullz-blur-full ${loaded ? 'is-loaded' : ''} ${className ?? ''}`}
+        className={`pullz-blur-full ${(loaded && !hasError) ? 'is-loaded' : ''} ${className ?? ''}`}
         loading={priority ? 'eager' : (loading ?? 'lazy')}
         decoding={decoding ?? 'async'}
         width={intrinsicWidth}
@@ -67,6 +86,7 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
         style={style}
         {...rest}
         onLoad={handleLoad}
+        onError={handleError}
       />
     </div>
   );
