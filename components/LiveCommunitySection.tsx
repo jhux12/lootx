@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Timestamp, collection, doc, increment, limit, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
-import { db } from '../firebase';
+import { Timestamp, collection, doc, getDoc, increment, limit, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
+import { getDownloadURL, ref } from 'firebase/storage';
+import { db, storage } from '../firebase';
 
 export type LiveCommunityStory = {
   id: string;
@@ -25,6 +26,24 @@ export type LiveCommunityStory = {
 };
 
 
+
+
+const STORY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=600&q=70';
+
+const resolveMediaUrl = async (story: LiveCommunityStory): Promise<string> => {
+  const rawUrl = typeof story.mediaUrl === 'string' ? story.mediaUrl.trim() : '';
+  if (rawUrl.startsWith('gs://')) return getDownloadURL(ref(storage, rawUrl));
+  if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) return rawUrl;
+
+  const snapshot = await getDoc(doc(db, 'liveCommunityStories', story.id));
+  if (snapshot.exists()) {
+    const data = snapshot.data() as Record<string, unknown>;
+    const storagePath = typeof data.storagePath === 'string' ? data.storagePath : '';
+    if (storagePath) return getDownloadURL(ref(storage, storagePath));
+  }
+
+  return rawUrl;
+};
 const rarityRing: Record<string, string> = {
   common: 'from-slate-400/70 to-cyan-500/70',
   rare: 'from-sky-400/80 to-violet-500/80',
@@ -61,6 +80,7 @@ export const LiveCommunitySection: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const holdRef = useRef(false);
   const viewedStoryIdsRef = useRef<Set<string>>(new Set());
+  const [brokenStoryIds, setBrokenStoryIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const q = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(50));
@@ -115,6 +135,19 @@ export const LiveCommunitySection: React.FC = () => {
 
 
 
+  const handleStoryImageError = async (story: LiveCommunityStory) => {
+    if (brokenStoryIds.has(story.id)) return;
+    setBrokenStoryIds((current) => new Set(current).add(story.id));
+    try {
+      const resolved = await resolveMediaUrl(story);
+      if (resolved && resolved !== story.mediaUrl) {
+        setStories((current) => current.map((entry) => (entry.id === story.id ? { ...entry, mediaUrl: resolved } : entry)));
+        return;
+      }
+    } catch {}
+    setStories((current) => current.map((entry) => (entry.id === story.id ? { ...entry, mediaUrl: STORY_IMAGE_FALLBACK } : entry)));
+  };
+
   const handleOpenStory = async (index: number) => {
     const story = stories[index];
     if (!story) return;
@@ -139,10 +172,10 @@ export const LiveCommunitySection: React.FC = () => {
       <div className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto px-0 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:auto]">
         {stories.length ? stories.map((story, index) => (
           <button key={story.id} onClick={() => { void handleOpenStory(index); }} className="group relative h-[220px] w-[122px] shrink-0 snap-start overflow-hidden rounded-[20px] border border-[#2f56ff]/80 bg-black text-left shadow-[0_0_0_1px_rgba(182,85,255,0.55),0_0_20px_rgba(76,100,255,0.22)]">
-            <img src={story.mediaUrl} alt={story.caption} loading="lazy" decoding="async" className="absolute inset-[1px] h-[calc(100%-2px)] w-[calc(100%-2px)] rounded-[18px] object-cover" />
+            <img src={story.mediaUrl} alt={story.caption || 'Live community story'} loading="lazy" decoding="async" className="absolute inset-[1px] h-[calc(100%-2px)] w-[calc(100%-2px)] rounded-[18px] object-cover" onError={() => { void handleStoryImageError(story); }} />
             <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/80" />
             <div className="absolute left-2 top-2 flex items-start gap-2">
-              <div className="h-6 w-6 rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[1.5px]"><img src={story.mediaUrl} alt="" className="h-full w-full rounded-full object-cover" /></div>
+              <div className="h-6 w-6 rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[1.5px]"><img src={story.mediaUrl} alt="" className="h-full w-full rounded-full object-cover" onError={() => { void handleStoryImageError(story); }} /></div>
               <div><p className="text-[10px] font-extrabold text-white leading-none">{story.username}</p><p className="mt-1 text-[9px] font-bold text-white/90">{story.timestampLabel ?? formatStoryTimeLabel(story)}</p></div>
             </div>
             <div className="absolute bottom-2 left-2 right-2 space-y-1.5">
@@ -159,7 +192,7 @@ export const LiveCommunitySection: React.FC = () => {
           <div className="mb-2 flex gap-1">{stories.map((_, idx) => <div key={idx} className="h-1 flex-1 overflow-hidden rounded bg-white/20"><div className="h-full bg-white" style={{ width: `${idx < activeIndex ? 100 : idx === activeIndex ? progress : 0}%` }} /></div>)}</div>
           <div className="mb-2 flex items-center justify-between text-sm text-white"><span>{stories[activeIndex].username} · {stories[activeIndex].timestampLabel ?? formatStoryTimeLabel(stories[activeIndex])}</span><button onClick={() => setActiveIndex(null)}>✕</button></div>
           <div className="relative flex-1 overflow-hidden rounded-2xl border border-white/10 bg-[#111]" onMouseDown={() => { holdRef.current = true; }} onMouseUp={() => { holdRef.current = false; }} onTouchStart={() => { holdRef.current = true; }} onTouchEnd={() => { holdRef.current = false; }}>
-            {stories[activeIndex].mediaType === 'video' ? <video src={stories[activeIndex].mediaUrl} className="h-full w-full object-cover" autoPlay muted playsInline /> : <img src={stories[activeIndex].mediaUrl} className="h-full w-full object-cover" alt={stories[activeIndex].caption} />}
+            {stories[activeIndex].mediaType === 'video' ? <video src={stories[activeIndex].mediaUrl} className="h-full w-full object-cover" autoPlay muted playsInline /> : <img src={stories[activeIndex].mediaUrl} className="h-full w-full object-cover" alt={stories[activeIndex].caption || 'Live community story'} onError={() => { void handleStoryImageError(stories[activeIndex]); }} />}
             <button
               type="button"
               aria-label="Previous story"
