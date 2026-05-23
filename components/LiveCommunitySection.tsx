@@ -174,7 +174,7 @@ export const LiveCommunitySection: React.FC = () => {
           <button
             key={story.id}
             onClick={() => { void handleOpenStory(index); }}
-            className="group flex w-[86px] shrink-0 snap-start flex-col items-center gap-1.5 text-center"
+            className="group flex w-[86px] shrink-0 snap-start flex-col items-center text-center"
           >
             <div className="relative h-[74px] w-[74px] rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[2px] shadow-[0_0_18px_rgba(92,101,255,0.35)]">
               <img
@@ -186,9 +186,6 @@ export const LiveCommunitySection: React.FC = () => {
                 onError={() => { void handleStoryImageError(story); }}
               />
             </div>
-            <p className="max-w-[82px] truncate text-[11px] font-bold text-white">{story.username}</p>
-            <p className="text-[10px] text-slate-300">{story.timestampLabel ?? formatStoryTimeLabel(story)}</p>
-            {story.showViewCount && <p className="flex items-center gap-1 text-[10px] font-semibold text-white/80"><i className="fa-solid fa-eye text-[9px]" aria-hidden="true" /><span>{Number.isFinite(story.views) ? story.views : 0}</span></p>}
           </button>
         )) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[86px] w-[86px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
       </div>
