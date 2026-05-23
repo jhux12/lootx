@@ -171,19 +171,26 @@ export const LiveCommunitySection: React.FC = () => {
       </div>
       <div className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto px-0 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:auto]">
         {stories.length ? stories.map((story, index) => (
-          <button key={story.id} onClick={() => { void handleOpenStory(index); }} className="group relative h-[220px] w-[122px] shrink-0 snap-start overflow-hidden rounded-[20px] border border-[#2f56ff]/80 bg-black text-left shadow-[0_0_0_1px_rgba(182,85,255,0.55),0_0_20px_rgba(76,100,255,0.22)]">
-            <img src={story.mediaUrl} alt={story.caption || 'Live community story'} loading="lazy" decoding="async" className="absolute inset-[1px] h-[calc(100%-2px)] w-[calc(100%-2px)] rounded-[18px] object-cover" onError={() => { void handleStoryImageError(story); }} />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/80" />
-            <div className="absolute left-2 top-2 flex items-start gap-2">
-              <div className="h-6 w-6 rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[1.5px]"><img src={story.mediaUrl} alt="" className="h-full w-full rounded-full object-cover" onError={() => { void handleStoryImageError(story); }} /></div>
-              <div><p className="text-[10px] font-extrabold text-white leading-none">{story.username}</p><p className="mt-1 text-[9px] font-bold text-white/90">{story.timestampLabel ?? formatStoryTimeLabel(story)}</p></div>
+          <button
+            key={story.id}
+            onClick={() => { void handleOpenStory(index); }}
+            className="group flex w-[86px] shrink-0 snap-start flex-col items-center gap-1.5 text-center"
+          >
+            <div className="relative h-[74px] w-[74px] rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[2px] shadow-[0_0_18px_rgba(92,101,255,0.35)]">
+              <img
+                src={story.mediaUrl}
+                alt={story.caption || 'Live community story'}
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full rounded-full object-cover"
+                onError={() => { void handleStoryImageError(story); }}
+              />
             </div>
-            <div className="absolute bottom-2 left-2 right-2 space-y-1.5">
-              {(story.badgeText || story.caption) && <p className="inline-block max-w-full rounded-xl bg-black/25 px-2.5 py-1 text-[10px] font-black leading-tight text-white shadow-sm backdrop-blur-[1px]">{story.badgeText || story.caption}</p>}
-              {story.showViewCount && <p className="flex items-center gap-1 text-[11px] font-semibold text-white/90"><i className="fa-solid fa-eye text-[10px]" aria-hidden="true" /><span>{Number.isFinite(story.views) ? story.views : 0}</span></p>}
-            </div>
+            <p className="max-w-[82px] truncate text-[11px] font-bold text-white">{story.username}</p>
+            <p className="text-[10px] text-slate-300">{story.timestampLabel ?? formatStoryTimeLabel(story)}</p>
+            {story.showViewCount && <p className="flex items-center gap-1 text-[10px] font-semibold text-white/80"><i className="fa-solid fa-eye text-[9px]" aria-hidden="true" /><span>{Number.isFinite(story.views) ? story.views : 0}</span></p>}
           </button>
-        )) : Array.from({ length: 5 }).map((_, idx) => <div key={idx} className="relative h-[220px] w-[122px] shrink-0 overflow-hidden rounded-[20px] border border-white/10 bg-white/[0.03]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
+        )) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[86px] w-[86px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
       </div>
     </div>
     {activeIndex !== null && stories[activeIndex] && (
