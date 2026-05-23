@@ -4,6 +4,7 @@ import { useGame } from '../../context/GameContext';
 import { getBoxTags } from '../../utils/boxTags';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
+import { LiveCommunityAdmin } from './LiveCommunityAdmin';
 import {
   MAX_SHOWCASE_BOXES,
   ShowcaseLayout,
@@ -237,6 +238,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <LiveCommunityAdmin />
       {toast && (
         <div
           className={`fixed right-4 top-4 z-50 rounded-lg border px-4 py-3 text-sm font-semibold shadow-lg sm:right-6 ${
@@ -291,6 +293,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
+      <LiveCommunityAdmin />
           {showcaseRows.length === 0 && (
             <div className="rounded-xl border border-gray-800 bg-[#131720] p-6 text-sm text-gray-400">
               No homepage rows configured yet. Add a row to get started.

@@ -192,6 +192,19 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+
+    match /liveCommunityStories/{storyId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
+          && request.resource.data.views is int
+          && resource.data.views is int
+          && request.resource.data.views == resource.data.views + 1
+        );
+    }
+
     match /userVotes/{uid}/polls/{pollId} {
       allow read: if isOwnUser(uid) || isAdmin();
       allow write: if false;
