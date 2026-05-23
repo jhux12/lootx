@@ -3,6 +3,7 @@ import './blurImage.css';
 
 type BlurImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
   placeholderSrc?: string;
+  fallbackSrc?: string;
   ratioClassName?: string;
   priority?: boolean;
   showPlaceholder?: boolean;
@@ -13,6 +14,7 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
   alt,
   className,
   placeholderSrc,
+  fallbackSrc,
   ratioClassName,
   priority = false,
   showPlaceholder = true,
@@ -59,6 +61,11 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
       const separator = source.includes('?') ? '&' : '?';
       setHasRetried(true);
       setCurrentSrc(`${source}${separator}retry=${Date.now()}`);
+      return;
+    }
+    if (fallbackSrc && source !== fallbackSrc) {
+      setHasError(false);
+      setCurrentSrc(fallbackSrc);
       return;
     }
     setHasError(true);
