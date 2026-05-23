@@ -6,6 +6,7 @@ import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
+import { BlurImage } from '../src/ui/images/BlurImage';
 import type { MysteryBox } from '../types';
 
 type BoxCatalogProps = {
@@ -91,7 +92,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [maxPriceQuery, setMaxPriceQuery] = useState('');
   const [onlyAffordable, setOnlyAffordable] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-  const [loadedBoxImages, setLoadedBoxImages] = useState<Record<string, boolean>>({});
 
   const minPrice = minPriceQuery.trim() ? Number(minPriceQuery) : null;
   const maxPrice = maxPriceQuery.trim() ? Number(maxPriceQuery) : null;
@@ -192,10 +192,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     setView({ type: 'CASE_OPENING', boxId });
   };
 
-  useEffect(() => {
-    setLoadedBoxImages({});
-  }, [groupedBoxes]);
-
   return (
     <div className="w-full bg-[#1a1f26] pb-20">
 
@@ -252,19 +248,16 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               {groupedBoxes.map((box) => (
                 <button key={box.id} type="button" onClick={() => openBox(box.id)} className="group w-full max-w-[220px] rounded-xl border border-transparent bg-transparent p-2 text-center transition-colors duration-300 ease-out">
                   <div className="relative mx-auto aspect-[0.72] w-[88%] sm:w-[86%]">
-                    {!loadedBoxImages[box.id] && (
-                      <div className="absolute inset-0 animate-pulse rounded-xl bg-white/10" aria-hidden="true" />
-                    )}
-                    <img
+                    <BlurImage
                       src={box.image}
+                      fallbackSrc="/preview.png"
                       alt={box.name}
                       loading="lazy"
                       decoding="async"
                       width={220}
                       height={306}
-                      onLoad={() => setLoadedBoxImages((prev) => ({ ...prev, [box.id]: true }))}
-                      onError={() => setLoadedBoxImages((prev) => ({ ...prev, [box.id]: true }))}
-                      className={`mx-auto h-full w-full object-contain transition-all duration-300 ease-out group-hover:scale-110 group-hover:rotate-[-3deg] ${loadedBoxImages[box.id] ? 'opacity-100' : 'opacity-0'}`}
+                      ratioClassName="h-full w-full"
+                      className="mx-auto h-full w-full object-contain transition-all duration-300 ease-out group-hover:scale-110 group-hover:rotate-[-3deg]"
                     />
                   </div>
                   <div className="mt-3 line-clamp-2 min-h-[2.5rem] text-sm font-extrabold text-white sm:text-base">
