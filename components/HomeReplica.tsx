@@ -191,7 +191,7 @@ HomeBelowFoldSkeleton.displayName = 'HomeBelowFoldSkeleton';
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onViewAllBoxes, onSignUp }) => {
   const { setView, user } = useGame();
   const [showBelowFold, setShowBelowFold] = useState(false);
-  const featuredBoxes = boxes.slice(0, 5);
+  const featuredBoxes = boxes.slice(0, 6);
   const liveWins = useMemo(() => buildLiveWins(boxes), [boxes]);
 
   useEffect(() => {
@@ -267,14 +267,14 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
 
           <section>
             <div className="mb-5 flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-xl font-black"><span className="text-slate-400">▣</span>Available Boxes</h2>
+              <h2 className="flex items-center gap-2 text-xl font-black"><i className="fa-solid fa-box-open text-slate-400" aria-hidden="true" />Available Boxes</h2>
               <button onClick={onViewAllBoxes} className="px-1 py-2 text-xs font-bold text-white/90 hover:text-white">View All</button>
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-5">
               {featuredBoxes.map((box) => (
                 <button key={box.id} onClick={() => onOpenBox(box.id)} className="group rounded-xl border border-transparent bg-transparent p-2 text-center transition-colors duration-300 ease-out">
                   <div className="flex h-[145px] items-center justify-center p-2 sm:h-[170px]">
-                    <BlurImage src={box.image} alt={box.name} className="mx-auto max-h-full w-auto object-contain transition-transform duration-200 ease-out group-hover:scale-105" loading="lazy" width={220} height={220} />
+                    <BlurImage src={box.image} alt={box.name} className="mx-auto max-h-full w-auto object-contain transition-transform duration-200 ease-out group-hover:scale-105" loading="lazy" showPlaceholder={false} width={220} height={220} />
                   </div>
                   <div className="mt-2 flex justify-center">
                     <CoinAmount amount={Math.round(box.price)} className="text-sm font-semibold text-slate-200" iconClassName="h-4 w-4" />
