@@ -2293,7 +2293,28 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
               <div className="border-t border-white/10 bg-black/20 p-4 sm:p-6">
                 {isDemoSpin ? (
-                  <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
+                  <div className="flex flex-col gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeWinModal();
+                        void handleSpin({ isQuick: isQuickSpinEnabled });
+                      }}
+                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
+                      className="h-12 w-full rounded-xl bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] px-4 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <span className="inline-flex items-center justify-center gap-2">
+                        Open for
+                        <CoinAmount
+                          amount={toCoins(box?.price ?? 0, PRICE_UNIT_MODE)}
+                          formatOptions={{ maximumFractionDigits: 0 }}
+                          className="text-white"
+                          iconClassName="h-4 w-4"
+                        />
+                      </span>
+                    </button>
+                    <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
+                  </div>
                 ) : (
                   <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                     <button
