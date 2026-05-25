@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 import {
+  Flame,
   ChevronDown,
   HelpCircle,
   Instagram,
@@ -41,15 +42,9 @@ type HeaderProps = {
   isSticky?: boolean;
 };
 
-const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <i className={`fa-brands fa-superpowers ${className ?? ''}`.trim()} aria-hidden="true" />
-);
-const GamesIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <i className={`fa-solid fa-box-open ${className ?? ''}`.trim()} aria-hidden="true" />
-);
-const RewardsIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <i className={`fa-solid fa-gem ${className ?? ''}`.trim()} aria-hidden="true" />
-);
+const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => <Flame className={className} aria-hidden="true" />;
+const GamesIcon: React.FC<{ className?: string }> = ({ className }) => <Package className={className} aria-hidden="true" />;
+const RewardsIcon: React.FC<{ className?: string }> = ({ className }) => <Sparkles className={className} aria-hidden="true" />;
 
 const drawerCardClass =
   'flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[0.075] active:translate-y-0';
@@ -432,7 +427,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
             </div>
           </div>
 
-          <div className="flex min-h-[42px] shrink-0 items-center gap-2 sm:gap-3">
+          <div className="flex min-h-[42px] min-w-[132px] shrink-0 items-center gap-2 sm:min-w-[148px] sm:gap-3 lg:min-w-[430px]">
             {!authInitialized ? (
               <HeaderSkeleton />
             ) : isAuthenticated ? (

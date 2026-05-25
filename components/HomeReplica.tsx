@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { Package } from 'lucide-react';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
@@ -222,16 +223,18 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
               >
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_70%,rgba(34,211,238,0.30),transparent_56%),radial-gradient(circle_at_25%_15%,rgba(32,93,215,0.20),transparent_46%),radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.14),transparent_42%)]" />
                 <p className="relative z-10 max-w-[140px] text-sm font-black uppercase leading-5 text-slate-100">{tile.title}</p>
-                <img
-                  src={tile.image}
-                  alt={`${tile.title} artwork`}
-                  className="pointer-events-none absolute -right-3 -bottom-7 z-10 h-[154px] w-[154px] shrink-0 -rotate-12 object-contain opacity-100 transition-transform duration-300 ease-out group-hover:scale-105 group-hover:-rotate-[15deg] sm:-right-2 sm:-bottom-6 sm:h-[148px] sm:w-[148px] md:h-[160px] md:w-[160px] lg:h-[172px] lg:w-[172px]"
-                  loading="lazy"
-                  fetchPriority="low"
-                  decoding="async"
-                  width={500}
-                  height={500}
-                />
+                <div className="pointer-events-none absolute -right-3 -bottom-7 z-10 h-[154px] w-[154px] shrink-0 sm:-right-2 sm:-bottom-6 sm:h-[148px] sm:w-[148px] md:h-[160px] md:w-[160px] lg:h-[172px] lg:w-[172px]">
+                  <img
+                    src={tile.image}
+                    alt={`${tile.title} artwork`}
+                    className="h-full w-full -rotate-12 object-contain opacity-100 transition-transform duration-300 ease-out group-hover:scale-105 group-hover:-rotate-[15deg]"
+                    loading="lazy"
+                    fetchPriority="low"
+                    decoding="async"
+                    width={500}
+                    height={500}
+                  />
+                </div>
               </button>
             ))}
           </div>
@@ -267,7 +270,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
 
           <section>
             <div className="mb-5 flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-xl font-black"><i className="fa-solid fa-box-open text-slate-400" aria-hidden="true" />Available Boxes</h2>
+              <h2 className="flex items-center gap-2 text-xl font-black"><Package className="h-5 w-5 text-slate-400" aria-hidden="true" />Available Boxes</h2>
               <button onClick={onViewAllBoxes} className="px-1 py-2 text-xs font-bold text-white/90 hover:text-white">View All</button>
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-5">

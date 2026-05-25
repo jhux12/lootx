@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Search, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronsDown, Search, Sparkles } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
@@ -217,7 +217,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 onClick={() => setIsMobileFiltersOpen((current) => !current)}
                 aria-label="Toggle filters"
               >
-                <i className="fa-solid fa-angles-down text-sm" />
+                <ChevronsDown className="h-4 w-4" />
               </button>
               <button type="button" className="text-[#4ea8ff] text-sm font-semibold" onClick={() => setSearchQuery('')}>Reset</button>
             </div>
