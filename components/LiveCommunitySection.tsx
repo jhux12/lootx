@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Timestamp, addDoc, collection, doc, getDoc, increment, limit, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from '../firebase';
+import { useGame } from '../context/GameContext';
 
 export type LiveCommunityStory = {
   id: string;
@@ -75,6 +76,7 @@ const formatStoryTimeLabel = (story: LiveCommunityStory): string => {
   return `${days}d`;
 };
 export const LiveCommunitySection: React.FC = () => {
+  const { isAuthenticated, openAuthModal, user } = useGame();
   const sectionRef = useRef<HTMLElement | null>(null);
   const [stories, setStories] = useState<LiveCommunityStory[]>([]);
   const [shouldConnectRealtime, setShouldConnectRealtime] = useState(false);
@@ -87,7 +89,6 @@ export const LiveCommunitySection: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-  const [submitUsername, setSubmitUsername] = useState('');
   const [submitCaption, setSubmitCaption] = useState('');
   const [submitFile, setSubmitFile] = useState<File | null>(null);
 
@@ -199,7 +200,6 @@ export const LiveCommunitySection: React.FC = () => {
   const resetSubmitState = () => {
     setSubmitError(null);
     setSubmitSuccess(null);
-    setSubmitUsername('');
     setSubmitCaption('');
     setSubmitFile(null);
   };
@@ -207,7 +207,9 @@ export const LiveCommunitySection: React.FC = () => {
   const handleSubmitStory = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSubmitting) return;
-    if (!submitUsername.trim()) return setSubmitError('Please enter a username.');
+    if (!isAuthenticated) return setSubmitError('Please sign in to submit a story.');
+    const resolvedUsername = String(user.username || user.displayName || user.name || '').trim();
+    if (!resolvedUsername) return setSubmitError('We could not find your username. Please update your profile first.');
     if (!submitFile) return setSubmitError('Please upload an image or short video.');
     setIsSubmitting(true);
     setSubmitError(null);
@@ -222,7 +224,7 @@ export const LiveCommunitySection: React.FC = () => {
       const mediaType: 'image' | 'video' = submitFile.type.startsWith('video') ? 'video' : 'image';
 
       await addDoc(collection(db, 'liveCommunityStories'), {
-        username: submitUsername.trim(),
+        username: resolvedUsername,
         caption: submitCaption.trim(),
         badgeText: submitCaption.trim() || 'Community submission',
         type: 'community submission',
@@ -261,6 +263,10 @@ export const LiveCommunitySection: React.FC = () => {
         <button
           type="button"
           onClick={() => {
+            if (!isAuthenticated) {
+              openAuthModal('login');
+              return;
+            }
             setShowSubmitModal(true);
             resetSubmitState();
           }}
@@ -339,13 +345,9 @@ export const LiveCommunitySection: React.FC = () => {
           </div>
           <p className="mb-3 text-xs text-slate-300">Uploads are reviewed by admins before they appear in live stories.</p>
           <form className="space-y-3" onSubmit={handleSubmitStory}>
-            <input
-              className="w-full rounded-lg border border-white/10 bg-[#0b0f18] px-3 py-2 text-sm text-white placeholder:text-slate-500"
-              placeholder="Username"
-              value={submitUsername}
-              maxLength={40}
-              onChange={(e) => setSubmitUsername(e.target.value)}
-            />
+            <div className="rounded-lg border border-white/10 bg-[#0b0f18] px-3 py-2 text-sm text-slate-200">
+              Posting as <span className="font-semibold text-white">{String(user.username || user.displayName || user.name || 'Unknown user')}</span>
+            </div>
             <input
               className="w-full rounded-lg border border-white/10 bg-[#0b0f18] px-3 py-2 text-sm text-white placeholder:text-slate-500"
               placeholder="Caption (optional)"
