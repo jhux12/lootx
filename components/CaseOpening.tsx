@@ -2230,10 +2230,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         )}
 
         {/* Slide Up Win Sheet */}
-        <div className={`fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
+        <div className={`fixed inset-0 z-[90] bg-black/70 transition-opacity duration-500 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
         <div className={`fixed bottom-0 left-0 right-0 z-[100] transform transition-transform duration-500 ${showWinModal && wonItem ? 'translate-y-0' : 'translate-y-full'}`}>
           {wonItem && (
-            <div className="mx-auto relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#1b2028]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] sm:max-h-[86vh]">
+            <div className="mx-auto relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-[#2b323c] bg-[#11161d] shadow-[0_-8px_24px_rgba(0,0,0,0.48)] sm:max-h-[86vh]">
               {confetti.map((piece) => (
                 <span
                   key={piece.id}
@@ -2241,32 +2241,30 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   style={{ left: `${piece.x}%`, top: `${piece.y}%`, width: piece.size, height: piece.size, background: piece.color, transform: `translate(${piece.dx}px, ${piece.dy}px)`, opacity: 0, animation: `fadeOut ${piece.life}ms ease-out forwards` }}
                 />
               ))}
-              <div className="flex items-center justify-between border-b border-white/10 bg-black/25 px-4 py-4 sm:px-6">
+              <div className="flex items-center justify-between border-b border-[#2b323c] bg-[#11161d] px-4 py-4 sm:px-6">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/15">
-                    <Check className="h-5 w-5 text-emerald-400" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2d9c76] bg-[#16362c]">
+                    <Check className="h-5 w-5 text-emerald-300" />
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-white sm:text-lg">{isDemoSpin ? 'Demo Spin Result' : 'Item Unboxed'}</h3>
-                    <p className="text-xs text-gray-400">{isDemoSpin ? 'Rewards are not granted in demo mode.' : 'Choose what to do with your item.'}</p>
+                    <p className="text-xs text-slate-400">{isDemoSpin ? 'Rewards are not granted in demo mode.' : 'Choose what to do with your item.'}</p>
                   </div>
                 </div>
-                <button type="button" onClick={closeWinModal} className="rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:text-white">
+                <button type="button" onClick={closeWinModal} className="rounded-full border border-[#2b323c] bg-[#181e27] p-2 text-slate-300 transition hover:text-white">
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              <div className="overflow-y-auto p-5 sm:p-6">
+              <div className="overflow-y-auto p-4 sm:p-6">
                 <div
-                  className="win-rarity-card relative mx-auto flex max-w-sm flex-col items-center rounded-2xl p-[2px] text-center"
-                  style={{ '--rarity-color': wonItem.color } as React.CSSProperties}
+                  className="relative mx-auto flex max-w-sm flex-col items-center rounded-2xl border border-[#2b323c] bg-[#151b24] p-4 text-center"
                 >
-                  <div className="win-rarity-card__inner relative flex w-full flex-col items-center overflow-hidden rounded-[calc(1rem-1px)] border border-white/10 bg-black/40 p-4">
-                    <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
+                  <div className="relative flex w-full flex-col items-center overflow-hidden rounded-xl border border-[#2f3742] bg-[#11161d] p-4">
                     <button
                       type="button"
                       onClick={() => setVerifyModalOpen(true)}
-                      className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-emerald-300/25 bg-emerald-500/10 text-emerald-200 transition hover:border-emerald-300/45 hover:bg-emerald-500/15"
+                      className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-[#31584a] bg-[#16362c] text-emerald-200 transition hover:bg-[#1b4436]"
                       aria-label="View fairness proof"
                       title="View fairness proof"
                     >
@@ -2284,22 +2282,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     <CoinAmount
                       amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
                       formatOptions={{ maximumFractionDigits: 0 }}
-                      className="relative z-10 mt-2 font-semibold text-gray-200"
+                      className="relative z-10 mt-2 font-semibold text-slate-200"
                       iconClassName="w-4 h-4"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-white/10 bg-black/20 p-4 sm:p-6">
+              <div className="border-t border-[#2b323c] bg-[#11161d] p-4 sm:p-6">
                 {isDemoSpin ? (
-                  <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
+                  <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-[#2f3742] bg-[#181e27] text-sm font-bold text-white transition hover:bg-[#212734]">Close</button>
                 ) : (
                   <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                     <button
                       type="button"
                       onClick={() => void handleShareUnboxing()}
-                      className="h-12 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-4 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/20 sm:h-14 sm:min-w-[160px] sm:flex-none"
+                      className="h-12 rounded-xl border border-[#2f3742] bg-[#181e27] px-4 text-sm font-semibold text-slate-100 transition hover:bg-[#212734] sm:h-14 sm:min-w-[160px] sm:flex-none"
                     >
                       <span className="inline-flex items-center justify-center gap-2">
                         <Share2 className="h-4 w-4" />
@@ -2310,10 +2308,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       <button
                         onClick={handleSell}
                         disabled={isGeneratingSellOffer || isSellingItem}
-                        className={`h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 border px-4 text-sm font-semibold transition disabled:opacity-60 ${
+                        className={`h-16 rounded-xl sm:h-14 flex-1 border px-4 text-sm font-semibold transition disabled:opacity-60 ${
                           sellOfferGenerated
-                            ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30'
-                            : 'border-white/10 bg-white/5 text-gray-100 hover:bg-white/10'
+                            ? 'border-[#2d9c76] bg-[#16362c] text-emerald-100 hover:bg-[#1b4436]'
+                            : 'border-[#2f3742] bg-[#181e27] text-gray-100 hover:bg-[#212734]'
                         }`}
                       >
                         {isSellingItem ? (
@@ -2345,7 +2343,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         )}
                       </button>
                     )}
-                    <button onClick={handleKeep} className="h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 btn-logo-gradient px-4 text-sm font-bold text-white"> 
+                    <button onClick={handleKeep} className="h-16 rounded-xl sm:h-14 flex-1 border border-[#2f3742] bg-[#1f2733] px-4 text-sm font-bold text-white transition hover:bg-[#273142]"> 
                       <span className="inline-flex items-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0"><PackageOpen className="h-4 w-4" />Keep Item</span>
                     </button>
                   </div>
