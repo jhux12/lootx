@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Flame, Sparkles, Trophy, UserRound } from 'lucide-react';
+import { ArrowLeft, Crown, Flame, Sparkles, Trophy, UserRound } from 'lucide-react';
 import { collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
@@ -337,24 +337,29 @@ export const Leaderboard: React.FC = () => {
 
                 const actualRank = leaders.findIndex((leader) => leader.uid === entry.uid) + 1;
                 const badge = actualRank === 1 ? '1' : actualRank === 2 ? '2' : '3';
-                const highlight = actualRank === 1
-                  ? 'from-[#4f7bff]/25 via-[#4f7bff]/10 to-transparent border-[#4f7bff]/45'
+                const rankTone = actualRank === 1
+                  ? 'border-cyan-300/35 bg-cyan-400/10 text-cyan-100'
                   : actualRank === 2
-                    ? 'from-[#58d5b3]/20 via-[#58d5b3]/10 to-transparent border-[#58d5b3]/40'
-                    : 'from-[#ec68c8]/24 via-[#ec68c8]/10 to-transparent border-[#ec68c8]/38';
+                    ? 'border-blue-300/30 bg-blue-400/10 text-blue-100'
+                    : 'border-violet-300/30 bg-violet-400/10 text-violet-100';
+                const scoreTone = actualRank === 1 ? 'text-cyan-200' : actualRank === 2 ? 'text-blue-200' : 'text-violet-200';
+                const pointTone = actualRank === 1 ? 'text-cyan-300' : 'text-[#a7b7e5]';
 
                 return (
-                  <article key={entry.uid} className={`relative overflow-hidden rounded-[24px] border bg-gradient-to-b p-5 text-center transition-transform duration-200 hover:-translate-y-0.5 sm:p-6 ${highlight} ${actualRank === 1 ? 'lg:-mt-2 lg:scale-[1.02]' : ''}`}>
-                    <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[#255fe5] to-[#68b6ff] text-6xl font-black text-white sm:h-28 sm:w-28">
+                  <article key={entry.uid} className={`relative overflow-hidden rounded-[24px] border border-white/10 bg-[#121820] p-5 text-center transition-transform duration-200 hover:-translate-y-0.5 sm:p-6 ${actualRank === 1 ? 'lg:-mt-2 lg:scale-[1.02]' : ''}`}>
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/5 to-transparent" />
+                    <div className={`absolute right-4 top-4 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${rankTone}`}>
+                      {actualRank === 1 && <Crown className="h-3 w-3" />} #{badge}
+                    </div>
+                    <div className="mx-auto mb-4 mt-3 flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1a2739] to-[#213656] text-4xl font-black text-white sm:h-24 sm:w-24">
                       {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full rounded-full object-cover" loading="lazy" decoding="async" width={48} height={48} /> : avatarFallback(entry.displayName)}
                     </div>
-                    <div className="absolute left-1/2 top-[112px] -translate-x-1/2 rounded-xl border border-white/10 bg-[#151b25] px-4 py-1.5 text-lg font-black text-[#d7e2ff] sm:top-[126px] sm:text-xl">#{badge}</div>
-                    <div className="mt-8 truncate text-3xl font-bold text-white sm:text-4xl">{entry.displayName}</div>
-                    <div className="mt-2 flex items-center justify-center gap-2 text-lg font-black text-[#a89fff] sm:text-xl"> 
-                      <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" loading="lazy" decoding="async" width={20} height={20} />
+                    <div className="truncate text-xl font-bold text-white sm:text-2xl">{entry.displayName}</div>
+                    <div className={`mt-2 flex items-center justify-center gap-2 text-base font-black sm:text-lg ${scoreTone}`}> 
+                      <img src={COIN_ICON} alt="Coins" className="h-4 w-4 object-contain sm:h-5 sm:w-5" loading="lazy" decoding="async" width={20} height={20} />
                       <span>{rewardByRule(settings, actualRank, entry.points).label}</span>
                     </div>
-                    <div className="mt-2 text-2xl font-black text-[#58d5b3] sm:text-3xl">{entry.points.toLocaleString()} pts</div>
+                    <div className={`mt-2 text-2xl font-black sm:text-3xl ${pointTone}`}>{entry.points.toLocaleString()} pts</div>
                   </article>
                 );
               })}
