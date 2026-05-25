@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Backpack, Box, Crown, X } from 'lucide-react';
+import { Backpack, Box, Crown, Flame, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 
@@ -11,9 +11,7 @@ type NavItem = {
   requiresAuth?: boolean;
 };
 
-const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <i className={`fa-brands fa-superpowers ${className ?? ''}`.trim()} aria-hidden="true" />
-);
+const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => <Flame className={className} aria-hidden="true" />;
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'MENU', label: 'Menu' },
