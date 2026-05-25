@@ -94,10 +94,8 @@ export const LiveCommunitySection: React.FC = () => {
           .filter((story) => !story.hidden && Boolean(story.mediaUrl))
           .filter((story) => {
             const publishAt = story.publishAt as Timestamp | undefined;
-            const expiresAt = story.expiresAt as Timestamp | undefined;
             const publishMs = publishAt && typeof publishAt.toMillis === 'function' ? publishAt.toMillis() : 0;
-            const expiresMs = expiresAt && typeof expiresAt.toMillis === 'function' ? expiresAt.toMillis() : Number.POSITIVE_INFINITY;
-            return publishMs <= nowMs && expiresMs > nowMs;
+            return publishMs <= nowMs;
           })
           .sort((a, b) => {
             if (a.featured !== b.featured) return a.featured ? -1 : 1;
