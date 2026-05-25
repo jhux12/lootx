@@ -75,7 +75,9 @@ const formatStoryTimeLabel = (story: LiveCommunityStory): string => {
   return `${days}d`;
 };
 export const LiveCommunitySection: React.FC = () => {
+  const sectionRef = useRef<HTMLElement | null>(null);
   const [stories, setStories] = useState<LiveCommunityStory[]>([]);
+  const [shouldConnectRealtime, setShouldConnectRealtime] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
   const holdRef = useRef(false);
@@ -83,6 +85,31 @@ export const LiveCommunitySection: React.FC = () => {
   const [brokenStoryIds, setBrokenStoryIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let io: IntersectionObserver | null = null;
+    let idleId: number | null = null;
+    let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
+    const activate = () => setShouldConnectRealtime(true);
+    if ('IntersectionObserver' in window && sectionRef.current) {
+      io = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          activate();
+          io?.disconnect();
+        }
+      }, { rootMargin: '240px 0px' });
+      io.observe(sectionRef.current);
+    }
+    if ('requestIdleCallback' in window) idleId = window.requestIdleCallback(activate, { timeout: 3500 }) as unknown as number;
+    else timeoutId = window.setTimeout(activate, 3500);
+    return () => {
+      io?.disconnect();
+      if (idleId !== null && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId);
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!shouldConnectRealtime) return;
     const q = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(50));
 
     return onSnapshot(
@@ -116,7 +143,7 @@ export const LiveCommunitySection: React.FC = () => {
         setStories(cached);
       }
     );
-  }, []);
+  }, [shouldConnectRealtime]);
 
   useEffect(() => {
     if (activeIndex === null || holdRef.current) return;
@@ -162,7 +189,7 @@ export const LiveCommunitySection: React.FC = () => {
     }
   };
 
-  return <section className="space-y-4">
+  return <section ref={sectionRef} className="space-y-4 min-h-[120px]">
     <div className="">
       <div className="flex justify-end px-1 py-1">
         <button className="text-sm font-semibold text-slate-300 hover:text-white">View All</button>

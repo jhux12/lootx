@@ -118,6 +118,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
   const hasFreeSignupBox = isAuthenticated && hasDailyBox && !user.lastFreeBoxClaim;
   const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;
   const [rewardsSettings, setRewardsSettings] = useState<RewardsSettingsData>();
+  const [enableRewardsRealtime, setEnableRewardsRealtime] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -219,17 +220,35 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isAuthenticated) {
+      setEnableRewardsRealtime(false);
+      return;
+    }
+    let idleId: number | null = null;
+    let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
+    const enable = () => setEnableRewardsRealtime(true);
+    if ('requestIdleCallback' in window) idleId = window.requestIdleCallback(enable, { timeout: 3000 }) as unknown as number;
+    else timeoutId = window.setTimeout(enable, 3000);
+    return () => {
+      if (idleId !== null && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId);
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
     if (!isAuthenticated) {
       setRewardsSettings(undefined);
       return;
     }
+    if (!enableRewardsRealtime) return;
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
       setRewardsSettings(snap.data() as RewardsSettingsData);
     }, (error) => {
       console.error('Rewards settings snapshot failed', error);
     });
     return () => unsub();
-  }, [isAuthenticated]);
+  }, [enableRewardsRealtime, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) {

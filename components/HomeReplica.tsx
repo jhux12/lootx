@@ -192,6 +192,7 @@ HomeBelowFoldSkeleton.displayName = 'HomeBelowFoldSkeleton';
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onViewAllBoxes, onSignUp }) => {
   const { setView, user } = useGame();
   const [showBelowFold, setShowBelowFold] = useState(false);
+  const [startTickerAnimation, setStartTickerAnimation] = useState(false);
   const featuredBoxes = boxes.slice(0, 6);
   const liveWins = useMemo(() => buildLiveWins(boxes), [boxes]);
 
@@ -201,6 +202,11 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
       return;
     }
     return runHomeWorkAfterIdleOrInteraction(() => setShowBelowFold(true), 3600);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    return runHomeWorkAfterIdleOrInteraction(() => setStartTickerAnimation(true), 1800);
   }, []);
 
   return (
@@ -256,7 +262,10 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 <>
                   <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#20262b] to-transparent sm:w-16" />
                   <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#20262b] to-transparent sm:w-16" />
-                  <div className="ticker-animation live-wins-ticker flex w-max items-center gap-2 px-4 [animation-duration:70s] sm:gap-3">
+                  <div
+                    className={`live-wins-ticker flex w-max items-center gap-2 px-4 sm:gap-3 ${startTickerAnimation ? 'ticker-animation [animation-duration:70s]' : ''}`}
+                    style={{ transform: 'translate3d(0,0,0)' }}
+                  >
                     {[...liveWins, ...liveWins].map((win, index) => (
                       <LiveWinCard key={`${win.id}-${index}`} win={win} onOpenBox={onOpenBox} />
                     ))}
