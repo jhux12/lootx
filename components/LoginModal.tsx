@@ -42,6 +42,7 @@ export const LoginModal: React.FC = () => {
   const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [showOAuthFallback, setShowOAuthFallback] = useState(false);
+  const [showInAppBrowserHint, setShowInAppBrowserHint] = useState(false);
   const [showEmailFields, setShowEmailFields] = useState(false);
   const isLinkingGoogle = Boolean(googleLinkCredential);
   const showRegisterFormMessage = Boolean(message && mode === 'register' && showEmailFields && !isLinkingGoogle);
@@ -243,6 +244,13 @@ export const LoginModal: React.FC = () => {
   }, [mode, googleSignupConsent]);
 
   useEffect(() => {
+    if (typeof navigator === 'undefined') return;
+    const ua = navigator.userAgent || '';
+    const inAppPattern = /(Instagram|FBAN|FBAV|FB_IAB|TikTok|Musical\.ly)/i;
+    setShowInAppBrowserHint(inAppPattern.test(ua));
+  }, []);
+
+  useEffect(() => {
     if (!isOAuthLoading) {
       setShowOAuthFallback(false);
       return;
@@ -355,6 +363,11 @@ export const LoginModal: React.FC = () => {
           {!isLinkingGoogle && (
             <>
               <div className="grid grid-cols-1 gap-2">
+                {showInAppBrowserHint && (
+                  <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                    For best results, open in Safari or Chrome.
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
