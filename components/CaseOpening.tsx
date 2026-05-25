@@ -361,6 +361,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isGeneratingSellOffer, setIsGeneratingSellOffer] = useState(false);
   const [isSellingItem, setIsSellingItem] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
+  const [demoSpinCount, setDemoSpinCount] = useState(0);
   const [serverSeedHash, setServerSeedHash] = useState('');
   const [clientSeed, setClientSeed] = useState('pullz-player');
   const [clientSeedInput, setClientSeedInput] = useState('pullz-player');
@@ -1253,6 +1254,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     if (isDemo) {
       setIsDemoSpin(true);
+      setDemoSpinCount((prev) => prev + 1);
     } else {
       setIsDemoSpin(false);
     }
@@ -1591,6 +1593,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [showTopUpModal, spinFeedbackMessage]);
 
   useEffect(() => {
+    if (isFree || showTopUpModal || demoSpinCount < 4 || isAuthenticated === false) return;
+    const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
+    if (!Number.isFinite(currentCasePrice) || availableCoins >= currentCasePrice) return;
+    setTopUpModalIntent({
+      reason: 'insufficient_balance',
+      requiredCoins: currentCasePrice,
+      currentBalance: availableCoins,
+      missingCoins: Math.max(0, currentCasePrice - availableCoins),
+      source: 'demo_conversion_nudge',
+      preferredPackageUsd: 25
+    });
+    setShowTopUpModal(true);
+    setSpinFeedbackMessage('Unlock real pulls instantly — secure checkout via Stripe.');
+  }, [balance, currentCasePrice, demoSpinCount, isAuthenticated, isFree, setShowTopUpModal, setTopUpModalIntent, showTopUpModal, user.balance]);
+
+  useEffect(() => {
     setIsBoxPreviewVisible(false);
     setIsBoxPreviewFading(false);
   }, [boxId]);
@@ -1757,6 +1775,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [box, handleSpin, isFree, isReady, isSpinning]);
 
   const handleSell = async () => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(12);
+    }
     playSound('click');
     if (wonItem?.redeemable === false) {
         toast.error('This item is not redeemable and cannot be sold back.');
@@ -2058,7 +2079,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
+      <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
                  <button 
                     onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
@@ -2124,6 +2145,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   </div>
                 )}
             </div>
+            {!isFree && demoSpinCount >= 2 && (
+              <div className="px-3 pb-3">
+                <div className="mx-auto max-w-xl rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-4 py-2 text-center text-xs text-cyan-100 sm:text-sm">
+                  {demoSpinCount >= 5
+                    ? 'Your next pull could be shipped. Unlock real pulls now.'
+                    : demoSpinCount >= 3
+                      ? 'Unlock real pulls — your next pull could be shipped.'
+                      : `You’re only ${Math.max(0, Math.ceil(currentCasePrice - (Number.isFinite(balance) ? balance : Number(user.balance ?? 0)))).toLocaleString()} coins away from your first real box.`}
+                </div>
+              </div>
+            )}
             {spinFeedbackMessage && (
               <div className="px-2 pb-4">
                 <div
@@ -2293,7 +2325,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
               <div className="border-t border-white/10 bg-black/20 p-4 sm:p-6">
                 {isDemoSpin ? (
-                  <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
+                  <div className="relative">
+                    {demoSpinCount >= 5 && (
+                      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl border border-white/10 bg-black/55 backdrop-blur-[2px]">
+                        <p className="px-4 text-center text-xs font-semibold text-cyan-100">Demo limit reached — unlock real pulls to keep winning shippable items.</p>
+                      </div>
+                    )}
+                    <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
+                  </div>
                 ) : (
                   <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                     <button
