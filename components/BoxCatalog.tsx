@@ -90,6 +90,11 @@ const toCategoryVariants = (value: string) => {
   return Array.from(variants);
 };
 
+const isCategoryIconUrl = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  return normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('data:image/');
+};
+
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const { boxes, setView, stripeSettings } = useGame();
   const { playSound } = useSound();
@@ -218,8 +223,14 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   onClick={() => setActiveCategory(cat.id)}
                   className={`flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide transition ${isActive ? 'bg-[#205DD7] text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}
                 >
-                  {cat.id !== 'all' && cat.iconClass && cat.iconClass.startsWith('http') ? (
-                    <img src={cat.iconClass} alt={cat.title} className="h-4 w-4 object-contain sm:h-5 sm:w-5" />
+                  {cat.id !== 'all' && cat.iconClass && isCategoryIconUrl(cat.iconClass) ? (
+                    <img
+                      src={cat.iconClass}
+                      alt={cat.title}
+                      className="h-5 w-5 shrink-0 object-contain"
+                      loading="eager"
+                      decoding="async"
+                    />
                   ) : (
                     cat.title
                   )}
