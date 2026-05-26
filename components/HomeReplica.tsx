@@ -140,10 +140,10 @@ const LiveWinCard = memo(({ win, onOpenBox }: { win: HomeTickerWin; onOpenBox: (
     <button
       type="button"
       onClick={handleOpen}
-      className={`group flex h-[84px] w-[108px] shrink-0 items-center justify-center overflow-hidden rounded-sm border p-1.5 transition hover:-translate-y-0.5 active:scale-[0.99] sm:h-[92px] sm:w-[116px] ${TICKER_RARITY_CARD_CLASS[win.rarity]}`}
+      className={`group flex h-[84px] w-[108px] shrink-0 items-center justify-center overflow-hidden rounded-sm p-1.5 transition hover:-translate-y-0.5 active:scale-[0.99] sm:h-[92px] sm:w-[116px] ${TICKER_RARITY_CARD_CLASS[win.rarity]}`}
       title={`${win.itemName} won from ${win.boxName}`}
     >
-      <div className="flex h-full w-full items-center justify-center rounded-[2px] bg-black/20 p-1.5">
+      <div className="flex h-full w-full items-center justify-center rounded-[2px] p-1.5">
         <img src={win.itemImage} alt={win.itemName} className="h-full w-full object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)] transition-transform duration-200 group-hover:scale-105" loading="lazy" decoding="async" width={72} height={72} />
       </div>
     </button>
