@@ -1444,8 +1444,14 @@ export const AdminPanel: React.FC = () => {
   const handleSaveBoxTagIcons = () => {
       const normalized = Object.fromEntries(
           Object.entries(boxTagIconsDraft)
-              .map(([tag, iconClass]) => [tag.trim().toLowerCase(), sanitizeFontAwesomeClass(iconClass)] as const)
-              .filter(([tag, iconClass]) => tag.length > 0 && iconClass.length > 0)
+              .map(([tag, iconValue]) => {
+                  const normalizedTag = tag.trim().toLowerCase();
+                  const trimmedValue = iconValue.trim();
+                  const sanitizedFa = sanitizeFontAwesomeClass(trimmedValue);
+                  const normalizedValue = sanitizedFa || (/^https?:\/\//i.test(trimmedValue) ? trimmedValue : '');
+                  return [normalizedTag, normalizedValue] as const;
+              })
+              .filter(([tag, iconValue]) => tag.length > 0 && iconValue.length > 0)
       );
 
       updateStripeSettings({
@@ -1454,6 +1460,21 @@ export const AdminPanel: React.FC = () => {
       });
       setBoxTagIconsNotice(true);
       window.setTimeout(() => setBoxTagIconsNotice(false), 3000);
+  };
+
+  const handleUploadTagSvg = async (tag: string, file: File | null) => {
+      if (!file) return;
+      const normalizedTag = tag.trim().toLowerCase();
+      try {
+          const path = `box-tag-icons/${normalizedTag}-${Date.now()}.svg`;
+          const storageRef = ref(storage, path);
+          await uploadBytes(storageRef, file, { contentType: file.type || 'image/svg+xml' });
+          const downloadUrl = await getDownloadURL(storageRef);
+          setBoxTagIconsDraft((prev) => ({ ...prev, [normalizedTag]: downloadUrl }));
+      } catch (error) {
+          console.error('Failed to upload tag svg icon', error);
+          alert('Failed to upload SVG icon. Please try again.');
+      }
   };
 
   const filteredItemsForBox = useMemo(() => {
@@ -3859,7 +3880,7 @@ export const AdminPanel: React.FC = () => {
                                     <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <div>
                                             <h4 className="text-sm font-semibold text-white">Tag Icon Editor</h4>
-                                            <p className="text-[11px] text-gray-400">Assign a Font Awesome icon to each current tag. Paste either <span className="font-mono">fa-regular fa-gem</span> or <span className="font-mono">&lt;i class="fa-regular fa-gem"&gt;&lt;/i&gt;</span></p>
+                                            <p className="text-[11px] text-gray-400">Assign either a Font Awesome icon class or upload an SVG icon for each category tag.</p>
                                         </div>
                                         <button
                                             type="button"
@@ -3885,11 +3906,26 @@ export const AdminPanel: React.FC = () => {
                                                         </div>
                                                         <Input
                                                             type="text"
-                                                            placeholder="fa-regular fa-gem or <i class=&quot;fa-regular fa-gem&quot;></i>"
+                                                            placeholder="fa-regular fa-gem or https://.../icon.svg"
                                                             className="w-full bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
                                                             value={iconClass}
                                                             onChange={(event) => setBoxTagIconsDraft((prev) => ({ ...prev, [tag]: event.target.value }))}
                                                         />
+                                                        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                                            <input
+                                                                type="file"
+                                                                accept=".svg,image/svg+xml"
+                                                                onChange={(event) => {
+                                                                    const file = event.target.files?.[0] ?? null;
+                                                                    void handleUploadTagSvg(tag, file);
+                                                                    event.currentTarget.value = '';
+                                                                }}
+                                                                className="block w-full cursor-pointer text-[11px] text-gray-300 file:mr-2 file:rounded file:border-0 file:bg-blue-600 file:px-2 file:py-1 file:text-[10px] file:font-medium file:text-white hover:file:bg-blue-500"
+                                                            />
+                                                            {iconClass.startsWith('http') && (
+                                                                <img src={iconClass} alt={`${tag} icon`} className="h-5 w-5 object-contain" />
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 );
                                             })}

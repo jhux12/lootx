@@ -216,9 +216,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide transition ${isActive ? 'bg-[#205DD7] text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}
+                  className={`flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide transition ${isActive ? 'bg-[#205DD7] text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}
                 >
-                  {cat.title}
+                  {cat.id !== 'all' && cat.iconClass && cat.iconClass.startsWith('http') ? (
+                    <img src={cat.iconClass} alt={cat.title} className="h-4 w-4 object-contain sm:h-5 sm:w-5" />
+                  ) : (
+                    cat.title
+                  )}
                 </button>
               );
             })}
