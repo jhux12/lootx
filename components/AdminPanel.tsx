@@ -56,6 +56,7 @@ const ITEM_TAG_SUGGESTIONS = [
     'vintage',
     'modern'
 ] as const;
+const BOX_TAG_PRESETS = ['new', 'top', 'hot', 'limited', 'popular'] as const;
 
 const ITEM_SIZE_SUGGESTIONS = [
     'XS',
@@ -858,7 +859,6 @@ export const AdminPanel: React.FC = () => {
                   note: 'Item added to inventory'
               }
 ];
-const BOX_TAG_PRESETS = ['new', 'top', 'hot', 'limited', 'popular'] as const;
           return {
               ...item,
               locked: item.locked ?? false,
