@@ -218,7 +218,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           </div>
           <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
             <div className="relative w-full max-w-[460px]">
-              <div className="pointer-events-none absolute inset-x-0 top-1/2 h-56 -translate-y-1/2 rounded-[42px] bg-[radial-gradient(120%_90%_at_24%_30%,rgba(63,109,255,0.45)_0%,rgba(63,109,255,0.18)_28%,rgba(63,109,255,0)_62%),radial-gradient(105%_95%_at_78%_72%,rgba(122,77,255,0.34)_0%,rgba(122,77,255,0.14)_30%,rgba(122,77,255,0)_65%),linear-gradient(110deg,rgba(32,108,255,0.12)_8%,rgba(95,71,255,0.2)_48%,rgba(154,136,255,0.08)_100%)] blur-2xl sm:h-64" />
+              <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden h-56 -translate-y-1/2 rounded-[42px] bg-[radial-gradient(120%_90%_at_24%_30%,rgba(63,109,255,0.45)_0%,rgba(63,109,255,0.18)_28%,rgba(63,109,255,0)_62%),radial-gradient(105%_95%_at_78%_72%,rgba(122,77,255,0.34)_0%,rgba(122,77,255,0.14)_30%,rgba(122,77,255,0)_65%),linear-gradient(110deg,rgba(32,108,255,0.12)_8%,rgba(95,71,255,0.2)_48%,rgba(154,136,255,0.08)_100%)] blur-2xl sm:block sm:h-64" />
               {stripeSettings.boxCatalogHeroImageUrl ? (
                 <img
                   src={stripeSettings.boxCatalogHeroImageUrl}
@@ -236,7 +236,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-white/10 bg-[#131a24]/95 backdrop-blur">
         <div className="mx-auto max-w-[1320px] px-3 py-3 sm:px-5">
           <div className="mb-3 flex w-full items-center gap-2 sm:mb-2 sm:max-w-[680px]">
-              <div className="flex items-center rounded-xl border border-white/10 bg-[#20262b] px-3 py-3">
+              <div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-[#20262b] px-3 py-3">
                 <Search className="h-4 w-4 shrink-0 text-[#5f6f95]" />
                 <input type="text" placeholder="Search boxes..." className="w-full bg-transparent pl-2 text-sm text-white placeholder-slate-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
@@ -267,8 +267,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 )}
               </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
             {CATEGORY_ORDER.map((id) => {
               const cat = id === 'all' ? { id: 'all', title: 'All' } : categories.find((entry) => entry.id === id);
               if (!cat) return null;
@@ -299,7 +299,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               );
             })}
             </div>
-            <label className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200">
+            <label className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200 sm:w-auto sm:justify-start">
               <input
                 type="checkbox"
                 checked={showAffordableOnly}
