@@ -192,14 +192,26 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   return (
     <div className="w-full bg-[#1f2730] pb-20 text-white">
 
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-50 w-full border-b border-white/10 bg-[#1f2730]/95 backdrop-blur">
+      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-b border-white/10 bg-[#1f2730]/95">
         <div className="mx-auto max-w-[1320px] px-3 py-4 sm:px-5">
           <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <h1 className="text-5xl font-black uppercase tracking-tight sm:text-6xl">Boxes</h1>
-              <p className="mt-1 text-lg text-slate-300">Open boxes and win real items</p>
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0d1423] p-3 sm:p-4">
+              <div className="min-w-0">
+                <h1 className="text-4xl font-extrabold uppercase tracking-tight text-white sm:text-5xl">Boxes</h1>
+                <p className="mt-1 text-base text-slate-300 sm:text-lg">Open boxes and win <span className="text-[#4b8dff]">real items</span></p>
+              </div>
+              {stripeSettings.boxCatalogHeroImageUrl ? (
+                <img
+                  src={stripeSettings.boxCatalogHeroImageUrl}
+                  alt="Box catalog hero"
+                  className="h-20 w-28 shrink-0 object-contain sm:h-24 sm:w-36"
+                  loading="eager"
+                  decoding="async"
+                />
+              ) : null}
             </div>
-            <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_180px] md:w-[520px]">
+          </div>
+          <div className="mb-4 grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_180px] md:w-[520px]">
               <div className="flex items-center rounded-xl border border-white/10 bg-[#20262b] px-3 py-3">
                 <Search className="h-4 w-4 shrink-0 text-[#5f6f95]" />
                 <input type="text" placeholder="Search boxes..." className="w-full bg-transparent pl-2 text-sm text-white placeholder-slate-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
@@ -210,7 +222,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7a87a8]" />
               </label>
-            </div>
           </div>
           <div className="flex items-center gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-[#20262b] p-2 scrollbar-hide">
             {CATEGORY_ORDER.map((id) => {

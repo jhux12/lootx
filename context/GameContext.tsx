@@ -254,6 +254,7 @@ const DEFAULT_BONUS_SETTINGS: BonusSettings = {
 const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
 
 const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
+  boxCatalogHeroImageUrl: '',
   authPopupImageUrl: '',
   authPopupImageUrls: ['', '', ''],
   homeCategoryImageUrls: ['', '', ''],
@@ -284,6 +285,7 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
     : [];
 
   return {
+    boxCatalogHeroImageUrl: typeof settings.boxCatalogHeroImageUrl === 'string' ? settings.boxCatalogHeroImageUrl.trim() : '',
     authPopupImageUrl: legacyAuthImage,
     authPopupImageUrls: normalizedAuthImages.length > 0
       ? normalizedAuthImages

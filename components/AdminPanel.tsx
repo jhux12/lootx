@@ -358,6 +358,7 @@ export const AdminPanel: React.FC = () => {
   const [itemTagFilters, setItemTagFilters] = useState<string[]>([]);
   const [deletingBoxId, setDeletingBoxId] = useState<string | null>(null);
   const [isUploadingSpinnerBackground, setIsUploadingSpinnerBackground] = useState(false);
+  const [isUploadingBoxCatalogHero, setIsUploadingBoxCatalogHero] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userXpInput, setUserXpInput] = useState<number>(0);
   const [isSavingUser, setIsSavingUser] = useState(false);
@@ -533,6 +534,7 @@ export const AdminPanel: React.FC = () => {
       sortOrder: 0
   });
   const [stripeSettingsDraft, setStripeSettingsDraft] = useState({
+      boxCatalogHeroImageUrl: stripeSettings.boxCatalogHeroImageUrl,
       authPopupImageUrl: stripeSettings.authPopupImageUrl,
       authPopupImageUrls: stripeSettings.authPopupImageUrls,
       homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
@@ -1318,6 +1320,7 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       setStripeSettingsDraft({
+              boxCatalogHeroImageUrl: stripeSettings.boxCatalogHeroImageUrl,
               authPopupImageUrl: stripeSettings.authPopupImageUrl,
           authPopupImageUrls: stripeSettings.authPopupImageUrls,
           homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
@@ -2807,6 +2810,33 @@ export const AdminPanel: React.FC = () => {
       }
   };
 
+  const handleBoxCatalogHeroUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      if (!adminUser?.isAdmin) return;
+      if (!file.type.startsWith('image/')) {
+          alert('Please choose a valid image file.');
+          event.target.value = '';
+          return;
+      }
+      setIsUploadingBoxCatalogHero(true);
+      try {
+          const extension = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+          const path = `box-catalog-hero/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+          const storageRef = ref(storage, path);
+          const uploadResult = await uploadBytes(storageRef, file, { contentType: file.type });
+          const downloadUrl = await getDownloadURL(uploadResult.ref);
+          setStripeSettingsDraft((prev) => ({ ...prev, boxCatalogHeroImageUrl: downloadUrl }));
+          setStripeSettingsNotice(false);
+      } catch (error) {
+          console.error('Failed to upload box catalog hero image', error);
+          alert('Unable to upload image. Please try again.');
+      } finally {
+          setIsUploadingBoxCatalogHero(false);
+          event.target.value = '';
+      }
+  };
+
   const resetBoxForm = () => {
       setEditingBoxId(null);
       setNewBox({
@@ -3086,6 +3116,7 @@ export const AdminPanel: React.FC = () => {
       const rawRate = Number(stripeSettingsDraft.shippingFlatRateInput);
       const shippingFlatRateCents = Number.isFinite(rawRate) ? Math.max(0, Math.round(rawRate * 100)) : 0;
       updateStripeSettings({
+          boxCatalogHeroImageUrl: stripeSettingsDraft.boxCatalogHeroImageUrl.trim(),
           authPopupImageUrl: stripeSettingsDraft.authPopupImageUrl.trim(),
           authPopupImageUrls: stripeSettingsDraft.authPopupImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
           homeCategoryImageUrls: stripeSettingsDraft.homeCategoryImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
@@ -6231,6 +6262,25 @@ export const AdminPanel: React.FC = () => {
                             <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4 md:col-span-2">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Homepage & auth images</label>
                                 <p className="text-xs text-gray-500 mb-4">Paste CDN image URLs. Optimized for mobile cards and modal artwork.</p>
+                                <div className="mb-4 rounded-lg border border-gray-700 bg-[#111827] p-3">
+                                    <label className="mb-2 block text-xs font-bold uppercase text-gray-400">Box catalog header image</label>
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                        <Input
+                                            type="url"
+                                            value={stripeSettingsDraft.boxCatalogHeroImageUrl}
+                                            onChange={(event) => {
+                                                setStripeSettingsDraft((prev) => ({ ...prev, boxCatalogHeroImageUrl: event.target.value }));
+                                                setStripeSettingsNotice(false);
+                                            }}
+                                            placeholder="https://your-cdn.com/box-catalog-hero.png"
+                                            className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                                        />
+                                        <label className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-brand-blue/40 bg-brand-blue/10 px-3 py-2 text-xs font-semibold text-brand-blue hover:bg-brand-blue hover:text-white">
+                                            <input type="file" accept="image/*" className="hidden" onChange={handleBoxCatalogHeroUpload} disabled={isUploadingBoxCatalogHero} />
+                                            {isUploadingBoxCatalogHero ? 'Uploading…' : 'Upload image'}
+                                        </label>
+                                    </div>
+                                </div>
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                     {[0, 1, 2].map((index) => (
                                         <Input
