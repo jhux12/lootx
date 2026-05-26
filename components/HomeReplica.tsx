@@ -37,20 +37,12 @@ const TICKER_RARITY_MULTIPLIER: Record<HomeTickerWin['rarity'], number> = {
   legendary: 0.055
 };
 
-const TICKER_RARITY_DOT_CLASS: Record<HomeTickerWin['rarity'], string> = {
-  common: 'bg-gray-300',
-  uncommon: 'bg-green-300',
-  rare: 'bg-blue-300',
-  epic: 'bg-purple-300',
-  legendary: 'bg-amber-300'
-};
-
 const TICKER_RARITY_CARD_CLASS: Record<HomeTickerWin['rarity'], string> = {
-  common: 'border-gray-400/55 hover:border-gray-300/80 shadow-gray-950/20',
-  uncommon: 'border-green-400/55 hover:border-green-300/80 shadow-green-950/20',
-  rare: 'border-blue-400/60 hover:border-blue-300/85 shadow-blue-950/20',
-  epic: 'border-purple-400/65 hover:border-purple-300/90 shadow-purple-950/25',
-  legendary: 'border-amber-300/75 hover:border-amber-200 shadow-amber-950/30'
+  common: 'border-[#646c7a] bg-gradient-to-b from-[#2b3340] to-[#1c2330]',
+  uncommon: 'border-[#31b46e] bg-gradient-to-b from-[#224735] to-[#152c22]',
+  rare: 'border-[#2d89ff] bg-gradient-to-b from-[#1f3f72] to-[#182845]',
+  epic: 'border-[#9137ff] bg-gradient-to-b from-[#4a2579] to-[#2f184d]',
+  legendary: 'border-[#f3bb3f] bg-gradient-to-b from-[#75531f] to-[#4a3412]'
 };
 
 const pickWeightedItem = <T extends { weight: number }>(pool: T[]) => {
@@ -148,24 +140,11 @@ const LiveWinCard = memo(({ win, onOpenBox }: { win: HomeTickerWin; onOpenBox: (
     <button
       type="button"
       onClick={handleOpen}
-      className={`group flex w-[214px] shrink-0 items-center gap-3 rounded-xl border-2 bg-[#1b2024]/80 p-2.5 text-left shadow-lg transition hover:-translate-y-0.5 hover:bg-[#252c32] active:scale-[0.99] sm:w-[252px] ${TICKER_RARITY_CARD_CLASS[win.rarity]}`}
+      className={`group flex h-[84px] w-[108px] shrink-0 items-center justify-center overflow-hidden rounded-sm p-1.5 transition hover:-translate-y-0.5 active:scale-[0.99] sm:h-[92px] sm:w-[116px] ${TICKER_RARITY_CARD_CLASS[win.rarity]}`}
       title={`${win.itemName} won from ${win.boxName}`}
     >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-black/20 p-1.5 sm:h-14 sm:w-14">
-        <img src={win.itemImage} alt={win.itemName} className="h-full w-full object-contain drop-shadow-md" loading="lazy" decoding="async" width={56} height={56} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-          <span className={`h-1.5 w-1.5 rounded-full ${TICKER_RARITY_DOT_CLASS[win.rarity]}`} />
-          <span>{win.rarity}</span>
-          <span className="text-slate-600">•</span>
-          <span>{win.timeAgo}</span>
-        </div>
-        <p className="mt-1 truncate text-xs font-bold text-slate-100 sm:text-sm">{win.itemName}</p>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <p className="truncate text-[11px] text-slate-500">{win.boxName}</p>
-          <CoinAmount amount={Math.round(win.itemPrice)} className="shrink-0 text-[11px] font-black text-emerald-200" iconClassName="h-3.5 w-3.5" animated={false} />
-        </div>
+      <div className="flex h-full w-full items-center justify-center rounded-[2px] p-1.5">
+        <img src={win.itemImage} alt={win.itemName} className="h-full w-full object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)] transition-transform duration-200 group-hover:scale-105" loading="lazy" decoding="async" width={72} height={72} />
       </div>
     </button>
   );
@@ -173,9 +152,9 @@ const LiveWinCard = memo(({ win, onOpenBox }: { win: HomeTickerWin; onOpenBox: (
 LiveWinCard.displayName = 'LiveWinCard';
 
 const LiveWinsSkeleton = memo(() => (
-  <div className="flex min-h-[112px] items-center gap-2 px-4 py-3 sm:min-h-[124px] sm:gap-3" aria-hidden="true">
-    {Array.from({ length: 4 }).map((_, index) => (
-      <div key={index} className="h-[72px] w-[214px] shrink-0 rounded-xl border border-white/5 bg-white/[0.045] sm:h-20 sm:w-[252px]" />
+  <div className="flex min-h-[92px] items-center gap-2 px-2 py-2 sm:min-h-[100px]" aria-hidden="true">
+    {Array.from({ length: 8 }).map((_, index) => (
+      <div key={index} className="h-[84px] w-[108px] shrink-0 rounded-sm border border-white/10 bg-white/[0.045] sm:h-[92px] sm:w-[116px]" />
     ))}
   </div>
 ));
@@ -245,37 +224,6 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             ))}
           </div>
 
-
-          <section aria-label="Live recent wins" className="min-h-[158px] overflow-hidden rounded-2xl border border-white/5 bg-[#20262b] shadow-[0_14px_38px_rgba(5,8,12,0.22)] sm:min-h-[170px]">
-              <div className="flex flex-col gap-1 border-b border-white/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-300" />
-                  </span>
-                  <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-100">Live Wins</h2>
-                </div>
-              </div>
-
-            <div className="relative overflow-hidden py-3">
-              {liveWins.length > 0 ? (
-                <>
-                  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#20262b] to-transparent sm:w-16" />
-                  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#20262b] to-transparent sm:w-16" />
-                  <div
-                    className={`live-wins-ticker flex w-max items-center gap-2 px-4 sm:gap-3 ${startTickerAnimation ? 'ticker-animation [animation-duration:70s]' : ''}`}
-                    style={{ transform: 'translate3d(0,0,0)' }}
-                  >
-                    {[...liveWins, ...liveWins].map((win, index) => (
-                      <LiveWinCard key={`${win.id}-${index}`} win={win} onOpenBox={onOpenBox} />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <LiveWinsSkeleton />
-              )}
-            </div>
-          </section>
 
           <section>
             <div className="mb-5 flex items-center justify-between gap-3">
