@@ -194,7 +194,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
   return (
     <div className="w-full bg-[#131a24] pb-20 text-white">
-      <div className="relative mx-auto max-w-[1320px] px-3 pb-5 pt-5 sm:px-5 sm:pt-8">
+      <div className="relative mx-auto max-w-[1320px] overflow-hidden px-3 pb-5 pt-5 sm:px-5 sm:pt-8">
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_22%,rgba(63,109,255,0.22),transparent_45%),radial-gradient(circle_at_82%_28%,rgba(122,77,255,0.20),transparent_48%)]" />
         <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,470px)]">
           <div className="order-2 lg:order-1">
             <h1 className="text-4xl font-extrabold uppercase tracking-tight text-white sm:text-5xl">Boxes</h1>
@@ -268,8 +269,16 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 )}
               </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
+            <label className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200">
+              <input
+                type="checkbox"
+                checked={showAffordableOnly}
+                onChange={(event) => setShowAffordableOnly(event.target.checked)}
+                className="h-3.5 w-3.5 rounded border-white/30 bg-transparent text-[#3f7cff] focus:ring-[#3f7cff]"
+              />
+              Enough coins
+            </label>
             {CATEGORY_ORDER.map((id) => {
               const cat = id === 'all' ? { id: 'all', title: 'All' } : categories.find((entry) => entry.id === id);
               if (!cat) return null;
@@ -299,16 +308,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 </button>
               );
             })}
-            </div>
-            <label className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200">
-              <input
-                type="checkbox"
-                checked={showAffordableOnly}
-                onChange={(event) => setShowAffordableOnly(event.target.checked)}
-                className="h-3.5 w-3.5 rounded border-white/30 bg-transparent text-[#3f7cff] focus:ring-[#3f7cff]"
-              />
-              Enough coins
-            </label>
           </div>
         </div>
       </div>
