@@ -96,12 +96,13 @@ const isCategoryIconUrl = (value: string) => {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
-  const { boxes, setView, stripeSettings } = useGame();
+  const { boxes, setView, stripeSettings, balance } = useGame();
   const { playSound } = useSound();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('featured');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [showAffordableOnly, setShowAffordableOnly] = useState(false);
   const CATEGORY_ORDER = ['all', 'pokemon', 'tech', 'sneakers', 'streetwear', 'collectibles', 'gaming'];
 
   const hasActiveFilters =
@@ -144,9 +145,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       const tags = getBoxTags(box);
       const matchesCategory = activeCategory === 'all' || tags.includes(normalizeBoxTag(activeCategory));
       const matchesSearch = box.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
-      return matchesCategory && matchesSearch;
+      const matchesAffordability = !showAffordableOnly || getBoxPrice(box) <= balance;
+      return matchesCategory && matchesSearch && matchesAffordability;
     });
-  }, [activeCategory, displayBoxes, searchQuery]);
+  }, [activeCategory, balance, displayBoxes, searchQuery, showAffordableOnly]);
 
   const sortedFilteredBoxes = useMemo(() => getSortedBoxes(filteredBoxes, sortOption), [filteredBoxes, sortOption]);
 
@@ -216,8 +218,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           </div>
           <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
             <div className="relative w-full max-w-[460px]">
-              <div className="pointer-events-none absolute -left-6 -top-5 h-32 w-32 rounded-full bg-[#3f6dff]/35 blur-3xl sm:h-44 sm:w-44" />
-              <div className="pointer-events-none absolute -bottom-8 right-2 h-36 w-36 rounded-full bg-[#7a4dff]/25 blur-3xl sm:h-52 sm:w-52" />
+              <div className="pointer-events-none absolute -left-6 -top-5 h-44 w-44 rounded-full bg-[#3f6dff]/35 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-8 right-2 h-52 w-52 rounded-full bg-[#7a4dff]/25 blur-3xl" />
               {stripeSettings.boxCatalogHeroImageUrl ? (
                 <img
                   src={stripeSettings.boxCatalogHeroImageUrl}
@@ -266,7 +268,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 )}
               </div>
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-hide">
             {CATEGORY_ORDER.map((id) => {
               const cat = id === 'all' ? { id: 'all', title: 'All' } : categories.find((entry) => entry.id === id);
               if (!cat) return null;
@@ -282,19 +285,30 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   }`}
                 >
                   {cat.id !== 'all' && cat.iconClass && isCategoryIconUrl(cat.iconClass) ? (
-                    <img
-                      src={cat.iconClass}
-                      alt={cat.title}
-                      className="h-5 w-5 shrink-0 object-contain"
-                      loading="eager"
-                      decoding="async"
-                    />
-                  ) : (
-                    cat.title
-                  )}
+                    <>
+                      <img
+                        src={cat.iconClass}
+                        alt={cat.title}
+                        className="h-4 w-4 shrink-0 object-contain"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <span>{cat.title}</span>
+                    </>
+                  ) : <span>{cat.title}</span>}
                 </button>
               );
             })}
+            </div>
+            <label className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200">
+              <input
+                type="checkbox"
+                checked={showAffordableOnly}
+                onChange={(event) => setShowAffordableOnly(event.target.checked)}
+                className="h-3.5 w-3.5 rounded border-white/30 bg-transparent text-[#3f7cff] focus:ring-[#3f7cff]"
+              />
+              Enough coins
+            </label>
           </div>
         </div>
       </div>
