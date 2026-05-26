@@ -83,7 +83,7 @@ const toCategoryVariants = (value: string) => {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
-  const { boxes, setView, stripeSettings, balance } = useGame();
+  const { boxes, setView, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -130,7 +130,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       const tags = getBoxTags(box);
       const matchesCategory = activeCategory === 'all' || tags.includes(normalizeBoxTag(activeCategory));
       const matchesSearch = box.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
-      const boxPrice = getBoxPrice(box);
       return matchesCategory && matchesSearch;
     });
   }, [activeCategory, displayBoxes, searchQuery]);
@@ -178,29 +177,29 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   };
 
   return (
-    <div className="w-full bg-[#050811] pb-20 text-white">
+    <div className="w-full bg-[#1f2730] pb-20 text-white">
 
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-50 w-full border-b border-[#16203a] bg-[#050811]/95 backdrop-blur">
+      <div className="sticky top-[var(--pullz-header-height,70px)] z-50 w-full border-b border-white/10 bg-[#1f2730]/95 backdrop-blur">
         <div className="mx-auto max-w-[1320px] px-3 py-4 sm:px-5">
           <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
-              <h1 className="text-4xl font-black uppercase tracking-tight">Boxes</h1>
-              <p className="mt-1 text-sm text-[#8c98b8]">Open boxes and win real items</p>
+              <h1 className="text-5xl font-black uppercase tracking-tight sm:text-6xl">Boxes</h1>
+              <p className="mt-1 text-lg text-slate-300">Open boxes and win real items</p>
             </div>
             <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_180px] md:w-[520px]">
-              <div className="flex items-center rounded-xl border border-[#192745] bg-[#071127] px-3 py-3">
+              <div className="flex items-center rounded-xl border border-white/10 bg-[#20262b] px-3 py-3">
                 <Search className="h-4 w-4 shrink-0 text-[#5f6f95]" />
-                <input type="text" placeholder="Search boxes..." className="w-full bg-transparent pl-2 text-sm text-white placeholder-[#5f6f95] outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                <input type="text" placeholder="Search boxes..." className="w-full bg-transparent pl-2 text-sm text-white placeholder-slate-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
               <label className="relative">
-                <select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)} className="h-full w-full appearance-none rounded-xl border border-[#192745] bg-[#071127] px-4 py-3 pr-9 text-sm font-semibold text-white outline-none">
+                <select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)} className="h-full w-full appearance-none rounded-xl border border-white/10 bg-[#20262b] px-4 py-3 pr-9 text-sm font-semibold text-white outline-none">
                   {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7a87a8]" />
               </label>
             </div>
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto rounded-2xl border border-[#16203a] bg-[#050d20] p-2 scrollbar-hide">
+          <div className="flex items-center gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-[#20262b] p-2 scrollbar-hide">
             {CATEGORY_ORDER.map((id) => {
               const cat = id === 'all' ? { id: 'all', title: 'All' } : categories.find((entry) => entry.id === id);
               if (!cat) return null;
@@ -209,7 +208,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide transition ${isActive ? 'bg-[#2f2fdf] text-white' : 'text-[#9ba8c8] hover:bg-[#111c35] hover:text-white'}`}
+                  className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide transition ${isActive ? 'bg-[#205DD7] text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}
                 >
                   {cat.title}
                 </button>
@@ -234,7 +233,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   key={box.id}
                   type="button"
                   onClick={() => openBox(box.id)}
-                  className="group w-full overflow-hidden rounded-xl border border-[#18254a] bg-[#060d1d] text-left shadow-[0_0_0_1px_rgba(53,76,129,0.12)] transition hover:border-[#304a83]"
+                  className="group w-full overflow-hidden rounded-xl border border-white/10 bg-[#20262b] text-left shadow-[0_0_0_1px_rgba(53,76,129,0.12)] transition hover:border-slate-400/35"
                 >
                   <div className="relative px-2 pb-2 pt-3">
                     {(sortOption === 'newest' || index >= 5) && (
@@ -257,9 +256,17 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       />
                     </div>
                   </div>
-                  <div className="border-t border-[#152243] px-3 pb-3 pt-2">
-                    <div className="line-clamp-1 text-[26px] text-sm font-bold sm:text-base">{box.name}</div>
+                  <div className="border-t border-white/10 px-3 pb-3 pt-2">
+                    <div className="line-clamp-1 text-base font-bold sm:text-[28px] sm:leading-7">{box.name}</div>
                     <CoinAmount amount={Math.round(getBoxPrice(box))} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-base font-bold" iconClassName="h-4 w-4" />
+                    <p className="mt-3 text-[10px] font-bold uppercase tracking-wide text-slate-400">Best items</p>
+                    <div className="mt-1 grid grid-cols-3 gap-1.5">
+                      {[...box.items].sort((a, b) => b.price - a.price).slice(0, 3).map((item) => (
+                        <div key={`${box.id}-${item.id}`} className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-[#1f2730] p-1">
+                          <BlurImage src={item.image} fallbackSrc="/preview.png" alt={item.name} className="h-full w-full object-contain" loading="lazy" width={56} height={44} />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </button>
               ))}
