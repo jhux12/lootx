@@ -857,7 +857,8 @@ export const AdminPanel: React.FC = () => {
                   createdAt: item.obtainedAt || Date.now() - (index + 1) * 1000 * 60 * 45,
                   note: 'Item added to inventory'
               }
-          ];
+];
+const BOX_TAG_PRESETS = ['new', 'top', 'hot', 'limited', 'popular'] as const;
           return {
               ...item,
               locked: item.locked ?? false,
@@ -3783,6 +3784,18 @@ export const AdminPanel: React.FC = () => {
                                 <Input type="text" placeholder="Accent Color (Hex)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.accentColor} onChange={e => setNewBox({...newBox, accentColor: e.target.value})} />
                                 <div>
                                     <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Box Tags</label>
+                                    <div className="mb-2 flex flex-wrap gap-2">
+                                        {BOX_TAG_PRESETS.map((tag) => (
+                                            <button
+                                                key={`preset-${tag}`}
+                                                type="button"
+                                                onClick={() => addBoxTag(tag)}
+                                                className="rounded border border-gray-700 bg-[#0b0e14] px-2 py-1 text-[10px] uppercase tracking-wide text-gray-300 hover:border-gray-500"
+                                            >
+                                                + {tag}
+                                            </button>
+                                        ))}
+                                    </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                         {boxTagOptions.map((tag) => {
                                             const isSelected = (newBox.tags ?? []).includes(tag);
@@ -3839,7 +3852,7 @@ export const AdminPanel: React.FC = () => {
                                         />
                                     </div>
                                     <p className="mt-2 text-[10px] text-gray-500">
-                                      Tags power homepage filters. Max {MAX_BOX_TAGS} tags, {MAX_BOX_TAG_LENGTH} characters each.
+                                      Tags power homepage filters and catalog badges (new=blue, top=violet, hot=red, limited=gold, popular=green). Max {MAX_BOX_TAGS} tags, {MAX_BOX_TAG_LENGTH} characters each.
                                     </p>
                                 </div>
                                 <div className="mt-5 rounded-xl border border-white/10 bg-[#0b0e14] p-3 sm:p-4">

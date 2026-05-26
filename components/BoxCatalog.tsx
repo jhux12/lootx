@@ -23,6 +23,14 @@ const SORT_OPTIONS: Array<{ id: SortOption; label: string }> = [
   { id: 'price-desc', label: 'Price: High to Low' }
 ];
 
+const TAG_STYLES: Record<string, string> = {
+  top: 'bg-violet-600/90 text-white',
+  new: 'bg-sky-500/90 text-white',
+  hot: 'bg-rose-500/90 text-white',
+  limited: 'bg-amber-500/90 text-black',
+  popular: 'bg-emerald-500/90 text-black'
+};
+
 const getBoxPrice = (box: MysteryBox) => toCoins(box.price, PRICE_UNIT_MODE);
 
 const scoreTrending = (box: MysteryBox) => {
@@ -229,6 +237,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           {!isLoadingBoxes && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {groupedBoxes.map((box, index) => (
+                (() => {
+                  const boxTags = getBoxTags(box);
+                  const primaryTag = boxTags.find((tag) => TAG_STYLES[tag]) ?? (sortOption === 'newest' || index >= 5 ? 'new' : 'top');
+                  const tagClass = TAG_STYLES[primaryTag] ?? 'bg-slate-600 text-white';
+                  return (
                 <button
                   key={box.id}
                   type="button"
@@ -236,12 +249,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   className="group w-full overflow-hidden rounded-xl border border-white/10 bg-[#20262b] text-left shadow-[0_0_0_1px_rgba(53,76,129,0.12)] transition hover:border-slate-400/35"
                 >
                   <div className="relative px-2 pb-2 pt-3">
-                    {(sortOption === 'newest' || index >= 5) && (
-                      <span className="absolute left-2 top-2 z-10 rounded-md bg-[#245dff] px-2 py-0.5 text-[10px] font-black uppercase">New</span>
-                    )}
-                    {(sortOption !== 'newest' && index < 5) && (
-                      <span className="absolute left-2 top-2 z-10 rounded-md bg-[#5636ff] px-2 py-0.5 text-[10px] font-black uppercase">Top</span>
-                    )}
+                    <span className={`absolute left-2 top-2 z-10 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-wide ${tagClass}`}>{primaryTag}</span>
                     <div className="mx-auto aspect-[1.35] w-full">
                       <BlurImage
                         src={box.image}
@@ -257,9 +265,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                     </div>
                   </div>
                   <div className="border-t border-white/10 px-3 pb-3 pt-2">
-                    <div className="line-clamp-1 text-base font-bold sm:text-[28px] sm:leading-7">{box.name}</div>
-                    <CoinAmount amount={Math.round(getBoxPrice(box))} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-base font-bold" iconClassName="h-4 w-4" />
-                    <p className="mt-3 text-[10px] font-bold uppercase tracking-wide text-slate-400">Best items</p>
+                    <div className="line-clamp-1 text-[15px] font-medium text-slate-100 sm:text-base">{box.name}</div>
+                    <CoinAmount amount={Math.round(getBoxPrice(box))} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[15px] font-medium text-slate-200" iconClassName="h-4 w-4" />
+                    <p className="mt-3 text-[10px] uppercase tracking-wide text-slate-400">Best items</p>
                     <div className="mt-1 grid grid-cols-3 gap-1.5">
                       {[...box.items].sort((a, b) => b.price - a.price).slice(0, 3).map((item) => (
                         <div key={`${box.id}-${item.id}`} className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-[#1f2730] p-1">
@@ -269,6 +277,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                     </div>
                   </div>
                 </button>
+                  );
+                })()
               ))}
             </div>
           )}
