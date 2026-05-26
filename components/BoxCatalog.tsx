@@ -64,6 +64,41 @@ const getSortedBoxes = (boxes: MysteryBox[], sortOption: SortOption) => {
   return sorted;
 };
 
+type CatalogTickerWin = {
+  id: string;
+  boxId: string;
+  itemName: string;
+  itemImage: string;
+  rarity: MysteryBox['items'][number]['rarity'];
+};
+
+const CATALOG_TICKER_RARITY_CARD_CLASS: Record<CatalogTickerWin['rarity'], string> = {
+  common: 'border-[#646c7a] bg-gradient-to-b from-[#2b3340] to-[#1c2330]',
+  uncommon: 'border-[#31b46e] bg-gradient-to-b from-[#224735] to-[#152c22]',
+  rare: 'border-[#2d89ff] bg-gradient-to-b from-[#1f3f72] to-[#182845]',
+  epic: 'border-[#9137ff] bg-gradient-to-b from-[#4a2579] to-[#2f184d]',
+  legendary: 'border-[#f3bb3f] bg-gradient-to-b from-[#75531f] to-[#4a3412]'
+};
+
+const buildCatalogLivePullz = (boxes: MysteryBox[]) => {
+  const eligibleItems = boxes
+    .filter((box) => !box.isDaily && !box.isUserCreated)
+    .flatMap((box) =>
+      box.items
+        .filter((item) => (item.rarity === 'legendary' || item.rarity === 'epic') && item.image && item.name)
+        .map((item, itemIndex) => ({
+          id: `${box.id}-${item.id ?? itemIndex}`,
+          boxId: box.id,
+          itemName: item.name,
+          itemImage: item.image,
+          rarity: item.rarity
+        }))
+    );
+
+  if (!eligibleItems.length) return [];
+  return eligibleItems.slice(0, Math.min(16, eligibleItems.length));
+};
+
 const toCategoryKey = (value: string) =>
   value
     .toLowerCase()
@@ -92,6 +127,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [maxPriceQuery, setMaxPriceQuery] = useState('');
   const [onlyAffordable, setOnlyAffordable] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [startTickerAnimation, setStartTickerAnimation] = useState(false);
 
   const minPrice = minPriceQuery.trim() ? Number(minPriceQuery) : null;
   const maxPrice = maxPriceQuery.trim() ? Number(maxPriceQuery) : null;
@@ -150,6 +186,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const sortedFilteredBoxes = useMemo(() => getSortedBoxes(filteredBoxes, sortOption), [filteredBoxes, sortOption]);
 
   const groupedBoxes = useMemo(() => sortedFilteredBoxes, [sortedFilteredBoxes]);
+  const catalogLivePullz = useMemo(() => buildCatalogLivePullz(displayBoxes), [displayBoxes]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const timeout = window.setTimeout(() => setStartTickerAnimation(true), 250);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -194,6 +237,43 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
   return (
     <div className="w-full bg-[#1a1f26] pb-20">
+      <section className="mx-auto w-full max-w-6xl px-4 pt-4 sm:pt-5">
+        <div className="overflow-hidden rounded-md border border-[#1d2228] bg-[#090b10] shadow-[0_10px_28px_rgba(0,0,0,0.4)]">
+          <div className="flex min-h-[96px] items-stretch">
+            <div className="flex w-[72px] shrink-0 flex-col items-center justify-center gap-1 border-r border-[#f59e0b]/70 bg-[#0c1016] px-2 text-center">
+              <span className="text-base leading-none">🔥</span>
+              <h2 className="text-[11px] font-black uppercase leading-3 tracking-[0.08em] text-white">User Pullz</h2>
+            </div>
+            <div className="relative min-w-0 flex-1 overflow-hidden">
+              {catalogLivePullz.length > 0 ? (
+                <>
+                  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-[#090b10] to-transparent sm:w-10" />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-[#090b10] to-transparent sm:w-10" />
+                  <div className={`live-wins-ticker flex w-max items-center gap-2 px-2 py-1.5 sm:gap-2.5 ${startTickerAnimation ? 'ticker-animation [animation-duration:65s]' : ''}`}>
+                    {[...catalogLivePullz, ...catalogLivePullz].map((win, index) => (
+                      <button
+                        key={`${win.id}-${index}`}
+                        type="button"
+                        onClick={() => openBox(win.boxId)}
+                        className={`group flex h-[84px] w-[108px] shrink-0 items-center justify-center overflow-hidden rounded-sm border p-1.5 transition hover:-translate-y-0.5 active:scale-[0.99] sm:h-[92px] sm:w-[116px] ${CATALOG_TICKER_RARITY_CARD_CLASS[win.rarity]}`}
+                        title={win.itemName}
+                      >
+                        <div className="flex h-full w-full items-center justify-center rounded-[2px] bg-black/20 p-1.5">
+                          <img src={win.itemImage} alt={win.itemName} className="h-full w-full object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)] transition-transform duration-200 group-hover:scale-105" loading="lazy" decoding="async" width={72} height={72} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex min-h-[92px] items-center px-3 py-2 text-xs font-semibold text-neutral-400 sm:text-sm">
+                  No Epic or Legendary pulls available yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="sticky top-[var(--pullz-header-height,70px)] z-50 w-full border-b border-white/10 bg-[#1a1f26]/95 shadow-xl backdrop-blur">
         <div className="mx-auto max-w-[980px] px-3 py-3 sm:px-4">

@@ -225,33 +225,6 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
           </div>
 
 
-          <section aria-label="Live recent wins" className="overflow-hidden rounded-md border border-[#1d2228] bg-[#090b10] shadow-[0_10px_28px_rgba(0,0,0,0.4)]">
-            <div className="flex min-h-[96px] items-stretch">
-              <div className="flex w-[72px] shrink-0 flex-col items-center justify-center gap-1 border-r border-[#f59e0b]/70 bg-[#0c1016] px-2 text-center">
-                <span className="text-base leading-none">🔥</span>
-                <h2 className="text-[11px] font-black uppercase leading-3 tracking-[0.08em] text-white">User Pullz</h2>
-              </div>
-              <div className="relative min-w-0 flex-1 overflow-hidden">
-              {liveWins.length > 0 ? (
-                <>
-                  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-[#090b10] to-transparent sm:w-10" />
-                  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-[#090b10] to-transparent sm:w-10" />
-                  <div
-                    className={`live-wins-ticker flex w-max items-center gap-2 px-2 py-1.5 sm:gap-2.5 ${startTickerAnimation ? 'ticker-animation [animation-duration:65s]' : ''}`}
-                    style={{ transform: 'translate3d(0,0,0)' }}
-                  >
-                    {[...liveWins, ...liveWins].map((win, index) => (
-                      <LiveWinCard key={`${win.id}-${index}`} win={win} onOpenBox={onOpenBox} />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <LiveWinsSkeleton />
-              )}
-              </div>
-            </div>
-          </section>
-
           <section>
             <div className="mb-5 flex items-center justify-between gap-3">
               <h2 className="flex items-center gap-2 text-xl font-black"><Package className="h-5 w-5 text-slate-400" aria-hidden="true" />Available Boxes</h2>
