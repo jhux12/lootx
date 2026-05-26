@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Search } from 'lucide-react';
+import { ChevronDown, Search, ShieldCheck, Sparkles, Tag, SlidersHorizontal } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
@@ -101,6 +101,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('featured');
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const CATEGORY_ORDER = ['all', 'pokemon', 'tech', 'sneakers', 'streetwear', 'collectibles', 'gaming'];
 
   const hasActiveFilters =
@@ -190,40 +191,82 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   };
 
   return (
-    <div className="w-full bg-[#1f2730] pb-20 text-white">
-
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-b border-white/10 bg-[#1f2730]/95">
-        <div className="mx-auto max-w-[1320px] px-3 py-4 sm:px-5">
-          <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0d1423] p-3 sm:p-4">
-              <div className="min-w-0">
-                <h1 className="text-4xl font-extrabold uppercase tracking-tight text-white sm:text-5xl">Boxes</h1>
-                <p className="mt-1 text-base text-slate-300 sm:text-lg">Open boxes and win <span className="text-[#4b8dff]">real items</span></p>
-              </div>
+    <div className="w-full bg-[#131a24] pb-20 text-white">
+      <div className="relative mx-auto max-w-[1320px] px-3 pb-5 pt-5 sm:px-5 sm:pt-8">
+        <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,470px)]">
+          <div className="order-2 lg:order-1">
+            <h1 className="text-4xl font-extrabold uppercase tracking-tight text-white sm:text-5xl">Boxes</h1>
+            <p className="mt-2 max-w-xl text-base text-slate-300 sm:text-lg">
+              Open premium mystery boxes and win <span className="text-[#5da0ff]">real items</span>.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#67a6ff]" />
+                Provably Fair
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
+                <Sparkles className="h-3.5 w-3.5 text-[#9a88ff]" />
+                Real Items
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
+                <Tag className="h-3.5 w-3.5 text-[#67a6ff]" />
+                Sell Back
+              </span>
+            </div>
+          </div>
+          <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
+            <div className="relative w-full max-w-[460px]">
+              <div className="pointer-events-none absolute -left-6 -top-5 h-32 w-32 rounded-full bg-[#3f6dff]/35 blur-3xl sm:h-44 sm:w-44" />
+              <div className="pointer-events-none absolute -bottom-8 right-2 h-36 w-36 rounded-full bg-[#7a4dff]/25 blur-3xl sm:h-52 sm:w-52" />
               {stripeSettings.boxCatalogHeroImageUrl ? (
                 <img
                   src={stripeSettings.boxCatalogHeroImageUrl}
                   alt="Box catalog hero"
-                  className="h-20 w-28 shrink-0 object-contain sm:h-24 sm:w-36"
+                  className="relative mx-auto h-44 w-full object-contain sm:h-56 lg:h-64"
                   loading="eager"
                   decoding="async"
                 />
               ) : null}
             </div>
           </div>
-          <div className="mb-4 grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_180px] md:w-[520px]">
+        </div>
+      </div>
+
+      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-white/10 bg-[#131a24]/95 backdrop-blur">
+        <div className="mx-auto max-w-[1320px] px-3 py-3 sm:px-5">
+          <div className="mb-3 flex w-full items-center gap-2 sm:mb-2 sm:max-w-[680px]">
               <div className="flex items-center rounded-xl border border-white/10 bg-[#20262b] px-3 py-3">
                 <Search className="h-4 w-4 shrink-0 text-[#5f6f95]" />
                 <input type="text" placeholder="Search boxes..." className="w-full bg-transparent pl-2 text-sm text-white placeholder-slate-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
-              <label className="relative">
+              <label className="relative hidden sm:block">
                 <select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)} className="h-full w-full appearance-none rounded-xl border border-white/10 bg-[#20262b] px-4 py-3 pr-9 text-sm font-semibold text-white outline-none">
                   {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7a87a8]" />
               </label>
+              <div className="relative sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFilterOpen((prev) => !prev)}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-[#20262b] text-slate-200"
+                  aria-label="Filter and sort options"
+                >
+                  <SlidersHorizontal className="h-4.5 w-4.5" />
+                </button>
+                {isMobileFilterOpen && (
+                  <div className="absolute right-0 top-12 z-50 w-48 rounded-xl border border-white/10 bg-[#1b2432] p-2 shadow-xl">
+                    <label className="relative block">
+                      <select value={sortOption} onChange={(event) => { setSortOption(event.target.value as SortOption); setIsMobileFilterOpen(false); }} className="h-10 w-full appearance-none rounded-lg border border-white/10 bg-[#20262b] px-3 pr-8 text-sm font-semibold text-white outline-none">
+                        {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7a87a8]" />
+                    </label>
+                  </div>
+                )}
+              </div>
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-[#20262b] p-2 scrollbar-hide">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
             {CATEGORY_ORDER.map((id) => {
               const cat = id === 'all' ? { id: 'all', title: 'All' } : categories.find((entry) => entry.id === id);
               if (!cat) return null;
@@ -232,7 +275,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide transition ${isActive ? 'bg-[#205DD7] text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}
+                  className={`flex items-center justify-center whitespace-nowrap rounded-full border px-3.5 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                    isActive
+                      ? 'border-transparent bg-gradient-to-r from-[#1f6cff] to-[#5d39ff] text-white'
+                      : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:text-white'
+                  }`}
                 >
                   {cat.id !== 'all' && cat.iconClass && isCategoryIconUrl(cat.iconClass) ? (
                     <img
