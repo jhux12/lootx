@@ -239,8 +239,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               {groupedBoxes.map((box, index) => (
                 (() => {
                   const boxTags = getBoxTags(box);
-                  const primaryTag = boxTags.find((tag) => TAG_STYLES[tag]) ?? (sortOption === 'newest' || index >= 5 ? 'new' : 'top');
-                  const tagClass = TAG_STYLES[primaryTag] ?? 'bg-slate-600 text-white';
+                  const primaryTag = boxTags.find((tag) => TAG_STYLES[tag]) ?? null;
+                  const tagClass = primaryTag ? (TAG_STYLES[primaryTag] ?? 'bg-slate-600 text-white') : '';
                   return (
                 <button
                   key={box.id}
@@ -249,7 +249,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   className="group w-full overflow-hidden rounded-xl border border-white/10 bg-[#20262b] text-left shadow-[0_0_0_1px_rgba(53,76,129,0.12)] transition hover:border-slate-400/35"
                 >
                   <div className="relative px-2 pb-2 pt-3">
-                    <span className={`absolute left-2 top-2 z-10 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-wide ${tagClass}`}>{primaryTag}</span>
+                    {primaryTag && (
+                      <span className={`absolute left-2 top-2 z-10 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-wide ${tagClass}`}>{primaryTag}</span>
+                    )}
                     <div className="mx-auto aspect-[1.35] w-full">
                       <BlurImage
                         src={box.image}
