@@ -56,6 +56,7 @@ const ITEM_TAG_SUGGESTIONS = [
     'vintage',
     'modern'
 ] as const;
+const BOX_TAG_PRESETS = ['new', 'top', 'hot', 'limited', 'popular'] as const;
 
 const ITEM_SIZE_SUGGESTIONS = [
     'XS',
@@ -357,6 +358,7 @@ export const AdminPanel: React.FC = () => {
   const [itemTagFilters, setItemTagFilters] = useState<string[]>([]);
   const [deletingBoxId, setDeletingBoxId] = useState<string | null>(null);
   const [isUploadingSpinnerBackground, setIsUploadingSpinnerBackground] = useState(false);
+  const [isUploadingBoxCatalogHero, setIsUploadingBoxCatalogHero] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userXpInput, setUserXpInput] = useState<number>(0);
   const [isSavingUser, setIsSavingUser] = useState(false);
@@ -532,6 +534,7 @@ export const AdminPanel: React.FC = () => {
       sortOrder: 0
   });
   const [stripeSettingsDraft, setStripeSettingsDraft] = useState({
+      boxCatalogHeroImageUrl: stripeSettings.boxCatalogHeroImageUrl,
       authPopupImageUrl: stripeSettings.authPopupImageUrl,
       authPopupImageUrls: stripeSettings.authPopupImageUrls,
       homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
@@ -857,7 +860,7 @@ export const AdminPanel: React.FC = () => {
                   createdAt: item.obtainedAt || Date.now() - (index + 1) * 1000 * 60 * 45,
                   note: 'Item added to inventory'
               }
-          ];
+];
           return {
               ...item,
               locked: item.locked ?? false,
@@ -1317,6 +1320,7 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       setStripeSettingsDraft({
+              boxCatalogHeroImageUrl: stripeSettings.boxCatalogHeroImageUrl,
               authPopupImageUrl: stripeSettings.authPopupImageUrl,
           authPopupImageUrls: stripeSettings.authPopupImageUrls,
           homeCategoryImageUrls: stripeSettings.homeCategoryImageUrls,
@@ -1443,8 +1447,14 @@ export const AdminPanel: React.FC = () => {
   const handleSaveBoxTagIcons = () => {
       const normalized = Object.fromEntries(
           Object.entries(boxTagIconsDraft)
-              .map(([tag, iconClass]) => [tag.trim().toLowerCase(), sanitizeFontAwesomeClass(iconClass)] as const)
-              .filter(([tag, iconClass]) => tag.length > 0 && iconClass.length > 0)
+              .map(([tag, iconValue]) => {
+                  const normalizedTag = tag.trim().toLowerCase();
+                  const trimmedValue = iconValue.trim();
+                  const sanitizedFa = sanitizeFontAwesomeClass(trimmedValue);
+                  const normalizedValue = sanitizedFa || (/^https?:\/\//i.test(trimmedValue) ? trimmedValue : '');
+                  return [normalizedTag, normalizedValue] as const;
+              })
+              .filter(([tag, iconValue]) => tag.length > 0 && iconValue.length > 0)
       );
 
       updateStripeSettings({
@@ -1453,6 +1463,21 @@ export const AdminPanel: React.FC = () => {
       });
       setBoxTagIconsNotice(true);
       window.setTimeout(() => setBoxTagIconsNotice(false), 3000);
+  };
+
+  const handleUploadTagSvg = async (tag: string, file: File | null) => {
+      if (!file) return;
+      const normalizedTag = tag.trim().toLowerCase();
+      try {
+          const path = `box-tag-icons/${normalizedTag}-${Date.now()}.svg`;
+          const storageRef = ref(storage, path);
+          await uploadBytes(storageRef, file, { contentType: file.type || 'image/svg+xml' });
+          const downloadUrl = await getDownloadURL(storageRef);
+          setBoxTagIconsDraft((prev) => ({ ...prev, [normalizedTag]: downloadUrl }));
+      } catch (error) {
+          console.error('Failed to upload tag svg icon', error);
+          alert('Failed to upload SVG icon. Please try again.');
+      }
   };
 
   const filteredItemsForBox = useMemo(() => {
@@ -2785,6 +2810,33 @@ export const AdminPanel: React.FC = () => {
       }
   };
 
+  const handleBoxCatalogHeroUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      if (!adminUser?.isAdmin) return;
+      if (!file.type.startsWith('image/')) {
+          alert('Please choose a valid image file.');
+          event.target.value = '';
+          return;
+      }
+      setIsUploadingBoxCatalogHero(true);
+      try {
+          const extension = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+          const path = `box-catalog-hero/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+          const storageRef = ref(storage, path);
+          const uploadResult = await uploadBytes(storageRef, file, { contentType: file.type });
+          const downloadUrl = await getDownloadURL(uploadResult.ref);
+          setStripeSettingsDraft((prev) => ({ ...prev, boxCatalogHeroImageUrl: downloadUrl }));
+          setStripeSettingsNotice(false);
+      } catch (error) {
+          console.error('Failed to upload box catalog hero image', error);
+          alert('Unable to upload image. Please try again.');
+      } finally {
+          setIsUploadingBoxCatalogHero(false);
+          event.target.value = '';
+      }
+  };
+
   const resetBoxForm = () => {
       setEditingBoxId(null);
       setNewBox({
@@ -3064,6 +3116,7 @@ export const AdminPanel: React.FC = () => {
       const rawRate = Number(stripeSettingsDraft.shippingFlatRateInput);
       const shippingFlatRateCents = Number.isFinite(rawRate) ? Math.max(0, Math.round(rawRate * 100)) : 0;
       updateStripeSettings({
+          boxCatalogHeroImageUrl: stripeSettingsDraft.boxCatalogHeroImageUrl.trim(),
           authPopupImageUrl: stripeSettingsDraft.authPopupImageUrl.trim(),
           authPopupImageUrls: stripeSettingsDraft.authPopupImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
           homeCategoryImageUrls: stripeSettingsDraft.homeCategoryImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
@@ -3783,6 +3836,18 @@ export const AdminPanel: React.FC = () => {
                                 <Input type="text" placeholder="Accent Color (Hex)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.accentColor} onChange={e => setNewBox({...newBox, accentColor: e.target.value})} />
                                 <div>
                                     <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Box Tags</label>
+                                    <div className="mb-2 flex flex-wrap gap-2">
+                                        {BOX_TAG_PRESETS.map((tag) => (
+                                            <button
+                                                key={`preset-${tag}`}
+                                                type="button"
+                                                onClick={() => addBoxTag(tag)}
+                                                className="rounded border border-gray-700 bg-[#0b0e14] px-2 py-1 text-[10px] uppercase tracking-wide text-gray-300 hover:border-gray-500"
+                                            >
+                                                + {tag}
+                                            </button>
+                                        ))}
+                                    </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                         {boxTagOptions.map((tag) => {
                                             const isSelected = (newBox.tags ?? []).includes(tag);
@@ -3839,14 +3904,14 @@ export const AdminPanel: React.FC = () => {
                                         />
                                     </div>
                                     <p className="mt-2 text-[10px] text-gray-500">
-                                      Tags power homepage filters. Max {MAX_BOX_TAGS} tags, {MAX_BOX_TAG_LENGTH} characters each.
+                                      Tags power homepage filters and catalog badges (new=blue, top=violet, hot=red, limited=gold, popular=green). Max {MAX_BOX_TAGS} tags, {MAX_BOX_TAG_LENGTH} characters each.
                                     </p>
                                 </div>
                                 <div className="mt-5 rounded-xl border border-white/10 bg-[#0b0e14] p-3 sm:p-4">
                                     <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <div>
                                             <h4 className="text-sm font-semibold text-white">Tag Icon Editor</h4>
-                                            <p className="text-[11px] text-gray-400">Assign a Font Awesome icon to each current tag. Paste either <span className="font-mono">fa-regular fa-gem</span> or <span className="font-mono">&lt;i class="fa-regular fa-gem"&gt;&lt;/i&gt;</span></p>
+                                            <p className="text-[11px] text-gray-400">Assign either a Font Awesome icon class or upload an SVG icon for each category tag.</p>
                                         </div>
                                         <button
                                             type="button"
@@ -3872,11 +3937,26 @@ export const AdminPanel: React.FC = () => {
                                                         </div>
                                                         <Input
                                                             type="text"
-                                                            placeholder="fa-regular fa-gem or <i class=&quot;fa-regular fa-gem&quot;></i>"
+                                                            placeholder="fa-regular fa-gem or https://.../icon.svg"
                                                             className="w-full bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
                                                             value={iconClass}
                                                             onChange={(event) => setBoxTagIconsDraft((prev) => ({ ...prev, [tag]: event.target.value }))}
                                                         />
+                                                        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                                            <input
+                                                                type="file"
+                                                                accept=".svg,image/svg+xml"
+                                                                onChange={(event) => {
+                                                                    const file = event.target.files?.[0] ?? null;
+                                                                    void handleUploadTagSvg(tag, file);
+                                                                    event.currentTarget.value = '';
+                                                                }}
+                                                                className="block w-full cursor-pointer text-[11px] text-gray-300 file:mr-2 file:rounded file:border-0 file:bg-blue-600 file:px-2 file:py-1 file:text-[10px] file:font-medium file:text-white hover:file:bg-blue-500"
+                                                            />
+                                                            {iconClass.startsWith('http') && (
+                                                                <img src={iconClass} alt={`${tag} icon`} className="h-5 w-5 object-contain" />
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 );
                                             })}
@@ -6182,6 +6262,25 @@ export const AdminPanel: React.FC = () => {
                             <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4 md:col-span-2">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Homepage & auth images</label>
                                 <p className="text-xs text-gray-500 mb-4">Paste CDN image URLs. Optimized for mobile cards and modal artwork.</p>
+                                <div className="mb-4 rounded-lg border border-gray-700 bg-[#111827] p-3">
+                                    <label className="mb-2 block text-xs font-bold uppercase text-gray-400">Box catalog header image</label>
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                        <Input
+                                            type="url"
+                                            value={stripeSettingsDraft.boxCatalogHeroImageUrl}
+                                            onChange={(event) => {
+                                                setStripeSettingsDraft((prev) => ({ ...prev, boxCatalogHeroImageUrl: event.target.value }));
+                                                setStripeSettingsNotice(false);
+                                            }}
+                                            placeholder="https://your-cdn.com/box-catalog-hero.png"
+                                            className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                                        />
+                                        <label className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-brand-blue/40 bg-brand-blue/10 px-3 py-2 text-xs font-semibold text-brand-blue hover:bg-brand-blue hover:text-white">
+                                            <input type="file" accept="image/*" className="hidden" onChange={handleBoxCatalogHeroUpload} disabled={isUploadingBoxCatalogHero} />
+                                            {isUploadingBoxCatalogHero ? 'Uploading…' : 'Upload image'}
+                                        </label>
+                                    </div>
+                                </div>
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                     {[0, 1, 2].map((index) => (
                                         <Input

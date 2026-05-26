@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronsDown, Search, Sparkles } from 'lucide-react';
+import { ChevronDown, Search } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
@@ -22,6 +22,14 @@ const SORT_OPTIONS: Array<{ id: SortOption; label: string }> = [
   { id: 'price-asc', label: 'Price: Low to High' },
   { id: 'price-desc', label: 'Price: High to Low' }
 ];
+
+const TAG_STYLES: Record<string, string> = {
+  top: 'bg-violet-600/90 text-white',
+  new: 'bg-sky-500/90 text-white',
+  hot: 'bg-rose-500/90 text-white',
+  limited: 'bg-amber-500/90 text-black',
+  popular: 'bg-emerald-500/90 text-black'
+};
 
 const getBoxPrice = (box: MysteryBox) => toCoins(box.price, PRICE_UNIT_MODE);
 
@@ -82,26 +90,22 @@ const toCategoryVariants = (value: string) => {
   return Array.from(variants);
 };
 
+const isCategoryIconUrl = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  return normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('data:image/');
+};
+
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
-  const { boxes, setView, stripeSettings, balance } = useGame();
+  const { boxes, setView, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('featured');
-  const [minPriceQuery, setMinPriceQuery] = useState('');
-  const [maxPriceQuery, setMaxPriceQuery] = useState('');
-  const [onlyAffordable, setOnlyAffordable] = useState(false);
-  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-
-  const minPrice = minPriceQuery.trim() ? Number(minPriceQuery) : null;
-  const maxPrice = maxPriceQuery.trim() ? Number(maxPriceQuery) : null;
+  const CATEGORY_ORDER = ['all', 'pokemon', 'tech', 'sneakers', 'streetwear', 'collectibles', 'gaming'];
 
   const hasActiveFilters =
     activeCategory !== 'all' ||
-    searchQuery.trim().length > 0 ||
-    Boolean(minPriceQuery.trim()) ||
-    Boolean(maxPriceQuery.trim()) ||
-    onlyAffordable;
+    searchQuery.trim().length > 0;
 
   const displayBoxes = useMemo(
     () => boxes.filter((box) => !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
@@ -139,13 +143,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       const tags = getBoxTags(box);
       const matchesCategory = activeCategory === 'all' || tags.includes(normalizeBoxTag(activeCategory));
       const matchesSearch = box.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
-      const boxPrice = getBoxPrice(box);
-      const matchesMin = minPrice == null || Number.isNaN(minPrice) || boxPrice >= minPrice;
-      const matchesMax = maxPrice == null || Number.isNaN(maxPrice) || boxPrice <= maxPrice;
-      const matchesAffordable = !onlyAffordable || boxPrice <= balance;
-      return matchesCategory && matchesSearch && matchesMin && matchesMax && matchesAffordable;
+      return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, balance, displayBoxes, maxPrice, minPrice, onlyAffordable, searchQuery]);
+  }, [activeCategory, displayBoxes, searchQuery]);
 
   const sortedFilteredBoxes = useMemo(() => getSortedBoxes(filteredBoxes, sortOption), [filteredBoxes, sortOption]);
 
@@ -181,9 +181,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const clearFilters = () => {
     setActiveCategory('all');
     setSearchQuery('');
-    setMinPriceQuery('');
-    setMaxPriceQuery('');
-    setOnlyAffordable(false);
     setSortOption('featured');
   };
 
@@ -193,89 +190,126 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   };
 
   return (
-    <div className="w-full bg-[#1a1f26] pb-20">
+    <div className="w-full bg-[#1f2730] pb-20 text-white">
 
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-50 w-full border-b border-white/10 bg-[#1a1f26]/95 shadow-xl backdrop-blur">
-        <div className="mx-auto max-w-[980px] px-3 py-3 sm:px-4">
-          <div className="mb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            <button onClick={() => setActiveCategory('all')} className="flex items-center gap-2 whitespace-nowrap rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white">
-              <Sparkles className="h-4 w-4 text-blue-400" /> All
-            </button>
-            {categories.map((cat) => (
-              <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className="whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold text-neutral-400 hover:bg-white/5 hover:text-white">
-                {cat.title}
-              </button>
-            ))}
+      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-b border-white/10 bg-[#1f2730]/95">
+        <div className="mx-auto max-w-[1320px] px-3 py-4 sm:px-5">
+          <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0d1423] p-3 sm:p-4">
+              <div className="min-w-0">
+                <h1 className="text-4xl font-extrabold uppercase tracking-tight text-white sm:text-5xl">Boxes</h1>
+                <p className="mt-1 text-base text-slate-300 sm:text-lg">Open boxes and win <span className="text-[#4b8dff]">real items</span></p>
+              </div>
+              {stripeSettings.boxCatalogHeroImageUrl ? (
+                <img
+                  src={stripeSettings.boxCatalogHeroImageUrl}
+                  alt="Box catalog hero"
+                  className="h-20 w-28 shrink-0 object-contain sm:h-24 sm:w-36"
+                  loading="eager"
+                  decoding="async"
+                />
+              ) : null}
+            </div>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-[#222833] px-3 py-3">
-              <Search className="h-4 w-4 shrink-0 text-neutral-500" />
-              <input type="text" placeholder="Search" className="w-full min-w-0 border-none bg-transparent text-sm text-white placeholder-neutral-600 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-white/15 text-white sm:hidden"
-                onClick={() => setIsMobileFiltersOpen((current) => !current)}
-                aria-label="Toggle filters"
-              >
-                <ChevronsDown className="h-4 w-4" />
-              </button>
-              <button type="button" className="text-[#4ea8ff] text-sm font-semibold" onClick={() => setSearchQuery('')}>Reset</button>
-            </div>
-            <label className={`relative ${isMobileFiltersOpen ? 'block' : 'hidden'} sm:block`}>
-              <select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)} className="appearance-none w-full rounded-xl border border-white/10 bg-[#1d232e] px-4 py-3 pr-9 text-sm font-bold text-white outline-none">
-                {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
-            </label>
-            <div className={`grid grid-cols-2 gap-2 ${isMobileFiltersOpen ? 'grid' : 'hidden'} sm:grid`}>
-              <input inputMode="numeric" placeholder="Min" value={minPriceQuery} onChange={(event) => setMinPriceQuery(event.target.value.replace(/[^\d]/g, ''))} className="w-full rounded-xl border border-white/10 bg-[#1d232e] px-3 py-3 text-sm font-semibold text-white placeholder-neutral-500 outline-none" />
-              <input inputMode="numeric" placeholder="Max" value={maxPriceQuery} onChange={(event) => setMaxPriceQuery(event.target.value.replace(/[^\d]/g, ''))} className="w-full rounded-xl border border-white/10 bg-[#1d232e] px-3 py-3 text-sm font-semibold text-white placeholder-neutral-500 outline-none" />
-            </div>
+          <div className="mb-4 grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_180px] md:w-[520px]">
+              <div className="flex items-center rounded-xl border border-white/10 bg-[#20262b] px-3 py-3">
+                <Search className="h-4 w-4 shrink-0 text-[#5f6f95]" />
+                <input type="text" placeholder="Search boxes..." className="w-full bg-transparent pl-2 text-sm text-white placeholder-slate-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              </div>
+              <label className="relative">
+                <select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)} className="h-full w-full appearance-none rounded-xl border border-white/10 bg-[#20262b] px-4 py-3 pr-9 text-sm font-semibold text-white outline-none">
+                  {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7a87a8]" />
+              </label>
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-[#20262b] p-2 scrollbar-hide">
+            {CATEGORY_ORDER.map((id) => {
+              const cat = id === 'all' ? { id: 'all', title: 'All' } : categories.find((entry) => entry.id === id);
+              if (!cat) return null;
+              const isActive = activeCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide transition ${isActive ? 'bg-[#205DD7] text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}
+                >
+                  {cat.id !== 'all' && cat.iconClass && isCategoryIconUrl(cat.iconClass) ? (
+                    <img
+                      src={cat.iconClass}
+                      alt={cat.title}
+                      className="h-5 w-5 shrink-0 object-contain"
+                      loading="eager"
+                      decoding="async"
+                    />
+                  ) : (
+                    cat.title
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      <div className="mx-auto min-h-[100dvh] w-full max-w-6xl px-4 py-8">
-        <div className="flex flex-col gap-8">
+      <div className="mx-auto min-h-[100dvh] w-full max-w-[1320px] px-3 py-4 sm:px-5 sm:py-5">
+        <div className="flex flex-col gap-6">
           {isLoadingBoxes && (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
               {Array.from({ length: 10 }).map((_, idx) => <SkeletonTile key={`box-skeleton-${idx}`} />)}
             </div>
           )}
 
           {!isLoadingBoxes && (
-            <div className="grid justify-items-center grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 lg:grid-cols-5">
-              {groupedBoxes.map((box) => (
-                <button key={box.id} type="button" onClick={() => openBox(box.id)} className="group w-full max-w-[220px] rounded-xl border border-transparent bg-transparent p-2 text-center transition-colors duration-300 ease-out">
-                  <div className="relative mx-auto aspect-[0.72] w-[88%] sm:w-[86%]">
-                    <BlurImage
-                      src={box.image}
-                      fallbackSrc="/preview.png"
-                      alt={box.name}
-                      loading="lazy"
-                      decoding="async"
-                      width={220}
-                      height={306}
-                      ratioClassName="h-full w-full"
-                      className="mx-auto h-full w-full object-contain transition-all duration-300 ease-out group-hover:scale-110 group-hover:rotate-[-3deg]"
-                    />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {groupedBoxes.map((box, index) => (
+                (() => {
+                  const boxTags = getBoxTags(box);
+                  const primaryTag = boxTags.find((tag) => TAG_STYLES[tag]) ?? null;
+                  const tagClass = primaryTag ? (TAG_STYLES[primaryTag] ?? 'bg-slate-600 text-white') : '';
+                  return (
+                <button
+                  key={box.id}
+                  type="button"
+                  onClick={() => openBox(box.id)}
+                  className="group w-full overflow-hidden rounded-xl border border-white/10 bg-[#20262b] text-left shadow-[0_0_0_1px_rgba(53,76,129,0.12)] transition hover:border-slate-400/35"
+                >
+                  <div className="relative px-2 pb-2 pt-3">
+                    {primaryTag && (
+                      <span className={`absolute left-2 top-2 z-10 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-wide ${tagClass}`}>{primaryTag}</span>
+                    )}
+                    <div className="mx-auto aspect-[1.35] w-full">
+                      <BlurImage
+                        src={box.image}
+                        fallbackSrc="/preview.png"
+                        alt={box.name}
+                        loading="lazy"
+                        decoding="async"
+                        width={360}
+                        height={230}
+                        ratioClassName="h-full w-full"
+                        className="h-full w-full object-contain transition duration-300 group-hover:scale-105"
+                      />
+                    </div>
                   </div>
-                  <div className="mt-3 line-clamp-2 min-h-[2.5rem] text-sm font-extrabold text-white sm:text-base">
-                    {box.name}
-                  </div>
-                  <div className="mt-1 flex justify-center">
-                    <CoinAmount
-                      amount={Math.round(getBoxPrice(box))}
-                      formatOptions={{ maximumFractionDigits: 0 }}
-                      className="justify-center text-lg font-extrabold text-white"
-                      iconClassName="h-4 w-4"
-                    />
+                  <div className="border-t border-white/10 px-3 pb-3 pt-2">
+                    <div className="line-clamp-1 text-[15px] font-medium text-slate-100 sm:text-base">{box.name}</div>
+                    <CoinAmount amount={Math.round(getBoxPrice(box))} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[15px] font-medium text-slate-200" iconClassName="h-4 w-4" />
+                    <p className="mt-3 text-[10px] uppercase tracking-wide text-slate-400">Best items</p>
+                    <div className="mt-1 grid grid-cols-3 gap-1.5">
+                      {[...box.items].sort((a, b) => b.price - a.price).slice(0, 3).map((item) => (
+                        <div key={`${box.id}-${item.id}`} className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-[#1f2730] p-1">
+                          <BlurImage src={item.image} fallbackSrc="/preview.png" alt={item.name} className="h-full w-full object-contain" loading="lazy" width={56} height={44} />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </button>
+                  );
+                })()
               ))}
             </div>
           )}
-
           {!isLoadingBoxes && groupedBoxes.length === 0 && (
             <div className="rounded-2xl border border-dashed border-white/10 bg-neutral-950/70 px-6 py-12 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5">
@@ -309,18 +343,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           )}
         </div>
 
-        <div className="mt-20 border-t border-white/5 pt-8">
-          <div className="prose prose-invert prose-sm max-w-none text-neutral-400">
-            <h2 className="mb-4 text-xl font-bold text-white">Browse by Category</h2>
-            <p className="mb-4">
-              Pullz mystery boxes are split into category groups. Each box lists every possible item and the exact drop rates before you open.
-            </p>
-            <h2 className="mb-4 text-xl font-bold text-white">How Box Opening Works</h2>
-            <p>
-              Browse the full catalog and buy a mystery box online in seconds. Pick any box, and before you open, every item inside is visible along with its drop rate. After opening, choose to ship the item or trade it in for Coins and use them on any other box.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -177,6 +177,7 @@ export interface CoinPackage {
 }
 
 export interface StripeSettings {
+  boxCatalogHeroImageUrl: string;
   authPopupImageUrl: string;
   authPopupImageUrls: string[];
   homeCategoryImageUrls: string[];
