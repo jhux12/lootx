@@ -193,7 +193,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   };
 
   return (
-    <div className="w-full bg-[#131a24] pb-20 text-white">
+    <div className="w-full bg-[#1b2024] pb-20 text-white">
       <div className="relative mx-auto max-w-[1320px] px-3 pb-5 pt-5 sm:px-5 sm:pt-8">
         <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,470px)]">
           <div className="order-2 lg:order-1">
@@ -233,7 +233,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       </div>
 
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-white/10 bg-[#131a24]/95 backdrop-blur">
+      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-white/10 bg-[#1b2024]/95 backdrop-blur">
         <div className="mx-auto max-w-[1320px] px-3 py-3 sm:px-5">
           <div className="mb-3 flex w-full items-center gap-2 sm:mb-2 sm:max-w-[680px]">
               <div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-[#20262b] px-3 py-3">
