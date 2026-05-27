@@ -98,7 +98,7 @@ const isCategoryIconUrl = (value: string) => {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
-  const { boxes, setView, stripeSettings, balance, user } = useGame();
+  const { boxes, setView, stripeSettings, balance, user, isAuthenticated } = useGame();
   const { playSound } = useSound();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -190,6 +190,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!isAuthenticated) return;
 
     const localDismissed = window.localStorage.getItem(HOW_IT_WORKS_LOCAL_KEY) === '1';
     const sessionShown = window.sessionStorage.getItem(HOW_IT_WORKS_SESSION_KEY) === '1';
@@ -223,7 +224,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [isAuthenticated, user]);
 
   const closeHowItWorksModal = async () => {
     const resolvedUserId =
