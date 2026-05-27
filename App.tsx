@@ -10,7 +10,6 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { HomeReplica } from './components/HomeReplica';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
-import { InstallPrompt } from './src/ui/pwa/InstallPrompt';
 import { SeoHead } from './components/SeoHead';
 import { AdminGate } from './components/AdminGate';
 import { trackEvent, trackMetaEvent } from './utils/trackEvent';
@@ -120,16 +119,6 @@ const DeferredAnalytics = React.memo(() => {
   return isReady ? <Analytics /> : null;
 });
 DeferredAnalytics.displayName = 'DeferredAnalytics';
-
-const DeferredInstallPrompt = React.memo(() => {
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => runAfterIdleOrInteraction(() => setIsReady(true), 5000), []);
-
-  return isReady ? <InstallPrompt /> : null;
-});
-DeferredInstallPrompt.displayName = 'DeferredInstallPrompt';
-
 type MainContentProps = {
   isChatCollapsed: boolean;
 };
@@ -750,7 +739,6 @@ const AppShell = () => {
         />
         <AppLayout hasStickyHeader={shouldUseStickyHeader} />
         <MobileBottomNav />
-        <DeferredInstallPrompt />
         <ResetPasswordModal />
       </div>
     </PullToRefresh>
