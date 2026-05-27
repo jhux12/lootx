@@ -106,9 +106,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [showAffordableOnly, setShowAffordableOnly] = useState(false);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+  const [isHowItWorksAnimatingIn, setIsHowItWorksAnimatingIn] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const CATEGORY_ORDER = ['all', 'pokemon', 'tech', 'sneakers', 'streetwear', 'collectibles', 'gaming'];
   const HOW_IT_WORKS_LOCAL_KEY = 'pullz:boxCatalogHowItWorksDismissed';
+  const HOW_IT_WORKS_SESSION_KEY = 'pullz:boxCatalogHowItWorksShownThisSession';
 
   const hasActiveFilters =
     activeCategory !== 'all' ||
@@ -190,7 +192,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     if (typeof window === 'undefined') return;
 
     const localDismissed = window.localStorage.getItem(HOW_IT_WORKS_LOCAL_KEY) === '1';
-    if (localDismissed) return;
+    const sessionShown = window.sessionStorage.getItem(HOW_IT_WORKS_SESSION_KEY) === '1';
+    if (localDismissed || sessionShown) return;
 
     const resolvedUserId =
       ((user as { id?: string; uid?: string } | null | undefined)?.id ?? (user as { id?: string; uid?: string } | null | undefined)?.uid ?? auth.currentUser?.uid)?.trim?.() ?? '';
@@ -211,6 +214,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       }
 
       if (!cancelled) {
+        window.sessionStorage.setItem(HOW_IT_WORKS_SESSION_KEY, '1');
         setShowHowItWorksModal(true);
       }
     };
@@ -237,8 +241,22 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         }
       }
     }
+    setIsHowItWorksAnimatingIn(false);
     setShowHowItWorksModal(false);
   };
+
+  useEffect(() => {
+    if (!showHowItWorksModal) {
+      setIsHowItWorksAnimatingIn(false);
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setIsHowItWorksAnimatingIn(true);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [showHowItWorksModal]);
 
   const clearFilters = () => {
     setActiveCategory('all');
@@ -254,8 +272,18 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   return (
     <div className="w-full bg-[#1b2024] pb-20 text-white">
       {showHowItWorksModal && (
-        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/65 px-3 pb-3 pt-8 sm:items-center sm:px-5 sm:pb-5">
-          <div className="w-full max-w-2xl rounded-2xl border border-white/15 bg-gradient-to-b from-[#111821] to-[#0b1118] p-4 shadow-2xl sm:rounded-3xl sm:p-6">
+        <div
+          className={`fixed inset-0 z-[120] flex items-end justify-center px-3 pb-3 pt-8 transition-colors duration-300 sm:items-center sm:px-5 sm:pb-5 ${
+            isHowItWorksAnimatingIn ? 'bg-black/65' : 'bg-black/0'
+          }`}
+        >
+          <div
+            className={`w-full max-w-2xl rounded-2xl border border-white/15 bg-gradient-to-b from-[#111821] to-[#0b1118] p-4 shadow-2xl transition-all duration-300 sm:rounded-3xl sm:p-6 ${
+              isHowItWorksAnimatingIn
+                ? 'translate-y-0 opacity-100'
+                : 'translate-y-10 opacity-0 sm:translate-y-14'
+            }`}
+          >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7d8faf]">Welcome</p>
