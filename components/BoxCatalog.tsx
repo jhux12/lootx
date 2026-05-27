@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Search, ShieldCheck, Sparkles, Tag, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, Search, ShieldCheck, Sparkles, Tag, SlidersHorizontal, X } from 'lucide-react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
@@ -96,14 +98,17 @@ const isCategoryIconUrl = (value: string) => {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
-  const { boxes, setView, stripeSettings, balance } = useGame();
+  const { boxes, setView, stripeSettings, balance, user } = useGame();
   const { playSound } = useSound();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('featured');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [showAffordableOnly, setShowAffordableOnly] = useState(false);
+  const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const CATEGORY_ORDER = ['all', 'pokemon', 'tech', 'sneakers', 'streetwear', 'collectibles', 'gaming'];
+  const HOW_IT_WORKS_LOCAL_KEY = 'pullz:boxCatalogHowItWorksDismissed';
 
   const hasActiveFilters =
     activeCategory !== 'all' ||
@@ -181,6 +186,60 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     }
   }, [categories]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const localDismissed = window.localStorage.getItem(HOW_IT_WORKS_LOCAL_KEY) === '1';
+    if (localDismissed) return;
+
+    const resolvedUserId =
+      ((user as { id?: string; uid?: string } | null | undefined)?.id ?? (user as { id?: string; uid?: string } | null | undefined)?.uid ?? auth.currentUser?.uid)?.trim?.() ?? '';
+
+    if (!resolvedUserId) return;
+
+    let cancelled = false;
+    const loadPreference = async () => {
+      try {
+        const userSnap = await getDoc(doc(db, 'users', resolvedUserId));
+        const dismissed = userSnap.data()?.dismissedBoxCatalogHowItWorks === true;
+        if (dismissed) {
+          window.localStorage.setItem(HOW_IT_WORKS_LOCAL_KEY, '1');
+          return;
+        }
+      } catch (error) {
+        console.warn('Failed to load BoxCatalog How Pullz Works preference.', error);
+      }
+
+      if (!cancelled) {
+        setShowHowItWorksModal(true);
+      }
+    };
+
+    void loadPreference();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const closeHowItWorksModal = async () => {
+    const resolvedUserId =
+      ((user as { id?: string; uid?: string } | null | undefined)?.id ?? (user as { id?: string; uid?: string } | null | undefined)?.uid ?? auth.currentUser?.uid)?.trim?.() ?? '';
+
+    if (dontShowAgain) {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(HOW_IT_WORKS_LOCAL_KEY, '1');
+      }
+      if (resolvedUserId) {
+        try {
+          await setDoc(doc(db, 'users', resolvedUserId), { dismissedBoxCatalogHowItWorks: true }, { merge: true });
+        } catch (error) {
+          console.warn('Failed to save BoxCatalog How Pullz Works preference.', error);
+        }
+      }
+    }
+    setShowHowItWorksModal(false);
+  };
+
   const clearFilters = () => {
     setActiveCategory('all');
     setSearchQuery('');
@@ -194,6 +253,76 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
   return (
     <div className="w-full bg-[#1b2024] pb-20 text-white">
+      {showHowItWorksModal && (
+        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/65 px-3 pb-3 pt-8 sm:items-center sm:px-5 sm:pb-5">
+          <div className="w-full max-w-2xl rounded-2xl border border-white/15 bg-gradient-to-b from-[#111821] to-[#0b1118] p-4 shadow-2xl sm:rounded-3xl sm:p-6">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7d8faf]">Welcome</p>
+                <h2 className="mt-1 text-xl font-bold text-white sm:text-2xl">How Pullz Works</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => void closeHowItWorksModal()}
+                aria-label="Close how it works modal"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-300 sm:text-base">
+              Open boxes. Win real items. Keep them or sell back instantly.
+            </p>
+            <div className="mt-5 space-y-3">
+              {[
+                ['1', 'Pick a box', 'Browse boxes by category and choose one that fits your budget.'],
+                ['2', 'Open with coins', 'Use coins to open. Every result is generated fairly.'],
+                ['3', 'Keep or sell back', 'Keep your item for shipping, or sell it back for instant coins.']
+              ].map(([step, title, description]) => (
+                <div key={step} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:p-3.5">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2b7bff] to-[#6f4bff] text-xs font-bold text-white">
+                      {step}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">{title}</p>
+                      <p className="mt-0.5 text-xs text-slate-300 sm:text-sm">{description}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-5 text-center text-xs font-medium text-slate-300 sm:text-sm">
+              Provably fair • Real items • Secure checkout
+            </p>
+            <label className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-slate-300 sm:text-sm">
+              <input
+                type="checkbox"
+                checked={dontShowAgain}
+                onChange={(event) => setDontShowAgain(event.target.checked)}
+                className="h-4 w-4 rounded border-white/30 bg-transparent text-[#4e86ff] focus:ring-[#4e86ff]"
+              />
+              Don&apos;t show this again
+            </label>
+            <div className="mt-5 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => void closeHowItWorksModal()}
+                className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-white/10 sm:w-auto"
+              >
+                Learn more
+              </button>
+              <button
+                type="button"
+                onClick={() => void closeHowItWorksModal()}
+                className="w-full rounded-xl bg-gradient-to-r from-[#2d73ff] to-[#5f42ff] px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 sm:w-auto"
+              >
+                Start browsing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="relative mx-auto max-w-[1320px] px-3 pb-5 pt-5 sm:px-5 sm:pt-8">
         <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,470px)]">
           <div className="order-2 lg:order-1">
