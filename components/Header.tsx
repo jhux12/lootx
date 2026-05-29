@@ -51,7 +51,7 @@ const drawerCardClass =
   'flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[0.075] active:translate-y-0';
 
 const desktopNavButtonClass =
-  'inline-flex h-11 min-w-[102px] items-center justify-center rounded-[12px] border border-transparent px-5 text-[16px] font-semibold tracking-[-0.01em] text-white/82 transition-all duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070c14]';
+  'relative inline-flex h-11 min-w-[102px] items-center justify-center rounded-[12px] border border-transparent px-5 text-[16px] font-semibold tracking-[-0.01em] text-white/82 transition-all duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070c14]';
 
 const desktopNavActiveClass =
   'border-[#1b3153]/80 bg-[#0d1d34]/82 text-[#9fc6ff] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_8px_22px_rgba(18,67,132,0.12)] hover:text-[#b7d5ff]';
@@ -376,10 +376,10 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
     <div className="relative z-[140]">
       <header
         ref={headerRef}
-        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] bg-[#050a12]/82 shadow-[0_20px_80px_rgba(0,0,0,0.28)] backdrop-blur-2xl`}
+        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] bg-[#050a12] shadow-[0_20px_80px_rgba(0,0,0,0.28)] lg:bg-[#050a12]/90 lg:backdrop-blur-2xl`}
       >
         <div className="px-3 py-3 pt-[calc(env(safe-area-inset-top,0px)+12px)] sm:px-4 lg:px-4 lg:py-3 lg:pt-[calc(env(safe-area-inset-top,0px)+12px)]">
-          <nav className="mx-auto flex h-[64px] w-full max-w-[calc(100vw-24px)] items-center justify-between rounded-[14px] border border-[#213148]/80 bg-[#080e18]/62 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_54px_rgba(0,0,0,0.22)] backdrop-blur-2xl sm:h-[68px] sm:max-w-[calc(100vw-32px)] sm:px-6 lg:h-[76px] lg:max-w-none lg:px-8 xl:px-10">
+          <nav className="mx-auto flex h-[64px] w-full max-w-[calc(100vw-24px)] items-center justify-between rounded-[14px] border border-[#213148]/80 bg-[#080e18] lg:bg-[#080e18]/76 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_54px_rgba(0,0,0,0.22)] backdrop-blur-2xl sm:h-[68px] sm:max-w-[calc(100vw-32px)] sm:px-6 lg:h-[76px] lg:max-w-none lg:px-8 xl:px-10">
             <div className="flex min-w-0 flex-1 items-center gap-5 sm:gap-8 lg:gap-10 xl:gap-12">
               <button
                 type="button"
@@ -391,13 +391,70 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
               </button>
 
               <div className="hidden items-center gap-9 xl:flex">
-                <button type="button" onClick={() => navigate('BOXES')} className={getDesktopNavClass('games')}>
-                  Games
-                </button>
-                <button type="button" onClick={() => navigate('BONUSES')} className={getDesktopNavClass('rewards')}>
-                  Rewards
-                  {questReadyCount > 0 ? <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}
-                </button>
+                <div ref={gamesMenuRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsGamesMenuOpen((prev) => !prev);
+                      setIsRewardsMenuOpen(false);
+                    }}
+                    className={`${getDesktopNavClass('games')} gap-2 pr-4`}
+                    aria-expanded={isGamesMenuOpen}
+                    aria-haspopup="menu"
+                  >
+                    Games
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isGamesMenuOpen ? 'rotate-180' : ''}`} strokeWidth={1.8} />
+                  </button>
+                  <div
+                    className={`${desktopMenuPanelClass} w-44 ${
+                      isGamesMenuOpen ? 'visible translate-y-0 opacity-100' : 'invisible -translate-y-1 opacity-0'
+                    }`}
+                    role="menu"
+                  >
+                    <button type="button" onClick={() => navigate('BOXES')} className={desktopMenuItemClass} role="menuitem">
+                      <Package className="h-4 w-4 text-orange-400" />
+                      Boxes
+                    </button>
+                    <button type="button" onClick={() => navigate('PLINKO')} className={`${desktopMenuItemClass} mt-1`} role="menuitem">
+                      <UpgraderIcon className="h-4 w-4 text-emerald-300" />
+                      Upgrader
+                    </button>
+                  </div>
+                </div>
+
+                <div ref={rewardsMenuRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRewardsMenuOpen((prev) => !prev);
+                      setIsGamesMenuOpen(false);
+                    }}
+                    className={`${getDesktopNavClass('rewards')} gap-2 pr-4`}
+                    aria-expanded={isRewardsMenuOpen}
+                    aria-haspopup="menu"
+                  >
+                    Rewards
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isRewardsMenuOpen ? 'rotate-180' : ''}`} strokeWidth={1.8} />
+                    {questReadyCount > 0 ? <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}
+                  </button>
+                  <div
+                    className={`${desktopMenuPanelClass} w-52 ${
+                      isRewardsMenuOpen ? 'visible translate-y-0 opacity-100' : 'invisible -translate-y-1 opacity-0'
+                    }`}
+                    role="menu"
+                  >
+                    <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass} role="menuitem">
+                      <RefreshCw className="h-4 w-4 text-blue-400" />
+                      Daily Spin
+                      {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
+                    </button>
+                    <button type="button" onClick={() => navigate('POLLS')} className={`${desktopMenuItemClass} mt-1`} role="menuitem"><BarChart3 className="h-4 w-4 text-cyan-300" />Polls</button>
+                    <button type="button" onClick={() => navigate('REFERRALS')} className={`${desktopMenuItemClass} mt-1`} role="menuitem"><Users className="h-4 w-4 text-blue-300" />Referrals</button>
+                    <button type="button" onClick={() => navigate('LEADERBOARD')} className={`${desktopMenuItemClass} mt-1`} role="menuitem"><Trophy className="h-4 w-4 text-white" />Leaderboard</button>
+                    <button type="button" onClick={() => navigate('QUESTS')} className={`${desktopMenuItemClass} mt-1`} role="menuitem"><Sparkles className="h-4 w-4 text-blue-300" />Quests {questReadyCount > 0 ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : claimedTodayCount > 0 ? <span className="ml-auto rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
+                  </div>
+                </div>
+
                 <button type="button" onClick={() => navigate('LEADERBOARD')} className={getDesktopNavClass('leaderboard')}>
                   Leaderboard
                 </button>
@@ -415,24 +472,23 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                     <span className="min-w-[54px] text-[16px] font-semibold leading-none tabular-nums text-white"><AnimatedNumber value={targetXp} /></span>
                   </div>
 
-                  <div className={`relative h-11 min-w-[136px] shrink-0 overflow-hidden rounded-[13px] border border-white/10 bg-[#0c1422]/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] ${balanceTone === 'up' ? 'ring-1 ring-emerald-400/35' : balanceTone === 'down' ? 'ring-1 ring-red-400/35' : ''}`}>
+                  <div className={`relative h-11 min-w-[166px] shrink-0 overflow-hidden rounded-[13px] border border-white/10 bg-[#0c1422]/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] ${balanceTone === 'up' ? 'ring-1 ring-emerald-400/35' : balanceTone === 'down' ? 'ring-1 ring-red-400/35' : ''}`}>
                     <span
                       aria-hidden="true"
                       className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(110,40,242,0.10),rgba(33,149,255,0.08),rgba(255,255,255,0.015))]"
                     />
-                    <div className="relative z-10 flex h-full items-center justify-center px-4">
+                    <div className="relative z-10 flex h-full items-center justify-between gap-2 pl-4 pr-1.5">
                       <CoinAmount amount={balance} className="text-[16px] font-semibold leading-none tracking-[-0.01em] text-white" iconClassName="h-5 w-5" textClassName="min-w-[70px] text-right tabular-nums" formatOptions={{ maximumFractionDigits: 0 }} />
+                      <button
+                        type="button"
+                        onClick={openTopUp}
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/90 text-[#07101b] shadow-sm transition-all duration-200 hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#07101b]"
+                        aria-label="Top up"
+                      >
+                        <Plus className="h-4 w-4" strokeWidth={2} />
+                      </button>
                     </div>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={openTopUp}
-                    className={utilityButtonClass}
-                    aria-label="Top up"
-                  >
-                    <Plus className="h-5 w-5" strokeWidth={1.8} />
-                  </button>
 
                   <button
                     type="button"
@@ -508,14 +564,14 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
       <button
         type="button"
         onClick={() => setIsMobileMenuOpen(false)}
-        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-40 bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-40 bg-black/92 transition-opacity duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${isMobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
         aria-label="Close menu overlay"
       />
 
       <div
-        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-50 w-full overflow-y-auto overscroll-contain border-t border-white/10 bg-[#090f16]/95 px-4 pb-4 pt-3 shadow-[0_-24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-50 w-full overflow-y-auto overscroll-contain border-t border-white/10 bg-[#070d15] px-4 pb-4 pt-3 shadow-[0_-24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${
           isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
@@ -524,7 +580,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
         aria-modal="true"
         aria-label="Mobile navigation menu"
       >
-        <div className="sticky top-0 z-10 -mx-4 mb-4 flex items-center justify-between border-b border-white/10 bg-[#090f16]/95 px-4 pb-3 pt-1 backdrop-blur-2xl">
+        <div className="sticky top-0 z-10 -mx-4 mb-4 flex items-center justify-between border-b border-white/10 bg-[#070d15] px-4 pb-3 pt-1 backdrop-blur-2xl">
           <span className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">Menu</span>
           <button
             type="button"
