@@ -6,6 +6,7 @@ import {
   HelpCircle,
   Instagram,
   LifeBuoy,
+  LogIn,
   LogOut,
   Package,
   PenTool,
@@ -317,6 +318,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
 
   const openActivity = useCallback(() => setShowActivity(true), []);
 
+  const handleSignIn = useCallback(() => {
+    playSound('click');
+    setIsMobileMenuOpen(false);
+    openAuthModal('login');
+  }, [openAuthModal, playSound]);
+
   const handleLogout = useCallback(() => {
     playSound('click');
     logout();
@@ -548,7 +555,18 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                 </div>
               </>
             ) : (
-              <div className="hidden items-center lg:flex">{startPullingButton}</div>
+              <div className="hidden items-center gap-2 lg:flex">
+                <button
+                  type="button"
+                  onClick={handleSignIn}
+                  className={utilityButtonClass}
+                  aria-label="Sign in"
+                  title="Sign in"
+                >
+                  <LogIn className="h-4 w-4" />
+                </button>
+                {startPullingButton}
+              </div>
             )}
 
             {authInitialized && !isAuthenticated && <div className="flex min-h-[44px] min-w-[132px] items-center lg:hidden">{startPullingButton}</div>}
@@ -603,18 +621,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
         aria-modal="true"
         aria-label="Mobile navigation menu"
       >
-        <div className="sticky top-0 z-10 -mx-4 mb-4 flex items-center justify-between border-b border-white/10 bg-[#090f16]/95 px-4 pb-3 pt-1 backdrop-blur-2xl">
-          <span className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">Menu</span>
-          <button
-            type="button"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
-            aria-label="Close mobile menu"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="flex flex-col gap-6 pb-4">
+        <div className="flex flex-col gap-6 pb-4 pt-1">
           {isAuthenticated ? (
             <div className="grid grid-cols-2 gap-3">
               <>
@@ -622,7 +629,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                 <button onClick={() => { playSound('click'); setIsMobileMenuOpen(false); logout(); }} className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] py-3.5 font-bold text-white transition-colors hover:bg-white/[0.07]"><LogOut className="h-5 w-5 text-neutral-400" />Log out</button>
               </>
             </div>
-          ) : null}
+          ) : (
+            <button onClick={handleSignIn} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-300/20 bg-[#205DD7]/85 py-3.5 font-bold text-white shadow-[0_10px_30px_rgba(32,93,215,0.20)] transition-all hover:bg-[#205DD7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70">
+              <LogIn className="h-5 w-5" />
+              Sign in
+            </button>
+          )}
 
           {user.isAdmin && (
             <button onClick={() => navigate('ADMIN')} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-400/25 bg-blue-500/10 py-3 font-bold text-blue-200 transition-colors hover:bg-blue-500/20">
