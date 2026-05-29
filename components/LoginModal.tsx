@@ -14,10 +14,11 @@ const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
 const EMAIL_CONFIRMATION_MESSAGE = 'Check your email to confirm your account before signing in.';
 
 export const LoginModal: React.FC = () => {
-  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
+  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
-  const registerBonusImage = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
+  const fallbackRegisterBonusImage = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
+  const registerBonusImage = stripeSettings.boxCatalogHeroImageUrl || fallbackRegisterBonusImage;
 
   // Form State
   const [email, setEmail] = useState('');
@@ -341,14 +342,15 @@ export const LoginModal: React.FC = () => {
           </div>
 
           {mode === 'register' && !isLinkingGoogle && (
-            <div className="mb-4 rounded-2xl border border-blue-400/20 bg-gradient-to-b from-[#205DD7]/10 via-[#18181b] to-[#101014] p-4 text-center">
-              <img
-                src={registerBonusImage}
-                alt="Free signup box"
-                className="mx-auto h-28 w-auto object-contain sm:h-32"
-              />
-              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-blue-300">Free signup bonus</p>
-              <p className="mt-1 text-sm text-neutral-300">Register to claim your free box.</p>
+            <div className="relative mb-4 mt-10 overflow-visible rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] via-[#18181b] to-[#101014] px-4 pb-4 pt-16 text-center sm:mt-12 sm:pt-20">
+              <div className="pointer-events-none absolute left-1/2 top-0 z-10 h-36 w-[min(84vw,260px)] -translate-x-1/2 -translate-y-1/2 sm:h-44 sm:w-[320px]">
+                <img
+                  src={registerBonusImage}
+                  alt="Free signup box"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <p className="text-sm text-neutral-300">Register to claim your free box.</p>
             </div>
           )}
 
