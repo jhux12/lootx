@@ -4,22 +4,30 @@ import { useGame } from '../context/GameContext';
 import { setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { trackEvent } from '../utils/trackEvent';
 import { subscribeHomepageConfig } from '../utils/homepageShowcase';
+import { getBoxTags } from '../utils/boxTags';
 
 const PRIZE_SKELETON_COUNT = 6;
 
 export const SpinLandingPage: React.FC = () => {
-  const { boxes, items, isAuthenticated, user, openAuthModal, setView } = useGame();
+  const { boxes, isAuthenticated, user, openAuthModal, setView } = useGame();
   const [trustImageUrl, setTrustImageUrl] = useState('');
 
   const freeSignupBox = useMemo(() => boxes.find((box) => box.isDaily) ?? null, [boxes]);
   const hasClaimedFreeBox = Boolean(user.lastFreeBoxClaim);
 
-  const topItems = useMemo(
+  const showcaseItems = useMemo(
     () =>
-      [...items]
+      boxes
+        .filter((box) => getBoxTags(box).includes('pokemon'))
+        .flatMap((box) =>
+          box.items.map((item) => ({
+            ...item,
+            showcaseId: `${box.id}-${item.id}`
+          }))
+        )
         .sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))
         .slice(0, 12),
-    [items]
+    [boxes]
   );
 
   const handleGetFreeBox = () => {
@@ -50,7 +58,7 @@ export const SpinLandingPage: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  const hasPrizeItems = topItems.length > 0;
+  const hasPrizeItems = showcaseItems.length > 0;
 
   return (
     <section className="relative min-h-[calc(100vh-64px)] overflow-hidden bg-[#1b2024] px-4 py-8 text-white sm:px-6 sm:py-10">
@@ -70,9 +78,9 @@ export const SpinLandingPage: React.FC = () => {
             <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#1b2024] to-transparent" />
             <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 pt-1 sm:gap-4">
               {hasPrizeItems
-                ? topItems.map((item) => (
+                ? showcaseItems.map((item) => (
                     <article
-                      key={item.id}
+                      key={item.showcaseId}
                       className="group min-w-[136px] snap-start rounded-2xl border border-white/5 bg-[#252c32] p-3 shadow-[0_10px_26px_rgba(5,8,12,0.18)] transition hover:-translate-y-1 hover:border-slate-400/35 hover:shadow-[0_14px_30px_rgba(5,8,12,0.32)] sm:min-w-[164px]"
                     >
                       <div className="flex h-24 items-center justify-center rounded-xl bg-black/20 p-2 sm:h-28">
@@ -124,13 +132,13 @@ export const SpinLandingPage: React.FC = () => {
 
           <p className="mt-3 text-xs text-slate-300 sm:text-sm">No purchase required • Real items • Instant pull</p>
 
-          <div className="mx-auto mt-4 max-w-xl rounded-xl border border-white/[0.06] bg-[#252c32] px-4 py-2 text-xs text-slate-300 sm:text-sm">
-            {hasClaimedFreeBox
-              ? 'You already claimed your signup free box on this account.'
-              : freeSignupBox
-                ? 'Your free signup box is waiting — tap open my free box to continue.'
+          {(hasClaimedFreeBox || !freeSignupBox) && (
+            <div className="mx-auto mt-4 max-w-xl rounded-xl border border-white/[0.06] bg-[#252c32] px-4 py-2 text-xs text-slate-300 sm:text-sm">
+              {hasClaimedFreeBox
+                ? 'You already claimed your signup free box on this account.'
                 : 'No free signup box is configured yet. Please check back shortly.'}
-          </div>
+            </div>
+          )}
         </section>
 
         <section className="rounded-2xl border border-white/5 bg-[#20262b] p-4 shadow-[0_14px_38px_rgba(5,8,12,0.18)] sm:p-6">
