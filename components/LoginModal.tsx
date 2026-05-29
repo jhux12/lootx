@@ -342,13 +342,15 @@ export const LoginModal: React.FC = () => {
           </div>
 
           {mode === 'register' && !isLinkingGoogle && (
-            <div className="mb-4 rounded-2xl border border-blue-400/20 bg-gradient-to-b from-[#205DD7]/10 via-[#18181b] to-[#101014] p-4 text-center">
-              <img
-                src={registerBonusImage}
-                alt="Free signup box"
-                className="mx-auto h-24 max-w-full object-contain sm:h-32"
-              />
-              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-blue-300">Free signup bonus</p>
+            <div className="relative mb-4 mt-10 overflow-visible rounded-2xl border border-blue-400/20 bg-gradient-to-b from-[#205DD7]/10 via-[#18181b] to-[#101014] px-4 pb-4 pt-16 text-center sm:mt-12 sm:pt-20">
+              <div className="pointer-events-none absolute left-1/2 top-0 z-10 h-36 w-[min(84vw,260px)] -translate-x-1/2 -translate-y-1/2 sm:h-44 sm:w-[320px]">
+                <img
+                  src={registerBonusImage}
+                  alt="Free signup box"
+                  className="h-full w-full object-contain drop-shadow-[0_18px_30px_rgba(32,93,215,0.35)]"
+                />
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-300">Free signup bonus</p>
               <p className="mt-1 text-sm text-neutral-300">Register to claim your free box.</p>
             </div>
           )}

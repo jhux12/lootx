@@ -50,12 +50,12 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
         aria-labelledby="promo-popup-title"
       >
         <div className="relative overflow-visible rounded-[28px] border border-white/10 bg-gradient-to-br from-[#111a3a] via-[#0b1020] to-[#050811] shadow-[0_28px_70px_rgba(5,8,17,0.75)]">
-          <div className="absolute left-1/2 top-[-80px] h-44 w-44 -translate-x-1/2 rounded-full bg-blue-500/35 blur-3xl sm:top-[-100px]" />
-          <div className="pointer-events-none absolute left-1/2 top-[-110px] z-30 w-[230px] -translate-x-1/2 sm:top-[-140px] sm:w-[280px]">
+          <div className="absolute left-1/2 top-[-92px] h-52 w-52 -translate-x-1/2 rounded-full bg-blue-500/35 blur-3xl sm:top-[-118px] sm:h-60 sm:w-60" />
+          <div className="pointer-events-none absolute left-1/2 top-[-128px] z-30 w-[min(78vw,260px)] -translate-x-1/2 sm:top-[-165px] sm:w-[330px]">
             <img src={popupImage} alt="Mystery box promotion" className="aspect-square h-auto w-full object-contain drop-shadow-[0_18px_30px_rgba(20,10,60,0.45)]" loading="lazy" decoding="async" width={560} height={560} style={{ aspectRatio: "1 / 1" }} />
           </div>
 
-          <div className="relative z-20 overflow-hidden rounded-[24px] bg-gradient-to-b from-[#101a34] via-[#0b1020] to-[#050811] px-6 pb-8 pt-20 sm:px-10 sm:pb-10 sm:pt-24">
+          <div className="relative z-20 overflow-hidden rounded-[24px] bg-gradient-to-b from-[#101a34] via-[#0b1020] to-[#050811] px-6 pb-8 pt-24 sm:px-10 sm:pb-10 sm:pt-28">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-transparent via-[#0b1020]/70 to-[#0b1020]" />
 
             <button
