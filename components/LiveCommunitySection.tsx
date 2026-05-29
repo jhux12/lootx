@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Timestamp, collection, doc, getDoc, increment, limit, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
-import { getDownloadURL, ref } from 'firebase/storage';
+import { Timestamp, addDoc, collection, doc, getDoc, increment, limit, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from '../firebase';
+import { useGame } from '../context/GameContext';
 
 export type LiveCommunityStory = {
   id: string;
@@ -75,6 +76,7 @@ const formatStoryTimeLabel = (story: LiveCommunityStory): string => {
   return `${days}d`;
 };
 export const LiveCommunitySection: React.FC = () => {
+  const { isAuthenticated, openAuthModal, user } = useGame();
   const sectionRef = useRef<HTMLElement | null>(null);
   const [stories, setStories] = useState<LiveCommunityStory[]>([]);
   const [shouldConnectRealtime, setShouldConnectRealtime] = useState(false);
@@ -83,6 +85,12 @@ export const LiveCommunitySection: React.FC = () => {
   const holdRef = useRef(false);
   const viewedStoryIdsRef = useRef<Set<string>>(new Set());
   const [brokenStoryIds, setBrokenStoryIds] = useState<Set<string>>(new Set());
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [submitCaption, setSubmitCaption] = useState('');
+  const [submitFile, setSubmitFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -189,12 +197,87 @@ export const LiveCommunitySection: React.FC = () => {
     }
   };
 
+  const resetSubmitState = () => {
+    setSubmitError(null);
+    setSubmitSuccess(null);
+    setSubmitCaption('');
+    setSubmitFile(null);
+  };
+
+  const handleSubmitStory = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isSubmitting) return;
+    if (!isAuthenticated) return setSubmitError('Please sign in to submit a story.');
+    const resolvedUsername = String(user.username || user.displayName || user.name || '').trim();
+    if (!resolvedUsername) return setSubmitError('We could not find your username. Please update your profile first.');
+    if (!submitFile) return setSubmitError('Please upload an image or short video.');
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(null);
+
+    try {
+      const safeName = submitFile.name.replace(/\s+/g, '-').toLowerCase();
+      const path = `live-community-submissions/${Date.now()}-${safeName}`;
+      const uploadRef = ref(storage, path);
+      await uploadBytes(uploadRef, submitFile);
+      const mediaUrl = await getDownloadURL(uploadRef);
+      const mediaType: 'image' | 'video' = submitFile.type.startsWith('video') ? 'video' : 'image';
+
+      await addDoc(collection(db, 'liveCommunityStories'), {
+        username: resolvedUsername,
+        caption: submitCaption.trim(),
+        badgeText: submitCaption.trim() || 'Community submission',
+        type: 'community submission',
+        rarity: 'rare',
+        showViewCount: true,
+        featured: false,
+        approved: false,
+        status: 'pending',
+        mediaUrl,
+        mediaType,
+        storagePath: path,
+        createdAt: serverTimestamp(),
+        views: 0,
+        clicks: 0,
+        hidden: false,
+        order: 9999,
+        source: 'user_submission'
+      });
+
+      setSubmitSuccess('Thanks! Your story was submitted and is now pending admin approval.');
+      setSubmitCaption('');
+      setSubmitFile(null);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to submit story right now.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return <section ref={sectionRef} className="space-y-4 min-h-[120px]">
     <div className="">
       <div className="flex justify-end px-1 py-1">
         <button className="text-sm font-semibold text-slate-300 hover:text-white">View All</button>
       </div>
       <div className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto px-0 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:auto]">
+        <button
+          type="button"
+          onClick={() => {
+            if (!isAuthenticated) {
+              openAuthModal('login');
+              return;
+            }
+            setShowSubmitModal(true);
+            resetSubmitState();
+          }}
+          className="group flex w-[86px] shrink-0 snap-start flex-col items-center text-center"
+          aria-label="Add your story"
+        >
+          <div className="relative flex h-[74px] w-[74px] items-center justify-center rounded-full border-2 border-dashed border-white/50 bg-white/[0.03] text-white">
+            <div className="absolute inset-[4px] rounded-full border border-white/20" />
+            <span className="relative text-3xl font-semibold leading-none">+</span>
+          </div>
+        </button>
         {stories.length ? stories.map((story, index) => (
           <button
             key={story.id}
@@ -249,6 +332,45 @@ export const LiveCommunitySection: React.FC = () => {
               }}
             />
           </div>
+        </div>
+      </div>
+    )}
+
+    {showSubmitModal && (
+      <div className="fixed inset-0 z-[230] flex items-end justify-center bg-black/70 p-3 sm:items-center" onClick={() => setShowSubmitModal(false)}>
+        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0f1320] p-4 text-white" onClick={(e) => e.stopPropagation()}>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-base font-semibold">Submit your story</h3>
+            <button type="button" className="rounded p-1 text-lg leading-none text-slate-300 hover:text-white" onClick={() => setShowSubmitModal(false)}>✕</button>
+          </div>
+          <p className="mb-3 text-xs text-slate-300">Uploads are reviewed by admins before they appear in live stories.</p>
+          <form className="space-y-3" onSubmit={handleSubmitStory}>
+            <div className="rounded-lg border border-white/10 bg-[#0b0f18] px-3 py-2 text-sm text-slate-200">
+              Posting as <span className="font-semibold text-white">{String(user.username || user.displayName || user.name || 'Unknown user')}</span>
+            </div>
+            <input
+              className="w-full rounded-lg border border-white/10 bg-[#0b0f18] px-3 py-2 text-sm text-white placeholder:text-slate-500"
+              placeholder="Caption (optional)"
+              value={submitCaption}
+              maxLength={120}
+              onChange={(e) => setSubmitCaption(e.target.value)}
+            />
+            <input
+              type="file"
+              accept="image/*,video/*"
+              className="block w-full text-xs text-slate-300 file:mr-3 file:rounded file:border-0 file:bg-slate-700 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white"
+              onChange={(e) => setSubmitFile(e.target.files?.[0] ?? null)}
+            />
+            {submitError && <p className="text-xs text-red-300">{submitError}</p>}
+            {submitSuccess && <p className="text-xs text-emerald-300">{submitSuccess}</p>}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full rounded-lg bg-brand-blue px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit for approval'}
+            </button>
+          </form>
         </div>
       </div>
     )}
