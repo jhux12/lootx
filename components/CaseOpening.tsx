@@ -2072,8 +2072,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="relative z-20 mt-4 flex flex-col items-stretch justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:flex-row sm:items-start sm:px-4">
-                 <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-center">
+            <div className="relative z-20 mt-4 flex flex-col items-stretch justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:items-center sm:px-4">
+              <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-start">
+                <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-center">
                  <button 
                     onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
@@ -2115,19 +2116,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                       )}
                     </span>
                  </button>
-                 {expectedValue !== null && (
-                  <div className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-[11px] font-semibold text-gray-300 sm:text-xs">
-                    <span className="uppercase tracking-[0.14em] text-gray-500">Expected Value</span>
-                    <CoinAmount
-                      amount={expectedValue}
-                      formatOptions={{ maximumFractionDigits: 0 }}
-                      animated={false}
-                      className="text-white"
-                      iconClassName="h-3.5 w-3.5"
-                    />
-                  </div>
-                 )}
-                 </div>
+                </div>
                 {!isFree && (
                   <div className="flex w-full items-start justify-center gap-2 sm:w-auto">
                     <div className="flex flex-1 flex-col gap-2 sm:flex-none">
@@ -2138,18 +2127,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     >
                       Demo Spin
                     </button>
-                    {expectedValue !== null && (
-                      <div className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-[11px] font-semibold text-gray-300 sm:text-xs">
-                        <span className="uppercase tracking-[0.14em] text-gray-500">Expected Value</span>
-                        <CoinAmount
-                          amount={expectedValue}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          animated={false}
-                          className="text-white"
-                          iconClassName="h-3.5 w-3.5"
-                        />
-                      </div>
-                    )}
                     </div>
                     <button
                       type="button"
@@ -2165,6 +2142,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </button>
                   </div>
                 )}
+              </div>
+              {expectedValue !== null && (
+                <div className="mx-auto flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-[11px] font-semibold text-gray-300 sm:w-auto sm:text-xs">
+                  <span className="uppercase tracking-[0.14em] text-gray-500">Average Pull Value</span>
+                  <CoinAmount
+                    amount={expectedValue}
+                    formatOptions={{ maximumFractionDigits: 0 }}
+                    animated={false}
+                    className="text-white"
+                    iconClassName="h-3.5 w-3.5"
+                  />
+                </div>
+              )}
             </div>
             {spinFeedbackMessage && (
               <div className="px-2 pb-4">
