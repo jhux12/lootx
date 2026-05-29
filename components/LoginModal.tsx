@@ -350,8 +350,7 @@ export const LoginModal: React.FC = () => {
                   className="h-full w-full object-contain"
                 />
               </div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-300">Free signup bonus</p>
-              <p className="mt-1 text-sm text-neutral-300">Register to claim your free box.</p>
+              <p className="text-sm text-neutral-300">Register to claim your free box.</p>
             </div>
           )}
 
