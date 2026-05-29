@@ -2,8 +2,10 @@ import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, u
 import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 import {
   Flame,
+  AtSign,
   ChevronDown,
   HelpCircle,
+  Facebook,
   Instagram,
   LifeBuoy,
   LogIn,
@@ -19,6 +21,7 @@ import {
   Clock3,
   ShieldCheck,
   Trophy,
+  Twitter,
   User as UserIcon,
   Users,
   X
@@ -103,10 +106,9 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
   const [isFreeBoxTooltipDismissed, setIsFreeBoxTooltipDismissed] = useState(false);
   const [openMobileSections, setOpenMobileSections] = useState({
     games: true,
-    rewards: true,
+    rewards: false,
     learn: false,
-    support: false,
-    social: false
+    support: false
   });
   const headerRef = useRef<HTMLElement | null>(null);
   const gamesMenuRef = useRef<HTMLDivElement | null>(null);
@@ -569,7 +571,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
               </div>
             )}
 
-            {authInitialized && !isAuthenticated && <div className="flex min-h-[44px] min-w-[132px] items-center lg:hidden">{startPullingButton}</div>}
+            {authInitialized && !isAuthenticated && (
+              <div className="flex min-h-[44px] min-w-[132px] items-center gap-2 lg:hidden">
+                <button
+                  type="button"
+                  onClick={handleSignIn}
+                  className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-[#273044]/80 bg-[#0e1420]/78 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-blue-300/35 hover:bg-[#141d2d] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60"
+                  aria-label="Sign in"
+                >
+                  <LogIn className="h-4 w-4" />
+                </button>
+                {startPullingButton}
+              </div>
+            )}
 
             {authInitialized && isAuthenticated && (
               <div className="flex min-h-[40px] min-w-0 items-center gap-1.5 lg:hidden">
@@ -723,34 +737,53 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
             ) : null}
           </section>
 
-          <section className="mt-2 flex flex-col items-center gap-6">
-            <button type="button" onClick={() => toggleMobileSection('social')} className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:bg-white/[0.07]">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Social Media</h3>
-              <ChevronDown className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.social ? 'rotate-180' : ''}`} />
-            </button>
-            {openMobileSections.social ? (
-              <>
-                <div className="flex w-full justify-center text-white">
-                  <a
-                    href="https://www.instagram.com/pullz.gg/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Follow Pullz.gg on Instagram"
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] transition-colors hover:border-cyan-300/25 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-                  >
-                    <Instagram className="h-6 w-6" />
-                  </a>
-                </div>
-                <div className="flex flex-col items-center gap-3 text-xs font-bold text-neutral-500">
-                  <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('TERMS')} className="hover:text-white">Terms of Service</button>
-                    <span>|</span>
-                    <button onClick={() => navigate('PRIVACY')} className="hover:text-white">Privacy Policy</button>
-                  </div>
-                  <button disabled className="cursor-not-allowed opacity-70">AML &amp; KYC Policy</button>
-                </div>
-              </>
-            ) : null}
+          <section className="mt-2 flex flex-col items-center gap-5 border-t border-white/10 pt-5">
+            <div className="grid w-full grid-cols-4 gap-2 text-white">
+              <a
+                href="https://www.instagram.com/pullz.gg/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Pullz.gg on Instagram"
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] transition-colors hover:border-cyan-300/25 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              >
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.facebook.com/pullzgg"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Pullz.gg on Facebook"
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] transition-colors hover:border-cyan-300/25 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              >
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a
+                href="https://x.com/pullzgg"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Pullz.gg on X"
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] transition-colors hover:border-cyan-300/25 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              >
+                <Twitter className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.threads.com/@pullz.gg"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Pullz.gg on Threads"
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] transition-colors hover:border-cyan-300/25 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              >
+                <AtSign className="h-5 w-5" />
+              </a>
+            </div>
+            <div className="flex flex-col items-center gap-3 text-xs font-bold text-neutral-500">
+              <div className="flex items-center gap-4">
+                <button onClick={() => navigate('TERMS')} className="hover:text-white">Terms of Service</button>
+                <span>|</span>
+                <button onClick={() => navigate('PRIVACY')} className="hover:text-white">Privacy Policy</button>
+              </div>
+              <button disabled className="cursor-not-allowed opacity-70">AML &amp; KYC Policy</button>
+            </div>
           </section>
         </div>
       </div>
