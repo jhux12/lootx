@@ -51,7 +51,7 @@ const drawerCardClass =
   'flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[0.075] active:translate-y-0';
 
 const desktopNavButtonBaseClass =
-  'group relative flex h-[56px] items-center justify-center rounded-[12px] border px-4 text-[15px] font-semibold xl:px-7 xl:text-[17px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b12]';
+  'group relative flex h-11 items-center justify-center rounded-[11px] border px-4 text-[14px] font-semibold xl:px-6 xl:text-[15px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b12]';
 
 const desktopNavButtonClass = `${desktopNavButtonBaseClass} border-transparent text-white/78 hover:border-white/10 hover:bg-[#101827]/70 hover:text-white`;
 
@@ -64,7 +64,7 @@ const desktopMenuItemClass =
   'flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 hover:bg-white/[0.07] hover:text-white';
 
 const utilityButtonClass =
-  'relative inline-flex h-12 w-12 items-center justify-center rounded-[14px] border border-[#273044]/80 bg-[#0e1420]/78 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-blue-300/35 hover:bg-[#141d2d] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60';
+  'relative inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-[#273044]/80 bg-[#0e1420]/78 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-blue-300/35 hover:bg-[#141d2d] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60';
 
 type RewardsSettingsData = Record<string, unknown> | undefined;
 
@@ -329,11 +329,11 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
         playSound('click');
         openAuthModal('register');
       }}
-      className="group relative inline-flex h-12 shrink-0 items-center gap-3 overflow-hidden rounded-[12px] bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] px-5 text-[15px] font-bold text-white shadow-[0_14px_34px_rgba(79,127,244,0.25)] outline-none transition-transform hover:scale-[1.01] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99] sm:px-6 lg:h-14 lg:min-w-[238px] lg:justify-center lg:rounded-[13px] lg:text-[18px]"
+      className="group relative inline-flex h-10 shrink-0 items-center gap-2 overflow-hidden rounded-[10px] bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] px-4 text-[13px] font-bold text-white shadow-[0_14px_34px_rgba(79,127,244,0.25)] outline-none transition-transform hover:scale-[1.01] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99] sm:px-5 lg:h-11 lg:min-w-[188px] lg:justify-center lg:rounded-[11px] lg:text-[15px]"
       aria-label="Open Free Box"
     >
       <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.28),transparent_32%)] opacity-80" />
-      <Box className="relative z-10 h-5 w-5 stroke-[2.1] lg:h-6 lg:w-6" aria-hidden="true" />
+      <Box className="relative z-10 h-4 w-4 stroke-[2.1] lg:h-5 lg:w-5" aria-hidden="true" />
       <span className="relative z-10 whitespace-nowrap">Open Free Box</span>
     </button>
   ), [openAuthModal, playSound]);
@@ -372,21 +372,21 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
     <div className="relative z-[140]">
       <header
         ref={headerRef}
-        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/10 bg-[#05080d]/95 shadow-[0_12px_50px_rgba(0,0,0,0.36)] backdrop-blur-2xl lg:border-b-0 lg:bg-transparent lg:px-4 lg:py-3 lg:shadow-none`}
+        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/10 bg-[#05080d]/95 shadow-[0_12px_50px_rgba(0,0,0,0.36)] backdrop-blur-2xl lg:border-b-0 lg:bg-transparent lg:px-4 lg:py-2 lg:shadow-none`}
       >
         <div className="pt-[env(safe-area-inset-top,0px)]">
-          <nav className="mx-auto flex h-[62px] max-w-7xl items-center justify-between px-3 sm:h-[66px] sm:px-5 lg:h-[88px] lg:max-w-none lg:rounded-[14px] lg:border lg:border-[#20283a]/95 lg:bg-[#080d16]/76 lg:px-6 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_58px_rgba(0,0,0,0.24)] xl:px-12">
-            <div className="flex min-w-0 items-center gap-3 lg:gap-x-4 xl:gap-x-6">
+          <nav className="mx-auto flex h-[62px] max-w-7xl items-center justify-between px-3 sm:h-[66px] sm:px-5 lg:h-[72px] lg:max-w-none lg:rounded-[13px] lg:border lg:border-[#20283a]/95 lg:bg-[#080d16]/76 lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_58px_rgba(0,0,0,0.24)] xl:px-9">
+            <div className="flex min-w-0 items-center gap-3 lg:gap-x-4 xl:gap-x-5">
             <button
               type="button"
               onClick={() => navigate('HOME')}
               className="inline-flex shrink-0 items-center rounded-2xl p-1 transition-all duration-200 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 lg:-ml-1"
               aria-label="Go home"
             >
-              <BrandLockup showText={false} logoClassName="h-9 w-auto sm:h-10 lg:h-[54px]" />
+              <BrandLockup showText={false} logoClassName="h-9 w-auto sm:h-10 lg:h-[42px]" />
             </button>
 
-            <div className="hidden items-center gap-4 lg:flex xl:gap-10">
+            <div className="hidden items-center gap-3 lg:flex xl:gap-7">
               <div
                 ref={gamesMenuRef}
                 className="relative"
@@ -467,30 +467,30 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
             </div>
           </div>
 
-          <div className="flex min-h-[42px] min-w-[132px] shrink-0 items-center justify-end gap-2 sm:min-w-[148px] sm:gap-3 lg:min-w-0 xl:min-w-[610px]">
+          <div className="flex min-h-[42px] min-w-[132px] shrink-0 items-center justify-end gap-2 sm:min-w-[148px] sm:gap-3 lg:min-w-0 xl:min-w-[490px]">
             {!authInitialized ? (
               <HeaderSkeleton />
             ) : isAuthenticated ? (
               <>
-                <div className="hidden items-center gap-3 lg:flex xl:gap-5">
-                  <div className="flex h-14 min-w-[102px] xl:min-w-[134px] items-center justify-center gap-3 rounded-[14px] border border-[#263046]/80 bg-[#0c121e]/72 px-4">
-                    <img src={XP_ICON} alt="XP" className="h-6 w-6 object-contain" width={24} height={24} />
-                    <span className="min-w-[44px] text-[17px] xl:min-w-[58px] xl:text-[19px] font-semibold tabular-nums text-white"><AnimatedNumber value={targetXp} /></span>
+                <div className="hidden items-center gap-2 lg:flex xl:gap-3">
+                  <div className="flex h-11 min-w-[88px] xl:min-w-[112px] items-center justify-center gap-2 rounded-[12px] border border-[#263046]/80 bg-[#0c121e]/72 px-4">
+                    <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" width={24} height={24} />
+                    <span className="min-w-[38px] text-[14px] xl:min-w-[48px] xl:text-[15px] font-semibold tabular-nums text-white"><AnimatedNumber value={targetXp} /></span>
                   </div>
-                  <div className={`relative min-w-[146px] xl:min-w-[164px] shrink-0 overflow-hidden rounded-[14px] border border-[#263046]/80 bg-[#0c121e]/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${balanceTone === 'up' ? 'ring-1 ring-emerald-400/35' : balanceTone === 'down' ? 'ring-1 ring-red-400/35' : ''}`}>
+                  <div className={`relative min-w-[126px] xl:min-w-[142px] shrink-0 overflow-hidden rounded-[12px] border border-[#263046]/80 bg-[#0c121e]/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${balanceTone === 'up' ? 'ring-1 ring-emerald-400/35' : balanceTone === 'down' ? 'ring-1 ring-red-400/35' : ''}`}>
                     <span
                       aria-hidden="true"
                       className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(99,102,241,0.12),rgba(59,130,246,0.08),rgba(255,255,255,0.015))]"
                     />
-                    <div className="relative z-10 flex h-14 items-center justify-between gap-2 px-3 pr-2 xl:gap-3 xl:px-4">
-                      <CoinAmount amount={balance} className="min-w-[88px] text-[17px] xl:min-w-[104px] xl:text-[19px] font-semibold leading-none tracking-tight text-white" iconClassName="h-6 w-6" textClassName="min-w-[62px] xl:min-w-[74px] text-right tabular-nums" formatOptions={{ maximumFractionDigits: 0 }} />
+                    <div className="relative z-10 flex h-11 items-center justify-between gap-2 px-3 pr-2 xl:gap-3 xl:px-4">
+                      <CoinAmount amount={balance} className="min-w-[76px] text-[14px] xl:min-w-[90px] xl:text-[15px] font-semibold leading-none tracking-tight text-white" iconClassName="h-5 w-5" textClassName="min-w-[52px] xl:min-w-[62px] text-right tabular-nums" formatOptions={{ maximumFractionDigits: 0 }} />
                       <button
                         type="button"
                         onClick={openTopUp}
-                        className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-white/10 bg-[#121a28] text-white shadow-sm transition-all duration-200 hover:bg-[#182337] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                        className="flex h-8 w-8 items-center justify-center rounded-[10px] border border-white/10 bg-[#121a28] text-white shadow-sm transition-all duration-200 hover:bg-[#182337] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                         aria-label="Top up"
                       >
-                        <Plus className="h-6 w-6" />
+                        <Plus className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
@@ -503,24 +503,24 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                     className={utilityButtonClass}
                     aria-label="Open notifications and activity"
                   >
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 ? <span className="absolute right-2 top-1.5 h-2.5 w-2.5 rounded-full bg-[#5ba7ff]" /> : null}
+                    <Bell className="h-4 w-4" />
+                    {unreadCount > 0 ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#5ba7ff]" /> : null}
                   </button>
                 </div>
 
-                <div className="hidden items-center gap-3 lg:flex xl:gap-4">
+                <div className="hidden items-center gap-2 lg:flex xl:gap-3">
                   {user.isAdmin && (
-                    <button onClick={() => navigate('ADMIN')} className="hidden h-12 items-center gap-2 rounded-[14px] border border-blue-400/20 bg-blue-500/10 px-3 text-xs font-bold uppercase tracking-wide text-blue-200 transition-all duration-200 hover:border-blue-300/40 hover:bg-[#205DD7] hover:text-white xl:flex">
+                    <button onClick={() => navigate('ADMIN')} className="hidden h-10 items-center gap-2 rounded-[12px] border border-blue-400/20 bg-blue-500/10 px-3 text-xs font-bold uppercase tracking-wide text-blue-200 transition-all duration-200 hover:border-blue-300/40 hover:bg-[#205DD7] hover:text-white xl:flex">
                       <ShieldCheck className="h-3.5 w-3.5" />
                       Admin
                     </button>
                   )}
-                  <span className="h-12 w-px bg-[#263046]/85" aria-hidden="true" />
+                  <span className="h-10 w-px bg-[#263046]/85" aria-hidden="true" />
                   <div className="relative flex items-center">
-                    <button type="button" onClick={() => navigate('PROFILE')} className="flex h-14 items-center gap-3 rounded-[16px] px-1.5 pr-2 transition-all duration-200 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60">
-                      <UserAvatar user={user} className="h-11 w-11 rounded-full object-cover" initialsClassName="text-sm" />
-                      <span className="hidden max-w-[92px] truncate text-[17px] font-semibold text-white/92 xl:inline xl:max-w-[120px]">{resolvedDisplayName}</span>
-                      <ChevronDown className="hidden h-5 w-5 text-white/68 xl:block" aria-hidden="true" />
+                    <button type="button" onClick={() => navigate('PROFILE')} className="flex h-11 items-center gap-2 rounded-[12px] px-1.5 pr-2 transition-all duration-200 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60">
+                      <UserAvatar user={user} className="h-9 w-9 rounded-full object-cover" initialsClassName="text-sm" />
+                      <span className="hidden max-w-[82px] truncate text-[15px] font-semibold text-white/92 xl:inline xl:max-w-[120px]">{resolvedDisplayName}</span>
+                      <ChevronDown className="hidden h-4 w-4 text-white/68 xl:block" aria-hidden="true" />
                     </button>
                     {showFreeBoxTooltip ? (
                       <div className="absolute left-1/2 top-full z-30 mt-2 w-max -translate-x-1/2 rounded-md border border-emerald-400/35 bg-[#0f1517] px-2 py-1 text-[10px] font-semibold text-emerald-200 shadow-lg">
@@ -543,7 +543,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                     className={utilityButtonClass}
                     aria-label="Log out"
                   >
-                    <LogOut className="h-5 w-5" />
+                    <LogOut className="h-4 w-4" />
                   </button>
                 </div>
               </>
