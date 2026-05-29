@@ -57,7 +57,7 @@ const desktopNavActiveClass =
   'border-[#1b3153]/80 bg-[#0d1d34]/82 text-[#9fc6ff] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_8px_22px_rgba(18,67,132,0.12)] hover:text-[#b7d5ff]';
 
 const desktopMenuPanelClass =
-  'absolute left-0 top-full mt-3 rounded-2xl border border-white/10 bg-[#101820]/95 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(34,211,238,0.05)] backdrop-blur-2xl transition-all duration-200';
+  'absolute left-0 top-full z-50 mt-3 rounded-2xl border border-white/10 bg-[#101820]/95 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(34,211,238,0.05)] backdrop-blur-2xl transition-all duration-200';
 
 const desktopMenuItemClass =
   'flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 hover:bg-white/[0.07] hover:text-white';
@@ -101,7 +101,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
   const [isFreeBoxTooltipDismissed, setIsFreeBoxTooltipDismissed] = useState(false);
   const [openMobileSections, setOpenMobileSections] = useState({
     games: true,
-    rewards: false,
+    rewards: true,
     learn: false,
     support: false,
     social: false
