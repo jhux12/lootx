@@ -339,6 +339,7 @@ export const AdminPanel: React.FC = () => {
       name: '',
       coins: 0,
       bonusCoins: 0,
+      firstDepositBonusCoins: 0,
       defaultSelected: false,
       imageUrl: '',
       displayPrice: '',
@@ -1602,6 +1603,7 @@ export const AdminPanel: React.FC = () => {
           name: '',
           coins: 0,
           bonusCoins: 0,
+          firstDepositBonusCoins: 0,
           defaultSelected: false,
           imageUrl: '',
           displayPrice: '',
@@ -1629,6 +1631,7 @@ export const AdminPanel: React.FC = () => {
       const name = packageDraft.name?.trim() ?? '';
       const coins = Number(packageDraft.coins ?? 0);
       const bonusCoins = Number(packageDraft.bonusCoins ?? 0);
+      const firstDepositBonusCoins = Number(packageDraft.firstDepositBonusCoins ?? 0);
       const imageUrl = packageDraft.imageUrl?.trim() ?? '';
       const displayPrice = packageDraft.displayPrice?.trim() ?? '';
       const stripePriceId = packageDraft.stripePriceId?.trim() ?? '';
@@ -1647,6 +1650,10 @@ export const AdminPanel: React.FC = () => {
       }
       if (!Number.isFinite(bonusCoins) || bonusCoins < 0 || !Number.isInteger(bonusCoins)) {
           setPackageError('Bonus coins must be a whole number greater than or equal to 0.');
+          return;
+      }
+      if (!Number.isFinite(firstDepositBonusCoins) || firstDepositBonusCoins < 0 || !Number.isInteger(firstDepositBonusCoins)) {
+          setPackageError('First deposit bonus coins must be a whole number greater than or equal to 0.');
           return;
       }
       if (!displayPrice) {
@@ -1670,6 +1677,7 @@ export const AdminPanel: React.FC = () => {
                   name,
                   coins,
                   bonusCoins,
+                  firstDepositBonusCoins,
                   defaultSelected,
                   imageUrl,
                   displayPrice,
@@ -1683,6 +1691,7 @@ export const AdminPanel: React.FC = () => {
                   name,
                   coins,
                   bonusCoins,
+                  firstDepositBonusCoins,
                   defaultSelected,
                   imageUrl,
                   displayPrice,
@@ -4363,6 +4372,7 @@ export const AdminPanel: React.FC = () => {
                                         <th className="px-4 py-3">Name</th>
                                         <th className="px-4 py-3">Base Coins</th>
                                         <th className="px-4 py-3">Bonus Coins</th>
+                                        <th className="px-4 py-3">1st Deposit Bonus</th>
                                         <th className="px-4 py-3">Total</th>
                                         <th className="px-4 py-3">Display Price</th>
                                         <th className="px-4 py-3">Image URL</th>
@@ -4390,6 +4400,9 @@ export const AdminPanel: React.FC = () => {
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-300">
                                                     {(pkg.bonusCoins ?? 0).toLocaleString()}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-300">
+                                                    {(pkg.firstDepositBonusCoins ?? 0).toLocaleString()}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <CoinAmount
@@ -4459,7 +4472,7 @@ export const AdminPanel: React.FC = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={11} className="px-4 py-6 text-center text-gray-500 text-sm">
+                                            <td colSpan={14} className="px-4 py-6 text-center text-gray-500 text-sm">
                                                 No coin packages yet. Create one to enable deposits.
                                             </td>
                                         </tr>
@@ -6502,6 +6515,17 @@ export const AdminPanel: React.FC = () => {
                               step={1}
                               value={packageDraft.bonusCoins ?? 0}
                               onChange={(event) => setPackageDraft((prev) => ({ ...prev, bonusCoins: Number(event.target.value) }))}
+                              className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">1st Deposit Bonus</label>
+                          <Input
+                              type="number"
+                              min={0}
+                              step={1}
+                              value={packageDraft.firstDepositBonusCoins ?? 0}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, firstDepositBonusCoins: Number(event.target.value) }))}
                               className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                           />
                       </div>

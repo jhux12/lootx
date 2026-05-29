@@ -164,6 +164,7 @@ export interface CoinPackage {
   name: string;
   coins: number;
   bonusCoins?: number;
+  firstDepositBonusCoins?: number;
   totalCoins?: number;
   defaultSelected?: boolean;
   imageUrl?: string;

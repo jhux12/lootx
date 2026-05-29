@@ -35,10 +35,18 @@ export default async function handler(req, res) {
     }
 
     const data = packageSnap.data() ?? {};
+    const userSnap = await firestore.collection('users').doc(decoded.uid).get();
+    const userData = userSnap.exists ? userSnap.data() ?? {} : {};
+    const depositCount = Number(userData.depositCount ?? 0);
+    const totalDepositedCents = Number(userData.totalDepositedCents ?? 0);
+    const totalSpent = Number(userData.totalSpent ?? 0);
+    const isFirstDeposit = depositCount <= 0 && totalDepositedCents <= 0 && totalSpent <= 0;
     const active = data.active === true;
     const stripePriceId = data.stripePriceId;
     const baseCoins = Number(data.coins ?? 0);
-    const bonusCoins = Number(data.bonusCoins ?? 0);
+    const baseBonusCoins = Number(data.bonusCoins ?? 0);
+    const firstDepositBonusCoins = Number(data.firstDepositBonusCoins ?? 0);
+    const bonusCoins = baseBonusCoins + (isFirstDeposit ? firstDepositBonusCoins : 0);
     const totalCoins = baseCoins + bonusCoins;
     const rawPrice = Number(data.price ?? data.amount ?? data.usdAmount ?? 0);
     const displayPrice = typeof data.displayPrice === 'string' ? data.displayPrice : '';
@@ -59,8 +67,11 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Invalid coin amount' });
     }
 
-    if (!Number.isFinite(bonusCoins) || bonusCoins < 0) {
+    if (!Number.isFinite(baseBonusCoins) || baseBonusCoins < 0) {
       return sendJson(res, 400, { error: 'Invalid bonus coins' });
+    }
+    if (!Number.isFinite(firstDepositBonusCoins) || firstDepositBonusCoins < 0) {
+      return sendJson(res, 400, { error: 'Invalid first deposit bonus coins' });
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -73,6 +84,8 @@ export default async function handler(req, res) {
         packageId,
         baseCoins: String(baseCoins),
         bonusCoins: String(bonusCoins),
+        firstDepositBonusCoins: String(isFirstDeposit ? firstDepositBonusCoins : 0),
+        isFirstDeposit: isFirstDeposit ? 'true' : 'false',
         coins: String(totalCoins),
         eventId: normalizedEventId.slice(0, 200),
         fbp: fbp.slice(0, 200),

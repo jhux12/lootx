@@ -7,6 +7,7 @@ import { auth } from '../firebase';
 import { CoinAmount } from './CoinAmount';
 import { readCookieValue, trackMetaEvent } from '../utils/trackEvent';
 import { toast } from '../src/ui/toast/toast';
+import { hasUserMadeDeposit } from '../utils/depositEligibility';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -16,7 +17,7 @@ const generateCheckoutEventId = () => {
 };
 
 export const TopUpModal: React.FC = () => {
-  const { setShowTopUpModal, setTopUpModalIntent, topUpModalIntent, coinPackages } = useGame();
+  const { setShowTopUpModal, setTopUpModalIntent, topUpModalIntent, coinPackages, user } = useGame();
   const { playSound } = useSound();
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [hasUserSelectedPackage, setHasUserSelectedPackage] = useState(false);
@@ -31,6 +32,11 @@ export const TopUpModal: React.FC = () => {
       .filter((pkg) => pkg.active)
       .sort((a, b) => a.sortOrder - b.sortOrder);
   }, [coinPackages]);
+  const isFirstTimeDepositor = useMemo(() => !user || !hasUserMadeDeposit(user), [user]);
+  const firstDepositPackages = useMemo(
+    () => activePackages.filter((pkg) => Number(pkg.firstDepositBonusCoins ?? 0) > 0),
+    [activePackages]
+  );
 
   const normalizedPackages = useMemo(() => {
     return activePackages.map((pkg) => ({
@@ -51,6 +57,8 @@ export const TopUpModal: React.FC = () => {
     return Number.isFinite(parsed) ? parsed : 0;
   }, [formattedDepositAmount]);
   const totalCoins = (selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0)));
+  const firstDepositBonusCoins = isFirstTimeDepositor ? Number(selectedPackage?.firstDepositBonusCoins ?? 0) : 0;
+  const checkoutCoins = totalCoins + firstDepositBonusCoins;
   const effectiveRate = priceValue > 0 ? Math.round(totalCoins / priceValue) : null;
   const missingCoins = useMemo(() => {
     const requiredCoins = Number(topUpModalIntent?.requiredCoins ?? 0);
@@ -285,15 +293,47 @@ export const TopUpModal: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 [-webkit-overflow-scrolling:touch]">
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 [-webkit-overflow-scrolling:touch]">
                     {isPostFreeBoxFlow && (
                       <p className="mb-3 rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100">
                         Covers your first box + extra spins
                       </p>
                     )}
+                    {isFirstTimeDepositor && firstDepositPackages.length > 0 && (
+                      <div className="mb-4 rounded-xl border border-emerald-400/25 bg-[linear-gradient(125deg,rgba(16,185,129,0.2),rgba(59,130,246,0.18),rgba(124,92,255,0.15))] p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <h3 className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-emerald-100">First Deposit Boost</h3>
+                          <span className="rounded-full bg-emerald-300/20 px-2 py-0.5 text-[10px] font-bold text-emerald-100">One-time bonus</span>
+                        </div>
+                        <div className="space-y-2">
+                          {firstDepositPackages.map((pack) => {
+                            const firstBonus = Number(pack.firstDepositBonusCoins ?? 0);
+                            const isSelected = selectedPackage?.id === pack.id;
+                            const totalWithFirst = Math.round((pack.totalCoins ?? (pack.coins + (pack.bonusCoins ?? 0))) + firstBonus);
+                            return (
+                              <button
+                                key={`first-${pack.id}`}
+                                onClick={() => {
+                                  setSelectedPackageId(pack.id);
+                                  setHasUserSelectedPackage(true);
+                                  playSound('click');
+                                }}
+                                className={`w-full rounded-lg border px-3 py-2 text-left transition-all ${isSelected ? 'border-emerald-300 bg-emerald-300/15' : 'border-white/15 bg-black/20 hover:bg-black/30'}`}
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <CoinAmount amount={totalWithFirst} formatOptions={{ maximumFractionDigits: 0 }} className="text-sm font-bold text-white" iconClassName="h-3.5 w-3.5" />
+                                  <span className="text-sm font-bold text-white">{pack.displayPrice}</span>
+                                </div>
+                                <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-emerald-200">Includes +{firstBonus.toLocaleString()} first deposit bonus coins</p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                     {/* Amount Selector */}
                     <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-slate-500">Select a pack</label>
-                    <div className="mb-4 flex flex-col gap-3">
+                    <div className="mb-4 flex max-h-[45dvh] flex-col gap-3 overflow-y-auto pr-1 sm:max-h-[42dvh]">
                         {activePackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             No packages available right now.
@@ -352,10 +392,13 @@ export const TopUpModal: React.FC = () => {
                       </>
                     ) : (
                       <span>
-                        Get {Math.round(selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0))).toLocaleString()} Coins for {formattedDepositAmount}
+                        Get {Math.round(checkoutCoins).toLocaleString()} Coins for {formattedDepositAmount}
                       </span>
                     )}
                   </button>
+                  {isFirstTimeDepositor && firstDepositBonusCoins > 0 && (
+                    <p className="mt-2 text-center text-[11px] font-semibold text-emerald-200">Includes +{firstDepositBonusCoins.toLocaleString()} first deposit bonus coins.</p>
+                  )}
                   <p className="mt-3 text-center text-xs text-white/60">Secure checkout • Instant delivery</p>
                 </div>
             </>
