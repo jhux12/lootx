@@ -51,10 +51,10 @@ const drawerCardClass =
   'flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[0.075] active:translate-y-0';
 
 const desktopNavButtonClass =
-  'inline-flex h-14 min-w-[118px] items-center justify-center rounded-xl border border-transparent px-6 text-[20px] font-semibold tracking-[-0.02em] text-white/82 transition-all duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070c14]';
+  'inline-flex h-11 min-w-[102px] items-center justify-center rounded-[12px] border border-transparent px-5 text-[16px] font-semibold tracking-[-0.01em] text-white/82 transition-all duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070c14]';
 
 const desktopNavActiveClass =
-  'border-[#1b3153]/80 bg-[#0d1d34]/82 text-[#9fc6ff] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_10px_28px_rgba(18,67,132,0.16)] hover:text-[#b7d5ff]';
+  'border-[#1b3153]/80 bg-[#0d1d34]/82 text-[#9fc6ff] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_8px_22px_rgba(18,67,132,0.12)] hover:text-[#b7d5ff]';
 
 const desktopMenuPanelClass =
   'absolute left-0 top-full mt-3 rounded-2xl border border-white/10 bg-[#101820]/95 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(34,211,238,0.05)] backdrop-blur-2xl transition-all duration-200';
@@ -63,7 +63,7 @@ const desktopMenuItemClass =
   'flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 hover:bg-white/[0.07] hover:text-white';
 
 const utilityButtonClass =
-  'relative inline-flex h-14 w-14 items-center justify-center rounded-[16px] border border-white/10 bg-[#0c1422]/70 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] transition-all duration-200 hover:border-blue-300/25 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60';
+  'relative inline-flex h-11 w-11 items-center justify-center rounded-[13px] border border-white/10 bg-[#0c1422]/70 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] transition-all duration-200 hover:border-blue-300/25 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60';
 
 type RewardsSettingsData = Record<string, unknown> | undefined;
 
@@ -322,10 +322,10 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
         playSound('click');
         openAuthModal('register');
       }}
-      className="group relative inline-flex h-12 shrink-0 items-center gap-2.5 overflow-hidden rounded-[14px] border border-white/10 bg-gradient-to-r from-[#6d22f2] via-[#6548f5] to-[#2195ff] px-4 text-sm font-semibold text-white shadow-[0_14px_38px_rgba(45,119,255,0.24)] outline-none transition-transform hover:scale-[1.01] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99] sm:h-14 sm:px-6 sm:text-base lg:h-[58px] lg:px-8 lg:text-[20px]"
+      className="group relative inline-flex h-11 shrink-0 items-center gap-2 overflow-hidden rounded-[13px] border border-white/10 bg-[linear-gradient(135deg,#6d28f2_0%,#4f46e5_45%,#1d8cff_100%)] px-4 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(42,111,255,0.22)] outline-none transition-transform before:absolute before:inset-0 before:bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(255,255,255,0)_58%)] hover:scale-[1.01] hover:shadow-[0_12px_32px_rgba(42,111,255,0.28)] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99] sm:h-12 sm:px-5 sm:text-base lg:h-11 lg:px-5 lg:text-[16px] xl:h-12 xl:px-6"
       aria-label="Open free box"
     >
-      <Box className="relative z-10 h-5 w-5 shrink-0 sm:h-6 sm:w-6" strokeWidth={2} />
+      <Box className="relative z-10 h-5 w-5 shrink-0" strokeWidth={2} />
       <span className="relative z-10 whitespace-nowrap leading-none">Open Free Box</span>
     </button>
   ), [openAuthModal, playSound]);
@@ -378,19 +378,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
         ref={headerRef}
         className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] bg-[#050a12]/82 shadow-[0_20px_80px_rgba(0,0,0,0.28)] backdrop-blur-2xl`}
       >
-        <div className="px-3 py-3 pt-[calc(env(safe-area-inset-top,0px)+12px)] sm:px-4 lg:px-4 lg:py-4 lg:pt-[calc(env(safe-area-inset-top,0px)+16px)]">
-          <nav className="mx-auto flex h-[66px] w-full max-w-[calc(100vw-24px)] items-center justify-between rounded-[14px] border border-[#213148]/80 bg-[#080e18]/62 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl sm:h-[74px] sm:max-w-[calc(100vw-32px)] sm:px-6 lg:h-[104px] lg:max-w-none lg:px-10 xl:px-12">
-            <div className="flex min-w-0 flex-1 items-center gap-5 sm:gap-8 lg:gap-16 xl:gap-[72px]">
+        <div className="px-3 py-3 pt-[calc(env(safe-area-inset-top,0px)+12px)] sm:px-4 lg:px-4 lg:py-3 lg:pt-[calc(env(safe-area-inset-top,0px)+12px)]">
+          <nav className="mx-auto flex h-[64px] w-full max-w-[calc(100vw-24px)] items-center justify-between rounded-[14px] border border-[#213148]/80 bg-[#080e18]/62 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_54px_rgba(0,0,0,0.22)] backdrop-blur-2xl sm:h-[68px] sm:max-w-[calc(100vw-32px)] sm:px-6 lg:h-[76px] lg:max-w-none lg:px-8 xl:px-10">
+            <div className="flex min-w-0 flex-1 items-center gap-5 sm:gap-8 lg:gap-10 xl:gap-12">
               <button
                 type="button"
                 onClick={() => navigate('HOME')}
                 className="inline-flex shrink-0 items-center rounded-xl transition-all duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60"
                 aria-label="Go home"
               >
-                <BrandLockup showText={false} logoClassName="h-10 w-auto sm:h-12 lg:h-[54px]" />
+                <BrandLockup showText={false} logoClassName="h-9 w-auto sm:h-11 lg:h-11" />
               </button>
 
-              <div className="hidden items-center gap-[54px] xl:flex">
+              <div className="hidden items-center gap-9 xl:flex">
                 <button type="button" onClick={() => navigate('BOXES')} className={getDesktopNavClass('games')}>
                   Games
                 </button>
@@ -404,24 +404,24 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
               </div>
             </div>
 
-          <div className="flex min-h-[42px] min-w-[132px] shrink-0 items-center justify-end gap-2 sm:min-w-[148px] sm:gap-3 lg:min-w-0 xl:min-w-[690px]">
+          <div className="flex min-h-[42px] min-w-[132px] shrink-0 items-center justify-end gap-2 sm:min-w-[148px] sm:gap-3 lg:min-w-0">
             {!authInitialized ? (
               <HeaderSkeleton />
             ) : isAuthenticated ? (
               <>
-                <div className="hidden items-center justify-end gap-5 lg:flex">
-                  <div className="flex h-14 min-w-[136px] items-center justify-center gap-3 rounded-[16px] border border-white/10 bg-[#0c1422]/70 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
-                    <img src={XP_ICON} alt="XP" className="h-7 w-7 object-contain" width={28} height={28} />
-                    <span className="min-w-[64px] text-[20px] font-semibold leading-none tabular-nums text-white"><AnimatedNumber value={targetXp} /></span>
+                <div className="hidden items-center justify-end gap-3.5 lg:flex xl:gap-4">
+                  <div className="flex h-11 min-w-[108px] items-center justify-center gap-2.5 rounded-[13px] border border-white/10 bg-[#0c1422]/70 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
+                    <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" width={20} height={20} />
+                    <span className="min-w-[54px] text-[16px] font-semibold leading-none tabular-nums text-white"><AnimatedNumber value={targetXp} /></span>
                   </div>
 
-                  <div className={`relative h-14 min-w-[164px] shrink-0 overflow-hidden rounded-[16px] border border-white/10 bg-[#0c1422]/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] ${balanceTone === 'up' ? 'ring-1 ring-emerald-400/35' : balanceTone === 'down' ? 'ring-1 ring-red-400/35' : ''}`}>
+                  <div className={`relative h-11 min-w-[136px] shrink-0 overflow-hidden rounded-[13px] border border-white/10 bg-[#0c1422]/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] ${balanceTone === 'up' ? 'ring-1 ring-emerald-400/35' : balanceTone === 'down' ? 'ring-1 ring-red-400/35' : ''}`}>
                     <span
                       aria-hidden="true"
                       className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(110,40,242,0.10),rgba(33,149,255,0.08),rgba(255,255,255,0.015))]"
                     />
-                    <div className="relative z-10 flex h-full items-center justify-center px-5">
-                      <CoinAmount amount={balance} className="text-[20px] font-semibold leading-none tracking-[-0.01em] text-white" iconClassName="h-7 w-7" textClassName="min-w-[82px] text-right tabular-nums" formatOptions={{ maximumFractionDigits: 0 }} />
+                    <div className="relative z-10 flex h-full items-center justify-center px-4">
+                      <CoinAmount amount={balance} className="text-[16px] font-semibold leading-none tracking-[-0.01em] text-white" iconClassName="h-5 w-5" textClassName="min-w-[70px] text-right tabular-nums" formatOptions={{ maximumFractionDigits: 0 }} />
                     </div>
                   </div>
 
@@ -431,7 +431,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                     className={utilityButtonClass}
                     aria-label="Top up"
                   >
-                    <Plus className="h-7 w-7" strokeWidth={1.8} />
+                    <Plus className="h-5 w-5" strokeWidth={1.8} />
                   </button>
 
                   <button
@@ -440,16 +440,16 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                     className={utilityButtonClass}
                     aria-label="Open notifications and activity"
                   >
-                    <Bell className="h-6 w-6" strokeWidth={1.8} />
-                    {unreadCount > 0 ? <span className="absolute right-3 top-2 h-3 w-3 rounded-full bg-[#43aaff] ring-2 ring-[#0c1422]" /> : null}
+                    <Bell className="h-5 w-5" strokeWidth={1.8} />
+                    {unreadCount > 0 ? <span className="absolute right-2.5 top-2 h-2.5 w-2.5 rounded-full bg-[#43aaff] ring-2 ring-[#0c1422]" /> : null}
                   </button>
 
-                  <div className="h-12 w-px bg-white/10" aria-hidden="true" />
+                  <div className="h-9 w-px bg-white/10" aria-hidden="true" />
 
-                  <button onClick={() => navigate('PROFILE')} className="group flex min-w-0 items-center gap-4 rounded-[16px] px-1.5 py-1 transition-colors hover:bg-white/[0.04]">
-                    <UserAvatar user={user} className="h-12 w-12 rounded-full object-cover ring-1 ring-white/10" initialsClassName="text-sm" />
-                    <span className="max-w-[104px] truncate text-[20px] font-medium tracking-[-0.02em] text-white group-hover:text-blue-100 xl:max-w-[140px]">{resolvedDisplayName}</span>
-                    <ChevronDown className="h-5 w-5 shrink-0 text-white/78" strokeWidth={1.8} />
+                  <button onClick={() => navigate('PROFILE')} className="group flex min-w-0 items-center gap-3 rounded-[13px] px-1.5 py-1 transition-colors hover:bg-white/[0.04]">
+                    <UserAvatar user={user} className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" initialsClassName="text-sm" />
+                    <span className="max-w-[92px] truncate text-[16px] font-medium tracking-[-0.01em] text-white group-hover:text-blue-100 xl:max-w-[124px]">{resolvedDisplayName}</span>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-white/78" strokeWidth={1.8} />
                   </button>
 
                   <button
@@ -457,7 +457,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                     className={utilityButtonClass}
                     aria-label="Log out"
                   >
-                    <LogOut className="h-6 w-6" strokeWidth={1.8} />
+                    <LogOut className="h-5 w-5" strokeWidth={1.8} />
                   </button>
                 </div>
 
