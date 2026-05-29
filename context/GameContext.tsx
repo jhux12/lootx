@@ -25,7 +25,7 @@ import {
   sendPasswordResetEmail,
   signOut,
   getIdTokenResult,
-  onIdTokenChanged
+  onAuthStateChanged
 } from 'firebase/auth';
 import { 
   addDoc,
@@ -662,7 +662,7 @@ interface GameContextType {
   linkGoogleAccount: (email: string, password: string, credential: AuthCredential) => Promise<GoogleAuthResult>;
   register: (name: string, email: string, pass: string) => Promise<EmailPasswordAuthResult>;
   resetPassword: (email: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   setShowLoginModal: (show: boolean) => void;
   setShowTopUpModal: (show: boolean) => void;
   setTopUpModalIntent: (intent: TopUpModalIntent | null) => void;
@@ -1222,6 +1222,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const activeUserIdRef = useRef<string | null>(null);
   const emailVerificationDismissedRef = useRef(false);
   const userUnsubscribeRef = useRef<(() => void) | null>(null);
+  const inventoryUnsubscribeRef = useRef<(() => void) | null>(null);
+  const notificationsUnsubscribeRef = useRef<(() => void) | null>(null);
+  const authStateEventRef = useRef(0);
   const legacyProfileBackfillInFlightRef = useRef<Set<string>>(new Set());
   const syncAdminClaim = async (firebaseUser: FirebaseUser | null) => {
     if (!firebaseUser) {
@@ -1345,16 +1348,103 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       userUnsubscribeRef.current();
       userUnsubscribeRef.current = null;
     }
+    if (inventoryUnsubscribeRef.current) {
+      inventoryUnsubscribeRef.current();
+      inventoryUnsubscribeRef.current = null;
+    }
+    if (notificationsUnsubscribeRef.current) {
+      notificationsUnsubscribeRef.current();
+      notificationsUnsubscribeRef.current = null;
+    }
   };
 
-  // Cost-control: inventory is fetched on demand (profile/inventory screens + post-mutation refresh)
-  // instead of a global realtime listener mounted for every authenticated session.
+  const resetAuthenticatedState = (options?: { resetView?: boolean }) => {
+    setIsAuthenticated(false);
+    setUser(GUEST_USER);
+    setBalance(0);
+    setInventory([]);
+    setNotifications([]);
+    hasInventorySubcollectionRef.current = false;
+    pendingBalanceRef.current = null;
+    pendingSoldIdsRef.current.clear();
+    activityStore.setScope('guest');
+    if (options?.resetView) {
+      setView({ type: 'HOME' });
+    }
+  };
+
+  const subscribeToInventory = useCallback((uid: string) => {
+    if (inventoryUnsubscribeRef.current) return;
+
+    const inventoryPath = `users/${uid}/inventory?limit=200`;
+    console.log('READING FIRESTORE PATH', inventoryPath);
+    const inventoryRef = query(collection(db, 'users', uid, 'inventory'), orderBy('obtainedAt', 'desc'), limit(200));
+    inventoryUnsubscribeRef.current = onSnapshot(inventoryRef, (snapshot) => {
+      if (activeUserIdRef.current !== uid) return;
+      console.log('SNAPSHOT OK', {
+        path: inventoryPath,
+        size: snapshot.size
+      });
+      hasInventorySubcollectionRef.current = snapshot.size > 0;
+      const pendingIds = pendingSoldIdsRef.current;
+      const loaded = snapshot.docs
+        .map(mapInventoryDoc)
+        .filter((item) => !pendingIds.has(item.instanceId))
+        .sort((a, b) => b.obtainedAt - a.obtainedAt);
+      setInventory(loaded);
+      setUser((prev) => ({ ...prev, topPulls: rankTopPullsByValue(loaded) }));
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: inventoryPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
+    });
+  }, []);
+
+  const subscribeToNotifications = useCallback((uid: string) => {
+    if (notificationsUnsubscribeRef.current) return;
+
+    const notificationsPath = `users/${uid}/notifications?limit=50`;
+    console.log('READING FIRESTORE PATH', notificationsPath);
+    const notificationsRef = query(collection(db, 'users', uid, 'notifications'), orderBy('createdAt', 'desc'), limit(50));
+    notificationsUnsubscribeRef.current = onSnapshot(notificationsRef, (snapshot) => {
+      if (activeUserIdRef.current !== uid) return;
+      console.log('SNAPSHOT OK', {
+        path: notificationsPath,
+        size: snapshot.size
+      });
+      const loaded = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() as Record<string, any>;
+        const type = data.type === 'shipping' ? 'shipping' : 'admin';
+        return {
+          id: docSnap.id,
+          message: String(data.message ?? data.body ?? data.title ?? 'Notification'),
+          createdAt: normalizeTimestamp(data.createdAt, Date.now()),
+          type
+        } as AppNotification;
+      });
+      setNotifications(loaded);
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: notificationsPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
+    });
+  }, []);
+
+  // Realtime inventory stays attached for the authenticated user's session so the
+  // navbar, profile, inventory, and balance-adjacent UI all update without refresh.
   const refreshInventory = useCallback(async (uid: string, options?: { limitCount?: number }) => {
     const cappedLimit = Math.max(10, Math.min(200, Number(options?.limitCount ?? 120)));
     const inventoryPath = `users/${uid}/inventory?limit=${cappedLimit}`;
     console.log('READING FIRESTORE PATH', inventoryPath);
     const inventoryRef = query(collection(db, 'users', uid, 'inventory'), orderBy('obtainedAt', 'desc'), limit(cappedLimit));
     const snapshot = await getDocs(inventoryRef);
+    if (activeUserIdRef.current !== uid) return;
     hasInventorySubcollectionRef.current = snapshot.size > 0;
     const loaded = snapshot.docs.map(mapInventoryDoc).sort((a, b) => b.obtainedAt - a.obtainedAt);
     const pendingIds = pendingSoldIdsRef.current;
@@ -1364,16 +1454,34 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const startAuthenticatedSession = (firebaseUser: FirebaseUser) => {
-    if (activeUserIdRef.current === firebaseUser.uid) return;
-    clearUserSubscriptions();
-    activeUserIdRef.current = firebaseUser.uid;
+    const uid = firebaseUser.uid;
+    const isSameUser = activeUserIdRef.current === uid;
+
+    if (isSameUser && userUnsubscribeRef.current) {
+      setIsAuthenticated(true);
+      subscribeToInventory(uid);
+      subscribeToNotifications(uid);
+      return;
+    }
+
+    if (!isSameUser) {
+      clearUserSubscriptions();
+      setInventory([]);
+      setNotifications([]);
+      hasInventorySubcollectionRef.current = false;
+      pendingBalanceRef.current = null;
+      pendingSoldIdsRef.current.clear();
+      activeUserIdRef.current = uid;
+    }
+
     setIsAuthenticated(true);
     void syncAdminClaim(firebaseUser);
 
-    const userPath = `users/${firebaseUser.uid}`;
+    const userPath = `users/${uid}`;
     console.log('READING FIRESTORE PATH', userPath);
-    const userRef = getUserRef(firebaseUser.uid);
+    const userRef = getUserRef(uid);
     userUnsubscribeRef.current = onSnapshot(userRef, (snapshot) => {
+      if (activeUserIdRef.current !== uid) return;
       console.log('SNAPSHOT OK', {
         path: userPath,
         size: 'size' in snapshot ? snapshot.size : undefined
@@ -1387,8 +1495,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const data = snapshot.data();
       const legacyProfileBackfill = buildLegacyUserProfileBackfill(firebaseUser, data);
-      if (Object.keys(legacyProfileBackfill).length > 0 && !legacyProfileBackfillInFlightRef.current.has(firebaseUser.uid)) {
-        legacyProfileBackfillInFlightRef.current.add(firebaseUser.uid);
+      if (Object.keys(legacyProfileBackfill).length > 0 && !legacyProfileBackfillInFlightRef.current.has(uid)) {
+        legacyProfileBackfillInFlightRef.current.add(uid);
         void authedFetch<{ ok: boolean; patched?: boolean }>('/api/backfill-user-profile', {
           method: 'POST',
           body: JSON.stringify({})
@@ -1397,7 +1505,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error('Failed to backfill legacy user profile fields', error);
           })
           .finally(() => {
-            legacyProfileBackfillInFlightRef.current.delete(firebaseUser.uid);
+            legacyProfileBackfillInFlightRef.current.delete(uid);
           });
       }
       const profile = buildUserProfile(firebaseUser, data);
@@ -1435,12 +1543,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     });
 
-    const shouldLoadInventory = typeof window !== 'undefined' && ['/inventory', '/profile'].some((path) => window.location.pathname.startsWith(path));
-    if (shouldLoadInventory) {
-      void refreshInventory(firebaseUser.uid).catch((error) => {
-        console.error('Failed to load inventory on-demand', error);
-      });
-    }
+    subscribeToInventory(uid);
+    subscribeToNotifications(uid);
   };
 
   const checkEmailVerificationStatus = async (firebaseUser?: FirebaseUser | null) => {
@@ -1648,8 +1752,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      const authEventId = authStateEventRef.current + 1;
+      authStateEventRef.current = authEventId;
       console.log('Auth state fired:', firebaseUser?.uid);
+      const isCurrentAuthEvent = () => authStateEventRef.current === authEventId;
       const isPasswordProvider = firebaseUser?.providerData.some((provider) => provider.providerId === 'password') ?? false;
       const requiresVerification = Boolean(firebaseUser && isPasswordProvider && !firebaseUser.emailVerified);
       if (requiresVerification && !hasPendingEmailVerification()) {
@@ -1657,49 +1764,43 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       void checkEmailVerificationStatus(firebaseUser);
-      clearUserSubscriptions();
 
       if (!firebaseUser) {
         console.log('No user');
-        setIsAuthenticated(false);
-        setUser(GUEST_USER);
-        setBalance(0);
-        setInventory([]);
-        setNotifications([]);
-        hasInventorySubcollectionRef.current = false;
+        clearUserSubscriptions();
         activeUserIdRef.current = null;
-        setAuthInitialized(true);
+        resetAuthenticatedState();
+        if (isCurrentAuthEvent()) setAuthInitialized(true);
         return;
       }
 
       if (requiresVerification) {
-        setIsAuthenticated(false);
-        setUser(GUEST_USER);
-        setBalance(0);
-        setInventory([]);
-        setNotifications([]);
-        hasInventorySubcollectionRef.current = false;
-        activeUserIdRef.current = null;
-        setAuthInitialized(true);
+        if (activeUserIdRef.current !== firebaseUser.uid) {
+          clearUserSubscriptions();
+          activeUserIdRef.current = null;
+        }
+        resetAuthenticatedState();
+        if (isCurrentAuthEvent()) setAuthInitialized(true);
         return;
       }
 
       try {
-        void syncAdminClaim(firebaseUser);
-        await firebaseUser.getIdToken(true);
-        await startAuthenticatedSession(firebaseUser);
+        await firebaseUser.getIdToken();
+        if (!isCurrentAuthEvent() || auth.currentUser?.uid !== firebaseUser.uid) return;
+        startAuthenticatedSession(firebaseUser);
         console.log('User fully authenticated:', firebaseUser.uid);
       } finally {
-        setAuthInitialized(true);
+        if (isCurrentAuthEvent()) setAuthInitialized(true);
       }
     });
 
     return () => {
+      authStateEventRef.current += 1;
       unsubscribe();
       clearUserSubscriptions();
       activeUserIdRef.current = null;
     };
-  }, []);
+  }, [subscribeToInventory, subscribeToNotifications]);
 
   useEffect(() => {
     void checkEmailVerificationStatus(auth.currentUser);
@@ -2504,14 +2605,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await sendPasswordResetEmail(auth, email, actionCodeSettings);
   };
 
-  const logout = () => {
-      signOut(auth);
-      setIsAuthenticated(false);
-      setUser(GUEST_USER);
-      setBalance(0);
-      setInventory([]);
-      setNotifications([]);
-      setView({ type: 'HOME' });
+  const logout = async () => {
+      authStateEventRef.current += 1;
+      await signOut(auth);
+      clearUserSubscriptions();
+      activeUserIdRef.current = null;
+      resetAuthenticatedState({ resetView: true });
+      setAuthInitialized(true);
   };
 
   const isRakebackUnlocked = (profile: User) => profile.rakebackUnlocked === true;

@@ -1,33 +1,15 @@
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import { type User } from 'firebase/auth';
 import { auth } from '../firebase';
 
-let authReadyPromise: Promise<User | null> | null = null;
+const waitForAuthUser = async (): Promise<User | null> => {
+  if (auth.currentUser) return auth.currentUser;
 
-const waitForAuthUser = (timeoutMs = 5000): Promise<User | null> => {
-  if (auth.currentUser) return Promise.resolve(auth.currentUser);
-  if (authReadyPromise) return authReadyPromise;
-
-  authReadyPromise = new Promise<User | null>((resolve) => {
-    const timeout = window.setTimeout(() => {
-      unsubscribe();
-      authReadyPromise = null;
-      resolve(null);
-    }, timeoutMs);
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) return;
-      window.clearTimeout(timeout);
-      unsubscribe();
-      authReadyPromise = null;
-      resolve(user);
-    });
-  });
-
-  return authReadyPromise;
+  await auth.authStateReady();
+  return auth.currentUser;
 };
 
 export const authedFetch = async <T,>(url: string, options: RequestInit = {}): Promise<T> => {
-  const user = auth.currentUser ?? (await waitForAuthUser(5000));
+  const user = auth.currentUser ?? (await waitForAuthUser());
   const token = await user?.getIdToken();
 
   if (!token) {
