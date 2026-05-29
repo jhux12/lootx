@@ -257,22 +257,22 @@ export const LiveCommunitySection: React.FC = () => {
           <button
             key={story.id}
             onClick={() => { void handleOpenStory(index); }}
-            className="group flex w-[108px] shrink-0 snap-start flex-col items-center text-center sm:w-[124px]"
+            className="group flex w-[132px] shrink-0 snap-start flex-col items-center text-center sm:w-[140px]"
           >
-            <div className="relative h-[96px] w-[96px] rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[2px] shadow-[0_0_22px_rgba(92,101,255,0.42)] transition-transform duration-200 group-hover:scale-105 sm:h-[112px] sm:w-[112px]">
-              <div className="flex h-full w-full items-center justify-center rounded-full bg-[#080a12] p-2">
+            <div className="relative h-[118px] w-[118px] overflow-hidden rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[2px] shadow-[0_0_24px_rgba(92,101,255,0.45)] transition-transform duration-200 group-hover:scale-105 sm:h-[126px] sm:w-[126px]">
+              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#080a12] p-3">
                 <img
                   src={story.mediaUrl}
                   alt={story.caption || 'Live community story'}
                   loading="lazy"
                   decoding="async"
-                  className="max-h-full max-w-full rounded-xl object-contain"
+                  className="block max-h-full max-w-full object-contain"
                   onError={() => { void handleStoryImageError(story); }}
                 />
               </div>
             </div>
           </button>
-        )) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[96px] w-[96px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[112px] sm:w-[112px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
+        )) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[118px] w-[118px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[126px] sm:w-[126px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
       </div>
     </div>
     {activeIndex !== null && stories[activeIndex] && (
