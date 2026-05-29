@@ -186,7 +186,7 @@ export const Leaderboard: React.FC = () => {
       const rankedEntries = topSnap.docs
         .map((d) => ({
           uid: d.id,
-          displayName: String(d.data().displayName ?? 'Player'),
+          displayName: String(d.data().username ?? d.data().displayName ?? 'Player'),
           avatarUrl: String(d.data().avatarUrl ?? ''),
           points: Number(d.data().points ?? 0),
           hiddenFromLeaderboard: d.data().hiddenFromLeaderboard === true

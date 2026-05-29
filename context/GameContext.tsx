@@ -830,7 +830,7 @@ const buildUserDocument = (user: User) => {
     username: user.username ?? user.name ?? '',
     usernameLower: toFirestoreUsernameLower(user.username ?? user.name ?? ''),
     createdAt: user.createdAt ?? Date.now(),
-    updatedAt: Date.now(),
+    updatedAt: serverTimestamp(),
     photoURL: user.photoURL,
     displayName: user.displayName ?? user.name ?? '',
     lastLogin: Date.now(),
@@ -1204,7 +1204,7 @@ const persistUserData = async (payload: PersistUserData) => {
   if (!currentUser) return;
   const userRef = getUserRef(currentUser.uid);
   const sanitized = filterSafeUserProfileFields(sanitizeDeep(payload));
-  await setDoc(userRef, { ...sanitized, updatedAt: Date.now(), lastLogin: Date.now() }, { merge: true });
+  await setDoc(userRef, { ...sanitized, updatedAt: serverTimestamp(), lastLogin: Date.now() }, { merge: true });
 };
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -2179,6 +2179,24 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
+  const syncLeaderboardDisplayName = async (uid: string, username: string) => {
+    try {
+      const rewardsSettingsSnapshot = await getDoc(doc(db, 'settings', 'rewards'));
+      const rewardsSettings = rewardsSettingsSnapshot.data() as Record<string, any> | undefined;
+      const seasonId = typeof rewardsSettings?.seasonId === 'string' && rewardsSettings.seasonId.trim()
+        ? rewardsSettings.seasonId.trim()
+        : null;
+      if (!seasonId) return;
+      await setDoc(doc(db, 'leaderboards', `rewardsSeason_${seasonId}`, 'users', uid), {
+        displayName: username,
+        username,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (error) {
+      console.warn('Failed to sync leaderboard display name', error);
+    }
+  };
+
   const ensureGoogleUserProfile = async (firebaseUser: FirebaseUser) => {
     const userRef = getUserRef(firebaseUser.uid);
     const userSnapshot = await getDoc(userRef);
@@ -2187,8 +2205,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const photoURL = firebaseUser.photoURL ?? undefined;
 
     if (!userSnapshot.exists()) {
-      const baseUsername = buildBaseUsername(displayName, email);
-      const username = await ensureUniqueUsername(baseUsername);
+      const username = await ensureUniqueUsername('Pullzer');
       const createdAt = Date.now();
       const avatar = photoURL || '';
       const newUser: User = {
@@ -2235,12 +2252,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const data = userSnapshot.data() as Record<string, any>;
     const updates: Record<string, unknown> = buildLegacyUserProfileBackfill(firebaseUser, data);
 
+    const currentUsername = typeof data.username === 'string' && data.username.trim() ? data.username.trim() : '';
+    const isGoogleProvider = data.provider === 'google' || firebaseUser.providerData.some((provider) => provider.providerId === 'google.com');
+    if (isGoogleProvider && !currentUsername.toLowerCase().startsWith('pullzer')) {
+      const username = await ensureUniqueUsername('Pullzer');
+      updates.username = username;
+      updates.usernameLower = toFirestoreUsernameLower(username);
+      updates.name = username;
+    }
+
     if (!data.email && email) updates.email = email;
     if (!data.displayName && displayName) updates.displayName = displayName;
     if (!data.photoURL && photoURL) updates.photoURL = photoURL;
 
     if (Object.keys(updates).length > 0) {
       await setDoc(userRef, filterSafeUserProfileFields(updates), { merge: true });
+    }
+
+    const syncedUsername = typeof updates.username === 'string' ? updates.username : currentUsername;
+    if (isGoogleProvider && syncedUsername) {
+      await syncLeaderboardDisplayName(firebaseUser.uid, syncedUsername);
     }
   };
 
@@ -2969,7 +3000,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (Object.keys(sanitizedUpdates).length === 0) return;
 
       try {
-          await setDoc(getUserRef(auth.currentUser.uid), { ...sanitizedUpdates, updatedAt: Date.now() }, { merge: true });
+          await setDoc(getUserRef(auth.currentUser.uid), { ...sanitizedUpdates, updatedAt: serverTimestamp() }, { merge: true });
       } catch (error) {
           console.error('Failed to update user flags in Firebase', error);
       }
@@ -2984,7 +3015,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (Object.keys(sanitizedUpdates).length > 0) {
         try {
-          await setDoc(getUserRef(userId), { ...sanitizedUpdates, updatedAt: Date.now() }, { merge: true });
+          await setDoc(getUserRef(userId), { ...sanitizedUpdates, updatedAt: serverTimestamp() }, { merge: true });
         } catch (error) {
           console.error('Failed to update user admin data in Firebase', error);
         }
@@ -2999,7 +3030,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const balanceValue = Number.isFinite(nextBalance) ? Math.max(0, nextBalance) : 0;
 
       try {
-        await setDoc(getUserRef(userId), { balance: balanceValue, coins: balanceValue, updatedAt: Date.now() }, { merge: true });
+        await setDoc(getUserRef(userId), { balance: balanceValue, coins: balanceValue, updatedAt: serverTimestamp() }, { merge: true });
       } catch (error) {
         console.error('Failed to update admin balance in Firebase', error);
       }
@@ -3282,7 +3313,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               bonusCoins: nextBonusCoins,
               totalCoins: nextCoins + nextBonusCoins,
               badge: updates.badge !== undefined ? String(updates.badge ?? '').trim() : entry.badge,
-              updatedAt: Date.now()
+              updatedAt: serverTimestamp()
             };
           })
           .sort((a, b) => a.sortOrder - b.sortOrder)
