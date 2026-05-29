@@ -36,6 +36,7 @@ export type ShowcaseRow = ShowcaseRowBoxes | ShowcaseRowCategories;
 export type HomepageConfig = {
   showcaseRows: ShowcaseRow[];
   demoBoxId?: string | null;
+  trustImageUrl?: string | null;
 };
 
 export const MAX_SHOWCASE_BOXES = 12;
@@ -129,7 +130,8 @@ export const subscribeHomepageConfig = (
       const data = snapshot.data() as HomepageConfig;
       onData({
         showcaseRows: normalizeShowcaseRows(data.showcaseRows),
-        demoBoxId: typeof data.demoBoxId === 'string' && data.demoBoxId.trim() ? data.demoBoxId : null
+        demoBoxId: typeof data.demoBoxId === 'string' && data.demoBoxId.trim() ? data.demoBoxId : null,
+        trustImageUrl: typeof data.trustImageUrl === 'string' && data.trustImageUrl.trim() ? data.trustImageUrl : null
       });
     },
     (error) => {
@@ -146,13 +148,16 @@ export const subscribeHomepageConfig = (
 
 export const saveHomepageConfig = async (configOrRows: HomepageConfig | ShowcaseRow[]) => {
   const config = Array.isArray(configOrRows)
-    ? { showcaseRows: configOrRows, demoBoxId: null }
+    ? { showcaseRows: configOrRows, demoBoxId: null, trustImageUrl: null }
     : configOrRows;
   const normalizedRows = normalizeShowcaseRows(config.showcaseRows);
   const demoBoxId = typeof config.demoBoxId === 'string' && config.demoBoxId.trim()
     ? config.demoBoxId
     : null;
-  await setDoc(HOMEPAGE_DOC_REF, { showcaseRows: normalizedRows, demoBoxId }, { merge: true });
+  const trustImageUrl = typeof config.trustImageUrl === 'string' && config.trustImageUrl.trim()
+    ? config.trustImageUrl.trim()
+    : null;
+  await setDoc(HOMEPAGE_DOC_REF, { showcaseRows: normalizedRows, demoBoxId, trustImageUrl }, { merge: true });
 };
 
 export const addRow = (rows: ShowcaseRow[]) => {
