@@ -53,7 +53,7 @@ const desktopNavButtonClass =
   'group relative flex h-10 items-center gap-2 rounded-xl border border-transparent px-3.5 text-sm font-semibold text-white/80 transition-all duration-200 hover:border-white/10 hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#090c10]';
 
 const desktopMenuPanelClass =
-  'absolute left-0 top-full mt-3 rounded-2xl border border-white/10 bg-[#101820]/95 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(34,211,238,0.05)] backdrop-blur-2xl transition-all duration-200';
+  'absolute left-0 top-full z-50 mt-3 rounded-2xl border border-white/10 bg-[#101820]/95 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(34,211,238,0.05)] backdrop-blur-2xl transition-all duration-200';
 
 const desktopMenuItemClass =
   'flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 hover:bg-white/[0.07] hover:text-white';
@@ -96,7 +96,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
   const [isFreeBoxTooltipDismissed, setIsFreeBoxTooltipDismissed] = useState(false);
   const [openMobileSections, setOpenMobileSections] = useState({
     games: true,
-    rewards: false,
+    rewards: true,
     learn: false,
     support: false,
     social: false
@@ -368,7 +368,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
     <div className="relative z-[140]">
       <header
         ref={headerRef}
-        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/10 bg-[#070b10]/70 shadow-[0_12px_50px_rgba(0,0,0,0.26)] backdrop-blur-2xl`}
+        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/10 bg-[#05080d]/95 shadow-[0_12px_50px_rgba(0,0,0,0.36)] backdrop-blur-2xl lg:bg-[#070b10]/70 lg:shadow-[0_12px_50px_rgba(0,0,0,0.26)]`}
       >
         <div className="pt-[env(safe-area-inset-top,0px)]">
           <nav className="mx-auto flex h-[62px] max-w-7xl items-center justify-between px-3 sm:h-[66px] sm:px-5 lg:h-[68px] lg:px-8">
@@ -386,11 +386,20 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
               <div
                 ref={gamesMenuRef}
                 className="relative"
+                onMouseEnter={() => {
+                  setIsGamesMenuOpen(true);
+                  setIsRewardsMenuOpen(false);
+                }}
+                onMouseLeave={() => setIsGamesMenuOpen(false)}
+                onFocusCapture={() => {
+                  setIsGamesMenuOpen(true);
+                  setIsRewardsMenuOpen(false);
+                }}
               >
                 <button
                   type="button"
                   onClick={() => {
-                    setIsGamesMenuOpen((prev) => !prev);
+                    setIsGamesMenuOpen(true);
                     setIsRewardsMenuOpen(false);
                   }}
                   className={desktopNavButtonClass}
@@ -403,40 +412,53 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                 </button>
                 <div
                   className={`${desktopMenuPanelClass} w-48 ${
-                    isGamesMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'
+                    isGamesMenuOpen ? 'visible translate-y-0 opacity-100 pointer-events-auto' : 'invisible -translate-y-1 opacity-0 pointer-events-none'
                   }`}
+                  role="menu"
                 >
-                  <button type="button" onClick={() => navigate('BOXES')} className={desktopMenuItemClass}>
+                  <button type="button" onClick={() => navigate('BOXES')} className={desktopMenuItemClass} role="menuitem">
                     <Package className="h-4 w-4 text-orange-400" />
                     Boxes
                   </button>
-                  <button type="button" onClick={() => navigate('PLINKO')} className={`${desktopMenuItemClass} mt-1`}>
+                  <button type="button" onClick={() => navigate('PLINKO')} className={`${desktopMenuItemClass} mt-1`} role="menuitem">
                     <UpgraderIcon className="h-4 w-4 text-emerald-300" />
                     Upgrader
                   </button>
                 </div>
               </div>
-              <div ref={rewardsMenuRef} className="relative">
-                <button type="button" onClick={() => {
-                  setIsRewardsMenuOpen((prev) => !prev);
+              <div
+                ref={rewardsMenuRef}
+                className="relative"
+                onMouseEnter={() => {
+                  setIsRewardsMenuOpen(true);
                   setIsGamesMenuOpen(false);
-                }} className={rewardsDesktopTabClass} aria-expanded={isRewardsMenuOpen}>
+                }}
+                onMouseLeave={() => setIsRewardsMenuOpen(false)}
+                onFocusCapture={() => {
+                  setIsRewardsMenuOpen(true);
+                  setIsGamesMenuOpen(false);
+                }}
+              >
+                <button type="button" onClick={() => {
+                  setIsRewardsMenuOpen(true);
+                  setIsGamesMenuOpen(false);
+                }} className={rewardsDesktopTabClass} aria-expanded={isRewardsMenuOpen} aria-haspopup="menu">
                   {showDailySpinReady ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_18%,rgba(96,165,250,0.25)_50%,transparent_82%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]" /> : null}
                   <RewardsIcon className={`relative z-10 h-4 w-4 ${showDailySpinReady ? 'motion-safe:animate-pulse text-blue-200' : 'text-white'}`} />
                   Rewards
                   <ChevronDown className={`h-4 w-4 transition-transform ${isRewardsMenuOpen ? 'rotate-180' : ''}`} />
                   {questReadyCount > 0 ? <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}
                 </button>
-                <div className={`${desktopMenuPanelClass} w-56 ${isRewardsMenuOpen ? 'visible translate-y-0 opacity-100' : 'invisible -translate-y-1 opacity-0'}`}>
-                  <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass}>
+                <div className={`${desktopMenuPanelClass} w-56 ${isRewardsMenuOpen ? 'visible translate-y-0 opacity-100 pointer-events-auto' : 'invisible -translate-y-1 opacity-0 pointer-events-none'}`} role="menu">
+                  <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass} role="menuitem">
                     <RefreshCw className="h-4 w-4 text-blue-500" />
                     Daily Spin
                     {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
                   </button>
-                  <button type="button" onClick={() => navigate('POLLS')} className={`${desktopMenuItemClass} mt-1`}><BarChart3 className="h-4 w-4 text-cyan-300" />Polls</button>
-                  <button type="button" onClick={() => navigate('REFERRALS')} className={`${desktopMenuItemClass} mt-1`}><Users className="h-4 w-4 text-blue-300" />Referrals</button>
-                  <button type="button" onClick={() => navigate('LEADERBOARD')} className={`${desktopMenuItemClass} mt-1`}><Trophy className="h-4 w-4 text-white" />Leaderboard</button>
-                  <button type="button" onClick={() => navigate('QUESTS')} className={`${desktopMenuItemClass} mt-1`}><Sparkles className="h-4 w-4 text-blue-300" />Quests {questReadyCount > 0 ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : claimedTodayCount > 0 ? <span className="ml-auto rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
+                  <button type="button" onClick={() => navigate('POLLS')} className={`${desktopMenuItemClass} mt-1`} role="menuitem"><BarChart3 className="h-4 w-4 text-cyan-300" />Polls</button>
+                  <button type="button" onClick={() => navigate('REFERRALS')} className={`${desktopMenuItemClass} mt-1`} role="menuitem"><Users className="h-4 w-4 text-blue-300" />Referrals</button>
+                  <button type="button" onClick={() => navigate('LEADERBOARD')} className={`${desktopMenuItemClass} mt-1`} role="menuitem"><Trophy className="h-4 w-4 text-white" />Leaderboard</button>
+                  <button type="button" onClick={() => navigate('QUESTS')} className={`${desktopMenuItemClass} mt-1`} role="menuitem"><Sparkles className="h-4 w-4 text-blue-300" />Quests {questReadyCount > 0 ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : claimedTodayCount > 0 ? <span className="ml-auto rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
                 </div>
               </div>
               <button onClick={() => navigate('LEADERBOARD')} className={desktopNavButtonClass}>
