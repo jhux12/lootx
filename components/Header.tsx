@@ -14,6 +14,7 @@ import {
   Sparkles,
   BarChart3,
   Bell,
+  Box,
   Clock3,
   ShieldCheck,
   Trophy,
@@ -50,7 +51,10 @@ const drawerCardClass =
   'flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[0.075] active:translate-y-0';
 
 const desktopNavButtonClass =
-  'group relative flex h-10 items-center gap-2 rounded-xl border border-transparent px-3.5 text-sm font-semibold text-white/80 transition-all duration-200 hover:border-white/10 hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#090c10]';
+  'inline-flex h-14 min-w-[118px] items-center justify-center rounded-xl border border-transparent px-6 text-[20px] font-semibold tracking-[-0.02em] text-white/82 transition-all duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070c14]';
+
+const desktopNavActiveClass =
+  'border-[#1b3153]/80 bg-[#0d1d34]/82 text-[#9fc6ff] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_10px_28px_rgba(18,67,132,0.16)] hover:text-[#b7d5ff]';
 
 const desktopMenuPanelClass =
   'absolute left-0 top-full mt-3 rounded-2xl border border-white/10 bg-[#101820]/95 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(34,211,238,0.05)] backdrop-blur-2xl transition-all duration-200';
@@ -59,7 +63,7 @@ const desktopMenuItemClass =
   'flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 hover:bg-white/[0.07] hover:text-white';
 
 const utilityButtonClass =
-  'relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.045] text-gray-200 transition-all duration-200 hover:border-cyan-300/25 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60';
+  'relative inline-flex h-14 w-14 items-center justify-center rounded-[16px] border border-white/10 bg-[#0c1422]/70 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] transition-all duration-200 hover:border-blue-300/25 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60';
 
 type RewardsSettingsData = Record<string, unknown> | undefined;
 
@@ -78,6 +82,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
     user,
     authInitialized,
     balance,
+    view,
     setView,
     isAuthenticated,
     openAuthModal,
@@ -317,18 +322,21 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
         playSound('click');
         openAuthModal('register');
       }}
-      className="group relative inline-flex shrink-0 overflow-hidden rounded-full p-[3px] shadow-[0_0_18px_rgba(255,72,128,0.2)] outline-none transition-transform hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99] sm:p-1 lg:p-[2px]"
-      aria-label="Start Pulling"
+      className="group relative inline-flex h-12 shrink-0 items-center gap-2.5 overflow-hidden rounded-[14px] border border-white/10 bg-gradient-to-r from-[#6d22f2] via-[#6548f5] to-[#2195ff] px-4 text-sm font-semibold text-white shadow-[0_14px_38px_rgba(45,119,255,0.24)] outline-none transition-transform hover:scale-[1.01] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99] sm:h-14 sm:px-6 sm:text-base lg:h-[58px] lg:px-8 lg:text-[20px]"
+      aria-label="Open free box"
     >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,56,92,0.12),rgba(34,211,238,0.08),rgba(255,255,255,0.02))]"
-      />
-      <span className="relative z-10 inline-flex items-center justify-center rounded-full bg-black px-4 py-2 text-sm font-extrabold leading-none tracking-tight text-white sm:px-5 sm:py-2.5 sm:text-base lg:px-4 lg:py-2.5 lg:text-sm xl:text-sm">
-        <span className="whitespace-nowrap">Start Pulling</span>
-      </span>
+      <Box className="relative z-10 h-5 w-5 shrink-0 sm:h-6 sm:w-6" strokeWidth={2} />
+      <span className="relative z-10 whitespace-nowrap leading-none">Open Free Box</span>
     </button>
   ), [openAuthModal, playSound]);
+
+  const activeDesktopSection = view.type === 'LEADERBOARD'
+    ? 'leaderboard'
+    : view.type === 'BONUSES' || view.type === 'QUESTS' || view.type === 'POLLS' || view.type === 'REFERRALS'
+      ? 'rewards'
+      : 'games';
+
+  const getDesktopNavClass = (section: 'games' | 'rewards' | 'leaderboard') => `${desktopNavButtonClass} ${activeDesktopSection === section ? desktopNavActiveClass : ''}`;
 
   const dailySpinDesktopClass = `group relative flex w-full items-center gap-2 overflow-hidden rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 ${
     showDailySpinReady
@@ -368,163 +376,97 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
     <div className="relative z-[140]">
       <header
         ref={headerRef}
-        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/10 bg-[#070b10]/70 shadow-[0_12px_50px_rgba(0,0,0,0.26)] backdrop-blur-2xl`}
+        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] bg-[#050a12]/82 shadow-[0_20px_80px_rgba(0,0,0,0.28)] backdrop-blur-2xl`}
       >
-        <div className="pt-[env(safe-area-inset-top,0px)]">
-          <nav className="mx-auto flex h-[62px] max-w-7xl items-center justify-between px-3 sm:h-[66px] sm:px-5 lg:h-[68px] lg:px-8">
-            <div className="flex min-w-0 items-center gap-3 lg:gap-x-6">
-            <button
-              type="button"
-              onClick={() => navigate('HOME')}
-              className="inline-flex shrink-0 items-center rounded-2xl p-1 transition-all duration-200 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
-              aria-label="Go home"
-            >
-              <BrandLockup showText={false} logoClassName="h-9 w-auto sm:h-10 lg:h-11" />
-            </button>
-
-            <div className="hidden items-center rounded-2xl border border-white/10 bg-white/[0.035] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] lg:flex">
-              <div
-                ref={gamesMenuRef}
-                className="relative"
+        <div className="px-3 py-3 pt-[calc(env(safe-area-inset-top,0px)+12px)] sm:px-4 lg:px-4 lg:py-4 lg:pt-[calc(env(safe-area-inset-top,0px)+16px)]">
+          <nav className="mx-auto flex h-[66px] w-full max-w-[calc(100vw-24px)] items-center justify-between rounded-[14px] border border-[#213148]/80 bg-[#080e18]/62 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl sm:h-[74px] sm:max-w-[calc(100vw-32px)] sm:px-6 lg:h-[104px] lg:max-w-none lg:px-10 xl:px-12">
+            <div className="flex min-w-0 flex-1 items-center gap-5 sm:gap-8 lg:gap-16 xl:gap-[72px]">
+              <button
+                type="button"
+                onClick={() => navigate('HOME')}
+                className="inline-flex shrink-0 items-center rounded-xl transition-all duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60"
+                aria-label="Go home"
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsGamesMenuOpen((prev) => !prev);
-                    setIsRewardsMenuOpen(false);
-                  }}
-                  className={desktopNavButtonClass}
-                  aria-expanded={isGamesMenuOpen}
-                  aria-haspopup="menu"
-                >
-                  <GamesIcon className="h-4 w-4 text-white" />
+                <BrandLockup showText={false} logoClassName="h-10 w-auto sm:h-12 lg:h-[54px]" />
+              </button>
+
+              <div className="hidden items-center gap-[54px] xl:flex">
+                <button type="button" onClick={() => navigate('BOXES')} className={getDesktopNavClass('games')}>
                   Games
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isGamesMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
-                <div
-                  className={`${desktopMenuPanelClass} w-48 ${
-                    isGamesMenuOpen ? 'visible opacity-100 translate-y-0' : 'invisible opacity-0 -translate-y-1'
-                  }`}
-                >
-                  <button type="button" onClick={() => navigate('BOXES')} className={desktopMenuItemClass}>
-                    <Package className="h-4 w-4 text-orange-400" />
-                    Boxes
-                  </button>
-                  <button type="button" onClick={() => navigate('PLINKO')} className={`${desktopMenuItemClass} mt-1`}>
-                    <UpgraderIcon className="h-4 w-4 text-emerald-300" />
-                    Upgrader
-                  </button>
-                </div>
-              </div>
-              <div ref={rewardsMenuRef} className="relative">
-                <button type="button" onClick={() => {
-                  setIsRewardsMenuOpen((prev) => !prev);
-                  setIsGamesMenuOpen(false);
-                }} className={rewardsDesktopTabClass} aria-expanded={isRewardsMenuOpen}>
-                  {showDailySpinReady ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_18%,rgba(96,165,250,0.25)_50%,transparent_82%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]" /> : null}
-                  <RewardsIcon className={`relative z-10 h-4 w-4 ${showDailySpinReady ? 'motion-safe:animate-pulse text-blue-200' : 'text-white'}`} />
+                <button type="button" onClick={() => navigate('BONUSES')} className={getDesktopNavClass('rewards')}>
                   Rewards
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isRewardsMenuOpen ? 'rotate-180' : ''}`} />
                   {questReadyCount > 0 ? <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}
                 </button>
-                <div className={`${desktopMenuPanelClass} w-56 ${isRewardsMenuOpen ? 'visible translate-y-0 opacity-100' : 'invisible -translate-y-1 opacity-0'}`}>
-                  <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass}>
-                    <RefreshCw className="h-4 w-4 text-blue-500" />
-                    Daily Spin
-                    {showDailySpinReady ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : null}
-                  </button>
-                  <button type="button" onClick={() => navigate('POLLS')} className={`${desktopMenuItemClass} mt-1`}><BarChart3 className="h-4 w-4 text-cyan-300" />Polls</button>
-                  <button type="button" onClick={() => navigate('REFERRALS')} className={`${desktopMenuItemClass} mt-1`}><Users className="h-4 w-4 text-blue-300" />Referrals</button>
-                  <button type="button" onClick={() => navigate('LEADERBOARD')} className={`${desktopMenuItemClass} mt-1`}><Trophy className="h-4 w-4 text-white" />Leaderboard</button>
-                  <button type="button" onClick={() => navigate('QUESTS')} className={`${desktopMenuItemClass} mt-1`}><Sparkles className="h-4 w-4 text-blue-300" />Quests {questReadyCount > 0 ? <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">Ready</span> : claimedTodayCount > 0 ? <span className="ml-auto rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">Claimed</span> : null}</button>
-                </div>
+                <button type="button" onClick={() => navigate('LEADERBOARD')} className={getDesktopNavClass('leaderboard')}>
+                  Leaderboard
+                </button>
               </div>
-              <button onClick={() => navigate('LEADERBOARD')} className={desktopNavButtonClass}>
-                <Trophy className="h-4 w-4 text-white" />
-                Leaderboard
-              </button>
             </div>
-          </div>
 
-          <div className="flex min-h-[42px] min-w-[132px] shrink-0 items-center gap-2 sm:min-w-[148px] sm:gap-3 lg:min-w-[430px]">
+          <div className="flex min-h-[42px] min-w-[132px] shrink-0 items-center justify-end gap-2 sm:min-w-[148px] sm:gap-3 lg:min-w-0 xl:min-w-[690px]">
             {!authInitialized ? (
               <HeaderSkeleton />
             ) : isAuthenticated ? (
               <>
-                <div className="hidden items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.035] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] lg:flex">
-                  <div className="flex h-10 min-w-[74px] items-center gap-1.5 rounded-xl border border-amber-300/15 bg-black/35 px-2.5 py-1.5">
-                    <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" width={20} height={20} />
-                    <span className="min-w-[32px] text-xs font-bold tabular-nums text-white"><AnimatedNumber value={targetXp} /></span>
+                <div className="hidden items-center justify-end gap-5 lg:flex">
+                  <div className="flex h-14 min-w-[136px] items-center justify-center gap-3 rounded-[16px] border border-white/10 bg-[#0c1422]/70 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
+                    <img src={XP_ICON} alt="XP" className="h-7 w-7 object-contain" width={28} height={28} />
+                    <span className="min-w-[64px] text-[20px] font-semibold leading-none tabular-nums text-white"><AnimatedNumber value={targetXp} /></span>
                   </div>
-                  <div className={`relative min-w-[132px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${balanceTone === 'up' ? 'ring-1 ring-emerald-400/35' : balanceTone === 'down' ? 'ring-1 ring-red-400/35' : ''}`}>
+
+                  <div className={`relative h-14 min-w-[164px] shrink-0 overflow-hidden rounded-[16px] border border-white/10 bg-[#0c1422]/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] ${balanceTone === 'up' ? 'ring-1 ring-emerald-400/35' : balanceTone === 'down' ? 'ring-1 ring-red-400/35' : ''}`}>
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,56,92,0.12),rgba(34,211,238,0.08),rgba(255,255,255,0.02))]"
+                      className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(110,40,242,0.10),rgba(33,149,255,0.08),rgba(255,255,255,0.015))]"
                     />
-                    <div className="relative z-10 flex h-10 items-center justify-between gap-2 px-3 pl-3.5 pr-1.5">
-                      <CoinAmount amount={balance} className="min-w-[84px] text-sm font-extrabold leading-none tracking-tight text-white" iconClassName="h-4 w-4" textClassName="min-w-[56px] text-right tabular-nums" formatOptions={{ maximumFractionDigits: 0 }} />
-                      <button
-                        type="button"
-                        onClick={openTopUp}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-black shadow-sm transition-all duration-200 hover:bg-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                        aria-label="Top up"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
+                    <div className="relative z-10 flex h-full items-center justify-center px-5">
+                      <CoinAmount amount={balance} className="text-[20px] font-semibold leading-none tracking-[-0.01em] text-white" iconClassName="h-7 w-7" textClassName="min-w-[82px] text-right tabular-nums" formatOptions={{ maximumFractionDigits: 0 }} />
                     </div>
                   </div>
-                </div>
 
-                <div className="hidden items-center lg:flex">
+                  <button
+                    type="button"
+                    onClick={openTopUp}
+                    className={utilityButtonClass}
+                    aria-label="Top up"
+                  >
+                    <Plus className="h-7 w-7" strokeWidth={1.8} />
+                  </button>
+
                   <button
                     type="button"
                     onClick={openActivity}
                     className={utilityButtonClass}
                     aria-label="Open notifications and activity"
                   >
-                    <Bell className="h-4 w-4" />
-                    {unreadCount > 0 ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-cyan-300" /> : null}
+                    <Bell className="h-6 w-6" strokeWidth={1.8} />
+                    {unreadCount > 0 ? <span className="absolute right-3 top-2 h-3 w-3 rounded-full bg-[#43aaff] ring-2 ring-[#0c1422]" /> : null}
                   </button>
-                </div>
 
-                <div className="hidden items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.035] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] lg:flex">
-                  {user.isAdmin && (
-                    <button onClick={() => navigate('ADMIN')} className="hidden h-10 items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 text-xs font-bold uppercase tracking-wide text-blue-200 transition-all duration-200 hover:border-blue-300/40 hover:bg-[#205DD7] hover:text-white xl:flex">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      Admin
-                    </button>
-                  )}
-                  <button onClick={() => navigate('PROFILE')} className="min-w-[94px] max-w-[136px] rounded-xl px-2 text-right transition-colors hover:bg-white/[0.04] xl:min-w-[116px]">
-                    <span className="block truncate text-sm font-bold text-white hover:text-cyan-200">{resolvedDisplayName}</span>
+                  <div className="h-12 w-px bg-white/10" aria-hidden="true" />
+
+                  <button onClick={() => navigate('PROFILE')} className="group flex min-w-0 items-center gap-4 rounded-[16px] px-1.5 py-1 transition-colors hover:bg-white/[0.04]">
+                    <UserAvatar user={user} className="h-12 w-12 rounded-full object-cover ring-1 ring-white/10" initialsClassName="text-sm" />
+                    <span className="max-w-[104px] truncate text-[20px] font-medium tracking-[-0.02em] text-white group-hover:text-blue-100 xl:max-w-[140px]">{resolvedDisplayName}</span>
+                    <ChevronDown className="h-5 w-5 shrink-0 text-white/78" strokeWidth={1.8} />
                   </button>
-                  <div className="relative flex items-center">
-                    <button type="button" onClick={() => navigate('PROFILE')} className="h-10 w-10 rounded-xl p-0.5 transition-all duration-200 hover:bg-white/[0.06]">
-                      <UserAvatar user={user} className="h-9 w-9 rounded-xl object-cover" initialsClassName="text-xs" />
-                    </button>
-                    {showFreeBoxTooltip ? (
-                      <div className="absolute left-1/2 top-full z-30 mt-2 w-max -translate-x-1/2 rounded-md border border-emerald-400/35 bg-[#0f1517] px-2 py-1 text-[10px] font-semibold text-emerald-200 shadow-lg">
-                        <div className="flex items-center gap-1.5">
-                          <span>Free box available</span>
-                          <button
-                            type="button"
-                            onClick={dismissFreeBoxTooltip}
-                            className="rounded p-0.5 text-emerald-100/80 transition-colors hover:bg-white/10 hover:text-white"
-                            aria-label="Dismiss free box tooltip"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
+
                   <button
                     onClick={handleLogout}
                     className={utilityButtonClass}
                     aria-label="Log out"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="h-6 w-6" strokeWidth={1.8} />
                   </button>
                 </div>
+
+                {user.isAdmin && (
+                  <button onClick={() => navigate('ADMIN')} className="hidden h-11 items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 text-xs font-bold uppercase tracking-wide text-blue-200 transition-all duration-200 hover:border-blue-300/40 hover:bg-[#205DD7] hover:text-white 2xl:flex">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Admin
+                  </button>
+                )}
               </>
             ) : (
               <div className="hidden items-center lg:flex">{startPullingButton}</div>
