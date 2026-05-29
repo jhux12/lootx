@@ -52,12 +52,14 @@ export const HomepageShowcaseEditor: React.FC = () => {
   const [boxSearch, setBoxSearch] = useState('');
   const [categoryValidation, setCategoryValidation] = useState<Record<string, boolean>>({});
   const [demoBoxId, setDemoBoxId] = useState<string>('');
+  const [trustImageUrl, setTrustImageUrl] = useState<string>('');
 
   useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
       (config) => {
         setShowcaseRows(normalizeShowcaseRows(config?.showcaseRows));
         setDemoBoxId(config?.demoBoxId ?? '');
+        setTrustImageUrl(config?.trustImageUrl ?? '');
         setIsLoading(false);
       },
       () => {
@@ -85,11 +87,21 @@ export const HomepageShowcaseEditor: React.FC = () => {
     window.setTimeout(() => setToast(null), 3200);
   };
 
-  const persistRows = async (nextRows: ShowcaseRow[], successMessage?: string, nextDemoBoxId = demoBoxId) => {
+  const persistRows = async (
+    nextRows: ShowcaseRow[],
+    successMessage?: string,
+    nextDemoBoxId = demoBoxId,
+    nextTrustImageUrl = trustImageUrl
+  ) => {
     setShowcaseRows(nextRows);
     setDemoBoxId(nextDemoBoxId);
+    setTrustImageUrl(nextTrustImageUrl);
     try {
-      await saveHomepageConfig({ showcaseRows: nextRows, demoBoxId: nextDemoBoxId || null });
+      await saveHomepageConfig({
+        showcaseRows: nextRows,
+        demoBoxId: nextDemoBoxId || null,
+        trustImageUrl: nextTrustImageUrl || null
+      });
       if (successMessage) showToast('success', successMessage);
     } catch (error) {
       showToast('error', 'Something went wrong while saving.');
@@ -103,6 +115,10 @@ export const HomepageShowcaseEditor: React.FC = () => {
 
   const handleDemoBoxChange = (value: string) => {
     persistRows(showcaseRows, 'Demo spinner box updated.', value);
+  };
+
+  const handleTrustImageSave = () => {
+    persistRows(showcaseRows, 'Trust image updated.', demoBoxId, trustImageUrl.trim());
   };
 
   const handleDeleteRow = (rowId: string) => {
@@ -267,24 +283,49 @@ export const HomepageShowcaseEditor: React.FC = () => {
         </button>
       </div>
 
-      <div className="rounded-xl border border-gray-800 bg-[#131720] p-4">
-        <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
-          Demo spinner box (homepage hero)
-          <Select
-            value={demoBoxId}
-            onChange={(event) => handleDemoBoxChange(event.target.value)}
-          >
-            <option value="">Auto (first available box)</option>
-            {sortedBoxes.map((box) => (
-              <option key={`demo-${box.id}`} value={box.id}>
-                {box.name}
-              </option>
-            ))}
-          </Select>
-        </label>
-        <p className="mt-2 text-xs text-gray-500">
-          This box powers the featured card and the demo spinner item pool on the homepage.
-        </p>
+      <div className="grid grid-cols-1 gap-4 rounded-xl border border-gray-800 bg-[#131720] p-4 lg:grid-cols-2">
+        <div>
+          <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Demo spinner box (homepage hero)
+            <Select
+              value={demoBoxId}
+              onChange={(event) => handleDemoBoxChange(event.target.value)}
+            >
+              <option value="">Auto (first available box)</option>
+              {sortedBoxes.map((box) => (
+                <option key={`demo-${box.id}`} value={box.id}>
+                  {box.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <p className="mt-2 text-xs text-gray-500">
+            This box powers the featured card and the demo spinner item pool on the homepage.
+          </p>
+        </div>
+
+        <div>
+          <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Spin landing trust image URL
+            <Input
+              value={trustImageUrl}
+              onChange={(event) => setTrustImageUrl(event.target.value)}
+              onBlur={handleTrustImageSave}
+              placeholder="https://example.com/trust-badge.png"
+            />
+          </label>
+          <p className="mt-2 text-xs text-gray-500">
+            Optional small image shown under the Open My Free Box button on the spin landing page.
+          </p>
+          {trustImageUrl.trim() && (
+            <img
+              src={trustImageUrl.trim()}
+              alt="Spin landing trust preview"
+              className="mt-3 max-h-12 max-w-[220px] rounded-md object-contain"
+              loading="lazy"
+            />
+          )}
+        </div>
       </div>
 
       {isLoading ? (
