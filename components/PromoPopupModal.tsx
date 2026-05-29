@@ -13,7 +13,7 @@ type PromoPopupModalProps = {
 
 export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClose, onSignUp, onSignIn }) => {
   const { stripeSettings } = useGame();
-  const popupImage = stripeSettings.authPopupImageUrl || popupArt;
+  const popupImage = stripeSettings.boxCatalogHeroImageUrl || stripeSettings.authPopupImageUrl || popupArt;
   useEffect(() => {
     if (!isOpen) return undefined;
 
@@ -52,7 +52,7 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
         <div className="relative overflow-visible rounded-[28px] border border-white/10 bg-gradient-to-br from-[#111a3a] via-[#0b1020] to-[#050811] shadow-[0_28px_70px_rgba(5,8,17,0.75)]">
           <div className="absolute left-1/2 top-[-80px] h-44 w-44 -translate-x-1/2 rounded-full bg-blue-500/35 blur-3xl sm:top-[-100px]" />
           <div className="pointer-events-none absolute left-1/2 top-[-110px] z-30 w-[230px] -translate-x-1/2 sm:top-[-140px] sm:w-[280px]">
-            <img src={popupImage} alt="Mystery box promotion" className="h-auto w-full drop-shadow-[0_18px_30px_rgba(20,10,60,0.45)]" loading="lazy" decoding="async" width={560} height={560} style={{ aspectRatio: "1 / 1" }} />
+            <img src={popupImage} alt="Mystery box promotion" className="aspect-square h-auto w-full object-contain drop-shadow-[0_18px_30px_rgba(20,10,60,0.45)]" loading="lazy" decoding="async" width={560} height={560} style={{ aspectRatio: "1 / 1" }} />
           </div>
 
           <div className="relative z-20 overflow-hidden rounded-[24px] bg-gradient-to-b from-[#101a34] via-[#0b1020] to-[#050811] px-6 pb-8 pt-20 sm:px-10 sm:pb-10 sm:pt-24">

@@ -14,10 +14,11 @@ const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
 const EMAIL_CONFIRMATION_MESSAGE = 'Check your email to confirm your account before signing in.';
 
 export const LoginModal: React.FC = () => {
-  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
+  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
-  const registerBonusImage = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
+  const fallbackRegisterBonusImage = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
+  const registerBonusImage = stripeSettings.boxCatalogHeroImageUrl || fallbackRegisterBonusImage;
 
   // Form State
   const [email, setEmail] = useState('');
@@ -345,7 +346,7 @@ export const LoginModal: React.FC = () => {
               <img
                 src={registerBonusImage}
                 alt="Free signup box"
-                className="mx-auto h-28 w-auto object-contain sm:h-32"
+                className="mx-auto h-24 max-w-full object-contain sm:h-32"
               />
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-blue-300">Free signup bonus</p>
               <p className="mt-1 text-sm text-neutral-300">Register to claim your free box.</p>
