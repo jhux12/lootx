@@ -58,7 +58,7 @@ const desktopNavButtonClass = `${desktopNavButtonBaseClass} border-transparent t
 const desktopActiveNavButtonClass = `${desktopNavButtonBaseClass} border-[#233148]/80 bg-[#101a2b]/86 text-blue-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_26px_rgba(0,0,0,0.18)]`;
 
 const desktopMenuPanelClass =
-  'absolute left-0 top-full z-50 mt-3 rounded-2xl border border-white/10 bg-[#101820]/95 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(34,211,238,0.05)] backdrop-blur-2xl transition-all duration-200';
+  'absolute left-0 top-full z-50 mt-3 rounded-2xl border border-white/10 bg-[#101820]/95 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(34,211,238,0.05)] backdrop-blur-2xl transition-all duration-200 before:absolute before:-top-3 before:left-0 before:h-3 before:w-full before:content-[""]';
 
 const desktopMenuItemClass =
   'flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 hover:bg-white/[0.07] hover:text-white';
