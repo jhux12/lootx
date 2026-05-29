@@ -260,13 +260,13 @@ export const LiveCommunitySection: React.FC = () => {
             className="group flex w-[132px] shrink-0 snap-start flex-col items-center text-center sm:w-[140px]"
           >
             <div className="relative h-[118px] w-[118px] overflow-hidden rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[2px] shadow-[0_0_24px_rgba(92,101,255,0.45)] transition-transform duration-200 group-hover:scale-105 sm:h-[126px] sm:w-[126px]">
-              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#080a12] p-3">
+              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#080a12]">
                 <img
                   src={story.mediaUrl}
                   alt={story.caption || 'Live community story'}
                   loading="lazy"
                   decoding="async"
-                  className="block max-h-full max-w-full object-contain"
+                  className="block h-full w-full object-cover"
                   onError={() => { void handleStoryImageError(story); }}
                 />
               </div>
@@ -288,7 +288,7 @@ export const LiveCommunitySection: React.FC = () => {
           <div className="mb-3 flex gap-1.5">{stories.map((_, idx) => <div key={idx} className="h-1 flex-1 overflow-hidden rounded bg-white/20"><div className="h-full bg-white" style={{ width: `${idx < activeIndex ? 100 : idx === activeIndex ? progress : 0}%` }} /></div>)}</div>
           <div className="mb-3 flex items-center justify-between gap-3 text-sm text-white"><span className="min-w-0 truncate font-semibold">{stories[activeIndex].username} · {stories[activeIndex].timestampLabel ?? formatStoryTimeLabel(stories[activeIndex])}</span><button type="button" aria-label="Close story" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-lg font-bold text-white transition hover:bg-white/20" onClick={closeStory}>✕</button></div>
           <div className="relative mx-auto flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#080a12] shadow-[0_24px_80px_rgba(0,0,0,0.55)] sm:max-h-[calc(100dvh-8rem)] sm:rounded-[2rem]" onMouseDown={() => { holdRef.current = true; }} onMouseUp={() => { holdRef.current = false; }} onMouseLeave={() => { holdRef.current = false; }}>
-            {stories[activeIndex].mediaType === 'video' ? <video src={stories[activeIndex].mediaUrl} className="h-full max-h-full w-full object-contain" autoPlay muted playsInline controls /> : <img src={stories[activeIndex].mediaUrl} className="h-full max-h-full w-full object-contain" alt={stories[activeIndex].caption || 'Live community story'} onError={() => { void handleStoryImageError(stories[activeIndex]); }} />}
+            {stories[activeIndex].mediaType === 'video' ? <video src={stories[activeIndex].mediaUrl} className="h-full max-h-full w-full object-cover" autoPlay muted playsInline controls /> : <img src={stories[activeIndex].mediaUrl} className="h-full max-h-full w-full object-cover" alt={stories[activeIndex].caption || 'Live community story'} onError={() => { void handleStoryImageError(stories[activeIndex]); }} />}
             <button
               type="button"
               aria-label="Previous story"
