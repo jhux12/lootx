@@ -34,7 +34,16 @@ export const AdminGate: React.FC<AdminGateProps> = ({ children, fallback }) => {
   const { authInitialized, isAuthenticated, user } = useAuth();
 
   if (!authInitialized) {
-    return null;
+    return (
+      <div className="w-full min-h-[45vh] flex items-center justify-center px-4" aria-busy="true" aria-live="polite">
+        <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-[#0b0e14] p-6 text-center sm:p-8">
+          <div className="mx-auto mb-4 h-12 w-12 animate-pulse rounded-full bg-white/10" />
+          <div className="mx-auto mb-3 h-6 w-48 animate-pulse rounded-lg bg-white/10" />
+          <div className="mx-auto h-4 w-full max-w-xs animate-pulse rounded-lg bg-white/5" />
+          <p className="sr-only">Checking admin access...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated || user.isAdmin !== true) {

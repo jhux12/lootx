@@ -328,7 +328,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
 
   const handleLogout = useCallback(() => {
     playSound('click');
-    logout();
+    void logout();
   }, [logout, playSound]);
 
   const startPullingButton = useMemo(() => (
@@ -641,7 +641,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
             <div className="grid grid-cols-2 gap-3">
               <>
                 <button onClick={() => navigate('PROFILE')} className="flex items-center justify-center gap-2 rounded-2xl border border-blue-300/20 bg-[#205DD7]/85 py-3.5 font-bold text-white shadow-[0_10px_30px_rgba(32,93,215,0.20)] transition-all hover:bg-[#205DD7]"><UserIcon className="h-5 w-5" />Account</button>
-                <button onClick={() => { playSound('click'); setIsMobileMenuOpen(false); logout(); }} className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] py-3.5 font-bold text-white transition-colors hover:bg-white/[0.07]"><LogOut className="h-5 w-5 text-neutral-400" />Log out</button>
+                <button onClick={() => { playSound('click'); setIsMobileMenuOpen(false); void logout(); }} className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] py-3.5 font-bold text-white transition-colors hover:bg-white/[0.07]"><LogOut className="h-5 w-5 text-neutral-400" />Log out</button>
               </>
             </div>
           ) : (

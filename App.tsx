@@ -111,6 +111,18 @@ const ModalLoadingShell = React.memo(() => (
 ));
 ModalLoadingShell.displayName = 'ModalLoadingShell';
 
+
+const ProtectedPageLoading: React.FC = () => (
+  <div className="mx-auto mt-10 w-full max-w-xl px-4">
+    <div className="rounded-2xl border border-gray-800 bg-[#0b0e14] p-6 sm:p-10" aria-busy="true" aria-live="polite">
+      <div className="mx-auto mb-4 h-12 w-12 animate-pulse rounded-full bg-white/10" />
+      <div className="mx-auto mb-3 h-6 w-48 animate-pulse rounded-lg bg-white/10" />
+      <div className="mx-auto h-4 w-full max-w-sm animate-pulse rounded-lg bg-white/5" />
+      <p className="sr-only">Checking your sign-in status...</p>
+    </div>
+  </div>
+);
+
 const DeferredAnalytics = React.memo(() => {
   const [isReady, setIsReady] = useState(false);
 
@@ -125,7 +137,7 @@ type MainContentProps = {
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
-  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, user, setView, setShowLoginModal, boxes, openAuthModal } = useGame();
+  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, authInitialized, user, setView, setShowLoginModal, boxes, openAuthModal } = useGame();
   const { playSound } = useSound();
   const performanceMode = usePerformanceMode();
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
@@ -514,7 +526,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
       {view.type === 'BONUSES' && (
         <div className="w-full">
-          {isAuthenticated ? (
+          {!authInitialized ? (
+            <ProtectedPageLoading />
+          ) : isAuthenticated ? (
             <Bonuses />
           ) : (
             <div className="max-w-xl mx-auto bg-[#0b0e14] border border-gray-800 rounded-2xl p-10 text-center mt-10">
@@ -534,7 +548,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
       {view.type === 'QUESTS' && (
         <div className="w-full">
-          {isAuthenticated ? (
+          {!authInitialized ? (
+            <ProtectedPageLoading />
+          ) : isAuthenticated ? (
             <Quests />
           ) : (
             <div className="max-w-xl mx-auto bg-[#0b0e14] border border-gray-800 rounded-2xl p-10 text-center mt-10">
@@ -648,13 +664,13 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
       {view.type === 'PROFILE' && (
         <div className="w-full pt-6">
-          <Profile />
+          {authInitialized ? <Profile /> : <ProtectedPageLoading />}
         </div>
       )}
 
       {view.type === 'INVENTORY' && (
         <div className="w-full pt-6">
-          <Profile initialTab="inventory" />
+          {authInitialized ? <Profile initialTab="inventory" /> : <ProtectedPageLoading />}
         </div>
       )}
 
