@@ -70,7 +70,9 @@ const SPINNER_MOTION = {
   nearMissChance: 0.42,
   durationVarianceMs: 180,
   initialBlurDurationMs: 260,
-  revealDelayMs: 760
+  revealDelayMs: 760,
+  slowCrawlChance: 0.18,
+  perfectCenterFinishChance: 0.12
 } as const;
 
 const rarityGlowClass: Record<string, string> = {
@@ -158,6 +160,22 @@ const pickPremiumSpinnerItem = <T extends Pick<CaseItem, 'rarity'>>(pool: T[], r
   const premiumPool = pool.filter((item) => ['rare', 'ultra', 'epic', 'legendary'].includes(normalizeRarityKey(item.rarity)));
   if (premiumPool.length === 0) return null;
   return premiumPool[Math.floor(rng() * premiumPool.length)] ?? premiumPool[0] ?? null;
+};
+
+const pickVisualItemByRarity = <T extends Pick<CaseItem, 'id' | 'rarity'>>(pool: T[], rarityKeys: string[], rng: () => number, excludeId?: string): T | null => {
+  const raritySet = new Set(rarityKeys);
+  const candidates = pool.filter((item) => normalizeRarityKey(item.rarity) && raritySet.has(normalizeRarityKey(item.rarity)) && item.id !== excludeId);
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(rng() * candidates.length)] ?? candidates[0] ?? null;
+};
+
+const resolveCenterTickSound = (rarity?: string) => {
+  const rarityKey = normalizeRarityKey(rarity);
+  if (rarityKey === 'legendary') return 'spin-tick-legendary' as const;
+  if (rarityKey === 'epic') return 'spin-tick-epic' as const;
+  if (rarityKey === 'ultra') return 'spin-tick-ultra' as const;
+  if (rarityKey === 'rare') return 'spin-tick-rare' as const;
+  return 'spin-tick' as const;
 };
 
 const formatSpinnerCoinValue = (value: number) => {
@@ -884,6 +902,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       newReel[index] = premiumItem;
     });
 
+    const applyStopPair = (leftRarities: string[], rightRarities: string[]) => {
+      const leftItem = pickVisualItemByRarity(pool, leftRarities, rng, target.id) ?? pickPremiumSpinnerItem(pool, rng);
+      const rightItem = pickVisualItemByRarity(pool, rightRarities, rng, target.id) ?? pickPremiumSpinnerItem(pool, rng);
+      if (leftItem && leftItem.id !== target.id) newReel[winnerIndex - 1] = leftItem;
+      if (rightItem && rightItem.id !== target.id) newReel[winnerIndex + 1] = rightItem;
+    };
+
+    const stopCompositionRoll = rng();
+    if (stopCompositionRoll < 0.11) {
+      applyStopPair(['legendary'], ['legendary']);
+    } else if (stopCompositionRoll < 0.22) {
+      applyStopPair(['ultra', 'epic'], ['legendary']);
+    } else if (stopCompositionRoll < 0.33) {
+      applyStopPair(['legendary'], ['ultra', 'epic']);
+    }
+
     if (sprinkleGold) {
       // Sparse deterministic gold inserts keep readability and premium spacing.
       const minSpacing = 14;
@@ -1030,8 +1064,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
+    const shouldSlowCrawl = !prefersReducedMotion && rng() < SPINNER_MOTION.slowCrawlChance;
+    const shouldPerfectCenterFinish = !shouldSlowCrawl && rng() < SPINNER_MOTION.perfectCenterFinishChance;
+    const approachOffset = shouldPerfectCenterFinish ? 0 : getApproachOffset(rng);
+    const landingJitterPx = shouldSlowCrawl || shouldPerfectCenterFinish
+      ? 0
+      : (rng() < 0.5 ? -1 : 1) * (4 + Math.round(rng() * 6));
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const resolvedDuration = Math.max(6200, duration + durationVariance);
     const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
@@ -1072,20 +1110,42 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setAnimationPhase('spinning');
 
     const allowMotionBlur = !reduceMobileEffects && !prefersReducedMotion;
-    const spinKeyframes: Keyframe[] = allowMotionBlur
-      ? [
-          { transform: 'translate3d(0px, 0, 0) scaleX(1)', filter: 'blur(0px)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-          { transform: `translate3d(${overshootTarget}px, 0, 0) scaleX(1.006)`, filter: 'blur(1.15px)', offset: Math.min(overshootOffset, 0.42), easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-          { transform: `translate3d(${overshootTarget}px, 0, 0) scaleX(1.003)`, filter: 'blur(0.45px)', offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-          { transform: `translate3d(${jitterLandingTranslate}px, 0, 0) scaleX(1)`, filter: 'blur(0px)', offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-          { transform: `translate3d(${centeredTranslate}px, 0, 0) scaleX(1)`, filter: 'blur(0px)', offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
-        ]
-      : [
-          { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-          { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-          { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-          { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
-        ];
+    const { stepWidth } = spinnerMeasurementsRef.current;
+    const crawlStep = Math.max(1, stepWidth || DESKTOP_CARD_WIDTH + DESKTOP_GAP_WIDTH);
+    const crawlStartTranslate = clampTranslate(centeredTranslate + (crawlStep * 3));
+    const crawlSecondTranslate = clampTranslate(centeredTranslate + (crawlStep * 2));
+    const crawlLastTranslate = clampTranslate(centeredTranslate + crawlStep);
+    const perfectSettleTranslate = shouldPerfectCenterFinish ? centeredTranslate : jitterLandingTranslate;
+    const spinKeyframes: Keyframe[] = shouldSlowCrawl
+      ? (allowMotionBlur
+        ? [
+            { transform: 'translate3d(0px, 0, 0) scaleX(1)', filter: 'blur(0px)', offset: 0, easing: 'cubic-bezier(0.22, 0.72, 0.16, 1)' },
+            { transform: `translate3d(${crawlStartTranslate}px, 0, 0) scaleX(1.006)`, filter: 'blur(1px)', offset: 0.62, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
+            { transform: `translate3d(${crawlSecondTranslate}px, 0, 0) scaleX(1.002)`, filter: 'blur(0px)', offset: 0.78, easing: 'cubic-bezier(0.28, 0.84, 0.38, 1)' },
+            { transform: `translate3d(${crawlLastTranslate}px, 0, 0) scaleX(1)`, filter: 'blur(0px)', offset: 0.9, easing: 'cubic-bezier(0.32, 0.86, 0.42, 1)' },
+            { transform: `translate3d(${centeredTranslate}px, 0, 0) scaleX(1)`, filter: 'blur(0px)', offset: 1, easing: 'cubic-bezier(0.2, 0.82, 0.18, 1)' }
+          ]
+        : [
+            { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.22, 0.72, 0.16, 1)' },
+            { transform: `translate3d(${crawlStartTranslate}px, 0, 0)`, offset: 0.62, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
+            { transform: `translate3d(${crawlSecondTranslate}px, 0, 0)`, offset: 0.78, easing: 'cubic-bezier(0.28, 0.84, 0.38, 1)' },
+            { transform: `translate3d(${crawlLastTranslate}px, 0, 0)`, offset: 0.9, easing: 'cubic-bezier(0.32, 0.86, 0.42, 1)' },
+            { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.2, 0.82, 0.18, 1)' }
+          ])
+      : (allowMotionBlur
+        ? [
+            { transform: 'translate3d(0px, 0, 0) scaleX(1)', filter: 'blur(0px)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
+            { transform: `translate3d(${shouldPerfectCenterFinish ? centeredTranslate : overshootTarget}px, 0, 0) scaleX(1.006)`, filter: 'blur(1.15px)', offset: Math.min(overshootOffset, 0.42), easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
+            { transform: `translate3d(${shouldPerfectCenterFinish ? centeredTranslate : overshootTarget}px, 0, 0) scaleX(1.003)`, filter: shouldPerfectCenterFinish ? 'blur(0px)' : 'blur(0.45px)', offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
+            { transform: `translate3d(${perfectSettleTranslate}px, 0, 0) scaleX(1)`, filter: 'blur(0px)', offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
+            { transform: `translate3d(${centeredTranslate}px, 0, 0) scaleX(1)`, filter: 'blur(0px)', offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
+          ]
+        : [
+            { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
+            { transform: `translate3d(${shouldPerfectCenterFinish ? centeredTranslate : overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
+            { transform: `translate3d(${perfectSettleTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
+            { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
+          ]);
 
     const animation = container.animate(
       spinKeyframes,
@@ -1108,7 +1168,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (index !== previousIndex) {
         lastCenterIndexRef.current = index;
         if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
-          playSound('spin-tick');
+          playSound(resolveCenterTickSound(reelItemsRef.current[index]?.rarity));
           lastTickedCenterIndexRef.current = index;
         }
         triggerRareCenterFlash(reelItemsRef.current[index]);
@@ -2042,7 +2102,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   aria-hidden="true"
                   style={{ ['--marker-color' as string]: centeredRarityIndicator.color, ['--marker-glow' as string]: centeredRarityIndicator.glow }}
                 >
-                  <div className="pullz-center-focus absolute left-1/2 top-1/2 h-[92%] w-44 -translate-x-1/2 -translate-y-1/2 rounded-full sm:w-56" />
+                  <div className="pullz-center-focus absolute left-1/2 top-1/2 h-[96%] w-52 -translate-x-1/2 -translate-y-1/2 rounded-full sm:w-64" />
                   {rareFlash && (
                     <div
                       key={rareFlash.nonce}
@@ -2079,23 +2139,28 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const allowHeavyHighlight = !isUltraSmoothSpin;
                           const spinnerValue = toCoins(Number(item.price ?? 0), PRICE_UNIT_MODE);
                           const imageBoxSize = Math.round(spinnerCardWidth * (performanceMode.isMobile ? 0.78 : 0.74));
+                          const winnerSettleScale = performanceMode.isMobile ? 1.06 : 1.08;
+                          const winnerPeakScale = performanceMode.isMobile ? 1.08 : 1.115;
+                          const isLegendaryWinner = isSettledWinner && normalizeRarityKey(item.rarity) === 'legendary';
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className={`pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${isSpinning ? 'is-spinning' : ''} ${isSettledWinner ? 'pullz-winner-settled' : ''}`}
+                            className={`pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${isSpinning ? 'is-spinning' : ''} ${isSettledWinner ? 'pullz-winner-settled' : ''} ${isLegendaryWinner ? 'pullz-winner-legendary' : ''}`}
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem && allowHeavyHighlight
-                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}55, 0 0 16px ${item.color}35` : `0 0 0 1px ${item.color}88, 0 0 36px ${item.color}65, 0 0 70px ${item.color}28`)
+                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}66, 0 0 20px ${item.color}42` : `0 0 0 1px ${item.color}aa, 0 0 44px ${item.color}78, 0 0 92px ${item.color}34`)
                                   : 'none',
                                 opacity: 1,
-                                filter: isSettledWinner ? 'brightness(1.12)' : 'none',
-                                transform: isSettledWinner ? 'translateZ(0) scale(1.045)' : 'translateZ(0)',
-                                zIndex: isFocusedItem ? 4 : 1
+                                filter: isSettledWinner ? 'brightness(1.16) contrast(1.05)' : 'none',
+                                transform: isSettledWinner ? `translateZ(0) scale(${winnerSettleScale})` : 'translateZ(0)',
+                                zIndex: isFocusedItem ? 4 : 1,
+                                ['--winner-settle-scale' as string]: winnerSettleScale,
+                                ['--winner-peak-scale' as string]: winnerPeakScale
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
@@ -2470,17 +2535,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         <style>{`
           .ambient-pulse { animation: ambientPulse 3s ease-in-out infinite; }
           .pullz-center-focus {
-            background: radial-gradient(ellipse at center, rgba(98, 127, 255, 0.16) 0%, rgba(34, 211, 238, 0.08) 34%, transparent 72%);
-            filter: blur(10px);
-            opacity: .58;
+            background: radial-gradient(ellipse at center, rgba(98, 127, 255, 0.22) 0%, rgba(34, 211, 238, 0.115) 34%, rgba(111, 77, 255, 0.06) 52%, transparent 76%);
+            filter: blur(12px);
+            opacity: .7;
             animation: pullzCenterFocusPulse 3.8s ease-in-out infinite;
             transform: translate3d(-50%, -50%, 0);
             will-change: opacity, transform;
           }
           .pullz-marker-beam {
-            background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--marker-color) 35%, transparent) 13%, #f8fbff 48%, color-mix(in srgb, var(--marker-color) 45%, transparent) 87%, transparent 100%);
-            box-shadow: 0 0 12px var(--marker-glow), 0 0 34px color-mix(in srgb, var(--marker-color) 44%, transparent);
-            opacity: .96;
+            background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--marker-color) 45%, transparent) 13%, #ffffff 48%, color-mix(in srgb, var(--marker-color) 56%, transparent) 87%, transparent 100%);
+            box-shadow: 0 0 16px var(--marker-glow), 0 0 44px color-mix(in srgb, var(--marker-color) 54%, transparent);
+            opacity: 1;
             animation: pullzMarkerBeamPulse 1.9s ease-in-out infinite;
             transform: translate3d(-50%, 0, 0);
             will-change: opacity, box-shadow;
@@ -2488,16 +2553,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           .pullz-marker-beam::before {
             content: '';
             position: absolute;
-            inset: 0 -7px;
+            inset: 0 -9px;
             border-radius: 9999px;
             background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--marker-color) 18%, transparent), transparent);
             filter: blur(8px);
-            opacity: .62;
+            opacity: .78;
           }
           .pullz-marker-arrow {
             color: var(--marker-color);
-            text-shadow: 0 0 10px var(--marker-glow), 0 0 22px color-mix(in srgb, var(--marker-color) 58%, transparent);
-            filter: drop-shadow(0 0 7px var(--marker-glow));
+            text-shadow: 0 0 12px var(--marker-glow), 0 0 26px color-mix(in srgb, var(--marker-color) 66%, transparent);
+            filter: drop-shadow(0 0 9px var(--marker-glow));
             animation: pullzMarkerArrowPulse 1.9s ease-in-out infinite;
             will-change: opacity, transform;
           }
@@ -2520,21 +2585,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             will-change: transform;
           }
           .pullz-winner-settled {
-            animation: pullzWinnerSettlePulse 680ms cubic-bezier(.2, .9, .2, 1) 1 both;
+            animation: pullzWinnerSettlePulse 760ms cubic-bezier(.2, .9, .2, 1) 1 both;
+          }
+          .pullz-winner-settled.pullz-winner-legendary {
+            animation: pullzLegendaryWinnerSettle 860ms cubic-bezier(.2, .9, .2, 1) 1 both;
           }
           @keyframes ambientPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 rgba(34,211,238,0.2);} 50% { transform: scale(1.02); box-shadow: 0 0 22px rgba(34,211,238,0.32);} }
-          @keyframes pullzCenterFocusPulse { 0%, 100% { opacity: .42; transform: translate3d(-50%, -50%, 0) scale(.96); } 50% { opacity: .68; transform: translate3d(-50%, -50%, 0) scale(1.04); } }
+          @keyframes pullzCenterFocusPulse { 0%, 100% { opacity: .52; transform: translate3d(-50%, -50%, 0) scale(.98); } 50% { opacity: .78; transform: translate3d(-50%, -50%, 0) scale(1.08); } }
           @keyframes pullzMarkerBeamPulse { 0%, 100% { opacity: .82; } 50% { opacity: 1; } }
           @keyframes pullzMarkerArrowPulse { 0%, 100% { opacity: .84; } 50% { opacity: 1; } }
           @keyframes pullzRareCenterFlash { 0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.86); } 35% { opacity: 1; } 100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.16); } }
-          @keyframes pullzWinnerSettlePulse { 0% { transform: translateZ(0) scale(1.02); } 42% { transform: translateZ(0) scale(1.085); } 100% { transform: translateZ(0) scale(1.045); } }
+          @keyframes pullzWinnerSettlePulse { 0% { transform: translateZ(0) scale(1.02); filter: brightness(1.08) contrast(1.02); } 38% { transform: translateZ(0) scale(var(--winner-peak-scale)); filter: brightness(1.28) contrast(1.1); } 100% { transform: translateZ(0) scale(var(--winner-settle-scale)); filter: brightness(1.16) contrast(1.05); } }
+          @keyframes pullzLegendaryWinnerSettle { 0% { transform: translate3d(0,0,0) scale(1.02); filter: brightness(1.1) contrast(1.03); } 36% { transform: translate3d(0,0,0) scale(var(--winner-peak-scale)); filter: brightness(1.34) contrast(1.12); } 62% { transform: translate3d(0,0,0) scale(var(--winner-settle-scale)); filter: brightness(1.2) contrast(1.07); } 72% { transform: translate3d(-2px,0,0) scale(var(--winner-settle-scale)); } 82% { transform: translate3d(2px,0,0) scale(var(--winner-settle-scale)); } 91% { transform: translate3d(-1px,0,0) scale(var(--winner-settle-scale)); } 100% { transform: translate3d(0,0,0) scale(var(--winner-settle-scale)); filter: brightness(1.16) contrast(1.05); } }
           @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
           @media (max-width: 640px) {
             .pullz-spinner-card { border-radius: 1.1rem; }
-            .pullz-center-focus { filter: blur(8px); opacity: .46; }
+            .pullz-center-focus { filter: blur(9px); opacity: .56; }
             .pullz-marker-beam { width: 2px; }
           }
-          @media (prefers-reduced-motion: reduce){ .ambient-pulse, .pullz-center-focus, .pullz-marker-beam, .pullz-marker-arrow, .pullz-rare-center-flash, .pullz-winner-settled { animation: none; } }
+          @media (prefers-reduced-motion: reduce){ .ambient-pulse, .pullz-center-focus, .pullz-marker-beam, .pullz-marker-arrow, .pullz-rare-center-flash, .pullz-winner-settled, .pullz-winner-settled.pullz-winner-legendary { animation: none; } }
         `}</style>
 
 
