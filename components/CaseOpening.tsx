@@ -71,8 +71,8 @@ const SPINNER_MOTION = {
   durationVarianceMs: 180,
   initialBlurDurationMs: 260,
   revealDelayMs: 760,
-  slowCrawlChance: 0.18,
-  perfectCenterFinishChance: 0.12
+  landingOffsetMinPx: 8,
+  landingOffsetMaxPx: 42
 } as const;
 
 const rarityGlowClass: Record<string, string> = {
@@ -1019,7 +1019,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       scrollContainerRef.current.getAnimations().forEach((animation) => animation.cancel());
       scrollContainerRef.current.style.transition = 'none';
       scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
-      scrollContainerRef.current.style.filter = 'blur(0px)';
     }
 
     if (tickTimerRef.current !== null) {
@@ -1064,12 +1063,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const shouldSlowCrawl = !prefersReducedMotion && rng() < SPINNER_MOTION.slowCrawlChance;
-    const shouldPerfectCenterFinish = !shouldSlowCrawl && rng() < SPINNER_MOTION.perfectCenterFinishChance;
-    const approachOffset = shouldPerfectCenterFinish ? 0 : getApproachOffset(rng);
-    const landingJitterPx = shouldSlowCrawl || shouldPerfectCenterFinish
-      ? 0
-      : (rng() < 0.5 ? -1 : 1) * (4 + Math.round(rng() * 6));
+    const approachOffset = getApproachOffset(rng);
+    const landingJitterPx = (rng() < 0.5 ? -1 : 1) * (4 + Math.round(rng() * 6));
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const resolvedDuration = Math.max(6200, duration + durationVariance);
     const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
@@ -1081,8 +1076,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     container.style.transition = 'none';
     container.style.transform = 'translate3d(0px, 0, 0)';
     container.style.backfaceVisibility = 'hidden';
-    container.style.filter = 'blur(0px)';
-    container.style.willChange = reduceMobileEffects || prefersReducedMotion ? 'transform' : 'transform, filter';
+    container.style.willChange = 'transform';
 
     // Two paint frames + layout read prevents mobile browsers from skipping early keyframes.
     await waitForNextPaint();
@@ -1095,11 +1089,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     lastTickedCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
 
-    const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
-    const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    const { cardWidth } = spinnerMeasurementsRef.current;
+    const maxLandingOffset = Math.max(
+      SPINNER_MOTION.landingOffsetMinPx,
+      Math.min(SPINNER_MOTION.landingOffsetMaxPx, Math.round(cardWidth * 0.24))
+    );
+    const landingOffsetMagnitude = SPINNER_MOTION.landingOffsetMinPx + Math.round(rng() * (maxLandingOffset - SPINNER_MOTION.landingOffsetMinPx));
+    const landingOffset = (rng() < 0.5 ? -1 : 1) * landingOffsetMagnitude;
+    const landingTranslateRaw = await resolveCenteredTranslate(winnerIndex, landingOffset);
+    const landingTranslate = landingTranslateRaw === null ? null : clampTranslate(landingTranslateRaw);
+    const jitterLandingTranslate = landingTranslate === null ? null : clampTranslate(landingTranslate + landingJitterPx);
+    const approachTranslate = landingTranslate === null ? null : clampTranslate(landingTranslate + approachOffset);
+    if (landingTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
@@ -1109,43 +1110,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
     setAnimationPhase('spinning');
 
-    const allowMotionBlur = !reduceMobileEffects && !prefersReducedMotion;
-    const { stepWidth } = spinnerMeasurementsRef.current;
-    const crawlStep = Math.max(1, stepWidth || DESKTOP_CARD_WIDTH + DESKTOP_GAP_WIDTH);
-    const crawlStartTranslate = clampTranslate(centeredTranslate + (crawlStep * 3));
-    const crawlSecondTranslate = clampTranslate(centeredTranslate + (crawlStep * 2));
-    const crawlLastTranslate = clampTranslate(centeredTranslate + crawlStep);
-    const perfectSettleTranslate = shouldPerfectCenterFinish ? centeredTranslate : jitterLandingTranslate;
-    const spinKeyframes: Keyframe[] = shouldSlowCrawl
-      ? (allowMotionBlur
-        ? [
-            { transform: 'translate3d(0px, 0, 0) scaleX(1)', filter: 'blur(0px)', offset: 0, easing: 'cubic-bezier(0.22, 0.72, 0.16, 1)' },
-            { transform: `translate3d(${crawlStartTranslate}px, 0, 0) scaleX(1.006)`, filter: 'blur(1px)', offset: 0.62, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-            { transform: `translate3d(${crawlSecondTranslate}px, 0, 0) scaleX(1.002)`, filter: 'blur(0px)', offset: 0.78, easing: 'cubic-bezier(0.28, 0.84, 0.38, 1)' },
-            { transform: `translate3d(${crawlLastTranslate}px, 0, 0) scaleX(1)`, filter: 'blur(0px)', offset: 0.9, easing: 'cubic-bezier(0.32, 0.86, 0.42, 1)' },
-            { transform: `translate3d(${centeredTranslate}px, 0, 0) scaleX(1)`, filter: 'blur(0px)', offset: 1, easing: 'cubic-bezier(0.2, 0.82, 0.18, 1)' }
-          ]
-        : [
-            { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.22, 0.72, 0.16, 1)' },
-            { transform: `translate3d(${crawlStartTranslate}px, 0, 0)`, offset: 0.62, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-            { transform: `translate3d(${crawlSecondTranslate}px, 0, 0)`, offset: 0.78, easing: 'cubic-bezier(0.28, 0.84, 0.38, 1)' },
-            { transform: `translate3d(${crawlLastTranslate}px, 0, 0)`, offset: 0.9, easing: 'cubic-bezier(0.32, 0.86, 0.42, 1)' },
-            { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.2, 0.82, 0.18, 1)' }
-          ])
-      : (allowMotionBlur
-        ? [
-            { transform: 'translate3d(0px, 0, 0) scaleX(1)', filter: 'blur(0px)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-            { transform: `translate3d(${shouldPerfectCenterFinish ? centeredTranslate : overshootTarget}px, 0, 0) scaleX(1.006)`, filter: 'blur(1.15px)', offset: Math.min(overshootOffset, 0.42), easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-            { transform: `translate3d(${shouldPerfectCenterFinish ? centeredTranslate : overshootTarget}px, 0, 0) scaleX(1.003)`, filter: shouldPerfectCenterFinish ? 'blur(0px)' : 'blur(0.45px)', offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-            { transform: `translate3d(${perfectSettleTranslate}px, 0, 0) scaleX(1)`, filter: 'blur(0px)', offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-            { transform: `translate3d(${centeredTranslate}px, 0, 0) scaleX(1)`, filter: 'blur(0px)', offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
-          ]
-        : [
-            { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-            { transform: `translate3d(${shouldPerfectCenterFinish ? centeredTranslate : overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-            { transform: `translate3d(${perfectSettleTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-            { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
-          ]);
+    const spinKeyframes: Keyframe[] = [
+      { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
+      { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
+      { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
+      { transform: `translate3d(${landingTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
+    ];
 
     const animation = container.animate(
       spinKeyframes,
@@ -1198,8 +1168,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       animation.cancel();
       container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
-      container.style.filter = 'blur(0px)';
+      container.style.transform = `translate3d(${landingTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
@@ -1221,12 +1190,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (frameId !== null) window.cancelAnimationFrame(frameId);
       tickFrameRef.current = null;
       setAnimationPhase('idle');
-      container.style.filter = 'blur(0px)';
       container.style.willChange = 'auto';
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, prefersReducedMotion, reduceMobileEffects, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, triggerRareCenterFlash, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, triggerRareCenterFlash, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1826,7 +1794,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (!scrollContainerRef.current) return;
       scrollContainerRef.current.style.transition = 'none';
       scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
-      scrollContainerRef.current.style.filter = 'blur(0px)';
       scrollContainerRef.current.getAnimations().forEach((animation) => animation.cancel());
     });
   }, []);
