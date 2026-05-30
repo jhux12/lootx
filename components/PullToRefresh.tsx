@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const TRIGGER_DISTANCE = 86;
-const MAX_PULL_DISTANCE = 140;
+const TRIGGER_DISTANCE = 78;
+const MAX_PULL_DISTANCE = 128;
+const ICON_RESTING_OFFSET = 34;
 
 const getScrollableAncestor = (target: Element | null): Element | null => {
   let element = target;
@@ -88,7 +89,7 @@ const PullToRefresh: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
       if (pullDistanceRef.current >= TRIGGER_DISTANCE) {
         setIsRefreshing(true);
-        setPullDistance(48);
+        setPullDistance(ICON_RESTING_OFFSET);
 
         window.setTimeout(() => {
           window.location.reload();
@@ -115,6 +116,8 @@ const PullToRefresh: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     };
   }, []);
 
+  const pullProgress = Math.min(1, pullDistance / TRIGGER_DISTANCE);
+  const iconRotation = Math.round(pullProgress * 360);
   const indicatorLabel = isRefreshing ? 'Refreshing' : isReady ? 'Release to refresh' : 'Pull down to refresh';
 
   return (
@@ -127,43 +130,42 @@ const PullToRefresh: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <div
         aria-hidden="true"
         style={{
-          height: `${pullDistance}px`,
-          transition: isPulling.current || isRefreshing ? 'none' : 'height 200ms ease-out'
+          height: `${Math.min(pullDistance, ICON_RESTING_OFFSET)}px`,
+          transition: isPulling.current || isRefreshing ? 'none' : 'height 180ms ease-out'
         }}
       />
       <div
         aria-live="polite"
         aria-label={indicatorLabel}
-        className="pointer-events-none fixed inset-x-0 top-[max(env(safe-area-inset-top),0px)] z-[70] flex justify-center"
+        className="pointer-events-none fixed inset-x-0 top-[max(env(safe-area-inset-top),0px)] z-[70] flex justify-center pt-2"
         style={{
-          transform: `translateY(${Math.max(-44, pullDistance - 54)}px)`,
-          opacity: pullDistance > 0 || isRefreshing ? 1 : 0,
-          transition: 'opacity 160ms ease, transform 180ms ease'
+          transform: `translateY(${Math.max(-28, Math.min(pullDistance - 42, 18))}px)`,
+          opacity: pullDistance > 4 || isRefreshing ? Math.max(0.2, pullProgress) : 0,
+          transition: isPulling.current || isRefreshing ? 'opacity 80ms linear, transform 80ms linear' : 'opacity 160ms ease, transform 180ms ease'
         }}
       >
-        <div className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-[#0b1220]/88 text-cyan-100 shadow-[0_10px_28px_rgba(0,0,0,0.26)] backdrop-blur-md">
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className={`h-5 w-5 ${isRefreshing || isReady ? 'animate-spin text-cyan-200' : 'text-white/75'}`}
-            fill="none"
-          >
-            <path
-              d="M17.7 6.3A8 8 0 1 0 20 12"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-            />
-            <path
-              d="M18 3v4h-4"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-            />
-          </svg>
-        </div>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className={`h-6 w-6 drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] ${isRefreshing ? 'animate-spin text-cyan-200' : 'text-white/80'}`}
+          fill="none"
+          style={isRefreshing ? undefined : { transform: `rotate(${iconRotation}deg)`, transition: 'transform 80ms linear' }}
+        >
+          <path
+            d="M17.7 6.3A8 8 0 1 0 20 12"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+          />
+          <path
+            d="M18 3v4h-4"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+          />
+        </svg>
       </div>
       <div className="relative">
         {children}
