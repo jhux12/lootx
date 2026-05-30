@@ -57,7 +57,6 @@ const SPINNER_MOTION = {
   goldTicketDurationMs: 10400,
   goldFinalDurationMs: 9600,
   settleDurationMs: 2200,
-  snapToCenterDurationMs: 560,
   overshootPx: 10,
   approachOffsetSoftMaxPx: 10,
   approachOffsetNearMissMinPx: 20,
@@ -993,8 +992,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const resolvedDuration = Math.max(6200, duration + durationVariance);
-    const snapPortion = clamp(SPINNER_MOTION.snapToCenterDurationMs / resolvedDuration, 0.045, 0.09);
-    const landingKeyframeOffset = clamp(1 - snapPortion, 0.9, 0.955);
     const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
     const preSettleOffset = clamp(1 - settlePortion, 0.7, 0.82);
     const overshootOffset = clamp(preSettleOffset - 0.16, 0.54, 0.7);
@@ -1038,8 +1035,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
         { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
         { transform: `translate3d(${approachTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${landingZoneTranslate}px, 0, 0)`, offset: landingKeyframeOffset, easing: 'cubic-bezier(0.12, 0.86, 0.22, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
+        { transform: `translate3d(${landingZoneTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.12, 0.86, 0.22, 1)' }
       ],
       {
         duration: resolvedDuration,
@@ -1582,11 +1578,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs * quickFactor, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
-                  });
+                  }, { seed: `${goldSeed}:motion` });
                 });
               goldStageTimerRef.current = null;
             }, 700);
-        });
+        }, { seed: `${ticketSeed}:motion` });
 
     } else {
         // --- NORMAL SPIN FLOW ---
@@ -1596,7 +1592,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.72 : 1), () => {
             finishSpin(winner);
-        });
+        }, { seed: `${mainSeed}:motion` });
     }
   };
 
