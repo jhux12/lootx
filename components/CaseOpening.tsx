@@ -1019,23 +1019,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const landingZoneOffset = getLandingZoneOffset(rng);
     const approachOffset = getApproachOffset(rng);
     const landingZoneTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingZoneOffset);
-    const approachTranslate = landingZoneTranslate === null ? null : clampTranslate(landingZoneTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || landingZoneTranslate === null) {
+    if (centeredTranslate === null || landingZoneTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
     }
 
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
+    const overshootDirection = (landingZoneOffset + approachOffset) >= 0 ? -1 : 1;
+    const overshootTarget = clampTranslate(landingZoneTranslate + approachOffset + (SPINNER_MOTION.overshootPx * overshootDirection));
     setAnimationPhase('spinning');
 
     const animation = container.animate(
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
         { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-        { transform: `translate3d(${approachTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${landingZoneTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.12, 0.86, 0.22, 1)' }
+        { transform: `translate3d(${landingZoneTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
+        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.12, 0.86, 0.22, 1)' }
       ],
       {
         duration: resolvedDuration,
