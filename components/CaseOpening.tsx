@@ -51,18 +51,18 @@ const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
-  preWinnerItems: 52,
-  postWinnerItems: 10,
-  spinDurationMs: 8400,
-  goldTicketDurationMs: 7800,
-  goldFinalDurationMs: 7200,
-  settleDurationMs: 1500,
-  overshootPx: 18,
-  approachOffsetSoftMaxPx: 16,
-  approachOffsetNearMissMinPx: 34,
-  approachOffsetNearMissMaxPx: 58,
+  preWinnerItems: 64,
+  postWinnerItems: 14,
+  spinDurationMs: 11200,
+  goldTicketDurationMs: 10400,
+  goldFinalDurationMs: 9600,
+  settleDurationMs: 2200,
+  overshootPx: 10,
+  approachOffsetSoftMaxPx: 10,
+  approachOffsetNearMissMinPx: 20,
+  approachOffsetNearMissMaxPx: 34,
   nearMissChance: 0.42,
-  durationVarianceMs: 420,
+  durationVarianceMs: 180,
   initialBlurDurationMs: 260
 } as const;
 
@@ -968,11 +968,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const approachOffset = getApproachOffset(rng);
     const landingJitterPx = 0;
-    const durationVariance = Math.round((rng() - 0.5) * Math.min(220, SPINNER_MOTION.durationVarianceMs) * 2);
-    const resolvedDuration = Math.max(4200, duration + durationVariance);
-    const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.16, 0.28);
-    const preSettleOffset = clamp(1 - settlePortion, 0.72, 0.84);
-    const overshootOffset = clamp(preSettleOffset - 0.2, 0.52, 0.68);
+    const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
+    const resolvedDuration = Math.max(6200, duration + durationVariance);
+    const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
+    const preSettleOffset = clamp(1 - settlePortion, 0.7, 0.82);
+    const overshootOffset = clamp(preSettleOffset - 0.16, 0.54, 0.7);
 
     resetSpinnerAnimation();
 
@@ -1008,10 +1008,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const animation = container.animate(
       [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.25, 0.6, 0.2, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.86, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.12, 0, 0.18, 1)' }
+        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
+        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
+        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
       ],
       {
         duration: resolvedDuration,
@@ -1538,7 +1538,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const ticketReelResult = generateReel(GOLDEN_TICKET_ITEM, items, { sprinkleGold: true, seed: ticketSeed });
         await prepareReelForSpin(ticketReelResult.items, ticketReelResult.winnerIndex);
 
-        const quickFactor = isQuick ? 0.58 : 1;
+        const quickFactor = isQuick ? 0.72 : 1;
         animateSpin(ticketReelResult.winnerIndex, SPINNER_MOTION.goldTicketDurationMs * quickFactor, () => {
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
@@ -1566,7 +1566,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const normalReelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
         await prepareReelForSpin(normalReelResult.items, normalReelResult.winnerIndex);
 
-        animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.58 : 1), () => {
+        animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.72 : 1), () => {
             finishSpin(winner);
         });
     }
@@ -1978,12 +1978,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const isUltraSmoothSpin = isSpinning;
                           const showItemGlow = !isUltraSmoothSpin && (!useMobileSpinnerBehavior || !reduceMobileEffects);
                           const allowHeavyHighlight = !isUltraSmoothSpin;
-                          const cardOpacity = isUltraSmoothSpin ? 1 : (isFocusedItem ? 1 : 0.35);
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className={`pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${isSpinning ? 'is-spinning transition-none' : 'transition-opacity duration-200'}`}
+                            className="pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
@@ -1992,12 +1991,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 boxShadow: isFocusedItem && allowHeavyHighlight
                                   ? (reduceMobileEffects ? `0 0 0 1px ${item.color}44, 0 0 12px ${item.color}30` : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
                                   : 'none',
-                                opacity: cardOpacity,
-                                filter: reduceMobileEffects || isUltraSmoothSpin
-                                  ? 'none'
-                                  : isFocusedItem
-                                    ? 'brightness(1.12)'
-                                    : 'brightness(0.82)',
+                                opacity: 1,
+                                filter: 'none',
                                 zIndex: isFocusedItem ? 4 : 1
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
