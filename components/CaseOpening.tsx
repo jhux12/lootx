@@ -357,8 +357,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
-  const [sellOfferGenerated, setSellOfferGenerated] = useState(false);
-  const [isGeneratingSellOffer, setIsGeneratingSellOffer] = useState(false);
   const [isSellingItem, setIsSellingItem] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
   const [serverSeedHash, setServerSeedHash] = useState('');
@@ -414,7 +412,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const itemModalCoinFrameRef = useRef<number | null>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const bodyOverflowRef = useRef<string>('');
-  const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
   const preFreeSpinBalanceRef = useRef<number | null>(null);
   const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
@@ -571,9 +568,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, []);
 
   useEffect(() => () => {
-    if (sellOfferTimerRef.current) {
-      window.clearTimeout(sellOfferTimerRef.current);
-    }
     if (itemModalRevealFrameRef.current) {
       window.cancelAnimationFrame(itemModalRevealFrameRef.current);
     }
@@ -1337,7 +1331,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setWonItem(null);
     setWonInventoryItem(null);
     setRewardResolved(false);
-    setSellOfferGenerated(false);
     playSound('click');
     
     let winner: CaseItem;
@@ -1689,11 +1682,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
   const closeWinModal = ({ redirectToBoxesCatalog = false }: { redirectToBoxesCatalog?: boolean } = {}) => {
-    if (sellOfferTimerRef.current) {
-      window.clearTimeout(sellOfferTimerRef.current);
-      sellOfferTimerRef.current = null;
-    }
-    setIsGeneratingSellOffer(false);
     setIsSellingItem(false);
     if (!rewardResolved) {
       setRewardResolved(true);
@@ -1701,7 +1689,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setShowWinModal(false);
     resetReelTrackPosition();
     setWonInventoryItem(null);
-    setSellOfferGenerated(false);
 
     const shouldRedirectToCatalog = redirectToBoxesCatalog && isFree;
     if (shouldRedirectToCatalog) {
@@ -1762,19 +1749,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         toast.error('This item is not redeemable and cannot be sold back.');
         return;
     }
-    if (isDemoSpin || isGeneratingSellOffer || isSellingItem) {
+    if (isDemoSpin || isSellingItem) {
         if (isDemoSpin) {
           closeWinModal();
         }
-        return;
-    }
-    if (!sellOfferGenerated) {
-        setIsGeneratingSellOffer(true);
-        sellOfferTimerRef.current = window.setTimeout(() => {
-          setSellOfferGenerated(true);
-          setIsGeneratingSellOffer(false);
-          sellOfferTimerRef.current = null;
-        }, 900);
         return;
     }
     if (wonInventoryItem && !rewardResolved) {
@@ -1793,12 +1771,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           setIsSellingItem(false);
         }
     }
-    if (sellOfferTimerRef.current) {
-      window.clearTimeout(sellOfferTimerRef.current);
-      sellOfferTimerRef.current = null;
-    }
     closeWinModal({ redirectToBoxesCatalog: true });
-    setIsGeneratingSellOffer(false);
     setIsSellingItem(false);
   };
 
@@ -1846,10 +1819,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleKeep = () => {
       playSound('click');
-      if (sellOfferTimerRef.current) {
-        window.clearTimeout(sellOfferTimerRef.current);
-        sellOfferTimerRef.current = null;
-      }
       if (wonItem && !rewardResolved) {
         setRewardResolved(true);
         if (isFree) {
@@ -1860,7 +1829,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           });
         }
       }
-      setIsGeneratingSellOffer(false);
       setIsSellingItem(false);
       closeWinModal({ redirectToBoxesCatalog: true });
   };
@@ -2330,40 +2298,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     {wonItem.redeemable !== false && (
                       <button
                         onClick={handleSell}
-                        disabled={isGeneratingSellOffer || isSellingItem}
-                        className={`h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 border px-4 text-sm font-semibold transition disabled:opacity-60 ${
-                          sellOfferGenerated
-                            ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30'
-                            : 'border-white/10 bg-white/5 text-gray-100 hover:bg-white/10'
-                        }`}
+                        disabled={isSellingItem}
+                        className="h-16 flex-1 rounded-lg border border-emerald-400/40 bg-emerald-500/20 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/30 disabled:opacity-60 sm:h-14 sm:rounded-xl"
                       >
-                        {isSellingItem ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Selling item...
-                          </span>
-                        ) : isGeneratingSellOffer ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Generating offer...
-                          </span>
-                        ) : sellOfferGenerated ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Trade for
-                            <CoinAmount
-                              amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
-                              formatOptions={{ maximumFractionDigits: 0 }}
-                              className="text-emerald-50"
-                              iconClassName="h-4 w-4"
-                            />
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Generate buy back offer
-                          </span>
-                        )}
+                        <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 sm:flex-nowrap sm:px-0 sm:py-0">
+                          <Wallet className="h-4 w-4 flex-none" />
+                          {isSellingItem ? (
+                            'Selling item...'
+                          ) : (
+                            <>
+                              <span>Quick Sell</span>
+                              <CoinAmount
+                                amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="text-emerald-50"
+                                iconClassName="h-4 w-4"
+                              />
+                            </>
+                          )}
+                        </span>
                       </button>
                     )}
                     <button onClick={handleKeep} className="h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 btn-logo-gradient px-4 text-sm font-bold text-white"> 
