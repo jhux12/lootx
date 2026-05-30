@@ -51,18 +51,18 @@ const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
-  preWinnerItems: 52,
-  postWinnerItems: 10,
-  spinDurationMs: 8400,
-  goldTicketDurationMs: 7800,
-  goldFinalDurationMs: 7200,
-  settleDurationMs: 1500,
-  overshootPx: 18,
-  approachOffsetSoftMaxPx: 16,
-  approachOffsetNearMissMinPx: 34,
-  approachOffsetNearMissMaxPx: 58,
+  preWinnerItems: 64,
+  postWinnerItems: 14,
+  spinDurationMs: 11200,
+  goldTicketDurationMs: 10400,
+  goldFinalDurationMs: 9600,
+  settleDurationMs: 2200,
+  overshootPx: 10,
+  approachOffsetSoftMaxPx: 10,
+  approachOffsetNearMissMinPx: 20,
+  approachOffsetNearMissMaxPx: 34,
   nearMissChance: 0.42,
-  durationVarianceMs: 420,
+  durationVarianceMs: 180,
   initialBlurDurationMs: 260
 } as const;
 
@@ -357,8 +357,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
-  const [sellOfferGenerated, setSellOfferGenerated] = useState(false);
-  const [isGeneratingSellOffer, setIsGeneratingSellOffer] = useState(false);
   const [isSellingItem, setIsSellingItem] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
   const [serverSeedHash, setServerSeedHash] = useState('');
@@ -414,7 +412,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const itemModalCoinFrameRef = useRef<number | null>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const bodyOverflowRef = useRef<string>('');
-  const sellOfferTimerRef = useRef<number | null>(null);
   const topUpTriggerLockRef = useRef(false);
   const preFreeSpinBalanceRef = useRef<number | null>(null);
   const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
@@ -571,9 +568,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, []);
 
   useEffect(() => () => {
-    if (sellOfferTimerRef.current) {
-      window.clearTimeout(sellOfferTimerRef.current);
-    }
     if (itemModalRevealFrameRef.current) {
       window.cancelAnimationFrame(itemModalRevealFrameRef.current);
     }
@@ -974,11 +968,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const approachOffset = getApproachOffset(rng);
     const landingJitterPx = 0;
-    const durationVariance = Math.round((rng() - 0.5) * Math.min(220, SPINNER_MOTION.durationVarianceMs) * 2);
-    const resolvedDuration = Math.max(4200, duration + durationVariance);
-    const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.16, 0.28);
-    const preSettleOffset = clamp(1 - settlePortion, 0.72, 0.84);
-    const overshootOffset = clamp(preSettleOffset - 0.2, 0.52, 0.68);
+    const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
+    const resolvedDuration = Math.max(6200, duration + durationVariance);
+    const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
+    const preSettleOffset = clamp(1 - settlePortion, 0.7, 0.82);
+    const overshootOffset = clamp(preSettleOffset - 0.16, 0.54, 0.7);
 
     resetSpinnerAnimation();
 
@@ -1014,10 +1008,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const animation = container.animate(
       [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.25, 0.6, 0.2, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.1, 1, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.86, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.12, 0, 0.18, 1)' }
+        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
+        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
+        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
       ],
       {
         duration: resolvedDuration,
@@ -1337,7 +1331,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setWonItem(null);
     setWonInventoryItem(null);
     setRewardResolved(false);
-    setSellOfferGenerated(false);
     playSound('click');
     
     let winner: CaseItem;
@@ -1545,7 +1538,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const ticketReelResult = generateReel(GOLDEN_TICKET_ITEM, items, { sprinkleGold: true, seed: ticketSeed });
         await prepareReelForSpin(ticketReelResult.items, ticketReelResult.winnerIndex);
 
-        const quickFactor = isQuick ? 0.58 : 1;
+        const quickFactor = isQuick ? 0.72 : 1;
         animateSpin(ticketReelResult.winnerIndex, SPINNER_MOTION.goldTicketDurationMs * quickFactor, () => {
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
@@ -1573,7 +1566,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const normalReelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
         await prepareReelForSpin(normalReelResult.items, normalReelResult.winnerIndex);
 
-        animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.58 : 1), () => {
+        animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.72 : 1), () => {
             finishSpin(winner);
         });
     }
@@ -1689,11 +1682,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
   const closeWinModal = ({ redirectToBoxesCatalog = false }: { redirectToBoxesCatalog?: boolean } = {}) => {
-    if (sellOfferTimerRef.current) {
-      window.clearTimeout(sellOfferTimerRef.current);
-      sellOfferTimerRef.current = null;
-    }
-    setIsGeneratingSellOffer(false);
     setIsSellingItem(false);
     if (!rewardResolved) {
       setRewardResolved(true);
@@ -1701,7 +1689,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setShowWinModal(false);
     resetReelTrackPosition();
     setWonInventoryItem(null);
-    setSellOfferGenerated(false);
 
     const shouldRedirectToCatalog = redirectToBoxesCatalog && isFree;
     if (shouldRedirectToCatalog) {
@@ -1762,19 +1749,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         toast.error('This item is not redeemable and cannot be sold back.');
         return;
     }
-    if (isDemoSpin || isGeneratingSellOffer || isSellingItem) {
+    if (isDemoSpin || isSellingItem) {
         if (isDemoSpin) {
           closeWinModal();
         }
-        return;
-    }
-    if (!sellOfferGenerated) {
-        setIsGeneratingSellOffer(true);
-        sellOfferTimerRef.current = window.setTimeout(() => {
-          setSellOfferGenerated(true);
-          setIsGeneratingSellOffer(false);
-          sellOfferTimerRef.current = null;
-        }, 900);
         return;
     }
     if (wonInventoryItem && !rewardResolved) {
@@ -1793,12 +1771,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           setIsSellingItem(false);
         }
     }
-    if (sellOfferTimerRef.current) {
-      window.clearTimeout(sellOfferTimerRef.current);
-      sellOfferTimerRef.current = null;
-    }
     closeWinModal({ redirectToBoxesCatalog: true });
-    setIsGeneratingSellOffer(false);
     setIsSellingItem(false);
   };
 
@@ -1846,10 +1819,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleKeep = () => {
       playSound('click');
-      if (sellOfferTimerRef.current) {
-        window.clearTimeout(sellOfferTimerRef.current);
-        sellOfferTimerRef.current = null;
-      }
       if (wonItem && !rewardResolved) {
         setRewardResolved(true);
         if (isFree) {
@@ -1860,7 +1829,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           });
         }
       }
-      setIsGeneratingSellOffer(false);
       setIsSellingItem(false);
       closeWinModal({ redirectToBoxesCatalog: true });
   };
@@ -2010,12 +1978,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const isUltraSmoothSpin = isSpinning;
                           const showItemGlow = !isUltraSmoothSpin && (!useMobileSpinnerBehavior || !reduceMobileEffects);
                           const allowHeavyHighlight = !isUltraSmoothSpin;
-                          const cardOpacity = isUltraSmoothSpin ? 1 : (isFocusedItem ? 1 : 0.35);
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className={`pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${isSpinning ? 'is-spinning transition-none' : 'transition-opacity duration-200'}`}
+                            className="pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
@@ -2024,12 +1991,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 boxShadow: isFocusedItem && allowHeavyHighlight
                                   ? (reduceMobileEffects ? `0 0 0 1px ${item.color}44, 0 0 12px ${item.color}30` : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
                                   : 'none',
-                                opacity: cardOpacity,
-                                filter: reduceMobileEffects || isUltraSmoothSpin
-                                  ? 'none'
-                                  : isFocusedItem
-                                    ? 'brightness(1.12)'
-                                    : 'brightness(0.82)',
+                                opacity: 1,
+                                filter: 'none',
                                 zIndex: isFocusedItem ? 4 : 1
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
@@ -2330,40 +2293,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     {wonItem.redeemable !== false && (
                       <button
                         onClick={handleSell}
-                        disabled={isGeneratingSellOffer || isSellingItem}
-                        className={`h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 border px-4 text-sm font-semibold transition disabled:opacity-60 ${
-                          sellOfferGenerated
-                            ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30'
-                            : 'border-white/10 bg-white/5 text-gray-100 hover:bg-white/10'
-                        }`}
+                        disabled={isSellingItem}
+                        className="h-16 flex-1 rounded-lg border border-emerald-400/40 bg-emerald-500/20 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/30 disabled:opacity-60 sm:h-14 sm:rounded-xl"
                       >
-                        {isSellingItem ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Selling item...
-                          </span>
-                        ) : isGeneratingSellOffer ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Generating offer...
-                          </span>
-                        ) : sellOfferGenerated ? (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Trade for
-                            <CoinAmount
-                              amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
-                              formatOptions={{ maximumFractionDigits: 0 }}
-                              className="text-emerald-50"
-                              iconClassName="h-4 w-4"
-                            />
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4" />
-                            Generate buy back offer
-                          </span>
-                        )}
+                        <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 sm:flex-nowrap sm:px-0 sm:py-0">
+                          <Wallet className="h-4 w-4 flex-none" />
+                          {isSellingItem ? (
+                            'Selling item...'
+                          ) : (
+                            <>
+                              <span>Quick Sell</span>
+                              <CoinAmount
+                                amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="text-emerald-50"
+                                iconClassName="h-4 w-4"
+                              />
+                            </>
+                          )}
+                        </span>
                       </button>
                     )}
                     <button onClick={handleKeep} className="h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 btn-logo-gradient px-4 text-sm font-bold text-white"> 
