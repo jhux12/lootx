@@ -71,8 +71,8 @@ const SPINNER_MOTION = {
   durationVarianceMs: 180,
   initialBlurDurationMs: 260,
   revealDelayMs: 760,
-  landingOffsetMinPx: 8,
-  landingOffsetMaxPx: 42
+  landingOffsetMinPx: 18,
+  landingOffsetMaxPx: 68
 } as const;
 
 const rarityGlowClass: Record<string, string> = {
@@ -184,6 +184,8 @@ const formatSpinnerCoinValue = (value: number) => {
   if (rounded >= 1000) return `${(rounded / 1000).toFixed(rounded >= 10000 ? 0 : 1)}K`;
   return rounded.toLocaleString();
 };
+
+const LANDING_ZONE_FACTORS = [-1, -0.76, -0.52, -0.28, 0.28, 0.52, 0.76, 1] as const;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const toHex = (buffer: ArrayBuffer) =>
@@ -1089,13 +1091,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     lastTickedCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
 
-    const { cardWidth } = spinnerMeasurementsRef.current;
+    const { cardWidth, stepWidth } = spinnerMeasurementsRef.current;
     const maxLandingOffset = Math.max(
       SPINNER_MOTION.landingOffsetMinPx,
-      Math.min(SPINNER_MOTION.landingOffsetMaxPx, Math.round(cardWidth * 0.24))
+      Math.min(
+        SPINNER_MOTION.landingOffsetMaxPx,
+        Math.round(cardWidth * 0.38),
+        Math.max(SPINNER_MOTION.landingOffsetMinPx, Math.floor((stepWidth / 2) - 10))
+      )
     );
-    const landingOffsetMagnitude = SPINNER_MOTION.landingOffsetMinPx + Math.round(rng() * (maxLandingOffset - SPINNER_MOTION.landingOffsetMinPx));
-    const landingOffset = (rng() < 0.5 ? -1 : 1) * landingOffsetMagnitude;
+    const zoneFactor = LANDING_ZONE_FACTORS[Math.floor(rng() * LANDING_ZONE_FACTORS.length)] ?? 1;
+    const zoneMicroOffset = Math.round((rng() - 0.5) * 8);
+    const landingOffset = clamp(
+      Math.round(zoneFactor * maxLandingOffset) + zoneMicroOffset,
+      -maxLandingOffset,
+      maxLandingOffset
+    );
     const landingTranslateRaw = await resolveCenteredTranslate(winnerIndex, landingOffset);
     const landingTranslate = landingTranslateRaw === null ? null : clampTranslate(landingTranslateRaw);
     const jitterLandingTranslate = landingTranslate === null ? null : clampTranslate(landingTranslate + landingJitterPx);
