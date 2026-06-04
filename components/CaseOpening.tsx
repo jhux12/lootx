@@ -447,10 +447,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && (currentXpBalance > 0 || xpProgress > 0);
   const canOpenMain = isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
-  const spinnerCardWidth = reduceMobileEffects ? 136 : DESKTOP_CARD_WIDTH;
-  const spinnerCardHeight = reduceMobileEffects ? 178 : DESKTOP_CARD_HEIGHT;
-  const spinnerGap = reduceMobileEffects ? 4 : DESKTOP_GAP_WIDTH;
-  const spinnerViewportHeight = reduceMobileEffects ? 220 : DESKTOP_SPINNER_VIEWPORT_HEIGHT;
+  const spinnerCardWidth = reduceMobileEffects ? 146 : 178;
+  const spinnerCardHeight = reduceMobileEffects ? 194 : 224;
+  const spinnerGap = reduceMobileEffects ? 5 : DESKTOP_GAP_WIDTH;
+  const spinnerViewportHeight = reduceMobileEffects ? 232 : 252;
   // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
   const useMobileSpinnerBehavior = true;
   const reduceSpinnerRerenders = reduceMobileEffects || prefersReducedMotion;
@@ -2017,7 +2017,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem && allowHeavyHighlight
-                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}44, 0 0 12px ${item.color}30` : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
+                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}55, 0 8px 22px rgba(0,0,0,0.22), 0 0 14px ${item.color}28` : `0 0 0 1px ${item.color}88, 0 14px 34px rgba(0,0,0,0.34), 0 0 30px ${item.color}44`)
                                   : 'none',
                                 opacity: 1,
                                 filter: 'none',
@@ -2026,22 +2026,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                              className={`pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-65 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
-                              style={{ background: item.color, boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 24px ${item.color}66` : 'none' }}
+                              className={`pullz-spinner-glow pointer-events-none absolute inset-x-4 top-5 bottom-5 rounded-[42%] ${showItemGlow ? 'opacity-55 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
+                              style={{ background: item.color, boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 28px ${item.color}55` : 'none' }}
                             />
                             <div
-                              className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-between self-stretch overflow-hidden rounded-2xl border bg-[#141b27]/90 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-3"
+                              className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-between gap-2.5 self-stretch overflow-hidden rounded-2xl border bg-[#141b27]/90 p-3 shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.10)] sm:gap-3 sm:p-3.5"
                               style={{
-                                borderColor: isFocusedItem ? `${item.color}cc` : `${item.color}44`,
-                                background: `linear-gradient(180deg, ${item.color}24 0%, rgba(20,27,39,0.96) 44%, rgba(8,12,20,0.98) 100%)`
+                                borderColor: isFocusedItem ? `${item.color}dd` : `${item.color}55`,
+                                boxShadow: `0 10px 24px rgba(0,0,0,0.28), inset 0 0 0 1px ${item.color}18, inset 0 1px 0 rgba(255,255,255,0.10)`,
+                                background: `linear-gradient(180deg, ${item.color}24 0%, rgba(20,27,39,0.96) 42%, rgba(8,12,20,0.98) 100%)`
                               }}
                             >
-                              <div className="absolute inset-x-3 top-2 h-1 rounded-full opacity-80" style={{ background: item.color }} />
-                              <div className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/35 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/80">
+                              <div className="absolute inset-x-4 top-2.5 h-1 rounded-full opacity-75" style={{ background: item.color }} />
+                              <div className="absolute right-3 top-3 rounded-full border border-white/10 bg-black/40 px-2 py-1 text-[8px] font-black uppercase leading-none tracking-[0.12em] text-white/85 shadow-[0_4px_12px_rgba(0,0,0,0.24)]">
                                 {rarityValue}
                               </div>
-                              <div className="relative mt-3 flex flex-1 items-center justify-center">
-                                <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[104px] w-[104px]' : 'h-[128px] w-[128px]'}`}>
+                              <div className="relative mt-5 flex min-h-0 flex-1 items-center justify-center sm:mt-6">
+                                <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[114px] w-[114px]' : 'h-[138px] w-[138px]'}`}>
                                   <BlurImage
                                       src={item.image}
                                       alt={item.name}
@@ -2051,9 +2052,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   />
                                 </div>
                               </div>
-                              <div className="relative w-full rounded-xl border border-white/10 bg-black/25 px-2 py-1.5 text-center">
-                                <p className="truncate text-[10px] font-bold text-white sm:text-xs">{item.name}</p>
-                                <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-0.5 justify-center text-[10px] font-black text-slate-200" iconClassName="h-3 w-3" />
+                              <div className="relative w-full rounded-xl border border-white/10 bg-black/30 px-2.5 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-3">
+                                <p className="truncate text-[10.5px] font-bold leading-snug text-white sm:text-xs">{item.name}</p>
+                                <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-center text-[10px] font-black leading-none text-slate-200 sm:text-[11px]" iconClassName="h-3 w-3" />
                               </div>
                             </div>
                         </div>
