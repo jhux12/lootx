@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2, Sparkles, Trophy, Target } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -457,14 +457,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
   const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
   const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
-  const jackpotItem = displayItems[0] ?? null;
-  const jackpotValue = jackpotItem ? toCoins(jackpotItem.price, PRICE_UNIT_MODE) : 0;
-  const highTierItems = displayItems.filter((item) => ['rare', 'epic', 'legendary'].includes(normalizeRarityKey(item.rarity)));
-  const highTierChance = highTierItems.reduce((sum, item) => sum + (Number(item.chance) || 0), 0);
   const currentCenterValue = centeredSpinnerItem ? toCoins(centeredSpinnerItem.price, PRICE_UNIT_MODE) : 0;
-  const spinnerBackgroundStyle = box?.spinnerBackgroundImage
-    ? { backgroundImage: `linear-gradient(180deg, rgba(8,12,22,0.72), rgba(8,12,22,0.96)), url(${box.spinnerBackgroundImage})` }
-    : undefined;
 
   const updateSpinnerMeasurements = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -1917,55 +1910,36 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
     </div>
 
+        <div className="mb-3 flex flex-col items-center gap-3 px-3 sm:mb-4 sm:px-5">
+          <div className="flex w-full justify-center">
+            <div className="relative flex h-28 w-28 items-center justify-center sm:h-36 sm:w-36">
+              <div className="absolute inset-3 rounded-full bg-white/5 blur-2xl" />
+              <BlurImage
+                src={box?.image}
+                alt={box?.name ?? 'Mystery box'}
+                loading="eager"
+                showPlaceholder={false}
+                className="relative z-10 h-full w-full object-contain drop-shadow-[0_18px_32px_rgba(0,0,0,0.45)]"
+              />
+            </div>
+          </div>
+          <div
+            className="inline-flex max-w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur-sm sm:text-xs"
+            aria-live="polite"
+          >
+            <span className="truncate" style={{ color: centeredRarityIndicator.color }}>{centeredRarityIndicator.label}</span>
+            <span className="text-white/40">•</span>
+            <CoinAmount amount={currentCenterValue} formatOptions={{ maximumFractionDigits: 0 }} className="text-[10px] text-white sm:text-xs" iconClassName="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          </div>
+          {copyStatusMessage && (<p className="text-center text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}
+        </div>
+
         {/* SPINNER AREA */}
         <div
-          className={`relative mb-8 w-full overflow-hidden rounded-[28px] border border-white/10 bg-[#111722] p-0 shadow-[0_24px_80px_rgba(0,0,0,0.38)] ${isGoldMode ? 'ring-2 ring-yellow-300/40' : ''}`}
-          style={spinnerBackgroundStyle}
+          className={`relative mb-8 w-full overflow-visible bg-transparent p-0 ${isGoldMode ? 'rounded-[28px] ring-2 ring-yellow-300/40' : ''}`}
         >
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(111,77,255,0.28),transparent_38%),linear-gradient(90deg,rgba(34,211,238,0.08),transparent_28%,transparent_72%,rgba(168,85,247,0.1))]" />
-            <div className="pointer-events-none absolute inset-x-4 top-20 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
-            {!reduceMobileEffects && (
-              <div className="pointer-events-none absolute inset-0 opacity-45 [background-image:linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:34px_34px]" />
-            )}
-            {!reduceMobileEffects && <div className="case-spinner-sweep pointer-events-none absolute inset-y-0 left-[-30%] w-1/3 skew-x-[-18deg] bg-gradient-to-r from-transparent via-white/10 to-transparent" />}
-            
             {/* Gold Mode Overlay Effect */}
-            {isGoldMode && <div className="absolute inset-0 z-10 bg-yellow-500/10 animate-pulse pointer-events-none"></div>}
-
-            <div className="relative z-20 px-3 pb-3 pt-4 sm:px-5 sm:pt-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div className="min-w-0">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100">
-                      <Sparkles className="h-3 w-3" /> Live unbox
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/25 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300">
-                      {isQuickSpinEnabled ? 'Quick spin armed' : 'Cinematic spin'}
-                    </span>
-                  </div>
-                  <h1 className="truncate text-2xl font-black uppercase tracking-tight text-white sm:text-4xl">{box?.name}</h1>
-                  <p className="mt-1 text-xs font-medium text-slate-400 sm:text-sm">Chase the center line, hit rare drops, and reveal your prize.</p>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-left sm:min-w-[430px]">
-                  <div className="rounded-2xl border border-yellow-300/20 bg-yellow-300/10 p-2.5 sm:p-3">
-                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-yellow-200"><Trophy className="h-3.5 w-3.5" /> Jackpot</div>
-                    <div className="mt-1 truncate text-xs font-bold text-white sm:text-sm">{jackpotItem?.name ?? 'Mystery prize'}</div>
-                    <CoinAmount amount={jackpotValue} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 text-xs font-black text-yellow-100 sm:text-sm" iconClassName="h-3.5 w-3.5" />
-                  </div>
-                  <div className="rounded-2xl border border-fuchsia-300/20 bg-fuchsia-400/10 p-2.5 sm:p-3">
-                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-fuchsia-200"><Target className="h-3.5 w-3.5" /> Rare+</div>
-                    <div className="mt-1 text-lg font-black text-white sm:text-xl">{highTierChance.toFixed(highTierChance > 0 && highTierChance < 1 ? 2 : 1)}%</div>
-                    <div className="text-[10px] font-semibold text-slate-400">{highTierItems.length} premium drops</div>
-                  </div>
-                  <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-2.5 sm:p-3">
-                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-200"><Zap className="h-3.5 w-3.5" /> Bonus</div>
-                    <div className="mt-1 text-lg font-black text-white sm:text-xl">+{previewTotalXp.toLocaleString()}</div>
-                    <div className="text-[10px] font-semibold text-slate-400">XP per open</div>
-                  </div>
-                </div>
-              </div>
-              {copyStatusMessage && (<p className="mt-2 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}
-            </div>
+            {isGoldMode && <div className="pointer-events-none absolute inset-0 z-10 rounded-[28px] bg-yellow-500/5 animate-pulse"></div>}
 
             {/* Spinner Window */}
             <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
@@ -1986,8 +1960,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 
                 
                 {/* Fade Gradients */}
-                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#111722] via-[#111722]/80 to-transparent sm:w-20"></div>
-                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#111722] via-[#111722]/80 to-transparent sm:w-20"></div>
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/70 to-transparent sm:w-20"></div>
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/70 to-transparent sm:w-20"></div>
 
                 {/* Center Indicator */}
                 <div className="pointer-events-none absolute left-1/2 top-0 z-30 h-full -translate-x-1/2" aria-hidden="true">
@@ -2009,10 +1983,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     style={{ color: centeredRarityIndicator.color, textShadow: `0 0 12px ${centeredRarityIndicator.glow}` }}
                   ></i>
                 </div>
-                <div className="pointer-events-none absolute left-1/2 top-4 z-30 hidden -translate-x-1/2 rounded-full border border-white/15 bg-black/55 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white shadow-2xl backdrop-blur-sm sm:block">
-                  {centeredRarityIndicator.label} • <CoinAmount amount={currentCenterValue} formatOptions={{ maximumFractionDigits: 0 }} className="inline-flex text-[10px] text-white" iconClassName="h-3 w-3" />
-                </div>
-
                 {/* The Moving Reel */}
                 <div 
                     ref={scrollContainerRef}
@@ -2434,13 +2404,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         )}
         <style>{`
           .ambient-pulse { animation: ambientPulse 3s ease-in-out infinite; }
-          .case-spinner-sweep { animation: caseSpinnerSweep 5.8s ease-in-out infinite; }
           .pullz-spinner-card:not(.is-spinning) { transition: transform 220ms ease, opacity 220ms ease; }
           .pullz-spinner-card:not(.is-spinning):hover { transform: translateY(-3px); }
           @keyframes ambientPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 rgba(34,211,238,0.2);} 50% { transform: scale(1.02); box-shadow: 0 0 22px rgba(34,211,238,0.32);} }
-          @keyframes caseSpinnerSweep { 0%, 42% { transform: translateX(0) skewX(-18deg); opacity: 0; } 52% { opacity: 1; } 100% { transform: translateX(430%) skewX(-18deg); opacity: 0; } }
           @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-          @media (prefers-reduced-motion: reduce){ .ambient-pulse, .case-spinner-sweep { animation: none; } }
+          @media (prefers-reduced-motion: reduce){ .ambient-pulse { animation: none; } }
         `}</style>
 
 
