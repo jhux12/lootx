@@ -61,7 +61,12 @@ const SPINNER_MOTION = {
   approachOffsetSoftMaxPx: 10,
   approachOffsetNearMissMinPx: 20,
   approachOffsetNearMissMaxPx: 34,
+  landingZoneSoftMaxRatio: 0.12,
+  landingZoneCloseCallMinRatio: 0.28,
+  landingZoneCloseCallMaxRatio: 0.42,
+  landingZoneEdgePaddingPx: 16,
   nearMissChance: 0.42,
+  closeCallLandingChance: 0.48,
   durationVarianceMs: 180,
   initialBlurDurationMs: 260
 } as const;
@@ -816,6 +821,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return direction * softMagnitude;
   }, []);
 
+  const getLandingZoneOffset = useCallback((rng: () => number) => {
+    const { cardWidth } = spinnerMeasurementsRef.current;
+    const safeHalfCard = Math.max(0, (cardWidth / 2) - SPINNER_MOTION.landingZoneEdgePaddingPx);
+    if (safeHalfCard <= 0) return 0;
+
+    const direction = rng() < 0.5 ? -1 : 1;
+    const isCloseCall = rng() < SPINNER_MOTION.closeCallLandingChance;
+
+    if (isCloseCall) {
+      const min = Math.min(safeHalfCard, cardWidth * SPINNER_MOTION.landingZoneCloseCallMinRatio);
+      const max = Math.min(safeHalfCard, cardWidth * SPINNER_MOTION.landingZoneCloseCallMaxRatio);
+      const magnitude = min + (rng() * Math.max(0, max - min));
+      return Math.round(direction * magnitude);
+    }
+
+    const magnitude = rng() * Math.min(safeHalfCard, cardWidth * SPINNER_MOTION.landingZoneSoftMaxRatio);
+    return Math.round(direction * magnitude);
+  }, []);
+
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
@@ -966,8 +990,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const resolvedDuration = Math.max(6200, duration + durationVariance);
     const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
@@ -994,24 +1016,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    const landingZoneOffset = getLandingZoneOffset(rng);
+    const approachOffset = getApproachOffset(rng);
+    const landingZoneTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingZoneOffset);
+    if (centeredTranslate === null || landingZoneTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
     }
 
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
+    const overshootDirection = (landingZoneOffset + approachOffset) >= 0 ? -1 : 1;
+    const overshootTarget = clampTranslate(landingZoneTranslate + approachOffset + (SPINNER_MOTION.overshootPx * overshootDirection));
     setAnimationPhase('spinning');
 
     const animation = container.animate(
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
         { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
+        { transform: `translate3d(${landingZoneTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
+        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.12, 0.86, 0.22, 1)' }
       ],
       {
         duration: resolvedDuration,
@@ -1088,7 +1111,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, getLandingZoneOffset, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1554,11 +1577,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs * quickFactor, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
-                  });
+                  }, { seed: `${goldSeed}:motion` });
                 });
               goldStageTimerRef.current = null;
             }, 700);
-        });
+        }, { seed: `${ticketSeed}:motion` });
 
     } else {
         // --- NORMAL SPIN FLOW ---
@@ -1568,7 +1591,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.72 : 1), () => {
             finishSpin(winner);
-        });
+        }, { seed: `${mainSeed}:motion` });
     }
   };
 
