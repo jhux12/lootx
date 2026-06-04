@@ -1924,7 +1924,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
           </div>
           <div
-            className="inline-flex max-w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur-sm sm:text-xs"
+            className="hidden max-w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur-sm sm:inline-flex sm:text-xs"
             aria-live="polite"
           >
             <span className="truncate" style={{ color: centeredRarityIndicator.color }}>{centeredRarityIndicator.label}</span>
