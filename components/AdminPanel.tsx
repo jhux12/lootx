@@ -3,7 +3,7 @@ import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box a
 import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, UserLocks, UserStatus } from '../types';
+import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -135,6 +135,23 @@ type SupportCase = {
     createdAt?: Timestamp;
     lastUpdatedAt?: Timestamp;
     messages?: SupportMessage[];
+};
+
+type ShipmentOrderRecord = {
+    id: string;
+    key: string;
+    shipments: Shipment[];
+    user?: User;
+    createdAt: number;
+    updatedAt: number;
+    status: Shipment['status'];
+    itemCount: number;
+    totalValue: number;
+    shippingCost: number;
+    shippingBatchCostCents: number;
+    shippingPaymentMethod?: Shipment['shippingPaymentMethod'];
+    shippingRateTier?: string;
+    trackingNumber: string;
 };
 
 
@@ -900,20 +917,57 @@ export const AdminPanel: React.FC = () => {
       };
   };
 
-  const shipmentRecords = useMemo(() => {
-      return shipments.map((shipment, index) => {
-          const shipmentUser = users.find((profile) => profile.id === shipment.uid);
-          return {
-              shipment,
-              user: shipmentUser,
-              key: shipment.id || `${shipment.uid}-${shipment.inventoryId ?? index}`
-          };
+  const shipmentOrders = useMemo<ShipmentOrderRecord[]>(() => {
+      const grouped = new Map<string, Shipment[]>();
+
+      shipments.forEach((shipment, index) => {
+          const orderId = shipment.shippingBatchId || shipment.id || `${shipment.uid}-${shipment.inventoryId ?? index}`;
+          grouped.set(orderId, [...(grouped.get(orderId) ?? []), shipment]);
       });
+
+      const getOrderStatus = (orderShipments: Shipment[]): Shipment['status'] => {
+          if (orderShipments.some((shipment) => shipment.status === 'pending_payment')) return 'pending_payment';
+          if (orderShipments.some((shipment) => shipment.status === 'shipping_requested' || shipment.status === 'shipping')) return 'shipping_requested';
+          if (orderShipments.length > 0 && orderShipments.every((shipment) => shipment.status === 'shipped')) return 'shipped';
+          if (orderShipments.length > 0 && orderShipments.every((shipment) => shipment.status === 'cancelled')) return 'cancelled';
+          return orderShipments[0]?.status ?? 'shipping_requested';
+      };
+
+      return Array.from(grouped.entries())
+          .map(([orderId, orderShipments]) => {
+              const sortedShipments = [...orderShipments].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+              const primaryShipment = sortedShipments[0];
+              const shipmentUser = users.find((profile) => profile.id === primaryShipment?.uid);
+              const shippingCost = sortedShipments.reduce((sum, shipment) => sum + Number(shipment.shippingCost ?? 0), 0);
+              const shippingBatchCostCents = Math.max(...sortedShipments.map((shipment) => Number(shipment.shippingBatchCostCents ?? 0)), 0);
+              const totalValue = sortedShipments.reduce((sum, shipment) => sum + Number(shipment.item?.value ?? 0), 0);
+              const createdAt = Math.min(...sortedShipments.map((shipment) => shipment.createdAt ?? Date.now()));
+              const updatedAt = Math.max(...sortedShipments.map((shipment) => shipment.updatedAt ?? shipment.createdAt ?? 0));
+              const trackingNumber = sortedShipments.find((shipment) => shipment.trackingNumber)?.trackingNumber ?? '';
+
+              return {
+                  id: orderId,
+                  key: orderId,
+                  shipments: sortedShipments,
+                  user: shipmentUser,
+                  createdAt,
+                  updatedAt,
+                  status: getOrderStatus(sortedShipments),
+                  itemCount: sortedShipments.length,
+                  totalValue,
+                  shippingCost,
+                  shippingBatchCostCents,
+                  shippingPaymentMethod: sortedShipments.find((shipment) => shipment.shippingPaymentMethod)?.shippingPaymentMethod,
+                  shippingRateTier: sortedShipments.find((shipment) => shipment.shippingRateTier)?.shippingRateTier,
+                  trackingNumber
+              };
+          })
+          .sort((a, b) => b.createdAt - a.createdAt);
   }, [shipments, users]);
 
-  const filteredShipments = shipmentRecords.filter(({ shipment }) => {
-      if (shipmentFilter === 'processing') return shipment.status === 'shipping' || shipment.status === 'shipping_requested';
-      if (shipmentFilter === 'shipped') return shipment.status === 'shipped';
+  const filteredShipmentOrders = shipmentOrders.filter((order) => {
+      if (shipmentFilter === 'processing') return order.status === 'pending_payment' || order.status === 'shipping' || order.status === 'shipping_requested';
+      if (shipmentFilter === 'shipped') return order.status === 'shipped';
       return true;
   });
   useEffect(() => {
@@ -4911,47 +4965,54 @@ export const AdminPanel: React.FC = () => {
                         </div>
                     </div>
 
-                    {filteredShipments.length === 0 ? (
+                    {filteredShipmentOrders.length === 0 ? (
                         <div className="bg-[#131720] border border-gray-800 rounded-xl p-8 text-center text-gray-500">
-                            No shipment requests match this filter.
+                            No shipment orders match this filter.
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            {filteredShipments.map(({ user: shipmentUser, shipment, key }) => {
-                                const address = shipment.shippingInfo ?? shipmentUser?.shippingAddress;
-                                const canUpdate = Boolean(shipment.id);
-                                const trackingKey = shipment.id || key;
-                                const trackingValue = shipmentTracking[trackingKey] ?? shipment.trackingNumber ?? '';
-                                const shipmentItem = shipment.item ?? ({ name: 'Mystery Item', value: 0, image: 'https://picsum.photos/200', rarity: 'common' } as Shipment['item']);
-                                const displayName = shipmentUser?.name ?? address?.fullName ?? 'Unknown user';
-                                const displayEmail = shipmentUser?.email || 'No email on file';
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                            {filteredShipmentOrders.map((order) => {
+                                const firstShipment = order.shipments[0];
+                                const address = firstShipment?.shippingInfo ?? order.user?.shippingAddress;
+                                const canUpdate = order.shipments.some((shipment) => Boolean(shipment.id));
+                                const trackingKey = order.id;
+                                const trackingValue = shipmentTracking[trackingKey] ?? order.trackingNumber ?? '';
+                                const displayName = order.user?.name ?? address?.fullName ?? 'Unknown user';
+                                const displayEmail = order.user?.email || 'No email on file';
+                                const orderStatusLabel = order.status === 'shipped'
+                                    ? 'Shipped'
+                                    : order.status === 'pending_payment'
+                                        ? 'Pending payment'
+                                        : order.status === 'cancelled'
+                                            ? 'Cancelled'
+                                            : 'Processing';
+                                const orderStatusClass = order.status === 'shipped'
+                                    ? 'bg-green-500/10 text-green-400'
+                                    : order.status === 'cancelled'
+                                        ? 'bg-red-500/10 text-red-300'
+                                        : order.status === 'pending_payment'
+                                            ? 'bg-blue-500/10 text-blue-300'
+                                            : 'bg-yellow-500/10 text-yellow-400';
+                                const shippingCostLabel = order.shippingPaymentMethod === 'cash'
+                                    ? `$${((order.shippingBatchCostCents || order.shippingCost) / 100).toFixed(2)}`
+                                    : `${Math.round(order.shippingCost || 0).toLocaleString()} coins`;
+
                                 return (
-                                    <div key={key} className="bg-[#131720] border border-gray-800 rounded-xl p-5 flex flex-col gap-4">
-                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                                            <div className="flex items-center gap-3">
-                                                <img src={shipmentItem.image} alt={shipmentItem.name} className="w-12 h-12 rounded-lg bg-[#0b0e14] object-contain" />
-                                                <div>
-                                                    <div className="text-white font-bold">{shipmentItem.name}</div>
-                                                    <CoinAmount
-                                                      amount={toCoins(shipmentItem.value, PRICE_UNIT_MODE)}
-                                                      formatOptions={{ maximumFractionDigits: 0 }}
-                                                      className="text-xs text-green-400 font-semibold"
-                                                      iconClassName="w-3 h-3"
-                                                    />
-                                                    {shipmentItem.size && (
-                                                        <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-blue-200">
-                                                            Size: {shipmentItem.size}
-                                                        </div>
-                                                    )}
-                                                    <div className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full mt-1 ${
-                                                        shipment.status === 'shipped'
-                                                            ? 'bg-green-500/10 text-green-400'
-                                                            : 'bg-yellow-500/10 text-yellow-400'
-                                                    }`}>
-                                                        {shipment.status === 'shipped' ? <PackageCheck className="w-3 h-3" /> : <Truck className="w-3 h-3" />}
-                                                        {shipment.status === 'shipped' ? 'Shipped' : 'Processing'}
-                                                    </div>
+                                    <div key={order.key} className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-5 flex flex-col gap-4">
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h4 className="text-white font-bold">Exchange order</h4>
+                                                    <span className="rounded-full bg-purple-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-purple-200">
+                                                        {order.itemCount} {order.itemCount === 1 ? 'item' : 'items'} bundled
+                                                    </span>
+                                                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full ${orderStatusClass}`}>
+                                                        {order.status === 'shipped' ? <PackageCheck className="w-3 h-3" /> : <Truck className="w-3 h-3" />}
+                                                        {orderStatusLabel}
+                                                    </span>
                                                 </div>
+                                                <div className="mt-1 text-xs text-gray-500 break-all">Order ID: {order.id}</div>
+                                                <div className="mt-1 text-xs text-gray-400">Submitted {formatTimestamp(order.createdAt)}</div>
                                             </div>
                                             <div className="text-sm text-gray-300 sm:text-right">
                                                 <div className="font-semibold">{displayName}</div>
@@ -4959,7 +5020,58 @@ export const AdminPanel: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                                            <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3">
+                                                <div className="text-[10px] uppercase font-bold text-gray-500">Items</div>
+                                                <div className="mt-1 text-gray-200 font-semibold">{order.itemCount}</div>
+                                            </div>
+                                            <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3">
+                                                <div className="text-[10px] uppercase font-bold text-gray-500">Order value</div>
+                                                <CoinAmount
+                                                  amount={toCoins(order.totalValue, PRICE_UNIT_MODE)}
+                                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                                  className="mt-1 text-green-400 font-semibold"
+                                                  iconClassName="w-3 h-3"
+                                                />
+                                            </div>
+                                            <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3">
+                                                <div className="text-[10px] uppercase font-bold text-gray-500">Shipping</div>
+                                                <div className="mt-1 text-gray-200 font-semibold">{shippingCostLabel}</div>
+                                                {order.shippingRateTier && <div className="text-[10px] text-gray-500">{order.shippingRateTier}</div>}
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3">
+                                            <div className="mb-3 flex items-center justify-between gap-2">
+                                                <div className="text-[10px] uppercase font-bold text-gray-500">Bundled items as submitted</div>
+                                                <div className="text-[10px] text-gray-500">{order.itemCount} total</div>
+                                            </div>
+                                            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                                                {order.shipments.map((shipment) => {
+                                                    const shipmentItem = shipment.item ?? ({ name: 'Mystery Item', value: 0, image: 'https://picsum.photos/200', rarity: 'common' } as Shipment['item']);
+                                                    return (
+                                                        <div key={shipment.id || shipment.inventoryId} className="flex gap-3 rounded-lg border border-gray-800 bg-[#131720] p-2">
+                                                            <img src={shipmentItem.image} alt={shipmentItem.name} className="h-12 w-12 flex-none rounded-lg bg-[#0b0e14] object-contain" />
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="truncate text-sm font-bold text-white">{shipmentItem.name}</div>
+                                                                <CoinAmount
+                                                                  amount={toCoins(shipmentItem.value, PRICE_UNIT_MODE)}
+                                                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                                                  className="text-xs text-green-400 font-semibold"
+                                                                  iconClassName="w-3 h-3"
+                                                                />
+                                                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500">
+                                                                    <span className="break-all">Instance: {shipment.inventoryId || 'Unavailable'}</span>
+                                                                    {shipmentItem.size && <span className="text-blue-200">Size: {shipmentItem.size}</span>}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                             <div className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 text-xs text-gray-400 space-y-1">
                                                 <div className="text-[10px] uppercase font-bold text-gray-500">Shipping Address</div>
                                                 {address ? (
@@ -4974,9 +5086,8 @@ export const AdminPanel: React.FC = () => {
                                                 )}
                                             </div>
                                             <div className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 text-xs text-gray-400 flex flex-col gap-3">
-                                                <div className="text-[10px] uppercase font-bold text-gray-500">Shipment Actions</div>
-                                                <div className="text-gray-500">Instance ID: <span className="text-gray-300">{shipment.inventoryId || 'Unavailable'}</span></div>
-                                                <label className="text-[10px] uppercase font-bold text-gray-500">Tracking number</label>
+                                                <div className="text-[10px] uppercase font-bold text-gray-500">Order Actions</div>
+                                                <label className="text-[10px] uppercase font-bold text-gray-500">Tracking number for all bundled items</label>
                                                 <Input
                                                     type="text"
                                                     value={trackingValue}
@@ -4991,32 +5102,36 @@ export const AdminPanel: React.FC = () => {
                                                 />
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                     <button
-                                                        onClick={() =>
-                                                            updateShipmentStatus(
-                                                                shipment.id,
-                                                                shipment.uid,
-                                                                shipment.inventoryId,
-                                                                'shipped',
-                                                                trackingValue
-                                                            )
-                                                        }
-                                                        disabled={shipment.status === 'shipped' || !canUpdate}
+                                                        onClick={() => {
+                                                            void Promise.all(order.shipments.map((shipment) =>
+                                                                updateShipmentStatus(
+                                                                    shipment.id,
+                                                                    shipment.uid,
+                                                                    shipment.inventoryId,
+                                                                    'shipped',
+                                                                    trackingValue
+                                                                )
+                                                            ));
+                                                        }}
+                                                        disabled={order.status === 'shipped' || order.status === 'pending_payment' || !canUpdate}
                                                         className="w-full px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
-                                                        Mark as shipped
+                                                        Mark order shipped
                                                     </button>
                                                     <button
-                                                        onClick={() =>
-                                                            cancelShipmentAsAdmin(
-                                                                shipment.id,
-                                                                shipment.uid,
-                                                                shipment.inventoryId
-                                                            )
-                                                        }
-                                                        disabled={shipment.status === 'shipped' || shipment.status === 'cancelled' || !canUpdate}
+                                                        onClick={() => {
+                                                            void Promise.all(order.shipments.map((shipment) =>
+                                                                cancelShipmentAsAdmin(
+                                                                    shipment.id,
+                                                                    shipment.uid,
+                                                                    shipment.inventoryId
+                                                                )
+                                                            ));
+                                                        }}
+                                                        disabled={order.status === 'shipped' || order.status === 'cancelled' || !canUpdate}
                                                         className="w-full px-4 py-2 bg-red-600/90 hover:bg-red-500 text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
-                                                        Cancel & restore
+                                                        Cancel & restore order
                                                     </button>
                                                 </div>
                                             </div>

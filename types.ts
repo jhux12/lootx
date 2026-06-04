@@ -237,6 +237,11 @@ export interface Shipment {
   shippingPaid?: boolean;
   shippingPaymentMethod?: 'coins' | 'cash' | 'FREE_XP';
   shippingCashAmountCents?: number;
+  shippingBatchId?: string;
+  shippingBatchCost?: number;
+  shippingBatchCostCents?: number;
+  shippingBatchValueCoins?: number;
+  shippingRateTier?: string;
   status: ShipmentStatus;
   trackingNumber?: string;
   createdAt?: number;
