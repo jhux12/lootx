@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -279,7 +279,7 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
   }
 };
 
-const formatUsdValueFromCoins = (coins: number) => `$${(Math.max(0, coins) / 100).toFixed(2)} value`;
+const formatUsdValueFromCoins = (coins: number) => `${new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.max(0, coins) / 100)} value`;
 
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
@@ -392,6 +392,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const dropTableRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const winningCardRef = useRef<HTMLDivElement>(null);
   const reelItemsRef = useRef<CaseItem[]>([]);
@@ -493,6 +494,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     return () => observer.disconnect();
   }, [reelItems, updateSpinnerMeasurements]);
+
+  const handleScrollToDropTable = useCallback(() => {
+    playSound('click');
+    dropTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [playSound]);
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -1859,7 +1865,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [lastReveal?.serverSeed, lastRoll, playSound]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
+    <div className="w-full max-w-7xl mx-auto px-4 pb-28 pt-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
       {!isReady ? (
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="text-center max-w-sm">
@@ -1918,6 +1924,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             <div className="relative z-20 px-2 pt-2 pb-3 sm:px-3 sm:pt-3 sm:pb-3">
               <div className="flex flex-wrap items-center gap-1.5 p-1.5 sm:gap-2 sm:p-2">
                 <div className="ml-auto">{copyStatusMessage && (<p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}</div>
+              </div>
+            </div>
+
+            <div className="relative z-20 mx-auto mb-4 flex w-full max-w-2xl flex-col items-center px-4 text-center sm:mb-6">
+              <div className="relative flex min-h-[14rem] w-full items-center justify-center overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_center,rgba(111,77,255,0.20),rgba(7,10,16,0)_68%)] px-6 py-8 shadow-[0_24px_70px_-50px_rgba(111,77,255,0.9)] sm:min-h-[18rem] sm:px-10">
+                <div className="absolute inset-6 rounded-full bg-cyan-400/10 blur-3xl" aria-hidden="true" />
+                <div className="absolute bottom-0 h-px w-2/3 bg-gradient-to-r from-transparent via-white/20 to-transparent" aria-hidden="true" />
+                <BlurImage
+                  src={box!.image}
+                  alt={`${box!.name} box`}
+                  ratioClassName="relative z-10 h-44 w-44 sm:h-64 sm:w-64"
+                  className="h-full w-full object-contain drop-shadow-[0_26px_45px_rgba(0,0,0,0.55)]"
+                  width={256}
+                  height={256}
+                  loading="eager"
+                  showPlaceholder={false}
+                />
               </div>
             </div>
 
@@ -2367,7 +2390,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
         {/* Box Contents */}
-        <div className="mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
+        <div ref={dropTableRef} id="drop-table" className="scroll-mt-24 mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
             <div className="mb-6 flex items-center gap-3">
                 <div className="rounded-lg border border-white/10 bg-white/5 p-2">
                   <Gamepad2 className="h-5 w-5 text-blue-300" />
@@ -2433,6 +2456,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 ))}
             </div>
         </div>
+        <div className="fixed inset-x-0 bottom-0 z-[80] px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:hidden pointer-events-none">
+          <button
+            type="button"
+            onClick={handleScrollToDropTable}
+            className="pointer-events-auto mx-auto flex min-h-12 w-full max-w-sm items-center justify-center gap-2 rounded-full border border-white/15 bg-white/95 px-5 py-3 text-sm font-bold text-[#111827] shadow-[0_18px_45px_rgba(0,0,0,0.42)] backdrop-blur-xl transition active:scale-[0.98]"
+            aria-label="Scroll to drop table"
+          >
+            <span>See what&apos;s inside</span>
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+
         {/* Slide Up Item Sheet */}
         <div className={`item-modal-overlay fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm ${selectedCaseItem ? '' : 'pointer-events-none'} ${itemModalActive ? 'active' : ''}`} onClick={() => setSelectedCaseItem(null)} />
         <div className={`item-modal-sheet fixed bottom-0 left-0 right-0 z-[120] transform ${itemModalActive ? 'active' : ''}`}>
