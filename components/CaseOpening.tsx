@@ -44,10 +44,10 @@ interface RevealData {
   rotatedAt: number;
 }
 
-const DESKTOP_CARD_WIDTH = 170;
-const DESKTOP_CARD_HEIGHT = 210;
-const DESKTOP_GAP_WIDTH = 6;
-const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
+const DESKTOP_CARD_WIDTH = 340;
+const DESKTOP_CARD_HEIGHT = 520;
+const DESKTOP_GAP_WIDTH = 28;
+const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 552;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -447,12 +447,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && (currentXpBalance > 0 || xpProgress > 0);
   const canOpenMain = isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
-  const spinnerCardWidth = reduceMobileEffects ? 146 : 178;
-  const spinnerCardHeight = reduceMobileEffects ? 194 : 224;
-  const spinnerGap = reduceMobileEffects ? 5 : DESKTOP_GAP_WIDTH;
-  const spinnerViewportHeight = reduceMobileEffects ? 232 : 252;
+  const spinnerCardWidth = reduceMobileEffects ? 210 : DESKTOP_CARD_WIDTH;
+  const spinnerCardHeight = reduceMobileEffects ? 340 : DESKTOP_CARD_HEIGHT;
+  const spinnerGap = reduceMobileEffects ? 10 : DESKTOP_GAP_WIDTH;
+  const spinnerViewportHeight = reduceMobileEffects ? 364 : DESKTOP_SPINNER_VIEWPORT_HEIGHT;
   // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
-  const useMobileSpinnerBehavior = true;
   const reduceSpinnerRerenders = reduceMobileEffects || prefersReducedMotion;
   const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
   const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
@@ -2004,7 +2003,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const isCenteredItem = idx === currentCenterIndex;
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
                           const isUltraSmoothSpin = isSpinning;
-                          const showItemGlow = !isUltraSmoothSpin && (!useMobileSpinnerBehavior || !reduceMobileEffects);
+                          const showItemGlow = !isUltraSmoothSpin && !reduceMobileEffects;
                           const allowHeavyHighlight = !isUltraSmoothSpin;
                           return (
                         <div 
@@ -2026,35 +2025,43 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                              className={`pullz-spinner-glow pointer-events-none absolute inset-x-4 top-5 bottom-5 rounded-[42%] ${showItemGlow ? 'opacity-55 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
-                              style={{ background: item.color, boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 28px ${item.color}55` : 'none' }}
+                              className={`pullz-spinner-glow pointer-events-none absolute -inset-2 rounded-[30px] ${showItemGlow ? 'opacity-55 blur-2xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
+                              style={{ background: item.color, boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 34px ${item.color}55` : 'none' }}
                             />
                             <div
-                              className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-between gap-2.5 self-stretch overflow-hidden rounded-2xl border bg-[#141b27]/90 p-3 shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.10)] sm:gap-3 sm:p-3.5"
+                              className="relative z-10 flex min-h-0 flex-1 flex-col items-center self-stretch overflow-hidden rounded-[26px] border-2 bg-[#141b27]/95 px-4 pb-4 pt-5 shadow-[0_18px_42px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.12)] sm:rounded-[30px] sm:px-6 sm:pb-6 sm:pt-7"
                               style={{
-                                borderColor: isFocusedItem ? `${item.color}dd` : `${item.color}55`,
-                                boxShadow: `0 10px 24px rgba(0,0,0,0.28), inset 0 0 0 1px ${item.color}18, inset 0 1px 0 rgba(255,255,255,0.10)`,
-                                background: `linear-gradient(180deg, ${item.color}24 0%, rgba(20,27,39,0.96) 42%, rgba(8,12,20,0.98) 100%)`
+                                borderColor: isFocusedItem ? `${item.color}ee` : `${item.color}aa`,
+                                boxShadow: `0 18px 42px rgba(0,0,0,0.34), 0 0 18px ${item.color}30, inset 0 0 0 1px ${item.color}22, inset 0 1px 0 rgba(255,255,255,0.14)`,
+                                background: `radial-gradient(circle at 50% 24%, ${item.color}24 0%, rgba(20,27,39,0.96) 42%, rgba(8,14,23,0.98) 100%)`
                               }}
                             >
-                              <div className="absolute inset-x-4 top-2.5 h-1 rounded-full opacity-75" style={{ background: item.color }} />
-                              <div className="absolute right-3 top-3 rounded-full border border-white/10 bg-black/40 px-2 py-1 text-[8px] font-black uppercase leading-none tracking-[0.12em] text-white/85 shadow-[0_4px_12px_rgba(0,0,0,0.24)]">
-                                {rarityValue}
+                              <div className="relative flex w-full items-center justify-center px-2">
+                                <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 opacity-90" style={{ background: `linear-gradient(90deg, transparent 0%, ${item.color} 22%, transparent 42%, transparent 58%, ${item.color} 78%, transparent 100%)` }} />
+                                <div
+                                  className="relative z-10 rounded-full border-2 bg-[#121923] px-4 py-1.5 text-[10px] font-black uppercase leading-none tracking-[0.18em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.32)] sm:px-6 sm:py-2 sm:text-sm"
+                                  style={{ borderColor: item.color, boxShadow: `0 0 18px ${item.color}33, inset 0 1px 0 rgba(255,255,255,0.12)` }}
+                                >
+                                  {rarityValue}
+                                </div>
                               </div>
-                              <div className="relative mt-5 flex min-h-0 flex-1 items-center justify-center sm:mt-6">
-                                <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[114px] w-[114px]' : 'h-[138px] w-[138px]'}`}>
+
+                              <div className="flex min-h-0 flex-1 items-center justify-center py-4 sm:py-7">
+                                <div className="flex h-[148px] w-[148px] items-center justify-center sm:h-[250px] sm:w-[250px]">
                                   <BlurImage
                                       src={item.image}
                                       alt={item.name}
                                       loading="eager"
                                       showPlaceholder={false}
-                                      className={`h-full w-full object-contain transition-transform duration-300 ${isFocusedItem && !isSpinning ? 'scale-110' : 'scale-100'} ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_10px_22px_rgba(0,0,0,0.65)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
+                                      className={`h-full w-full object-contain transition-transform duration-300 ${isFocusedItem && !isSpinning ? 'scale-105' : 'scale-100'} ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_18px_28px_rgba(0,0,0,0.68)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
                                   />
                                 </div>
                               </div>
-                              <div className="relative w-full rounded-xl border border-white/10 bg-black/30 px-2.5 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-3">
-                                <p className="truncate text-[10.5px] font-bold leading-snug text-white sm:text-xs">{item.name}</p>
-                                <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-center text-[10px] font-black leading-none text-slate-200 sm:text-[11px]" iconClassName="h-3 w-3" />
+
+                              <div className="relative w-full rounded-[18px] border bg-[#101824]/80 px-3 py-3 text-center shadow-[0_12px_24px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.10)] sm:rounded-[22px] sm:px-5 sm:py-5" style={{ borderColor: 'rgba(255,255,255,0.22)' }}>
+                                <p className="truncate text-sm font-black leading-snug text-white sm:text-xl">{item.name}</p>
+                                <div className="mx-auto my-2 h-px w-4/5 bg-gradient-to-r from-transparent via-white/20 to-transparent sm:my-4" />
+                                <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="justify-center text-lg font-black leading-none text-slate-100 sm:text-3xl" iconClassName="h-5 w-5 sm:h-7 sm:w-7" />
                               </div>
                             </div>
                         </div>
