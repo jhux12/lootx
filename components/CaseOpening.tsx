@@ -504,18 +504,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    let lastScrollY = window.scrollY;
+
     const updateDropTableCtaVisibility = () => {
       const dropTable = dropTableRef.current;
       const isMobileViewport = window.innerWidth < 640;
       if (!dropTable || !isMobileViewport) {
         setIsDropTableCtaVisible(false);
+        lastScrollY = window.scrollY;
         return;
       }
 
+      const currentScrollY = window.scrollY;
       const dropTableTop = dropTable.getBoundingClientRect().top;
-      const isStillNearTop = window.scrollY < 160;
-      const dropTableIsBelowViewport = dropTableTop > window.innerHeight * 0.85;
-      setIsDropTableCtaVisible(isStillNearTop && dropTableIsBelowViewport);
+      const isStillNearTop = currentScrollY < 160;
+      const isScrollingUp = currentScrollY < lastScrollY - 6;
+      const dropTableIsNotYetReached = dropTableTop > window.innerHeight * 0.35;
+
+      setIsDropTableCtaVisible((isStillNearTop || isScrollingUp) && dropTableIsNotYetReached);
+      lastScrollY = currentScrollY;
     };
 
     updateDropTableCtaVisibility();
