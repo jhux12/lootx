@@ -44,10 +44,10 @@ interface RevealData {
   rotatedAt: number;
 }
 
-const DESKTOP_CARD_WIDTH = 170;
-const DESKTOP_CARD_HEIGHT = 210;
-const DESKTOP_GAP_WIDTH = 6;
-const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
+const DESKTOP_CARD_WIDTH = 190;
+const DESKTOP_CARD_HEIGHT = 230;
+const DESKTOP_GAP_WIDTH = 8;
+const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 260;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -1927,21 +1927,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
               </div>
             </div>
 
-            <div className="relative z-20 mx-auto mb-4 flex w-full max-w-2xl flex-col items-center px-4 text-center sm:mb-6">
-              <div className="relative flex min-h-[14rem] w-full items-center justify-center overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_center,rgba(111,77,255,0.20),rgba(7,10,16,0)_68%)] px-6 py-8 shadow-[0_24px_70px_-50px_rgba(111,77,255,0.9)] sm:min-h-[18rem] sm:px-10">
-                <div className="absolute inset-6 rounded-full bg-cyan-400/10 blur-3xl" aria-hidden="true" />
-                <div className="absolute bottom-0 h-px w-2/3 bg-gradient-to-r from-transparent via-white/20 to-transparent" aria-hidden="true" />
-                <BlurImage
-                  src={box!.image}
-                  alt={`${box!.name} box`}
-                  ratioClassName="relative z-10 h-44 w-44 sm:h-64 sm:w-64"
-                  className="h-full w-full object-contain drop-shadow-[0_26px_45px_rgba(0,0,0,0.55)]"
-                  width={256}
-                  height={256}
-                  loading="eager"
-                  showPlaceholder={false}
-                />
-              </div>
+            <div className="relative z-20 mx-auto mb-3 flex w-full justify-center px-4 sm:mb-5">
+              <BlurImage
+                src={box!.image}
+                alt={`${box!.name} box`}
+                ratioClassName="h-32 w-32 sm:h-44 sm:w-44"
+                className="h-full w-full object-contain drop-shadow-[0_18px_30px_rgba(0,0,0,0.5)]"
+                width={176}
+                height={176}
+                loading="eager"
+                showPlaceholder={false}
+              />
             </div>
 
             {/* Spinner Window */}
@@ -2025,7 +2021,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
-                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
+                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[150px] w-[150px]' : 'h-[158px] w-[158px]'}`}>
                               <BlurImage
                                   src={item.image}
                                   alt={item.name}
