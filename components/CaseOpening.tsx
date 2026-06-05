@@ -54,9 +54,16 @@ const SPINNER_MOTION = {
   preWinnerItems: 64,
   postWinnerItems: 14,
   spinDurationMs: 11200,
+  quickSpinDurationMs: 900,
   goldTicketDurationMs: 10400,
+  quickGoldTicketDurationMs: 650,
   goldFinalDurationMs: 9600,
+  quickGoldFinalDurationMs: 800,
+  goldStageDelayMs: 700,
+  quickGoldStageDelayMs: 120,
   settleDurationMs: 2200,
+  minSpinDurationMs: 6200,
+  quickMinSpinDurationMs: 550,
   overshootPx: 10,
   approachOffsetSoftMaxPx: 10,
   approachOffsetNearMissMinPx: 20,
@@ -969,7 +976,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const approachOffset = getApproachOffset(rng);
     const landingJitterPx = 0;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
-    const resolvedDuration = Math.max(6200, duration + durationVariance);
+    const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
+    const resolvedDuration = Math.max(minDuration, duration + durationVariance);
     const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
     const preSettleOffset = clamp(1 - settlePortion, 0.7, 0.82);
     const overshootOffset = clamp(preSettleOffset - 0.16, 0.54, 0.7);
@@ -1538,8 +1546,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const ticketReelResult = generateReel(GOLDEN_TICKET_ITEM, items, { sprinkleGold: true, seed: ticketSeed });
         await prepareReelForSpin(ticketReelResult.items, ticketReelResult.winnerIndex);
 
-        const quickFactor = isQuick ? 0.72 : 1;
-        animateSpin(ticketReelResult.winnerIndex, SPINNER_MOTION.goldTicketDurationMs * quickFactor, () => {
+        const goldTicketDuration = isQuick ? SPINNER_MOTION.quickGoldTicketDurationMs : SPINNER_MOTION.goldTicketDurationMs;
+        const goldFinalDuration = isQuick ? SPINNER_MOTION.quickGoldFinalDurationMs : SPINNER_MOTION.goldFinalDurationMs;
+        const goldStageDelay = isQuick ? SPINNER_MOTION.quickGoldStageDelayMs : SPINNER_MOTION.goldStageDelayMs;
+        animateSpin(ticketReelResult.winnerIndex, goldTicketDuration, () => {
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
             setIsGoldMode(true);
@@ -1551,13 +1561,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 const goldSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-final');
                 const goldReelResult = generateReel(winner, pool, { sprinkleGold: true, seed: goldSeed });
                 void prepareReelForSpin(goldReelResult.items, goldReelResult.winnerIndex).then(() => {
-                  animateSpin(goldReelResult.winnerIndex, SPINNER_MOTION.goldFinalDurationMs * quickFactor, () => {
+                  animateSpin(goldReelResult.winnerIndex, goldFinalDuration, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
                   });
                 });
               goldStageTimerRef.current = null;
-            }, 700);
+            }, goldStageDelay);
         });
 
     } else {
@@ -1566,7 +1576,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         const normalReelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
         await prepareReelForSpin(normalReelResult.items, normalReelResult.winnerIndex);
 
-        animateSpin(normalReelResult.winnerIndex, SPINNER_MOTION.spinDurationMs * (isQuick ? 0.72 : 1), () => {
+        animateSpin(normalReelResult.winnerIndex, isQuick ? SPINNER_MOTION.quickSpinDurationMs : SPINNER_MOTION.spinDurationMs, () => {
             finishSpin(winner);
         });
     }
