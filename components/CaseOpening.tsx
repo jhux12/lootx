@@ -385,6 +385,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
   const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
   const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
+  const [isDropTableCtaVisible, setIsDropTableCtaVisible] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -499,6 +500,33 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     playSound('click');
     dropTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [playSound]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const updateDropTableCtaVisibility = () => {
+      const dropTable = dropTableRef.current;
+      const isMobileViewport = window.innerWidth < 640;
+      if (!dropTable || !isMobileViewport) {
+        setIsDropTableCtaVisible(false);
+        return;
+      }
+
+      const dropTableTop = dropTable.getBoundingClientRect().top;
+      const isStillNearTop = window.scrollY < 160;
+      const dropTableIsBelowViewport = dropTableTop > window.innerHeight * 0.85;
+      setIsDropTableCtaVisible(isStillNearTop && dropTableIsBelowViewport);
+    };
+
+    updateDropTableCtaVisibility();
+    window.addEventListener('scroll', updateDropTableCtaVisibility, { passive: true });
+    window.addEventListener('resize', updateDropTableCtaVisibility);
+
+    return () => {
+      window.removeEventListener('scroll', updateDropTableCtaVisibility);
+      window.removeEventListener('resize', updateDropTableCtaVisibility);
+    };
+  }, [isReady]);
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -2452,15 +2480,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 ))}
             </div>
         </div>
-        <div className="fixed inset-x-0 bottom-0 z-[80] px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:hidden pointer-events-none">
+        <div className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+0.75rem)] z-[80] flex justify-center px-4 sm:hidden pointer-events-none transition-all duration-300 ${isDropTableCtaVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`} aria-hidden={!isDropTableCtaVisible}>
           <button
             type="button"
             onClick={handleScrollToDropTable}
-            className="pointer-events-auto mx-auto flex min-h-12 w-full max-w-sm items-center justify-center gap-2 rounded-full border border-white/15 bg-white/95 px-5 py-3 text-sm font-bold text-[#111827] shadow-[0_18px_45px_rgba(0,0,0,0.42)] backdrop-blur-xl transition active:scale-[0.98]"
+            tabIndex={isDropTableCtaVisible ? 0 : -1}
+            disabled={!isDropTableCtaVisible}
+            className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/95 px-4 py-2 text-xs font-bold text-[#111827] shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl transition active:scale-[0.98] disabled:pointer-events-none ${isDropTableCtaVisible ? 'pointer-events-auto' : 'pointer-events-none'}`}
             aria-label="Scroll to drop table"
           >
             <span>See what&apos;s inside</span>
-            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </div>
 
