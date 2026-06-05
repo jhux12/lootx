@@ -1900,7 +1900,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [lastReveal?.serverSeed, lastRoll, playSound]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 pb-28 pt-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
+    <div className="w-full max-w-7xl mx-auto px-4 pb-28 pt-2 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
       {!isReady ? (
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="text-center max-w-sm">
@@ -1911,7 +1911,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       ) : (
         <>
         {/* Breadcrumb */}
-        <div className="mb-6 flex items-center justify-between gap-3">
+        <div className="mb-2 flex items-center justify-between gap-3 sm:mb-4">
             <div className="flex items-center gap-4">
                 <button 
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
@@ -1956,11 +1956,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
-            <div className="relative z-20 px-2 pt-2 pb-3 sm:px-3 sm:pt-3 sm:pb-3">
-              <div className="flex flex-wrap items-center gap-1.5 p-1.5 sm:gap-2 sm:p-2">
-                <div className="ml-auto">{copyStatusMessage && (<p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}</div>
+            {copyStatusMessage && (
+              <div className="relative z-20 px-2 pb-1 sm:px-3 sm:pb-2">
+                <p className="text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>
               </div>
-            </div>
+            )}
 
             <div className="relative z-20 mx-auto mb-3 flex w-full justify-center px-4 sm:mb-5">
               <BlurImage
