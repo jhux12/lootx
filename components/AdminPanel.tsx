@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3 } from 'lucide-react';
-import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
@@ -201,7 +201,31 @@ type BalanceAuditEntry = {
     createdAt?: Timestamp;
 };
 
+type UpgraderAttemptSnapshot = {
+    name: string;
+    value: number;
+    rarity: string;
+    category: string;
+};
 
+type UpgraderAttemptHistoryEntry = {
+    id: string;
+    uid: string;
+    createdAt: number;
+    sourceItemInstanceId: string;
+    sourceItemSnapshot: UpgraderAttemptSnapshot;
+    targetItemId: string;
+    targetItemSnapshot: UpgraderAttemptSnapshot;
+    chance: number;
+    expectedPayout: number;
+    roll: number;
+    rollHash: string;
+    win: boolean;
+    nonce: number;
+    clientSeed: string;
+    serverSeedHash: string;
+    resultItemInstanceId?: string | null;
+};
 
 type EconomySettingsDraft = {
     xpPerDollar: number;
@@ -514,8 +538,11 @@ export const AdminPanel: React.FC = () => {
   const [voidReason, setVoidReason] = useState('');
   const [ledgerFilter, setLedgerFilter] = useState<'all' | LedgerEntryType>('all');
   const [ledgerSearch, setLedgerSearch] = useState('');
-  const [timelineFilter, setTimelineFilter] = useState<'all' | 'ledger' | 'inventory' | 'admin' | 'shipment' | 'support'>('all');
+  const [timelineFilter, setTimelineFilter] = useState<'all' | 'ledger' | 'inventory' | 'admin' | 'shipment' | 'support' | 'upgrader'>('all');
   const [timelineSearch, setTimelineSearch] = useState('');
+  const [upgraderHistory, setUpgraderHistory] = useState<Record<string, UpgraderAttemptHistoryEntry[]>>({});
+  const [isLoadingUpgraderHistory, setIsLoadingUpgraderHistory] = useState(false);
+  const [upgraderHistoryError, setUpgraderHistoryError] = useState<string | null>(null);
   const [balanceAuditEntries, setBalanceAuditEntries] = useState<Record<string, BalanceAuditEntry[]>>({});
   const [balanceAuditCurrencyFilter, setBalanceAuditCurrencyFilter] = useState<'all' | 'coins' | 'xp'>('all');
   const [balanceAuditDirectionFilter, setBalanceAuditDirectionFilter] = useState<'all' | 'positive' | 'negative'>('all');
@@ -830,6 +857,37 @@ export const AdminPanel: React.FC = () => {
       const sign = showSign ? (amount < 0 ? '-' : '+') : '';
       return `${sign}${formatted} coins`;
   };
+
+  const formatPercent = (value: number) => `${(Math.max(0, value) * 100).toFixed(2)}%`;
+
+  const normalizeUpgraderAttemptSnapshot = (snapshot: unknown): UpgraderAttemptSnapshot => {
+      const data = snapshot && typeof snapshot === 'object' ? snapshot as Record<string, unknown> : {};
+      return {
+          name: String(data.name ?? 'Unknown item'),
+          value: Number(data.value ?? 0),
+          rarity: String(data.rarity ?? 'unknown'),
+          category: String(data.category ?? 'misc')
+      };
+  };
+
+  const normalizeUpgraderAttempt = (id: string, data: Record<string, unknown>): UpgraderAttemptHistoryEntry => ({
+      id,
+      uid: String(data.uid ?? ''),
+      createdAt: toMillis(data.createdAt, 0),
+      sourceItemInstanceId: String(data.sourceItemInstanceId ?? ''),
+      sourceItemSnapshot: normalizeUpgraderAttemptSnapshot(data.sourceItemSnapshot),
+      targetItemId: String(data.targetItemId ?? ''),
+      targetItemSnapshot: normalizeUpgraderAttemptSnapshot(data.targetItemSnapshot),
+      chance: Number(data.chance ?? 0),
+      expectedPayout: Number(data.expectedPayout ?? 0),
+      roll: Number(data.roll ?? 0),
+      rollHash: String(data.rollHash ?? ''),
+      win: data.win === true,
+      nonce: Number(data.nonce ?? 0),
+      clientSeed: String(data.clientSeed ?? ''),
+      serverSeedHash: String(data.serverSeedHash ?? ''),
+      resultItemInstanceId: data.resultItemInstanceId == null ? null : String(data.resultItemInstanceId)
+  });
 
   const normalizeLedgerEntries = (entries: LedgerEntry[] = [], currentBalance?: number) => {
       const sorted = [...entries].sort((a, b) => {
@@ -2578,6 +2636,39 @@ export const AdminPanel: React.FC = () => {
   const selectedInventory = selectedUserId ? inventoryState[selectedUserId] ?? [] : [];
   const selectedShippableInventory = selectedInventory.filter((item) => item.status === 'available' && !item.locked && item.shippable !== false);
   const selectedShippableInventoryValue = selectedShippableInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
+
+  useEffect(() => {
+      if (!selectedUserId) return;
+      let cancelled = false;
+      const loadUpgraderHistory = async () => {
+          setIsLoadingUpgraderHistory(true);
+          setUpgraderHistoryError(null);
+          try {
+              let snapshot;
+              try {
+                  snapshot = await getDocs(query(collection(db, 'upgradeAttempts'), where('uid', '==', selectedUserId), orderBy('createdAt', 'desc'), limit(100)));
+              } catch (indexedQueryError) {
+                  console.warn('Falling back to un-ordered upgradeAttempts query; Firestore index may be missing.', indexedQueryError);
+                  snapshot = await getDocs(query(collection(db, 'upgradeAttempts'), where('uid', '==', selectedUserId), limit(100)));
+              }
+              if (cancelled) return;
+              const attempts = snapshot.docs
+                  .map((docSnap) => normalizeUpgraderAttempt(docSnap.id, docSnap.data() as Record<string, unknown>))
+                  .sort((a, b) => b.createdAt - a.createdAt);
+              setUpgraderHistory((prev) => ({ ...prev, [selectedUserId]: attempts }));
+          } catch (error) {
+              console.error('Failed to load upgrader history', error);
+              if (!cancelled) setUpgraderHistoryError('Unable to load upgrader history for this user.');
+          } finally {
+              if (!cancelled) setIsLoadingUpgraderHistory(false);
+          }
+      };
+      void loadUpgraderHistory();
+      return () => {
+          cancelled = true;
+      };
+  }, [selectedUserId]);
+
   useEffect(() => {
       if (!selectedUserId) return;
       const run = async () => {
@@ -2623,6 +2714,10 @@ export const AdminPanel: React.FC = () => {
       [selectedBalanceAudits]
   );
   const selectedAdminLogs = selectedUserId ? adminLogs[selectedUserId] ?? [] : [];
+  const selectedUpgraderHistory = selectedUserId ? upgraderHistory[selectedUserId] ?? [] : [];
+  const upgraderWinCount = selectedUpgraderHistory.filter((attempt) => attempt.win).length;
+  const upgraderSourceValueTotal = selectedUpgraderHistory.reduce((sum, attempt) => sum + attempt.sourceItemSnapshot.value, 0);
+  const upgraderTargetValueWon = selectedUpgraderHistory.reduce((sum, attempt) => sum + (attempt.win ? attempt.targetItemSnapshot.value : 0), 0);
   const ledgerNetChange = selectedLedgerEntries.reduce((sum, entry) => sum + entry.amount, 0);
   const ledgerSearchValue = ledgerSearch.trim().toLowerCase();
 
@@ -2656,6 +2751,14 @@ export const AdminPanel: React.FC = () => {
               meta: `Admin: ${log.adminUid}`,
               category: 'admin' as const
           })),
+          ...selectedUpgraderHistory.map((attempt) => ({
+              id: `upgrader-${attempt.id}`,
+              createdAt: attempt.createdAt,
+              title: `Upgrader • ${attempt.win ? 'win' : 'loss'}`,
+              description: `${attempt.sourceItemSnapshot.name} → ${attempt.targetItemSnapshot.name}`,
+              meta: `Chance ${formatPercent(attempt.chance)} • Roll ${formatPercent(attempt.roll)} • Attempt ${attempt.id}`,
+              category: 'upgrader' as const
+          })),
           ...userShipments.map((shipment) => ({
               id: `shipment-${shipment.id}`,
               createdAt: shipment.updatedAt ?? shipment.createdAt ?? 0,
@@ -2674,7 +2777,7 @@ export const AdminPanel: React.FC = () => {
           }))
       ];
       return entries.sort((a, b) => b.createdAt - a.createdAt);
-  }, [selectedAdminLogs, selectedInventory, selectedLedgerEntries, selectedUserId, shipments, supportCases]);
+  }, [selectedAdminLogs, selectedInventory, selectedLedgerEntries, selectedUpgraderHistory, selectedUserId, shipments, supportCases]);
 
   const filteredLedgerEntries = selectedLedgerEntries.filter((entry) => {
       if (ledgerFilter !== 'all' && entry.type !== ledgerFilter) return false;
@@ -4665,7 +4768,7 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                     <div className="mb-4 flex flex-col gap-2 sm:flex-row">
                                         <Select value={timelineFilter} onChange={(event) => setTimelineFilter(event.target.value as typeof timelineFilter)} className="w-full sm:w-48 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
-                                            <option value="all">All types</option><option value="ledger">Ledger</option><option value="inventory">Inventory</option><option value="admin">Admin</option><option value="shipment">Shipment</option><option value="support">Support</option>
+                                            <option value="all">All types</option><option value="ledger">Ledger</option><option value="inventory">Inventory</option><option value="admin">Admin</option><option value="upgrader">Upgrader</option><option value="shipment">Shipment</option><option value="support">Support</option>
                                         </Select>
                                         <Input type="text" value={timelineSearch} onChange={(event) => setTimelineSearch(event.target.value)} placeholder="Search timeline" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
                                     </div>
@@ -4682,6 +4785,97 @@ export const AdminPanel: React.FC = () => {
                                             </div>
                                         ))}
                                     </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-5">
+                                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <h3 className="text-sm font-bold uppercase tracking-wide text-gray-300">Upgrader History</h3>
+                                                <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cyan-200">Admin view</span>
+                                            </div>
+                                            <p className="mt-1 text-xs text-gray-500">Recent upgrade attempts, including source item, target item, chance, roll, and provably fair IDs.</p>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-center text-xs sm:min-w-[270px]">
+                                            <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
+                                                <div className="text-[10px] uppercase text-gray-500">Attempts</div>
+                                                <div className="mt-1 font-bold text-white">{selectedUpgraderHistory.length}</div>
+                                            </div>
+                                            <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
+                                                <div className="text-[10px] uppercase text-gray-500">Wins</div>
+                                                <div className="mt-1 font-bold text-emerald-300">{upgraderWinCount}</div>
+                                            </div>
+                                            <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
+                                                <div className="text-[10px] uppercase text-gray-500">Win rate</div>
+                                                <div className="mt-1 font-bold text-white">{selectedUpgraderHistory.length ? formatPercent(upgraderWinCount / selectedUpgraderHistory.length) : '0.00%'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                        <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-3">
+                                            <div className="text-[10px] uppercase text-gray-500">Source value risked</div>
+                                            <CoinAmount amount={upgraderSourceValueTotal} animated={false} className="mt-1 text-sm font-bold text-red-200" iconClassName="h-3.5 w-3.5" />
+                                        </div>
+                                        <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-3">
+                                            <div className="text-[10px] uppercase text-gray-500">Target value won</div>
+                                            <CoinAmount amount={upgraderTargetValueWon} animated={false} className="mt-1 text-sm font-bold text-emerald-300" iconClassName="h-3.5 w-3.5" />
+                                        </div>
+                                    </div>
+
+                                    {upgraderHistoryError && <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">{upgraderHistoryError}</div>}
+                                    {isLoadingUpgraderHistory ? (
+                                        <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-4 text-sm text-gray-400">Loading upgrader history…</div>
+                                    ) : selectedUpgraderHistory.length === 0 ? (
+                                        <div className="rounded-lg border border-dashed border-gray-800 bg-[#0b0e14] p-4 text-sm text-gray-500">No upgrader attempts found for this user.</div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {selectedUpgraderHistory.slice(0, 50).map((attempt) => (
+                                                <div key={attempt.id} className="rounded-xl border border-gray-800 bg-[#0b0e14] p-3">
+                                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                        <div className="min-w-0">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${attempt.win ? 'bg-emerald-500/10 text-emerald-300' : 'bg-red-500/10 text-red-300'}`}>{attempt.win ? 'Win' : 'Loss'}</span>
+                                                                <span className="text-xs text-gray-500">{formatTimestamp(attempt.createdAt)}</span>
+                                                            </div>
+                                                            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
+                                                                <div className="min-w-0 rounded-lg border border-gray-800 bg-[#131720] p-2">
+                                                                    <div className="text-[10px] uppercase text-gray-500">Source consumed</div>
+                                                                    <div className="truncate text-sm font-semibold text-gray-100">{attempt.sourceItemSnapshot.name}</div>
+                                                                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
+                                                                        <CoinAmount amount={attempt.sourceItemSnapshot.value} animated={false} className="font-semibold text-red-200" iconClassName="h-3 w-3" />
+                                                                        <span>{attempt.sourceItemSnapshot.rarity}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="hidden text-gray-600 sm:block">→</div>
+                                                                <div className="min-w-0 rounded-lg border border-gray-800 bg-[#131720] p-2">
+                                                                    <div className="text-[10px] uppercase text-gray-500">Target item</div>
+                                                                    <div className="truncate text-sm font-semibold text-gray-100">{attempt.targetItemSnapshot.name}</div>
+                                                                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
+                                                                        <CoinAmount amount={attempt.targetItemSnapshot.value} animated={false} className="font-semibold text-emerald-300" iconClassName="h-3 w-3" />
+                                                                        <span>{attempt.targetItemSnapshot.rarity}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 text-xs sm:w-56">
+                                                            <div className="rounded-lg border border-gray-800 bg-[#131720] p-2"><div className="text-[10px] uppercase text-gray-500">Chance</div><div className="font-bold text-white">{formatPercent(attempt.chance)}</div></div>
+                                                            <div className="rounded-lg border border-gray-800 bg-[#131720] p-2"><div className="text-[10px] uppercase text-gray-500">Roll</div><div className="font-bold text-white">{formatPercent(attempt.roll)}</div></div>
+                                                            <div className="rounded-lg border border-gray-800 bg-[#131720] p-2"><div className="text-[10px] uppercase text-gray-500">Nonce</div><div className="font-bold text-gray-200">{attempt.nonce}</div></div>
+                                                            <div className="rounded-lg border border-gray-800 bg-[#131720] p-2"><div className="text-[10px] uppercase text-gray-500">EV</div><CoinAmount amount={attempt.expectedPayout} animated={false} className="font-bold text-gray-200" iconClassName="h-3 w-3" /></div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-3 grid grid-cols-1 gap-1 text-[10px] text-gray-500 sm:grid-cols-2">
+                                                        <div className="break-all">Attempt ID: {attempt.id}</div>
+                                                        <div className="break-all">Result item: {attempt.resultItemInstanceId ?? 'None'}</div>
+                                                        <div className="break-all">Source instance: {attempt.sourceItemInstanceId}</div>
+                                                        <div className="break-all">Target item ID: {attempt.targetItemId}</div>
+                                                        <div className="break-all sm:col-span-2">Server seed hash: {attempt.serverSeedHash || 'Unavailable'}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
