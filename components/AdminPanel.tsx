@@ -15,7 +15,6 @@ import { LegalEditor } from './admin/LegalEditor';
 import { UpgraderAdminSection } from './admin/UpgraderAdminSection';
 import { PollsAdminSection } from './admin/PollsAdminSection';
 import { ReferralAdminSection } from './admin/ReferralAdminSection';
-import { MarketPricingAdminSection } from './admin/MarketPricingAdminSection';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -4451,7 +4450,7 @@ export const AdminPanel: React.FC = () => {
                              {selectedItems.length > 0 && (
                                  <div className="border-t border-gray-800 pt-4">
                                      <h4 className="text-sm font-bold text-gray-400 uppercase mb-2">Box Contents ({selectedItems.length})</h4>
-                                     {boxItemMarketMessage && (
+                                     {editingBoxId && boxItemMarketMessage && (
                                          <div className="mb-3 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-gray-200">
                                              {boxItemMarketMessage}
                                          </div>
@@ -4520,6 +4519,7 @@ export const AdminPanel: React.FC = () => {
                                                          </select>
                                                      </label>
                                                  </div>
+                                                 {editingBoxId && (
                                                  <div className="mt-3 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3">
                                                      <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                                                          <div>
@@ -4608,6 +4608,7 @@ export const AdminPanel: React.FC = () => {
                                                          </button>
                                                      </div>
                                                  </div>
+                                                 )}
                                              </div>
                                              );
                                          })}
@@ -4624,8 +4625,6 @@ export const AdminPanel: React.FC = () => {
                             {editingBoxId ? 'Update Box' : 'Create Box'}
                         </button>
                     </div>
-
-                    <MarketPricingAdminSection items={items} boxes={boxes} />
 
                      {/* Box List */}
                      <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
