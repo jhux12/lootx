@@ -7,7 +7,7 @@ import { authedFetch } from '../../utils/authedFetch';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 
-const sources: MarketPricingSource[] = ['manual', 'pricecharting', 'tcgplayer', 'justtcg'];
+const sources: MarketPricingSource[] = ['tcgplayer'];
 const conditions: MarketPricingCondition[] = ['raw', 'near_mint', 'lightly_played', 'psa_9', 'psa_10', 'sealed'];
 
 type FilterKey = 'pending' | 'failed' | 'locked' | 'enabled' | 'danger';
@@ -15,6 +15,10 @@ type FilterKey = 'pending' | 'failed' | 'locked' | 'enabled' | 'danger';
 type Props = {
   items: CaseItem[];
   boxes: MysteryBox[];
+  activeBox?: MysteryBox | null;
+  selectedItemIds?: string[];
+  compact?: boolean;
+  onItemsUpdated?: (items: CaseItem[]) => void;
 };
 
 const coinsToUsd = (coins?: number) => Math.round(Math.max(0, Number(coins || 0)) / 100 * 100) / 100;
@@ -42,7 +46,7 @@ const auditClass = (status?: string) => {
   return 'border-gray-600 bg-white/5 text-gray-300';
 };
 
-export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => {
+export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes, activeBox = null, selectedItemIds, compact = false, onItemsUpdated }) => {
   const [filters, setFilters] = useState<Record<FilterKey, boolean>>({ pending: false, failed: false, locked: false, enabled: false, danger: false });
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -54,7 +58,10 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
     return ids;
   }, [boxes]);
 
+  const selectedIdSet = useMemo(() => new Set((selectedItemIds ?? []).map(String)), [selectedItemIds]);
+
   const visibleItems = useMemo(() => items.filter((item) => {
+    if (selectedItemIds && !selectedIdSet.has(String(item.id))) return false;
     const pricing = { ...(item.marketPricing || {}), ...(drafts[item.id] || {}) };
     if (filters.pending && pricing.updateStatus !== 'pending_review') return false;
     if (filters.failed && pricing.updateStatus !== 'failed') return false;
@@ -62,14 +69,14 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
     if (filters.enabled && pricing.enabled !== true) return false;
     if (filters.danger && !dangerItemIds.has(item.id)) return false;
     return true;
-  }), [dangerItemIds, drafts, filters, items]);
+  }), [dangerItemIds, drafts, filters, items, selectedIdSet, selectedItemIds]);
 
   const runAction = async (label: string, action: () => Promise<any>) => {
     setBusy(label);
     setMessage(null);
     try {
       const result = await action();
-      setMessage(result?.checked != null ? `Checked ${result.checked}, updated ${result.updated}, pending ${result.pendingReview}, failed ${result.failed}. Refresh to see latest values.` : 'Saved. Refresh to see latest values.');
+      setMessage(result?.checked != null ? `Checked ${result.checked}, updated ${result.updated}, pending ${result.pendingReview}, failed ${result.failed}. Latest values are loaded into the editor.` : 'Saved. Latest values are loaded into the editor.');
     } catch (error) {
       const text = error instanceof Error ? error.message : 'Request failed';
       setMessage(text);
@@ -91,7 +98,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
     const marketPricing = removeUndefined({
       ...existing,
       enabled: draft.enabled ?? existing.enabled ?? false,
-      source: (draft.source || existing.source || 'manual') as MarketPricingSource,
+      source: 'tcgplayer' as MarketPricingSource,
       sourceId: draft.sourceId ?? existing.sourceId,
       query: draft.query ?? existing.query,
       condition: draft.condition ?? existing.condition,
@@ -114,11 +121,37 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
     }
   };
 
+  const loadFreshItems = async (itemIds: string[]) => {
+    const freshItems: CaseItem[] = [];
+    await Promise.all(itemIds.map(async (itemId) => {
+      const snapshot = await getDoc(doc(db, 'items', itemId));
+      if (!snapshot.exists()) return;
+      const data = snapshot.data() as Omit<CaseItem, 'id'>;
+      freshItems.push({ id: snapshot.id, ...data });
+      if (data.marketPricing) {
+        setDrafts((prev) => ({ ...prev, [snapshot.id]: { ...prev[snapshot.id], ...data.marketPricing } }));
+      }
+    }));
+    if (freshItems.length > 0) onItemsUpdated?.(freshItems);
+    return freshItems;
+  };
+
   const checkPrice = async (item: CaseItem) => {
     // Save current dropdown/input drafts first so the server route reads fresh Firestore config.
-    await saveMarketPricingConfig(item);
+    await saveMarketPricingConfig(item, { enabled: true, source: 'tcgplayer' });
     const result = await authedFetch('/api/admin/market-prices/update', { method: 'POST', body: JSON.stringify({ itemId: item.id }) });
-    await refreshMarketPricingDraft(item.id);
+    await loadFreshItems([item.id]);
+    return result;
+  };
+
+  const checkActiveBoxPrices = async () => {
+    const boxItemIds = visibleItems.map((item) => item.id);
+    await Promise.all(visibleItems.map((item) => saveMarketPricingConfig(item, { enabled: true, source: 'tcgplayer' })));
+    const result = await authedFetch('/api/admin/market-prices/update', {
+      method: 'POST',
+      body: JSON.stringify(activeBox?.id ? { boxId: activeBox.id, itemIds: boxItemIds } : { itemIds: boxItemIds })
+    });
+    await loadFreshItems(boxItemIds);
     return result;
   };
 
@@ -143,21 +176,23 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
       <section className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-xl font-black text-white">Market Pricing</h2>
-            <p className="mt-1 max-w-3xl text-sm text-gray-400">Server-side pricing updates cache suggestions, auto-approve safe unlocked changes, and route risky moves to admin review.</p>
+            <h2 className="text-xl font-black text-white">{compact ? 'Box Market Pricing' : 'Market Pricing'}</h2>
+            <p className="mt-1 max-w-3xl text-sm text-gray-400">Use TCGplayer source IDs to refresh selected item prices, then auto-recalculate box odds against the editor target EV.</p>
           </div>
           <button
-            onClick={() => runAction('update-all', () => authedFetch('/api/admin/market-prices/update', { method: 'POST', body: JSON.stringify({}) }))}
-            disabled={busy !== null}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+            onClick={() => runAction(compact ? 'update-box' : 'update-all', compact ? checkActiveBoxPrices : () => authedFetch('/api/admin/market-prices/update', { method: 'POST', body: JSON.stringify({}) }))}
+            disabled={busy !== null || (compact && visibleItems.length === 0)}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-60 sm:w-auto"
           >
-            <RefreshCw className={`h-4 w-4 ${busy === 'update-all' ? 'animate-spin' : ''}`} /> Run Daily Update
+            <RefreshCw className={`h-4 w-4 ${busy === 'update-all' || busy === 'update-box' ? 'animate-spin' : ''}`} /> {compact ? `Update ${activeBox?.name || 'Box'} Prices` : 'Run Daily Update'}
           </button>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          {([
+          {(!compact ? [
             ['pending', 'Pending Review'], ['failed', 'Failed'], ['locked', 'Locked'], ['enabled', 'Auto-update enabled'], ['danger', 'Box margin danger']
+          ] : [
+            ['pending', 'Pending Review'], ['failed', 'Failed'], ['locked', 'Locked'], ['enabled', 'Auto-update enabled']
           ] as [FilterKey, string][]).map(([key, label]) => (
             <button key={key} onClick={() => setFilters((prev) => ({ ...prev, [key]: !prev[key] }))} className={`rounded-full border px-3 py-1.5 text-xs font-bold ${filters[key] ? 'border-cyan-400 bg-cyan-400/10 text-cyan-100' : 'border-gray-700 text-gray-400'}`}>{label}</button>
           ))}
@@ -206,22 +241,22 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
 
                 <div className="mt-4 grid grid-cols-1 gap-3 border-t border-white/10 pt-4 sm:grid-cols-2 xl:grid-cols-7">
                   <label className="text-[11px] font-bold uppercase text-gray-500">Enabled<Select value={String(pricing.enabled ?? false)} onChange={(e) => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], enabled: e.target.value === 'true' } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white"><option value="false">No</option><option value="true">Yes</option></Select></label>
-                  <label className="text-[11px] font-bold uppercase text-gray-500">Source<Select value={pricing.source || 'manual'} onChange={(e) => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], source: e.target.value as MarketPricingSource } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white">{sources.map((source) => <option key={source} value={source}>{source}</option>)}</Select></label>
+                  <label className="text-[11px] font-bold uppercase text-gray-500">Source<Select value="tcgplayer" onChange={() => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], source: 'tcgplayer' } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white">{sources.map((source) => <option key={source} value={source}>{source}</option>)}</Select></label>
                   <label className="text-[11px] font-bold uppercase text-gray-500">Source ID<Input value={pricing.sourceId || ''} onChange={(e) => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], sourceId: e.target.value } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white" /></label>
                   <label className="text-[11px] font-bold uppercase text-gray-500">Query<Input value={pricing.query || ''} onChange={(e) => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], query: e.target.value } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white" /></label>
                   <label className="text-[11px] font-bold uppercase text-gray-500">Condition<Select value={pricing.condition || 'raw'} onChange={(e) => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], condition: e.target.value as MarketPricingCondition } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white">{conditions.map((condition) => <option key={condition} value={condition}>{condition}</option>)}</Select></label>
                   <label className="text-[11px] font-bold uppercase text-gray-500">Approved USD<Input type="number" min="0" value={pricing.approvedValueUsd ?? ''} onChange={(e) => { const usd = Math.max(0, Number(e.target.value)); const coins = usdToCoins(usd); setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], approvedValueUsd: usd, approvedValueCoins: coins, approvedSellBackCoins: sellBack(coins) } })); }} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white" /></label>
                   <label className="text-[11px] font-bold uppercase text-gray-500">Approved Coins<Input type="number" min="0" value={pricing.approvedValueCoins ?? ''} onChange={(e) => { const coins = Math.max(0, Math.round(Number(e.target.value))); setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], approvedValueCoins: coins, approvedValueUsd: coinsToUsd(coins), approvedSellBackCoins: sellBack(coins) } })); }} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white" /></label>
                 </div>
-                <p className="mt-2 text-xs text-gray-500">Source ID can be a JustTCG card id or TCGplayer id. Use a specific query like “Pokemon Obsidian Flames Charizard ex 223/197”.</p>
-                <div className="mt-3 flex justify-end"><button onClick={() => runAction(`save-${item.id}`, () => saveConfig(item))} className="rounded-lg bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/15">Save Manual Override</button></div>
+                <p className="mt-2 text-xs text-gray-500">Source ID must be the TCGplayer product ID for this item. Use query only as a fallback search hint.</p>
+                <div className="mt-3 flex justify-end"><button onClick={() => runAction(`save-${item.id}`, () => saveConfig(item))} className="rounded-lg bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/15">Save TCGplayer Config</button></div>
               </article>
             );
           })}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-6">
+      {!compact && <section className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-6">
         <div className="mb-4 flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-300" /><h2 className="text-xl font-black text-white">Box Value Audit</h2></div>
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {boxes.map((box) => {
@@ -241,7 +276,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
             </div>;
           })}
         </div>
-      </section>
+      </section>}
     </div>
   );
 };
