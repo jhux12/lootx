@@ -7,7 +7,7 @@ import { authedFetch } from '../../utils/authedFetch';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 
-const sources: MarketPricingSource[] = ['manual', 'pricecharting', 'tcgplayer', 'justtcg'];
+const sources: MarketPricingSource[] = ['tcgplayer'];
 const conditions: MarketPricingCondition[] = ['raw', 'near_mint', 'lightly_played', 'psa_9', 'psa_10', 'sealed'];
 
 type FilterKey = 'pending' | 'failed' | 'locked' | 'enabled' | 'danger';
@@ -91,7 +91,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
     const marketPricing = removeUndefined({
       ...existing,
       enabled: draft.enabled ?? existing.enabled ?? false,
-      source: (draft.source || existing.source || 'manual') as MarketPricingSource,
+      source: 'tcgplayer' as MarketPricingSource,
       sourceId: draft.sourceId ?? existing.sourceId,
       query: draft.query ?? existing.query,
       condition: draft.condition ?? existing.condition,
@@ -191,7 +191,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
                     <div><span className="text-gray-500">Suggested</span><p className="font-bold text-white">{suggestedCoins ?? '—'} {suggestedCoins != null ? `coins ($${(pricing.suggestedValueUsd ?? coinsToUsd(suggestedCoins)).toFixed(2)})` : ''}</p></div>
                     <div><span className="text-gray-500">Diff</span><p className={`${diff != null && Math.abs(diff) > 15 ? 'text-amber-300' : 'text-gray-200'} font-bold`}>{diff == null ? '—' : `${diff > 0 ? '+' : ''}${diff}%`}</p></div>
                     <div><span className="text-gray-500">Sell-back</span><p className="font-bold text-white">{item.sellBackCoins ?? sellBack(currentCoins)} → {pricing.suggestedSellBackCoins ?? '—'}</p></div>
-                    <div><span className="text-gray-500">Source</span><p className="font-bold text-white">{pricing.source || 'manual'}</p></div>
+                    <div><span className="text-gray-500">Source</span><p className="font-bold text-white">tcgplayer</p></div>
                     <div><span className="text-gray-500">Condition</span><p className="font-bold text-white">{pricing.condition || '—'}</p></div>
                     <div className="col-span-2"><span className="text-gray-500">Last checked</span><p className="font-bold text-white">{formatDate(pricing.lastCheckedAt)}</p></div>
                   </div>
@@ -206,15 +206,15 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
 
                 <div className="mt-4 grid grid-cols-1 gap-3 border-t border-white/10 pt-4 sm:grid-cols-2 xl:grid-cols-7">
                   <label className="text-[11px] font-bold uppercase text-gray-500">Enabled<Select value={String(pricing.enabled ?? false)} onChange={(e) => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], enabled: e.target.value === 'true' } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white"><option value="false">No</option><option value="true">Yes</option></Select></label>
-                  <label className="text-[11px] font-bold uppercase text-gray-500">Source<Select value={pricing.source || 'manual'} onChange={(e) => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], source: e.target.value as MarketPricingSource } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white">{sources.map((source) => <option key={source} value={source}>{source}</option>)}</Select></label>
+                  <label className="text-[11px] font-bold uppercase text-gray-500">Source<Select value="tcgplayer" onChange={(e) => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], source: e.target.value as MarketPricingSource } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white">{sources.map((source) => <option key={source} value={source}>{source}</option>)}</Select></label>
                   <label className="text-[11px] font-bold uppercase text-gray-500">Source ID<Input value={pricing.sourceId || ''} onChange={(e) => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], sourceId: e.target.value } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white" /></label>
                   <label className="text-[11px] font-bold uppercase text-gray-500">Query<Input value={pricing.query || ''} onChange={(e) => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], query: e.target.value } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white" /></label>
                   <label className="text-[11px] font-bold uppercase text-gray-500">Condition<Select value={pricing.condition || 'raw'} onChange={(e) => setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], condition: e.target.value as MarketPricingCondition } }))} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white">{conditions.map((condition) => <option key={condition} value={condition}>{condition}</option>)}</Select></label>
                   <label className="text-[11px] font-bold uppercase text-gray-500">Approved USD<Input type="number" min="0" value={pricing.approvedValueUsd ?? ''} onChange={(e) => { const usd = Math.max(0, Number(e.target.value)); const coins = usdToCoins(usd); setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], approvedValueUsd: usd, approvedValueCoins: coins, approvedSellBackCoins: sellBack(coins) } })); }} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white" /></label>
                   <label className="text-[11px] font-bold uppercase text-gray-500">Approved Coins<Input type="number" min="0" value={pricing.approvedValueCoins ?? ''} onChange={(e) => { const coins = Math.max(0, Math.round(Number(e.target.value))); setDrafts((prev) => ({ ...prev, [item.id]: { ...prev[item.id], approvedValueCoins: coins, approvedValueUsd: coinsToUsd(coins), approvedSellBackCoins: sellBack(coins) } })); }} className="mt-1 w-full rounded bg-[#131720] p-2 text-sm text-white" /></label>
                 </div>
-                <p className="mt-2 text-xs text-gray-500">Source ID can be a JustTCG card id or TCGplayer id. Use a specific query like “Pokemon Obsidian Flames Charizard ex 223/197”.</p>
-                <div className="mt-3 flex justify-end"><button onClick={() => runAction(`save-${item.id}`, () => saveConfig(item))} className="rounded-lg bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/15">Save Manual Override</button></div>
+                <p className="mt-2 text-xs text-gray-500">Source ID must be the TCGplayer source ID for automated pricing. Use Query only as supporting label/search text.</p>
+                <div className="mt-3 flex justify-end"><button onClick={() => runAction(`save-${item.id}`, () => saveConfig(item))} className="rounded-lg bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/15">Save Pricing Config</button></div>
               </article>
             );
           })}
