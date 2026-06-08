@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3 } from 'lucide-react';
-import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
+import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MarketPricingCondition, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -21,6 +21,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { getBoxTags, sanitizeFontAwesomeClass } from '../utils/boxTags';
+import { authedFetch } from '../utils/authedFetch';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -374,6 +375,8 @@ export const AdminPanel: React.FC = () => {
   const [itemCategoryFilter, setItemCategoryFilter] = useState('');
   const [itemTagFilters, setItemTagFilters] = useState<string[]>([]);
   const [deletingBoxId, setDeletingBoxId] = useState<string | null>(null);
+  const [boxMarketPricingBusy, setBoxMarketPricingBusy] = useState(false);
+  const [boxMarketPricingMessage, setBoxMarketPricingMessage] = useState<string | null>(null);
   const [isUploadingSpinnerBackground, setIsUploadingSpinnerBackground] = useState(false);
   const [isUploadingBoxCatalogHero, setIsUploadingBoxCatalogHero] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -2758,7 +2761,14 @@ export const AdminPanel: React.FC = () => {
       }
 
       // Clone items to decouple from global pool (ensuring box-specific chances)
-      const boxItems = selectedItems.map(i => ({...i}));
+      const boxItems = selectedItems.map(i => ({
+          ...i,
+          marketPricing: removeUndefinedFields({
+              ...getSelectedItemMarketPricing(i),
+              source: 'tcgplayer' as const,
+              sourceId: String(getSelectedItemMarketPricing(i).sourceId ?? '').trim()
+          })
+      }));
 
       // If setting as daily, unset others first (best effort approach)
       if (newBox.isDaily) {
@@ -2802,6 +2812,7 @@ export const AdminPanel: React.FC = () => {
       setOddsEditorMode('manual');
       setRiskBalance(box.riskLevel ?? 50);
       setTargetEV(box.targetEV ?? 0.85);
+      setBoxMarketPricingMessage(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -2910,6 +2921,7 @@ export const AdminPanel: React.FC = () => {
       setOddsEditorMode('auto');
       setRiskBalance(50);
       setTargetEV(0.85);
+      setBoxMarketPricingMessage(null);
   };
 
   const toggleBoxTag = (tag: string) => {
@@ -2947,6 +2959,41 @@ export const AdminPanel: React.FC = () => {
   const getCatalogItemPrice = (item: CaseItem) => {
       const catalogItem = items.find((entry) => entry.id === item.id);
       return Math.max(0, Number(catalogItem?.price ?? item.originalPriceCoins ?? item.price ?? 0) || 0);
+  };
+
+  const removeUndefinedFields = <T extends Record<string, unknown>>(value: T): T =>
+      Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as T;
+
+  const getSelectedItemMarketPricing = (item: CaseItem): NonNullable<CaseItem['marketPricing']> => ({
+      enabled: item.marketPricing?.enabled ?? Boolean(item.marketPricing?.sourceId),
+      source: 'tcgplayer',
+      sourceId: item.marketPricing?.sourceId ?? '',
+      query: item.marketPricing?.query ?? item.name,
+      condition: item.marketPricing?.condition ?? 'raw',
+      valueLocked: item.marketPricing?.valueLocked ?? false,
+      approvedValueUsd: item.marketPricing?.approvedValueUsd,
+      approvedValueCoins: item.marketPricing?.approvedValueCoins,
+      approvedSellBackCoins: item.marketPricing?.approvedSellBackCoins,
+      suggestedValueUsd: item.marketPricing?.suggestedValueUsd,
+      suggestedValueCoins: item.marketPricing?.suggestedValueCoins,
+      suggestedSellBackCoins: item.marketPricing?.suggestedSellBackCoins,
+      updateStatus: item.marketPricing?.updateStatus,
+      lastCheckedAt: item.marketPricing?.lastCheckedAt,
+      lastError: item.marketPricing?.lastError ?? null
+  });
+
+  const handleSelectedItemMarketPricingChange = (itemId: string, patch: Partial<NonNullable<CaseItem['marketPricing']>>) => {
+      setSelectedItems((prev) => prev.map((entry) => {
+          if (entry.id !== itemId) return entry;
+          const nextMarketPricing = removeUndefinedFields({
+              ...getSelectedItemMarketPricing(entry),
+              ...patch,
+              source: 'tcgplayer',
+              enabled: patch.enabled ?? entry.marketPricing?.enabled ?? Boolean(patch.sourceId ?? entry.marketPricing?.sourceId)
+          });
+          return { ...entry, marketPricing: nextMarketPricing };
+      }));
+      setBoxMarketPricingMessage(null);
   };
 
   const applyBoxValueOverride = (itemId: string, nextValueCoins: number) => {
@@ -2994,6 +3041,87 @@ export const AdminPanel: React.FC = () => {
               ? { ...entry, chance: Number(nextChance.toFixed(4)) }
               : entry
       )));
+  };
+
+  const handleUpdateSelectedBoxMarketPrices = async () => {
+      if (selectedItems.length === 0) return;
+      setBoxMarketPricingBusy(true);
+      setBoxMarketPricingMessage(null);
+
+      try {
+          let updatedCount = 0;
+          let failedCount = 0;
+          const refreshedItems = await Promise.all(selectedItems.map(async (item) => {
+              const marketPricing = getSelectedItemMarketPricing(item);
+              const sourceId = String(marketPricing.sourceId ?? '').trim();
+              if (!sourceId) {
+                  return { ...item, marketPricing: { ...marketPricing, sourceId, lastError: 'Missing TCGplayer source id.' } };
+              }
+
+              const config = removeUndefinedFields({
+                  ...marketPricing,
+                  enabled: true,
+                  source: 'tcgplayer' as const,
+                  sourceId,
+                  query: marketPricing.query || item.name,
+                  condition: marketPricing.condition || 'raw'
+              });
+
+              try {
+                  await updateDoc(doc(db, 'items', item.id), { marketPricing: config });
+                  await authedFetch('/api/admin/market-prices/update', {
+                      method: 'POST',
+                      body: JSON.stringify({ itemId: item.id })
+                  });
+
+                  const snapshot = await getDoc(doc(db, 'items', item.id));
+                  const latest = snapshot.exists() ? (snapshot.data() as Partial<CaseItem>) : {};
+                  const latestPricing = { ...config, ...(latest.marketPricing ?? {}) };
+                  const nextValueCoins = Math.max(0, Math.round(Number(
+                      latestPricing.approvedValueCoins
+                      ?? latestPricing.suggestedValueCoins
+                      ?? latest.valueCoins
+                      ?? latest.price
+                      ?? item.price
+                      ?? 0
+                  )));
+                  updatedCount += 1;
+                  return {
+                      ...item,
+                      ...latest,
+                      id: item.id,
+                      chance: item.chance,
+                      rarity: item.rarity,
+                      color: item.color,
+                      price: nextValueCoins,
+                      valueCoins: nextValueCoins,
+                      valueUsd: latestPricing.approvedValueUsd ?? latestPricing.suggestedValueUsd ?? Number((nextValueCoins / 100).toFixed(2)),
+                      sellBackCoins: latestPricing.approvedSellBackCoins ?? latestPricing.suggestedSellBackCoins ?? Math.floor(nextValueCoins * 0.8),
+                      boxValueOverrideCoins: nextValueCoins,
+                      originalPriceCoins: Number(item.originalPriceCoins ?? getCatalogItemPrice(item)),
+                      marketPricing: latestPricing
+                  };
+              } catch (error) {
+                  failedCount += 1;
+                  const lastError = error instanceof Error ? error.message : 'Market update failed.';
+                  return { ...item, marketPricing: { ...config, updateStatus: 'failed' as const, lastError } };
+              }
+          }));
+
+          const { updatedItems } = getAutoCalculatedBoxItems(refreshedItems);
+          setSelectedItems(updatedItems);
+          setOddsEditorMode('auto');
+
+          if (editingBoxId) {
+              await updateBox(buildEditableBoxPayload(updatedItems.map((entry) => ({ ...entry }))));
+          }
+
+          setBoxMarketPricingMessage(`Updated ${updatedCount} item${updatedCount === 1 ? '' : 's'} from TCGplayer, recalculated box odds${editingBoxId ? ', and saved this box' : ''}.${failedCount ? ` ${failedCount} item${failedCount === 1 ? '' : 's'} failed.` : ''}`);
+      } catch (error) {
+          setBoxMarketPricingMessage(error instanceof Error ? error.message : 'Unable to update box market prices.');
+      } finally {
+          setBoxMarketPricingBusy(false);
+      }
   };
 
   const buildEditableBoxPayload = (items: CaseItem[]): MysteryBox => ({
@@ -4133,6 +4261,26 @@ export const AdminPanel: React.FC = () => {
                                         {evOutOfBounds && <div>⚠ EV must stay within ±1% of target.</div>}
                                     </div>
                                 )}
+                                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <h4 className="text-sm font-bold text-cyan-100">Box market pricing</h4>
+                                            <p className="mt-1 text-[11px] leading-relaxed text-cyan-100/70">Add each selected item&apos;s TCGplayer source ID below, then update this box to refresh prices and auto-recalculate odds.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleUpdateSelectedBoxMarketPrices}
+                                            disabled={boxMarketPricingBusy || selectedItems.length === 0}
+                                            className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-xs font-bold text-cyan-100 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                                        >
+                                            <BadgeDollarSign className="h-4 w-4" />
+                                            {boxMarketPricingBusy ? 'Updating…' : editingBoxId ? 'Update this box' : 'Update selected items'}
+                                        </button>
+                                    </div>
+                                    {boxMarketPricingMessage && (
+                                        <p className="mt-3 rounded-lg border border-white/10 bg-black/20 p-2 text-[11px] text-gray-200">{boxMarketPricingMessage}</p>
+                                    )}
+                                </div>
                                 <div className="flex items-center gap-2">
                                     <Checkbox
                                         id="daily-case"
@@ -4306,6 +4454,44 @@ export const AdminPanel: React.FC = () => {
                                                          className="w-24 bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-white font-semibold text-xs"
                                                      />
                                                  </label>
+                                                 <div className="grid w-full grid-cols-1 gap-2 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-2 sm:grid-cols-[110px_minmax(170px,1fr)_120px]">
+                                                     <label className="text-[10px] uppercase text-cyan-100/70">
+                                                         Source
+                                                         <Input
+                                                             value="TCGplayer"
+                                                             readOnly
+                                                             className="mt-1 w-full cursor-not-allowed rounded border border-cyan-400/20 bg-black/30 px-2 py-1 text-xs font-semibold text-cyan-100"
+                                                             aria-label={`Market source for ${item.name}`}
+                                                         />
+                                                     </label>
+                                                     <label className="text-[10px] uppercase text-cyan-100/70">
+                                                         TCGplayer Source ID
+                                                         <Input
+                                                             type="text"
+                                                             value={getSelectedItemMarketPricing(item).sourceId ?? ''}
+                                                             onChange={(event) => handleSelectedItemMarketPricingChange(item.id, { sourceId: event.target.value, enabled: event.target.value.trim().length > 0 })}
+                                                             placeholder="TCGplayer product / sku id"
+                                                             className="mt-1 w-full rounded border border-cyan-400/20 bg-[#0b0e14] px-2 py-1 text-xs text-white"
+                                                             aria-label={`TCGplayer source id for ${item.name}`}
+                                                         />
+                                                     </label>
+                                                     <label className="text-[10px] uppercase text-cyan-100/70">
+                                                         Condition
+                                                         <Select
+                                                             value={getSelectedItemMarketPricing(item).condition ?? 'raw'}
+                                                             onChange={(event) => handleSelectedItemMarketPricingChange(item.id, { condition: event.target.value as MarketPricingCondition })}
+                                                             className="mt-1 w-full rounded border border-cyan-400/20 bg-[#0b0e14] px-2 py-1 text-xs text-white"
+                                                         >
+                                                             <option value="raw">Raw</option>
+                                                             <option value="near_mint">Near mint</option>
+                                                             <option value="lightly_played">Lightly played</option>
+                                                             <option value="psa_9">PSA 9</option>
+                                                             <option value="psa_10">PSA 10</option>
+                                                             <option value="sealed">Sealed</option>
+                                                         </Select>
+                                                     </label>
+                                                     {item.marketPricing?.lastError && <p className="text-[10px] text-red-300 sm:col-span-3">{item.marketPricing.lastError}</p>}
+                                                 </div>
                                                  <label className="relative">
                                                      <span className="sr-only">Item rarity for {item.name}</span>
                                                      <select
