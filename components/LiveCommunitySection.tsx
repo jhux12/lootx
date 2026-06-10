@@ -92,6 +92,7 @@ const formatStoryTimeLabel = (story: LiveCommunityStory): string => {
 };
 export const LiveCommunitySection: React.FC = () => {
   const sectionRef = useRef<HTMLElement | null>(null);
+  const storyRailRef = useRef<HTMLDivElement | null>(null);
   const [stories, setStories] = useState<LiveCommunityStory[]>([]);
   const [shouldConnectRealtime, setShouldConnectRealtime] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -101,6 +102,15 @@ export const LiveCommunitySection: React.FC = () => {
   const [storyDragOffset, setStoryDragOffset] = useState(0);
   const viewedStoryIdsRef = useRef<Set<string>>(new Set());
   const [brokenStoryIds, setBrokenStoryIds] = useState<Set<string>>(new Set());
+
+  const scrollStoryRail = (direction: 'previous' | 'next') => {
+    const rail = storyRailRef.current;
+    if (!rail) return;
+    const card = rail.querySelector<HTMLElement>('[data-community-story-card]');
+    const cardWidth = card?.offsetWidth ?? 136;
+    const gap = 20;
+    rail.scrollBy({ left: (cardWidth + gap) * (direction === 'next' ? 2 : -2), behavior: 'smooth' });
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -243,6 +253,17 @@ export const LiveCommunitySection: React.FC = () => {
       return;
     }
 
+    if (Math.abs(deltaX) > 54 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25) {
+      setProgress(0);
+      setActiveIndex((current) => {
+        if (current === null) return current;
+        if (deltaX < 0) return current >= stories.length - 1 ? null : current + 1;
+        return Math.max(0, current - 1);
+      });
+      setStoryDragOffset(0);
+      return;
+    }
+
     setStoryDragOffset(0);
   };
 
@@ -263,6 +284,8 @@ export const LiveCommunitySection: React.FC = () => {
     }
   };
 
+  const canNavigateStories = stories.length > 1;
+
   return <section ref={sectionRef} className="space-y-4 min-h-[168px]">
     <div className="rounded-[1.35rem] border border-white/[0.06] bg-[#20262b]/62 p-4 shadow-[0_16px_40px_rgba(5,8,12,0.18)] sm:p-5">
       <div className="mb-3 flex items-end justify-between gap-3 px-0.5">
@@ -272,19 +295,31 @@ export const LiveCommunitySection: React.FC = () => {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-slate-300 sm:inline-flex">{formatStoryCount(stories.length)}</span>
+          <div className="hidden items-center gap-1 sm:flex" aria-label="Scroll community stories">
+            <button type="button" aria-label="Scroll to previous community stories" onClick={() => scrollStoryRail('previous')} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-lg font-black text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08]">‹</button>
+            <button type="button" aria-label="Scroll to next community stories" onClick={() => scrollStoryRail('next')} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-lg font-black text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08]">›</button>
+          </div>
           <button className="min-h-10 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-wide text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08] hover:text-white">View All</button>
         </div>
       </div>
-      <div className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto px-0.5 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:auto] sm:gap-5">
+      <div className="relative -mx-4 sm:mx-0">
+        <div className="pointer-events-none absolute inset-y-2 left-0 z-10 w-8 bg-gradient-to-r from-[#20262b] to-transparent sm:hidden" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-y-2 right-0 z-10 w-8 bg-gradient-to-l from-[#20262b] to-transparent sm:hidden" aria-hidden="true" />
+        <div
+          ref={storyRailRef}
+          className="scrollbar-hide flex snap-x snap-proximity gap-3 overflow-x-auto overscroll-x-contain px-4 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:pan-x] sm:gap-5 sm:px-0.5"
+          aria-label="Community Pullz stories. Swipe horizontally to browse."
+        >
         {stories.length ? stories.map((story, index) => {
           const badge = getStoryBadge(story);
           return (
           <button
             key={story.id}
             onClick={() => { void handleOpenStory(index); }}
-            className="group flex w-[136px] shrink-0 snap-start flex-col items-center text-center sm:w-[150px]"
+            data-community-story-card
+            className="group flex w-[124px] shrink-0 snap-start touch-pan-x flex-col items-center text-center sm:w-[150px]"
           >
-            <div className={`relative h-[122px] w-[122px] overflow-hidden rounded-full bg-gradient-to-br ${rarityRing[story.rarity] ?? 'from-fuchsia-500 via-violet-500 to-sky-500'} p-[2px] shadow-[0_0_24px_rgba(92,101,255,0.45)] transition-transform duration-200 group-hover:scale-105 group-active:scale-[0.98] sm:h-[132px] sm:w-[132px]`}>
+            <div className={`relative h-[112px] w-[112px] overflow-hidden rounded-full bg-gradient-to-br ${rarityRing[story.rarity] ?? 'from-fuchsia-500 via-violet-500 to-sky-500'} p-[2px] shadow-[0_0_24px_rgba(92,101,255,0.45)] transition-transform duration-200 group-hover:scale-105 group-active:scale-[0.98] sm:h-[132px] sm:w-[132px]`}>
               <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#080a12]">
                 <img
                   src={story.mediaUrl}
@@ -299,7 +334,8 @@ export const LiveCommunitySection: React.FC = () => {
             </div>
             <span className="mt-2 max-w-full truncate text-xs font-bold text-slate-200">@{story.username || 'pullz'}</span>
           </button>
-        );}) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[122px] w-[122px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[132px] sm:w-[132px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
+        );}) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[112px] w-[112px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[132px] sm:w-[132px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
+        </div>
       </div>
     </div>
     {activeIndex !== null && stories[activeIndex] && (
@@ -319,7 +355,7 @@ export const LiveCommunitySection: React.FC = () => {
             <button
               type="button"
               aria-label="Previous story"
-              className="absolute inset-y-0 left-0 w-1/3 bg-transparent"
+              className={`absolute inset-y-0 left-0 w-1/3 bg-transparent ${canNavigateStories ? 'cursor-pointer' : 'cursor-default'}`}
               onClick={() => {
                 setProgress(0);
                 setActiveIndex((current) => {
@@ -332,7 +368,7 @@ export const LiveCommunitySection: React.FC = () => {
             <button
               type="button"
               aria-label="Next story"
-              className="absolute inset-y-0 right-0 w-1/3 bg-transparent"
+              className={`absolute inset-y-0 right-0 w-1/3 bg-transparent ${canNavigateStories ? 'cursor-pointer' : 'cursor-default'}`}
               onClick={() => {
                 setProgress(0);
                 setActiveIndex((current) => {
