@@ -106,17 +106,19 @@
         min-height: var(--app-height);
       }
       .pullz-mobile-bottom-nav {
-        position: fixed;
+        position: fixed !important;
         left: 0;
         right: 0;
-        bottom: 0;
+        bottom: var(--pullz-mobile-viewport-bottom, 0px);
         width: 100%;
         -webkit-transform: translate3d(0, 0, 0);
         transform: translate3d(0, 0, 0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
       }
-      @supports (bottom: env(safe-area-inset-bottom)) {
+      @supports (height: 100dvh) {
         .pullz-mobile-bottom-nav {
-          bottom: 0;
+          max-height: calc(100dvh - env(safe-area-inset-top));
         }
       }
       /* Custom scrollbar for chat */

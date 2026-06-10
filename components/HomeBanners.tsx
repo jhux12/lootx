@@ -27,8 +27,8 @@ const HOME_BANNERS: HomeBanner[] = [
     view: { type: 'PLINKO' }
   },
   {
-    title: 'Climb the leaderboard',
-    description: 'Compete for the top spot and track the biggest Pullz players.',
+    title: 'Climb the ranks',
+    description: 'Compete for the top spot and track the biggest Pullz players on the leaderboard.',
     image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/leader.png?alt=media&token=d1904a5a-5b16-4b67-b23d-4b307dc72136',
     cta: 'View leaderboard',
     view: { type: 'LEADERBOARD' }

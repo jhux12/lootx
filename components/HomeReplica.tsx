@@ -374,6 +374,8 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
 
         <LiveCommunitySection />
 
+        <HomeBanners />
+
         <section aria-label="Available boxes" className="rounded-[1.35rem] border border-white/[0.06] bg-[#20262b]/72 p-4 shadow-[0_18px_44px_rgba(5,8,12,0.22)] sm:p-5">
           <div className="mb-5 flex items-end justify-between gap-3">
             <div>
@@ -398,8 +400,6 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             ))}
           </div>
         </section>
-
-        <HomeBanners />
 
         <section aria-label="Live recent wins" className="min-h-[450px] overflow-hidden rounded-[1.35rem] border border-white/5 bg-[#171918] shadow-[0_18px_44px_rgba(5,8,12,0.28)] sm:min-h-[500px]">
           <div className="flex flex-col gap-1 border-b border-white/[0.06] bg-[#171918] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
