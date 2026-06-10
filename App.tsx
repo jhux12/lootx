@@ -707,9 +707,24 @@ function App() {
 
 export default App;
 
+const getNavigationScrollKey = (view: ReturnType<typeof useGame>['view']) => {
+  switch (view.type) {
+    case 'CASE_OPENING':
+      return `${view.type}:${view.boxId ?? ''}:${view.isFree ? 'free' : 'paid'}`;
+    case 'BATTLE_ARENA':
+      return `${view.type}:${view.battleId ?? ''}`;
+    case 'PROFILE':
+      return `${view.type}:${view.userId ?? ''}`;
+    default:
+      return view.type;
+  }
+};
+
 const AppShell = () => {
   const { view } = useGame();
   const shouldUseStickyHeader = true;
+  const navigationScrollKey = getNavigationScrollKey(view);
+  const previousNavigationScrollKey = useRef(navigationScrollKey);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
@@ -744,6 +759,22 @@ const AppShell = () => {
     // Keep native mobile zoom behavior enabled (pinch + browser-level accessibility zoom).
     // Do not register gesture/touch preventDefault handlers here.
   }, []);
+
+  useEffect(() => {
+    if (previousNavigationScrollKey.current === navigationScrollKey) return undefined;
+    previousNavigationScrollKey.current = navigationScrollKey;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+
+    const scrollToPageTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    scrollToPageTop();
+    const frameId = window.requestAnimationFrame(scrollToPageTop);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [navigationScrollKey]);
 
   return (
     <PullToRefresh>
