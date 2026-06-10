@@ -315,14 +315,14 @@ export const LoginModal: React.FC = () => {
   return (
     <div
       data-disable-pull-refresh="true"
-      className="fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto overscroll-contain p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4"
+      className="fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto overscroll-contain p-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4"
     >
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={() => setShowLoginModal(false)}
       />
 
-      <div className="relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#18181b] shadow-2xl sm:max-h-[95dvh]">
+      <div className="relative my-auto flex max-h-[calc(100svh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#18181b] shadow-2xl sm:max-h-[95dvh] sm:rounded-3xl">
         <button
           onClick={() => setShowLoginModal(false)}
           className="absolute right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
@@ -330,9 +330,9 @@ export const LoginModal: React.FC = () => {
           <X className="h-5 w-5" />
         </button>
 
-        <div className="flex w-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[#18181b] p-4 pr-3 sm:p-6 sm:pr-5">
+        <div className="flex w-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[#18181b] p-3 pr-2.5 sm:p-6 sm:pr-5">
           {!isLinkingGoogle && (
-            <div className="mb-5 flex w-full rounded-xl border border-white/5 bg-[#18181b] p-1">
+            <div className="mb-3 flex w-full rounded-xl border border-white/5 bg-[#18181b] p-1 sm:mb-5">
               <button
                 onClick={() => mode !== 'login' && toggleMode()}
                 className={`flex-1 rounded-lg py-2.5 text-sm font-bold transition-all ${mode === 'login' ? 'bg-[#27272a] text-white shadow-sm ring-1 ring-white/5' : 'text-neutral-500 hover:text-neutral-300'}`}
@@ -351,7 +351,7 @@ export const LoginModal: React.FC = () => {
           )}
 
           <div className="mb-4 text-left">
-            <h2 className="text-2xl font-black text-white">
+            <h2 className="text-xl font-black text-white sm:text-2xl">
               {isLinkingGoogle ? 'Link Google Account' : mode === 'login' ? 'Welcome Back' : 'Register'}
             </h2>
             {(isLinkingGoogle || mode === 'login') && (
@@ -369,8 +369,8 @@ export const LoginModal: React.FC = () => {
           </div>
 
           {mode === 'register' && !isLinkingGoogle && (
-            <div className="relative mb-4 mt-10 overflow-visible rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] via-[#18181b] to-[#101014] px-4 pb-4 pt-16 text-center sm:mt-12 sm:pt-20">
-              <div className="pointer-events-none absolute left-1/2 top-0 z-10 h-36 w-[min(84vw,260px)] -translate-x-1/2 -translate-y-1/2 sm:h-44 sm:w-[320px]">
+            <div className="relative mb-3 mt-7 overflow-visible rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] via-[#18181b] to-[#101014] px-3 pb-3 pt-12 text-center sm:mb-4 sm:mt-12 sm:px-4 sm:pb-4 sm:pt-20">
+              <div className="pointer-events-none absolute left-1/2 top-0 z-10 h-28 w-[min(72vw,210px)] -translate-x-1/2 -translate-y-1/2 sm:h-44 sm:w-[320px]">
                 <img
                   src={registerBonusImage}
                   alt="Free signup box"
@@ -388,7 +388,7 @@ export const LoginModal: React.FC = () => {
                   type="button"
                   onClick={handleGoogleSignIn}
                   disabled={isLoading}
-                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-12 sm:py-3"
                 >
                   {isOAuthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" />}
                   {isOAuthLoading ? 'Opening Google sign-in…' : 'Continue with Google'}
@@ -400,7 +400,7 @@ export const LoginModal: React.FC = () => {
                   </div>
                 )}
                 {mode === 'register' && (
-                  <label className="group flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-[#141417] p-3 text-xs">
+                  <label className="group flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-[#141417] p-2.5 text-xs sm:p-3">
                     <Checkbox
                       required
                       checked={googleSignupConsent}
@@ -421,7 +421,7 @@ export const LoginModal: React.FC = () => {
                 )}
               </div>
 
-              <div className="relative py-4">
+              <div className="relative py-3 sm:py-4">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-white/10" />
                 </div>
@@ -479,7 +479,7 @@ export const LoginModal: React.FC = () => {
               </button>
             </form>
           ) : showEmailFields ? (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:gap-4">
               {mode === 'register' && (
                 <div className="flex flex-col gap-1.5">
                   <label className="ml-1 text-xs font-semibold text-neutral-400">Username</label>
@@ -548,7 +548,7 @@ export const LoginModal: React.FC = () => {
               )}
 
               {mode === 'register' && (
-                <label className="group mt-1 flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-[#141417] p-3 text-xs">
+                <label className="group mt-1 flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-[#141417] p-2.5 text-xs sm:p-3">
                   <Checkbox
                     required
                     checked={emailSignupConsent}
@@ -576,7 +576,6 @@ export const LoginModal: React.FC = () => {
                       <p className="mt-1 leading-5 text-emerald-50/90">
                         We sent a confirmation link{email.trim() ? <> to <span className="break-all font-semibold text-white">{email.trim()}</span></> : null}. Tap that link before signing in or claiming your free box.
                       </p>
-                      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-100/80">Already clicked Register? This is your next step.</p>
                     </div>
                   </div>
                 </div>
@@ -613,7 +612,7 @@ export const LoginModal: React.FC = () => {
           )}
 
           {!isLinkingGoogle && (
-            <div className="mt-auto pt-5 text-center text-xs text-neutral-500">
+            <div className="mt-auto pt-4 text-center text-xs text-neutral-500 sm:pt-5">
               {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
               <button
                 type="button"
