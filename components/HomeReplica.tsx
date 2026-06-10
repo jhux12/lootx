@@ -155,16 +155,16 @@ const LiveWinCard = memo(({ win, onOpenBox }: { win: HomeTickerWin; onOpenBox: (
     <button
       type="button"
       onClick={handleOpen}
-      className={`group relative flex h-[352px] w-[248px] shrink-0 flex-col overflow-hidden rounded-[1.55rem] border-2 bg-[#181a1b] text-left shadow-[0_18px_36px_rgba(0,0,0,0.36)] transition duration-200 hover:-translate-y-1 hover:brightness-110 active:scale-[0.98] sm:h-[390px] sm:w-[292px] lg:h-[430px] lg:w-[320px] ${TICKER_RARITY_CARD_CLASS[win.rarity]}`}
+      className={`group relative flex h-[372px] w-[248px] shrink-0 flex-col overflow-hidden rounded-[1.55rem] border-2 bg-[#181a1b] text-left shadow-[0_18px_36px_rgba(0,0,0,0.36)] transition duration-200 hover:-translate-y-1 hover:brightness-110 active:scale-[0.98] sm:h-[404px] sm:w-[292px] lg:h-[430px] lg:w-[320px] ${TICKER_RARITY_CARD_CLASS[win.rarity]}`}
       title={`${win.itemName} won from ${win.boxName}`}
     >
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${TICKER_RARITY_GLOW_CLASS[win.rarity]}`} />
-      <div className="relative flex h-[218px] items-center justify-center overflow-hidden bg-[#111313] p-4 sm:h-[245px] sm:p-5 lg:h-[270px]">
+      <div className="relative flex h-[198px] shrink-0 items-center justify-center overflow-hidden bg-[#111313] p-4 sm:h-[228px] sm:p-5 lg:h-[252px]">
         {win.featured && <span className="absolute left-3 top-3 z-20 rounded-full bg-amber-300 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-black shadow-lg">🔥 Big Win</span>}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 bg-gradient-to-t from-[#181a1b] to-transparent" />
         <img src={win.itemImage} alt={win.itemName} className="relative z-0 h-[88%] w-[88%] object-contain drop-shadow-[0_18px_26px_rgba(0,0,0,0.42)] transition-transform duration-300 group-hover:scale-105 sm:h-[86%] sm:w-[86%]" loading="lazy" decoding="async" width={260} height={260} />
       </div>
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-between gap-3 bg-[#1c1d1e]/96 p-4 sm:p-5">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-3 bg-[#1c1d1e]/96 p-4 pb-5 sm:p-5 sm:pb-6">
         <div>
           <div className="flex items-start justify-between gap-3">
             <p className="min-w-0 flex-1 truncate text-2xl font-black uppercase leading-none tracking-tight text-white sm:text-3xl">{win.itemName}</p>
@@ -185,7 +185,7 @@ const LiveWinCard = memo(({ win, onOpenBox }: { win: HomeTickerWin; onOpenBox: (
             </div>
           </div>
         </div>
-        <p className="truncate text-sm font-semibold text-slate-400">Pulled from <span className="text-lime-300">{win.boxName}</span></p>
+        <p className="mt-auto min-h-5 truncate text-sm font-semibold leading-5 text-slate-400">Pulled from <span className="text-lime-300">{win.boxName}</span></p>
       </div>
     </button>
   );
@@ -193,9 +193,9 @@ const LiveWinCard = memo(({ win, onOpenBox }: { win: HomeTickerWin; onOpenBox: (
 LiveWinCard.displayName = 'LiveWinCard';
 
 const LiveWinsSkeleton = memo(() => (
-  <div className="flex min-h-[380px] items-center gap-4 px-4 py-4 sm:min-h-[420px] sm:gap-5" aria-hidden="true">
+  <div className="flex min-h-[400px] items-center gap-4 px-4 py-4 sm:min-h-[434px] sm:gap-5" aria-hidden="true">
     {Array.from({ length: 4 }).map((_, index) => (
-      <div key={index} className="h-[352px] w-[248px] shrink-0 rounded-[1.55rem] border-2 border-white/10 bg-white/[0.045] sm:h-[390px] sm:w-[292px] lg:h-[430px] lg:w-[320px]" />
+      <div key={index} className="h-[372px] w-[248px] shrink-0 rounded-[1.55rem] border-2 border-white/10 bg-white/[0.045] sm:h-[404px] sm:w-[292px] lg:h-[430px] lg:w-[320px]" />
     ))}
   </div>
 ));
@@ -400,7 +400,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
           </div>
         </section>
 
-        <section aria-label="Live recent wins" className="min-h-[450px] overflow-hidden rounded-[1.35rem] border border-white/5 bg-[#171918] shadow-[0_18px_44px_rgba(5,8,12,0.28)] sm:min-h-[500px]">
+        <section aria-label="Live recent wins" className="min-h-[470px] overflow-hidden rounded-[1.35rem] border border-white/5 bg-[#171918] shadow-[0_18px_44px_rgba(5,8,12,0.28)] sm:min-h-[514px]">
           <div className="flex flex-col gap-1 border-b border-white/[0.06] bg-[#171918] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5">
@@ -414,7 +414,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             </div>
           </div>
 
-          <div className="relative overflow-hidden py-5">
+          <div className="relative overflow-hidden py-5 sm:py-6">
             {liveWins.length > 0 ? (
               <>
                 <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#171918] to-transparent sm:w-20" />
