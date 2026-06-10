@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -44,10 +44,10 @@ interface RevealData {
   rotatedAt: number;
 }
 
-const DESKTOP_CARD_WIDTH = 170;
-const DESKTOP_CARD_HEIGHT = 210;
-const DESKTOP_GAP_WIDTH = 6;
-const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
+const DESKTOP_CARD_WIDTH = 190;
+const DESKTOP_CARD_HEIGHT = 230;
+const DESKTOP_GAP_WIDTH = 8;
+const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 260;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -286,7 +286,7 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
   }
 };
 
-const formatUsdValueFromCoins = (coins: number) => `$${(Math.max(0, coins) / 100).toFixed(2)} value`;
+const formatUsdValueFromCoins = (coins: number) => `${new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.max(0, coins) / 100)} value`;
 
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false }) => {
@@ -392,6 +392,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
   const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
   const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
+  const [isDropTableCtaVisible, setIsDropTableCtaVisible] = useState(false);
   
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
@@ -399,6 +400,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const dropTableRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const winningCardRef = useRef<HTMLDivElement>(null);
   const reelItemsRef = useRef<CaseItem[]>([]);
@@ -500,6 +502,45 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     return () => observer.disconnect();
   }, [reelItems, updateSpinnerMeasurements]);
+
+  const handleScrollToDropTable = useCallback(() => {
+    playSound('click');
+    dropTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [playSound]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let lastScrollY = window.scrollY;
+
+    const updateDropTableCtaVisibility = () => {
+      const dropTable = dropTableRef.current;
+      const isMobileViewport = window.innerWidth < 640;
+      if (!dropTable || !isMobileViewport) {
+        setIsDropTableCtaVisible(false);
+        lastScrollY = window.scrollY;
+        return;
+      }
+
+      const currentScrollY = window.scrollY;
+      const dropTableTop = dropTable.getBoundingClientRect().top;
+      const isStillNearTop = currentScrollY < 160;
+      const isScrollingUp = currentScrollY < lastScrollY - 6;
+      const dropTableIsNotYetReached = dropTableTop > window.innerHeight * 0.35;
+
+      setIsDropTableCtaVisible((isStillNearTop || isScrollingUp) && dropTableIsNotYetReached);
+      lastScrollY = currentScrollY;
+    };
+
+    updateDropTableCtaVisibility();
+    window.addEventListener('scroll', updateDropTableCtaVisibility, { passive: true });
+    window.addEventListener('resize', updateDropTableCtaVisibility);
+
+    return () => {
+      window.removeEventListener('scroll', updateDropTableCtaVisibility);
+      window.removeEventListener('resize', updateDropTableCtaVisibility);
+    };
+  }, [isReady]);
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -1869,7 +1910,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   }, [lastReveal?.serverSeed, lastRoll, playSound]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
+    <div className="w-full max-w-7xl mx-auto px-4 pb-28 pt-2 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
       {!isReady ? (
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="text-center max-w-sm">
@@ -1880,7 +1921,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       ) : (
         <>
         {/* Breadcrumb */}
-        <div className="mb-6 flex items-center justify-between gap-3">
+        <div className="mb-2 flex items-center justify-between gap-3 sm:mb-4">
             <div className="flex items-center gap-4">
                 <button 
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
@@ -1925,10 +1966,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
-            <div className="relative z-20 px-2 pt-2 pb-3 sm:px-3 sm:pt-3 sm:pb-3">
-              <div className="flex flex-wrap items-center gap-1.5 p-1.5 sm:gap-2 sm:p-2">
-                <div className="ml-auto">{copyStatusMessage && (<p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}</div>
+            {copyStatusMessage && (
+              <div className="relative z-20 px-2 pb-1 sm:px-3 sm:pb-2">
+                <p className="text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>
               </div>
+            )}
+
+            <div className="relative z-20 mx-auto mb-3 flex w-full justify-center px-4 sm:mb-5">
+              <BlurImage
+                src={box!.image}
+                alt={`${box!.name} box`}
+                ratioClassName="h-32 w-32 sm:h-44 sm:w-44"
+                className="h-full w-full object-contain drop-shadow-[0_18px_30px_rgba(0,0,0,0.5)]"
+                width={176}
+                height={176}
+                loading="eager"
+                showPlaceholder={false}
+              />
             </div>
 
             {/* Spinner Window */}
@@ -2012,7 +2066,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
-                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
+                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[150px] w-[150px]' : 'h-[158px] w-[158px]'}`}>
                               <BlurImage
                                   src={item.image}
                                   alt={item.name}
@@ -2377,7 +2431,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
 
         {/* Box Contents */}
-        <div className="mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
+        <div ref={dropTableRef} id="drop-table" className="scroll-mt-24 mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
             <div className="mb-6 flex items-center gap-3">
                 <div className="rounded-lg border border-white/10 bg-white/5 p-2">
                   <Gamepad2 className="h-5 w-5 text-blue-300" />
@@ -2443,6 +2497,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 ))}
             </div>
         </div>
+        <div className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+0.75rem)] z-[80] flex justify-center px-4 sm:hidden pointer-events-none transition-all duration-300 ${isDropTableCtaVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`} aria-hidden={!isDropTableCtaVisible}>
+          <button
+            type="button"
+            onClick={handleScrollToDropTable}
+            tabIndex={isDropTableCtaVisible ? 0 : -1}
+            disabled={!isDropTableCtaVisible}
+            className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/95 px-4 py-2 text-xs font-bold text-[#111827] shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl transition active:scale-[0.98] disabled:pointer-events-none ${isDropTableCtaVisible ? 'pointer-events-auto' : 'pointer-events-none'}`}
+            aria-label="Scroll to drop table"
+          >
+            <span>See what&apos;s inside</span>
+            <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+
         {/* Slide Up Item Sheet */}
         <div className={`item-modal-overlay fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm ${selectedCaseItem ? '' : 'pointer-events-none'} ${itemModalActive ? 'active' : ''}`} onClick={() => setSelectedCaseItem(null)} />
         <div className={`item-modal-sheet fixed bottom-0 left-0 right-0 z-[120] transform ${itemModalActive ? 'active' : ''}`}>
