@@ -104,14 +104,6 @@ export const MobileBottomNav: React.FC = () => {
       data-disable-pull-refresh="true"
       className="pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-white/10 bg-[#05080d]/95 px-2.5 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_40px_rgba(0,0,0,0.42)] backdrop-blur lg:hidden"
       aria-label="Primary navigation"
-      style={{
-        WebkitTransform: 'translate3d(0,0,0)',
-        transform: 'translate3d(0,0,0)',
-        backfaceVisibility: 'hidden',
-        WebkitBackfaceVisibility: 'hidden',
-        contain: 'layout paint style',
-        willChange: 'transform'
-      }}
     >
       <nav className="grid h-full grid-cols-5 items-center gap-0.5">
         {NAV_ITEMS.map((item) => {
