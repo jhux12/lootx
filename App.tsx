@@ -730,13 +730,11 @@ const AppShell = () => {
     setAppHeight();
     window.addEventListener('resize', setAppHeight);
     window.visualViewport?.addEventListener('resize', setAppHeight);
-    window.visualViewport?.addEventListener('scroll', setAppHeight);
 
     return () => {
       if (rafId) window.cancelAnimationFrame(rafId);
       window.removeEventListener('resize', setAppHeight);
       window.visualViewport?.removeEventListener('resize', setAppHeight);
-      window.visualViewport?.removeEventListener('scroll', setAppHeight);
     };
   }, []);
 

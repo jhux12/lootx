@@ -98,6 +98,9 @@ export const LiveCommunitySection: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const holdRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const storyRailRef = useRef<HTMLDivElement | null>(null);
+  const railPointerRef = useRef<{ x: number; y: number; scrollLeft: number; dragging: boolean } | null>(null);
+  const suppressStoryClickRef = useRef(false);
   const [storyDragOffset, setStoryDragOffset] = useState(0);
   const viewedStoryIdsRef = useRef<Set<string>>(new Set());
   const [brokenStoryIds, setBrokenStoryIds] = useState<Set<string>>(new Set());
@@ -246,7 +249,48 @@ export const LiveCommunitySection: React.FC = () => {
     setStoryDragOffset(0);
   };
 
+  const handleStoryRailPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    railPointerRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      scrollLeft: storyRailRef.current?.scrollLeft ?? 0,
+      dragging: false
+    };
+  };
+
+  const handleStoryRailPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const start = railPointerRef.current;
+    const rail = storyRailRef.current;
+    if (!start || !rail) return;
+
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    if (!start.dragging && Math.abs(deltaX) > 8 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      start.dragging = true;
+      suppressStoryClickRef.current = true;
+      if (rail.setPointerCapture) rail.setPointerCapture(event.pointerId);
+    }
+
+    if (start.dragging) {
+      rail.scrollLeft = start.scrollLeft - deltaX;
+      event.preventDefault();
+    }
+  };
+
+  const handleStoryRailPointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (railPointerRef.current?.dragging) {
+      const rail = storyRailRef.current;
+      if (rail?.hasPointerCapture?.(event.pointerId)) rail.releasePointerCapture(event.pointerId);
+      window.setTimeout(() => {
+        suppressStoryClickRef.current = false;
+      }, 0);
+    }
+    railPointerRef.current = null;
+  };
+
   const handleOpenStory = async (index: number) => {
+    if (suppressStoryClickRef.current) return;
     const story = stories[index];
     if (!story) return;
     setActiveIndex(index);
@@ -275,16 +319,25 @@ export const LiveCommunitySection: React.FC = () => {
           <button className="min-h-10 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-wide text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08] hover:text-white">View All</button>
         </div>
       </div>
-      <div className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto px-0.5 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:auto] sm:gap-5">
+      <div
+        ref={storyRailRef}
+        className="scrollbar-hide -mx-4 flex snap-x snap-proximity gap-3 overflow-x-auto overscroll-x-contain px-4 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pinch-zoom] sm:mx-0 sm:gap-5 sm:px-0.5"
+        data-disable-pull-refresh="true"
+        onPointerDown={handleStoryRailPointerDown}
+        onPointerMove={handleStoryRailPointerMove}
+        onPointerUp={handleStoryRailPointerEnd}
+        onPointerCancel={handleStoryRailPointerEnd}
+        onPointerLeave={handleStoryRailPointerEnd}
+      >
         {stories.length ? stories.map((story, index) => {
           const badge = getStoryBadge(story);
           return (
           <button
             key={story.id}
             onClick={() => { void handleOpenStory(index); }}
-            className="group flex w-[136px] shrink-0 snap-start flex-col items-center text-center sm:w-[150px]"
+            className="group flex w-[128px] shrink-0 snap-start scroll-ml-4 touch-manipulation flex-col items-center text-center select-none sm:w-[150px] sm:scroll-ml-0"
           >
-            <div className={`relative h-[122px] w-[122px] overflow-hidden rounded-full bg-gradient-to-br ${rarityRing[story.rarity] ?? 'from-fuchsia-500 via-violet-500 to-sky-500'} p-[2px] shadow-[0_0_24px_rgba(92,101,255,0.45)] transition-transform duration-200 group-hover:scale-105 group-active:scale-[0.98] sm:h-[132px] sm:w-[132px]`}>
+            <div className={`relative h-[112px] w-[112px] overflow-hidden rounded-full bg-gradient-to-br ${rarityRing[story.rarity] ?? 'from-fuchsia-500 via-violet-500 to-sky-500'} p-[2px] shadow-[0_0_24px_rgba(92,101,255,0.45)] transition-transform duration-200 group-hover:scale-105 group-active:scale-[0.98] sm:h-[132px] sm:w-[132px]`}>
               <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#080a12]">
                 <img
                   src={story.mediaUrl}
@@ -299,7 +352,7 @@ export const LiveCommunitySection: React.FC = () => {
             </div>
             <span className="mt-2 max-w-full truncate text-xs font-bold text-slate-200">@{story.username || 'pullz'}</span>
           </button>
-        );}) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[122px] w-[122px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[132px] sm:w-[132px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
+        );}) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[112px] w-[112px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[132px] sm:w-[132px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
       </div>
     </div>
     {activeIndex !== null && stories[activeIndex] && (
