@@ -95,7 +95,7 @@ export const MobileBottomNav: React.FC = () => {
   return (
     <div
       data-disable-pull-refresh="true"
-      className="pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-cyan-400/20 bg-[#141b22]/98 px-2.5 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_40px_rgba(0,0,0,0.42)] backdrop-blur lg:hidden"
+      className="pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-white/10 bg-[#05080d]/95 px-2.5 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_40px_rgba(0,0,0,0.42)] backdrop-blur lg:hidden"
       aria-label="Primary navigation"
       style={{
         WebkitTransform: 'translate3d(0,0,0)',
@@ -160,7 +160,7 @@ export const MobileBottomNav: React.FC = () => {
                   <span className="relative">
                     <Icon className={item.iconClassName ?? iconClassName} />
                     {item.id === 'INVENTORY' && hasFreeSignupBox && (
-                      <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#1b2024]" aria-hidden="true" />
+                      <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#05080d]" aria-hidden="true" />
                     )}
                   </span>
                 ) : null}

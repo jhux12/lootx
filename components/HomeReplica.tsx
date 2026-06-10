@@ -162,7 +162,7 @@ const LiveWinCard = memo(({ win, onOpenBox }: { win: HomeTickerWin; onOpenBox: (
       <div className="relative flex h-[218px] items-center justify-center overflow-hidden bg-[#111313] p-4 sm:h-[245px] sm:p-5 lg:h-[270px]">
         {win.featured && <span className="absolute left-3 top-3 z-20 rounded-full bg-amber-300 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-black shadow-lg">🔥 Big Win</span>}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 bg-gradient-to-t from-[#181a1b] to-transparent" />
-        <img src={win.itemImage} alt={win.itemName} className="relative z-0 h-full w-full object-contain drop-shadow-[0_18px_26px_rgba(0,0,0,0.42)] transition-transform duration-300 group-hover:scale-105" loading="lazy" decoding="async" width={260} height={260} />
+        <img src={win.itemImage} alt={win.itemName} className="relative z-0 h-[88%] w-[88%] object-contain drop-shadow-[0_18px_26px_rgba(0,0,0,0.42)] transition-transform duration-300 group-hover:scale-105 sm:h-[86%] sm:w-[86%]" loading="lazy" decoding="async" width={260} height={260} />
       </div>
       <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-between gap-3 bg-[#1c1d1e]/96 p-4 sm:p-5">
         <div>
