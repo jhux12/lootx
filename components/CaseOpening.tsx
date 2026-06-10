@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2, Flame, Trophy, Target } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -355,6 +355,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const displayItems = [...items].sort(
     (a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)
   );
+  const chaseItem = displayItems[0] ?? null;
+  const rareOrBetterChance = items.reduce((total, item) => {
+    const rarityKey = normalizeRarityKey(item.rarity);
+    return rarityKey === 'rare' || rarityKey === 'epic' || rarityKey === 'legendary' ? total + Number(item.chance ?? 0) : total;
+  }, 0);
+  const legendaryCount = items.filter((item) => normalizeRarityKey(item.rarity) === 'legendary').length;
+  const jackpotMultiplier = chaseItem && box?.price
+    ? Math.max(1, Math.round(toCoins(chaseItem.price, PRICE_UNIT_MODE) / Math.max(1, toCoins(box.price, PRICE_UNIT_MODE))))
+    : 1;
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [isSpinnerAssetsLoading, setIsSpinnerAssetsLoading] = useState(true);
@@ -1926,18 +1935,58 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
             <div className="relative z-20 px-2 pt-2 pb-3 sm:px-3 sm:pt-3 sm:pb-3">
-              <div className="flex flex-wrap items-center gap-1.5 p-1.5 sm:gap-2 sm:p-2">
-                <div className="ml-auto">{copyStatusMessage && (<p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}</div>
-              </div>
-            </div>
+              <div className="case-arena-card overflow-hidden rounded-[28px] border border-white/10 bg-[#080d18]/90 shadow-[0_22px_80px_rgba(0,0,0,0.45)]">
+                <div className="relative z-20 grid gap-3 px-3 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="case-crate-mini relative hidden h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] sm:flex" style={{ '--case-accent': box?.accentColor ?? '#6f4dff' } as React.CSSProperties}>
+                      <span className="case-crate-mini__ring" aria-hidden="true" />
+                      <BlurImage src={box?.image ?? ''} alt={box?.name ?? 'Case'} className="relative z-10 h-12 w-12 object-contain drop-shadow-2xl" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="mb-1 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-300/25 bg-orange-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-200">
+                          <Flame className="h-3 w-3" /> Live opening
+                        </span>
+                        {isQuickSpinEnabled && (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-300/25 bg-violet-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-violet-200">
+                            <Zap className="h-3 w-3" /> Turbo
+                          </span>
+                        )}
+                      </div>
+                      <h1 className="truncate text-xl font-black tracking-tight text-white sm:text-3xl">{box?.name}</h1>
+                      <p className="mt-1 text-xs text-slate-400 sm:text-sm">Watch the needle. Chase the glow. Every tick can be the one.</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[420px]">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-2.5">
+                      <div className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-full bg-amber-400/15 text-amber-200"><Trophy className="h-3.5 w-3.5" /></div>
+                      <p className="truncate text-[10px] font-bold uppercase tracking-wide text-slate-500">Top prize</p>
+                      <p className="truncate text-xs font-black text-white sm:text-sm" title={chaseItem?.name}>{chaseItem?.name ?? 'Mystery'}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-2.5">
+                      <div className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-full bg-cyan-400/15 text-cyan-200"><Target className="h-3.5 w-3.5" /></div>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Rare+</p>
+                      <p className="text-xs font-black text-white sm:text-sm">{rareOrBetterChance.toFixed(2)}%</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-2.5">
+                      <div className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-full bg-fuchsia-400/15 text-fuchsia-200"><Zap className="h-3.5 w-3.5" /></div>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Jackpot</p>
+                      <p className="text-xs font-black text-white sm:text-sm">{jackpotMultiplier}x</p>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Spinner Window */}
-            <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
-            <div
-              ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
-              style={{ height: `${spinnerViewportHeight}px` }}
-            >
+                {copyStatusMessage && (
+                  <p className="relative z-20 px-4 pb-2 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>
+                )}
+
+                {/* Spinner Window */}
+                <div className="relative left-1/2 w-screen -translate-x-1/2 sm:w-full sm:translate-x-0 sm:left-auto" style={{ height: `${spinnerViewportHeight}px` }}>
+                <div
+                  ref={scrollViewportRef}
+                  className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden sm:w-full"
+                  style={{ height: `${spinnerViewportHeight}px` }}
+                >
                 {isSpinnerAssetsLoading && (
                   <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0a0f19]/75 px-4">
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 text-xs font-semibold text-white sm:text-sm">
@@ -1950,20 +1999,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 
                 
                 {/* Fade Gradients */}
-                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
-                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-12 bg-gradient-to-r from-[#080d18] via-[#080d18]/80 to-transparent sm:w-24"></div>
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-12 bg-gradient-to-l from-[#080d18] via-[#080d18]/80 to-transparent sm:w-24"></div>
 
                 {/* Center Indicator */}
-                <i
-                  className="fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none transition-[color,filter,text-shadow] duration-150 ease-out motion-reduce:transition-none sm:top-0 sm:text-lg"
-                  style={{
-                    color: centeredRarityIndicator.color,
-                    filter: reduceMobileEffects || isSpinning ? 'none' : `drop-shadow(0 0 8px ${centeredRarityIndicator.glow})`,
-                    textShadow: reduceMobileEffects || isSpinning ? `0 0 8px ${centeredRarityIndicator.glow}` : `0 0 10px ${centeredRarityIndicator.glow}, 0 0 20px ${centeredRarityIndicator.glow}`
-                  }}
-                  title={`${centeredRarityIndicator.label} item passing the spinner`}
-                  aria-hidden="true"
-                ></i>
+                <div className="case-needle pointer-events-none absolute left-1/2 top-0 z-30 flex -translate-x-1/2 flex-col items-center" style={{ '--needle-color': centeredRarityIndicator.color, '--needle-glow': centeredRarityIndicator.glow } as React.CSSProperties} title={`${centeredRarityIndicator.label} item passing the spinner`} aria-hidden="true">
+                  <span className="case-needle__cap">DROP ZONE</span>
+                  <span className="case-needle__pointer" />
+                  <span className="case-needle__beam" />
+                </div>
 
                 {/* The Moving Reel */}
                 <div 
@@ -1992,8 +2036,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className="pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
+                            className="pullz-spinner-card case-reel-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
                             style={{
+                                '--item-color': item.color,
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
                                 backfaceVisibility: 'hidden',
@@ -2011,6 +2056,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               className={`pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-65 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
                               style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
                             />
+                            <div className="case-reel-card__plate absolute inset-2 rounded-[24px]" aria-hidden="true" />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
                               <BlurImage
@@ -2022,6 +2068,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               />
                               </div>
                             </div>
+                            <div className="case-reel-card__meta pointer-events-none absolute inset-x-3 bottom-3 z-20 rounded-xl border border-white/10 bg-black/35 px-2 py-1 text-center backdrop-blur-sm">
+                              <p className="truncate text-[10px] font-black uppercase tracking-wide text-white">{item.name}</p>
+                              <p className="text-[9px] font-bold uppercase tracking-[0.16em]" style={{ color: item.color }}>{rarityValue}</p>
+                            </div>
                         </div>
                           );
                         })()
@@ -2030,12 +2080,27 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
             </div>
 
+            <div className="relative z-20 grid grid-cols-3 gap-2 px-3 pt-3 sm:px-5">
+              <div className="case-streak-tile rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Spin streak</p>
+                <p className="mt-1 text-lg font-black text-white">{nonce.toLocaleString()}</p>
+              </div>
+              <div className="case-streak-tile rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Legends</p>
+                <p className="mt-1 text-lg font-black text-amber-200">{legendaryCount}</p>
+              </div>
+              <div className="case-streak-tile rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Mode</p>
+                <p className="mt-1 text-lg font-black text-cyan-200">{isQuickSpinEnabled ? 'Turbo' : 'Classic'}</p>
+              </div>
+            </div>
+
             {/* Action Bar */}
-            <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
+            <div className="relative z-20 mt-4 flex flex-col items-stretch justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-5 sm:flex-row sm:items-center sm:px-4">
                  <button 
                     onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
-                    className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
+                    className={`min-h-14 w-full px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95 flex flex-col items-center justify-center leading-tight sm:w-auto sm:min-w-[260px] ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
                 >
                     <span>
                       {isSyncingFair ? (
@@ -2074,11 +2139,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </span>
                  </button>
                 {!isFree && (
-                  <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-[1fr_auto] gap-2 sm:flex sm:items-center">
                     <button
                       onClick={handleTryFree}
                       disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isSpinnerAssetsLoading}
-                      className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-white/10 bg-[#303741] px-3 py-3 text-[11px] font-semibold text-white transition hover:bg-[#39424d] disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
+                      className="inline-flex min-h-12 items-center justify-center whitespace-nowrap rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-[11px] font-semibold text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
                     >
                       Demo Spin
                     </button>
@@ -2088,7 +2153,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         playSound('click');
                         setIsQuickSpinEnabled((prev) => !prev);
                       }}
-                      className={`inline-flex h-[46px] w-[46px] items-center justify-center rounded-lg border text-white transition-colors ${isQuickSpinEnabled ? 'border-[#8a6cff] bg-[#6f4dff]/25 text-[#c8bcff]' : 'border-white/10 bg-[#303741] text-white/80 hover:bg-[#39424d]'}`}
+                      className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl border text-white transition-colors ${isQuickSpinEnabled ? 'border-[#8a6cff] bg-[#6f4dff]/25 text-[#c8bcff]' : 'border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.1]'}`}
                       aria-label={isQuickSpinEnabled ? 'Disable quick spin' : 'Enable quick spin'}
                       title={isQuickSpinEnabled ? 'Quick spin enabled' : 'Quick spin disabled'}
                     >
@@ -2108,6 +2173,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 </div>
               </div>
             )}
+              </div>
+            </div>
         </div>
 
 
@@ -2372,7 +2439,100 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           .ambient-pulse { animation: ambientPulse 3s ease-in-out infinite; }
           @keyframes ambientPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 rgba(34,211,238,0.2);} 50% { transform: scale(1.02); box-shadow: 0 0 22px rgba(34,211,238,0.32);} }
           @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-          @media (prefers-reduced-motion: reduce){ .ambient-pulse { animation: none; } }
+          .case-arena-card {
+            position: relative;
+            isolation: isolate;
+          }
+          .case-arena-card::before {
+            content: '';
+            position: absolute;
+            inset: -35% -18% auto;
+            height: 260px;
+            background: radial-gradient(circle at 50% 0%, rgba(111,77,255,0.34), rgba(34,211,238,0.14) 44%, transparent 72%);
+            pointer-events: none;
+            z-index: -1;
+          }
+          .case-arena-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 34px 34px;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+          }
+          .case-crate-mini__ring {
+            position: absolute;
+            inset: -2px;
+            border-radius: 18px;
+            background: conic-gradient(from 0deg, transparent, var(--case-accent), rgba(255,255,255,0.8), transparent 62%);
+            opacity: 0.7;
+            animation: caseRingSpin 5s linear infinite;
+          }
+          .case-crate-mini::after {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            border-radius: 16px;
+            background: #0b111d;
+          }
+          .case-needle__cap {
+            border: 1px solid color-mix(in srgb, var(--needle-color) 58%, white 18%);
+            border-radius: 999px;
+            background: rgba(0,0,0,0.72);
+            color: #fff;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: 0.16em;
+            line-height: 1;
+            padding: 6px 9px;
+            box-shadow: 0 0 18px var(--needle-glow);
+          }
+          .case-needle__pointer {
+            width: 0;
+            height: 0;
+            border-left: 11px solid transparent;
+            border-right: 11px solid transparent;
+            border-top: 18px solid var(--needle-color);
+            filter: drop-shadow(0 0 10px var(--needle-glow));
+          }
+          .case-needle__beam {
+            width: 2px;
+            height: 208px;
+            background: linear-gradient(to bottom, var(--needle-color), rgba(255,255,255,0.62), transparent);
+            opacity: 0.46;
+            box-shadow: 0 0 18px var(--needle-glow);
+          }
+          .case-reel-card__plate {
+            background: linear-gradient(180deg, rgba(255,255,255,0.095), rgba(255,255,255,0.025)), radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--item-color) 34%, transparent), transparent 62%);
+            border: 1px solid color-mix(in srgb, var(--item-color) 38%, rgba(255,255,255,0.12));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 18px 34px rgba(0,0,0,0.28);
+          }
+          .case-reel-card__plate::after {
+            content: '';
+            position: absolute;
+            inset: 10px;
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.07);
+            background: radial-gradient(circle at 50% 35%, rgba(255,255,255,0.08), transparent 55%);
+          }
+          .case-reel-card__meta {
+            opacity: 0.86;
+          }
+          .case-streak-tile {
+            min-width: 0;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+          }
+          @keyframes caseRingSpin { to { transform: rotate(1turn); } }
+          @media (max-width: 640px) {
+            .case-needle__cap { font-size: 8px; padding: 5px 7px; }
+            .case-needle__beam { height: 202px; opacity: 0.34; }
+            .case-reel-card__meta { inset-inline: 14px; bottom: 8px; padding: 3px 6px; }
+            .case-reel-card__meta p:first-child { font-size: 9px; }
+            .case-reel-card__meta p:last-child { font-size: 8px; }
+          }
+          @media (prefers-reduced-motion: reduce){ .ambient-pulse, .case-crate-mini__ring { animation: none; } }
         `}</style>
 
 
