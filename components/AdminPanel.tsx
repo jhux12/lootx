@@ -357,6 +357,7 @@ export const AdminPanel: React.FC = () => {
       coins: 0,
       bonusCoins: 0,
       defaultSelected: false,
+      firstTimeDepositOnly: false,
       imageUrl: '',
       displayPrice: '',
       stripePriceId: '',
@@ -1689,6 +1690,7 @@ export const AdminPanel: React.FC = () => {
       const sortOrder = Number.isFinite(Number(packageDraft.sortOrder)) ? Number(packageDraft.sortOrder) : 0;
       const active = packageDraft.active ?? true;
       const defaultSelected = packageDraft.defaultSelected ?? false;
+      const firstTimeDepositOnly = packageDraft.firstTimeDepositOnly ?? false;
       const badge = packageDraft.badge?.trim() ?? '';
 
       if (!name) {
@@ -1725,6 +1727,7 @@ export const AdminPanel: React.FC = () => {
                   coins,
                   bonusCoins,
                   defaultSelected,
+                  firstTimeDepositOnly,
                   imageUrl,
                   displayPrice,
                   stripePriceId,
@@ -1738,6 +1741,7 @@ export const AdminPanel: React.FC = () => {
                   coins,
                   bonusCoins,
                   defaultSelected,
+                  firstTimeDepositOnly,
                   imageUrl,
                   displayPrice,
                   stripePriceId,
@@ -4411,7 +4415,7 @@ export const AdminPanel: React.FC = () => {
                     </div>
                     <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[1040px] text-left text-sm">
+                            <table className="w-full min-w-[1120px] text-left text-sm">
                                 <thead className="bg-[#0b0e14] text-gray-400 font-medium">
                                     <tr>
                                         <th className="px-4 py-3">Name</th>
@@ -4424,6 +4428,7 @@ export const AdminPanel: React.FC = () => {
                                         <th className="px-4 py-3">Badge</th>
                                         <th className="px-4 py-3">Active</th>
                                         <th className="px-4 py-3">Default</th>
+                                        <th className="px-4 py-3">First Deposit</th>
                                         <th className="px-4 py-3">Sort</th>
                                         <th className="px-4 py-3">Updated</th>
                                         <th className="px-4 py-3 text-right">Actions</th>
@@ -4489,6 +4494,13 @@ export const AdminPanel: React.FC = () => {
                                                         <span className="text-gray-500">—</span>
                                                     )}
                                                 </td>
+                                                <td className="px-4 py-3 text-xs text-gray-300">
+                                                    {pkg.firstTimeDepositOnly ? (
+                                                        <span className="rounded-full bg-amber-500/15 px-2 py-1 font-semibold text-amber-200">First deposit</span>
+                                                    ) : (
+                                                        <span className="text-gray-500">—</span>
+                                                    )}
+                                                </td>
                                                 <td className="px-4 py-3 text-gray-300">{pkg.sortOrder}</td>
                                                 <td className="px-4 py-3 text-gray-400 text-xs">
                                                     {pkg.updatedAt ? formatTimestamp(pkg.updatedAt) : '--'}
@@ -4513,7 +4525,7 @@ export const AdminPanel: React.FC = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={11} className="px-4 py-6 text-center text-gray-500 text-sm">
+                                            <td colSpan={14} className="px-4 py-6 text-center text-gray-500 text-sm">
                                                 No coin packages yet. Create one to enable deposits.
                                             </td>
                                         </tr>
@@ -6572,7 +6584,7 @@ export const AdminPanel: React.FC = () => {
                   className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in"
                   onClick={() => setIsPackageModalOpen(false)}
               ></div>
-              <div className="relative w-full max-w-lg bg-[#131720] border border-gray-700 rounded-2xl shadow-2xl p-6 animate-in zoom-in-95">
+              <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto bg-[#131720] border border-gray-700 rounded-2xl shadow-2xl p-4 animate-in zoom-in-95 sm:p-6">
                   <div className="flex items-start justify-between gap-4 mb-4">
                       <div>
                           <h3 className="text-xl font-bold text-white">{editingPackageId ? 'Edit Package' : 'New Package'}</h3>
@@ -6681,6 +6693,18 @@ export const AdminPanel: React.FC = () => {
                           />
                           <label htmlFor="package-active" className="text-sm text-gray-300">
                               Active
+                          </label>
+                      </div>
+                      <div className="flex items-center gap-2 mt-6">
+                          <Input
+                              id="package-first-time-deposit-only"
+                              type="checkbox"
+                              checked={packageDraft.firstTimeDepositOnly ?? false}
+                              onChange={(event) => setPackageDraft((prev) => ({ ...prev, firstTimeDepositOnly: event.target.checked }))}
+                              className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-amber-500 focus:ring-amber-500"
+                          />
+                          <label htmlFor="package-first-time-deposit-only" className="text-sm text-gray-300">
+                              First-time deposit package
                           </label>
                       </div>
                       <div className="flex items-center gap-2 mt-6">
