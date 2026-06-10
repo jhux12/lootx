@@ -479,7 +479,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         />
       )}
       {view.type === 'HOME' && showHomePrompt && !isAuthenticated && (
-        <div className="fixed bottom-4 left-1/2 z-[130] w-[calc(100%-1rem)] max-w-md -translate-x-1/2 rounded-2xl border border-slate-500/25 bg-[#22282c]/95 p-4 shadow-[0_20px_45px_rgba(0,0,0,0.55)] backdrop-blur-md">
+        <div className="fixed bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+0.75rem)] left-1/2 z-[150] w-[calc(100%-1rem)] max-w-md -translate-x-1/2 rounded-2xl border border-slate-500/25 bg-[#22282c]/95 p-4 shadow-[0_20px_45px_rgba(0,0,0,0.55)] backdrop-blur-md lg:bottom-4">
           <p className="text-base font-bold text-white">{homePromptVariant === 'returning' ? 'Finish your free pull' : 'Your first pull is free 🎁'}</p>
           <p className="mt-1 text-sm text-slate-300">{homePromptVariant === 'returning' ? 'You’re one step away from opening your first box' : 'Open your first box — no deposit needed'}</p>
           <div className="mt-3 flex gap-2">

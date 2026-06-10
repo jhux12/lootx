@@ -181,7 +181,6 @@ const LiveWinCard = memo(({ win, onOpenBox }: { win: HomeTickerWin; onOpenBox: (
               <p className="mt-1 truncate text-xs font-semibold text-slate-400">From {win.boxName}</p>
             </div>
             <div className="shrink-0 text-right">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">MV</p>
               <CoinAmount amount={Math.round(win.itemPrice)} className="justify-end text-xl font-black text-lime-300 sm:text-2xl" iconClassName="h-4 w-4 sm:h-5 sm:w-5" animated={false} />
             </div>
           </div>

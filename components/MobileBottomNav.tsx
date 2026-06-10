@@ -28,38 +28,12 @@ export const MobileBottomNav: React.FC = () => {
   const [isFreeBoxTooltipDismissed, setIsFreeBoxTooltipDismissed] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+    if (typeof document === 'undefined') return undefined;
 
     const root = document.documentElement;
-    let rafId: number | null = null;
-
-    const updateMobileNavViewport = () => {
-      if (rafId !== null) window.cancelAnimationFrame(rafId);
-      rafId = window.requestAnimationFrame(() => {
-        const visualViewport = window.visualViewport;
-        const viewportBottomOffset = visualViewport
-          ? Math.max(0, Math.round(window.innerHeight - visualViewport.height - visualViewport.offsetTop))
-          : 0;
-
-        root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(env(safe-area-inset-bottom) + 72px)');
-        root.style.setProperty('--pullz-mobile-viewport-bottom', `${viewportBottomOffset}px`);
-      });
-    };
-
-    updateMobileNavViewport();
-    window.addEventListener('resize', updateMobileNavViewport, { passive: true });
-    window.addEventListener('orientationchange', updateMobileNavViewport, { passive: true });
-    window.visualViewport?.addEventListener('resize', updateMobileNavViewport, { passive: true });
-    window.visualViewport?.addEventListener('scroll', updateMobileNavViewport, { passive: true });
-
+    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(env(safe-area-inset-bottom) + 72px)');
     return () => {
-      if (rafId !== null) window.cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', updateMobileNavViewport);
-      window.removeEventListener('orientationchange', updateMobileNavViewport);
-      window.visualViewport?.removeEventListener('resize', updateMobileNavViewport);
-      window.visualViewport?.removeEventListener('scroll', updateMobileNavViewport);
       root.style.removeProperty('--pullz-mobile-bottom-nav-height');
-      root.style.removeProperty('--pullz-mobile-viewport-bottom');
     };
   }, []);
 
@@ -121,10 +95,9 @@ export const MobileBottomNav: React.FC = () => {
   return (
     <div
       data-disable-pull-refresh="true"
-      className="pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[180] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-cyan-400/20 bg-[#141b22]/98 px-2.5 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_40px_rgba(0,0,0,0.42)] backdrop-blur lg:hidden"
+      className="pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-cyan-400/20 bg-[#141b22]/98 px-2.5 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_40px_rgba(0,0,0,0.42)] backdrop-blur lg:hidden"
       aria-label="Primary navigation"
       style={{
-        bottom: 'var(--pullz-mobile-viewport-bottom, 0px)',
         WebkitTransform: 'translate3d(0,0,0)',
         transform: 'translate3d(0,0,0)',
         backfaceVisibility: 'hidden',

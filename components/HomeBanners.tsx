@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import type { View } from '../types';
@@ -41,6 +41,9 @@ export const HomeBanners: React.FC = () => {
   const { setView } = useGame();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const suppressNextClickRef = useRef(false);
 
   const goToSlide = useCallback((index: number) => {
     setActiveIndex((index + HOME_BANNERS.length) % HOME_BANNERS.length);
@@ -55,10 +58,46 @@ export const HomeBanners: React.FC = () => {
   }, []);
 
   const handleBannerAction = (banner: HomeBanner) => {
+    if (suppressNextClickRef.current) {
+      suppressNextClickRef.current = false;
+      return;
+    }
+
     setView(banner.view);
     if (banner.view.type === 'BOXES' && typeof window !== 'undefined') {
       window.history.replaceState({}, '', '/boxes');
     }
+  };
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    suppressNextClickRef.current = false;
+    setIsPaused(true);
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const startX = touchStartXRef.current;
+    const startY = touchStartYRef.current;
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    setIsPaused(false);
+
+    if (startX === null || startY === null) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+
+    if (Math.abs(deltaX) < 42 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
+
+    suppressNextClickRef.current = true;
+    window.setTimeout(() => {
+      suppressNextClickRef.current = false;
+    }, 350);
+    if (deltaX < 0) goToNextSlide();
+    else goToPreviousSlide();
   };
 
   useEffect(() => {
@@ -74,11 +113,13 @@ export const HomeBanners: React.FC = () => {
   return (
     <section aria-label="Pullz feature highlights" className="relative">
       <div
-        className="group relative overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#20262b]/72 shadow-[0_18px_44px_rgba(5,8,12,0.28)]"
+        className="group relative overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#20262b]/72 shadow-[0_18px_44px_rgba(5,8,12,0.28)] touch-pan-y select-none"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onFocus={() => setIsPaused(true)}
         onBlur={() => setIsPaused(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         role="region"
         aria-roledescription="carousel"
         aria-label="Open, upgrade, and leaderboard highlights"
