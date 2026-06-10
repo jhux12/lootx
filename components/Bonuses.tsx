@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { DailySpinPage } from './DailySpinPage';
@@ -7,11 +7,17 @@ import { authedFetch } from '../utils/authedFetch';
 export const Bonuses: React.FC = () => {
   const { user, setView, isAuthenticated, openAuthModal } = useGame();
   const { playSound } = useSound();
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const lastDailyClaim = Number.isFinite(user.lastDailyClaim ?? NaN) ? Number(user.lastDailyClaim) : 0;
   const dailyCooldownMs = 24 * 60 * 60 * 1000;
   const nextDailyClaimAt = lastDailyClaim + dailyCooldownMs;
-  const canClaim = !lastDailyClaim || nextDailyClaimAt <= Date.now();
+  const canClaim = !lastDailyClaim || nextDailyClaimAt <= currentTime;
 
   const handleSpinStart = async () => {
     if (!isAuthenticated) {

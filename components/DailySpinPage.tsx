@@ -18,6 +18,8 @@ interface DailySpinPageProps {
   nextClaimAt: number;
 }
 
+const WHEEL_HIDE_DELAY_MS = 900;
+
 const PRIZES: SpinPrize[] = [
   { id: 1, amount: 10, image: COIN_ICON, angle: 30 },
   { id: 2, amount: 25, image: COIN_ICON, angle: 90 },
@@ -83,6 +85,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
   const [errorMessage, setErrorMessage] = useState('');
   const [localNextClaimAt, setLocalNextClaimAt] = useState(nextClaimAt);
   const [countdownNow, setCountdownNow] = useState(Date.now());
+  const [isWheelVisible, setIsWheelVisible] = useState(() => canSpin || nextClaimAt <= Date.now());
 
   const effectiveNextClaimAt = Math.max(localNextClaimAt, nextClaimAt);
 
@@ -93,16 +96,36 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
 
   const canSpinNow = canSpin && effectiveNextClaimAt <= countdownNow;
   const hasClaimedDailyBonus = !isSpinning && !canSpinNow && effectiveNextClaimAt > countdownNow;
+  const showClaimedCard = hasClaimedDailyBonus && !isWheelVisible;
 
   const lockLabel = useMemo(() => {
     if (canSpinNow && !isSpinning) return '';
     return formatCountdown(effectiveNextClaimAt);
   }, [canSpinNow, isSpinning, effectiveNextClaimAt, countdownNow]);
 
+  useEffect(() => {
+    if (!canSpinNow) return;
+    setIsWheelVisible(true);
+    setLastPrize(null);
+  }, [canSpinNow]);
+
+  useEffect(() => {
+    if (!hasClaimedDailyBonus) return undefined;
+
+    if (lastPrize === null) {
+      setIsWheelVisible(false);
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => setIsWheelVisible(false), WHEEL_HIDE_DELAY_MS);
+    return () => window.clearTimeout(timeout);
+  }, [hasClaimedDailyBonus, lastPrize]);
+
   const handleSpin = async () => {
     if (isSpinning || !canSpinNow) return;
 
     setErrorMessage('');
+    setIsWheelVisible(true);
     setIsSpinning(true);
 
     try {
@@ -154,6 +177,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
           <p className="text-neutral-400 font-medium mt-2">Spin for free coins every 24 hours!</p>
         </div>
 
+        {isWheelVisible && (
         <div className="relative w-[340px] h-[340px] md:w-[510px] md:h-[510px] flex items-center justify-center max-w-full">
           <svg viewBox="0 0 400 400" className="pointer-events-none absolute z-10 overflow-visible w-full h-full scale-[1.02]">
             <path d="M 179.13 133.46 Q 167.80 138.14 162.13 127.25 L 113.55 33.93 Q 107.88 23.04 118.93 17.71 A 199.5 199.5 0 0 1 281.06 17.71 Q 292.11 23.04 286.44 33.93 L 237.86 127.25 Q 232.19 138.14 220.86 133.46 A 69.73 69.73 0 0 0 179.13 133.46 Z" className="fill-transparent stroke-[#205DD7]" strokeWidth="5" />
@@ -226,8 +250,9 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
             </button>
           </div>
         </div>
+        )}
 
-        {hasClaimedDailyBonus && (
+        {showClaimedCard && (
           <div className="mt-2 w-full max-w-md rounded-3xl border border-sky-300/20 bg-white/[0.06] p-4 text-center shadow-[0_18px_70px_rgba(32,93,215,0.18)] backdrop-blur-md sm:p-5">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20">
               <CheckCircle2 className="h-6 w-6" />
@@ -250,7 +275,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
         )}
 
         <p className="mt-6 text-neutral-500 font-bold text-sm md:text-base">Resets every 24 hours</p>
-        {!canSpinNow && !hasClaimedDailyBonus && <p className="mt-2 text-xs md:text-sm text-neutral-400">Next spin in {lockLabel || formatCountdown(effectiveNextClaimAt)}</p>}
+        {!canSpinNow && !showClaimedCard && <p className="mt-2 text-xs md:text-sm text-neutral-400">Next spin in {lockLabel || formatCountdown(effectiveNextClaimAt)}</p>}
         {!!errorMessage && <p className="mt-3 text-xs md:text-sm text-red-400 text-center">{errorMessage}</p>}
       </div>
     </div>
