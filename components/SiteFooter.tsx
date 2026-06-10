@@ -1,9 +1,30 @@
 import React from 'react';
 import { BrandLockup } from './BrandLockup';
-import { Instagram } from 'lucide-react';
+import { AtSign, Facebook, Instagram, Twitter } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 
-const INSTAGRAM_URL = 'https://www.instagram.com/pullz.gg/';
+const socialLinks = [
+  {
+    href: 'https://www.instagram.com/pullz.gg/',
+    label: 'Follow Pullz.gg on Instagram',
+    Icon: Instagram
+  },
+  {
+    href: 'https://www.facebook.com/pullzgg',
+    label: 'Follow Pullz.gg on Facebook',
+    Icon: Facebook
+  },
+  {
+    href: 'https://x.com/pullzgg',
+    label: 'Follow Pullz.gg on X',
+    Icon: Twitter
+  },
+  {
+    href: 'https://www.threads.com/@pullz.gg',
+    label: 'Follow Pullz.gg on Threads',
+    Icon: AtSign
+  }
+];
 
 export const SiteFooter: React.FC = () => {
   const { setView } = useGame();
@@ -20,16 +41,19 @@ export const SiteFooter: React.FC = () => {
             textClassName="text-lg"
             showTextOnMobile
           />
-          <div className="flex items-center gap-4">
-            <a
-              href={INSTAGRAM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-cyan-400/25 bg-[#25313a] text-slate-200 transition hover:border-cyan-300/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/70 focus:ring-offset-2 focus:ring-offset-[#10161c]"
-              aria-label="Follow Pullz.gg on Instagram"
-            >
-              <Instagram className="h-5 w-5" />
-            </a>
+          <div className="grid w-full grid-cols-4 gap-2 text-white sm:w-auto sm:flex sm:items-center sm:gap-3" aria-label="Pullz.gg social links">
+            {socialLinks.map(({ href, label, Icon }) => (
+              <a
+                key={href}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-11 min-w-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] text-slate-200 transition-colors hover:border-cyan-300/25 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/70 sm:h-10 sm:w-10 sm:rounded-full sm:border-cyan-400/25 sm:bg-[#25313a]"
+                aria-label={label}
+              >
+                <Icon className="h-5 w-5" />
+              </a>
+            ))}
           </div>
         </div>
         <div className="flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
