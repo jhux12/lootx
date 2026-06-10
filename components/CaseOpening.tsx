@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -1925,10 +1925,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
-            <div className="relative z-20 px-2 pt-2 pb-3 sm:px-3 sm:pt-3 sm:pb-3">
-              <div className="flex flex-wrap items-center gap-1.5 p-1.5 sm:gap-2 sm:p-2">
-                <div className="ml-auto">{copyStatusMessage && (<p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}</div>
-              </div>
+            <div className="relative z-20 px-2 pb-3 pt-2 text-center sm:px-3 sm:pb-4 sm:pt-3">
+              <h1 className="mx-auto max-w-[min(92vw,48rem)] truncate px-2 text-2xl font-black leading-tight tracking-tight text-white sm:text-4xl">
+                {box?.name ?? 'Mystery Box'}
+              </h1>
+              {copyStatusMessage && (
+                <p className="mx-auto mt-2 max-w-[92vw] text-center text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
+                  {copyStatusMessage}
+                </p>
+              )}
             </div>
 
             {/* Spinner Window */}
@@ -2378,11 +2383,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         {/* Box Contents */}
         <div className="mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
-            <div className="mb-6 flex items-center gap-3">
-                <div className="rounded-lg border border-white/10 bg-white/5 p-2">
-                  <Gamepad2 className="h-5 w-5 text-blue-300" />
+            <div className="mb-6 flex items-center gap-3 sm:gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center sm:h-20 sm:w-20" aria-hidden="true">
+                  <BlurImage
+                    src={box?.image || pullzLogo}
+                    alt=""
+                    showPlaceholder={false}
+                    className="h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.5)]"
+                  />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="text-xl font-bold text-white">Drop Table</h3>
                   <p className="text-xs text-gray-400">Tap an item to inspect details.</p>
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] font-medium text-gray-400">
