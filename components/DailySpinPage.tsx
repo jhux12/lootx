@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { COIN_ICON } from '../constants';
 
 type SpinPrize = {
@@ -13,6 +13,7 @@ interface DailySpinPageProps {
   onBack: () => void;
   onSpinStart: () => Promise<{ amount: number }>;
   onSpinClaim: () => Promise<{ amount: number; nextClaimAt: number }>;
+  onExploreBoxes: () => void;
   canSpin: boolean;
   nextClaimAt: number;
 }
@@ -75,7 +76,7 @@ const formatCountdown = (targetTime: number) => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStart, onSpinClaim, canSpin, nextClaimAt }) => {
+export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStart, onSpinClaim, onExploreBoxes, canSpin, nextClaimAt }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [lastPrize, setLastPrize] = useState<number | null>(null);
@@ -91,6 +92,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
   }, []);
 
   const canSpinNow = canSpin && effectiveNextClaimAt <= countdownNow;
+  const hasClaimedDailyBonus = !isSpinning && !canSpinNow && effectiveNextClaimAt > countdownNow;
 
   const lockLabel = useMemo(() => {
     if (canSpinNow && !isSpinning) return '';
@@ -225,8 +227,30 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
           </div>
         </div>
 
-        <p className="mt-8 text-neutral-500 font-bold text-sm md:text-base">Resets every 24 hours</p>
-        {!canSpinNow && <p className="mt-2 text-xs md:text-sm text-neutral-400">Next spin in {lockLabel || formatCountdown(effectiveNextClaimAt)}</p>}
+        {hasClaimedDailyBonus && (
+          <div className="mt-2 w-full max-w-md rounded-3xl border border-sky-300/20 bg-white/[0.06] p-4 text-center shadow-[0_18px_70px_rgba(32,93,215,0.18)] backdrop-blur-md sm:p-5">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20">
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+            <p className="text-xl font-black text-white sm:text-2xl">Daily bonus claimed!</p>
+            <p className="mt-2 text-sm text-neutral-300">Your free reward is locked in. Explore more boxes while the next spin gets ready.</p>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-neutral-950/55 px-4 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-sky-200/80">Next spin in</p>
+              <p className="mt-1 font-mono text-2xl font-black text-white tabular-nums">{lockLabel || formatCountdown(effectiveNextClaimAt)}</p>
+            </div>
+            <button
+              type="button"
+              onClick={onExploreBoxes}
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#205DD7] to-sky-400 px-5 py-3 text-sm font-black text-white shadow-[0_12px_30px_rgba(32,93,215,0.35)] transition-transform hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
+            >
+              Explore Boxes
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        <p className="mt-6 text-neutral-500 font-bold text-sm md:text-base">Resets every 24 hours</p>
+        {!canSpinNow && !hasClaimedDailyBonus && <p className="mt-2 text-xs md:text-sm text-neutral-400">Next spin in {lockLabel || formatCountdown(effectiveNextClaimAt)}</p>}
         {!!errorMessage && <p className="mt-3 text-xs md:text-sm text-red-400 text-center">{errorMessage}</p>}
       </div>
     </div>

@@ -53,6 +53,7 @@ export const Bonuses: React.FC = () => {
         onBack={() => setView({ type: 'HOME' })}
         onSpinStart={handleSpinStart}
         onSpinClaim={handleSpinClaim}
+        onExploreBoxes={() => setView({ type: 'BOXES' })}
         canSpin={canClaim}
         nextClaimAt={nextDailyClaimAt}
       />
