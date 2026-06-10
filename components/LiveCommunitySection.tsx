@@ -13,6 +13,7 @@ export type LiveCommunityStory = {
   rarity: string;
   featured: boolean;
   createdAt?: Timestamp;
+  publishAt?: Timestamp;
   expiresAt?: Timestamp;
   approved: boolean;
   views: number;
@@ -50,6 +51,21 @@ const rarityRing: Record<string, string> = {
   epic: 'from-fuchsia-400/80 to-violet-500/80',
   legendary: 'from-amber-300/90 to-orange-500/90'
 };
+
+const getStoryBadge = (story: LiveCommunityStory) => {
+  const raw = `${story.badgeText ?? ''} ${story.type ?? ''} ${story.rarity ?? ''}`.toLowerCase();
+  if (raw.includes('deliver') || raw.includes('shipment')) return 'Delivered';
+  if (raw.includes('big') || raw.includes('hit') || raw.includes('legendary') || raw.includes('psa')) return 'Big Win';
+  return 'Pull';
+};
+
+const storyBadgeClass: Record<string, string> = {
+  Pull: 'border-sky-300/25 bg-sky-400/10 text-sky-100',
+  Delivered: 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100',
+  'Big Win': 'border-amber-300/30 bg-amber-300/12 text-amber-100'
+};
+
+const formatStoryCount = (count: number) => `${count} ${count === 1 ? 'story' : 'stories'}`;
 
 
 
@@ -90,7 +106,7 @@ export const LiveCommunitySection: React.FC = () => {
     if (typeof window === 'undefined') return;
     let io: IntersectionObserver | null = null;
     let idleId: number | null = null;
-    let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
+    let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
     const activate = () => setShouldConnectRealtime(true);
     if ('IntersectionObserver' in window && sectionRef.current) {
       io = new IntersectionObserver((entries) => {
@@ -102,11 +118,11 @@ export const LiveCommunitySection: React.FC = () => {
       io.observe(sectionRef.current);
     }
     if ('requestIdleCallback' in window) idleId = window.requestIdleCallback(activate, { timeout: 3500 }) as unknown as number;
-    else timeoutId = window.setTimeout(activate, 3500);
+    else timeoutId = globalThis.setTimeout(activate, 3500);
     return () => {
       io?.disconnect();
       if (idleId !== null && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId);
-      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      if (timeoutId !== null) globalThis.clearTimeout(timeoutId);
     };
   }, []);
 
@@ -247,32 +263,43 @@ export const LiveCommunitySection: React.FC = () => {
     }
   };
 
-  return <section ref={sectionRef} className="space-y-4 min-h-[120px]">
-    <div className="">
-      <div className="flex justify-end px-1 py-1">
-        <button className="text-sm font-semibold text-slate-300 hover:text-white">View All</button>
+  return <section ref={sectionRef} className="space-y-4 min-h-[168px]">
+    <div className="rounded-[1.35rem] border border-white/[0.06] bg-[#20262b]/62 p-4 shadow-[0_16px_40px_rgba(5,8,12,0.18)] sm:p-5">
+      <div className="mb-3 flex items-end justify-between gap-3 px-0.5">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-fuchsia-200/85">Community Pullz</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Real wins &amp; deliveries</h2>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-slate-300 sm:inline-flex">{formatStoryCount(stories.length)}</span>
+          <button className="min-h-10 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-wide text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08] hover:text-white">View All</button>
+        </div>
       </div>
-      <div className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto px-0 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:auto]">
-        {stories.length ? stories.map((story, index) => (
+      <div className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto px-0.5 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:auto] sm:gap-5">
+        {stories.length ? stories.map((story, index) => {
+          const badge = getStoryBadge(story);
+          return (
           <button
             key={story.id}
             onClick={() => { void handleOpenStory(index); }}
-            className="group flex w-[132px] shrink-0 snap-start flex-col items-center text-center sm:w-[140px]"
+            className="group flex w-[136px] shrink-0 snap-start flex-col items-center text-center sm:w-[150px]"
           >
-            <div className="relative h-[118px] w-[118px] overflow-hidden rounded-full bg-gradient-to-br from-fuchsia-500 via-violet-500 to-sky-500 p-[2px] shadow-[0_0_24px_rgba(92,101,255,0.45)] transition-transform duration-200 group-hover:scale-105 sm:h-[126px] sm:w-[126px]">
+            <div className={`relative h-[122px] w-[122px] overflow-hidden rounded-full bg-gradient-to-br ${rarityRing[story.rarity] ?? 'from-fuchsia-500 via-violet-500 to-sky-500'} p-[2px] shadow-[0_0_24px_rgba(92,101,255,0.45)] transition-transform duration-200 group-hover:scale-105 group-active:scale-[0.98] sm:h-[132px] sm:w-[132px]`}>
               <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#080a12]">
                 <img
                   src={story.mediaUrl}
-                  alt={story.caption || 'Live community story'}
+                  alt={story.caption || `${story.username} community story`}
                   loading="lazy"
                   decoding="async"
                   className="block h-full w-full object-cover"
                   onError={() => { void handleStoryImageError(story); }}
                 />
               </div>
+              <span className={`absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wide backdrop-blur-md ${storyBadgeClass[badge]}`}>{badge}</span>
             </div>
+            <span className="mt-2 max-w-full truncate text-xs font-bold text-slate-200">@{story.username || 'pullz'}</span>
           </button>
-        )) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[118px] w-[118px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[126px] sm:w-[126px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
+        );}) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[122px] w-[122px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[132px] sm:w-[132px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
       </div>
     </div>
     {activeIndex !== null && stories[activeIndex] && (

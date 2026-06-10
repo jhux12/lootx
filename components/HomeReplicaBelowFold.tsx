@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
+import { Trophy } from 'lucide-react';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
+import { useGame } from '../context/GameContext';
 
 type HomeReplicaBelowFoldProps = {
   boxes: MysteryBox[];
@@ -50,6 +52,7 @@ const rarityGlowClass: Record<string, string> = {
 };
 
 export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxes, showSignupCta, onSignUp }) => {
+  const { users, setView } = useGame();
   const [openFaqId, setOpenFaqId] = useState<string | null>(faqs[0]?.id ?? null);
   const topUpgrades = useMemo(() => {
     const highValueItems = boxes
@@ -84,16 +87,27 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
 
   const [topPullOffset] = useState(() => Math.floor(Math.random() * 12));
 
+  const leaderboardPreview = useMemo(() => users
+    .filter((entry) => !entry.hiddenFromLeaderboard && !entry.hiddenFromPublicDisplay)
+    .map((entry) => ({
+      id: entry.id,
+      name: entry.displayName || entry.username || entry.name || 'Pullz player',
+      avatar: entry.avatar || entry.photoURL || '',
+      points: Math.max(0, Math.round(Number(entry.totalSpent ?? 0)))
+    }))
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 5), [users]);
+
   const topPullz = useMemo(() => {
     if (topPullCandidates.length <= 3) return topPullCandidates;
     return Array.from({ length: 3 }, (_, index) => topPullCandidates[(topPullOffset + index) % topPullCandidates.length]);
   }, [topPullCandidates, topPullOffset]);
 
   return (
-    <>
-      <div className="space-y-10 lg:col-start-1">
+    <div className="grid grid-cols-1 gap-7 lg:grid-cols-[1fr_260px]">
+      <div className="space-y-8">
         <section>
-          <h2 className="mb-4 text-xl font-black">Top Upgrades</h2>
+          <div className="mb-4 flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-200/80">Upgrade items</p><h2 className="mt-1 text-2xl font-black tracking-tight">Top Upgrades</h2></div></div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {topUpgrades.map((upgrade) => (
               <div key={upgrade.id} className="group min-h-[156px] rounded-xl border border-white/5 bg-[#22282c] p-3 transition-colors duration-200 ease-out hover:border-slate-400/35">
@@ -103,6 +117,31 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
                 </div>
                 <p className="truncate text-xs text-slate-400">{upgrade.name}</p>
                 <CoinAmount amount={Math.round(upgrade.price)} className="mt-1 text-sm font-black text-white" iconClassName="h-4 w-4" />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-white/[0.06] bg-[#20262b]/72 p-4 shadow-[0_14px_36px_rgba(5,8,12,0.18)] sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-200/80">Leaderboards</p>
+              <h2 className="mt-1 flex items-center gap-2 text-2xl font-black tracking-tight"><Trophy className="h-5 w-5 text-amber-200" />Climb the ranks</h2>
+            </div>
+            <button type="button" onClick={() => setView({ type: 'LEADERBOARD' })} className="min-h-10 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-wide text-white/90 transition hover:border-sky-300/40 hover:bg-white/[0.08] hover:text-white active:scale-[0.98]">View</button>
+          </div>
+          <div className="grid gap-2">
+            {(leaderboardPreview.length ? leaderboardPreview : Array.from({ length: 3 }).map((_, index) => ({ id: `placeholder-${index}`, name: ['PullzPlayer', 'BoxHunter', 'RareChaser'][index], avatar: '', points: [12450, 9820, 7400][index] }))).map((entry, index) => (
+              <div key={entry.id} className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-[#1b2024]/70 px-3 py-3">
+                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-black ${index === 0 ? 'bg-amber-300 text-black' : 'bg-white/[0.06] text-slate-200'}`}>#{index + 1}</span>
+                <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-[#7C5CFF] to-sky-400 text-sm font-black text-white">
+                  {entry.avatar ? <img src={entry.avatar} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" /> : entry.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-white">{entry.name}</p>
+                  <p className="text-xs text-slate-400">Season points</p>
+                </div>
+                <CoinAmount amount={entry.points} className="shrink-0 text-sm font-black text-slate-100" iconClassName="h-4 w-4" animated={false} />
               </div>
             ))}
           </div>
@@ -142,7 +181,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
         </section>
       </div>
 
-      <aside className="space-y-4 lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+      <aside className="space-y-4 lg:sticky lg:top-20">
         <section>
           <h3 className="mb-2 text-xs font-black uppercase text-slate-300 sm:mb-3 sm:text-sm">Top Pullz</h3>
           <div className="space-y-2">
@@ -165,6 +204,6 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
           </div>
         </section>
       </aside>
-    </>
+    </div>
   );
 };
