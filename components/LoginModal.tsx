@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { X, Mail, Lock, User, Loader2, MailCheck } from 'lucide-react';
 import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -11,7 +11,7 @@ import { toast } from '../src/ui/toast/toast';
 import { DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 
 const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
-const EMAIL_CONFIRMATION_MESSAGE = 'Check your email to confirm your account before signing in.';
+const EMAIL_CONFIRMATION_MESSAGE = 'Please check your email to confirm your account before signing in.';
 
 export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
@@ -44,15 +44,28 @@ export const LoginModal: React.FC = () => {
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [showOAuthFallback, setShowOAuthFallback] = useState(false);
   const [showEmailFields, setShowEmailFields] = useState(false);
+  const [emailConfirmationSentTo, setEmailConfirmationSentTo] = useState<string | null>(null);
+  const [emailConfirmationReminderCount, setEmailConfirmationReminderCount] = useState(0);
   const isLinkingGoogle = Boolean(googleLinkCredential);
-  const showRegisterFormMessage = Boolean(message && mode === 'register' && showEmailFields && !isLinkingGoogle);
+  const normalizedEmail = email.trim().toLowerCase();
+  const isEmailConfirmationMessage = message === EMAIL_CONFIRMATION_MESSAGE;
+  const showEmailConfirmationNotice = Boolean(isEmailConfirmationMessage && emailConfirmationSentTo && normalizedEmail === emailConfirmationSentTo && mode === 'register' && showEmailFields && !isLinkingGoogle);
+  const showRegisterFormMessage = Boolean(message && mode === 'register' && showEmailFields && !isLinkingGoogle && !showEmailConfirmationNotice);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    playSound('click');
+
+    if (mode === 'register' && emailConfirmationSentTo && normalizedEmail === emailConfirmationSentTo) {
+      setUserError(null);
+      setMessage(EMAIL_CONFIRMATION_MESSAGE);
+      setEmailConfirmationReminderCount((count) => count + 1);
+      return;
+    }
+
     setIsLoading(true);
     setUserError(null);
     setMessage(null);
-    playSound('click');
 
     try {
       if (mode === 'register') {
@@ -62,10 +75,11 @@ export const LoginModal: React.FC = () => {
           setIsLoading(false);
           return;
         }
-        setMessage(EMAIL_CONFIRMATION_MESSAGE);
         const result = await register(username, email, password);
         if (result?.requiresEmailVerification) {
           setShowEmailFields(true);
+          setEmailConfirmationSentTo(normalizedEmail);
+          setEmailConfirmationReminderCount((count) => count + 1);
           setPassword('');
           setMessage(EMAIL_CONFIRMATION_MESSAGE);
           return;
@@ -73,6 +87,8 @@ export const LoginModal: React.FC = () => {
       } else {
         const result = await login(email, password, rememberMe);
         if (result?.requiresEmailVerification) {
+          setEmailConfirmationSentTo(normalizedEmail);
+          setEmailConfirmationReminderCount((count) => count + 1);
           setPassword('');
           setMessage(EMAIL_CONFIRMATION_MESSAGE);
           return;
@@ -82,6 +98,7 @@ export const LoginModal: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       setMessage(null);
+      setEmailConfirmationSentTo(null);
       setUserError(getAuthErrorMessage(err));
     } finally {
       setIsLoading(false);
@@ -195,6 +212,8 @@ export const LoginModal: React.FC = () => {
     setRememberMe(true);
     setShowEmailFields(false);
     setShowOAuthFallback(false);
+    setEmailConfirmationSentTo(null);
+    setEmailConfirmationReminderCount(0);
     playSound('click');
   };
 
@@ -209,6 +228,8 @@ export const LoginModal: React.FC = () => {
     setUserError(null);
     setMessage(null);
     setShowOAuthFallback(false);
+    setEmailConfirmationSentTo(null);
+    setEmailConfirmationReminderCount(0);
   };
 
   useEffect(() => {
@@ -255,6 +276,12 @@ export const LoginModal: React.FC = () => {
 
     return () => window.clearTimeout(timeoutId);
   }, [isOAuthLoading]);
+
+  const remindEmailConfirmation = () => {
+    setUserError(null);
+    setMessage(EMAIL_CONFIRMATION_MESSAGE);
+    setEmailConfirmationReminderCount((count) => count + 1);
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -334,7 +361,7 @@ export const LoginModal: React.FC = () => {
                   : 'Login to access your account.'}
               </p>
             )}
-            {message && !showRegisterFormMessage && (
+            {message && !showRegisterFormMessage && !showEmailConfirmationNotice && (
               <p className="mt-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-neutral-300" aria-live="polite">
                 {message}
               </p>
@@ -534,6 +561,27 @@ export const LoginModal: React.FC = () => {
                 </label>
               )}
 
+              {showEmailConfirmationNotice && (
+                <div
+                  key={emailConfirmationReminderCount}
+                  className="rounded-2xl border border-emerald-300/40 bg-emerald-500/15 p-3 text-sm text-emerald-50 shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-300/20 animate-in fade-in zoom-in-95 duration-200 sm:p-4"
+                  aria-live="assertive"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-100">
+                      <MailCheck className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-base font-black leading-6 text-white">Please check your email to confirm</p>
+                      <p className="mt-1 leading-5 text-emerald-50/90">
+                        We sent a confirmation link{email.trim() ? <> to <span className="break-all font-semibold text-white">{email.trim()}</span></> : null}. Tap that link before signing in or claiming your free box.
+                      </p>
+                      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-100/80">Already clicked Register? This is your next step.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {showRegisterFormMessage && (
                 <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-neutral-300" aria-live="polite">
                   {message}
@@ -541,11 +589,12 @@ export const LoginModal: React.FC = () => {
               )}
 
               <button
-                type="submit"
+                type={showEmailConfirmationNotice ? 'button' : 'submit'}
+                onClick={showEmailConfirmationNotice ? remindEmailConfirmation : undefined}
                 disabled={isLoading}
                 className="mt-2 w-full rounded-xl bg-[#205DD7] py-3.5 text-sm font-bold text-white transition-all hover:bg-[#1f6bea] hover:shadow-lg hover:shadow-blue-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isLoading ? 'Please wait...' : mode === 'login' ? 'Login with Password' : 'Register with Password'}
+                {isLoading ? 'Please wait...' : showEmailConfirmationNotice ? 'Please check your email to confirm' : mode === 'login' ? 'Login with Password' : 'Register with Password'}
               </button>
             </form>
           ) : (
