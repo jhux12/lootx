@@ -1925,10 +1925,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
-            <div className="relative z-20 px-2 pt-2 pb-3 sm:px-3 sm:pt-3 sm:pb-3">
-              <div className="flex flex-wrap items-center gap-1.5 p-1.5 sm:gap-2 sm:p-2">
-                <div className="ml-auto">{copyStatusMessage && (<p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}</div>
-              </div>
+            <div className="relative z-20 px-2 pb-3 pt-2 text-center sm:px-3 sm:pb-4 sm:pt-3">
+              <h1 className="mx-auto max-w-[min(92vw,48rem)] truncate px-2 text-2xl font-black leading-tight tracking-tight text-white drop-shadow-[0_0_18px_rgba(59,130,246,0.28)] sm:text-4xl">
+                {box?.name ?? 'Mystery Box'}
+              </h1>
+              {copyStatusMessage && (
+                <p className="mx-auto mt-2 max-w-[92vw] text-center text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
+                  {copyStatusMessage}
+                </p>
+              )}
             </div>
 
             {/* Spinner Window */}
@@ -2378,15 +2383,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         {/* Box Contents */}
         <div className="mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
-            <div className="mb-6 flex items-center gap-3">
-                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-white/10 via-sky-400/10 to-indigo-500/10 shadow-[0_10px_28px_rgba(56,189,248,0.14)] sm:h-14 sm:w-14" aria-hidden="true">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_20%,rgba(255,255,255,0.28),transparent_48%)]" />
-                  <div className="absolute bottom-1 h-4 w-9 rounded-full bg-cyan-300/20 blur-md" />
+            <div className="mb-6 flex items-center gap-3 sm:gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center sm:h-20 sm:w-20" aria-hidden="true">
                   <BlurImage
                     src={box?.image || pullzLogo}
                     alt=""
                     showPlaceholder={false}
-                    className="relative z-10 h-9 w-9 object-contain drop-shadow-[0_7px_12px_rgba(0,0,0,0.45)] sm:h-10 sm:w-10"
+                    className="h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.5)]"
                   />
                 </div>
                 <div className="min-w-0">
