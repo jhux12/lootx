@@ -44,10 +44,10 @@ interface RevealData {
   rotatedAt: number;
 }
 
-const DESKTOP_CARD_WIDTH = 170;
-const DESKTOP_CARD_HEIGHT = 210;
-const DESKTOP_GAP_WIDTH = 6;
-const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
+const DESKTOP_CARD_WIDTH = 340;
+const DESKTOP_CARD_HEIGHT = 520;
+const DESKTOP_GAP_WIDTH = 28;
+const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 552;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -454,16 +454,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && (currentXpBalance > 0 || xpProgress > 0);
   const canOpenMain = isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
-  const spinnerCardWidth = DESKTOP_CARD_WIDTH;
-  const spinnerCardHeight = DESKTOP_CARD_HEIGHT;
-  const spinnerGap = DESKTOP_GAP_WIDTH;
-  const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
+  const spinnerCardWidth = reduceMobileEffects ? 210 : DESKTOP_CARD_WIDTH;
+  const spinnerCardHeight = reduceMobileEffects ? 340 : DESKTOP_CARD_HEIGHT;
+  const spinnerGap = reduceMobileEffects ? 10 : DESKTOP_GAP_WIDTH;
+  const spinnerViewportHeight = reduceMobileEffects ? 364 : DESKTOP_SPINNER_VIEWPORT_HEIGHT;
   // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
-  const useMobileSpinnerBehavior = true;
   const reduceSpinnerRerenders = reduceMobileEffects || prefersReducedMotion;
   const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
   const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
   const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
+  const currentCenterValue = centeredSpinnerItem ? toCoins(centeredSpinnerItem.price, PRICE_UNIT_MODE) : 0;
 
   const updateSpinnerMeasurements = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -1919,17 +1919,36 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
     </div>
 
-        {/* SPINNER AREA */}
-        <div className="relative mb-8 w-full overflow-visible p-0">
-            
-            {/* Gold Mode Overlay Effect */}
-            {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
-
-            <div className="relative z-20 px-2 pt-2 pb-3 sm:px-3 sm:pt-3 sm:pb-3">
-              <div className="flex flex-wrap items-center gap-1.5 p-1.5 sm:gap-2 sm:p-2">
-                <div className="ml-auto">{copyStatusMessage && (<p className="mt-1 text-right text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}</div>
-              </div>
+        <div className="mb-3 flex flex-col items-center gap-3 px-3 sm:mb-4 sm:px-5">
+          <div className="flex w-full justify-center">
+            <div className="relative flex h-28 w-28 items-center justify-center sm:h-36 sm:w-36">
+              <div className="absolute inset-3 rounded-full bg-white/5 blur-2xl" />
+              <BlurImage
+                src={box?.image}
+                alt={box?.name ?? 'Mystery box'}
+                loading="eager"
+                showPlaceholder={false}
+                className="relative z-10 h-full w-full object-contain drop-shadow-[0_18px_32px_rgba(0,0,0,0.45)]"
+              />
             </div>
+          </div>
+          <div
+            className="hidden max-w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur-sm sm:inline-flex sm:text-xs"
+            aria-live="polite"
+          >
+            <span className="truncate" style={{ color: centeredRarityIndicator.color }}>{centeredRarityIndicator.label}</span>
+            <span className="text-white/40">•</span>
+            <CoinAmount amount={currentCenterValue} formatOptions={{ maximumFractionDigits: 0 }} className="text-[10px] text-white sm:text-xs" iconClassName="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          </div>
+          {copyStatusMessage && (<p className="text-center text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">{copyStatusMessage}</p>)}
+        </div>
+
+        {/* SPINNER AREA */}
+        <div
+          className={`relative mb-8 w-full overflow-visible bg-transparent p-0 ${isGoldMode ? 'rounded-[28px] ring-2 ring-yellow-300/40' : ''}`}
+        >
+            {/* Gold Mode Overlay Effect */}
+            {isGoldMode && <div className="pointer-events-none absolute inset-0 z-10 rounded-[28px] bg-yellow-500/5 animate-pulse"></div>}
 
             {/* Spinner Window */}
             <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
@@ -1950,21 +1969,29 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 
                 
                 {/* Fade Gradients */}
-                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
-                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/70 to-transparent sm:w-20"></div>
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/70 to-transparent sm:w-20"></div>
 
                 {/* Center Indicator */}
-                <i
-                  className="fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none transition-[color,filter,text-shadow] duration-150 ease-out motion-reduce:transition-none sm:top-0 sm:text-lg"
-                  style={{
-                    color: centeredRarityIndicator.color,
-                    filter: reduceMobileEffects || isSpinning ? 'none' : `drop-shadow(0 0 8px ${centeredRarityIndicator.glow})`,
-                    textShadow: reduceMobileEffects || isSpinning ? `0 0 8px ${centeredRarityIndicator.glow}` : `0 0 10px ${centeredRarityIndicator.glow}, 0 0 20px ${centeredRarityIndicator.glow}`
-                  }}
-                  title={`${centeredRarityIndicator.label} item passing the spinner`}
-                  aria-hidden="true"
-                ></i>
-
+                <div className="pointer-events-none absolute left-1/2 top-0 z-30 h-full -translate-x-1/2" aria-hidden="true">
+                  <div
+                    className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-white/80 to-transparent"
+                    style={{ boxShadow: reduceMobileEffects ? `0 0 10px ${centeredRarityIndicator.glow}` : `0 0 18px ${centeredRarityIndicator.glow}, 0 0 38px ${centeredRarityIndicator.glow}` }}
+                  />
+                  <i
+                    className="fa-solid fa-caret-down absolute left-1/2 top-1 -translate-x-1/2 text-base leading-none transition-[color,filter,text-shadow] duration-150 ease-out motion-reduce:transition-none sm:top-0 sm:text-lg"
+                    style={{
+                      color: centeredRarityIndicator.color,
+                      filter: reduceMobileEffects || isSpinning ? 'none' : `drop-shadow(0 0 8px ${centeredRarityIndicator.glow})`,
+                      textShadow: reduceMobileEffects || isSpinning ? `0 0 8px ${centeredRarityIndicator.glow}` : `0 0 10px ${centeredRarityIndicator.glow}, 0 0 20px ${centeredRarityIndicator.glow}`
+                    }}
+                    title={`${centeredRarityIndicator.label} item passing the spinner`}
+                  ></i>
+                  <i
+                    className="fa-solid fa-caret-up absolute bottom-1 left-1/2 -translate-x-1/2 text-base leading-none sm:text-lg"
+                    style={{ color: centeredRarityIndicator.color, textShadow: `0 0 12px ${centeredRarityIndicator.glow}` }}
+                  ></i>
+                </div>
                 {/* The Moving Reel */}
                 <div 
                     ref={scrollContainerRef}
@@ -1986,20 +2013,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const isCenteredItem = idx === currentCenterIndex;
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
                           const isUltraSmoothSpin = isSpinning;
-                          const showItemGlow = !isUltraSmoothSpin && (!useMobileSpinnerBehavior || !reduceMobileEffects);
+                          const showItemGlow = !isUltraSmoothSpin && !reduceMobileEffects;
                           const allowHeavyHighlight = !isUltraSmoothSpin;
                           return (
                         <div 
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className="pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
+                            className={`pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${isSpinning ? 'is-spinning' : ''}`}
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem && allowHeavyHighlight
-                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}44, 0 0 12px ${item.color}30` : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
+                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}55, 0 8px 22px rgba(0,0,0,0.22), 0 0 14px ${item.color}28` : `0 0 0 1px ${item.color}88, 0 14px 34px rgba(0,0,0,0.34), 0 0 30px ${item.color}44`)
                                   : 'none',
                                 opacity: 1,
                                 filter: 'none',
@@ -2008,18 +2035,43 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                              className={`pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-65 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
-                              style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
+                              className={`pullz-spinner-glow pointer-events-none absolute -inset-2 rounded-[30px] ${showItemGlow ? 'opacity-55 blur-2xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
+                              style={{ background: item.color, boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 34px ${item.color}55` : 'none' }}
                             />
-                            <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
-                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
-                              <BlurImage
-                                  src={item.image}
-                                  alt={item.name}
-                                  loading="eager"
-                                  showPlaceholder={false}
-                                  className={`h-full w-full object-contain ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
-                              />
+                            <div
+                              className="relative z-10 flex min-h-0 flex-1 flex-col items-center self-stretch overflow-hidden rounded-[26px] border-2 bg-[#141b27]/95 px-4 pb-4 pt-5 shadow-[0_18px_42px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.12)] sm:rounded-[30px] sm:px-6 sm:pb-6 sm:pt-7"
+                              style={{
+                                borderColor: isFocusedItem ? `${item.color}ee` : `${item.color}aa`,
+                                boxShadow: `0 18px 42px rgba(0,0,0,0.34), 0 0 18px ${item.color}30, inset 0 0 0 1px ${item.color}22, inset 0 1px 0 rgba(255,255,255,0.14)`,
+                                background: `radial-gradient(circle at 50% 24%, ${item.color}24 0%, rgba(20,27,39,0.96) 42%, rgba(8,14,23,0.98) 100%)`
+                              }}
+                            >
+                              <div className="relative flex w-full items-center justify-center px-2">
+                                <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 opacity-90" style={{ background: `linear-gradient(90deg, transparent 0%, ${item.color} 22%, transparent 42%, transparent 58%, ${item.color} 78%, transparent 100%)` }} />
+                                <div
+                                  className="relative z-10 rounded-full border-2 bg-[#121923] px-4 py-1.5 text-[10px] font-black uppercase leading-none tracking-[0.18em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.32)] sm:px-6 sm:py-2 sm:text-sm"
+                                  style={{ borderColor: item.color, boxShadow: `0 0 18px ${item.color}33, inset 0 1px 0 rgba(255,255,255,0.12)` }}
+                                >
+                                  {rarityValue}
+                                </div>
+                              </div>
+
+                              <div className="flex min-h-0 flex-1 items-center justify-center py-4 sm:py-7">
+                                <div className="flex h-[148px] w-[148px] items-center justify-center sm:h-[250px] sm:w-[250px]">
+                                  <BlurImage
+                                      src={item.image}
+                                      alt={item.name}
+                                      loading="eager"
+                                      showPlaceholder={false}
+                                      className={`h-full w-full object-contain transition-transform duration-300 ${isFocusedItem && !isSpinning ? 'scale-105' : 'scale-100'} ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_18px_28px_rgba(0,0,0,0.68)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="relative w-full rounded-[18px] border bg-[#101824]/80 px-3 py-3 text-center shadow-[0_12px_24px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.10)] sm:rounded-[22px] sm:px-5 sm:py-5" style={{ borderColor: 'rgba(255,255,255,0.22)' }}>
+                                <p className="truncate text-sm font-black leading-snug text-white sm:text-xl">{item.name}</p>
+                                <div className="mx-auto my-2 h-px w-4/5 bg-gradient-to-r from-transparent via-white/20 to-transparent sm:my-4" />
+                                <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="justify-center text-lg font-black leading-none text-slate-100 sm:text-3xl" iconClassName="h-5 w-5 sm:h-7 sm:w-7" />
                               </div>
                             </div>
                         </div>
@@ -2031,11 +2083,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             {/* Action Bar */}
-            <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
+            <div className="relative z-20 mt-3 flex flex-col items-stretch justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-5 sm:flex-row sm:items-center sm:px-4">
                  <button 
                     onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
-                    className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
+                    className={`min-h-[54px] w-full px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95 flex flex-col items-center justify-center leading-tight sm:min-w-[260px] sm:w-auto ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
                 >
                     <span>
                       {isSyncingFair ? (
@@ -2074,7 +2126,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </span>
                  </button>
                 {!isFree && (
-                  <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-[1fr_auto] gap-2 sm:flex sm:items-center">
                     <button
                       onClick={handleTryFree}
                       disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isSpinnerAssetsLoading}
@@ -2370,6 +2422,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         )}
         <style>{`
           .ambient-pulse { animation: ambientPulse 3s ease-in-out infinite; }
+          .pullz-spinner-card:not(.is-spinning) { transition: transform 220ms ease, opacity 220ms ease; }
+          .pullz-spinner-card:not(.is-spinning):hover { transform: translateY(-3px); }
           @keyframes ambientPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 rgba(34,211,238,0.2);} 50% { transform: scale(1.02); box-shadow: 0 0 22px rgba(34,211,238,0.32);} }
           @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
           @media (prefers-reduced-motion: reduce){ .ambient-pulse { animation: none; } }
