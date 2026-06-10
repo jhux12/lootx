@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Package, X } from 'lucide-react';
-import { collection, limit, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
@@ -203,20 +203,24 @@ FirstDepositBanner.displayName = 'FirstDepositBanner';
 
 type SocialProofActivity = {
   id: string;
-  type?: string;
-  caption?: string;
-  username?: string;
-  itemName?: string;
+  uid: string;
+  username: string;
+  itemName: string;
 };
 
-const buildSocialProofMessage = (activity: SocialProofActivity) => {
-  const rawType = `${activity.type ?? ''} ${activity.caption ?? ''}`.toLowerCase();
-  const subject = activity.itemName || activity.caption?.replace(/^[🔥📦⭐\s]+/, '').trim() || 'a community Pullz hit';
-  if (rawType.includes('deliver') || rawType.includes('shipment')) return `📦 Shipment delivered${activity.username ? ` for ${activity.username}` : ''}`;
-  if (rawType.includes('deposit') || rawType.includes('bonus')) return '⭐ First Deposit Bonus claimed';
-  if (rawType.includes('big') || rawType.includes('hit') || rawType.includes('psa') || rawType.includes('legendary')) return `🔥 Someone pulled ${subject}`;
-  return `🔥 ${activity.username || 'Someone'} pulled ${subject}`;
+const resolveOpenUsername = async (uid: string) => {
+  if (!uid) return 'Someone';
+  try {
+    const userSnap = await getDoc(doc(db, 'users', uid));
+    const userData = userSnap.data() as Record<string, unknown> | undefined;
+    const displayName = userData?.displayName ?? userData?.username ?? userData?.name;
+    return typeof displayName === 'string' && displayName.trim() ? displayName.trim() : 'Someone';
+  } catch {
+    return 'Someone';
+  }
 };
+
+const buildSocialProofMessage = (activity: SocialProofActivity) => `${activity.username} Just unboxed ${activity.itemName}`;
 
 const SocialProofNotifications = memo(() => {
   const [activities, setActivities] = useState<SocialProofActivity[]>([]);
@@ -224,12 +228,25 @@ const SocialProofNotifications = memo(() => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(18));
+    const q = query(collection(db, 'opens'), orderBy('createdAt', 'desc'), limit(18));
     return onSnapshot(q, (snap) => {
-      const next = snap.docs
-        .map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Omit<SocialProofActivity, 'id'>) }))
-        .filter((activity) => activity.type || activity.caption || activity.itemName);
-      setActivities(next);
+      void (async () => {
+        const openRows = snap.docs.map((docSnap) => {
+          const data = docSnap.data() as Record<string, any>;
+          const uid = typeof data.uid === 'string' ? data.uid : '';
+          const prize = data.prize && typeof data.prize === 'object' ? data.prize as Record<string, unknown> : {};
+          const itemName = typeof prize.name === 'string' && prize.name.trim() ? prize.name.trim() : 'a mystery item';
+          return { id: docSnap.id, uid, itemName };
+        }).filter((activity) => activity.uid && activity.itemName);
+        const usernamesByUid = new Map<string, string>();
+        await Promise.all(Array.from(new Set(openRows.map((row) => row.uid))).map(async (uid) => {
+          usernamesByUid.set(uid, await resolveOpenUsername(uid));
+        }));
+        setActivities(openRows.map((row) => ({
+          ...row,
+          username: usernamesByUid.get(row.uid) ?? 'Someone'
+        })));
+      })();
     }, () => setActivities([]));
   }, []);
 
