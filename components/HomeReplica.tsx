@@ -7,6 +7,7 @@ import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
 import { BlurImage } from '../src/ui/images/BlurImage';
 import { LiveCommunitySection } from './LiveCommunitySection';
+import { HomeBanners } from './HomeBanners';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 
 type HomeReplicaProps = {
@@ -368,6 +369,8 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             ))}
           </div>
         </section>
+
+        <HomeBanners />
 
         <section aria-label="Live recent wins" className="min-h-[172px] overflow-hidden rounded-2xl border border-white/5 bg-[#20262b] shadow-[0_14px_38px_rgba(5,8,12,0.22)] sm:min-h-[190px]">
           <div className="flex flex-col gap-1 border-b border-white/[0.06] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
