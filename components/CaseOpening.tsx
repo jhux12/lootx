@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Gamepad2, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Check, PackageOpen, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
@@ -2379,10 +2379,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         {/* Box Contents */}
         <div className="mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
             <div className="mb-6 flex items-center gap-3">
-                <div className="rounded-lg border border-white/10 bg-white/5 p-2">
-                  <Gamepad2 className="h-5 w-5 text-blue-300" />
+                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-white/10 via-sky-400/10 to-indigo-500/10 shadow-[0_10px_28px_rgba(56,189,248,0.14)] sm:h-14 sm:w-14" aria-hidden="true">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_20%,rgba(255,255,255,0.28),transparent_48%)]" />
+                  <div className="absolute bottom-1 h-4 w-9 rounded-full bg-cyan-300/20 blur-md" />
+                  <BlurImage
+                    src={box?.image || pullzLogo}
+                    alt=""
+                    showPlaceholder={false}
+                    className="relative z-10 h-9 w-9 object-contain drop-shadow-[0_7px_12px_rgba(0,0,0,0.45)] sm:h-10 sm:w-10"
+                  />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="text-xl font-bold text-white">Drop Table</h3>
                   <p className="text-xs text-gray-400">Tap an item to inspect details.</p>
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] font-medium text-gray-400">
