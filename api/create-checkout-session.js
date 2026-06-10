@@ -36,6 +36,7 @@ export default async function handler(req, res) {
 
     const data = packageSnap.data() ?? {};
     const active = data.active === true;
+    const firstTimeDepositOnly = data.firstTimeDepositOnly === true;
     const stripePriceId = data.stripePriceId;
     const baseCoins = Number(data.coins ?? 0);
     const bonusCoins = Number(data.bonusCoins ?? 0);
@@ -49,6 +50,17 @@ export default async function handler(req, res) {
 
     if (!active) {
       return sendJson(res, 400, { error: 'Package is inactive' });
+    }
+
+    if (firstTimeDepositOnly) {
+      const userSnap = await firestore.collection('users').doc(decoded.uid).get();
+      const userData = userSnap.data() ?? {};
+      const depositCount = Math.max(0, Number(userData.depositCount ?? 0));
+      const totalDepositedCents = Math.max(0, Number(userData.totalDepositedCents ?? 0));
+      const totalSpent = Math.max(0, Number(userData.totalSpent ?? 0));
+      if (depositCount > 0 || totalDepositedCents > 0 || totalSpent > 0) {
+        return sendJson(res, 400, { error: 'First-time deposit packages are only available before your first deposit' });
+      }
     }
 
     if (!stripePriceId || typeof stripePriceId !== 'string' || !stripePriceId.startsWith('price_')) {

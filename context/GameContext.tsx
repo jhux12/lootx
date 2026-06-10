@@ -2122,6 +2122,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           bonusCoins,
           totalCoins: coins + bonusCoins,
           defaultSelected: Boolean(data.defaultSelected),
+          firstTimeDepositOnly: Boolean(data.firstTimeDepositOnly),
           imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
           displayPrice: data.displayPrice ?? '',
           stripePriceId: data.stripePriceId ?? '',
@@ -3309,6 +3310,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       coins: Math.max(0, Number(rawData.coins ?? 0)),
       bonusCoins: Math.max(0, Number(rawData.bonusCoins ?? 0)),
       defaultSelected: !!rawData.defaultSelected,
+      firstTimeDepositOnly: !!rawData.firstTimeDepositOnly,
       badge: typeof rawData.badge === 'string' ? rawData.badge.trim() : undefined,
       sortOrder: Number(rawData.sortOrder ?? 0),
       active: !!rawData.active,
@@ -3331,6 +3333,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         active: !!rawData.active,
         sortOrder: Number(rawData.sortOrder ?? 0),
         defaultSelected: !!rawData.defaultSelected,
+        firstTimeDepositOnly: !!rawData.firstTimeDepositOnly,
         createdAt: now,
         updatedAt: now
       };
@@ -3366,6 +3369,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       coins: updates.coins !== undefined ? Math.max(0, Number(updates.coins ?? 0)) : undefined,
       bonusCoins: updates.bonusCoins !== undefined ? Math.max(0, Number(updates.bonusCoins ?? 0)) : undefined,
       defaultSelected: updates.defaultSelected !== undefined ? !!updates.defaultSelected : undefined,
+      firstTimeDepositOnly: updates.firstTimeDepositOnly !== undefined ? !!updates.firstTimeDepositOnly : undefined,
       badge: updates.badge !== undefined ? String(updates.badge ?? '').trim() : undefined,
       sortOrder: updates.sortOrder !== undefined ? Number(updates.sortOrder ?? 0) : undefined,
       active: updates.active !== undefined ? !!updates.active : undefined,
@@ -3402,6 +3406,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ensureAdmin();
     try {
       await deleteDoc(doc(db, 'coin_packages', id));
+      setCoinPackages((prev) => prev.filter((pkg) => pkg.id !== id));
     } catch (error) {
       console.error('Failed to delete coin package from Firebase', error);
       throw error;

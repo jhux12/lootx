@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, Wallet, Loader2, CheckCircle } from 'lucide-react';
+import { X, Wallet, Loader2, CheckCircle, Sparkles } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -7,6 +7,7 @@ import { auth } from '../firebase';
 import { CoinAmount } from './CoinAmount';
 import { readCookieValue, trackMetaEvent } from '../utils/trackEvent';
 import { toast } from '../src/ui/toast/toast';
+import { hasUserMadeDeposit } from '../utils/depositEligibility';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -16,7 +17,7 @@ const generateCheckoutEventId = () => {
 };
 
 export const TopUpModal: React.FC = () => {
-  const { setShowTopUpModal, setTopUpModalIntent, topUpModalIntent, coinPackages } = useGame();
+  const { user, setShowTopUpModal, setTopUpModalIntent, topUpModalIntent, coinPackages } = useGame();
   const { playSound } = useSound();
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [hasUserSelectedPackage, setHasUserSelectedPackage] = useState(false);
@@ -24,6 +25,7 @@ export const TopUpModal: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [recommendedPackageId, setRecommendedPackageId] = useState<string | null>(null);
+  const [showFirstDepositPackages, setShowFirstDepositPackages] = useState(false);
   const autoSelectAppliedRef = React.useRef(false);
   const isPostFreeBoxFlow = topUpModalIntent?.source === 'post_free_box';
   const activePackages = useMemo(() => {
@@ -32,18 +34,34 @@ export const TopUpModal: React.FC = () => {
       .sort((a, b) => a.sortOrder - b.sortOrder);
   }, [coinPackages]);
 
+  const isFirstDepositEligible = !hasUserMadeDeposit(user);
+  const firstDepositPackages = useMemo(
+    () => activePackages.filter((pkg) => pkg.firstTimeDepositOnly),
+    [activePackages]
+  );
+  const standardPackages = useMemo(
+    () => activePackages.filter((pkg) => !pkg.firstTimeDepositOnly),
+    [activePackages]
+  );
+  const displayedPackages = useMemo(() => {
+    if (isFirstDepositEligible && showFirstDepositPackages) {
+      return firstDepositPackages;
+    }
+    return standardPackages;
+  }, [firstDepositPackages, isFirstDepositEligible, showFirstDepositPackages, standardPackages]);
+
   const normalizedPackages = useMemo(() => {
-    return activePackages.map((pkg) => ({
+    return displayedPackages.map((pkg) => ({
       ...pkg,
       baseCoinsNormalized: Number(pkg.coins ?? 0)
     }));
-  }, [activePackages]);
+  }, [displayedPackages]);
 
   const defaultPackage = useMemo(
-    () => activePackages.find((pkg) => pkg.defaultSelected) ?? activePackages[0],
-    [activePackages]
+    () => displayedPackages.find((pkg) => pkg.defaultSelected) ?? displayedPackages[0],
+    [displayedPackages]
   );
-  const selectedPackage = activePackages.find((pkg) => pkg.id === selectedPackageId) ?? defaultPackage;
+  const selectedPackage = displayedPackages.find((pkg) => pkg.id === selectedPackageId) ?? defaultPackage;
   const formattedDepositAmount = selectedPackage?.displayPrice ?? '$0.00';
   const priceValue = useMemo(() => {
     const raw = formattedDepositAmount.replace(/[^0-9.]/g, '');
@@ -60,17 +78,17 @@ export const TopUpModal: React.FC = () => {
     return Math.max(0, computedMissing);
   }, [topUpModalIntent?.currentBalance, topUpModalIntent?.missingCoins, topUpModalIntent?.requiredCoins]);
   const isInsufficientBalanceFlow = topUpModalIntent?.reason === 'insufficient_balance' && missingCoins > 0;
-  const getPackageImage = (pack: typeof activePackages[number]) =>
+  const getPackageImage = (pack: typeof displayedPackages[number]) =>
     pack.imageUrl?.trim() ||
     'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/item_images%2F12.png?alt=media&token=a82f5343-7e3e-4cb9-9d7a-b0451d4e49b0';
-  const getBonusLabel = (pack: typeof activePackages[number]) => {
+  const getBonusLabel = (pack: typeof displayedPackages[number]) => {
     const baseCoins = Math.max(0, Number(pack.coins ?? 0));
     const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
     if (!baseCoins || bonusCoins <= 0) return '';
     const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
     return `+${bonusPercent}% BONUS`;
   };
-  const getBonusSummaryLabel = (pack?: typeof activePackages[number]) => {
+  const getBonusSummaryLabel = (pack?: typeof displayedPackages[number]) => {
     if (!pack) return '';
     const baseCoins = Math.max(0, Number(pack.coins ?? 0));
     const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
@@ -142,24 +160,36 @@ export const TopUpModal: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
-    if (!selectedPackageId && defaultPackage) {
-      setSelectedPackageId(defaultPackage.id);
+    if (!isFirstDepositEligible && showFirstDepositPackages) {
+      setShowFirstDepositPackages(false);
     }
-  }, [defaultPackage, selectedPackageId]);
+  }, [isFirstDepositEligible, showFirstDepositPackages]);
 
   React.useEffect(() => {
-    if (!isPostFreeBoxFlow || activePackages.length === 0) {
+    if (!defaultPackage) {
+      setSelectedPackageId(null);
+      return;
+    }
+    if (!selectedPackageId || !displayedPackages.some((pkg) => pkg.id === selectedPackageId)) {
+      setSelectedPackageId(defaultPackage.id);
+      setHasUserSelectedPackage(false);
+      autoSelectAppliedRef.current = false;
+    }
+  }, [defaultPackage, displayedPackages, selectedPackageId]);
+
+  React.useEffect(() => {
+    if (!isPostFreeBoxFlow || displayedPackages.length === 0) {
       return;
     }
 
     const preferredUsd = Number(topUpModalIntent?.preferredPackageUsd ?? 50);
-    const preferredPackage = activePackages.find((pkg) => Math.abs(parseDisplayPrice(pkg.displayPrice) - preferredUsd) < 0.001);
+    const preferredPackage = displayedPackages.find((pkg) => Math.abs(parseDisplayPrice(pkg.displayPrice) - preferredUsd) < 0.001);
     if (!preferredPackage) return;
     setRecommendedPackageId(preferredPackage.id);
     setSelectedPackageId(preferredPackage.id);
     setHasUserSelectedPackage(false);
     autoSelectAppliedRef.current = true;
-  }, [activePackages, isPostFreeBoxFlow, topUpModalIntent?.preferredPackageUsd]);
+  }, [displayedPackages, isPostFreeBoxFlow, topUpModalIntent?.preferredPackageUsd]);
 
   React.useEffect(() => {
     if (isPostFreeBoxFlow) {
@@ -291,15 +321,45 @@ export const TopUpModal: React.FC = () => {
                         Covers your first box + extra spins
                       </p>
                     )}
+                    {isFirstDepositEligible && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowFirstDepositPackages((current) => !current);
+                          setHasUserSelectedPackage(false);
+                          autoSelectAppliedRef.current = false;
+                          playSound('click');
+                        }}
+                        className={`mb-4 flex w-full items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition-all sm:px-4 ${
+                          showFirstDepositPackages
+                            ? 'border-amber-300/60 bg-[linear-gradient(135deg,rgba(247,183,51,0.22),rgba(124,92,255,0.18))] shadow-[0_0_24px_rgba(247,183,51,0.16)]'
+                            : 'border-white/10 bg-white/[0.04] hover:border-amber-300/35 hover:bg-white/[0.07]'
+                        }`}
+                        aria-pressed={showFirstDepositPackages}
+                      >
+                        <span className="flex min-w-0 items-center gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-300/15 text-amber-200">
+                            <Sparkles className="h-5 w-5" />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-extrabold text-white">First deposit deals</span>
+                            <span className="block text-[11px] leading-4 text-slate-300">Unlock starter-only coin packages before your first deposit.</span>
+                          </span>
+                        </span>
+                        <span className={`relative h-7 w-12 shrink-0 rounded-full p-1 transition-colors ${showFirstDepositPackages ? 'bg-amber-300' : 'bg-slate-700'}`}>
+                          <span className={`block h-5 w-5 rounded-full bg-white shadow-lg transition-transform ${showFirstDepositPackages ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </span>
+                      </button>
+                    )}
                     {/* Amount Selector */}
                     <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-slate-500">Select a pack</label>
                     <div className="mb-4 flex flex-col gap-3">
-                        {activePackages.length === 0 ? (
+                        {displayedPackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
-                            No packages available right now.
+                            {showFirstDepositPackages ? 'No first-time deposit packages available right now.' : 'No packages available right now.'}
                           </div>
                         ) : (
-                          activePackages.map((pack) => {
+                          displayedPackages.map((pack) => {
                             const isSelected = selectedPackage?.id === pack.id;
                             const bonusCoins = pack.bonusCoins ?? 0;
                             const bonusLabel = getBonusLabel(pack);

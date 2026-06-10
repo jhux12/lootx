@@ -166,6 +166,7 @@ export interface CoinPackage {
   bonusCoins?: number;
   totalCoins?: number;
   defaultSelected?: boolean;
+  firstTimeDepositOnly?: boolean;
   imageUrl?: string;
   displayPrice: string;
   stripePriceId: string;
