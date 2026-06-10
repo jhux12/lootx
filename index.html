@@ -105,6 +105,20 @@
       #root {
         min-height: var(--app-height);
       }
+      .pullz-mobile-bottom-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+      }
+      @supports (bottom: env(safe-area-inset-bottom)) {
+        .pullz-mobile-bottom-nav {
+          bottom: 0;
+        }
+      }
       /* Custom scrollbar for chat */
       .scrollbar-thin::-webkit-scrollbar {
         width: 6px;

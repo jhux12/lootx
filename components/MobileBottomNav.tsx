@@ -30,7 +30,7 @@ export const MobileBottomNav: React.FC = () => {
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
 
-    document.documentElement.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(env(safe-area-inset-bottom) + 64px)');
+    document.documentElement.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(env(safe-area-inset-bottom) + 72px)');
     return () => {
       document.documentElement.style.removeProperty('--pullz-mobile-bottom-nav-height');
     };
@@ -93,10 +93,19 @@ export const MobileBottomNav: React.FC = () => {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-[70] min-h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-cyan-400/20 bg-[#141b22]/95 px-2.5 pb-[calc(env(safe-area-inset-bottom)+6px)] pt-2 backdrop-blur lg:hidden"
+      data-disable-pull-refresh="true"
+      className="pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[160] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-cyan-400/20 bg-[#141b22]/98 px-2.5 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_40px_rgba(0,0,0,0.38)] backdrop-blur lg:hidden"
       aria-label="Primary navigation"
+      style={{
+        WebkitTransform: 'translate3d(0,0,0)',
+        transform: 'translate3d(0,0,0)',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        contain: 'layout paint style',
+        willChange: 'transform'
+      }}
     >
-      <nav className="grid grid-cols-5 gap-0.5">
+      <nav className="grid h-full grid-cols-5 items-center gap-0.5">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = item.id === 'MENU' ? isMenuOpen : activeId === item.id;
@@ -121,7 +130,7 @@ export const MobileBottomNav: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleNav(item)}
-                className={`flex flex-col items-center gap-0.5 rounded-lg py-1 text-[11px] font-medium ${
+                className={`flex min-h-12 w-full flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-semibold transition-colors ${
                   isActive ? 'text-white' : 'text-slate-400'
                 }`}
                 aria-current={isActive ? 'page' : undefined}

@@ -7,6 +7,7 @@ import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
 import { BlurImage } from '../src/ui/images/BlurImage';
 import { LiveCommunitySection } from './LiveCommunitySection';
+import { HomeBanners } from './HomeBanners';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 
 type HomeReplicaProps = {
@@ -50,11 +51,27 @@ const TICKER_RARITY_DOT_CLASS: Record<HomeTickerWin['rarity'], string> = {
 };
 
 const TICKER_RARITY_CARD_CLASS: Record<HomeTickerWin['rarity'], string> = {
-  common: 'border-gray-400/55 hover:border-gray-300/80 shadow-gray-950/20',
-  uncommon: 'border-green-400/55 hover:border-green-300/80 shadow-green-950/20',
-  rare: 'border-blue-400/60 hover:border-blue-300/85 shadow-blue-950/20',
-  epic: 'border-purple-400/65 hover:border-purple-300/90 shadow-purple-950/25',
-  legendary: 'border-amber-300/75 hover:border-amber-200 shadow-amber-950/30'
+  common: 'border-slate-400/55 shadow-slate-950/30',
+  uncommon: 'border-emerald-400/75 shadow-emerald-950/30',
+  rare: 'border-lime-400/75 shadow-lime-950/30',
+  epic: 'border-purple-400/80 shadow-purple-950/35',
+  legendary: 'border-emerald-300/85 shadow-emerald-950/35'
+};
+
+const TICKER_RARITY_PILL_CLASS: Record<HomeTickerWin['rarity'], string> = {
+  common: 'bg-slate-300 text-slate-950',
+  uncommon: 'bg-emerald-300 text-emerald-950',
+  rare: 'bg-lime-300 text-lime-950',
+  epic: 'bg-purple-400 text-white',
+  legendary: 'bg-emerald-300 text-emerald-950'
+};
+
+const TICKER_RARITY_GLOW_CLASS: Record<HomeTickerWin['rarity'], string> = {
+  common: 'from-slate-400/24 via-transparent to-slate-950/70',
+  uncommon: 'from-emerald-400/28 via-transparent to-emerald-950/70',
+  rare: 'from-lime-400/30 via-transparent to-lime-950/70',
+  epic: 'from-purple-400/30 via-transparent to-purple-950/70',
+  legendary: 'from-emerald-300/35 via-transparent to-emerald-950/75'
 };
 
 const pickWeightedItem = <T extends { weight: number }>(pool: T[]) => {
@@ -138,25 +155,38 @@ const LiveWinCard = memo(({ win, onOpenBox }: { win: HomeTickerWin; onOpenBox: (
     <button
       type="button"
       onClick={handleOpen}
-      className={`group flex min-h-[104px] w-[248px] shrink-0 items-center gap-3.5 rounded-2xl border bg-[#1b2024]/88 p-3 text-left shadow-lg transition duration-200 hover:-translate-y-0.5 hover:bg-[#252c32] active:scale-[0.98] sm:w-[292px] sm:p-3.5 ${TICKER_RARITY_CARD_CLASS[win.rarity]}`}
+      className={`group relative flex h-[352px] w-[248px] shrink-0 flex-col overflow-hidden rounded-[1.55rem] border-2 bg-[#181a1b] text-left shadow-[0_18px_36px_rgba(0,0,0,0.36)] transition duration-200 hover:-translate-y-1 hover:brightness-110 active:scale-[0.98] sm:h-[390px] sm:w-[292px] lg:h-[430px] lg:w-[320px] ${TICKER_RARITY_CARD_CLASS[win.rarity]}`}
       title={`${win.itemName} won from ${win.boxName}`}
     >
-      <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-black/25 p-2 sm:h-[72px] sm:w-[72px]">
-        {win.featured && <span className="absolute -left-1 -top-2 rounded-full bg-amber-300 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-black shadow-lg">🔥 Big Win</span>}
-        <img src={win.itemImage} alt={win.itemName} className="h-full w-full object-contain drop-shadow-md transition-transform duration-200 group-hover:scale-105" loading="lazy" decoding="async" width={72} height={72} />
+      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${TICKER_RARITY_GLOW_CLASS[win.rarity]}`} />
+      <div className="relative flex h-[218px] items-center justify-center overflow-hidden bg-[#111313] p-4 sm:h-[245px] sm:p-5 lg:h-[270px]">
+        {win.featured && <span className="absolute left-3 top-3 z-20 rounded-full bg-amber-300 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-black shadow-lg">🔥 Big Win</span>}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 bg-gradient-to-t from-[#181a1b] to-transparent" />
+        <img src={win.itemImage} alt={win.itemName} className="relative z-0 h-full w-full object-contain drop-shadow-[0_18px_26px_rgba(0,0,0,0.42)] transition-transform duration-300 group-hover:scale-105" loading="lazy" decoding="async" width={260} height={260} />
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-black leading-5 text-white sm:text-base">{win.itemName}</p>
-        <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-          <span className={`h-1.5 w-1.5 rounded-full ${TICKER_RARITY_DOT_CLASS[win.rarity]}`} />
-          <span>{win.rarity}</span>
-          <span className="text-slate-600">•</span>
-          <span>{win.timeAgo}</span>
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-between gap-3 bg-[#1c1d1e]/96 p-4 sm:p-5">
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <p className="min-w-0 flex-1 truncate text-2xl font-black uppercase leading-none tracking-tight text-white sm:text-3xl">{win.itemName}</p>
+            <span className={`shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] ${TICKER_RARITY_PILL_CLASS[win.rarity]}`}>{win.rarity}</span>
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                <span className={`h-1.5 w-1.5 rounded-full ${TICKER_RARITY_DOT_CLASS[win.rarity]}`} />
+                <span>{win.rarity}</span>
+                <span className="text-slate-600">•</span>
+                <span>{win.timeAgo}</span>
+              </div>
+              <p className="mt-1 truncate text-xs font-semibold text-slate-400">From {win.boxName}</p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">MV</p>
+              <CoinAmount amount={Math.round(win.itemPrice)} className="justify-end text-xl font-black text-lime-300 sm:text-2xl" iconClassName="h-4 w-4 sm:h-5 sm:w-5" animated={false} />
+            </div>
+          </div>
         </div>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <p className="truncate text-[11px] text-slate-400">{win.boxName}</p>
-          <CoinAmount amount={Math.round(win.itemPrice)} className="shrink-0 text-sm font-black text-emerald-200" iconClassName="h-4 w-4" animated={false} />
-        </div>
+        <p className="truncate text-sm font-semibold text-slate-400">Pulled from <span className="text-lime-300">{win.boxName}</span></p>
       </div>
     </button>
   );
@@ -164,9 +194,9 @@ const LiveWinCard = memo(({ win, onOpenBox }: { win: HomeTickerWin; onOpenBox: (
 LiveWinCard.displayName = 'LiveWinCard';
 
 const LiveWinsSkeleton = memo(() => (
-  <div className="flex min-h-[112px] items-center gap-2 px-4 py-3 sm:min-h-[124px] sm:gap-3" aria-hidden="true">
+  <div className="flex min-h-[380px] items-center gap-4 px-4 py-4 sm:min-h-[420px] sm:gap-5" aria-hidden="true">
     {Array.from({ length: 4 }).map((_, index) => (
-      <div key={index} className="h-[104px] w-[248px] shrink-0 rounded-2xl border border-white/5 bg-white/[0.045] sm:w-[292px]" />
+      <div key={index} className="h-[352px] w-[248px] shrink-0 rounded-[1.55rem] border-2 border-white/10 bg-white/[0.045] sm:h-[390px] sm:w-[292px] lg:h-[430px] lg:w-[320px]" />
     ))}
   </div>
 ));
@@ -369,8 +399,10 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
           </div>
         </section>
 
-        <section aria-label="Live recent wins" className="min-h-[172px] overflow-hidden rounded-2xl border border-white/5 bg-[#20262b] shadow-[0_14px_38px_rgba(5,8,12,0.22)] sm:min-h-[190px]">
-          <div className="flex flex-col gap-1 border-b border-white/[0.06] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <HomeBanners />
+
+        <section aria-label="Live recent wins" className="min-h-[450px] overflow-hidden rounded-[1.35rem] border border-white/5 bg-[#171918] shadow-[0_18px_44px_rgba(5,8,12,0.28)] sm:min-h-[500px]">
+          <div className="flex flex-col gap-1 border-b border-white/[0.06] bg-[#171918] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" />
@@ -383,13 +415,13 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
             </div>
           </div>
 
-          <div className="relative overflow-hidden py-4">
+          <div className="relative overflow-hidden py-5">
             {liveWins.length > 0 ? (
               <>
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#20262b] to-transparent sm:w-16" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#20262b] to-transparent sm:w-16" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#171918] to-transparent sm:w-20" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#171918] to-transparent sm:w-20" />
                 <div
-                  className={`live-wins-ticker flex w-max items-center gap-3 px-4 sm:gap-4 ${startTickerAnimation ? 'ticker-animation [animation-duration:74s]' : ''}`}
+                  className={`live-wins-ticker flex w-max items-center gap-4 px-4 sm:gap-5 ${startTickerAnimation ? 'ticker-animation [animation-duration:92s]' : ''}`}
                   style={{ transform: 'translate3d(0,0,0)' }}
                 >
                   {[...liveWins, ...liveWins].map((win, index) => (
