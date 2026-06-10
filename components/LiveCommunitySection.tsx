@@ -336,7 +336,6 @@ export const LiveCommunitySection: React.FC = () => {
           </button>
         );}) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[112px] w-[112px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[132px] sm:w-[132px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
         </div>
-        <p className="mt-1 px-4 text-[11px] font-semibold text-slate-500 sm:hidden">Swipe sideways to browse stories</p>
       </div>
     </div>
     {activeIndex !== null && stories[activeIndex] && (
